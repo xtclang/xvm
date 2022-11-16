@@ -192,6 +192,11 @@ public class ArrayConstant
     @Override
     public boolean containsUnresolved()
         {
+        if (isHashCached())
+            {
+            return false;
+            }
+
         if (m_constType.containsUnresolved())
             {
             return true;

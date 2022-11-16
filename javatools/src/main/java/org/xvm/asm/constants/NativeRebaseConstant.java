@@ -51,7 +51,7 @@ public class NativeRebaseConstant
     @Override
     public boolean containsUnresolved()
         {
-        return super.containsUnresolved() || m_constIface.containsUnresolved();
+        return !isHashCached() && (super.containsUnresolved() || m_constIface.containsUnresolved());
         }
 
     @Override

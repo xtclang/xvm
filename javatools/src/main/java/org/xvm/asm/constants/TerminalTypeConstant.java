@@ -2190,15 +2190,22 @@ public class TerminalTypeConstant
     @Override
     public boolean containsUnresolved()
         {
+        if (isHashCached())
+            {
+            return false;
+            }
+
         Constant constId = ensureResolvedConstant();
         if (constId.containsUnresolved())
             {
             return true;
             }
+
         if (getFormat() == Format.Typedef)
             {
             return ((TypedefConstant) constId).getReferredToType().containsUnresolved();
             }
+
         return false;
         }
 

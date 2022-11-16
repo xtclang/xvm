@@ -538,9 +538,23 @@ public class UnresolvedTypeConstant
     @Override
     public int hashCode()
         {
-        return isTypeResolved()
-            ? Hash.of(getResolvedType())
-            : Hash.of(m_constId);
+        if (isTypeResolved())
+            {
+            return Hash.of(getResolvedType());
+            }
+
+        // calculate a temporary hash code
+        int nHash = m_nUnresolvedHash;
+        if (nHash == 0)
+            {
+            nHash = Hash.of(m_constId);
+            if (nHash == 0)
+                {
+                nHash = 1234567891; // prime
+                }
+            m_nUnresolvedHash = nHash;
+            }
+        return nHash;
         }
 
     @Override
@@ -548,6 +562,7 @@ public class UnresolvedTypeConstant
         {
         return 0;
         }
+
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -565,4 +580,9 @@ public class UnresolvedTypeConstant
      * Recursive type indicator.
      */
     private boolean m_fRecursive;
+
+    /**
+     * A temporary hash code.
+     */
+    private transient int m_nUnresolvedHash;
     }

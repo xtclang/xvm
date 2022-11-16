@@ -161,7 +161,7 @@ public class VersionMatchesCondition
     @Override
     public boolean containsUnresolved()
         {
-        return m_constStruct.containsUnresolved();
+        return !isHashCached() && m_constStruct.containsUnresolved();
         }
 
     @Override

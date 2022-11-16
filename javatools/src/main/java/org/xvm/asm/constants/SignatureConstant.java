@@ -579,10 +579,16 @@ public class SignatureConstant
     @Override
     public boolean containsUnresolved()
         {
+        if (isHashCached())
+            {
+            return false;
+            }
+
         if (m_constName.containsUnresolved())
             {
             return true;
             }
+
         for (TypeConstant constant : m_aconstParams)
             {
             if (constant.containsUnresolved())
@@ -590,6 +596,7 @@ public class SignatureConstant
                 return true;
                 }
             }
+
         for (TypeConstant constant : m_aconstReturns)
             {
             if (constant.containsUnresolved())
@@ -597,6 +604,7 @@ public class SignatureConstant
                 return true;
                 }
             }
+
         return false;
         }
 

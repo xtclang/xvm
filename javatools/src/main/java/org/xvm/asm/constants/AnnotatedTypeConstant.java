@@ -708,7 +708,7 @@ public class AnnotatedTypeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_annotation.containsUnresolved() || m_constType.containsUnresolved();
+        return !isHashCached() && (m_annotation.containsUnresolved() || m_constType.containsUnresolved());
         }
 
     @Override

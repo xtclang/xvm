@@ -697,7 +697,7 @@ public abstract class RelationalTypeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constType1.containsUnresolved() || m_constType2.containsUnresolved();
+        return !isHashCached() && (m_constType1.containsUnresolved() || m_constType2.containsUnresolved());
         }
 
     @Override

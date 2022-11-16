@@ -6,6 +6,8 @@ import org.xvm.asm.Constant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.util.Hash;
+
 
 /**
  * Constant whose purpose is to represent an object handle (run-time only).
@@ -50,6 +52,12 @@ public class HandleConstant
     protected int compareDetails(Constant constant)
         {
         return -1;
+        }
+
+    @Override
+    public int computeHashCode()
+        {
+        return Hash.of(m_hValue);
         }
 
     @Override

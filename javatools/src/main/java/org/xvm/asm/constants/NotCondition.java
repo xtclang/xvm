@@ -168,7 +168,7 @@ public class NotCondition
     @Override
     public boolean containsUnresolved()
         {
-        return m_constCond.containsUnresolved();
+        return !isHashCached() && m_constCond.containsUnresolved();
         }
 
     @Override

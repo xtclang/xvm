@@ -304,10 +304,30 @@ public class UnresolvedNameConstant
     @Override
     public int hashCode()
         {
-        return isNameResolved()
-            ? Hash.of(m_constId)
-            : Hash.of(m_asName,
-              Hash.of(m_fNoNarrow));
+        if (isNameResolved())
+            {
+            return Hash.of(m_constId);
+            }
+
+        // calculate a temporary hash code
+        int nHash = m_nUnresolvedHash;
+        if (nHash == 0)
+            {
+            nHash = Hash.of(m_asName,
+                    Hash.of(m_fNoNarrow));
+            if (nHash == 0)
+                {
+                nHash = 1000000007; // prime
+                }
+            m_nUnresolvedHash = nHash;
+            }
+        return nHash;
+        }
+
+    @Override
+    public int computeHashCode()
+        {
+        return 0;
         }
 
 
@@ -332,4 +352,9 @@ public class UnresolvedNameConstant
      * A consumer that needs to be called when this name constant is resolved.
      */
     private Consumer<Constant> m_consumer;
+
+    /**
+     * A temporary hash code.
+     */
+    private transient int m_nUnresolvedHash;
     }

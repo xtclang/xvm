@@ -916,10 +916,16 @@ public class ParameterizedTypeConstant
     @Override
     public boolean containsUnresolved()
         {
+        if (isHashCached())
+            {
+            return false;
+            }
+
         if (m_constType.containsUnresolved())
             {
             return true;
             }
+
         for (Constant param : m_atypeParams)
             {
             if (param.containsUnresolved())
@@ -927,6 +933,7 @@ public class ParameterizedTypeConstant
                 return true;
                 }
             }
+
         return false;
         }
 

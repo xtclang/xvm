@@ -138,7 +138,7 @@ public class DecoratedClassConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_type.containsUnresolved();
+        return !isHashCached() && m_type.containsUnresolved();
         }
 
     @Override

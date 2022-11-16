@@ -768,6 +768,11 @@ public abstract class IdentityConstant
     @Override
     public boolean containsUnresolved()
         {
+        if (isHashCached())
+            {
+            return false;
+            }
+
         IdentityConstant parent = getParentConstant();
         return parent != null && parent.containsUnresolved();
         }

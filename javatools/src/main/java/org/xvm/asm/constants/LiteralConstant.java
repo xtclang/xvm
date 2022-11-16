@@ -810,7 +810,7 @@ public class LiteralConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constStr.containsUnresolved();
+        return !isHashCached() && m_constStr.containsUnresolved();
         }
 
     @Override

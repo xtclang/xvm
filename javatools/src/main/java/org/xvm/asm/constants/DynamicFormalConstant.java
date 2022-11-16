@@ -169,9 +169,9 @@ public class DynamicFormalConstant
     @Override
     public boolean containsUnresolved()
         {
-        return super.containsUnresolved() ||
-               m_typeReg.containsUnresolved() ||
-               m_constFormal.containsUnresolved();
+        return !isHashCached() && (super.containsUnresolved()
+                                   || m_typeReg.containsUnresolved()
+                                   || m_constFormal.containsUnresolved());
         }
 
     @Override

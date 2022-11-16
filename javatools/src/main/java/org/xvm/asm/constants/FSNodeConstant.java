@@ -297,10 +297,10 @@ public class FSNodeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return     m_constName    .containsUnresolved()
-                || m_constCreated .containsUnresolved()
-                || m_constModified.containsUnresolved()
-                || m_constData    .containsUnresolved();
+        return !isHashCached() && (   m_constName    .containsUnresolved()
+                                   || m_constCreated .containsUnresolved()
+                                   || m_constModified.containsUnresolved()
+                                   || m_constData    .containsUnresolved());
         }
 
     @Override

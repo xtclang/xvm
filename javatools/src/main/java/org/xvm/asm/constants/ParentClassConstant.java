@@ -171,7 +171,7 @@ public class ParentClassConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constChild.containsUnresolved();
+        return !isHashCached() && m_constChild.containsUnresolved();
         }
 
     @Override

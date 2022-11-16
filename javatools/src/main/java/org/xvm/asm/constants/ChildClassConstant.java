@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import  org.xvm.util.Hash;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -164,7 +166,7 @@ public class ChildClassConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constParent.containsUnresolved() || m_constName.containsUnresolved();
+        return !isHashCached() && (m_constParent.containsUnresolved() || m_constName.containsUnresolved());
         }
 
     @Override
@@ -172,6 +174,13 @@ public class ChildClassConstant
         {
         visitor.accept(m_constParent);
         visitor.accept(m_constName);
+        }
+
+    @Override
+    public int computeHashCode()
+        {
+        return Hash.of(m_constParent,
+               Hash.of(m_constName));
         }
 
     @Override

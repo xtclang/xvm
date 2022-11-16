@@ -609,11 +609,7 @@ public abstract class Constant
      *
      * @return the hash
      */
-    protected int computeHashCode()
-        {
-        // inefficient and begs for optimization by sub-classes
-        return this.toString().hashCode();
-        }
+    abstract protected int computeHashCode();
 
     /**
      * Compute and store a non-zero hash of this constant.
@@ -627,7 +623,15 @@ public abstract class Constant
             return 0;
             }
         int iHash = Hash.of(getClass().getName(), computeHashCode());
-        return m_iHash = iHash == 0 ? 1 : iHash;
+        return m_iHash = iHash == 0 ? 7654211 : iHash;
+        }
+
+    /**
+     * @return true if the hash code is cached (which implies that the constant is resolved)
+     */
+    protected boolean isHashCached()
+        {
+        return m_iHash != 0;
         }
 
     @Override

@@ -287,7 +287,7 @@ public class RangeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_const1.containsUnresolved() || m_const2.containsUnresolved();
+        return !isHashCached() && (m_const1.containsUnresolved() || m_const2.containsUnresolved());
         }
 
     @Override

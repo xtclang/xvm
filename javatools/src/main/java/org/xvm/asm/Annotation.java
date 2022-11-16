@@ -202,6 +202,11 @@ public class Annotation
      */
     public boolean containsUnresolved()
         {
+        if (isHashCached())
+            {
+            return false;
+            }
+
         if (getAnnotationClass().containsUnresolved())
             {
             return true;

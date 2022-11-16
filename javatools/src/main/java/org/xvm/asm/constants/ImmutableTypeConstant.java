@@ -180,7 +180,7 @@ public class ImmutableTypeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constType.containsUnresolved();
+        return !isHashCached() && m_constType.containsUnresolved();
         }
 
     @Override

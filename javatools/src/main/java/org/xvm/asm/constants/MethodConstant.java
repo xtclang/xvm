@@ -502,7 +502,8 @@ public class MethodConstant
     @Override
     public boolean containsUnresolved()
         {
-        return super.containsUnresolved() || isNascent() || getSignature().containsUnresolved();
+        return !isHashCached()
+            && (super.containsUnresolved() || isNascent() || getSignature().containsUnresolved());
         }
 
     @Override

@@ -110,7 +110,7 @@ public class ThisClassConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constClass.containsUnresolved();
+        return !isHashCached() && m_constClass.containsUnresolved();
         }
 
     @Override

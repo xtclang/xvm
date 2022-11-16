@@ -136,7 +136,7 @@ public class MethodBindingConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_idMethod.containsUnresolved();
+        return !isHashCached() && m_idMethod.containsUnresolved();
         }
 
     @Override

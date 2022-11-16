@@ -253,7 +253,7 @@ public abstract class AbstractDependantTypeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_typeParent.containsUnresolved();
+        return !isHashCached() && m_typeParent.containsUnresolved();
         }
 
     @Override

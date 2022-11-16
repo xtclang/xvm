@@ -255,6 +255,11 @@ public abstract class MultiCondition
     @Override
     public boolean containsUnresolved()
         {
+        if (isHashCached())
+            {
+            return false;
+            }
+
         for (Constant constant : m_aconstCond)
             {
             if (constant.containsUnresolved())

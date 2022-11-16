@@ -148,7 +148,7 @@ public class FileStoreConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constDir.containsUnresolved();
+        return !isHashCached() && m_constDir.containsUnresolved();
         }
 
     @Override
