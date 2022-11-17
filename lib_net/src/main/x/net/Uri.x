@@ -1666,7 +1666,7 @@ const Uri
                     break;
 
                 case '%':
-                    (_, _, String? error) = decodeEscape(authority, EachChar.count, Null);
+                    (_, _, String? error) = decodeEscape(authority, EachChar.count);
                     if (error != Null)
                         {
                         return True, Null, Null, Null, Null, error;

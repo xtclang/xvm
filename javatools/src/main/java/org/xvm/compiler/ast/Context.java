@@ -426,7 +426,7 @@ public class Context
             return;
             }
 
-        // begin with a snap-shot of the current modifications
+        // begin with a snapshot of the current modifications
         boolean fDemux   = false;
         Context ctxInner = this;
         while (ctxInner != ctxDest)
@@ -1583,7 +1583,7 @@ public class Context
         TypeConstant typeOriginal = reg.getType();
         TypeConstant typeResolved = typeOriginal.resolveGenerics(pool(), getLocalResolver(branch));
 
-        return typeResolved == typeOriginal
+        return typeResolved.equals(typeOriginal)
                 ? reg
                 : reg.narrowType(typeResolved);
         }

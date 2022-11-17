@@ -212,7 +212,7 @@ public class IsExpression
             typeInferred = typeNarrowing.adoptParameters(pool, typeInferred.getParamTypesArray());
             }
 
-        if (typeInferred == typeNarrowing)
+        if (typeInferred.equals(typeNarrowing))
             {
             typeInferred = typeOriginal.combine(pool, typeNarrowing);
             }

@@ -43,6 +43,10 @@ public class Register
                     throw new IllegalArgumentException("type required");
                 }
             }
+        else
+            {
+            type = type.resolveTypedefs();
+            }
 
         validateIndex(iArg);
 
@@ -646,9 +650,11 @@ public class Register
         @Override
         public Register restoreType()
             {
-            return getType().equals(getOriginalType())
+            // no reason to shadow the shadow
+            TypeConstant typeOrig = getOriginalType();
+            return getType().equals(typeOrig)
                     ? this
-                    : super.restoreType();
+                    : Register.this.narrowType(typeOrig);
             }
 
         @Override
