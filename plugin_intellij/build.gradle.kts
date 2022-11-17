@@ -6,7 +6,7 @@ plugins {
     // Java support
     id("java")
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.9.0"
+    id("org.jetbrains.intellij") version "1.10.0"
 }
 
 group = properties("pluginGroup")
@@ -37,7 +37,7 @@ tasks {
     buildSearchableOptions {
         enabled = false
     }
-    
+
     patchPluginXml {
         version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))
