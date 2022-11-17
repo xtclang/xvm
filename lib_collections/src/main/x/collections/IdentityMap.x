@@ -346,7 +346,7 @@ class IdentityMap<Key, Value>
                 }
 
             // if the only thing not frozen is the map itself, then just make it immutable
-            if (this.as(IdentityMap).storage.is(immutable))
+            if (this.storage.is(immutable))
                 {
                 return inPlace
                         ? makeImmutable()
