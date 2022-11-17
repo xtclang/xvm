@@ -5988,12 +5988,7 @@ public abstract class TypeConstant
      */
     protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
-        if (!typeLeft.isSingleDefiningConstant() || !typeRight.isSingleDefiningConstant())
-            {
-            return null;
-            }
-
-        if (!typeLeft.isSingleDefiningConstant()    || !typeRight.isSingleDefiningConstant() ||
+        if (!typeLeft.isSingleUnderlyingClass(true) || !typeRight.isSingleUnderlyingClass(true) ||
             !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true))
             {
             return null;
