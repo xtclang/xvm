@@ -5,7 +5,9 @@ import java.lang.reflect.Field;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -241,8 +243,6 @@ public class SwitchStatement
         // notify the case manager that we're finished collecting everything
         fValid &= mgr.validateEnd(ctxSwitch, errs);
 
-        ctx = ctxSwitch.exit();
-
         if (m_listContinues != null)
             {
             // the last "continue" is translated as a "break"
@@ -256,7 +256,24 @@ public class SwitchStatement
             m_listContinues = null;
             }
 
+        if (!m_listBreaks.isEmpty())
+            {
+            ctxSwitch.mergeBreaks(m_listBreaks);
+            m_listBreaks.clear();
+            }
+
+        ctx = ctxSwitch.exit();
+
         return fValid ? this : null;
+        }
+
+    @Override
+    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn, Label label)
+        {
+        // we will process the assignments ourselves; see SwitchContext.mergeBreaks()
+        m_listBreaks.add(mapAsn);
+
+        super.addBreak(nodeOrigin, Collections.EMPTY_MAP, label);
         }
 
     @Override
@@ -474,9 +491,8 @@ public class SwitchStatement
             Map<String, Integer> mapAllNames = new HashMap<>();
             for (CaseBlockContext ctxBlock : listBlocks)
                 {
-                for (Entry<String, Argument> entry : ctxBlock.getNameMap().entrySet())
+                for (String sName : ctxBlock.getNameMap().keySet())
                     {
-                    String sName = entry.getKey();
                     if (!ctxBlock.isVarDeclaredInThisScope(sName))
                         {
                         mapAllNames.compute(sName, (k, v) -> v == null ? 1 : v + 1);
@@ -533,6 +549,67 @@ public class SwitchStatement
                 {
                 super.promoteNarrowedTypes();
                 }
+            }
+
+        /**
+         * Merge a list of previously prepared set of variable assignment information into this
+         * context by collecting assignments that were defined by *every* block.
+         *
+         * @param listAdd a list of maps of assignments from a previous calls to {@link #addBreak)}
+         */
+        protected void mergeBreaks(List<Map<String, Assignment>> listAdd)
+            {
+            // collect all assigned names, counting the occurrences and collect the current assignments
+            Map<String, Integer>    mapAllNames = new HashMap<>();
+            Map<String, Assignment> mapThis     = new HashMap<>();
+            for (Map<String, Assignment> mapAdd : listAdd)
+                {
+                for (String sName : mapAdd.keySet())
+                    {
+                    mapThis.computeIfAbsent(sName, this::getVarAssignment);
+                    mapAllNames.compute(sName, (k, v) -> v == null ? 1 : v + 1);
+                    }
+                }
+
+            boolean fCompletes = f_mgr.isCompletable();
+            int     cBlocks    = listAdd.size();
+            for (Map<String, Assignment> mapAdd : listAdd)
+                {
+                for (Iterator<Entry<String, Assignment>> iter = mapAdd.entrySet().iterator();
+                        iter.hasNext();)
+                    {
+                    Entry<String, Assignment> entry = iter.next();
+
+                    String     sName   = entry.getKey();
+                    Assignment asnThat = entry.getValue();
+                    Assignment asnThis = mapThis.get(sName);
+
+                    if (mapAllNames.get(sName) == cBlocks && !fCompletes)
+                        {
+                        // every block assigns this var and the entire value domain is covered -
+                        //
+                        if (asnThis.isDefinitelyAssigned())
+                            {
+                            mapThis.put(sName, asnThis.join(asnThat));
+                            }
+                        else
+                            {
+                            mapThis.put(sName, asnThat);
+                            }
+                        }
+                    else
+                        {
+                        // not all blocks assign this var or there is no "default" -
+                        // unassigned should stay unassigned, otherwise - simply join
+                        if (!asnThis.isDefinitelyUnassigned())
+                            {
+                            mapThis.put(sName, asnThis.join(asnThat));
+                            }
+                        }
+                    }
+                }
+
+            ensureDefiniteAssignments().putAll(mapThis);
             }
 
         private final CaseManager            f_mgr;
@@ -618,6 +695,11 @@ public class SwitchStatement
      * encountered in the group.
      */
     private transient List<Entry<AstNode, Map<String, Assignment>>> m_listContinues;
+
+    /**
+     * This collects the assignment information that comes from each "break" statement.
+     */
+    private transient final List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
     }

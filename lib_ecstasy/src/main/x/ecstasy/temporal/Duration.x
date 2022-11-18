@@ -152,7 +152,7 @@ const Duration(UInt128 picoseconds)
                         case ':':
                             assert:arg !iso as $"Duration includes an unexpected character ':': {duration.quoted()}";
                             assert:arg ++colons <= 2 as $"Too many ':' sections in Duration: {duration.quoted()}";
-                            factor   = 0; // TODO GG it compiled (but crashed running) without this line; compiler should have detected an unassigned var!!!
+                            factor   = 0;
                             stageNew = 2 + colons;
                             seconds  = (seconds + part) * 60;
                             break;
