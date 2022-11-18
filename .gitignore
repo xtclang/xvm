@@ -52,18 +52,8 @@ Thumbs.db
 classes/
 build/
 
-# user-specific project files #
-###############################
+# tooling and project files #
+#############################
 prj/
-.idea/gradle.xml
-.idea/misc.xml
-.idea/workspace.xml
-.idea/dictionaries/
-.idea/inspectionProfiles/
-.idea/**/tasks.xml
-.idea/**/usage.statistics.xml
-.idea/**/shelf
-
-# Gradle-specific project files #
-#################################
-.gradle
+.idea/
+.gradle/
