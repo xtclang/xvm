@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -345,7 +344,7 @@ public class ForEachStatement
             m_ctxLabelVars  = ctx;
             m_errsLabelVars = errs;
 
-            // ultimately, the condition has to be re-written, because it is inevitably short-hand for
+            // ultimately, the condition has to be re-written, because it is inevitably shorthand for
             // a measure of syntactic sugar; in order of precedence, the condition can be:
             //
             //   1) iterator   :  L: for (T value          : container.as(Iterator<T>)) {...}
