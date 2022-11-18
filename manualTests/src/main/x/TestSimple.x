@@ -3,9 +3,11 @@ module TestSimple
     @Inject Console console;
     void run()
         {
-        Object[] valArray = [];
-        Object value = "test";
-        valArray += value;  // this used to call addAll(Iterable<Char>) instead pf add(Object)
-        console.println(valArray);
+        (_, _, String? error) = decodeEscape(Null); // this used to blow the compiler
+        }
+
+    (Boolean, String?) decodeEscape(String? error)
+        {
+        return True, error;
         }
     }

@@ -1652,6 +1652,13 @@ public abstract class AstNode
                 atypeReturn = atypeReturn[0].getParamTypesArray();
                 cReturns    = atypeReturn.length;
                 }
+
+            if (cMethodReturns < cReturns)
+                {
+                log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
+                       sName, String.valueOf(cReturns), String.valueOf(cMethodReturns));
+                return TypeFit.NoFit;
+                }
             }
 
         for (int i = 0; i < cReturns; i++)
