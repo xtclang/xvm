@@ -128,7 +128,7 @@ public class TryStatement
         if (resources != null)
             {
             // the using/try-with-resources section provides a context to the rest of the
-            // statement (it is the outer-most layer of the "onion")
+            // statement (it is the outermost layer of the "onion")
             ctx = ctx.enter();
 
             for (int i = 0, c = resources.size(); i < c; ++i)
@@ -162,6 +162,7 @@ public class TryStatement
             {
             ctxCatchAll = ctxOrig.enter();
             ctxCatchAll.merge(mapTryAsn);
+            ctxCatchAll.setReachable(true);
             }
 
         if (cCatches > 0)
@@ -205,6 +206,7 @@ public class TryStatement
             if (fReachable)
                 {
                 ctxNext.merge(mapTryAsn);
+                ctxNext.setReachable(true);
                 }
 
             for (int i = 0; i < cCatches; ++i)
@@ -546,6 +548,7 @@ public class TryStatement
             {
             Context ctxOuter = getOuterContext();
             ctxOuter.merge(getDefiniteAssignments());
+            ctxOuter.setReachable(true);
 
             promoteNarrowedTypes();
             }

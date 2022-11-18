@@ -307,12 +307,19 @@ public class ForStatement
 
             if (m_listShorts != null)
                 {
+                boolean fContinues = false;
                 for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
                     {
                     if (!entry.getKey().isDiscarded())
                         {
                         ctx.merge(entry.getValue());
+                        fContinues = true;
                         }
+                    }
+
+                if (fContinues)
+                    {
+                    ctx.setReachable(true);
                     }
                 m_listShorts = null;
                 }
@@ -370,6 +377,7 @@ public class ForStatement
             // that we learned on a previous trial run through the loop
             ctx = ctxOrig.enter();
             ctx.merge(mapLoopAsn, mapLoopArg);
+            ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
             m_ctxLabelVars  = ctx;
@@ -462,12 +470,19 @@ public class ForStatement
             if (m_listContinues != null)
                 {
                 // the last "continue" is translated as a "break"
+                boolean fContinues = false;
                 for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
                     {
                     if (!entry.getKey().isDiscarded())
                         {
                         ctx.merge(entry.getValue());
+                        fContinues = true;
                         }
+                    }
+
+                if (fContinues)
+                    {
+                    ctx.setReachable(true);
                     }
                 m_listContinues = null;
                 }
@@ -488,12 +503,19 @@ public class ForStatement
 
                 if (m_listShorts != null)
                     {
+                    boolean fContinues = false;
                     for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
                         {
                         if (!entry.getKey().isDiscarded())
                             {
                             ctx.merge(entry.getValue());
+                            fContinues = true;
                             }
+                        }
+
+                    if (fContinues)
+                        {
+                        ctx.setReachable(true);
                         }
                     m_listShorts = null;
                     }

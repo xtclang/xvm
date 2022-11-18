@@ -339,6 +339,7 @@ public class ForEachStatement
             // that we learned on a previous trial run through the loop
             ctx = ctxOrig.enter();
             ctx.merge(mapLoopAsn, mapLoopArg);
+            ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
             m_ctxLabelVars  = ctx;
@@ -566,6 +567,7 @@ public class ForEachStatement
                     {
                     ctx.merge(mapAsn);
                     }
+                ctx.setReachable(true);
                 }
 
             // see if there are any assignments that would change our starting assumptions

@@ -513,7 +513,6 @@ public class Context
                     }
                 }
             }
-        setReachable(true);
         }
 
     /**

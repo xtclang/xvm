@@ -181,14 +181,20 @@ public class SwitchStatement
                     // associate any previous "fall through" with this pseudo statement block
                     if (m_labelContinue != null)
                         {
+                        boolean fContinues = false;
                         for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
                             {
                             if (!entry.getKey().isDiscarded())
                                 {
                                 ctxBlock.merge(entry.getValue());
+                                fContinues = true;
                                 }
                             }
 
+                        if (fContinues)
+                            {
+                            ctx.setReachable(true);
+                            }
                         m_labelContinue = null;
                         m_listContinues = null;
                         }

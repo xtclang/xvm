@@ -268,7 +268,9 @@ public class WhileStatement
             // that we learned on a previous trial run through the loop
             ctx = ctxOrig.enter();
             ctx.merge(mapLoopAsn, mapLoopArg);
-            int cExits  = 1;
+            ctx.setReachable(true);
+
+            int cExits = 1;
 
             // the current context and error list are required by getLabelVar() if, in the process
             // of validation, one of the nested AST nodes requires a loop variable
@@ -420,6 +422,11 @@ public class WhileStatement
                                 fContinues = true;
                                 ctx.merge(entry.getValue());
                                 }
+                            }
+
+                        if (fContinues)
+                            {
+                            ctx.setReachable(true);
                             }
                         }
 

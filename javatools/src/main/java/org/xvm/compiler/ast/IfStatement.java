@@ -196,12 +196,19 @@ public class IfStatement
             //           was fully evaluated, it should be unassigned here, right?
             if (m_listShorts != null)
                 {
+                boolean fContinues = false;
                 for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
                     {
                     if (!entry.getKey().isDiscarded())
                         {
                         ctx.merge(entry.getValue());
+                        fContinues = true;
                         }
+                    }
+
+                if (fContinues)
+                    {
+                    ctx.setReachable(true);
                     }
                 }
 
