@@ -1357,8 +1357,7 @@ public class LambdaExpression
      * which the values (or references / variables) of the outer context can be <i>captured</i>.
      *
      * @param ctx          the current (soon to be outer) context
-     * @param body         the StatementBlock of the lambda, anonymous inner class, or statement
-     *                     expression
+     * @param body         the StatementBlock of the lambda or anonymous inner class
      * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
      * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
      *

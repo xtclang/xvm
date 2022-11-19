@@ -11,8 +11,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 
-import org.xvm.compiler.ast.LambdaExpression.LambdaContext;
-
 import org.xvm.util.Severity;
 
 
@@ -127,7 +125,7 @@ public class StatementExpression
         StatementBlock blockTempOld = (StatementBlock) body.clone();
 
         // the resulting returned types come back in the type collector
-        ctx = enterCapture(ctx, blockTempOld);
+        ctx = enterStatementContext(ctx);
         StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
         ctx = ctx.exit();
 
@@ -176,7 +174,7 @@ public class StatementExpression
 
         // clone the body and validate it using the requested type to test if that type will work
         StatementBlock blockTempOld = (StatementBlock) body.clone();
-        ctx = enterCapture(ctx, blockTempOld);
+        ctx = enterStatementContext(ctx);
 
         m_atypeRequired = atypeRequired;
         StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
@@ -207,7 +205,13 @@ public class StatementExpression
         TypeFit        fit         = TypeFit.Fit;
         TypeConstant[] atypeActual = null;
         StatementBlock bodyOld     = body;
-        StatementBlock bodyNew     = (StatementBlock) bodyOld.validate(ctx, errs);
+
+        ctx = enterStatementContext(ctx);
+
+        StatementBlock bodyNew = (StatementBlock) bodyOld.validate(ctx, errs);
+
+        ctx = ctx.exit();
+
         if (bodyNew == null)
             {
             fit = TypeFit.NoFit;
@@ -272,18 +276,23 @@ public class StatementExpression
         }
 
     /**
-     * Create a context that bridges from the current context into a special compilation mode in
-     * which the values (or references / variables) of the outer context can be <i>captured</i>.
-     *
-     * @param ctx   the current (soon to be outer) context
-     * @param body  the StatementBlock of the lambda, anonymous inner class, or statement expression
-     *
-     * @return a capturing context
+     * Create a custom statement expression context.
      */
-    protected LambdaContext enterCapture(Context ctx, StatementBlock body)
+    protected StatementExpressionContext enterStatementContext(Context ctx)
         {
-        // TODO don't use LambdaContext? use a similar class specific to the StatementExpression?
-        return LambdaExpression.enterCapture(ctx, body, null, null);
+        return new StatementExpressionContext(ctx);
+        }
+
+    /**
+     * A custom context implementation for statement expression.
+     */
+    static protected class StatementExpressionContext
+            extends Context
+        {
+        public StatementExpressionContext(Context ctxOuter)
+            {
+            super(ctxOuter, true);
+            }
         }
 
 
