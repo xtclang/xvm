@@ -1,57 +1,48 @@
 module TestSimple
     {
-    @Inject Console console;
+    class Exposed
+        {
+        public    String pub = "public";
+        protected String pro = "protected";
+        private   String pri = "private";
+
+        @Override
+        String toString()
+            {
+            return $"pub={pub.quoted()}, pro={pro.quoted()}, pri={pri.quoted()}";
+            }
+        }
 
     void run()
         {
-        test1('A', Null);
-        }
+        @Inject Console console;
 
-    void test1(Char ch, String? error)
-        {
-        Int  factor;
+        Exposed expo = new Exposed();
+        console.println($"before: {expo}");
 
-        if (error != Null)
-            {
-            console.println(error);
-            return;
-            }
+        // you can only access public members from the default reference
+        expo.pub = $"this was {expo.pub}";
+     // expo.pro = $"this was {expo.pro}";              <- compiler error
+     // expo.pri = $"this was {expo.pri}";              <- compiler error
 
-        for (Int i : 0..4)
-            {
-            switch (ch)
-                {
-                case 'A':
-                    continue;
-                case 'a':
-                    factor = 1;
-                    Int q = 0;
-                    break;
+        // but you can ask for the protected reference ...
+        assert (protected Exposed) expoPro := &expo.revealAs((protected Exposed));
+        expoPro.pro = $"this was {expoPro.pro}";
+     // expoPro.pri = $"this was {expoPro.pri}";        <- compiler error
 
-                case 'B':
-                    continue;
-                case 'b':
-                    factor   = 2;
-                    break;
+        // and you can ask for the private reference ...
+        assert (private Exposed) expoPri := &expo.revealAs((private Exposed));
+        expoPri.pri = $"this was {expoPri.pri}";
 
-                case 'C':
-                    // commenting either one below used to allow to compile
-                    factor   = 6;
-                    (_, error) = decodeEscape(error);
-                    break;
+        console.println($"after: {expo}");
 
-                default:
-                    error ?:= "Illegal character";
-                    factor   = 100;
-                    break;
-                }
-            console.println(factor);
-            assert ch := ch.next();
-            }
-        }
+        // or you can ask for the underlying struct, which is a passive
+        // object that contains only the field storage
+        assert (struct Exposed) expoStr := &expo.revealAs((struct Exposed));
+        expoStr.pub = $"{expoStr.pub}!!!";
+        expoStr.pro = $"{expoStr.pro}!!!";
+        expoStr.pri = $"{expoStr.pri}!!!";
 
-    (Boolean, String?) decodeEscape(String? error)
-        {
-        return True, error;
+        console.println($"struct: {expo}");
         }
     }
