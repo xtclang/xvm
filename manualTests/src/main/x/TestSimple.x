@@ -1,15 +1,11 @@
-module TestSimple
+module CallMethod
     {
-    class Exposed
+    const Example(String text)
         {
-        public    String pub = "public";
-        protected String pro = "protected";
-        private   String pri = "private";
-
         @Override
         String toString()
             {
-            return $"pub={pub.quoted()}, pro={pro.quoted()}, pri={pri.quoted()}";
+            return $"This is an example with text={text}";
             }
         }
 
@@ -17,32 +13,10 @@ module TestSimple
         {
         @Inject Console console;
 
-        Exposed expo = new Exposed();
-        console.println($"before: {expo}");
-
-        // you can only access public members from the default reference
-        expo.pub = $"this was {expo.pub}";
-     // expo.pro = $"this was {expo.pro}";              <- compiler error
-     // expo.pri = $"this was {expo.pri}";              <- compiler error
-
-        // but you can ask for the protected reference ...
-        assert (protected Exposed) expoPro := &expo.revealAs((protected Exposed));
-        expoPro.pro = $"this was {expoPro.pro}";
-     // expoPro.pri = $"this was {expoPro.pri}";        <- compiler error
-
-        // and you can ask for the private reference ...
-        assert (private Exposed) expoPri := &expo.revealAs((private Exposed));
-        expoPri.pri = $"this was {expoPri.pri}";
-
-        console.println($"after: {expo}");
-
-        // or you can ask for the underlying struct, which is a passive
-        // object that contains only the field storage
-        assert (struct Exposed) expoStr := &expo.revealAs((struct Exposed));
-        expoStr.pub = $"{expoStr.pub}!!!";
-        expoStr.pro = $"{expoStr.pro}!!!";
-        expoStr.pri = $"{expoStr.pri}!!!";
-
-        console.println($"struct: {expo}");
+        Example example = new Example("hello!");
+        Method<Example, <>, <String>> method = Example.toString;
+        function String() func = method.bindTarget(example);
+        val func4 = &func();                                // used to assert the compiler
+        console.println($"Calling a fully bound function: {func4()}");
         }
     }

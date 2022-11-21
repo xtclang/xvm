@@ -3026,8 +3026,13 @@ public class InvocationExpression
 
         if (m_fBindParams)
             {
+            if (args.size() > pool().extractFunctionParams(typeFn).length)
+                {
+                return TypeConstant.NO_TYPES;
+                }
             typeFn = bindFunctionParameters(typeFn);
             }
+
         return new TypeConstant[] {typeFn};
         }
 
