@@ -2,10 +2,12 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -72,20 +74,26 @@ public abstract class Statement
         if (ctxOrigin.isReachable())
             {
             // generate a delta of assignment information for the jump
-            addBreak(nodeOrigin, ctxOrigin.prepareJump(ctxDest), label);
+            Map<String, Assignment> mapAsn = new HashMap<>();
+            Map<String, Argument>   mapArg = new HashMap<>();
+
+            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
+
+            addBreak(nodeOrigin, mapAsn, mapArg, label);
             }
 
         return label;
         }
 
-    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn, Label label)
+    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn,
+                            Map<String, Argument> mapsArg, Label label)
         {
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listBreaks == null)
             {
             m_listBreaks = new ArrayList<>();
             }
-        m_listBreaks.add(new Break(nodeOrigin, mapAsn, label));
+        m_listBreaks.add(new Break(nodeOrigin, mapAsn, mapsArg, label));
         }
 
     /**
@@ -149,7 +157,7 @@ public abstract class Statement
                     }
                 else
                     {
-                    ctx.merge(breakInfo.mapAssign);
+                    ctx.merge(breakInfo.mapAssign, breakInfo.mapNarrow);
 
                     if (breakInfo.label != null)
                         {
@@ -238,20 +246,22 @@ public abstract class Statement
      */
     protected abstract boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs);
 
-
     /**
      * The break info.
      */
     private static class Break
         {
-        Break(AstNode node, Map<String, Assignment> mapAssign, Label label)
+        Break(AstNode node, Map<String, Assignment> mapAssign, Map<String, Argument> mapNarrow,
+              Label label)
             {
             this.node      = node;
             this.mapAssign = mapAssign;
+            this.mapNarrow = mapNarrow;
             this.label     = label;
             }
         public final AstNode node;
         public final Map<String, Assignment> mapAssign;
+        public final Map<String, Argument> mapNarrow;
         public final Label label;
         }
 

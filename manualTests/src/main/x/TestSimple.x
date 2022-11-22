@@ -17,12 +17,11 @@ module TestSimple
                 bundle = "";
                 break;
                 }
-            bundle = Null; // used to be able to compile without this line
-            break;
+            bundle = Null;
             }
         while (serviceInfo);
 
-        report(bundle?);
+        report(bundle?); // used to fail to compile
         }
 
     void report(String message)

@@ -250,7 +250,7 @@ public class SwitchStatement
                 {
                 if (!entry.getKey().isDiscarded())
                     {
-                    addBreak(entry.getKey(), entry.getValue(), m_labelContinue);
+                    addBreak(entry.getKey(), entry.getValue(), Collections.EMPTY_MAP, m_labelContinue);
                     }
                 }
             m_listContinues = null;
@@ -268,12 +268,13 @@ public class SwitchStatement
         }
 
     @Override
-    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn, Label label)
+    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn,
+                            Map<String, Argument> mapsArg, Label label)
         {
         // we will process the assignments ourselves; see SwitchContext.mergeBreaks()
         m_listBreaks.add(mapAsn);
 
-        super.addBreak(nodeOrigin, Collections.EMPTY_MAP, label);
+        super.addBreak(nodeOrigin, Collections.EMPTY_MAP, Collections.EMPTY_MAP, label);
         }
 
     @Override
@@ -555,7 +556,7 @@ public class SwitchStatement
          * Merge a list of previously prepared set of variable assignment information into this
          * context by collecting assignments that were defined by *every* block.
          *
-         * @param listAdd a list of maps of assignments from a previous calls to {@link #addBreak)}
+         * @param listAdd a list of maps of assignments from a previous calls to {@link Statement#addBreak)}
          */
         protected void mergeBreaks(List<Map<String, Assignment>> listAdd)
             {

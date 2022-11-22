@@ -502,14 +502,27 @@ public class Context
             Register regNew = (Register) mapAddArg.get(sName);
             if (regNew != null)
                 {
-                Argument argOld = getVar(sName);
-                assert argOld != null;
+                Register regOld = (Register) getVar(sName);
+                assert regOld != null;
 
-                if (!argOld.equals(regNew) && argOld.getType().isA(regNew.getType()))
+                TypeConstant typeOld = regOld.getType();
+                TypeConstant typeNew = regNew.getType();
+                if (!typeOld.equals(typeNew))
                     {
-                    // the new type is wider - take it instead of the old narrower one
-                    assert !regNew.isInPlace();
-                    ensureNameMap().put(sName, regNew);
+                    if (typeOld.isA(typeNew))
+                        {
+                        // the new type is wider - take it instead of the old narrower one
+                        assert !regNew.isInPlace();
+                        replaceArgument(sName, Branch.Always, regNew);
+                        }
+                    else
+                        {
+                        TypeConstant typeJoin = typeNew.union(pool(), typeOld);
+                        if (!typeJoin.equals(typeOld))
+                            {
+                            replaceArgument(sName, Branch.Always, regOld.narrowType(typeJoin));
+                            }
+                        }
                     }
                 }
             }
