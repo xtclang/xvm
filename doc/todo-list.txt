@@ -7,8 +7,6 @@
 
 - entering the debugger should stop time
 
-- fix the definite assignment bug (on shelf)
-
 - add is(_) switch not-reachable type ordering error message
 
 - lambda capture of a non-effectively final var as a Ref or Var needs to be explicitly allowed
@@ -37,11 +35,6 @@
     const Test(HashMap<Int, String> map) - json serialization DOESN'T WORK
 
 - need to implement "persistent" mutators for HasherMap
-
-- improve error description for
-    "service S extends Closeable" (extends vs. implements)
-    "service S incorporates Closeable" (incorporates vs. implements)
-   etc. -- see TypeCompositionStatement.resolveNames()
 
 - should this compile?
     if (ParamType body := request.attributes.getAttribute(HttpAttributes.BODY))
