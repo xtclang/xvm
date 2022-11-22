@@ -1,7 +1,6 @@
 package org.xvm.asm.constants;
 
 import java.io.DataOutput;
-import java.io.IOException;
 
 import java.util.List;
 import java.util.Set;
@@ -13,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
+
 import org.xvm.util.Hash;
 
 /**
@@ -250,10 +250,10 @@ public class PendingTypeConstant
         }
 
     @Override
-    public boolean equals(Object that)
+    public boolean equals(Object obj)
         {
-        return that instanceof PendingTypeConstant &&
-            f_typeConstraint.equals(((PendingTypeConstant) that).f_typeConstraint);
+        return obj instanceof PendingTypeConstant that &&
+                this.f_typeConstraint.equals(that.f_typeConstraint);
         }
 
     @Override

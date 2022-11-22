@@ -36,7 +36,8 @@ public class PresentCondition
     public PresentCondition(ConstantPool pool, Constant constVMStruct)
         {
         super(pool);
-        assert constVMStruct  instanceof IdentityConstant || constVMStruct instanceof UnresolvedNameConstant;
+        assert constVMStruct instanceof IdentityConstant ||
+               constVMStruct instanceof UnresolvedNameConstant;
         m_constStruct = constVMStruct;
         }
 
@@ -98,12 +99,12 @@ public class PresentCondition
         }
 
     @Override
-    public Relation calcRelation(ConditionalConstant that)
+    public Relation calcRelation(ConditionalConstant constant)
         {
-        if (that instanceof PresentCondition)
+        if (constant instanceof PresentCondition that)
             {
             IdentityConstant constThis = (IdentityConstant) this.m_constStruct;
-            IdentityConstant constThat = (IdentityConstant) ((PresentCondition) that).m_constStruct;
+            IdentityConstant constThat = (IdentityConstant) that.m_constStruct;
             if (constThis.equals(constThat))
                 {
                 // they're testing the same thing
@@ -134,7 +135,7 @@ public class PresentCondition
                     : Relation.IMPLIED;
                 }
             }
-        else if (that instanceof VersionMatchesCondition thatCond &&
+        else if (constant instanceof VersionMatchesCondition thatCond &&
                  this.m_constStruct instanceof ModuleConstant constThisModule)
             {
             ModuleConstant constThatModule = thatCond.getModuleConstant();
@@ -172,13 +173,13 @@ public class PresentCondition
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant obj)
         {
-        if (!(that instanceof PresentCondition))
+        if (!(obj instanceof PresentCondition that))
             {
             return -1;
             }
-        return m_constStruct.compareTo(((PresentCondition) that).m_constStruct);
+        return m_constStruct.compareTo(that.m_constStruct);
         }
 
     @Override

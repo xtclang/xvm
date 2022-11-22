@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
