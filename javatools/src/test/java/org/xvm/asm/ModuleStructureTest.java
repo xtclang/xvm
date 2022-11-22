@@ -26,7 +26,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalParams()
-            throws IOException
         {
         // this should fail because a module can't have type params
         String src = "module test<SomeType> {}";
@@ -35,7 +34,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalExtends()
-            throws IOException
         {
         // this should fail because a module can't have type params
         String src = "module Test extends Something extends SomethingElse {}";
@@ -44,7 +42,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalImport()
-            throws IOException
         {
         // this should fail because a module doesn't "import"
         String src = "module Test import Something {}";
@@ -53,7 +50,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalImportEmbedded()
-            throws IOException
         {
         // this should fail because a module doesn't "import"
         String src = "module Test import:embedded Something {}";
@@ -62,7 +58,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalImportDesired()
-            throws IOException
         {
         // this should fail because a module doesn't "import"
         String src = "module Test import:desired Something {}";
@@ -71,7 +66,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalImportRequired()
-            throws IOException
         {
         // this should fail because a module doesn't "import"
         String src = "module Test import:required Something {}";
@@ -80,7 +74,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalImportOptional()
-            throws IOException
         {
         // this should fail because a module doesn't "import"
         String src = "module Test import:optional Something {}";
@@ -89,7 +82,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testParseIllegalInto()
-            throws IOException
         {
         // this should fail because a module does mix "into" something
         String src = "module Test into Something {}";
@@ -98,7 +90,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testModuleDoc()
-            throws IOException
         {
         String src = "/**\n * This is a module that\n\t* has some doc.\r\n */\nmodule Test {}";
         FileStructure   struct = compile(src, null, null);
@@ -108,7 +99,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testIllegalConstructorParams()
-            throws IOException
         {
         // this should fail because a module can't have constructor params (without defaults)
         String src = "module Test(Int x = 1, Int y) {}";
@@ -135,7 +125,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testIllegalPublicPublic()
-            throws IOException
         {
         // this should fail because a module can't be public x2
         String src = "public public module Test.mycompany.com {}";
@@ -144,7 +133,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testIllegalPrivate()
-            throws IOException
         {
         // this should fail because a module can't be private
         String src = "private module Test.mycompany.com {}";
@@ -153,7 +141,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testIllegalProtected()
-            throws IOException
         {
         // this should fail because a module can't be protected
         String src = "protected module Test.mycompany.com {}";
@@ -162,7 +149,6 @@ public class ModuleStructureTest
 
 //    @Test
     public void testIllegalStatic()
-            throws IOException
         {
         // this should fail because a module can't be declared static
         String src = "static module Test.mycompany.com {}";

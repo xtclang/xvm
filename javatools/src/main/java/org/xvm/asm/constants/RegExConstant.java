@@ -4,10 +4,12 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Objects;
+
 import java.util.regex.Pattern;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.quotedString;

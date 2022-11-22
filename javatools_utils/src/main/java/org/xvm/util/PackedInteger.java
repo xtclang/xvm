@@ -717,12 +717,11 @@ public class PackedInteger
     @Override
     public boolean equals(Object obj)
         {
-        if (!(obj instanceof PackedInteger))
+        if (!(obj instanceof PackedInteger that))
             {
             return false;
             }
 
-        PackedInteger that = (PackedInteger) obj;
         return this.isBig()
                 ? that.isBig() && this.getBigInteger().equals(that.getBigInteger())
                 : !that.isBig() && this.getLong() == that.getLong();

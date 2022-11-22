@@ -76,7 +76,7 @@ public class SetTest
 
         if (sTest == null)
             {
-            TestLoop: for (int i = 1; i <= cIters; ++i)
+            for (int i = 1; i <= cIters; ++i)
                 {
                 out("Running test# " + i);
                 if (!randomTest(cSteps))
@@ -94,12 +94,12 @@ public class SetTest
 //    @Test
     public void sizeTestHashSet()
         {
-        sizeTest(new HashSet<Integer>());
+        sizeTest(new HashSet<>());
         }
 //    @Test
     public void sizeTestListSet()
         {
-        sizeTest(new ListSet<Integer>());
+        sizeTest(new ListSet<>());
         }
     static void sizeTest(Set<Integer> set)
         {
@@ -128,12 +128,12 @@ public class SetTest
         long l0 = System.currentTimeMillis();
         for (int i = 0; i < cIters; ++i)
             {
-            speedTest(new HashSet<Integer>());
+            speedTest(new HashSet<>());
             }
         long l1 = System.currentTimeMillis();
         for (int i = 0; i < cIters; ++i)
             {
-            speedTest(new ListSet<Integer>());
+            speedTest(new ListSet<>());
             }
         long l2 = System.currentTimeMillis();
         if (fPrint)

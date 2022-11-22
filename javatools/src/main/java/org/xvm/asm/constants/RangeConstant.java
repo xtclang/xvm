@@ -312,12 +312,11 @@ public class RangeConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (!(that instanceof RangeConstant))
+        if (!(that instanceof RangeConstant range))
             {
             return -1;
             }
 
-        RangeConstant range = (RangeConstant) that;
         int nResult = this.m_const1.compareTo(range.m_const1);
         if (nResult == 0)
             {

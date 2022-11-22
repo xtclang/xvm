@@ -78,18 +78,17 @@ public class IdentityArrayList<E>
             return true;
             }
 
-        if (!(o instanceof List))
+        if (!(o instanceof List that))
             {
             return false;
             }
 
-        List that = (List) o;
         if (this.size() != that.size())
             {
             return false;
             }
 
-        for (ListIterator iterThis = this.listIterator(), iterThat = ((List) o).listIterator();
+        for (ListIterator iterThis = this.listIterator(), iterThat = that.listIterator();
                 iterThis.hasNext() && iterThat.hasNext(); )
             {
             if (iterThis.next() != iterThat.next())

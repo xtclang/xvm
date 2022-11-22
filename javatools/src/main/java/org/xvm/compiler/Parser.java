@@ -759,7 +759,7 @@ public class Parser
     List<Statement> parseTypeCompositionComponents(Expression exprCondition, List<Statement> stmts, boolean fFileLevel)
         {
         boolean fFoundType = false;
-        NextComponent: while (match(Id.R_CURLY) == null)
+        while (match(Id.R_CURLY) == null)
             {
             Statement stmt;
             switch (peek().getId())
@@ -823,7 +823,7 @@ public class Parser
 
                     // there is no "if statement" per se; instead, the expression was simply pushed
                     // down to any type composition components that were encountered inside the if
-                    continue NextComponent;
+                    continue;
                     }
 
                 default:
@@ -4090,12 +4090,7 @@ public class Parser
                 String  sFile   = (String) tokFile.getValue();
                 boolean fDir    = !fContents && sFile.endsWith("/");
                 long    lEnd    = tokFile.getEndPosition();
-                File    file    = null;
-                try
-                    {
-                    file = m_source.resolvePath(sFile);
-                    }
-                catch (IOException ignore) {}
+                File    file    = m_source.resolvePath(sFile);
 
                 Token   tokData = null;
                 boolean fErr    = false;
@@ -4588,12 +4583,7 @@ public class Parser
                 boolean fReqDir  = sFile.endsWith("/") || !fReqFile;
                 long    lStart   = type.getStartPosition();
                 long    lEnd     = tokFile.getEndPosition();
-                File    file     = null;
-                try
-                    {
-                    file = m_source.resolvePath(sFile);
-                    }
-                catch (IOException ignore) {}
+                File    file     = m_source.resolvePath(sFile);
 
                 if (file == null || !file.exists()              // path must exist
                         || fReqFile && fReqDir                  // can't be both a file and a dir
@@ -6422,7 +6412,7 @@ public class Parser
     private Token m_doc;
 
     /**
-     * The top-most (outer-most) type declaration of the compilation unit, such
+     * The top-most (outermost) type declaration of the compilation unit, such
      * as a module.
      */
     private StatementBlock m_root;

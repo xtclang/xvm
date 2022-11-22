@@ -78,7 +78,6 @@ public class NativeRebaseConstant
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
         {
         throw new IllegalStateException();
         }

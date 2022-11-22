@@ -11,8 +11,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 
@@ -21,6 +19,7 @@ import org.xvm.runtime.template.numbers.xUInt8;
 import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToBoolean;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToNibble;
 

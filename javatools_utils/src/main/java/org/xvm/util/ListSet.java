@@ -382,9 +382,8 @@ public class ListSet<E>
         while (iSrc < iSrcEnd)
             {
             Object elem = aElem[iSrc & nMask];
-            if (elem instanceof Stop)
+            if (elem instanceof Stop stopCur)
                 {
-                Stop stopCur = (Stop) elem;
                 if (!fFront && !stopCur.isDisposable())
                     {
                     if (stop == null)
@@ -546,9 +545,8 @@ public class ListSet<E>
             for (int iTest = iNext+1, iLast = m_iHead - 1; iTest <= iLast; ++iTest)
                 {
                 Object eCur = aElem[iTest & nMask];
-                if (eCur instanceof Stop)
+                if (eCur instanceof Stop stop)
                     {
-                    Stop stop = (Stop) eCur;
                     if (stop.appliesTo(nStop))
                         {
                         return iNext;

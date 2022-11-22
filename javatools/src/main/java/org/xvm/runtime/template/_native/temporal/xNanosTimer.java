@@ -525,7 +525,7 @@ public class xNanosTimer
                     Alarm   alarm      = m_alarm;
                     if (alarm != null)
                         {
-                        alarm.f_context.unregisterNotification();;
+                        alarm.f_context.unregisterNotification();
                         m_alarm = null;
                         }
                     return fCancelled;

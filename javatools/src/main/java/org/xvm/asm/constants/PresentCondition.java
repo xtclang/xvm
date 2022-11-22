@@ -13,7 +13,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 
-import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -135,10 +134,10 @@ public class PresentCondition
                     : Relation.IMPLIED;
                 }
             }
-        else if (that instanceof VersionMatchesCondition && this.m_constStruct instanceof ModuleConstant)
+        else if (that instanceof VersionMatchesCondition thatCond &&
+                 this.m_constStruct instanceof ModuleConstant constThisModule)
             {
-            ModuleConstant constThisModule = (ModuleConstant) this.m_constStruct;
-            ModuleConstant constThatModule = ((VersionMatchesCondition) that).getModuleConstant();
+            ModuleConstant constThatModule = thatCond.getModuleConstant();
             if (constThisModule.equals(constThatModule))
                 {
                 // so "this" is checking that the module is present at all, and "that" is checking

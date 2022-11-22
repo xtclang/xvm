@@ -10,9 +10,8 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
-
 import org.xvm.asm.Version;
-import org.xvm.util.Handy;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
@@ -110,16 +109,15 @@ public class VersionMatchesCondition
         }
 
     @Override
-    public Relation calcRelation(ConditionalConstant that)
+    public Relation calcRelation(ConditionalConstant constant)
         {
-        if (that instanceof VersionMatchesCondition)
+        if (constant instanceof VersionMatchesCondition that)
             {
             // too bad Java doesn't respect the "if instanceof" we just suffered through
-            VersionMatchesCondition thaT = (VersionMatchesCondition) that;
-            if (this.m_constStruct.equals(thaT.m_constStruct))
+            if (this.m_constStruct.equals(that.m_constStruct))
                 {
                 Version verThis = this.m_constVer.getVersion();
-                Version verThat = thaT.m_constVer.getVersion();
+                Version verThat = that.m_constVer.getVersion();
 
                 if (verThis.isSameAs(verThat))
                     {
@@ -139,11 +137,11 @@ public class VersionMatchesCondition
                 return Relation.MUTEX;
                 }
             }
-        else if (that instanceof PresentCondition)
+        else if (constant instanceof PresentCondition)
             {
             // these two are potentially related, but instead of duplicating the code, let's keep
             // the logic over on PresentCondition
-            return that.calcRelation(this).reverse();
+            return constant.calcRelation(this).reverse();
             }
 
         return Relation.INDEP;
@@ -172,17 +170,16 @@ public class VersionMatchesCondition
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant obj)
         {
-        if (!(that instanceof VersionMatchesCondition))
+        if (!(obj instanceof VersionMatchesCondition that))
             {
             return -1;
             }
-        VersionMatchesCondition constThat = (VersionMatchesCondition) that;
-        int nResult = m_constStruct.compareTo(constThat.m_constStruct);
+        int nResult = m_constStruct.compareTo(that.m_constStruct);
         if (nResult == 0)
             {
-            nResult = m_constVer.compareTo(constThat.m_constVer);
+            nResult = m_constVer.compareTo(that.m_constVer);
             }
 
         return nResult;

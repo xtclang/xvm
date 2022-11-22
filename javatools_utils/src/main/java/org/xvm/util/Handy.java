@@ -1615,7 +1615,7 @@ public class Handy
      */
     public static <T> ArrayList<T> startList(T[] ao, int c)
         {
-        return appendList(new ArrayList<T>(), ao, 0, c);
+        return appendList(new ArrayList<>(), ao, 0, c);
         }
 
     /**

@@ -126,11 +126,9 @@ public class ChildInfo
             {
             fCombine = true;
             }
-        else if (this.f_child instanceof ClassStructure && that.f_child instanceof ClassStructure)
+        else if (this.f_child instanceof ClassStructure clzThis &&
+                 that.f_child instanceof ClassStructure clzThat)
             {
-            ClassStructure clzThis = (ClassStructure) this.f_child;
-            ClassStructure clzThat = (ClassStructure) that.f_child;
-
             // "static" attribute must be the same
             if (clzThis.isStatic() == clzThat.isStatic())
                 {
@@ -143,7 +141,7 @@ public class ChildInfo
                 // for virtual child assume that override is all that we need;
                 // if the combination is illegal, that needs to be detected by the TypeInfo creation
                 // for the child itself
-                fCombine = ((ClassStructure) that.f_child).isExplicitlyOverride();
+                fCombine = clzThat.isExplicitlyOverride();
                 }
             }
 

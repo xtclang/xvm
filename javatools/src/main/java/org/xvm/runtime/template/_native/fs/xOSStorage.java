@@ -338,7 +338,7 @@ public class xOSStorage
         @Override
         public void run()
             {
-            try (var x = ConstantPool.withPool(f_pool))
+            try (var ignore = ConstantPool.withPool(f_pool))
                 {
                 while (true)
                     {

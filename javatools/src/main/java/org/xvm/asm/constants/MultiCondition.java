@@ -142,7 +142,7 @@ public abstract class MultiCondition
      */
     public Iterator<ConditionalConstant> flatIterator()
         {
-        return new Iterator<ConditionalConstant>()
+        return new Iterator<>()
             {
             final ConditionalConstant[]   acond   = m_aconstCond;
             int                           iNext   = 0;
@@ -361,13 +361,12 @@ public abstract class MultiCondition
         // TODO this should all be moved to the compareDetails() method, and the equals() method should be dropped (let Constant.equals() handle it by calling compareDetails())
 
         // must both be multi-conditions
-        if (!(obj instanceof MultiCondition))
+        if (!(obj instanceof MultiCondition that))
             {
             return false;
             }
 
         // must both have the same operator
-        final MultiCondition that = (MultiCondition) obj;
         if (!this.getOperatorString().equals(that.getOperatorString()))
             {
             return false;

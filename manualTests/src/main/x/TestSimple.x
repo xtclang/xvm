@@ -28,4 +28,6 @@ module TestSimple
         {
         console.println(message);
         }
+
+    service S incorporates Closeable{}
     }

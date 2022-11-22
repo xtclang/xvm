@@ -49,7 +49,7 @@ public class VersionTree<V>
      */
     public Iterator<Version> iterator()
         {
-        return new Iterator<Version>()
+        return new Iterator<>()
             {
             @Override
             public boolean hasNext()
@@ -366,9 +366,8 @@ public class VersionTree<V>
             return true;
             }
 
-        if (o instanceof VersionTree)
+        if (o instanceof VersionTree<?> that)
             {
-            VersionTree<?> that = (VersionTree<?>) o;
             if (this.size() == that.size())
                 {
                 for (Iterator<Version> iterThis = this.iterator(), iterThat = that.iterator();

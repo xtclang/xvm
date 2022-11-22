@@ -45,7 +45,6 @@ public class KeywordConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public KeywordConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
         {
         this(pool, format);
         }

@@ -121,9 +121,8 @@ public class AllCondition
         ConditionalConstant[] acondOld = m_aconstCond;
         int                   cConds   = acondOld.length;
         ConditionalConstant   condLast = acondOld[cConds-1];
-        if (condLast instanceof AnyCondition)
+        if (condLast instanceof AnyCondition condAny)
             {
-            AnyCondition condAny = (AnyCondition) condLast;
             if (condAny.isOnlyVersions())
                 {
                 ConditionalConstant[] acondNew = acondOld.clone();
@@ -179,7 +178,6 @@ public class AllCondition
                     return acondOld[0];
 
                 default:
-                    ConstantPool          pool     = getConstantPool();
                     ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
                     System.arraycopy(acondOld, 0, acondNew, 0, cConds-1);
                     return new AllCondition(acondNew);

@@ -245,7 +245,6 @@ public class PendingTypeConstant
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
         {
         throw new IllegalStateException();
         }

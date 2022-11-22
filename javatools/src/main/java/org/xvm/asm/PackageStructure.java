@@ -168,13 +168,12 @@ public class PackageStructure
             return true;
             }
 
-        if (!(obj instanceof PackageStructure && super.equals(obj)))
+        if (!(obj instanceof PackageStructure that && super.equals(obj)))
             {
             return false;
             }
 
         // compare imported modules
-        PackageStructure that = (PackageStructure) obj;
         return Handy.equals(this.m_constModule, that.m_constModule);
         }
 

@@ -15,7 +15,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.Version;
 
-import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -179,11 +178,10 @@ public class VersionedCondition
     @Override
     protected int compareDetails(Constant that)
         {
-        if (!(that instanceof VersionedCondition))
+        if (!(that instanceof VersionedCondition constThat))
             {
             return -1;
             }
-        VersionedCondition constThat = (VersionedCondition) that;
         return m_constVer.compareTo(constThat.m_constVer);
         }
 

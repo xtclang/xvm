@@ -1,8 +1,6 @@
 package org.xvm.runtime.template._native.mgmt;
 
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 
 import java.util.Collections;
@@ -25,9 +23,6 @@ import org.xvm.runtime.NestedContainer;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
-
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
-import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;

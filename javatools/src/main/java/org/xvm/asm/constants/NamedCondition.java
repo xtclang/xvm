@@ -11,7 +11,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 
-import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;

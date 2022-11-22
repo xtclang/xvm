@@ -547,7 +547,6 @@ public class CompositeComponent
 
     @Override
     protected void disassemble(DataInput in)
-            throws IOException
         {
         throw new UnsupportedOperationException();
         }
@@ -560,7 +559,6 @@ public class CompositeComponent
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
         {
         throw new UnsupportedOperationException();
         }

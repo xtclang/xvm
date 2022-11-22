@@ -454,7 +454,7 @@ public class MapConstant
             Set<K> set = setKeys;
             if (set == null)
                 {
-                setKeys = set = new AbstractSet<K>()
+                setKeys = set = new AbstractSet<>()
                     {
                     @Override
                     public int size()
@@ -471,7 +471,7 @@ public class MapConstant
                     @Override
                     public Iterator<K> iterator()
                         {
-                        return new Iterator<K>()
+                        return new Iterator<>()
                             {
                             @Override
                             public K next()
@@ -503,7 +503,7 @@ public class MapConstant
             Set<Entry<K,V>> set = setEntries;
             if (set == null)
                 {
-                setEntries = set = new AbstractSet<Entry<K,V>>()
+                setEntries = set = new AbstractSet<>()
                     {
                     @Override
                     public int size()
@@ -514,7 +514,7 @@ public class MapConstant
                     @Override
                     public Iterator<Entry<K,V>> iterator()
                         {
-                        return new Iterator<Entry<K,V>>()
+                        return new Iterator<>()
                             {
                             @Override
                             public Entry<K, V> next()

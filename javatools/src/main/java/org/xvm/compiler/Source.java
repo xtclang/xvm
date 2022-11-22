@@ -164,7 +164,6 @@ public class Source
      * @return the File for the file or directory, or null if unresolvable
      */
     public File resolvePath(String sFile)
-            throws IOException
         {
         if (m_file == null || sFile.length() == 0)
             {

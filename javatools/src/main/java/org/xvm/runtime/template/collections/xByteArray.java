@@ -18,7 +18,6 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;

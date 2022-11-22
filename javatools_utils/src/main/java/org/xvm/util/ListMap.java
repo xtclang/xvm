@@ -62,7 +62,7 @@ public class ListMap<K,V>
             throw new UnsupportedOperationException();
             }
 
-        m_list.add(new SimpleEntry<K, V>(key, value));
+        m_list.add(new SimpleEntry<>(key, value));
         return null;
         }
 

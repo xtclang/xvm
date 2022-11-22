@@ -507,7 +507,6 @@ public class UnresolvedTypeConstant
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
         {
         throw new IllegalStateException(toString());
         }

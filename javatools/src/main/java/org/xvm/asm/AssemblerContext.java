@@ -345,9 +345,8 @@ public class AssemblerContext
         ConditionalConstant condRaw = pop();
 
         boolean fMatch = false;
-        if (condRaw instanceof VersionMatchesCondition)
+        if (condRaw instanceof VersionMatchesCondition cond)
             {
-            VersionMatchesCondition cond = (VersionMatchesCondition) condRaw;
             if (cond.getModuleConstant().equals(constModule) && cond.getVersionConstant().equals(constVer))
                 {
                 fMatch = true;

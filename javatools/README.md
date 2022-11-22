@@ -55,6 +55,6 @@ LLVM-based adaptive compiler).
 is expected, because it is only intended as a proof-of-concept.
 The runtime is currently implemented as an interpreter, and
 the interpreter (which would be naturally slow to begin with)
-has not been optimized. Its pupose is to be malleable and easy
+has not been optimized. Its purpose is to be malleable and easy
 to test, so that we could prove out the design of the compiler
 and the Ecstasy IR.

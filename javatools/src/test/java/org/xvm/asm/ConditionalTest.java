@@ -24,7 +24,6 @@ public class ConditionalTest
     {
 //    @Test
     public void testSimple()
-            throws IOException
         {
         FileStructure       file   = new FileStructure("test");
         ConstantPool        pool   = file.getConstantPool();

@@ -140,14 +140,12 @@ public class HandyTest
 
     @Test
     public void testByteArrayToHexDump()
-            throws IOException
         {
         Assert.assertEquals("00: 41 42 AB\n02: 43    C ", byteArrayToHexDump("ABC".getBytes(), 2));
         }
 
     @Test
     public void testByteArrayToHexDump2()
-            throws IOException
         {
         byte[] ab = new byte[0x700];
         ab[0x500] = (byte) 'A';

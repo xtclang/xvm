@@ -111,14 +111,14 @@ public class SimulatedLinkerContext
                         }
                     present.put(((PresentCondition) condEach).getPresentConstant(), true);
                     }
-                else if (condEach instanceof VersionMatchesCondition)
+                else if (condEach instanceof VersionMatchesCondition condModuleVer)
                     {
                     if (modules.isEmpty())
                         {
                         modules = new HashMap<>();
                         }
-                    VersionMatchesCondition condModuleVer = (VersionMatchesCondition) condEach;
-                    modules.put(condModuleVer.getModuleConstant(), condModuleVer.getVersionConstant().getVersion());
+                    modules.put(condModuleVer.getModuleConstant(),
+                            condModuleVer.getVersionConstant().getVersion());
                     }
                 else if (condEach instanceof VersionedCondition)
                     {
@@ -212,12 +212,8 @@ public class SimulatedLinkerContext
     @Override
     public boolean equals(Object obj)
         {
-        if (obj instanceof SimulatedLinkerContext)
-            {
-            SimulatedLinkerContext that = (SimulatedLinkerContext) obj;
-            return this == that || Handy.equals(this.cond, that.cond);
-            }
-        return false;
+        return obj instanceof SimulatedLinkerContext that
+                && (this == that || Handy.equals(this.cond, that.cond));
         }
 
     @Override
