@@ -387,7 +387,7 @@ public class ForStatement
             // expression evaluates to "false"
             ctx = ctx.enterIf();
 
-            boolean fAlwaysTrue = false;
+            boolean fAlwaysTrue = cConds == 0; // for(;;) is "always true"
             for (int i = 0; i < cConds; ++i)
                 {
                 AstNode cond = getCondition(i);

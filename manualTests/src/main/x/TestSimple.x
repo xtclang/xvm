@@ -1,22 +1,32 @@
-module CallMethod
+module TestSimple
     {
-    const Example(String text)
-        {
-        @Override
-        String toString()
-            {
-            return $"This is an example with text={text}";
-            }
-        }
+    @Inject Console console;
 
     void run()
         {
-        @Inject Console console;
+        }
 
-        Example example = new Example("hello!");
-        Method<Example, <>, <String>> method = Example.toString;
-        function String() func = method.bindTarget(example);
-        val func4 = &func();                                // used to assert the compiler
-        console.println($"Calling a fully bound function: {func4()}");
+    void test(Boolean serviceInfo)
+        {
+        String? bundle;
+
+        do
+            {
+            if (!serviceInfo)
+                {
+                bundle = "";
+                break;
+                }
+            bundle = Null; // used to be able to compile without this line
+            break;
+            }
+        while (serviceInfo);
+
+        report(bundle?);
+        }
+
+    void report(String message)
+        {
+        console.println(message);
         }
     }

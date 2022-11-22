@@ -123,9 +123,10 @@ public class StatementExpression
 
         // clone the body (to avoid damaging the original) and validate it to calculate its type
         StatementBlock blockTempOld = (StatementBlock) body.clone();
+        blockTempOld.suppressScope();
+        ctx = enterStatementContext(ctx);
 
         // the resulting returned types come back in the type collector
-        ctx = enterStatementContext(ctx);
         StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
         ctx = ctx.exit();
 
@@ -172,11 +173,13 @@ public class StatementExpression
             return TypeFit.Fit;
             }
 
+        m_atypeRequired = atypeRequired;
+
         // clone the body and validate it using the requested type to test if that type will work
         StatementBlock blockTempOld = (StatementBlock) body.clone();
+        blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
-        m_atypeRequired = atypeRequired;
         StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
         ctx = ctx.exit();
 
@@ -206,6 +209,7 @@ public class StatementExpression
         TypeConstant[] atypeActual = null;
         StatementBlock bodyOld     = body;
 
+        bodyOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
         StatementBlock bodyNew = (StatementBlock) bodyOld.validate(ctx, errs);
@@ -292,6 +296,21 @@ public class StatementExpression
         public StatementExpressionContext(Context ctxOuter)
             {
             super(ctxOuter, true);
+            }
+
+        @Override
+        public Context exit()
+            {
+            // the "statement expression" is an "inline lambda", that represents a conceptually
+            // nested unit of compilation that produces one or more values which become the value(s)
+            // of the expression; as a result, the "return" statement inside of the statement
+            // expression is simply the means to yield the value(s), and does not exit the
+            // containing method (as "return" normally would), so the control flow is simply
+            // returned to the enclosing context, and as such, the current point in this context is
+            // still considered to be reachable (unlike after a normal method "return")
+            setReachable(true);
+
+            return super.exit();
             }
         }
 

@@ -544,8 +544,9 @@ public class Context
                 {
                 Assignment asnOuter = ctxOuter.getVarAssignment(sName);
                 asnOuter = fCompletes
-                    ? promote(sName, asnInner, asnOuter)
-                    : asnInner.promoteFromNonCompleting(asnOuter);
+                        ? promote(sName, asnInner, asnOuter)
+                        : asnOuter.promoteFromNonCompleting(asnInner);
+
                 if (fDemuxing)
                     {
                     asnOuter = asnOuter.demux();
