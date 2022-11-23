@@ -448,6 +448,12 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isClass()
+        {
+        return isTypeResolved() && getResolvedType().isClass();
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         return !m_fRecursive && (m_type == null || m_type.containsUnresolved());

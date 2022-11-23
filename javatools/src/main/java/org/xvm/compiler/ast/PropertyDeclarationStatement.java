@@ -322,14 +322,14 @@ public class PropertyDeclarationStatement
                 }
             else if (fStatic)
                 {
-                // illegal to combine a setter-specific access with static
+                // illegal to combine a setter specific access with static
                 log(errs, Severity.ERROR, Compiler.STATIC_PROP_HAS_SETTER_ACCESS,
                         sName, container.getIdentityConstant().getValueString());
                 accessSet = null;
                 }
             else if (accessSet.isMoreAccessibleThan(accessGet))
                 {
-                // illegal to have a setter-specific access that is more accessible than the default
+                // illegal to have a setter specific access that is more accessible than the default
                 // access (the getter access)
                 log(errs, Severity.ERROR, Compiler.PROP_SETTER_ACCESS_TOO_ACCESSIBLE,
                         sName, container.getIdentityConstant().getValueString());
@@ -460,7 +460,7 @@ public class PropertyDeclarationStatement
                     if (fConstant)
                         {
                         Constant constValue = valueTest.toConstant();
-                        assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
+                        assert !constValue.containsUnresolved();
                         prop.setInitialValue(valueTest.validateAndConvertConstant(constValue, type, errs));
 
                         // despite having a constant initial value, the property may still require

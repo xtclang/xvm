@@ -778,6 +778,15 @@ public abstract class IdentityConstant
         }
 
     @Override
+    public Constant convertTo(TypeConstant typeOut)
+        {
+        ConstantPool pool = getConstantPool();
+        return typeOut.equals(pool.typeClass())
+                ? new DecoratedClassConstant(pool, this.getType())
+                : super.convertTo(typeOut);
+        }
+
+    @Override
     protected Object getLocator()
         {
         // this protected method must be present here to make it accessible to other classes in this

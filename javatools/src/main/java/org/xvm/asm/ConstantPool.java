@@ -1159,9 +1159,9 @@ public class ConstantPool
             }
         while (typeCur != null);
 
-        return fUseType || !(type.getDefiningConstant() instanceof ClassConstant)
-                ? (DecoratedClassConstant) register(new DecoratedClassConstant(this, type))
-                : (ClassConstant)          register(type.getDefiningConstant());
+        return type.getDefiningConstant() instanceof ClassConstant idClz && !fUseType
+                ? (IdentityConstant)       register(idClz)
+                : (DecoratedClassConstant) register(new DecoratedClassConstant(this, type));
         }
 
     /**
