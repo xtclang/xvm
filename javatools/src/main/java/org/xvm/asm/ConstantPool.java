@@ -4163,9 +4163,12 @@ public class ConstantPool
 
             ErrorList errs   = new ErrorList(1);
             Parser    parser = new Parser(src, errs);
-            s_implicits       = parser.parseImplicits();
+            Map<String, String[]> mapImplicits = parser.parseImplicits();
+
+            s_implicits       = new HashMap<>(mapImplicits);
             s_implicitsByPath = new HashMap<>();
-            for (Map.Entry<String, String[]> entry : s_implicits.entrySet())
+
+            for (Map.Entry<String, String[]> entry : mapImplicits.entrySet())
                 {
                 StringBuilder sb     = new StringBuilder();
                 boolean       fFirst = true;

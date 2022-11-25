@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +24,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.*;
 
 import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -126,7 +126,7 @@ public class Parser
      */
     public Map<String, String[]> parseImplicits()
         {
-        Map<String, String[]> imports = new HashMap<>();
+        Map<String, String[]> imports = new ListMap<>();
 
         while (!eof())
             {
