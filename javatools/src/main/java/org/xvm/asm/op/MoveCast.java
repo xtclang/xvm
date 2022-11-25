@@ -99,7 +99,7 @@ public class MoveCast
 
         if (!typeFrom.isA(typeTo))
             {
-            return frame.raiseException(xException.illegalCast(frame, typeFrom.getValueString()));
+            return frame.raiseException(xException.typeMismatch(frame, typeFrom.getValueString()));
             }
 
         if (frame.isNextRegister(m_nToValue))

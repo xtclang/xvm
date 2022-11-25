@@ -679,7 +679,7 @@ public class xRef
             ObjectHandle hMasked    = hGeneric.maskAs(frame.f_context.f_container, typeMasked);
 
             return hMasked == null
-                ? frame.raiseException(xException.illegalCast(frame, typeMasked.getValueString()))
+                ? frame.raiseException(xException.typeMismatch(frame, typeMasked.getValueString()))
                 : frame.assignValue(iReturn, hMasked);
             }
         else

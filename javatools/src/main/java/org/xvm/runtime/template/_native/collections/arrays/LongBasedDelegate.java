@@ -162,7 +162,7 @@ public abstract class LongBasedDelegate
         catch (ClassCastException e)
             {
             return frame.raiseException(
-                xException.illegalCast(frame, hValue.getType().getValueString()));
+                xException.typeMismatch(frame, hValue.getType().getValueString()));
             }
         }
 

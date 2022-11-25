@@ -296,11 +296,14 @@ public class AnnotatedTypeConstant
             listAnnos.add(typeAnno.getAnnotation());
 
             TypeConstant typeNext = typeAnno.getUnderlyingType();
-            if (!(typeNext instanceof AnnotatedTypeConstant))
+            if (typeNext instanceof AnnotatedTypeConstant typeNextA)
+                {
+                typeAnno = typeNextA;
+                }
+            else
                 {
                 break;
                 }
-            typeAnno = (AnnotatedTypeConstant) typeNext;
             }
         return listAnnos.toArray(Annotation.NO_ANNOTATIONS);
         }

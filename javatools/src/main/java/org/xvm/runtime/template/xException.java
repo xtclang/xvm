@@ -134,7 +134,7 @@ public class xException
         return makeHandle(frame, s_clzIllegalArgument, sMsg);
         }
 
-    public static ExceptionHandle illegalCast(Frame frame, String sType)
+    public static ExceptionHandle typeMismatch(Frame frame, String sType)
         {
         return makeHandle(frame, s_clzTypeMismatch, sType);
         }

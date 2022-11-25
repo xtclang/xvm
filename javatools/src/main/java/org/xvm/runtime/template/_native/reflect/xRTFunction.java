@@ -328,7 +328,7 @@ public class xRTFunction
             if (!typeArg.isA(typeParam))
                 {
                 return frame.raiseException(
-                    xException.illegalCast(frame, typeArg.getValueString()));
+                    xException.typeMismatch(frame, typeArg.getValueString()));
                 }
             }
 
@@ -1545,8 +1545,6 @@ public class xRTFunction
             }
         else
             {
-            clzConstruct = INSTANCE.ensureClass(container, constructor);
-
             Annotation[] aAnno = constructor.getAnnotations();
             if (aAnno.length > 0)
                 {
@@ -1580,7 +1578,14 @@ public class xRTFunction
 
                     case Op.R_EXCEPTION:
                         return new DeferredCallHandle(frame.m_hException);
+
+                    default:
+                        throw new IllegalStateException();
                     }
+                }
+            else
+                {
+                clzConstruct = INSTANCE.ensureClass(container, constructor);
                 }
             }
 

@@ -326,9 +326,9 @@ public class TupleExpression
                 {
                 // required type could be a union type. e.g. (T1 | Tuple<T2>), in which case
                 // we could use a very simple helper; otherwise use implicit types
-                if (typeRequired instanceof UnionTypeConstant)
+                if (typeRequired instanceof UnionTypeConstant typeUnion)
                     {
-                    TypeConstant typeTuple = ((UnionTypeConstant) typeRequired).extractTuple();
+                    TypeConstant typeTuple = typeUnion.extractTuple();
                     if (typeTuple != null)
                         {
                         aReqTypes = typeTuple.getParamTypesArray();
