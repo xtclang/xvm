@@ -262,7 +262,24 @@ public class RangeConstant
     @Override
     public TypeConstant getType()
         {
-        return getConstantPool().ensureRangeType(m_const1.getType());
+        TypeConstant type1 = m_const1.getType();
+        TypeConstant type2 = m_const2.getType();
+        if (type1.equals(type2))
+            {
+            return getConstantPool().ensureRangeType(type1);
+            }
+        if (m_const1 instanceof EnumValueConstant enumVal1 &&
+            m_const2 instanceof EnumValueConstant enumVal2)
+            {
+            IdentityConstant idEnum1 = enumVal1.getClassConstant().getParentConstant();
+            IdentityConstant idEnum2 = enumVal2.getClassConstant().getParentConstant();
+
+            if (idEnum1.equals(idEnum2))
+                {
+                return getConstantPool().ensureRangeType(idEnum1.getType());
+                }
+            }
+        throw new IllegalStateException("Non-uniform range " + this);
         }
 
     /**
