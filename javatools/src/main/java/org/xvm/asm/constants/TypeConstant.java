@@ -6684,7 +6684,14 @@ public abstract class TypeConstant
             Component        prop = clz.getChild("default");
             if (prop instanceof PropertyStructure propDefault)
                 {
-                return propDefault.getInitialValue();
+                Constant constDefault = propDefault.getInitialValue();
+                if (isAnnotated() &&
+                        containsAnnotation(getConstantPool().clzUnchecked()) &&
+                        constDefault instanceof IntConstant constInt)
+                    {
+                    constDefault = constInt.toUnchecked();
+                    }
+                return constDefault;
                 }
             }
         else if (isNullable())

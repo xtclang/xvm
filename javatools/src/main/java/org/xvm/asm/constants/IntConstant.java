@@ -229,6 +229,42 @@ public class IntConstant
         }
 
     /**
+     * @return an unchecked constant value of the same magnitude
+     */
+    public IntConstant toUnchecked()
+        {
+        switch (m_fmt)
+            {
+            case Int16:
+            case Int32:
+            case Int64:
+            case Int128:
+            case IntN:
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+            case UIntN:
+                return this;
+
+            case CInt16:
+            case CInt32:
+            case CInt64:
+            case CInt128:
+            case CIntN:
+            case CUInt16:
+            case CUInt32:
+            case CUInt64:
+            case CUInt128:
+            case CUIntN:
+                return new IntConstant(getConstantPool(), normalize(m_fmt), m_pint);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
      * @return the number of bytes in the integer format
      */
     public int byteSize()
