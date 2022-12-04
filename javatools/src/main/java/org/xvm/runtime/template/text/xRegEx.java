@@ -13,6 +13,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.RegExConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -25,6 +26,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -72,7 +74,12 @@ public class xRegEx
 
         m_clzMatchStruct   = clzMatch.ensureAccess(Constants.Access.STRUCT);
         m_constructorMatch = templateMatch.getStructure().findMethod("construct", 3);
-        m_clzRangeOfInt    = f_container.resolveClass(pool.ensureRangeType(pool.typeCInt64()));
+
+        TypeConstant typeRange = pool.ensureRangeType(pool.typeCInt64());
+        m_clzRangeOfInt = f_container.resolveClass(typeRange);
+
+        TypeConstant typeRangeArray = pool.ensureArrayType(pool.ensureNullableTypeConstant(typeRange));
+        m_clzRangeArray = f_container.resolveClass(typeRangeArray);
         }
 
     @Override
@@ -93,7 +100,7 @@ public class xRegEx
         RegExHandle hPattern = (RegExHandle) hTarget;
         if ("pattern".equals(sPropName))
             {
-            return frame.assignValue(iReturn, xString.makeHandle(hPattern.m_regex));
+            return frame.assignValue(iReturn, xString.makeHandle(hPattern.f_regex));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -252,7 +259,7 @@ public class xRegEx
                 }
             }
 
-        ObjectHandle   hGroups = xArray.makeObjectArrayHandle(ah, xArray.Mutability.Fixed);
+        ObjectHandle   hGroups = xArray.makeArrayHandle(m_clzRangeArray, ah.length, ah, Mutability.Fixed);
         ObjectHandle[] ahArgs  = new ObjectHandle[]{hRegEx, hText, hGroups};
         ObjectHandle[] ahVar   = Utils.ensureSize(ahArgs, constructor.getMaxVars());
         GenericHandle  hMatch  = new GenericHandle(clzStruct);
@@ -277,44 +284,50 @@ public class xRegEx
         /**
          * The compiled regular expression {@link Pattern}.
          */
-        private final String m_regex;
+        private final String f_regex;
 
-        private final long m_nFlags;
+        /**
+         * The regular expression flags.
+         */
+        private final long f_nFlags;
 
+        /**
+         * Cached regular expression pattern.
+         */
         private Pattern m_pattern;
 
         protected RegExHandle(TypeComposition clazz, String regex, long nFlags)
             {
             super(clazz);
 
-            m_regex  = regex;
-            m_nFlags = nFlags;
+            f_regex  = regex;
+            f_nFlags = nFlags;
             }
 
         /**
-         * @return the regular expression.
+         * @return the regular expression
          */
         public String getRegex()
             {
-            return m_regex;
+            return f_regex;
             }
 
         /**
-         * @return the regular expression flags.
+         * @return the regular expression flags
          */
         public long getFlags()
             {
-            return m_nFlags;
+            return f_nFlags;
             }
 
         /**
-         * @return the compiled regular expression {@link Pattern}.
+         * @return the compiled regular expression {@link Pattern}
          */
         public Pattern getPattern()
             {
             if (m_pattern == null)
                 {
-                m_pattern = Pattern.compile(m_regex, (int) m_nFlags);
+                m_pattern = Pattern.compile(f_regex, (int) f_nFlags);
                 }
             return m_pattern;
             }
@@ -323,19 +336,19 @@ public class xRegEx
         public boolean equals(Object obj)
             {
             return obj instanceof RegExHandle that &&
-                   m_regex.equals(that.m_regex);
+                   this.f_regex.equals(that.f_regex);
             }
 
         @Override
         public int hashCode()
             {
-            return m_regex.hashCode();
+            return f_regex.hashCode();
             }
 
         @Override
         public String toString()
             {
-            return super.toString() + m_regex;
+            return super.toString() + f_regex;
             }
         }
 
@@ -347,12 +360,17 @@ public class xRegEx
     private MethodStructure m_constructorMatch;
 
     /**
-     * The text.Match struct.
+     * The TypeComposition for text.Match type.
      */
     private TypeComposition m_clzMatchStruct;
 
     /**
-     * The Range struct.
+     * The TypeComposition for Range<Int> type.
      */
     private TypeComposition m_clzRangeOfInt;
+
+    /**
+     * The TypeComposition for Range<Int>?[] type.
+     */
+    private TypeComposition m_clzRangeArray;
     }
