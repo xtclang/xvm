@@ -1879,10 +1879,10 @@ public class TypeCompositionStatement
                 String            sParam = param.getName();
                 PropertyStructure prop   = (PropertyStructure) mapChildren.get(sParam);
 
-                assert prop != null;
-
                 // whether or not the property is defined by the super class, we must've created
                 // a synthetic structure for it during registerStructures() phase
+                assert prop != null;
+
                 if (prop.getType().containsUnresolved())
                     {
                     mgr.requestRevisit();
@@ -1913,7 +1913,7 @@ public class TypeCompositionStatement
             // slightly different here (since we can't resolve types at this stage), so what we
             // will look for is any constructor that has a matching number of parameters (or a
             // higher number of parameters if the additional parameters are optional), and each
-            // parameter type must match the type specified in the short-hand constructor notation
+            // parameter type must match the type specified in the shorthand constructor notation
             boolean fFound = false;
             if (constructors != null)
                 {
@@ -1985,7 +1985,7 @@ public class TypeCompositionStatement
 
             if (!fFound)
                 {
-                // create a constructor based on the "short-hand notation" implicit constructor
+                // create a constructor based on the "shorthand notation" implicit constructor
                 // definition
                 org.xvm.asm.Parameter[] aParams = org.xvm.asm.Parameter.NO_PARAMS;
                 if (cParams > 0)
@@ -2285,6 +2285,14 @@ public class TypeCompositionStatement
                     prop.addAnnotation(pool.clzOverride());
                     prop.addAnnotation(pool.clzRO());
                     fInvalidate = true;
+                    }
+
+                TypeConstant typeBase = infoProp.getType().removeAccess();
+                TypeConstant typeThis = prop.getType().resolveTypedefs();
+                // ensure the type equivalency, which slightly more lax than equality
+                if (!typeBase.isA(typeThis) || !typeThis.isA(typeBase))
+                    {
+                    param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeBase, typeThis);
                     }
                 }
 
@@ -2868,22 +2876,22 @@ public class TypeCompositionStatement
 
         StringBuilder sb = new StringBuilder();
         int nState = 0;
-        NextChar: for (char ch : sDoc.substring(1).toCharArray())
+        for (char ch : sDoc.substring(1).toCharArray())
             {
             switch (nState)
                 {
-                case 0:         // leading whitespace expected
+                case 0: // leading whitespace expected
                     if (!isLineTerminator(ch))
                         {
                         if (isWhitespace(ch))
                             {
-                            continue NextChar;
+                            continue;
                             }
 
                         if (ch == '*')
                             {
                             nState = 1;
-                            continue NextChar;
+                            continue;
                             }
 
                         // weird - it's actual text to append; we didn't find the leading '*'
@@ -2897,7 +2905,7 @@ public class TypeCompositionStatement
                         if (isWhitespace(ch))
                             {
                             nState = 2;
-                            continue NextChar;
+                            continue;
                             }
 
                         // weird - it's actual text to append; there was no ' ' after the '*'
@@ -2913,7 +2921,7 @@ public class TypeCompositionStatement
                             sb.append(LF);
                             }
                         nState = ch == CR ? 3 : 0;
-                        continue NextChar;
+                        continue;
                         }
                     break;
 
@@ -2921,13 +2929,13 @@ public class TypeCompositionStatement
                     if (ch == LF || isWhitespace(ch))
                         {
                         nState = 0;
-                        continue NextChar;
+                        continue;
                         }
 
                     if (ch == '*')
                         {
                         nState = 1;
-                        continue NextChar;
+                        continue;
                         }
 
                     // weird - it's actual text to append; we didn't find the leading '*'

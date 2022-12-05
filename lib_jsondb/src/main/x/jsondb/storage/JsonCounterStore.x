@@ -13,10 +13,15 @@ service JsonCounterStore(Catalog catalog, DBObjectInfo info)
     {
     static IntNumberMapping<Int> JSON_MAPPING = new IntNumberMapping<Int>();
 
-    @Override
     @Concurrent
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Override
+    protected class Changes
         {
+        construct(Int writeId, Future<Int> pendingReadId)
+            {
+            super(writeId, pendingReadId);
+            }
+
         /**
          * Tracks whether the transaction had to read the value.
          */

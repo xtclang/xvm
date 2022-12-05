@@ -1792,10 +1792,21 @@ service Client<Schema extends RootSchema>
     /**
      * The DBCounter DBObject implementation.
      */
-    class DBCounterImpl(DBObjectInfo info_, CounterStore store_)
-            extends DBValueImpl<Int>(info_, store_)
+    class DBCounterImpl
+            extends DBValueImpl<Int>
             implements DBCounter
         {
+        construct(DBObjectInfo info_, CounterStore store_)
+            {
+            super(info_, store_);
+            }
+
+        @Override
+        @RO CounterStore store_.get()
+            {
+            return super().as(CounterStore);
+            }
+
         @Override
         Boolean transactional.get()
             {

@@ -201,7 +201,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * An internal, mutable record of Changes for a specific transaction.
      */
     @Concurrent
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    protected class Changes(Int writeId, Future<Int>? pendingReadId)
         {
         construct(Int writeId, Future<Int> pendingReadId)
             {
@@ -242,8 +242,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                     }
                 }
             }
-
-        Future<Int>? pendingReadId;
 
         /**
          * The worker to dump CPU intensive serialization and deserialization work onto.

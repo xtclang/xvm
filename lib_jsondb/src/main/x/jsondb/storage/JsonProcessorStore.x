@@ -100,10 +100,15 @@ service JsonProcessorStore<Message extends immutable Const>
     protected immutable OrderedMap<Message, PidSet> NoChanges =
             new SkiplistMap<Message, PidSet>().makeImmutable();
 
-    @Override
     @Concurrent
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Override
+    protected class Changes
         {
+        construct(Int writeId, Future<Int> pendingReadId)
+            {
+            super(writeId, pendingReadId);
+            }
+
         /**
          * A map of inserted and updated processing requests.
          */

@@ -70,10 +70,15 @@ service JsonValueStore<Value extends immutable Const>
         return dataDir.fileFor("value.json");
         }
 
-    @Override
     @Concurrent
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Override
+    protected class Changes
         {
+        construct(Int writeId, Future<Int> pendingReadId)
+            {
+            super(writeId, pendingReadId);
+            }
+
         /**
          * Set to True when the transaction contains possible changes related to this ObjectStore.
          */

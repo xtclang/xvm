@@ -75,10 +75,15 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     protected immutable OrderedMap<Key, Value|Deletion> NoChanges =
             new SkiplistMap<Key, Value|Deletion>().makeImmutable();
 
-    @Override
     @Concurrent
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Override
+    protected class Changes
         {
+        construct(Int writeId, Future<Int> pendingReadId)
+            {
+            super(writeId, pendingReadId);
+            }
+
         /**
          * A map of inserted and updated key/value pairs.
          */
