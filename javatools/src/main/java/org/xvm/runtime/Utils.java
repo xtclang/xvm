@@ -1359,9 +1359,12 @@ public abstract class Utils
 
                         // constructing Argument<Referent extends immutable Const>
                         //                  (Referent value, String? name = Null)
-                        Parameter param  = constructMixin.getParam(iArg);
-                        int      iResult = constructArgument(frameCaller, param.getType(),
-                                                hValue, param.getName());
+                        Parameter    param  = constructMixin.getParam(iArg);
+                        TypeConstant type   = param.getType().
+                            resolveGenerics(frameCaller.poolContext(),
+                                frameCaller.getGenericsResolver(false));
+
+                        int iResult = constructArgument(frameCaller, type, hValue, param.getName());
                         if (iResult == Op.R_CALL)
                             {
                             frameCaller.m_frameNext.addContinuation(this);

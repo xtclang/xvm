@@ -39,6 +39,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
+import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.TransientId;
 import org.xvm.runtime.Utils.BinaryAction;
@@ -1159,6 +1160,13 @@ public abstract class ClassTemplate
             {
             return frame.raiseException(
                 xException.immutableObjectProperty(frame, idProp.getName(), hThis.getType()));
+            }
+
+        if (!(hValue instanceof InitializingHandle)
+                && !hValue.getType().isA(field.getType()))
+            {
+            return frame.raiseException(
+                xException.typeMismatch(frame, hValue.getType().getValueString()));
             }
 
         if (field.isInflated())

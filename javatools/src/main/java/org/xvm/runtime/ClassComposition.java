@@ -616,7 +616,8 @@ public class ClassComposition
                 m_fHasOuter = true;
                 }
             mapFields.put(sField,
-                    new FieldInfo(sField, nIndex++, null, /*synthetic*/ true, false, false, false));
+                    new FieldInfo(sField, nIndex++, pool.typeObject(), null,
+                        /*synthetic*/ true, false, false, false));
             }
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
@@ -697,8 +698,14 @@ public class ClassComposition
                         : infoStruct.findPropertyByNid(enid) != null;
                 assert !mapFields.containsKey(enid);
 
-                FieldInfo field = new FieldInfo(enid, nIndex++, clzRef,
-                        infoProp.isInjected(), fTransient,
+                TypeConstant type = infoProp.getType();
+                if (type.containsFormalType(true))
+                    {
+                    type = type.resolveConstraints();
+                    }
+
+                FieldInfo field = new FieldInfo(enid, nIndex++, type,
+                        clzRef, infoProp.isInjected(), fTransient,
                         infoProp.isSimpleUnassigned(), infoProp.isLazy());
                 mapFields.put(enid, field);
 
@@ -773,14 +780,16 @@ public class ClassComposition
          *
          * @param enid        the field's name, property id or nested identity
          * @param nIndex      the field's storage index
+         * @param type        the field's type
          * @param clzRef      (optional) the TypeComposition for inflated fields
          * @param fSynthetic  true iff the field is synthetic (e.g. implicit or injected)
          */
-        protected FieldInfo(Object enid, int nIndex, TypeComposition clzRef, boolean fSynthetic,
-                            boolean fTransient, boolean fUnassigned, boolean fLazy)
+        protected FieldInfo(Object enid, int nIndex, TypeConstant type, TypeComposition clzRef,
+                            boolean fSynthetic, boolean fTransient, boolean fUnassigned, boolean fLazy)
             {
             f_enid        = enid;
             f_nIndex      = nIndex;
+            f_type        = type;
             f_clzRef      = clzRef;
             f_fSynthetic  = fSynthetic;
             f_fTransient  = fTransient;
@@ -805,6 +814,14 @@ public class ClassComposition
             {
             return f_nIndex;
             }
+
+        /**
+         * @return the field's type
+         */
+        public TypeConstant getType()
+           {
+           return f_type;
+           }
 
         /**
          * @return the TypeComposition for inflated fields
@@ -907,6 +924,7 @@ public class ClassComposition
 
         private final Object          f_enid; // String | PropertyConstant | NestedIdentity
         private final int             f_nIndex;
+        private final TypeConstant    f_type;
         private final TypeComposition f_clzRef;
         private final boolean         f_fSynthetic;
         private final boolean         f_fTransient;
