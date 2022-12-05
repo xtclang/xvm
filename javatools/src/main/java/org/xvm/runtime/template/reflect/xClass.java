@@ -281,7 +281,7 @@ public class xClass
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        if (hParent != null && !hParent.isPassThrough(null))
+        if (hParent != null && !hParent.isPassThrough())
             {
             return frame.raiseException(xException.mutableObject(frame));
             }

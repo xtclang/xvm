@@ -88,7 +88,7 @@ public class xLazyVar
 
     protected int invokeImmutableSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
         {
-        if (!hValue.isPassThrough(null))
+        if (!hValue.isPassThrough())
             {
             if (hValue.getType().isA(frame.poolContext().typeFreezable()))
                 {

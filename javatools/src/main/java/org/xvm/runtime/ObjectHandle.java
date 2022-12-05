@@ -198,6 +198,16 @@ public abstract class ObjectHandle
         }
 
     /**
+     * @return true iff the handle is an object that is allowed to be passed across service
+     *         boundaries within the same container (an immutable, a service or an object that has
+     *         all pass-through fields)
+     */
+    public boolean isPassThrough()
+        {
+        return isPassThrough(null);
+        }
+
+    /**
      * @return true iff the handle is an object that is allowed to be passed across service/container
      *         boundaries (an immutable, a service or an object that has all pass-through fields)
      */

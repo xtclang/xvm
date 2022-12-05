@@ -109,6 +109,11 @@ public class NestedContainer
             {
             f_mapResources.put(key, (frame, hOpts) -> hSupplier);
             }
+        else
+            {
+            f_mapResources.put(key, (frame, hOpts) -> new DeferredCallHandle(
+                    xException.makeHandle(frame, "Non-shareable resource: " + key)));
+            }
         }
 
 

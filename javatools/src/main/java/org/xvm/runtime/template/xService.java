@@ -155,7 +155,7 @@ public class xService
         ServiceContext context    = frame.f_context;
         ServiceContext contextNew = context.f_container.createServiceContext(f_sName);
 
-        if (hParent != null && !hParent.isPassThrough(null) ||
+        if (hParent != null && !hParent.isPassThrough() ||
                 !context.validatePassThrough(contextNew, constructor, ahArg))
             {
             return frame.raiseException(xException.mutableObject(frame));

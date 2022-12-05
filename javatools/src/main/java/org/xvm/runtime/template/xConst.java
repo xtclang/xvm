@@ -249,7 +249,7 @@ public class xConst
                         }
 
                     ObjectHandle hField = hConst.getField(field.getIndex());
-                    if (hField == null || hField.isPassThrough(null))
+                    if (hField == null || hField.isPassThrough())
                         {
                         // we already checked that it's allowed to be unassigned in
                         // GenericHandle.validateFields()
