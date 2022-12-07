@@ -3,7 +3,7 @@ import ecstasy.reflect.Access;
 /**
  * The native Method implementation.
  */
-const RTMethod<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
+class RTMethod<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
         extends RTSignature<ParamTypes, ReturnTypes>
         implements Method<Target, ParamTypes, ReturnTypes>
     {

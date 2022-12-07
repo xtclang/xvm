@@ -39,8 +39,6 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-import org.xvm.runtime.template.numbers.xInt64;
-
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
@@ -205,15 +203,6 @@ public class xRTFunction
         {
         return frame.assignValue(iReturn,
             xOrdered.makeHandle(hValue1.hashCode() - hValue2.hashCode()));
-        }
-
-    @Override
-    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
-        FunctionHandle hFunc = (FunctionHandle) hTarget;
-
-        // for now, simply use an identity hash code
-        return frame.assignValue(iReturn, xInt64.makeHandle(hFunc.hashCode()));
         }
 
 

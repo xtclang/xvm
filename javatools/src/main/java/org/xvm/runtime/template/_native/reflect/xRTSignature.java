@@ -12,6 +12,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -34,13 +35,13 @@ import org.xvm.runtime.template.text.xString;
  * Native (abstract level) Method and Function implementation.
  */
 public class xRTSignature
-        extends xConst
+        extends ClassTemplate
     {
     public static xRTSignature INSTANCE;
 
     public xRTSignature(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance)
             {

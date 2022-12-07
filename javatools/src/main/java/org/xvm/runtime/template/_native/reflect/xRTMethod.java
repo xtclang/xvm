@@ -34,8 +34,6 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-import org.xvm.runtime.template.numbers.xInt64;
-
 
 /**
  * Native Method implementation.
@@ -218,14 +216,6 @@ public class xRTMethod
 
         return frame.assignValue(iReturn,
             xOrdered.makeHandle(hMethod1.getMethodId().compareTo(hMethod2.getMethodId())));
-        }
-
-    @Override
-    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
-        MethodHandle hMethod = (MethodHandle) hTarget;
-
-        return frame.assignValue(iReturn, xInt64.makeHandle(hMethod.hashCode()));
         }
 
 

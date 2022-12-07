@@ -1,11 +1,10 @@
 import ecstasy.reflect.MethodTemplate;
 import ecstasy.reflect.Parameter;
-import ecstasy.reflect.Return;
 
 /**
  * The native Function implementation.
  */
-const RTFunction<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
+class RTFunction<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
         extends RTSignature<ParamTypes, ReturnTypes>
         implements Function<ParamTypes, ReturnTypes>
     {
