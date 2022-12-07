@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -100,6 +100,14 @@ public class Runtime
         f_executorIO.submit(task);
         }
 
+    /**
+     * @return a unique id
+     */
+    public long makeUniqueId()
+        {
+        return f_idProducer.getAndIncrement();
+        }
+
     public void shutdownXVM()
         {
         f_executorIO .shutdown();
@@ -142,9 +150,9 @@ public class Runtime
     private final Map<Container, Object> f_containers = new WeakHashMap<>();
 
     /**
-     * A service id producer.
+     * A unique id producer.
      */
-    protected final AtomicInteger f_idProducer = new AtomicInteger();
+    protected final AtomicLong f_idProducer = new AtomicLong();
 
     /**
      * The time at which the last service task was submitted.

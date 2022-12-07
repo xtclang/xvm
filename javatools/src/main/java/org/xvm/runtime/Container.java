@@ -128,8 +128,7 @@ public abstract class Container
      */
     public ServiceContext createServiceContext(String sName)
         {
-        ServiceContext service = new ServiceContext(this, sName,
-                                    f_runtime.f_idProducer.getAndIncrement());
+        ServiceContext service = new ServiceContext(this, sName, f_runtime.makeUniqueId());
         f_setServices.put(service, null);
         return service;
         }

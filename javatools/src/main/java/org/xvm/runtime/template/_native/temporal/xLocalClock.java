@@ -18,6 +18,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
+import org.xvm.runtime.WeakCallback;
 
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
@@ -101,7 +102,7 @@ public class xLocalClock
                 long     ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
                 long     cDelay    = Math.max(0, ldtWakeup - ldtNow);
 
-                Alarm alarm = new Alarm(frame.f_context, hAlarm);
+                Alarm alarm = new Alarm(new WeakCallback(frame.f_context, hAlarm));
                 try
                     {
                     TIMER.schedule(alarm, cDelay);
@@ -210,39 +211,42 @@ public class xLocalClock
     protected static class Alarm
             extends TimerTask
         {
-        protected Alarm(ServiceContext ctx, FunctionHandle hFunction)
+        /**
+         * Construct an alarm.
+         *
+         * @param refFunction  the weak ref to a function to call when the alarm triggers
+         */
+        protected Alarm(WeakCallback refFunction)
             {
-            m_context   = ctx;
-            m_hFunction = hFunction;
+            f_refCallback = refFunction;
 
-            ctx.registerNotification();
+            refFunction.get().registerNotification();
             }
 
         @Override
         public void run()
             {
-            m_context.callLater(m_hFunction, Utils.OBJECTS_NONE);
-            m_context.unregisterNotification();
-            m_context   = null;
-            m_hFunction = null;
+            ServiceContext context = f_refCallback.get();
+            if (context != null)
+                {
+                context.callLater(f_refCallback.getFunction(), Utils.OBJECTS_NONE);
+                context.unregisterNotification();
+                }
             }
 
         @Override
         public boolean cancel()
             {
             boolean        fCancelled = super.cancel();
-            ServiceContext context    = m_context;
+            ServiceContext context = f_refCallback.get();
             if (context != null)
                 {
                 context.unregisterNotification();
-                m_context   = null;
-                m_hFunction = null;
                 }
             return fCancelled;
             }
 
-        private ServiceContext m_context;
-        private FunctionHandle m_hFunction;
+        private final WeakCallback f_refCallback;
         }
 
 

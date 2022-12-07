@@ -7,6 +7,7 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.WeakReference;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -64,12 +65,12 @@ import org.xvm.runtime.template._native.temporal.xLocalClock;
  */
 public class ServiceContext
     {
-    ServiceContext(Container container, String sName, int nId)
+    ServiceContext(Container container, String sName, long lId)
         {
         f_container = container;
         f_pool      = container.getConstantPool();
         f_sName     = sName;
-        f_nId       = nId;
+        f_lId       = lId;
         }
 
 
@@ -321,6 +322,27 @@ public class ServiceContext
             map = m_mapTransient = new WeakHashMap<>();
             }
         return map;
+        }
+
+    /**
+     * @return the map of callbacks keyed by unique ids
+     */
+    protected Map<Long, FunctionHandle> ensureCallbackMap()
+        {
+        Map<Long, FunctionHandle> map = m_mapCallbacks;
+        if (map == null)
+            {
+            map = m_mapCallbacks = new HashMap<>();
+            }
+        return map;
+        }
+
+    /**
+     * @return the map of callbacks keyed by unique ids
+     */
+    protected Map<Long, FunctionHandle> getCallbackMap()
+        {
+        return m_mapCallbacks;
         }
 
 
@@ -676,7 +698,7 @@ public class ServiceContext
                                 assert frame.m_hException != null;
 
                                 iPC = Op.R_EXCEPTION;
-                                continue nextOp;
+                                continue; // nextOp
 
                             case Op.R_CALL:
                                 assert frame.m_frameNext != null;
@@ -687,11 +709,11 @@ public class ServiceContext
 
                                 aOp = frame.f_aOp;
                                 iPC = 0;
-                                continue nextOp;
+                                continue; // nextOp
 
                             case Op.R_RETURN:
                                 iPC = Op.R_RETURN;
-                                continue nextOp;
+                                continue; // nextOp
 
                             default:
                                 if (iResult < 0)
@@ -1502,7 +1524,7 @@ public class ServiceContext
         sb.append("Service \"")
           .append(f_sName)
           .append("\" (id=")
-          .append(f_nId)
+          .append(f_lId)
           .append(')');
 
         if (m_synchronicity != Synchronicity.Concurrent)
@@ -1899,7 +1921,7 @@ public class ServiceContext
     /**
      * The service id.
      */
-    public final int f_nId;
+    public final long f_lId;
 
     /**
      * The service name.
@@ -1912,7 +1934,7 @@ public class ServiceContext
     private ServiceHandle m_hService;
 
     /**
-     * The unhandled exception notification
+     * The unhandled exception notification.
      */
     public FunctionHandle m_hExceptionHandler;
 
@@ -2039,6 +2061,11 @@ public class ServiceContext
      * A "service-local" cache for transient field values.
      */
     private Map<TransientId, ObjectHandle> m_mapTransient;
+
+    /**
+     * A "service-local" cache for service callbacks.
+     */
+    private Map<Long, FunctionHandle> m_mapCallbacks;
 
     /**
      * A wake-up scheduler to process registered timeouts.

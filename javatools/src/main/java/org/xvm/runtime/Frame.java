@@ -2016,7 +2016,7 @@ public class Frame
                 {
                 ServiceContext ctx = frame.f_context;
                 sb.append("Service #")
-                  .append(ctx.f_nId)
+                  .append(ctx.f_lId)
                   .append(' ')
                   .append(ctx.f_sName);
 

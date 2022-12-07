@@ -210,7 +210,7 @@ public class xContainerLinker
         protected void updateResult(Frame frameCaller)
             {
             // the resource supplier for the current key is on the frame's stack
-            ServiceHandle hService  = this.hProvider.getService();
+            ServiceHandle hService  = hProvider.getService();
             ObjectHandle  hSupplier = frameCaller.popStack();
 
             container.addResourceSupplier(aKeys[index], hService, hSupplier);

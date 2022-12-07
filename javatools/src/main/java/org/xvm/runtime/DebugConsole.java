@@ -1806,7 +1806,7 @@ public class DebugConsole
                 sb.append("\n    Service \"")
                   .append(ctx.f_sName)
                   .append("\" (id=")
-                  .append(ctx.f_nId)
+                  .append(ctx.f_lId)
                   .append("); status=")
                   .append(ctx.getStatus());
 
