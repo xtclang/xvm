@@ -6844,14 +6844,11 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff mutable objects of this type could be proxied across the service boundary
+     * @return true iff objects of this type could be proxied across the service boundary
      */
     public boolean isProxyable()
         {
-        return isConstant()
-            || isInterfaceType()
-            || (isSingleUnderlyingClass(false)
-             && getSingleUnderlyingClass(false).getComponent().getFormat() == Component.Format.SERVICE);
+        return isImmutable() || isConstant() || isInterfaceType() || isService();
         }
 
 
