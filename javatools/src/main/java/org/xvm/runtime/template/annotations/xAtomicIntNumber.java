@@ -28,13 +28,6 @@ public class xAtomicIntNumber
     {
     public static xAtomicIntNumber INSTANCE;
 
-    public xAtomicIntNumber(xConstrainedInteger templateIntNumber)
-        {
-        super(templateIntNumber.f_container, INSTANCE.f_struct, false);
-
-        f_templateReferent = templateIntNumber;
-        }
-
     public xAtomicIntNumber(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, false);
@@ -44,6 +37,13 @@ public class xAtomicIntNumber
             INSTANCE = this;
             }
         f_templateReferent = null;
+        }
+
+    public xAtomicIntNumber(xConstrainedInteger templateIntNumber)
+        {
+        super(templateIntNumber.f_container, INSTANCE.f_struct, false);
+
+        f_templateReferent = templateIntNumber;
         }
 
     @Override

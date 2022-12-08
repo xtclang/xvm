@@ -363,11 +363,9 @@ public class xEnum
         @Override
         public boolean equals(Object obj)
             {
-            if (obj instanceof EnumHandle that)
-                {
-                return m_clazz == that.m_clazz && m_index == that.m_index;
-                }
-            return false;
+            return obj instanceof EnumHandle that &&
+                    this.m_clazz == that.m_clazz &&
+                    this.m_index == that.m_index;
             }
 
         /**

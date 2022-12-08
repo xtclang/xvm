@@ -1,9 +1,7 @@
-- passing a const/service argument from a child container into the parent's one should check the
-  inception type rather than the revealed type and create/register a stub (soft-ref?) to make sure
-  that those arguments don't leak the entire child container upon the shutdown
-
 - mergeMixinInfo() should increment the rank of the incorporated fields; native reflection method
   implementations should sort the properties methods based on their ranks - same as ClassComposition
+
+- what to do about passing a const/service argument from a child container into the parent's one?
 
 - entering the debugger should stop time
 
@@ -143,7 +141,6 @@
 - consider @Proxyable annotation for compiler to enforce proxy-ability of an interface
 
 // DEFERRED:
-- RTFunction should not be xConst
 - classes in methods don't support captures of formal types
 - @Atomic property with a mutable content needs to wrap
 - what if timer.schedule() lambda throws? (exception is invisible)

@@ -300,7 +300,7 @@ public class Proxy
                 return true;
                 }
 
-            return obj instanceof ProxyHandle && ((ProxyHandle) obj).f_hTarget == f_hTarget;
+            return obj instanceof ProxyHandle that && this.f_hTarget == that.f_hTarget;
             }
 
         @Override
