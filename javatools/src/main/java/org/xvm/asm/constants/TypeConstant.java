@@ -5317,12 +5317,14 @@ public abstract class TypeConstant
                 }
             }
 
+        int nBaseRank = mapProps.values().stream().
+                            map(PropertyInfo::getRank).max(Integer::compare).orElse(0);
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
             PropertyConstant prop = entry.getKey();
 
             layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, prop, entry.getValue(),
-                    mapDefaults == null ? null : mapDefaults.get(prop.getName()), errs);
+                    mapDefaults == null ? null : mapDefaults.get(prop.getName()), nBaseRank, errs);
             }
 
         typeTarget.layerOnMethods(idBase, false, annoMixin != null, null, mapMethods, mapVirtMethods,
@@ -5361,6 +5363,7 @@ public abstract class TypeConstant
      * @param idMixinProp   the identity of the property at the mixin
      * @param infoProp      the property info from the mixin
      * @param constInit     (optional) an initial value for the property
+     * @param nBaseRank     the maximum rank of the base class properties
      * @param errs          the error listener
      */
     protected void layerOnMixinProp(
@@ -5372,6 +5375,7 @@ public abstract class TypeConstant
             PropertyConstant                    idMixinProp,
             PropertyInfo                        infoProp,
             Constant                            constInit,
+            int                                 nBaseRank,
             ErrorListener                       errs)
         {
         Object           nidContrib = idMixinProp.getNestedIdentity(); // resolved
@@ -5397,6 +5401,10 @@ public abstract class TypeConstant
         PropertyInfo propResult;
         if (propBase == null)
             {
+            if (nBaseRank > 0)
+                {
+                infoProp = infoProp.withRank(nBaseRank + infoProp.getRank());
+                }
             propResult = infoProp;
             }
         else

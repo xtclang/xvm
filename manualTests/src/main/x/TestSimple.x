@@ -2,27 +2,17 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        Method m0 = report;
-        report(m0);
-
-        Function f0 = report;
-        report(f0);
-
-        function Int(Int) f1 = i -> i*i;
-        report(f1);
-
-        function void(Object) f2 = report;
-        report(f2);
-
-        function void() f3 = &report("hello");
-        report(f3);
+        console.println(new Test(42, "a", True));
+        console.println(new @Weight(1) Test(42, "a", True));
+        console.println(new @Descr("d") Test(42, "a", True));
+        console.println(new @Weight(1) @Descr("d") Test(42, "a", True));
+        console.println(new @Descr("d") @Weight(1) Test(42, "a", True));
         }
 
-    void report(Object o)
-        {
-        console.println($"type  = {&o.actualType}");
-        console.println($"value = {o}\n");
-        }
+    const Test(Int f1, String f2, Boolean f3);
+
+    mixin Weight(Int weight) into Const;
+    mixin Descr(String descr) into Const;
     }

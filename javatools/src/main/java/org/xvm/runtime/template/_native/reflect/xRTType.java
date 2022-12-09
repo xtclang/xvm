@@ -2,8 +2,7 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Comparator;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
@@ -563,17 +562,17 @@ public class xRTType
         TypeConstant                        typeTarget = hType.getDataType();
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
-        ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
 
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
+        ArrayList<PropertyInfo> listInfo = new ArrayList<>(mapProps.size());
+        for (PropertyInfo infoProp : mapProps.values())
             {
-            PropertyInfo infoProp = entry.getValue();
             if (infoProp.isConstant())
                 {
-                listProps.add(xRTProperty.makeHandle(frame, typeTarget, infoProp));
+                listInfo.add(infoProp);
                 }
             }
-        return makePropertyArray(frame, typeTarget, listProps, iReturn);
+
+        return makePropertyArray(frame, typeTarget, listInfo, iReturn);
         }
 
     /**
@@ -829,24 +828,18 @@ public class xRTType
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
 
-        Map.Entry<PropertyConstant, PropertyInfo>[] aEntry =
-                mapProps.entrySet().toArray(new Map.Entry[0]);
-        if (aEntry.length > 1)
-            {
-            Arrays.sort(aEntry, PropertyInfo.RANKER);
-            }
-
-        ArrayList<ObjectHandle> listProps = new ArrayList<>(mapProps.size());
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
+        ArrayList<PropertyInfo> listInfo = new ArrayList<>(mapProps.size());
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
             if (!infoProp.isConstant() && idProp.isTopLevel())
                 {
-                listProps.add(xRTProperty.makeHandle(frame, typeTarget, infoProp));
+                listInfo.add(infoProp);
                 }
             }
-        return makePropertyArray(frame, typeTarget, listProps, iReturn);
+
+        return makePropertyArray(frame, typeTarget, listInfo, iReturn);
         }
 
     /**
@@ -1417,9 +1410,20 @@ public class xRTType
             }
         }
 
-    private static int makePropertyArray(Frame frame, TypeConstant typeTarget,
-                                         List<ObjectHandle> listProps, int iReturn)
+    private int makePropertyArray(Frame frame, TypeConstant typeTarget,
+                                  ArrayList<PropertyInfo> listInfo, int iReturn)
         {
+        if (listInfo.size() > 1)
+            {
+            listInfo.sort(Comparator.comparingInt(PropertyInfo::getRank));
+            }
+
+        ArrayList<ObjectHandle> listProps = new ArrayList<>(listInfo.size());
+        for (PropertyInfo infoProp : listInfo)
+            {
+            listProps.add(xRTProperty.makeHandle(frame, typeTarget, infoProp));
+            }
+
         ObjectHandle[]  ahProps  = listProps.toArray(Utils.OBJECTS_NONE);
         TypeComposition clzArray = xRTProperty.ensureArrayComposition(frame, typeTarget);
 

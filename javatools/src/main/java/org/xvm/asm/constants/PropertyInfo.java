@@ -58,7 +58,7 @@ public class PropertyInfo
             body.getType(), body.hasField(), body.isSetterBlockingSuper(), that.m_nRank);
         }
 
-    protected PropertyInfo(
+    private PropertyInfo(
             PropertyBody[] aBody,
             TypeConstant   type,
             boolean        fRequireField,
@@ -534,6 +534,15 @@ public class PropertyInfo
         }
 
     /**
+     * @return a new PropertyInfo that is identical to this one in all aspects, except with the
+     *         specified rank
+     */
+    public PropertyInfo withRank(int nRank)
+        {
+        return new PropertyInfo(m_aBody, m_type, m_fRequireField, m_fSuppressVar, nRank);
+        }
+
+    /**
      * @return the container of the property
      */
     public IdentityConstant getParent()
@@ -858,13 +867,12 @@ public class PropertyInfo
      */
     public boolean isNative()
         {
-        NextBody:
         for (PropertyBody body : m_aBody)
             {
             switch (body.getImplementation())
                 {
                 case Implicit:
-                    continue NextBody;
+                    continue;
 
                 case Native:
                     return true;

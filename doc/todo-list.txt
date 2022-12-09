@@ -1,6 +1,3 @@
-- mergeMixinInfo() should increment the rank of the incorporated fields; native reflection method
-  implementations should sort the properties methods based on their ranks - same as ClassComposition
-
 - what to do about passing a const/service argument from a child container into the parent's one?
 
 - entering the debugger should stop time
