@@ -245,7 +245,7 @@ public class xRTCompiler
             return true;
             }
 
-        assert frame.popStack() == xBoolean.FALSE;
+        assert hReturn == xBoolean.FALSE;
         return false;
         }
 
