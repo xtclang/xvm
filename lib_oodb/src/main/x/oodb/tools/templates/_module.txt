@@ -69,20 +69,24 @@ module %appName%_jsondb
             Catalog_<%appSchema%_> catalog,
             Int                     clientId,
             DBUser_                 dbUser,
-            Boolean                 readOnly = False,
+            Boolean                 readOnly      = False,
             function void(Client_)? notifyOnClose = Null)
         {
         return new %appName%Client_(catalog, clientId, dbUser, readOnly, notifyOnClose);
         }
 
-    service %appName%Client_(
-            Catalog_<%appSchema%_> catalog,
-            Int                     clientId,
-            DBUser_                 dbUser,
-            Boolean                 readOnly = False,
-            function void(Client_)? notifyOnClose = Null)
-                extends Client_<%appSchema%_>(catalog, clientId, dbUser, readOnly, notifyOnClose)
+    service %appName%Client_
+                extends Client_<%appSchema%_>
         {
+        construct(Catalog_<%appSchema%_> catalog,
+                  Int                     clientId,
+                  DBUser_                 dbUser,
+                  Boolean                 readOnly = False,
+                  function void(Client_)? notifyOnClose = Null)
+            {
+            super(catalog, clientId, dbUser, readOnly, notifyOnClose);
+            }
+
         @Override
         class RootSchemaImpl(DBObjectInfo_ info_)
                 implements %appSchema%_
