@@ -36,9 +36,6 @@
 
 - how to move ecstasy.mgmt package to a separate module? FileTemplate depends on ModuleRepository...
 
-- improve toString() for TypeConstant of function type
-    (Function<Tuple<this:Map<Map.Key, Map.Value>.Entry>, Tuple<Boolean>>)
-
 - if an object is not auto-proxy'ed then try to freeze before throwing an exception
 
 - enum ClassCompositions without type parameters could be made into CanonicalCompositions

@@ -986,24 +986,84 @@ public class ParameterizedTypeConstant
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(m_constType.getValueString())
-          .append('<');
-
-        boolean first = true;
-        for (TypeConstant type : m_atypeParams)
+        ConstantPool pool = getConstantPool();
+        if (m_constType.isA(pool.typeFunction()))
             {
-            if (first)
-                {
-                first = false;
-                }
-            else
-                {
-                sb.append(", ");
-                }
-            sb.append(type.getValueString());
-            }
+            sb.append("function ");
 
-        sb.append('>');
+            TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
+            TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
+            int            cParams      = atypeParams.length;
+            int            cReturns     = atypeReturns.length;
+
+            switch (cReturns)
+                {
+                case 0:
+                    sb.append("void");
+                    break;
+
+                case 1:
+                    sb.append(atypeReturns[0].getValueString());
+                    break;
+
+                default:
+                    sb.append('(');
+                    for (int i = 0; i < cReturns; i++)
+                        {
+                        if (i > 0)
+                            {
+                            sb.append(", ");
+                            }
+                        sb.append(atypeReturns[i].getValueString());
+                        }
+                    sb.append(')');
+                    break;
+                }
+
+            sb.append('(');
+            switch (cParams)
+                {
+                case 0:
+                    break;
+
+                case 1:
+                    sb.append(atypeParams[0].getValueString());
+                    break;
+
+                default:
+                    for (int i = 0; i < cParams; i++)
+                        {
+                        if (i > 0)
+                            {
+                            sb.append(", ");
+                            }
+                        sb.append(atypeParams[i].getValueString());
+                        }
+                    break;
+                }
+            sb.append(')');
+            }
+        else
+            {
+            sb.append(m_constType.getValueString())
+              .append('<');
+
+            boolean first = true;
+            for (TypeConstant type : m_atypeParams)
+                {
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(type.getValueString());
+                }
+
+            sb.append('>');
+            }
 
         return sb.toString();
         }
