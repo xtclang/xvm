@@ -24,12 +24,12 @@ import DBObject.DBCategory;
 class ModuleGenerator(String implName, String moduleName)
     {
     /**
-     * The implementation name (json, imdb, etc).
+     * The implementation name (jsondb, imdb, etc).
      */
     protected String implName;
 
     /**
-     * The underlying (hosted) module name.
+     * The underlying (hosted) fully qualified module name.
      */
     protected String moduleName;
 
@@ -57,7 +57,16 @@ class ModuleGenerator(String implName, String moduleName)
             ModuleRepository repository, Directory buildDir, Log errors)
         {
         ModuleTemplate dbModule = repository.getResolvedModule(moduleName);
-        String         hostName = $"{moduleName}_{implName}";
+
+        String appName   = moduleName;
+        String qualifier = "";
+        if (Int dot := appName.indexOf('.'))
+            {
+            qualifier = appName[dot ..< appName.size];
+            appName   = appName[0 ..< dot];
+            }
+
+        String hostName = $"{appName}_{implName}{qualifier}";
 
         if (ModuleTemplate hostModule := repository.getModule(hostName))
             {
@@ -76,8 +85,6 @@ class ModuleGenerator(String implName, String moduleName)
             catch (Exception ignore) {}
             }
 
-        String appName = moduleName; // TODO GG: allow fully qualified name
-
         ClassTemplate appSchemaTemplate;
         if (!(appSchemaTemplate := findSchema(dbModule)))
             {
@@ -87,7 +94,7 @@ class ModuleGenerator(String implName, String moduleName)
 
         File sourceFile = buildDir.fileFor($"{appName}_{implName}.x");
 
-        if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
+        if (createModule(sourceFile, appName, qualifier, dbModule, appSchemaTemplate, errors) &&
             compileModule(repository, sourceFile, buildDir, errors))
             {
             errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
@@ -99,7 +106,7 @@ class ModuleGenerator(String implName, String moduleName)
     /**
      * Create module source file.
      */
-    Boolean createModule(File sourceFile, String appName,
+    Boolean createModule(File sourceFile, String appName, String qualifier,
                          ModuleTemplate moduleTemplate, ClassTemplate appSchemaTemplate, Log errors)
         {
         String appSchema = appSchemaTemplate.name;
@@ -307,6 +314,7 @@ class ModuleGenerator(String implName, String moduleName)
         String moduleSource = moduleSourceTemplate
                                 .replace("%appName%"             , appName)
                                 .replace("%appSchema%"           , appSchema)
+                                .replace("%qualifier%"           , qualifier)
                                 .replace("%ChildrenIds%"         , childrenIds)
                                 .replace("%PropertyInfos%"       , propertyInfos)
                                 .replace("%PropertyTypes%"       , propertyTypes)

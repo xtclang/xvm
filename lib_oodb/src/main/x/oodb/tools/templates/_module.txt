@@ -1,4 +1,4 @@
-module %appName%_jsondb
+module %appName%_jsondb%qualifier%
         incorporates jsondb_.CatalogMetadata<%appSchema%_>
     {
     package oodb_   import oodb.xtclang.org;
@@ -11,7 +11,7 @@ module %appName%_jsondb
     import jsondb_.Client             as Client_;
     import jsondb_.model.DBObjectInfo as DBObjectInfo_;
 
-    package %appName%_ import %appName%;
+    package %appName%_ import %appName%%qualifier%;
 
     import %appName%_.%appSchema% as %appSchema%_;
 
