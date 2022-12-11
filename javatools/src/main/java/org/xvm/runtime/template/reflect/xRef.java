@@ -593,9 +593,8 @@ public class xRef
      */
     protected int getPropertyAnnotations(Frame frame, RefHandle hRef, int iReturn)
         {
-        ObjectHandle[]  ahAnno      = Utils.OBJECTS_NONE;
         TypeComposition composition = hRef.getComposition();
-        Annotation[]    aAnno       = Annotation.NO_ANNOTATIONS;
+        Annotation[]    aAnno;
 
         if (composition instanceof ClassComposition)
             {
@@ -606,12 +605,17 @@ public class xRef
             PropertyInfo inoProp = clzProp.getPropertyInfo();
             aAnno = inoProp.getRefAnnotations();
             }
+        else
+            {
+            aAnno = Annotation.NO_ANNOTATIONS;
+            }
 
-        // TODO GG: can we cache the annotations on the composition?
+        // theoretically speaking, we could cache the resulting array on the composition, but
+        // this appears to be a very rarely used API, so the benefits would be minimal
         return aAnno.length > 0
                 ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
                 : frame.assignValue(iReturn,
-                        Utils.makeAnnoArrayHandle(frame.f_context.f_container, ahAnno));
+                        Utils.makeAnnoArrayHandle(frame.f_context.f_container, Utils.OBJECTS_NONE));
         }
 
     /**
@@ -633,7 +637,7 @@ public class xRef
             {
             PropertyInfo infoProp      = clzProp.getPropertyInfo();
             TypeConstant typeContainer = infoProp.getType();
-            throw new UnsupportedOperationException("TODO GG");
+            throw new UnsupportedOperationException("TODO GG isProperty " + typeContainer);
             }
         else if (composition instanceof ClassComposition)
             {

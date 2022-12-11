@@ -126,21 +126,21 @@ public abstract class xUnconstrainedInteger
             {
             case "bitCount":
                 {
-                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
+                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 int cBits = pi.isBig() ? pi.getBigInteger().bitCount() : Long.bitCount(pi.getLong());
                 return frame.assignValue(iReturn, xInt64.makeHandle(cBits));
                 }
 
             case "bitLength":
                 {
-                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
+                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
                 return frame.assignValue(iReturn, xInt64.makeHandle(cBytes * 8L));
                 }
 
             case "leftmostBit":
                 {
-                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
+                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 if (pi.isBig())
                     {
                     throw new UnsupportedOperationException(); // TODO
@@ -154,7 +154,7 @@ public abstract class xUnconstrainedInteger
 
             case "rightmostBit":
                 {
-                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
+                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 if (pi.isBig())
                     {
                     throw new UnsupportedOperationException(); // TODO
@@ -168,7 +168,7 @@ public abstract class xUnconstrainedInteger
 
             case "leadingZeroCount":
                 {
-                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
+                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 if (pi.isBig())
                     {
                     throw new UnsupportedOperationException(); // TODO
@@ -182,7 +182,7 @@ public abstract class xUnconstrainedInteger
 
             case "trailingZeroCount":
                 {
-                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
+                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 if (pi.isBig())
                     {
                     throw new UnsupportedOperationException(); // TODO
@@ -383,7 +383,7 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((xIntLiteral.IntNHandle) hTarget).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.shl(pi2)));
@@ -467,7 +467,7 @@ public abstract class xUnconstrainedInteger
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        IntNHandle h1 = (xIntLiteral.IntNHandle) hValue1;
+        IntNHandle h1 = (IntNHandle) hValue1;
         IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));

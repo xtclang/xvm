@@ -196,7 +196,7 @@ public class xFPLiteral
         }
 
     /**
-     * This handle type is used by IntN, UIntN as well as IntLiteral. TODO GG is this cut and paste?
+     * The handle for FPLiteral (based on a BigDecimal).
      */
     public static class FPNHandle
             extends ObjectHandle
