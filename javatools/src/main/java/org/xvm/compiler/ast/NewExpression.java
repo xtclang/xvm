@@ -105,15 +105,6 @@ public class NewExpression
         }
 
     /**
-     * @return return a list of expressions that are passed to the constructor of the object being
-     *         instantiated
-     */
-    public List<Expression> getConstructorArguments()
-        {
-        return args;
-        }
-
-    /**
      * @return true iff there were square brackets as part of the new expression
      */
     public boolean hasSquareBrackets()
@@ -321,17 +312,13 @@ public class NewExpression
                 typeResult = type.ensureTypeConstant(ctx, errs);
                 if (typeResult.containsUnresolved())
                     {
-                    if (typeResult instanceof AnnotatedTypeConstant typeAnno)
-                        {
-                        typeResult     = typeAnno.stripParameters();
-                        plan           = Plan.Regular;
-                        m_fDynamicAnno = true;
-                        }
-                    else
+                    typeResult = checkDynamicAnnotation(typeResult);
+                    if (typeResult == null)
                         {
                         log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
                         return null;
                         }
+                    plan = Plan.Regular;
                     }
                 else if (typeResult.isFormalType())
                     {
@@ -447,12 +434,8 @@ public class NewExpression
                         typeResult = exprTest.ensureTypeConstant(ctx, errs);
                         if (typeResult.containsUnresolved())
                             {
-                            if (typeResult instanceof AnnotatedTypeConstant typeAnno)
-                                {
-                                typeResult     = typeAnno.stripParameters();
-                                m_fDynamicAnno = true;
-                                }
-                            else
+                            typeResult = checkDynamicAnnotation(typeResult);
+                            if (typeResult == null)
                                 {
                                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE,
                                         exprTest.toString());
@@ -921,6 +904,26 @@ public class NewExpression
 
 
     // ----- compilation helpers -------------------------------------------------------------------
+
+    /**
+     * Check if the specified unresolved type is unresolved only due to some unresolved annotation
+     * parameters.
+     *
+     * @return the resolved annotation type stripped of the unresolved parameters; null otherwise
+     */
+    private TypeConstant checkDynamicAnnotation(TypeConstant typeUnresolved)
+        {
+        if (typeUnresolved instanceof AnnotatedTypeConstant typeAnno)
+            {
+            TypeConstant typeResolved = typeAnno.stripParameters();
+            if (!typeResolved.containsUnresolved())
+                {
+                m_fDynamicAnno = true;
+                return typeResolved;
+                }
+            }
+        return null;
+        }
 
     /**
      * Report one or more reasons why the specified type is "not newable".
@@ -1650,7 +1653,7 @@ public class NewExpression
     /**
      * @return true iff the name specifies a captured variable
      */
-    boolean isCapture(String sCaptureName)
+    protected boolean isCapture(String sCaptureName)
         {
         return m_mapCapture != null && m_mapCapture.containsKey(sCaptureName);
         }
@@ -1658,7 +1661,7 @@ public class NewExpression
     /**
      * @return the type of the value (not the Ref or Var, if implicit deref is used)
      */
-    TypeConstant getCaptureType(String sCaptureName)
+    protected TypeConstant getCaptureType(String sCaptureName)
         {
         assert m_mapRegisters.containsKey(sCaptureName);
 
@@ -1668,7 +1671,7 @@ public class NewExpression
     /**
      * @return true iff the captured variable has been marked as being effectively final
      */
-    boolean isCaptureFinal(String sCaptureName)
+    protected boolean isCaptureFinal(String sCaptureName)
         {
         assert m_mapRegisters.containsKey(sCaptureName);
 
@@ -1678,7 +1681,7 @@ public class NewExpression
     /**
      * @return true iff a capture variable needs to be implicitly de-ref'd (via a CVAR)
      */
-    boolean isImplicitDeref(String sCaptureName)
+    protected boolean isImplicitDeref(String sCaptureName)
         {
         assert m_mapCapture.containsKey(sCaptureName);
 
