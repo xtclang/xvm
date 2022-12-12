@@ -121,7 +121,7 @@ public class ClassStructure
 
         // best guess: walk up to the first "top level" class
         ClassStructure clzTopLevel = this;
-        while (clzTopLevel.isInnerClass())
+        while (!clzTopLevel.isTopLevel())
             {
             clzTopLevel = clzTopLevel.getOuter();
             }
@@ -780,6 +780,10 @@ public class ClassStructure
         PropertyStructure prop = createProperty(false, Access.PUBLIC, Access.PUBLIC, typeConstraintType, sName);
         prop.markAsGenericTypeParameter();
         markModified();
+
+        // invalidate cached types
+        m_typeCanonical = null;
+        m_typeFormal    = null;
         return prop;
         }
 
