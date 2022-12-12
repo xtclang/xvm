@@ -56,6 +56,7 @@ mixin KeySetBasedMap<Key, Value>
 
         /**
          * Iterator that relies on an iterator of keys to produce a corresponding sequence of entries.
+         * TODO GG if this class is inside the iterator() method, compiler emits error about type param
          */
         protected class EntryIterator(Iterator<Key> keyIterator)
                 implements Iterator<Map.Entry>
@@ -167,6 +168,8 @@ mixin KeySetBasedMap<Key, Value>
 
         /**
          * Iterator that relies on an iterator of keys to produce a corresponding sequence of values.
+         * TODO GG if this class is inside the iterator() method, compiler emits errors like:
+         *      COMPILER-145: Unresolvable type parameter(s): Value.
          */
         protected class ValueIterator(Iterator<Key> keyIterator)
                 implements Iterator<Value>

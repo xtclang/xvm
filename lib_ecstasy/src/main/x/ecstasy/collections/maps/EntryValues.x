@@ -30,39 +30,39 @@ class EntryValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     Iterator<MapValue> iterator()
         {
         return new ValueIterator(contents.entries.iterator());
+        }
 
-        typedef Iterator<Map<MapKey, MapValue>.Entry> as EntryIterator;
+    protected typedef Iterator<Map<MapKey, MapValue>.Entry> as EntryIterator;
 
-        /**
-         * Iterator that relies on an iterator of entries to produce a corresponding sequence of
-         * values.
-         */
-        class ValueIterator<MapKey, MapValue>(EntryIterator entryIterator)
-                implements Iterator<MapValue>
+    /**
+     * Iterator that relies on an iterator of entries to produce a corresponding sequence of values.
+     * TODO GG if this class is inside the iterator() method, compiler emits error about type param
+     */
+    protected class ValueIterator(EntryIterator entryIterator)
+            implements Iterator<MapValue>
+        {
+        @Override
+        conditional MapValue next()
             {
-            @Override
-            conditional MapValue next()
+            if (Map<MapKey, MapValue>.Entry entry := entryIterator.next())
                 {
-                if (Map<MapKey, MapValue>.Entry entry := entryIterator.next())
-                    {
-                    return True, entry.value;
-                    }
-
-                return False;
+                return True, entry.value;
                 }
 
-            @Override
-            conditional Int knownSize()
-                {
-                return entryIterator.knownSize();
-                }
+            return False;
+            }
 
-            @Override
-            (Iterator<MapValue>, Iterator<MapValue>) bifurcate()
-                {
-                (EntryIterator iter1, EntryIterator iter2) = entryIterator.bifurcate();
-                return new ValueIterator(iter1), new ValueIterator(iter2);
-                }
+        @Override
+        conditional Int knownSize()
+            {
+            return entryIterator.knownSize();
+            }
+
+        @Override
+        (Iterator<MapValue>, Iterator<MapValue>) bifurcate()
+            {
+            (EntryIterator iter1, EntryIterator iter2) = entryIterator.bifurcate();
+            return new ValueIterator(iter1), new ValueIterator(iter2);
             }
         }
 
