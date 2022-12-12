@@ -16,12 +16,12 @@ const Nibble(Bit[] bits)
     /**
      * The minimum value for a Nibble.
      */
-    static IntLiteral minvalue = 0;
+    static IntLiteral MinValue = 0;
 
     /**
      * The maximum value for a Nibble.
      */
-    static IntLiteral maxvalue = 0xF;
+    static IntLiteral MaxValue = 0xF;
 
     /**
      * The entire set of nibbles, in magnitude order.
@@ -98,7 +98,7 @@ const Nibble(Bit[] bits)
     @Override
     conditional Nibble next()
         {
-        if (this < maxvalue)
+        if (this < MaxValue)
             {
             return True, values[this.toInt64() + 1];
             }
@@ -109,7 +109,7 @@ const Nibble(Bit[] bits)
     @Override
     conditional Nibble prev()
         {
-        if (this > minvalue)
+        if (this > MinValue)
             {
             return True, values[this - 1];
             }

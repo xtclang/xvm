@@ -15,12 +15,12 @@ const Bit(IntLiteral literal)
     /**
      * The minimum value for a Bit.
      */
-    static IntLiteral minvalue = 0;
+    static IntLiteral MinValue = 0;
 
     /**
      * The maximum value for a Bit.
      */
-    static IntLiteral maxvalue = 1;
+    static IntLiteral MaxValue = 1;
 
 
     // ----- properties ----------------------------------------------------------------------------

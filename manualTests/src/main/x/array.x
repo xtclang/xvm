@@ -198,7 +198,7 @@ module TestArray
         console.println("\n** testNibble()");
 
         loop:
-        for (Nibble b : Nibble.minvalue..Nibble.maxvalue)
+        for (Nibble b : MinValue .. MaxValue)
             {
             console.println($"b{loop.count}={b}");
             }

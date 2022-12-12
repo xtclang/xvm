@@ -7,12 +7,12 @@ const Int8
     /**
      * The minimum value for an Int8.
      */
-    static IntLiteral minvalue = -128;
+    static IntLiteral MinValue = -128;
 
     /**
      * The maximum value for an Int8.
      */
-    static IntLiteral maxvalue = 127;
+    static IntLiteral MaxValue = 127;
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
@@ -38,7 +38,7 @@ const Int8
     @Override
     static conditional Range<Int8> range()
         {
-        return True, minvalue..maxvalue;
+        return True, MinValue..MaxValue;
         }
 
 
@@ -288,7 +288,7 @@ const Int8
     @Override
     conditional Int8 next()
         {
-        if (this < maxvalue)
+        if (this < MaxValue)
             {
             return True, this + 1;
             }
@@ -299,7 +299,7 @@ const Int8
     @Override
     conditional Int8 prev()
         {
-        if (this > minvalue)
+        if (this > MinValue)
             {
             return True, this - 1;
             }

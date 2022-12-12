@@ -10,12 +10,12 @@ const UInt8
     /**
      * The minimum value for an UInt8.
      */
-    static IntLiteral minvalue = 0;
+    static IntLiteral MinValue = 0;
 
     /**
      * The maximum value for an UInt8.
      */
-    static IntLiteral maxvalue = 0xFF;
+    static IntLiteral MaxValue = 0xFF;
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
@@ -41,7 +41,7 @@ const UInt8
     @Override
     static conditional Range<UInt8> range()
         {
-        return True, minvalue..maxvalue;
+        return True, MinValue..MaxValue;
         }
 
 
@@ -280,7 +280,7 @@ const UInt8
     @Override
     conditional UInt8 next()
         {
-        if (this < maxvalue)
+        if (this < MaxValue)
             {
             return True, this + 1;
             }
@@ -291,7 +291,7 @@ const UInt8
     @Override
     conditional UInt8 prev()
         {
-        if (this > minvalue)
+        if (this > MinValue)
             {
             return True, this - 1;
             }
@@ -317,7 +317,7 @@ const UInt8
     @Override
     Int8 toInt8()
         {
-        assert:bounds this <= Int8.maxvalue;
+        assert:bounds this <= Int8.MaxValue;
         return new Int8(bits);
         }
 

@@ -59,7 +59,7 @@ interface Random
     Int int(Int max)
         {
         assert max > 0;
-        return max == maxvalue ? int() & maxvalue : int() % max;
+        return max == MaxValue ? int() & MaxValue : int() % max;
         }
 
     /**
@@ -67,7 +67,7 @@ interface Random
      */
     Int int(Range<Int> range)
         {
-        // note: range.size is limited to Int64.maxvalue
+        // note: range.size is limited to Int64.MaxValue
         return range.effectiveLowerBound + int(range.size);
         }
 
@@ -86,7 +86,7 @@ interface Random
     UInt uint(UInt max)
         {
         assert max > 0;
-        return max == maxvalue ? uint() : uint() % max;
+        return max == MaxValue ? uint() : uint() % max;
         }
 
     /**
@@ -94,7 +94,7 @@ interface Random
      */
     UInt uint(Range<UInt> range)
         {
-        // note: range.size is limited to Int64.maxvalue
+        // note: range.size is limited to Int64.MaxValue
         return range.effectiveLowerBound + uint(range.size.toUInt64());
         }
 

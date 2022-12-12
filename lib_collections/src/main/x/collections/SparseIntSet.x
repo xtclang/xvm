@@ -55,7 +55,7 @@ class SparseIntSet
 
         return new Iterator<Int>()
             {
-            Int index  = Int.maxvalue;
+            Int index  = MaxValue;
             Int bitset = 0;
 
             @Override conditional Int next()
@@ -157,7 +157,7 @@ class SparseIntSet
             @Override conditional Int knownSize()
                 {
                 // if the iterator has not yet started, then we know the remaining size
-                if (index == Int.maxvalue)
+                if (index == MaxValue)
                     {
                     return this.SparseIntSet.knownSize();
                     }

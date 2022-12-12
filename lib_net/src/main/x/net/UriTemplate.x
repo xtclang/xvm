@@ -1044,7 +1044,7 @@ const UriTemplate
                 return pctEncode(buf, char);
 
             default:
-                if (char.codepoint <= Byte.maxvalue)
+                if (char.codepoint <= Byte.MaxValue)
                     {
                     return pctEncode(buf, char);
                     }
@@ -1084,7 +1084,7 @@ const UriTemplate
                 return pctEncode(buf, char);
 
             default:
-                if (char.codepoint <= Byte.maxvalue)
+                if (char.codepoint <= Byte.MaxValue)
                     {
                     return pctEncode(buf, char);
                     }

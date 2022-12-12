@@ -50,13 +50,13 @@ module TestNumbers
             {
             }
 
-        Int un1 = Int.maxvalue.toInt64().toUnchecked();
+        Int un1 = Int.MaxValue.toInt64().toUnchecked();
         Int un2 = un1 + 1;
 
-        assert un2 == Int.minvalue; // wraps around w/out exception
+        assert un2 == Int.MinValue; // wraps around w/out exception
         assert un2.is(@Unchecked Int);
 
-        UInt un3 = UInt.maxvalue.toUInt64().toUnchecked();
+        UInt un3 = UInt.MaxValue.toUInt64().toUnchecked();
         UInt un4 = ++un3;
         assert un4 == 0;
 
@@ -89,15 +89,15 @@ module TestNumbers
             }
 
         // Byte == UInt8
-        Byte un1 = Byte.maxvalue.toUInt8().toUnchecked();
+        Byte un1 = Byte.MaxValue.toUInt8().toUnchecked();
         Byte un2 = un1 + 1;
 
         assert un2 == 0; // wraps around w/out exception
         assert un2.is(@Unchecked Byte);
 
-        Int8 un3 = Int8.maxvalue.toInt8().toUnchecked();
+        Int8 un3 = Int8.MaxValue.toInt8().toUnchecked();
         Int8 un4 = ++un3;
-        assert un4 == Int8.minvalue;
+        assert un4 == Int8.MinValue;
 
         assert un4.is(@Unchecked Int8);
         }

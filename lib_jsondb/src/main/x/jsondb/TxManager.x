@@ -329,7 +329,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * An illegal transaction ID used to indicate that no ID has been assigned yet.
      */
-    static Int NO_TX = Int.minvalue;
+    static Int NO_TX = MinValue;
 
     /**
      * The count of transactions (referred to as "write transactions") that this transaction manager

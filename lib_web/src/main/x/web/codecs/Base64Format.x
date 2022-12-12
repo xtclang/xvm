@@ -80,7 +80,7 @@ const Base64Format(Boolean pad=False, Int? lineLength=Null)
     void write(Value value, Appender<Char> stream, Boolean? pad=Null, Int? lineLength=Null)
         {
         pad        ?:= this.pad;
-        lineLength ?:= this.lineLength ?: Int.maxvalue;
+        lineLength ?:= this.lineLength ?: MaxValue;
 
         Int    lineOffset = 0;
         Int    totalChars = 0;

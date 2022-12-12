@@ -265,7 +265,7 @@ const IPAddress(Byte[] bytes)
                 if (Int digit := ch.asciiDigit())
                     {
                     n = n * 10 + digit;
-                    if (n > UInt32.maxvalue)
+                    if (n > UInt32.MaxValue)
                         {
                         return False, [], $"Part {cell+1} of the IPv4 address is out of range: {text.quoted()}";
                         }

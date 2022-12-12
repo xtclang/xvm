@@ -7,12 +7,12 @@ const UInt64
     /**
      * The minimum value for an UInt64.
      */
-    static IntLiteral minvalue = 0;
+    static IntLiteral MinValue = 0;
 
     /**
      * The maximum value for an UInt64.
      */
-    static IntLiteral maxvalue =  0xFFFF_FFFF_FFFF_FFFF;
+    static IntLiteral MaxValue =  0xFFFF_FFFF_FFFF_FFFF;
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
@@ -38,7 +38,7 @@ const UInt64
     @Override
     static conditional Range<UInt64> range()
         {
-        return True, minvalue..maxvalue;
+        return True, MinValue..MaxValue;
         }
 
 
@@ -264,7 +264,7 @@ const UInt64
     @Override
     conditional UInt64 next()
         {
-        if (this < maxvalue)
+        if (this < MaxValue)
             {
             return True, this + 1;
             }
@@ -275,7 +275,7 @@ const UInt64
     @Override
     conditional UInt64 prev()
         {
-        if (this > minvalue)
+        if (this > MinValue)
             {
             return True, this - 1;
             }
@@ -301,28 +301,28 @@ const UInt64
     @Override
     Int8 toInt8()
         {
-        assert:bounds this <= Int8.maxvalue;
+        assert:bounds this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
     Int16 toInt16()
         {
-        assert:bounds this <= Int16.maxvalue;
+        assert:bounds this <= Int16.MaxValue;
         return new Int16(bits[bitLength-16 ..< bitLength]);
         }
 
     @Override
     Int32 toInt32()
         {
-        assert:bounds this <= Int32.maxvalue;
+        assert:bounds this <= Int32.MaxValue;
         return new Int32(bits[bitLength-32 ..< bitLength]);
         }
 
     @Override
     Int64 toInt64()
         {
-        assert:bounds this <= Int64.maxvalue;
+        assert:bounds this <= Int64.MaxValue;
         return new Int64(bits);
         }
 
@@ -341,21 +341,21 @@ const UInt64
     @Override
     UInt8 toUInt8()
         {
-        assert:bounds this <= UInt8.maxvalue;
+        assert:bounds this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
     UInt16 toUInt16()
         {
-        assert:bounds this <= UInt16.maxvalue;
+        assert:bounds this <= UInt16.MaxValue;
         return new UInt16(bits[bitLength-16 ..< bitLength]);
         }
 
     @Override
     UInt32 toUInt32()
         {
-        assert:bounds this <= UInt32.maxvalue;
+        assert:bounds this <= UInt32.MaxValue;
         return new UInt32(bits[bitLength-32 ..< bitLength]);
         }
 
@@ -417,7 +417,7 @@ const UInt64
         return buf;
         }
 
-    // maxvalue = 18_446_744_073_709_551_615 (20 digits)
+    // MaxValue = 18_446_744_073_709_551_615 (20 digits)
     private static UInt64[] sizeArray =
          [
          9, 99, 999, 9_999, 99_999, 999_999,

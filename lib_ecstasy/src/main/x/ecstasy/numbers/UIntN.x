@@ -274,7 +274,7 @@ const UIntN
     @Override
     Int8 toInt8()
         {
-        assert:bounds this <= Int8.maxvalue;
+        assert:bounds this <= Int8.MaxValue;
         return bitLength < 8
                 ? new Int8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
                 : new Int8(bits[bitLength-8 ..< bitLength]);
@@ -283,7 +283,7 @@ const UIntN
     @Override
     Int16 toInt16()
         {
-        assert:bounds this <= Int16.maxvalue;
+        assert:bounds this <= Int16.MaxValue;
         return bitLength < 16
                 ? new Int16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
                 : new Int16(bits[bitLength-16 ..< bitLength]);
@@ -292,7 +292,7 @@ const UIntN
     @Override
     Int32 toInt32()
         {
-        assert:bounds this <= Int32.maxvalue;
+        assert:bounds this <= Int32.MaxValue;
         return bitLength < 32
                 ? new Int32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
                 : new Int32(bits[bitLength-32 ..< bitLength]);
@@ -301,7 +301,7 @@ const UIntN
     @Override
     Int64 toInt64()
         {
-        assert:bounds this <= Int64.maxvalue;
+        assert:bounds this <= Int64.MaxValue;
         return bitLength < 64
                 ? new Int64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
                 : new Int64(bits[bitLength-64 ..< bitLength]);
@@ -310,7 +310,7 @@ const UIntN
     @Override
     Int128 toInt128()
         {
-        assert:bounds this <= Int128.maxvalue;
+        assert:bounds this <= Int128.MaxValue;
         return bitLength < 128
                 ? new Int128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
                 : new Int128(bits[bitLength-128 ..< bitLength]);
@@ -330,7 +330,7 @@ const UIntN
     @Override
     UInt8 toUInt8()
         {
-        assert:bounds this <= UInt8.maxvalue;
+        assert:bounds this <= UInt8.MaxValue;
         return bitLength < 8
                 ? new UInt8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
                 : new UInt8(bits[bitLength-8 ..< bitLength]);
@@ -339,7 +339,7 @@ const UIntN
     @Override
     UInt16 toUInt16()
         {
-        assert:bounds this <= UInt16.maxvalue;
+        assert:bounds this <= UInt16.MaxValue;
         return bitLength < 16
                 ? new UInt16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
                 : new UInt16(bits[bitLength-16 ..< bitLength]);
@@ -348,7 +348,7 @@ const UIntN
     @Override
     UInt32 toUInt32()
         {
-        assert:bounds this <= UInt32.maxvalue;
+        assert:bounds this <= UInt32.MaxValue;
         return bitLength < 32
                 ? new UInt32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
                 : new UInt32(bits[bitLength-32 ..< bitLength]);
@@ -357,7 +357,7 @@ const UIntN
     @Override
     UInt64 toUInt64()
         {
-        assert:bounds this <= UInt64.maxvalue;
+        assert:bounds this <= UInt64.MaxValue;
         return bitLength < 64
                 ? new UInt64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
                 : new UInt64(bits[bitLength-64 ..< bitLength]);
@@ -366,7 +366,7 @@ const UIntN
     @Override
     UInt128 toUInt128()
         {
-        assert:bounds this <= UInt64.maxvalue;
+        assert:bounds this <= UInt64.MaxValue;
         return bitLength < 128
                 ? new UInt128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
                 : new UInt128(bits[bitLength-128 ..< bitLength]);
@@ -396,7 +396,7 @@ const UIntN
     @Override
     Int estimateStringLength()
         {
-        if (this <= UInt64.maxvalue)
+        if (this <= UInt64.MaxValue)
             {
             return toUInt64().estimateStringLength();
             }
@@ -411,14 +411,14 @@ const UIntN
             (left, _) = left /% chunkVal;
             rightLen += chunkLen;
             }
-        while (left > UInt64.maxvalue);
+        while (left > UInt64.MaxValue);
         return left.toUInt64().estimateStringLength() + rightLen;
         }
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        if (this <= UInt64.maxvalue)
+        if (this <= UInt64.MaxValue)
             {
             return toUInt64().appendTo(buf);
             }

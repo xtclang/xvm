@@ -125,7 +125,7 @@ const Char(UInt32 codepoint)
     @Override
     conditional Char next()
         {
-        if (codepoint < UInt32.maxvalue)
+        if (codepoint < MaxValue)
             {
             return True, new Char(codepoint + 1);
             }

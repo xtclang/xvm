@@ -386,7 +386,7 @@ interface DataOutput
      */
     static Int packedIntNLength(IntN n)
         {
-        return Int.minvalue <= n <= Int.maxvalue
+        return Int.MinValue <= n <= Int.MaxValue
                 ? packedIntLength(n.toInt64())
                 : 1 + n.toByteArray().size;
         }
@@ -481,7 +481,7 @@ interface DataOutput
      */
     static void writePackedIntN(DataOutput out, IntN n)
         {
-        if (Int.minvalue <= n <= Int.maxvalue)
+        if (Int.MinValue <= n <= Int.MaxValue)
             {
             writePackedInt(out, n.toInt64());
             }

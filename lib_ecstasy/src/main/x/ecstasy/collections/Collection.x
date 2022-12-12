@@ -939,7 +939,7 @@ interface Collection<Element>
 
         if (limit == Null || limit < 0)
             {
-            limit = Int.maxvalue;
+            limit = MaxValue;
             }
 
         Loop: for (Element e : this)

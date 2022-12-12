@@ -341,7 +341,7 @@ interface List<Element>
      * @return True iff this list contains the `value`, at or before the `startAt` index
      * @return (conditional) the index at which the specified value was found
      */
-    conditional Int lastIndexOf(Element value, Int startAt = Int.maxvalue)
+    conditional Int lastIndexOf(Element value, Int startAt = MaxValue)
         {
         if (Orderer? orderer := ordered(), orderer != Null)
             {
@@ -397,7 +397,7 @@ interface List<Element>
      * @return True iff this list contains that list, at or before the `startAt` index
      * @return (conditional) the index at which the specified list of values was found
      */
-    conditional Int lastIndexOf(List! that, Int startAt = Int.maxvalue)
+    conditional Int lastIndexOf(List! that, Int startAt = MaxValue)
         {
         Int length = that.size;
         startAt = startAt.minOf(this.size-length);
@@ -1490,7 +1490,7 @@ interface List<Element>
      */
     static <Element> Boolean bubbleSort(List<Element>   list,
                                         Element.Orderer order,
-                                        Int             max = Int.maxvalue)
+                                        Int             max = MaxValue)
         {
         if (!list.indexed)
             {

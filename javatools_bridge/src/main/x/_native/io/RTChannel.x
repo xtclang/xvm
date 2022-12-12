@@ -119,7 +119,7 @@ service RTChannel(RawChannel rawChannel)
         }
 
     @Override
-    Int read(WriteBuffer buffer, Int minBytes=Int.maxvalue, Origin origin=Incoming)
+    Int read(WriteBuffer buffer, Int minBytes=MaxValue, Origin origin=Incoming)
         {
         assert !closed as "The Channel was closed before the read operation began";
 
@@ -168,7 +168,7 @@ service RTChannel(RawChannel rawChannel)
         }
 
     @Override
-    (Int, Int) read(WriteBuffer[] buffers, Int minBytes = Int.maxvalue, Origin origin=Incoming)
+    (Int, Int) read(WriteBuffer[] buffers, Int minBytes=MaxValue, Origin origin=Incoming)
         {
         assert !closed as "The Channel was closed before the read operation began";
 

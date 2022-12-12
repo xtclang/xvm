@@ -2,7 +2,7 @@
  * An error list is designed for collecting errors, summarizing those errors, and reporting when
  * some arbitrary limit of errors has been reached.
  */
-class ErrorList(Int maxSize = maxvalue, ErrorList? parent = Null)
+class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null)
     {
     assert()
         {
@@ -155,7 +155,7 @@ class ErrorList(Int maxSize = maxvalue, ErrorList? parent = Null)
      *
      * @return the branched ErrorList
      */
-    ErrorList branch(Int branchMax = maxvalue)
+    ErrorList branch(Int branchMax = MaxValue)
         {
         branchMax = branchMax.minOf(maxSize - seriousCount).maxOf(maxSize == 0 ? 0 : 1);
         return new ErrorList(branchMax, this);

@@ -185,7 +185,7 @@ class StringBuffer
         return chars.indexOf(value, startAt);
         }
 
-    conditional Int lastIndexOf(Char value, Int startAt = Int.maxvalue)
+    conditional Int lastIndexOf(Char value, Int startAt = MaxValue)
         {
         return chars.lastIndexOf(value, startAt);
         }

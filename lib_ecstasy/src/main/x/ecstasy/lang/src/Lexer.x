@@ -701,46 +701,46 @@ class Lexer
                 switch (name)
                     {
                     case "Bit":
-                        IntLiteral value = eatIntLiteral(before, Bit.minvalue, Bit.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, Bit.MinValue, Bit.MaxValue, True);
                         return LitBit, value.toBit();
 
                     case "Nibble":
-                        IntLiteral value = eatIntLiteral(before, Nibble.minvalue, Nibble.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, Nibble.MinValue, Nibble.MaxValue, True);
                         return LitNibble, value.toNibble();
 
                     case "Int8":
-                        IntLiteral value = eatIntLiteral(before, Int8.minvalue, Int8.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, Int8.MinValue, Int8.MaxValue, True);
                         return LitInt8, value.toInt8();
                     case "Int16":
-                        IntLiteral value = eatIntLiteral(before, Int16.minvalue, Int16.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, Int16.MinValue, Int16.MaxValue, True);
                         return LitInt16, value.toInt16();
                     case "Int32":
-                        IntLiteral value = eatIntLiteral(before, Int32.minvalue, Int32.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, Int32.MinValue, Int32.MaxValue, True);
                         return LitInt32, value.toInt32();
                     case "Int64", "Int":
-                        IntLiteral value = eatIntLiteral(before, Int64.minvalue, Int64.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, Int64.MinValue, Int64.MaxValue, True);
                         return LitInt64, value.toInt64();
                     case "Int128":
-                        IntLiteral value = eatIntLiteral(before, Int128.minvalue, Int128.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, Int128.MinValue, Int128.MaxValue, True);
                         return LitInt128, value.toInt128();
                     case "IntN":
                         IntLiteral value = eatIntLiteral(before, explicitlyInt=True);
                         return LitIntN, value.toIntN();
 
                     case "UInt8":
-                        IntLiteral value = eatIntLiteral(before, UInt8.minvalue, UInt8.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, UInt8.MinValue, UInt8.MaxValue, True);
                         return LitUInt8, value.toUInt8();
                     case "UInt16":
-                        IntLiteral value = eatIntLiteral(before, UInt16.minvalue, UInt16.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, UInt16.MinValue, UInt16.MaxValue, True);
                         return LitUInt16, value.toUInt16();
                     case "UInt32":
-                        IntLiteral value = eatIntLiteral(before, UInt32.minvalue, UInt32.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, UInt32.MinValue, UInt32.MaxValue, True);
                         return LitUInt32, value.toUInt32();
                     case "UInt64", "UInt":
-                        IntLiteral value = eatIntLiteral(before, UInt64.minvalue, UInt64.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, UInt64.MinValue, UInt64.MaxValue, True);
                         return LitUInt64, value.toUInt64();
                     case "UInt128":
-                        IntLiteral value = eatIntLiteral(before, UInt128.minvalue, UInt128.maxvalue, True);
+                        IntLiteral value = eatIntLiteral(before, UInt128.MinValue, UInt128.MaxValue, True);
                         return LitUInt128, value.toUInt128();
                     case "UIntN":
                         IntLiteral value = eatIntLiteral(before, explicitlyInt=True);
@@ -1040,7 +1040,7 @@ class Lexer
         Loop: while (True)
             {
             // read the number
-            static UInt MAX   = maxvalue / 10 - 1;
+            static UInt MAX   = MaxValue / 10 - 1;
             UInt       value  = 0;
             UInt       digits = 0;
             while (Char digit := nextDigit())

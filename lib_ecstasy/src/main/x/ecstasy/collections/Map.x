@@ -771,7 +771,7 @@ interface Map<Key, Value>
 
         if (limit == Null || limit < 0)
             {
-            limit = Int.maxvalue;
+            limit = MaxValue;
             }
 
         Loop: for ((Key key, Value value) : this)

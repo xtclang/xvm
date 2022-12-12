@@ -51,9 +51,9 @@ mixin JavaDataOutput
                 length += 6;
                 }
             }
-        if (length > UInt16.maxvalue)
+        if (length > UInt16.MaxValue)
             {
-            throw new IllegalUTF($"length ({length}) exceeds the Java limit ({UInt16.maxvalue}})");
+            throw new IllegalUTF($"length ({length}) exceeds the Java limit ({UInt16.MaxValue}})");
             }
 
         writeUInt16(length.toUInt16());

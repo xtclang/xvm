@@ -1831,10 +1831,10 @@ class SkiplistMap<Key extends Orderable, Value>
             {
             return switch (indexType)
                 {
-                case Int8:  Int8 .maxvalue;
-                case Int16: Int16.maxvalue;
-                case Int32: Int32.maxvalue;
-                case Int64: Int64.maxvalue;
+                case Int8:  Int8 .MaxValue;
+                case Int16: Int16.MaxValue;
+                case Int32: Int32.MaxValue;
+                case Int64: Int64.MaxValue;
                 default:    assert;
                 };
             }
@@ -1915,7 +1915,7 @@ class SkiplistMap<Key extends Orderable, Value>
     protected static class IndexStore8(Int capacity, Int valueHeight)
             extends IndexStore<Int8>(capacity, valueHeight)
         {
-        @Override Int  nil.get()      {return Int8.maxvalue;}
+        @Override Int  nil.get()      {return Int8.MaxValue;}
         @Override Int8 toIndex(Int n) {return n.toInt8();}
         }
 
@@ -1925,7 +1925,7 @@ class SkiplistMap<Key extends Orderable, Value>
     protected static class IndexStore16(Int capacity, Int valueHeight)
             extends IndexStore<Int16>(capacity, valueHeight)
         {
-        @Override Int   nil.get()      {return Int16.maxvalue;}
+        @Override Int   nil.get()      {return Int16.MaxValue;}
         @Override Int16 toIndex(Int n) {return n.toInt16();}
         }
 
@@ -1935,7 +1935,7 @@ class SkiplistMap<Key extends Orderable, Value>
     protected static class IndexStore32(Int capacity, Int valueHeight)
             extends IndexStore<Int32>(capacity, valueHeight)
         {
-        @Override Int   nil.get()      {return Int32.maxvalue;}
+        @Override Int   nil.get()      {return Int32.MaxValue;}
         @Override Int32 toIndex(Int n) {return n.toInt32();}
         }
 
@@ -1945,7 +1945,7 @@ class SkiplistMap<Key extends Orderable, Value>
     protected static class IndexStore64(Int capacity, Int valueHeight)
             extends IndexStore<Int64>(capacity, valueHeight)
         {
-        @Override Int   nil.get()      {return Int64.maxvalue;}
+        @Override Int   nil.get()      {return Int64.MaxValue;}
         @Override Int64 toIndex(Int n) {return n;}
         }
 

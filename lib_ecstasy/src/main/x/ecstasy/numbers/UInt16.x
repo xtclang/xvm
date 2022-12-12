@@ -7,12 +7,12 @@ const UInt16
     /**
      * The minimum value for an UInt16.
      */
-    static IntLiteral minvalue = 0;
+    static IntLiteral MinValue = 0;
 
     /**
      * The maximum value for an UInt16.
      */
-    static IntLiteral maxvalue = 0xFFFF;
+    static IntLiteral MaxValue = 0xFFFF;
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
@@ -38,7 +38,7 @@ const UInt16
     @Override
     static conditional Range<UInt16> range()
         {
-        return True, minvalue..maxvalue;
+        return True, MinValue..MaxValue;
         }
 
 
@@ -264,7 +264,7 @@ const UInt16
     @Override
     conditional UInt16 next()
         {
-        if (this < maxvalue)
+        if (this < MaxValue)
             {
             return True, this + 1;
             }
@@ -275,7 +275,7 @@ const UInt16
     @Override
     conditional UInt16 prev()
         {
-        if (this > minvalue)
+        if (this > MinValue)
             {
             return True, this - 1;
             }
@@ -301,14 +301,14 @@ const UInt16
     @Override
     Int8 toInt8()
         {
-        assert:bounds this <= Int8.maxvalue;
+        assert:bounds this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
     Int16 toInt16()
         {
-        assert:bounds this <= Int16.maxvalue;
+        assert:bounds this <= Int16.MaxValue;
         return new Int16(bits);
         }
 
@@ -339,7 +339,7 @@ const UInt16
     @Override
     UInt8 toUInt8()
         {
-        assert:bounds this <= UInt8.maxvalue;
+        assert:bounds this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
         }
 
@@ -413,7 +413,7 @@ const UInt16
         return buf;
         }
 
-    // maxvalue = 65_535 (5 digits)
+    // MaxValue = 65_535 (5 digits)
     private static UInt16[] sizeArray =
          [
          9, 99, 999, 9_999, 65_535

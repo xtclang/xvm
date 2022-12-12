@@ -569,7 +569,7 @@ class Array<Element>
             if (index == delete)
                 {
                 // obtain the next element index to delete
-                delete = ++deletedCount < indexes.size ? indexes[deletedCount] : Int.maxvalue;
+                delete = ++deletedCount < indexes.size ? indexes[deletedCount] : MaxValue;
                 }
             else
                 {

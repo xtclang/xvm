@@ -26,7 +26,7 @@ service JsonLogStoreBase<Element extends immutable Const>
         this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;
         this.expiry         = expiry.maxOf(MINUTE);
-        this.truncateSize   = truncateSize > 0 ? truncateSize.maxOf(2K) : Int.maxvalue;
+        this.truncateSize   = truncateSize > 0 ? truncateSize.maxOf(2K) : MaxValue;
         this.maxFileSize    = maxFileSize.minOf(this.truncateSize/2);
         }
 
@@ -74,7 +74,7 @@ service JsonLogStoreBase<Element extends immutable Const>
 
     /**
      * The maximum size log to store in any one log file. If the `truncateSize` is specified
-     * (less then Int.maxvalue), this value is held below half of the `truncateSize`, so as the logs
+     * (less then Int.MaxValue), this value is held below half of the `truncateSize`, so as the logs
      * accumulate, in addition to the current log file there will be at least two rolled over files.
      */
     protected Int maxFileSize;

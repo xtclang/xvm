@@ -522,7 +522,7 @@ const String
      * @return True iff this string contains the character, at or before the `startAt` index
      * @return (conditional) the index at which the specified character was found
      */
-    conditional Int lastIndexOf(Char value, Int startAt = Int.maxvalue)
+    conditional Int lastIndexOf(Char value, Int startAt = MaxValue)
         {
         return chars.lastIndexOf(value, startAt);
         }
@@ -594,7 +594,7 @@ const String
      * @return True iff this string contains the specified string, at or before the `startAt` index
      * @return (conditional) the index at which the specified string was found
      */
-     conditional Int lastIndexOf(String that, Int startAt = Int.maxvalue)
+     conditional Int lastIndexOf(String that, Int startAt = MaxValue)
          {
          Int thisLen = this.size;
          Int thatLen = that.size;

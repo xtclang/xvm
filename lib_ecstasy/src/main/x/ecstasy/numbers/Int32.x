@@ -7,12 +7,12 @@ const Int32
     /**
      * The minimum value for an Int32.
      */
-    static IntLiteral minvalue = -0x80000000;
+    static IntLiteral MinValue = -0x80000000;
 
     /**
      * The maximum value for an Int32.
      */
-    static IntLiteral maxvalue =  0x7FFFFFFF;
+    static IntLiteral MaxValue =  0x7FFFFFFF;
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
@@ -38,7 +38,7 @@ const Int32
     @Override
     static conditional Range<Int32> range()
         {
-        return True, minvalue..maxvalue;
+        return True, MinValue..MaxValue;
         }
 
 
@@ -288,7 +288,7 @@ const Int32
     @Override
     conditional Int32 next()
         {
-        if (this < maxvalue)
+        if (this < MaxValue)
             {
             return True, this + 1;
             }
@@ -299,7 +299,7 @@ const Int32
     @Override
     conditional Int32 prev()
         {
-        if (this > minvalue)
+        if (this > MinValue)
             {
             return True, this - 1;
             }
@@ -325,14 +325,14 @@ const Int32
     @Override
     Int8 toInt8()
         {
-        assert:bounds this >= Int8.minvalue && this <= Int8.maxvalue;
+        assert:bounds this >= Int8.MinValue && this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
     Int16 toInt16()
         {
-        assert:bounds this >= Int16.minvalue && this <= Int16.maxvalue;
+        assert:bounds this >= Int16.MinValue && this <= Int16.MaxValue;
         return new Int16(bits[bitLength-16 ..< bitLength]);
         }
 
@@ -363,14 +363,14 @@ const Int32
     @Override
     UInt8 toUInt8()
         {
-        assert:bounds this >= UInt8.minvalue && this <= UInt8.maxvalue;
+        assert:bounds this >= UInt8.MinValue && this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
     UInt16 toUInt16()
         {
-        assert:bounds this >= UInt16.minvalue && this <= UInt16.maxvalue;
+        assert:bounds this >= UInt16.MinValue && this <= UInt16.MaxValue;
         return new UInt16(bits[bitLength-16 ..< bitLength]);
         }
 

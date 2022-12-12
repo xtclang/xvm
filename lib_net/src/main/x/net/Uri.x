@@ -1840,7 +1840,7 @@ const Uri
                 if (Int n := text[offset].asciiDigit())
                     {
                     n += port.toInt64() * 10;
-                    if (n > UInt16.maxvalue)
+                    if (n > UInt16.MaxValue)
                         {
                         // we could either treat this as an error or pretend that the entire
                         // authority is just opaque
