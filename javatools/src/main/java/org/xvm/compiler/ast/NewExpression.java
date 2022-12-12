@@ -445,6 +445,20 @@ public class NewExpression
                     else
                         {
                         typeResult = exprTest.ensureTypeConstant(ctx, errs);
+                        if (typeResult.containsUnresolved())
+                            {
+                            if (typeResult instanceof AnnotatedTypeConstant typeAnno)
+                                {
+                                typeResult     = typeAnno.stripParameters();
+                                m_fDynamicAnno = true;
+                                }
+                            else
+                                {
+                                log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE,
+                                        exprTest.toString());
+                                fValid = false;
+                                }
+                            }
                         }
                     ctx.exit();
                     exprTest.discard(true);

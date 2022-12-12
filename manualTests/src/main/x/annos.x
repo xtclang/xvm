@@ -140,23 +140,26 @@ module TestAnnotations
     void testMixin2()
         {
         new Parent().test();
-        new Parent().new @Parent.Mixin Parent.Child().test();
+
+        String descr = "from outside";
+        new Parent().new @Parent.Mixin(descr) Parent.Child().test();  // used to assert
 
         class Parent
             {
-            mixin Mixin into Child
+            mixin Mixin(String descr) into Child
                 {
                 @Override
                 void test()
                     {
-                    console.println("in test at Mixin");
+                    console.println($"in test at Mixin {descr}");
                     super();
                     }
                 }
 
             void test()
                 {
-                new @Mixin Child().test();
+                String descr = "from inside";
+                new @Mixin(descr) Child().test();
                 }
 
             class Child
@@ -231,4 +234,3 @@ module TestAnnotations
     mixin TaggedConst(Int weight=1, Int hash=-1)
         extends TaggedObject("const", weight);
     }
-
