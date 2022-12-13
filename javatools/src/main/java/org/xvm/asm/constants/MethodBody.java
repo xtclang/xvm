@@ -415,7 +415,7 @@ public class MethodBody
      */
     public boolean isAuto()
         {
-        // all @Auto methods must have no params and a single return value
+        // all @Auto methods must have no required params and a single return value
         SignatureConstant sig       = m_id.getSignature();
         MethodStructure   struct    = getMethodStructure();
         int               cRequired = struct == null

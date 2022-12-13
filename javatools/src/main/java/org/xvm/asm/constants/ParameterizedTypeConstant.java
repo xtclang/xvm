@@ -694,9 +694,17 @@ public class ParameterizedTypeConstant
                     break Unroll;
 
                 case AnnotatedType:
-                    typeActual = ((AnnotatedTypeConstant) typeActual).getAnnotationType();
-                    break;
-
+                    {
+                    // try to resolve the parameter using the annotated type by itself first;
+                    // if that doesn't work go down to the underlying type
+                    TypeConstant typeAnno    = ((AnnotatedTypeConstant) typeActual).getAnnotationType();
+                    TypeConstant typeResolve = resolveTypeParameter(typeAnno, sFormalName);
+                    if (typeResolve != null)
+                        {
+                        return typeResolve;
+                        }
+                    // fall through
+                    }
                 default:
                     typeActual = typeActual.getUnderlyingType();
                     break;
