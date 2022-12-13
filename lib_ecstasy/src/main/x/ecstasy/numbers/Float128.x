@@ -46,9 +46,9 @@ const Float128
     // ----- Numberic interface --------------------------------------------------------------------
 
     @Override
-    static conditional Int fixedByteLength()
+    static conditional Int fixedBitLength()
         {
-        return True, 16;
+        return True, 128;
         }
 
     @Override
@@ -148,7 +148,7 @@ const Float128
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean signBit, Int128 significand, Int exponent) split()
+    (Boolean negative, Int128 significand, Int exponent) split()
         {
         TODO
         }
@@ -319,32 +319,85 @@ const Float128
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    Float128! toFloat128()
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
+        {
+        return round(direction).toIntN();
+        }
+
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
+        {
+        return round(direction).toUIntN();
+        }
+
+    @Override
+    BFloat16 toBFloat16();
+
+    @Override
+    Float16 toFloat16();
+
+    @Override
+    Float32 toFloat32();
+
+    @Override
+    Float64 toFloat64();
+
+    @Override
+    Float128 toFloat128()
         {
         return this;
         }
 
-    @Override
-    IntN toIntN()
-        {
-        TODO
-        }
-
-    @Override
-    UIntN toUIntN()
-        {
-        TODO
-        }
-
+    @Auto
     @Override
     FloatN toFloatN()
         {
-        TODO
+        return new FloatN(bits);
         }
 
     @Override
+    Dec32 toDec32();
+
+    @Override
+    Dec64 toDec64();
+
+    @Override
+    Dec128 toDec128();
+
+    @Auto
+    @Override
     DecN toDecN()
         {
-        TODO
+        return toFPLiteral().toDecN();
         }
     }

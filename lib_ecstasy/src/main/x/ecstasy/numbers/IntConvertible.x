@@ -1,329 +1,216 @@
+import Number.Rounding;
+
 /**
  * Represents a value that can be converted to an integer or floating point numeric value.
  */
 interface IntConvertible
-        extends FPConvertible
     {
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
      * Convert the value to an `IntLiteral` that represents the same value.
      *
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return an integer literal
      */
-    IntLiteral toIntLiteral();
+    IntLiteral toIntLiteral(Rounding direction = TowardZero);
 
     /**
      * Convert the value to a signed 8-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return a signed 8-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
+     *                      and `truncate` is not `True`
      */
-    Int8 toInt8()
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toInt8();
+        return toIntN(direction).toInt8(truncate);
         }
 
     /**
      * Convert the value to a signed 16-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return a signed 16-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
+     *                      and `truncate` is not `True`
      */
-    Int16 toInt16()
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toInt16();
+        return toIntN(direction).toInt16(truncate);
         }
 
     /**
      * Convert the value to a signed 32-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return a signed 32-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
+     *                      and `truncate` is not `True`
      */
-    Int32 toInt32()
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toInt32();
+        return toIntN(direction).toInt32(truncate);
         }
 
     /**
      * Convert the value to a signed 64-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return a signed 64-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
+     *                      and `truncate` is not `True`
      */
-    Int64 toInt64()
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toInt64();
+        return toIntN(direction).toInt64(truncate);
         }
 
     /**
      * Convert the value to a signed 128-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return a signed 128-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
+     *                      and `truncate` is not `True`
      */
-    Int128 toInt128()
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toInt128();
+        return toIntN(direction).toInt128(truncate);
         }
 
     /**
      * Convert the value to a variable-length signed integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return a signed integer of variable length
+     *
+     * @throws OutOfBounds  if the resulting value is out of the integer range supported by the
+     *         variable-length signed integer type
      */
-    IntN toIntN();
+    IntN toIntN(Rounding direction = TowardZero);
 
     /**
      * Convert the value to an unsigned 8-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return an unsigned 8-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
+     *                      and `truncate` is not `True`
      */
-    UInt8 toUInt8()
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toUInt8();
+        return toIntN(direction).toUInt8(truncate);
+        }
+
+    /**
+     * A second name for the [toUInt8] method, to assist with readability.
+     */
+    Byte toByte(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toUInt8(truncate, direction);
         }
 
     /**
      * Convert the value to an unsigned 16-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return an unsigned 16-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
+     *                      and `truncate` is not `True`
      */
-    UInt16 toUInt16()
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toUInt16();
+        return toIntN(direction).toUInt16(truncate);
         }
 
     /**
      * Convert the value to an unsigned 32-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return an unsigned 32-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
+     *                      and `truncate` is not `True`
      */
-    UInt32 toUInt32()
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toUInt32();
+        return toIntN(direction).toUInt32(truncate);
         }
 
     /**
      * Convert the value to an unsigned 64-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return an unsigned 64-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
+     *                      and `truncate` is not `True`
      */
-    UInt64 toUInt64()
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toUInt64();
+        return toIntN(direction).toUInt64(truncate);
         }
 
     /**
      * Convert the value to an unsigned 128-bit integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return an unsigned 128-bit integer
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
+     *                      and `truncate` is not `True`
      */
-    UInt128 toUInt128()
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN().toUInt128();
+        return toIntN(direction).toUInt128(truncate);
         }
 
     /**
      * Convert the value to a variable-length unsigned integer.
      *
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
      * @return an unsigned integer of variable length
-     */
-    UIntN toUIntN()
-        {
-        return toIntN().toUIntN();
-        }
-
-
-    // ----- "slicing" -----------------------------------------------------------------------------
-
-    /**
-     * Obtain the least significant 8 bits of the integer value as a signed 8-bit integer.
      *
-     * @return a signed 8-bit integer
+     * @throws OutOfBounds  if the resulting value is out of the integer range supported by the
+     *         variable-length unsigned integer type
      */
-    Int8 sliceInt8()
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
-        Byte[] bytes = toIntN().toByteArray();
-        return new Int8(bytes[bytes.size-1].toBitArray());
-        }
-
-    /**
-     * Obtain the least significant 16 bits of the integer value as a signed 16-bit integer.
-     *
-     * @return a signed 16-bit integer
-     */
-    Int16 sliceInt16()
-        {
-        Byte[] bytes = toIntN().toByteArray();
-        Int    max   = 2;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new Int16(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
-            });
-        }
-
-    /**
-     * Obtain the least significant 32 bits of the integer value as a signed 32-bit integer.
-     *
-     * @return a signed 32-bit integer
-     */
-    Int32 sliceInt32()
-        {
-        Byte[] bytes = toIntN().toByteArray();
-        Int    max   = 4;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new Int32(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
-            });
-        }
-
-    /**
-     * Obtain the least significant 64 bits of the integer value as a signed 64-bit integer.
-     *
-     * @return a signed 64-bit integer
-     */
-    Int64 sliceInt64()
-        {
-        Byte[] bytes = toIntN().toByteArray();
-        Int    max   = 8;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new Int64(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
-            });
-        }
-
-    /**
-     * Obtain the least significant 128 bits of the integer value as a signed 128-bit integer.
-     *
-     * @return a signed 128-bit integer
-     */
-    Int128 sliceInt128()
-        {
-        Byte[] bytes = toIntN().toByteArray();
-        Int    max   = 16;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new Int128(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
-            });
-        }
-
-    /**
-     * Obtain the least significant 8 bits of the integer value as an unsigned 8-bit integer.
-     *
-     * @return an unsigned 8-bit integer
-     */
-    UInt8 sliceUInt8()
-        {
-        Byte[] bytes = toIntN().toByteArray();
-        return bytes[bytes.size-1];
-        }
-
-    /**
-     * Obtain the least significant 16 bits of the integer value as an unsigned 16-bit integer.
-     *
-     * @return an unsigned 16-bit integer
-     */
-    UInt16 sliceUInt16()
-        {
-        Byte[] bytes = toUIntN().toByteArray();
-        Int    max   = 2;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new UInt16(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
-            });
-        }
-
-    /**
-     * Obtain the least significant 32 bits of the integer value as an unsigned 32-bit integer.
-     *
-     * @return an unsigned 32-bit integer
-     */
-    UInt32 sliceUInt32()
-        {
-        Byte[] bytes = toUIntN().toByteArray();
-        Int    max   = 4;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new UInt32(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
-            });
-        }
-
-    /**
-     * Obtain the least significant 64 bits of the integer value as an unsigned 64-bit integer.
-     *
-     * @return an unsigned 64-bit integer
-     */
-    UInt64 sliceUInt64()
-        {
-        Byte[] bytes = toUIntN().toByteArray();
-        Int    max   = 8;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new UInt64(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
-            });
-        }
-
-    /**
-     * Obtain the least significant 128 bits of the integer value as an unsigned 128-bit integer.
-     *
-     * @return an unsigned 128-bit integer
-     */
-    UInt128 sliceUInt128()
-        {
-        Byte[] bytes = toUIntN().toByteArray();
-        Int    max   = 16;
-        Int    len   = bytes.size;
-        Int    fill  = max - len;
-        return new UInt128(switch (fill.sign)
-            {
-            case Negative: bytes[len-max ..< len];
-            case Zero    : bytes;
-            case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
-            });
+        return toIntN(direction).toUIntN();
         }
     }

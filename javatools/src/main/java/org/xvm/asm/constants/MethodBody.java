@@ -416,8 +416,12 @@ public class MethodBody
     public boolean isAuto()
         {
         // all @Auto methods must have no params and a single return value
-        SignatureConstant sig = m_id.getSignature();
-        return sig.getParamCount() == 0 && sig.getReturnCount() == 1 &&
+        SignatureConstant sig       = m_id.getSignature();
+        MethodStructure   struct    = getMethodStructure();
+        int               cRequired = struct == null
+                ? sig.getParamCount()
+                : struct.getParamCount() - struct.getDefaultParamCount();
+        return cRequired == 0 && sig.getReturnCount() > 0 &&
                findAnnotation(pool().clzAuto()) != null;
         }
 

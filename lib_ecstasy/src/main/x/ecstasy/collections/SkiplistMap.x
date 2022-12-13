@@ -2515,7 +2515,8 @@ class SkiplistMap<Key extends Orderable, Value>
                 }
             this.numType = numType;
 
-            assert bytesPerNum := numType.fixedByteLength();
+            assert Int bitsPerNum := numType.fixedBitLength();
+            bytesPerNum = (bitsPerNum + 7) / 8;
             Int bytesPerIndex = IndexStore.sizeOf(Index) / 8;
             valueHeight = ((nullable ? bytesPerNum+1 : bytesPerNum) + bytesPerIndex-1) / bytesPerIndex;
 

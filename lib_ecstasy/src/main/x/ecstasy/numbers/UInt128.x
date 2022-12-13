@@ -18,9 +18,9 @@ const UInt128
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedByteLength()
+    static conditional Int fixedBitLength()
         {
-        return True, 16;
+        return True, 128;
         }
 
     @Override
@@ -299,96 +299,132 @@ const UInt128
         }
 
     @Override
-    Int8 toInt8()
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
-    Int16 toInt16()
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= Int16.MaxValue;
         return new Int16(bits[bitLength-16 ..< bitLength]);
         }
 
     @Override
-    Int32 toInt32()
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= Int32.MaxValue;
         return new Int32(bits[bitLength-32 ..< bitLength]);
         }
 
     @Override
-    Int64 toInt64()
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= Int64.MaxValue;
         return new Int64(bits[bitLength-64 ..< bitLength]);
         }
 
     @Override
-    Int128 toInt128()
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= Int128.MaxValue;
         return new Int128(bits);
         }
 
+    @Auto
     @Override
-    @Auto IntN toIntN()
+    IntN toIntN(Rounding direction = TowardZero)
         {
         return bits[0] == 0 ? new IntN(bits) : toUIntN().toIntN();
         }
 
     @Override
-    UInt8 toUInt8()
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
-    UInt16 toUInt16()
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= UInt16.MaxValue;
         return new UInt16(bits[bitLength-16 ..< bitLength]);
         }
 
     @Override
-    UInt32 toUInt32()
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= UInt32.MaxValue;
         return new UInt32(bits[bitLength-32 ..< bitLength]);
         }
 
     @Override
-    UInt64 toUInt64()
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= UInt64.MaxValue;
         return new UInt64(bits[bitLength-64 ..< bitLength]);
         }
 
     @Override
-    UInt128 toUInt128()
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return this;
         }
 
+    @Auto
     @Override
-    @Auto UIntN toUIntN()
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
         return new UIntN(bits);
         }
 
+    @Auto
     @Override
-    @Auto FloatN toFloatN()
+    BFloat16 toBFloat16();
+
+    @Auto
+    @Override
+    Float16 toFloat16();
+
+    @Auto
+    @Override
+    Float32 toFloat32();
+
+    @Auto
+    @Override
+    Float64 toFloat64();
+
+    @Auto
+    @Override
+    Float128 toFloat128();
+
+    @Auto
+    @Override
+    FloatN toFloatN()
         {
-        TODO
+        return toIntLiteral().toFloatN();
         }
 
+    @Auto
     @Override
-    @Auto DecN toDecN()
+    Dec32 toDec32();
+
+    @Auto
+    @Override
+    Dec64 toDec64();
+
+    @Auto
+    @Override
+    Dec128 toDec128();
+
+    @Auto
+    @Override
+    DecN toDecN()
         {
-        TODO
+        return toIntLiteral().toDecN();
         }
 
 

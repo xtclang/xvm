@@ -5,7 +5,7 @@ mixin FPNumberArray<Element extends FPNumber>
         into Array<Element>
         extends NumberArray<Element>
     {
-    typedef FPNumber.Rounding as Rounding;
+    typedef Number.Rounding as Rounding;
 
     // ----- vector operations ---------------------------------------------------------------------
 
@@ -669,7 +669,7 @@ mixin FPNumberArray<Element extends FPNumber>
                 return NaN ?: throw new OutOfBounds("value is NaN");
                 }
 
-            if (e.signBit)
+            if (e.negative)
                 {
                 return negInfinity?;
                 }

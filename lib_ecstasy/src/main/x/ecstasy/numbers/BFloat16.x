@@ -48,15 +48,15 @@ const BFloat16
      *
      * REVIEW GG CP if this approach is good, then replicate (including static properties below) to all FPNumber implementations
      *
-     * @param signBit      true if explicitly negative
+     * @param negative      true if explicitly negative
      * @param significand  the significand value, in the range `0` to TODO
      * @param exponent     the exponent value, in the range [EMIN] to [EMAX]
      */
-    construct(Boolean signBit, Int significand, Int exponent)
+    construct(Boolean negative, Int significand, Int exponent)
         {
         if (significand == 0)
             {
-            construct BFloat16(signBit ? BFloat16:-0.bits : BFloat16:0.bits);
+            construct BFloat16(negative ? BFloat16:-0.bits : BFloat16:0.bits);
             return;
             }
 
@@ -67,7 +67,7 @@ const BFloat16
         assert:bounds significand > 0 && sigCount - 1 <= SIG_BITS;
         assert:bounds EMIN <= exponent <= EMAX;
 
-        Bit[] signBits = signBit ? [1] : [0];
+        Bit[] signBits = negative ? [1] : [0];
         Bit[] expBits  = (exponent + BIAS).toBitArray()[64-EXP_BITS ..< 64];
         Bit[] sigBits  = (significand << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS ..< 64];
         construct BFloat16(signBits + expBits + sigBits);
@@ -79,9 +79,9 @@ const BFloat16
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedByteLength()
+    static conditional Int fixedBitLength()
         {
-        return True, 2;
+        return True, 16;
         }
 
     @Override
@@ -218,7 +218,7 @@ const BFloat16
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean signBit, Int significand, Int exponent) split()
+    (Boolean negative, Int significand, Int exponent) split()
         {
         TODO
         }
@@ -389,32 +389,91 @@ const BFloat16
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    BFloat16! toBFloat16()
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
+        {
+        return round(direction).toIntN();
+        }
+
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
+        {
+        return round(direction).toUIntN();
+        }
+
+    @Override
+    BFloat16 toBFloat16()
         {
         return this;
         }
 
     @Override
-    IntN toIntN()
-        {
-        TODO
-        }
+    Float16 toFloat16();
 
+    @Auto
     @Override
-    UIntN toUIntN()
-        {
-        TODO
-        }
+    Float32 toFloat32();
 
+    @Auto
+    @Override
+    Float64 toFloat64();
+
+    @Auto
+    @Override
+    Float128 toFloat128();
+
+    @Auto
     @Override
     FloatN toFloatN()
         {
-        TODO
+        return new FloatN(bits);
         }
 
+    @Auto
+    @Override
+    Dec32 toDec32();
+
+    @Auto
+    @Override
+    Dec64 toDec64();
+
+    @Auto
+    @Override
+    Dec128 toDec128();
+
+    @Auto
     @Override
     DecN toDecN()
         {
-        TODO
+        return toFPLiteral().toDecN();
         }
     }

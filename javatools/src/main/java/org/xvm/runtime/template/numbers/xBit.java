@@ -43,9 +43,9 @@ public class xBit
         ONE  = new JavaLong(getCanonicalClass(), 1);
 
         markNativeMethod("toBoolean", VOID, new String[]{"Boolean"});
-        markNativeMethod("toUInt8"  , VOID, new String[]{"numbers.UInt8"}); // Byte
-        markNativeMethod("toInt64"  , VOID, new String[]{"numbers.Int64"});
-        markNativeMethod("toUInt64" , VOID, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt8"  , null, new String[]{"numbers.UInt8"}); // Byte
+        markNativeMethod("toInt64"  , null, new String[]{"numbers.Int64"});
+        markNativeMethod("toUInt64" , null, new String[]{"numbers.UInt64"});
 
         markNativeMethod("and", THIS, THIS);
         markNativeMethod("or" , THIS, THIS);

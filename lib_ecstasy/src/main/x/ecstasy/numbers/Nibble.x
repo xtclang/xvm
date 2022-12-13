@@ -1,9 +1,12 @@
+import Number.Rounding;
+
 /**
  * A Nibble is half of a byte (bite); basically, a nibble is the number of bits necessary to hold a
  * hexadecimal value (a _hexit_, akin to a digit).
  */
 const Nibble(Bit[] bits)
         implements Sequential
+        implements IntConvertible
         default(0)
     {
     assert()
@@ -212,15 +215,6 @@ const Nibble(Bit[] bits)
         }
 
     /**
-     * Convert the number to an unsigned 8-bit integer.
-     *
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<Bit, <>, <Byte>> toByte = toUInt8;
-
-    /**
      * @return the character representation of the nibble, which is the digit `0..9` or the alpha
      *         letter `A..F`
      */
@@ -231,11 +225,19 @@ const Nibble(Bit[] bits)
         return n <= 9 ? '0' + n : 'A' + n - 0xA;
         }
 
+    @Auto
+    @Override
+    IntLiteral toIntLiteral(Rounding direction = TowardZero)
+        {
+        return new IntLiteral(toChar().toString());
+        }
+
     /**
      * @return the Int8 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    Int8 toInt8()
+    @Override
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toInt8();
         }
@@ -244,7 +246,8 @@ const Nibble(Bit[] bits)
      * @return the Int16 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    Int16 toInt16()
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toInt16();
         }
@@ -253,7 +256,8 @@ const Nibble(Bit[] bits)
      * @return the Int32 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    Int32 toInt32()
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toInt32();
         }
@@ -262,7 +266,8 @@ const Nibble(Bit[] bits)
      * @return the Int64 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    Int64 toInt64()
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toInt64();
         }
@@ -271,7 +276,8 @@ const Nibble(Bit[] bits)
      * @return the Int128 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    Int128 toInt128()
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toInt128();
         }
@@ -280,7 +286,8 @@ const Nibble(Bit[] bits)
      * @return the IntN value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    IntN toIntN()
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
         {
         return toUInt8().toIntN();
         }
@@ -290,7 +297,8 @@ const Nibble(Bit[] bits)
      *         `[0..F]`
      */
     @Auto
-    UInt8 toUInt8()
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return bits.toUInt8();
         }
@@ -299,7 +307,8 @@ const Nibble(Bit[] bits)
      * @return the UInt16 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    UInt16 toUInt16()
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toUInt16();
         }
@@ -308,7 +317,8 @@ const Nibble(Bit[] bits)
      * @return the UInt32 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    UInt32 toUInt32()
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toUInt32();
         }
@@ -317,7 +327,8 @@ const Nibble(Bit[] bits)
      * @return the UInt64 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    UInt64 toUInt64()
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toUInt64();
         }
@@ -326,7 +337,8 @@ const Nibble(Bit[] bits)
      * @return the UInt128 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    UInt128 toUInt128()
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toUInt8().toUInt128();
         }
@@ -335,7 +347,8 @@ const Nibble(Bit[] bits)
      * @return the UIntN value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
-    UIntN toUIntN()
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
         return toUInt8().toUIntN();
         }

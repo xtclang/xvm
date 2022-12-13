@@ -51,8 +51,9 @@ class StringBuffer
         return this;
         }
 
+    @Auto
     @Override
-    @Auto String toString()
+    String toString()
         {
         return new String(chars);
         }

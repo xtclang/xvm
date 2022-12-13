@@ -81,26 +81,26 @@ public abstract class xConstrainedInteger
 
         markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("toInt8"  , VOID, sName.equals("numbers.Int8")   ? THIS : new String[]{"numbers.Int8"});
-        markNativeMethod("toInt16" , VOID, sName.equals("numbers.Int16")  ? THIS : new String[]{"numbers.Int16"});
-        markNativeMethod("toInt32" , VOID, sName.equals("numbers.Int32")  ? THIS : new String[]{"numbers.Int32"});
-        markNativeMethod("toInt64" , VOID, sName.equals("numbers.Int64")  ? THIS : new String[]{"numbers.Int64"});
-        markNativeMethod("toUInt8" , VOID, sName.equals("numbers.UInt8")  ? THIS : new String[]{"numbers.UInt8"});
-        markNativeMethod("toUInt16", VOID, sName.equals("numbers.UInt16") ? THIS : new String[]{"numbers.UInt16"});
-        markNativeMethod("toUInt32", VOID, sName.equals("numbers.UInt32") ? THIS : new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt64", VOID, sName.equals("numbers.UInt64") ? THIS : new String[]{"numbers.UInt64"});
+        markNativeMethod("toInt8"  , null, sName.equals("numbers.Int8")   ? THIS : new String[]{"numbers.Int8"});
+        markNativeMethod("toInt16" , null, sName.equals("numbers.Int16")  ? THIS : new String[]{"numbers.Int16"});
+        markNativeMethod("toInt32" , null, sName.equals("numbers.Int32")  ? THIS : new String[]{"numbers.Int32"});
+        markNativeMethod("toInt64" , null, sName.equals("numbers.Int64")  ? THIS : new String[]{"numbers.Int64"});
+        markNativeMethod("toUInt8" , null, sName.equals("numbers.UInt8")  ? THIS : new String[]{"numbers.UInt8"});
+        markNativeMethod("toUInt16", null, sName.equals("numbers.UInt16") ? THIS : new String[]{"numbers.UInt16"});
+        markNativeMethod("toUInt32", null, sName.equals("numbers.UInt32") ? THIS : new String[]{"numbers.UInt32"});
+        markNativeMethod("toUInt64", null, sName.equals("numbers.UInt64") ? THIS : new String[]{"numbers.UInt64"});
 
-        markNativeMethod("toFloat16"     , VOID, new String[]{"numbers.Float16"});
-        markNativeMethod("toFloat32"     , VOID, new String[]{"numbers.Float32"});
-        markNativeMethod("toFloat64"     , VOID, new String[]{"numbers.Float64"});
+        markNativeMethod("toFloat16"     , null, new String[]{"numbers.Float16"});
+        markNativeMethod("toFloat32"     , null, new String[]{"numbers.Float32"});
+        markNativeMethod("toFloat64"     , null, new String[]{"numbers.Float64"});
 
-        markNativeMethod("toInt128"      , VOID, new String[]{"numbers.Int128"});
-        markNativeMethod("toUInt128"     , VOID, new String[]{"numbers.UInt128"});
-        markNativeMethod("toIntN"        , VOID, new String[]{"numbers.IntN"});
-        markNativeMethod("toUIntN"       , VOID, new String[]{"numbers.UIntN"});
-        markNativeMethod("toFloatN"      , VOID, new String[]{"numbers.FloatN"});
-        markNativeMethod("toDecN"        , VOID, new String[]{"numbers.DecN"});
-        markNativeMethod("toChar"        , VOID, new String[]{"text.Char"});
+        markNativeMethod("toInt128"      , null, new String[]{"numbers.Int128"});
+        markNativeMethod("toUInt128"     , null, new String[]{"numbers.UInt128"});
+        markNativeMethod("toIntN"        , null, new String[]{"numbers.IntN"});
+        markNativeMethod("toUIntN"       , null, new String[]{"numbers.UIntN"});
+        markNativeMethod("toFloatN"      , null, new String[]{"numbers.FloatN"});
+        markNativeMethod("toDecN"        , null, new String[]{"numbers.DecN"});
+        markNativeMethod("toChar"        , null, new String[]{"text.Char"});
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);

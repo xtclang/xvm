@@ -2,16 +2,9 @@
  * An FPNumber is a Number that represents an floating point value.
  */
 @Abstract const FPNumber
-        extends Number // TODO FPConvertible
+        extends Number
     {
     // ----- constants -----------------------------------------------------------------------------
-
-    /**
-     * Options for rounding.
-     *
-     * These are the rounding directions defined by the IEEE 754 standard.
-     */
-    enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
 
     /**
      * The value of _pi_ ("π"), defined as the ratio of the circumference of a circle to its
@@ -75,7 +68,8 @@
      * IEEE 754 values have a sign bit; it is the left-most bit of the value for both binary
      * and decimal floating point values. In the standard, the sign bit is referred to as _S_.
      */
-    @RO Boolean signBit.get()
+    @Override
+    @RO Boolean negative.get()
         {
         return bits[0].toBoolean();
         }
@@ -113,27 +107,6 @@
         (_, _, IntNumber exponent) = split();
         return exponent;
         }
-
-    /**
-     * True iff the floating point value is a finite value, indicating that it is neither infinity
-     * nor Not-a-Number (`NaN`).
-     */
-    @RO Boolean finite.get()
-        {
-        return !infinity && !NaN;
-        }
-
-    /**
-     * True iff the floating point value is positive infinity or negative infinity. Floating point
-     * values can be infinite as the result of math overflow, for example.
-     */
-    @RO Boolean infinity;
-
-    /**
-     * True iff the floating point value is a `NaN` (_Not-a-Number_). Floating point values can be
-     * `NaN` as the result of math underflow, for example.
-     */
-    @RO Boolean NaN;
 
     /**
      * The radix of the significand.
@@ -213,11 +186,11 @@
      * Split the floating point number into its constituent pieces: A sign bit, a significand, and
      * an exponent.
      *
-     * @return signBit
-     * @return significand
-     * @return exponent
+     * @return negative     `True` iff the floating point value is explicitly negative
+     * @return significand  the significand value of the floating point number
+     * @return exponent     the exponent value of the floating point number
      */
-    (Boolean signBit, IntNumber significand, IntNumber exponent) split();
+    (Boolean negative, IntNumber significand, IntNumber exponent) split();
 
     /**
      * Round a floating point value to an integer.
@@ -393,9 +366,9 @@
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    IntLiteral toIntLiteral()
+    IntLiteral toIntLiteral(Rounding direction = TowardZero)
         {
-        return round(TowardZero).toIntN().toIntLiteral();
+        return round(direction).toIntN().toIntLiteral();
         }
 
     @Override

@@ -1,3 +1,5 @@
+import Number.Rounding;
+
 /**
  * An IntLiteral is a constant type that is able to convert any text string containing a
  * legal representation of an IntNumber into any of the built-in IntNumber implementations.
@@ -21,6 +23,8 @@
  */
 const IntLiteral(String text)
         implements Sequential
+        implements IntConvertible
+        implements FPConvertible
         implements Destringable
         default(0)
     {
@@ -492,406 +496,193 @@ const IntLiteral(String text)
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    // TODO doc all
-    // TODO unchecked support
-
-    @Auto Bit toBit()
-        {
-        if (magnitude == 0)
-            {
-            return 0;
-            }
-
-        assert magnitude == 1 && explicitSign != Signum.Negative;
-        return 1;
-        }
-
     /**
-     * Convert the number to an unsigned 8-bit integer.
+     * Convert the value to a single Bit.
      *
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<IntLiteral, <>, <Byte>> toByte = toUInt8;
-
-    /**
-     * Convert the number to a variable-length signed integer.
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
      *
-     * @return the variable-length signed integer value
-     */
-    @Auto IntN toIntN()
-        {
-        TODO
-        }
-
-    /**
-     * Convert the number to an unchecked, variable-length signed integer.
-     *
-     * @return the unchecked, variable-length signed integer value
-     */
-    @Auto @Unchecked IntN toUncheckedIntN()
-        {
-        return toIntN().toUnchecked();
-        }
-
-    /**
-     * Convert the number to a signed 8-bit integer.
-     *
-     * @return the signed 8-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
-     */
-    @Auto Int8 toInt8()
-        {
-        return toIntN().toInt8();
-        }
-
-    /**
-     * Convert the number to an unchecked, signed 8-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the signed 8-bit integer value
-     */
-    @Auto @Unchecked Int8 toUncheckedInt8()
-        {
-        return toIntN().toUnchecked().toInt8().toUnchecked();
-        }
-
-    /**
-     * Convert the number to a signed 16-bit integer.
-     *
-     * @return the signed 16-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
-     */
-    @Auto Int16 toInt16()
-        {
-        return toIntN().toInt16();
-        }
-
-    /**
-     * Convert the number to an unchecked, signed 16-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the signed 16-bit integer value
-     */
-    @Auto @Unchecked Int16 toUncheckedInt16()
-        {
-        return toIntN().toUnchecked().toInt16().toUnchecked();
-        }
-
-    /**
-     * Convert the number to a signed 32-bit integer.
-     *
-     * @return the signed 32-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
-     */
-    @Auto Int32 toInt32()
-        {
-        return toIntN().toInt32();
-        }
-
-    /**
-     * Convert the number to an unchecked, signed 32-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the signed 32-bit integer value
-     */
-    @Auto @Unchecked Int32 toUncheckedInt32()
-        {
-        return toIntN().toUnchecked().toInt32().toUnchecked();
-        }
-
-    /**
-     * Convert the number to a signed 64-bit integer.
-     *
-     * @return the signed 64-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
-     */
-    @Auto Int64 toInt64()
-        {
-        return toIntN().toInt64();
-        }
-
-    /**
-     * Convert the number to an unchecked, signed 64-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the signed 64-bit integer value
-     */
-    @Auto @Unchecked Int64 toUncheckedInt64()
-        {
-        return toIntN().toUnchecked().toInt64().toUnchecked();
-        }
-
-    /**
-     * Convert the number to a signed 128-bit integer.
-     *
-     * @return the signed 128-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
-     */
-    @Auto Int128 toInt128()
-        {
-        return toIntN().toInt128();
-        }
-
-    /**
-     * Convert the number to an unchecked, signed 128-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the signed 128-bit integer value
-     */
-    @Auto @Unchecked Int128 toUncheckedInt128()
-        {
-        return toIntN().toUnchecked().toInt128().toUnchecked();
-        }
-
-    /**
-     * Convert the number to a variable-length unsigned integer.
-     *
-     * @return the variable-length unsigned integer value
-     */
-    @Auto UIntN toUIntN()
-        {
-        TODO
-        }
-
-    /**
-     * Convert the number to an unchecked, variable-length unsigned integer.
-     *
-     * @return the unchecked, variable-length unsigned integer value
-     */
-    @Auto @Unchecked UIntN toUncheckedUIntN()
-        {
-        return toUIntN().toUnchecked();
-        }
-
-    /**
-     * Convert the number to an unsigned 8-bit integer.
-     *
-     * @return the unsigned 8-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
-     */
-    @Auto UInt8 toUInt8()
-        {
-        return toUIntN().toUInt8();
-        }
-
-    /**
-     * Convert the number to an unchecked, unsigned 8-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the unsigned 8-bit integer value
-     */
-    @Auto @Unchecked UInt8 toUncheckedUInt8()
-        {
-        return toUIntN().toUnchecked().toUInt8().toUnchecked();
-        }
-
-    /**
-     * Convert the number to an unsigned 16-bit integer.
-     *
-     * @return the unsigned 16-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
-     */
-    @Auto UInt16 toUInt16()
-        {
-        return toUIntN().toUInt16();
-        }
-
-    /**
-     * Convert the number to an unchecked, unsigned 16-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the unsigned 16-bit integer value
-     */
-    @Auto @Unchecked UInt16 toUncheckedUInt16()
-        {
-        return toUIntN().toUnchecked().toUInt16().toUnchecked();
-        }
-
-    /**
-     * Convert the number to an unsigned 32-bit integer.
-     *
-     * @return the unsigned 32-bit integer value
+     * @return the corresponding Bit value
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
+     *                      and `truncate` is not `True`
      */
-    @Auto UInt32 toUInt32()
+    @Auto
+    Bit toBit(Boolean truncate = False)
         {
-        return toUIntN().toUInt32();
-        }
-
-    /**
-     * Convert the number to an unchecked, unsigned 32-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the unsigned 32-bit integer value
-     */
-    @Auto @Unchecked UInt32 toUncheckedUInt32()
-        {
-        return toUIntN().toUnchecked().toUInt32().toUnchecked();
-        }
-
-    /**
-     * Convert the number to an unsigned 64-bit integer.
-     *
-     * @return the unsigned 64-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
-     */
-    @Auto UInt64 toUInt64()
-        {
-        return toUIntN().toUInt64();
-        }
-
-    /**
-     * Convert the number to an unchecked, unsigned 64-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the unsigned 64-bit integer value
-     */
-    @Auto @Unchecked UInt64 toUncheckedUInt64()
-        {
-        return toUIntN().toUnchecked().toUInt64().toUnchecked();
-        }
-
-    /**
-     * Convert the number to an unsigned 128-bit integer.
-     *
-     * @return the unsigned 128-bit integer value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
-     */
-    @Auto UInt128 toUInt128()
-        {
-        return toIntN().toUInt128();
-        }
-
-    /**
-     * Convert the number to an unchecked, unsigned 128-bit integer.
-     * Any additional magnitude is discarded.
-     *
-     * @return the unsigned 128-bit integer value
-     */
-    @Auto @Unchecked UInt128 toUncheckedUInt128()
-        {
-        return toUIntN().toUnchecked().toUInt128().toUnchecked();
-        }
-
-    /**
-     * Convert the number to a variable-length binary radix floating point number.
-     */
-    @Auto FloatN toFloatN()
-        {
-        TODO
-        }
-
-    /**
-     * Convert the number to a 16-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float16 toFloat16()
-        {
-        return toFloatN().toFloat16();
-        }
-
-    /**
-     * Convert the number to a 16-bit radix-2 (binary) "brain" floating point number.
-     */
-    @Auto BFloat16 toBFloat16()
-        {
-        return toFloatN().toBFloat16();
-        }
-
-    /**
-     * Convert the number to a 32-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float32 toFloat32()
-        {
-        return toFloatN().toFloat32();
-        }
-
-    /**
-     * Convert the number to a 64-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float64 toFloat64()
-        {
-        return toFloatN().toFloat64();
-        }
-
-    /**
-     * Convert the number to a 128-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float128 toFloat128()
-        {
-        return toFloatN().toFloat128();
-        }
-
-    /**
-     * Convert the number to a variable-length decimal radix floating point number.
-     */
-    @Auto DecN toDecN()
-        {
-        TODO
-        }
-
-    /**
-     * Convert the number to a 32-bit radix-10 (decimal) floating point number.
-     */
-    @Auto Dec32 toDec32()
-        {
-        return toDecN().toDec32();
-        }
-
-    /**
-     * Convert the number to a 64-bit radix-10 (decimal) floating point number.
-     */
-    @Auto Dec64 toDec64()
-        {
-        return toDecN().toDec64();
-        }
-
-    /**
-     * Convert the number to a 128-bit radix-10 (decimal) floating point number.
-     */
-    @Auto Dec128 toDec128()
-        {
-        return toDecN().toDec128();
+        Byte byte = toByte(truncate);
+        assert:bounds truncate || byte <= 1;
+        return byte & 1 == 1 ? 1 : 0;
         }
 
     /**
      * Convert the number to a 4-bit integer.
-     * Any additional magnitude is discarded.
+     *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     *
+     * @return the corresponding Nibble value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 4-bit integer range
+     *                      and `truncate` is not `True`
      */
-    @Auto Nibble toNibble()
+    @Auto
+    Nibble toNibble(Boolean truncate = False)
         {
-        return Nibble.of(toInt64());
+        return Nibble.of(toInt64(truncate));
         }
 
     /**
-     * Convert the number to a 128-bit radix-10 (decimal) floating point number.
+     * Convert the value to a character value.
+     *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     *
+     * @return the corresponding Char value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
+     *                      and `truncate` is not `True`
      */
-    Char toChar()
+    Char toChar(Boolean truncate = False)
         {
-        return new Char(toUInt32());
+        return new Char(toUInt32(truncate));
+        }
+
+    @Override
+    IntLiteral toIntLiteral(Rounding direction = TowardZero)
+        {
+        return this;
+        }
+
+    @Auto
+    @Override
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
+        {
+        TODO
+        }
+
+    @Auto
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    FPLiteral toFPLiteral()
+        {
+        return new FPLiteral(text);
+        }
+
+    @Auto
+    @Override
+    BFloat16 toBFloat16()
+        {
+        return toFPLiteral().toBFloat16();
+        }
+
+    @Auto
+    @Override
+    Float16 toFloat16()
+        {
+        return toFPLiteral().toFloat16();
+        }
+
+    @Auto
+    @Override
+    Float32 toFloat32()
+        {
+        return toFPLiteral().toFloat32();
+        }
+
+    @Auto
+    @Override
+    Float64 toFloat64()
+        {
+        return toFPLiteral().toFloat64();
+        }
+
+    @Auto
+    @Override
+    Float128 toFloat128()
+        {
+        return toFPLiteral().toFloat128();
+        }
+
+    @Auto
+    @Override
+    FloatN toFloatN()
+        {
+        return toFPLiteral().toFloatN();
+        }
+
+    @Auto
+    @Override
+    Dec32 toDec32()
+        {
+        return toFPLiteral().toDec32();
+        }
+
+    @Auto
+    @Override
+    Dec64 toDec64()
+        {
+        return toFPLiteral().toDec64();
+        }
+
+    @Auto
+    @Override
+    Dec128 toDec128()
+        {
+        return toFPLiteral().toDec128();
+        }
+
+    @Auto
+    @Override
+    DecN toDecN()
+        {
+        return toFPLiteral().toDecN();
         }
 
     @Override
     String toString()
         {
         return text;
-        }
-
-    // TODO @Auto?
-    FPLiteral toFPLiteral()
-        {
-        return new FPLiteral(text);
         }
 
 

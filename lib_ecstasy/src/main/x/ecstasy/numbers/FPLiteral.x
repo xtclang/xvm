@@ -4,6 +4,7 @@
  */
 const FPLiteral(String text)
         implements Orderable
+        implements FPConvertible
         implements Destringable
         default(0.0)
     {
@@ -12,84 +13,80 @@ const FPLiteral(String text)
      */
     private String text;
 
-    /**
-     * Convert the number to a variable-length binary radix floating point number.
-     */
-    @Auto FloatN toFloatN()
+    @Auto
+    @Override
+    FloatN toFloatN()
         {
         TODO
         }
 
-    /**
-     * Convert the number to a "brain" 16-bit radix-2 (binary) floating point number.
-     */
-    @Auto BFloat16 toBFloat16()
+    @Auto
+    @Override
+    BFloat16 toBFloat16()
         {
         return toFloatN().toBFloat16();
         }
 
-    /**
-     * Convert the number to a 16-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float16 toFloat16()
+    @Auto
+    @Override
+    Float16 toFloat16()
         {
         return toFloatN().toFloat16();
         }
 
-    /**
-     * Convert the number to a 32-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float32 toFloat32()
+    @Auto
+    @Override
+    Float32 toFloat32()
         {
         return toFloatN().toFloat32();
         }
 
-    /**
-     * Convert the number to a 64-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float64 toFloat64()
+    @Auto
+    @Override
+    Float64 toFloat64()
         {
         return toFloatN().toFloat64();
         }
 
-    /**
-     * Convert the number to a 128-bit radix-2 (binary) floating point number.
-     */
-    @Auto Float128 toFloat128()
+    @Auto
+    @Override
+    Float128 toFloat128()
         {
         return toFloatN().toFloat128();
         }
 
-    /**
-     * Convert the number to a variable-length decimal radix floating point number.
-     */
-    @Auto DecN toDecN()
+    @Auto
+    @Override
+    DecN toDecN()
         {
         TODO
         }
 
-    /**
-     * Convert the number to a 32-bit radix-10 (decimal) floating point number.
-     */
-    @Auto Dec32 toDec32()
+    @Auto
+    @Override
+    Dec32 toDec32()
         {
         return toDecN().toDec32();
         }
 
-    /**
-     * Convert the number to a 64-bit radix-10 (decimal) floating point number.
-     */
-    @Auto Dec64 toDec64()
+    @Auto
+    @Override
+    Dec64 toDec64()
         {
         return toDecN().toDec64();
         }
 
-    /**
-     * Convert the number to a 128-bit radix-10 (decimal) floating point number.
-     */
-    @Auto Dec128 toDec128()
+    @Auto
+    @Override
+    Dec128 toDec128()
         {
         return toDecN().toDec128();
+        }
+
+    @Override
+    FPLiteral toFPLiteral()
+        {
+        return this;
         }
 
     @Override

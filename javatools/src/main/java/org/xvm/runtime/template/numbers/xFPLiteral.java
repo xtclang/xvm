@@ -51,15 +51,15 @@ public class xFPLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("toFloatN"  , VOID, new String[]{"numbers.FloatN"});
-        markNativeMethod("toFloat16" , VOID, new String[]{"numbers.Float16"});
-        markNativeMethod("toFloat32" , VOID, new String[]{"numbers.Float32"});
-        markNativeMethod("toFloat64" , VOID, new String[]{"numbers.Float64"});
-        markNativeMethod("toFloat128", VOID, new String[]{"numbers.Float128"});
-        markNativeMethod("toDecN"    , VOID, new String[]{"numbers.DecN"});
-        markNativeMethod("toDec32"   , VOID, new String[]{"numbers.Dec32"});
-        markNativeMethod("toDec64"   , VOID, new String[]{"numbers.Dec64"});
-        markNativeMethod("toDec128"  , VOID, new String[]{"numbers.Dec128"});
+        markNativeMethod("toFloatN"  , null, new String[]{"numbers.FloatN"});
+        markNativeMethod("toFloat16" , null, new String[]{"numbers.Float16"});
+        markNativeMethod("toFloat32" , null, new String[]{"numbers.Float32"});
+        markNativeMethod("toFloat64" , null, new String[]{"numbers.Float64"});
+        markNativeMethod("toFloat128", null, new String[]{"numbers.Float128"});
+        markNativeMethod("toDecN"    , null, new String[]{"numbers.DecN"});
+        markNativeMethod("toDec32"   , null, new String[]{"numbers.Dec32"});
+        markNativeMethod("toDec64"   , null, new String[]{"numbers.Dec64"});
+        markNativeMethod("toDec128"  , null, new String[]{"numbers.Dec128"});
 
         getCanonicalType().invalidateTypeInfo();
         }

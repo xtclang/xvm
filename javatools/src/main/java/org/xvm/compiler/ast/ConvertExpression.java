@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
@@ -41,7 +42,9 @@ public class ConvertExpression
 
         assert iVal >= 0 && iVal < expr.getValueCount();
         assert idConv != null;
-        assert idConv.getRawParams().length == 0; // TODO add support for default parameters
+        assert idConv.getRawParams().length == 0
+            || (idConv.getComponent() instanceof MethodStructure method)
+                && method.getParamCount()-method.getDefaultParamCount() == 0;
         assert idConv.getRawReturns().length > 0;
         assert !idConv.getComponent().isStatic();
 

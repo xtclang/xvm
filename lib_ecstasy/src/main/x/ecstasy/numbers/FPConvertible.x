@@ -111,18 +111,4 @@ interface FPConvertible
      * @return a decimal of variable length
      */
     DecN toDecN();
-
-    // REVIEW GG
-    Int8    roundToInt8(   FPNumber.Rounding direction = TowardZero);
-    Int16   roundToInt16(  FPNumber.Rounding direction = TowardZero);
-    Int32   roundToInt32(  FPNumber.Rounding direction = TowardZero);
-    Int64   roundToInt64(  FPNumber.Rounding direction = TowardZero);
-    Int128  roundToInt128( FPNumber.Rounding direction = TowardZero);
-    IntN    roundToIntN(   FPNumber.Rounding direction = TowardZero);
-    UInt8   roundToUInt8(  FPNumber.Rounding direction = TowardZero);
-    UInt16  roundToUInt16( FPNumber.Rounding direction = TowardZero);
-    UInt32  roundToUInt32( FPNumber.Rounding direction = TowardZero);
-    UInt64  roundToUInt64( FPNumber.Rounding direction = TowardZero);
-    UInt128 roundToUInt128(FPNumber.Rounding direction = TowardZero);
-    UIntN   roundToUIntN(  FPNumber.Rounding direction = TowardZero);
     }

@@ -64,19 +64,11 @@ const FloatN
     @Override
     Signum sign.get()
         {
-        Boolean negative = False;
         eachBit: for (Bit bit : bits)
             {
-            if (bit == 1)
+            if (bit == 1 && !eachBit.first)
                 {
-                if (eachBit.first)
-                    {
-                    negative = True;
-                    }
-                else
-                    {
-                    return negative ? Negative : Positive;
-                    }
+                return negative ? Negative : Positive;
                 }
             }
         return Zero;
@@ -160,7 +152,7 @@ const FloatN
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean signBit, IntN significand, IntN exponent) split()
+    (Boolean negative, IntN significand, IntN exponent) split()
         {
         TODO
         }
@@ -331,26 +323,81 @@ const FloatN
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    IntN toIntN()
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
         {
-        TODO
+        return round(direction).toIntN();
         }
 
     @Override
-    UIntN toUIntN()
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
-        TODO
+        return round(direction).toUIntN();
         }
 
     @Override
-    FloatN! toFloatN()
+    BFloat16 toBFloat16();
+
+    @Override
+    Float16 toFloat16();
+
+    @Override
+    Float32 toFloat32();
+
+    @Override
+    Float64 toFloat64();
+
+    @Override
+    Float128 toFloat128();
+
+    @Override
+    FloatN toFloatN()
         {
         return this;
         }
 
     @Override
+    Dec32 toDec32();
+
+    @Override
+    Dec64 toDec64();
+
+    @Override
+    Dec128 toDec128();
+
+    @Auto
+    @Override
     DecN toDecN()
         {
-        TODO
+        return toFPLiteral().toDecN();
         }
     }

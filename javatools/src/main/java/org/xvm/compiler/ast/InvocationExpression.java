@@ -2602,9 +2602,9 @@ public class InvocationExpression
             {
             // almost identical to the above case, allow calling a function on a class represented
             // by the DataType; this for example allows writing (assuming "Type<Number> numType")
-            //      "numType.fixedByteLength()"
+            //      "numType.fixedBitLength()"
             // instead of more explicit
-            //      "numType.DataType.fixedByteLength()"
+            //      "numType.DataType.fixedBitLength()"
             TypeConstant typeDataType = typeLeft.getParamType(0);
             TypeInfo     infoDataType = typeDataType.ensureTypeInfo(ErrorListener.BLACKHOLE);
 

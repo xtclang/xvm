@@ -229,8 +229,10 @@ mixin ByteArray<Element extends Byte>
         {
         construct(ByteArray bytes)
             {
-            this.bytes        = bytes;
-            this.bytesPerNum := NumType.fixedByteLength();
+            assert Int bitsPerNum := NumType.fixedBitLength();
+
+            this.bytes       = bytes;
+            this.bytesPerNum = (bitsPerNum + 7) / 8;
             }
 
         private Byte[] bytes;

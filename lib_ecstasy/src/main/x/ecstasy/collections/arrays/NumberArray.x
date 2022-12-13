@@ -434,17 +434,15 @@ mixin NumberArray<Element extends Number>
      */
     Bit[] asBitArray()
         {
-        assert Element.fixedByteLength();
+        assert Element.fixedBitLength();
 
         static class Translator<NumType extends Number>(NumType[] nums)
                 implements ArrayDelegate<Bit>
             {
             construct(NumType[] nums)
                 {
-                assert Int bytesPerNum := NumType.fixedByteLength();
-
-                this.nums       = nums;
-                this.bitsPerNum = bytesPerNum * 8;
+                this.nums = nums;
+                assert this.bitsPerNum := NumType.fixedBitLength();
                 }
 
             private NumType[] nums;

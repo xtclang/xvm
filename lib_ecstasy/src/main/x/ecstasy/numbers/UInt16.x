@@ -18,9 +18,9 @@ const UInt16
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedByteLength()
+    static conditional Int fixedBitLength()
         {
-        return True, 2;
+        return True, 16;
         }
 
     @Override
@@ -299,90 +299,132 @@ const UInt16
         }
 
     @Override
-    Int8 toInt8()
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
-    Int16 toInt16()
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= Int16.MaxValue;
         return new Int16(bits);
         }
 
+    @Auto
     @Override
-    @Auto Int32 toInt32()
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return new Int32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])));
         }
 
+    @Auto
     @Override
-    @Auto Int64 toInt64()
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return new Int64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
         }
 
+    @Auto
     @Override
-    @Auto Int128 toInt128()
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return new Int128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
         }
 
+    @Auto
     @Override
-    @Auto IntN toIntN()
+    IntN toIntN(Rounding direction = TowardZero)
         {
         return bits[0] == 0 ? new IntN(bits) : toUIntN().toIntN();
         }
 
     @Override
-    UInt8 toUInt8()
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
-    UInt16 toUInt16()
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return this;
         }
 
+    @Auto
     @Override
-    @Auto UInt32 toUInt32()
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return new UInt32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])));
         }
 
+    @Auto
     @Override
-    @Auto UInt64 toUInt64()
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return new UInt64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
         }
 
+    @Auto
     @Override
-    @Auto UInt128 toUInt128()
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
         }
 
+    @Auto
     @Override
-    @Auto UIntN toUIntN()
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
         return new UIntN(bits);
         }
 
+    @Auto
     @Override
-    @Auto FloatN toFloatN()
+    BFloat16 toBFloat16();
+
+    @Auto
+    @Override
+    Float16 toFloat16();
+
+    @Auto
+    @Override
+    Float32 toFloat32();
+
+    @Auto
+    @Override
+    Float64 toFloat64();
+
+    @Auto
+    @Override
+    Float128 toFloat128();
+
+    @Auto
+    @Override
+    FloatN toFloatN()
         {
-        TODO
+        return toIntLiteral().toFloatN();
         }
 
+    @Auto
     @Override
-    @Auto DecN toDecN()
+    Dec32 toDec32();
+
+    @Auto
+    @Override
+    Dec64 toDec64();
+
+    @Auto
+    @Override
+    Dec128 toDec128();
+
+    @Auto
+    @Override
+    DecN toDecN()
         {
-        TODO
+        return toIntLiteral().toDecN();
         }
 
 

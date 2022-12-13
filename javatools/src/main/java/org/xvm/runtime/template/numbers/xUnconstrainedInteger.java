@@ -51,18 +51,18 @@ public abstract class xUnconstrainedInteger
 
 // TODO markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("toInt8"   , VOID, new String[]{"numbers.Int8"});
-        markNativeMethod("toInt16"  , VOID, new String[]{"numbers.Int16"});
-        markNativeMethod("toInt32"  , VOID, new String[]{"numbers.Int32"});
-        markNativeMethod("toInt64"  , VOID, new String[]{"numbers.Int64"});
-        markNativeMethod("toInt128" , VOID, new String[]{"numbers.Int128"});
-        markNativeMethod("toIntN"   , VOID, f_sName.equals("numbers.IntN")  ? THIS : new String[]{"numbers.IntN"});
-        markNativeMethod("toUInt8"  , VOID, new String[]{"numbers.UInt8"});
-        markNativeMethod("toUInt16" , VOID, new String[]{"numbers.UInt16"});
-        markNativeMethod("toUInt32" , VOID, new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt64" , VOID, new String[]{"numbers.UInt64"});
-        markNativeMethod("toUInt128", VOID, new String[]{"numbers.UInt128"});
-        markNativeMethod("toUIntN"  , VOID, f_sName.equals("numbers.UIntN") ? THIS : new String[]{"numbers.UIntN"});
+        markNativeMethod("toInt8"   , null, new String[]{"numbers.Int8"});
+        markNativeMethod("toInt16"  , null, new String[]{"numbers.Int16"});
+        markNativeMethod("toInt32"  , null, new String[]{"numbers.Int32"});
+        markNativeMethod("toInt64"  , null, new String[]{"numbers.Int64"});
+        markNativeMethod("toInt128" , null, new String[]{"numbers.Int128"});
+        markNativeMethod("toIntN"   , null, f_sName.equals("numbers.IntN")  ? THIS : new String[]{"numbers.IntN"});
+        markNativeMethod("toUInt8"  , null, new String[]{"numbers.UInt8"});
+        markNativeMethod("toUInt16" , null, new String[]{"numbers.UInt16"});
+        markNativeMethod("toUInt32" , null, new String[]{"numbers.UInt32"});
+        markNativeMethod("toUInt64" , null, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt128", null, new String[]{"numbers.UInt128"});
+        markNativeMethod("toUIntN"  , null, f_sName.equals("numbers.UIntN") ? THIS : new String[]{"numbers.UIntN"});
 
 // TODO markNativeMethod("toFloat16", VOID, new String[]{"numbers.Float16"});
 // TODO markNativeMethod("toFloat32", VOID, new String[]{"numbers.Float32"});

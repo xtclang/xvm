@@ -19,6 +19,8 @@
  */
 @Abstract const Number
         implements Numeric
+        implements IntConvertible
+        implements FPConvertible
         implements Orderable
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -49,6 +51,13 @@
 
 
     // ----- related types -------------------------------------------------------------------------
+
+    /**
+     * Options for rounding.
+     *
+     * These are the rounding directions defined by the IEEE 754 standard.
+     */
+    enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
 
     /**
      * Signum represents the sign of the number, whether zero, negative or positive.
@@ -86,15 +95,16 @@
     /**
      * The number of bits that the number uses.
      */
-    Int bitLength.get()
+    @RO Int bitLength.get()
         {
         return bits.size;
         }
 
     /**
-     * The number of bytes that the number uses.
+     * The number of bytes that this number uses for its storage. In the case of a number that does
+     * not use an exact number of bytes, the number is rounded up to the closest byte.
      */
-    Int byteLength.get()
+    @RO Int byteLength.get()
         {
         return (bitLength + 7) / 8;
         }
@@ -103,15 +113,52 @@
      * True if the numeric type is signed (has the potential to hold positive or negative values);
      * False if unsigned (representing only a magnitude).
      */
-    Boolean signed.get()
+    @RO Boolean signed.get()
         {
         return True;
         }
 
     /**
-     * The Sign of the number.
+     * The Sign of the number. The case of [Zero] is special, in that some numeric formats have an
+     * explicitly signed zero value; in that case, using the
      */
     @RO Signum sign;
+
+    /**
+     * The explicit negative sign of this number. This method only differs from the `sign==Negative`
+     * when the value is a negative zero.
+     */
+    @RO Boolean negative.get()
+        {
+        return sign == Negative;
+        }
+
+    /**
+     * True iff the floating point value is a finite value, indicating that it is neither infinity
+     * nor Not-a-Number (`NaN`).
+     */
+    @RO Boolean finite.get()
+        {
+        return !infinity && !NaN;
+        }
+
+    /**
+     * True iff the this Number is positive infinity or negative infinity. Some forms of Numbers
+     * such as floating point values can be infinite as the result of math overflow, for example.
+     */
+    @RO Boolean infinity.get()
+        {
+        return False;
+        }
+
+    /**
+     * True iff the this Number is a `NaN` (_Not-a-Number_). Some forms of Numbers such as floating
+     * point values can be `NaN` as the result of math underflow, for example.
+     */
+    @RO Boolean NaN.get()
+        {
+        return False;
+        }
 
     /**
      * The magnitude of this number (its distance from zero), which may use a different Number type
@@ -119,7 +166,7 @@
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
-    Number! magnitude.get()
+    @RO Number! magnitude.get()
         {
         return abs();
         }
@@ -312,269 +359,6 @@
         }
 
     /**
-     * Convert the number to a signed 8-bit integer.
-     *
-     * @return the number as a signed 8-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
-     */
-    Int8 toInt8()
-        {
-        return toIntN().toInt8();
-        }
-
-    /**
-     * Convert the number to a signed 16-bit integer.
-     *
-     * @return the number as a signed 16-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
-     */
-    Int16 toInt16()
-        {
-        return toIntN().toInt16();
-        }
-
-    /**
-     * Convert the number to a signed 32-bit integer.
-     *
-     * @return the number as a signed 32-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
-     */
-    Int32 toInt32()
-        {
-        return toIntN().toInt32();
-        }
-
-    /**
-     * Convert the number to a signed 64-bit integer.
-     *
-     * @return the number as a signed 64-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
-     */
-    Int64 toInt64()
-        {
-        return toIntN().toInt64();
-        }
-
-    /**
-     * Convert the number to a signed 128-bit integer.
-     *
-     * @return the number as a signed 128-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
-     */
-    Int128 toInt128()
-        {
-        return toIntN().toInt128();
-        }
-
-    /**
-     * Convert the number to a variable-length signed integer.
-     *
-     * @return the number as a signed integer of variable length
-     *
-     * @throws OutOfBounds  if the resulting value is out of the integer range supported by the
-     *         variable-length signed integer type
-     */
-    IntN toIntN();
-
-    /**
-     * Convert the number to an unsigned 8-bit integer.
-     *
-     * @return the number as an unsigned 8-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
-     */
-    UInt8 toUInt8()
-        {
-        return toUIntN().toUInt8();
-        }
-
-    /**
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<Number, <>, <Byte>> toByte = toUInt8;
-
-    /**
-     * Convert the number to an unsigned 16-bit integer.
-     *
-     * @return the number as an unsigned 16-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
-     */
-    UInt16 toUInt16()
-        {
-        return toUIntN().toUInt16();
-        }
-
-    /**
-     * Convert the number to an unsigned 32-bit integer.
-     *
-     * @return the number as an unsigned 32-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
-     */
-    UInt32 toUInt32()
-        {
-        return toUIntN().toUInt32();
-        }
-
-    /**
-     * Convert the number to an unsigned 64-bit integer.
-     *
-     * @return the number as an unsigned 64-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
-     */
-    UInt64 toUInt64()
-        {
-        return toUIntN().toUInt64();
-        }
-
-    /**
-     * Convert the number to an unsigned 128-bit integer.
-     *
-     * @return the number as an unsigned 128-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
-     */
-    UInt128 toUInt128()
-        {
-        return toIntN().toUInt128();
-        }
-
-    /**
-     * Convert the number to a variable-length unsigned integer.
-     *
-     * @return the number as an unsigned integer of variable length
-     *
-     * @throws OutOfBounds  if the resulting value is out of the integer range supported by the
-     *         variable-length unsigned integer type
-     */
-    UIntN toUIntN();
-
-    /**
-     * Convert the number to a 16-bit radix-2 (binary) "brain" floating point number.
-     *
-     * @return the number as a 16-bit "brain" floating point number
-     */
-    BFloat16 toBFloat16()
-        {
-        return toFloatN().toBFloat16();
-        }
-
-    /**
-     * Convert the number to a 16-bit radix-2 (binary) floating point number.
-     *
-     * @return the number as a 16-bit binary floating point number
-     */
-    Float16 toFloat16()
-        {
-        return toFloatN().toFloat16();
-        }
-
-    /**
-     * Convert the number to a 32-bit radix-2 (binary) floating point number.
-     *
-     * @return the number as a 32-bit binary floating point number
-     */
-    Float32 toFloat32()
-        {
-        return toFloatN().toFloat32();
-        }
-
-    /**
-     * Convert the number to a 64-bit radix-2 (binary) floating point number.
-     *
-     * @return the number as a 64-bit binary floating point number
-     */
-    Float64 toFloat64()
-        {
-        return toFloatN().toFloat64();
-        }
-
-    /**
-     * Convert the number to a 128-bit radix-2 (binary) floating point number.
-     *
-     * @return the number as a 128-bit binary floating point number
-     */
-    Float128 toFloat128()
-        {
-        return toFloatN().toFloat128();
-        }
-
-    /**
-     * Convert the number to a variable-length binary radix floating point number.
-     *
-     * @return the number as a binary floating point of variable length
-     */
-    FloatN toFloatN();
-
-    /**
-     * Convert the number to a 32-bit radix-10 (decimal) floating point number.
-     *
-     * @return the number as a 32-bit decimal
-     *
-     * @throws OutOfBounds  if the resulting value is out of the 32-bit decimal range
-     */
-    Dec32 toDec32()
-        {
-        return toDecN().toDec32();
-        }
-
-    /**
-     * Convert the number to a 64-bit radix-10 (decimal) floating point number.
-     *
-     * @return the number as a 64-bit decimal
-     *
-     * @throws OutOfBounds  if the resulting value is out of the 64-bit decimal range
-     */
-    Dec64 toDec64()
-        {
-        return toDecN().toDec64();
-        }
-
-    /**
-     * Convert the number to a 128-bit radix-10 (decimal) floating point number.
-     *
-     * @return the number as a 128-bit decimal
-     *
-     * @throws OutOfBounds  if the resulting value is out of the 128-bit decimal range
-     */
-    Dec128 toDec128()
-        {
-        return toDecN().toDec128();
-        }
-
-    /**
-     * Convert the number to a variable-length decimal radix floating point number.
-     *
-     * @return the number as a decimal of variable length
-     */
-    DecN toDecN();
-
-    /**
-     * Produce an `IntLiteral` value that represents the value of this number.
-     *
-     * @return an integer literal for this number
-     *
-     * @throws TODO if this value is not naturally convertible to an integer form without loss of information
-     */
-    IntLiteral toIntLiteral();
-
-    /**
-     * Produce an `FPLiteral` value that represents the value of this number.
-     *
-     * @return a floating point literal for this number
-     */
-    FPLiteral toFPLiteral();
-
-    /**
      * Obtain a function that converts from the first specified numeric type to the second
      * specified numeric type.
      *
@@ -617,9 +401,9 @@
          * Determine if the numeric type is a fixed length format.
          *
          * @return True iff the Numeric type is a fixed length format
-         * @return (conditional) the number of bytes in the format
+         * @return (conditional) the number of bits in the format
          */
-        static conditional Int fixedByteLength();
+        static conditional Int fixedBitLength();
 
         /**
          * Determine the "zero" value for the numeric type.
@@ -693,7 +477,7 @@
         }
 
     @Override
-    static conditional Int fixedByteLength()
+    static conditional Int fixedBitLength()
         {
         return False;
         }

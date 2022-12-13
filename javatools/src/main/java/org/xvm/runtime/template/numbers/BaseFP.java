@@ -87,13 +87,13 @@ abstract public class BaseFP
         markNativeMethod("nextDown"   , VOID, THIS);
 
         // conversions
-        markNativeMethod("toInt64"    , VOID, INT);
-        markNativeMethod("toDec64"    , VOID, DEC64);
-        markNativeMethod("toFloat64"  , VOID, FLOAT64);
-        markNativeMethod("toIntN"     , VOID, VAR_INT);
-        markNativeMethod("toUIntN"    , VOID, VAR_UINT);
-        markNativeMethod("toFloatN"   , VOID, VAR_FLOAT);
-        markNativeMethod("toDecN"     , VOID, VAR_DEC);
+        markNativeMethod("toInt64"    , null, INT);
+        markNativeMethod("toDec64"    , null, DEC64);
+        markNativeMethod("toFloat64"  , null, FLOAT64);
+        markNativeMethod("toIntN"     , null, VAR_INT);
+        markNativeMethod("toUIntN"    , null, VAR_UINT);
+        markNativeMethod("toFloatN"   , null, VAR_FLOAT);
+        markNativeMethod("toDecN"     , null, VAR_DEC);
         }
 
     @Override

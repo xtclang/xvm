@@ -1,8 +1,12 @@
+import Number.Rounding;
+
+
 /**
  * A bit represents the smallest possible unit of storage. It has two states: `0` and `1`.
  */
 const Bit(IntLiteral literal)
         implements Sequential
+        implements IntConvertible
         default(0)
     {
     assert()
@@ -36,7 +40,8 @@ const Bit(IntLiteral literal)
     /**
      * @return the [IntLiteral] that corresponds to the bit value
      */
-    IntLiteral toIntLiteral()
+    @Override
+    IntLiteral toIntLiteral(Rounding direction = TowardZero)
         {
         return literal;
         }
@@ -51,120 +56,123 @@ const Bit(IntLiteral literal)
         }
 
     /**
-     * Convert the number to an unsigned 8-bit integer.
-     *
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<Bit, <>, <Byte>> toByte = toUInt8;
-
-    /**
      * @return the [Int8] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    Int8 toInt8()
+    @Override
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toInt8();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [Int16] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    Int16 toInt16()
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toInt16();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [Int32] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    Int32 toInt32()
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toInt32();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [Int64] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    Int64 toInt64()
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toInt64();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [Int128] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    Int128 toInt128()
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toInt128();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [IntN] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    IntN toIntN()
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
         {
-        return literal.toIntN();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [UInt8] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    UInt8 toUInt8()
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toUInt8();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [UInt16] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    UInt16 toUInt16()
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toUInt16();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [UInt32] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    UInt32 toUInt32()
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toUInt32();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [UInt64] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    UInt64 toUInt64()
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toUInt64();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [UInt128] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    UInt128 toUInt128()
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return literal.toUInt128();
+        return toBoolean() ? 1 : 0;
         }
 
     /**
      * @return the [UIntN] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
-    UIntN toUIntN()
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
-        return literal.toUIntN();
+        return toBoolean() ? 1 : 0;
         }
 
 

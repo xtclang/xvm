@@ -212,8 +212,7 @@
      */
     Char toHexit()
         {
-        UInt32 nibble = toUnchecked().toUInt32() & 0xF;          // TODO CP sliceByte()
-        return nibble <= 9 ? '0' + nibble : 'A' + nibble - 10;
+        return toNibble(True).toChar();
         }
 
     /**
@@ -221,9 +220,11 @@
      *
      * @return the hexit for the least significant 4 bits of the integer value
      */
-    Nibble toNibble()
+    Nibble toNibble(Boolean truncate = False)
         {
-        return Nibble.of(toInt64() & 0xF);
+        Byte byte = toByte(truncate);
+        assert truncate || byte <= 0xF;
+        return Nibble.of(byte & 0xF);
         }
 
     /**
@@ -249,7 +250,7 @@
     @Unchecked IntNumber toUnchecked();
 
     @Override
-    IntLiteral toIntLiteral()
+    IntLiteral toIntLiteral(Rounding direction = TowardZero)
         {
         return new IntLiteral(toString());
         }
