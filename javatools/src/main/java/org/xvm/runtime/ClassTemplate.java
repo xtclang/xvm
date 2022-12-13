@@ -108,7 +108,7 @@ public abstract class ClassTemplate
      */
     protected Set<String> registerImplicitFields(Set<String> setFields)
         {
-        if (f_struct.hasOuter())
+        if (f_struct.isInstanceChild())
             {
             if (setFields == null)
                 {

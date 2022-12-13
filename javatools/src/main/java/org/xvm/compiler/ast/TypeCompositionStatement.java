@@ -766,48 +766,60 @@ public class TypeCompositionStatement
                 }
             }
 
-        if (zone == Zone.InProperty)
+        boolean fImplicitlyStatic = component.getFormat().isImplicitlyStatic();
+        switch (zone)
             {
-            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Class within a property");
-            }
+            case InProperty:
+                log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Class within a property");
+                break;
 
-        // inner const/service classes must be declared static if the parent is not const/service
-        // TODO should also check some of these for Zone.InProperty
-        if (!fExplicitlyStatic && zone == Zone.InClass)
-            {
-            ClassStructure clzParent = (ClassStructure) container;
-            switch (component.getFormat())
+            case InMethod:
                 {
-                case CONST:
-                    // parent MUST be a const or a service (because parent will be automatically
-                    // captured, and a const can't capture a non-const)
-                    if (!clzParent.isConst() && !clzParent.isService())
-                        {
-                        log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
-                        fExplicitlyStatic = true;
-                        }
-                    break;
-
-                case SERVICE:
-                    // parent MUST be a const or a service (because parent is automatically captured,
-                    // and a service can't capture an object that isn't either a const or a service)
-                    if (!clzParent.isConst() && !clzParent.isService())
-                        {
-                        log(errs, Severity.ERROR, Compiler.INNER_SERVICE_NOT_STATIC);
-                        fExplicitlyStatic = true;
-                        }
-                    break;
+                MethodStructure method = (MethodStructure) component.getParent();
+                fImplicitlyStatic |= method.isFunction();
+                break;
                 }
+
+            case InClass:
+                // inner const/service classes must be declared static if the parent is not const/service
+                // TODO should also check some of these for Zone.InProperty
+                if (!fExplicitlyStatic)
+                    {
+                    ClassStructure clzParent = (ClassStructure) container;
+                    switch (component.getFormat())
+                        {
+                        case CONST:
+                            // parent MUST be a const or a service (because parent will be
+                            // automatically captured, and a const can't capture a non-const)
+                            if (!clzParent.isConst() && !clzParent.isService())
+                                {
+                                log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
+                                fExplicitlyStatic = true;
+                                }
+                            break;
+
+                        case SERVICE:
+                            // parent MUST be a const or a service (because parent is automatically
+                            // captured, and a service can't capture an object that isn't either a
+                            // const or a service)
+                            if (!clzParent.isConst() && !clzParent.isService())
+                                {
+                                log(errs, Severity.ERROR, Compiler.INNER_SERVICE_NOT_STATIC);
+                                fExplicitlyStatic = true;
+                                }
+                            break;
+                        }
+
+                    m_fVirtChild = fInner && !fExplicitlyStatic;
+
+                    // anonymous inner classes must evaluate to inner but never virtual
+                    assert !m_fAnon || fInner && !m_fVirtChild;
+                    }
+                break;
             }
-
-        m_fVirtChild = zone == Zone.InClass && fInner && !fExplicitlyStatic;
-
-        // anonymous inner classes must evaluate to inner but never virtual
-        assert !m_fAnon || fInner && !m_fVirtChild;
 
         // configure the static bit on the component
-        if (fExplicitlyStatic || component.getFormat().isImplicitlyStatic() ||
-                (fInner && !m_fVirtChild && !m_fAnon))
+        if (fExplicitlyStatic || fImplicitlyStatic)
             {
             component.setStatic(true);
             }

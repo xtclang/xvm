@@ -288,11 +288,32 @@ public class ClassStructure
         }
 
     /**
-     * @return true iff this class is an inner class
+     * @return true iff this class is an inner class nested under a method or property member
      */
-    public boolean isInnerClass()
+    public boolean isMemberClass()
         {
-        return !isTopLevel();
+        return switch (getParent().getFormat())
+            {
+            case METHOD, PROPERTY -> true;
+            default               -> false;
+            };
+        }
+
+    /**
+     * @return true iff this class is an anonymous inner class
+     */
+    public boolean isAnonInnerClass()
+        {
+        return isMemberClass() && isSynthetic()
+                && getIdentityConstant().getParentConstant() instanceof MethodConstant;
+        }
+
+    /**
+     * @return true iff this class is a non-static inner class
+     */
+    public boolean isInnerChild()
+        {
+        return isMemberClass() && !isStatic();
         }
 
     /**
@@ -335,6 +356,14 @@ public class ClassStructure
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    /**
+     * @return true iff an object of this class needs to hold a reference to its parent
+     */
+    public boolean isInstanceChild()
+        {
+        return isVirtualChild() || isInnerChild();
         }
 
     /**
@@ -455,77 +484,11 @@ public class ClassStructure
         }
 
     /**
-     * @return true iff this class is an anonymous inner class
-     */
-    public boolean isAnonInnerClass()
-        {
-        return isInnerClass() && isSynthetic()
-                && getIdentityConstant().getParentConstant() instanceof MethodConstant;
-        }
-
-    /**
-     * @return true iff this is an inner class with a reference to an "outer this"
-     */
-    public boolean hasOuter()
-        {
-        if (isVirtualChild())
-            {
-            return true;
-            }
-
-        if (isStatic() || !isInnerClass())
-            {
-            return false;
-            }
-
-        // if this class is nested directly under the outer class, then it does have an outer, but
-        // if there are properties and/or methods interposed between the outer class and this class,
-        // then each of those interposed components MUST be non-static in order for this class to
-        // have an outer reference
-        Component parent = getParent();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case MULTIMETHOD:
-                    // ignore multi-methods; only properties and methods matter in this
-                    // determination
-                    break;
-
-                case METHOD:
-                case PROPERTY:
-                    if (parent.isStatic())
-                        {
-                        return false;
-                        }
-                    break;
-
-                case MODULE:
-                case PACKAGE:
-                case INTERFACE:
-                case CLASS:
-                case CONST:
-                case SERVICE:
-                case ENUM:
-                case ENUMVALUE:
-                case MIXIN:
-                    return true;
-
-                default:
-                    throw new IllegalStateException(
-                        parent.getIdentityConstant() + " format=" + parent.getFormat());
-                }
-
-            parent = parent.getParent();
-            }
-        }
-
-    /**
      * @return an "outer this" class structure
      */
     public ClassStructure getOuter()
         {
-        assert hasOuter();
+        assert isInstanceChild();
 
         Component parent = getParent();
         while (true)
@@ -2706,7 +2669,6 @@ public class ClassStructure
             }
 
         // check the contributions
-    nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
@@ -2719,14 +2681,14 @@ public class ClassStructure
                 case Into:
                     if (!fAllowInto)
                         {
-                        continue nextContribution;
+                        continue;
                         }
                     break;
 
                 case Annotation:
                     if (isIntoClassMixin(typeContrib))
                         {
-                        continue nextContribution;
+                        continue;
                         }
                     // break through
                 case Incorporates:
@@ -2857,7 +2819,6 @@ public class ClassStructure
             }
 
         // check the contributions
-    nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
@@ -2870,14 +2831,14 @@ public class ClassStructure
                 case Into:
                     if (!fAllowInto)
                         {
-                        continue nextContribution;
+                        continue;
                         }
                     break;
 
                 case Annotation:
                     if (isIntoClassMixin(typeContrib))
                         {
-                        continue nextContribution;
+                        continue;
                         }
                     // break through
                 case Incorporates:
@@ -3138,7 +3099,6 @@ public class ClassStructure
             }
 
         // check the contributions
-    nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
@@ -3151,14 +3111,14 @@ public class ClassStructure
                 case Into:
                     if (!fAllowInto)
                         {
-                        continue nextContribution;
+                        continue;
                         }
                     break;
 
                 case Annotation:
                     if (isIntoClassMixin(typeContrib))
                         {
-                        continue nextContribution;
+                        continue;
                         }
                     // break through
                 case Incorporates:
@@ -3583,14 +3543,6 @@ public class ClassStructure
             code.registerConstants(pool);
             }
         return methodDelegate;
-        }
-
-    /**
-     * @return true iff an object of this class needs to hold a reference to its parent
-     */
-    public boolean isInstanceChild()
-        {
-        return isInnerClass() && !isStatic();
         }
 
     /**

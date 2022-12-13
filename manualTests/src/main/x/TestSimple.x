@@ -4,15 +4,40 @@ module TestSimple
 
     void run( )
         {
-        console.println(new Test(42, "a", True));
-        console.println(new @Weight(1) Test(42, "a", True));
-        console.println(new @Descr("d") Test(42, "a", True));
-        console.println(new @Weight(1) @Descr("d") Test(42, "a", True));
-        console.println(new @Descr("d") @Weight(1) Test(42, "a", True));
+        new Test().test1();
+        Test.test2();
         }
 
-    const Test(Int f1, String f2, Boolean f3);
+    class Test
+        {
+        Int external = 42;
 
-    mixin Weight(Int weight) into Const;
-    mixin Descr(String descr) into Const;
+        void test1()
+            {
+            new Inner1(1).report();
+
+            class Inner1(Int value)
+                {
+                void report()
+                    {
+                    console.println(value);
+                    console.println(external); // used to fail to compile
+                    }
+                }
+            }
+
+        static void test2()
+            {
+            new Inner2(2).report();
+
+            class Inner2(Int value)
+                {
+                void report()
+                    {
+                    console.println(value);
+//                    console.println(external); // compiler error
+                    }
+                }
+            }
+        }
     }
