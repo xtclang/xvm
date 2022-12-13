@@ -1,3 +1,16 @@
+/**
+ * BFloat16 is a 16-bit floating point number, commonly known as a "brain floating point", and
+ * based directly on the "binary32" type in the IEEE 754 floating point standard -- but with the
+ * trailing 16 bits truncated. It is composed of a sign bit, 8 exponent bits, and 7 mantissa bits.
+ * With its mantissa chopped from 23 bits (in Float32) to 7 bits (in Bfloat16), the values are
+ * fairly poor for general purpose math, but lose almost no precision when applied to tasks like
+ * machine learning -- hence the name "brain float". In other words, with large machine learning
+ * models, BFloat16 would achieve almost as good of results as Float32, but would use half the
+ * memory and less CPU time to do so. However, the main reason for reducing the size of the floating
+ * point values was to be able to double the number of values being used in a machine learning model
+ * in the same amount of memory, which produces significantly better results despite the loss of
+ * precision in each data point.
+ */
 const BFloat16
         extends BinaryFPNumber
         default(0.0)
@@ -46,9 +59,7 @@ const BFloat16
      * Construct the floating point number from its constituent pieces: A sign bit, a significand,
      * and an exponent.
      *
-     * REVIEW GG CP if this approach is good, then replicate (including static properties below) to all FPNumber implementations
-     *
-     * @param negative      true if explicitly negative
+     * @param negative     true if explicitly negative
      * @param significand  the significand value, in the range `0` to TODO
      * @param exponent     the exponent value, in the range [EMIN] to [EMAX]
      */
@@ -72,8 +83,6 @@ const BFloat16
         Bit[] sigBits  = (significand << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS ..< 64];
         construct BFloat16(signBits + expBits + sigBits);
         }
-
-
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
