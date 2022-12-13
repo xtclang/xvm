@@ -1,3 +1,8 @@
+/**
+ * Float16 is a 16-bit floating point number, commonly known as a "half", and technically named
+ * "binary16" in the IEEE 754 floating point standard. It is composed of a sign bit, 5 exponent
+ * bits, and 10 mantissa bits.
+ */
 const Float16
         extends BinaryFPNumber
         default(0.0)
