@@ -142,7 +142,7 @@ module TestAnnotations
         new Parent().test();
 
         String descr = "from outside";
-        new Parent().new @Parent.Mixin(descr) Parent.Child().test();  // used to assert
+        new Parent().new @Parent.Mixin(descr) Parent.Child().test();
 
         class Parent
             {

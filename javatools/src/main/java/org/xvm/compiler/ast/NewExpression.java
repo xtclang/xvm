@@ -577,35 +577,6 @@ public class NewExpression
                         typeResult = pool.ensureAnnotatedTypeConstant(typeResult, annos);
                         }
                     }
-                else if (fNestMate)
-                    {
-                    ClassStructure clzTarget = (ClassStructure)
-                            typeTarget.getSingleUnderlyingClass(false).getComponent();
-
-                    if (clzTarget.isVirtualChild())
-                        {
-                        plan = Plan.Child;
-
-                        int nSteps = ctx.getStepsToOuterClass(clzTarget.getVirtualParent());
-                        if (nSteps >= 0)
-                            {
-                            if (nSteps == 0 && ctx.isConstructor())
-                                {
-                                log(errs, Severity.ERROR, Compiler.PARENT_NOT_CONSTRUCTED,
-                                        clzTarget.getSimpleName());
-                                return null;
-                                }
-                            ctx.requireThis(getStartPosition(), errs);
-                            m_nVirtualParentSteps = nSteps;
-                            }
-                        else
-                            {
-                            // TODO: a better error
-                            log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
-                            return null;
-                            }
-                        }
-                    }
                 else if (type instanceof ArrayTypeExpression exprArray)
                     {
                     // this is a "new X[]", "new X[c1]", new X[c1](supply),
@@ -644,6 +615,35 @@ public class NewExpression
                         default:
                             log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Multi-dimensional array");
                             return null;
+                        }
+                    }
+                else if (fNestMate)
+                    {
+                    ClassStructure clzTarget = (ClassStructure)
+                            typeTarget.getSingleUnderlyingClass(false).getComponent();
+
+                    if (clzTarget.isVirtualChild())
+                        {
+                        plan = Plan.Child;
+
+                        int nSteps = ctx.getStepsToOuterClass(clzTarget.getVirtualParent());
+                        if (nSteps >= 0)
+                            {
+                            if (nSteps == 0 && ctx.isConstructor())
+                                {
+                                log(errs, Severity.ERROR, Compiler.PARENT_NOT_CONSTRUCTED,
+                                        clzTarget.getSimpleName());
+                                return null;
+                                }
+                            ctx.requireThis(getStartPosition(), errs);
+                            m_nVirtualParentSteps = nSteps;
+                            }
+                        else
+                            {
+                            // TODO: a better error
+                            log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                            return null;
+                            }
                         }
                     }
                 }

@@ -380,8 +380,8 @@ mixin NumberArray<Element extends Number>
      */
     (NumberArray quotients, NumberArray remainders) divremScalar(Element scalar, Boolean inPlace = False)
         {
-        Element[] quotients  = inPlace && this.inPlace ? this : new Element[size];
-        Element[] remainders = new Element[size];
+        Element[] quotients  = inPlace && this.inPlace ? this : new Element[size](Element.zero());
+        Element[] remainders = new Element[size](Element.zero());
 
         for (Int i : 0 ..< size)
             {
@@ -409,8 +409,8 @@ mixin NumberArray<Element extends Number>
         {
         assert:bounds this.size == that.size;
 
-        Element[] quotients  = inPlace && this.inPlace ? this : new Element[size];
-        Element[] remainders = new Element[size];
+        Element[] quotients  = inPlace && this.inPlace ? this : new Element[size](Element.zero());
+        Element[] remainders = new Element[size](Element.zero());
 
         for (Int i : 0 ..< size)
             {
