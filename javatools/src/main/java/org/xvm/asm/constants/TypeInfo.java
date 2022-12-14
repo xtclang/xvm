@@ -1,7 +1,6 @@
 package org.xvm.asm.constants;
 
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,7 +17,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -545,14 +543,6 @@ public class TypeInfo
         }
 
     /**
-     * @return true iff this type is a native rebase
-     */
-    public boolean isNativeRebase()
-        {
-        return f_type.getDefiningConstant() instanceof NativeRebaseConstant;
-        }
-
-    /**
      * @return true iff this type is static (a static global type is a singleton; a static local
      *         type does not hold a reference to its parent)
      */
@@ -666,15 +656,6 @@ public class TypeInfo
         }
 
     /**
-     * @return true iff this class is a virtual child class, or an anonymous inner class, or some
-     *         other inner class such as a named class inside a method
-     */
-    public boolean isInnerClass()
-        {
-        return f_struct != null && f_struct.isInnerClass();
-        }
-
-    /**
      * @return true iff this class is scoped within another class, such that it requires a parent
      *         reference in order to be instantiated
      */
@@ -689,67 +670,6 @@ public class TypeInfo
     public boolean isAnonInnerClass()
         {
         return f_struct != null && f_struct.isAnonInnerClass();
-        }
-
-    /**
-     * @return true iff this is an inner class with a reference to an "outer this"
-     */
-    public boolean hasOuter()
-        {
-        return f_struct != null && f_struct.hasOuter();
-        }
-
-    /**
-     * @return the type of the "outer this" for any TypeInfo that {@link #hasOuter()}
-     */
-    public TypeConstant getOuterType()
-        {
-        assert hasOuter();
-
-        TypeConstant type = getType();
-        if (type.isVirtualChild() || type.isAnonymousClass())
-            {
-            return type.getParentType();
-            }
-        // REVIEW: it's not clear what type to return: formal, canonical or naked
-        return f_struct.getOuter().getIdentityConstant().getType();
-        }
-
-    /**
-     * Test if this TypeInfo would represent an identifiable reference using the specified name.
-     * For example, within a <tt>Map.Entry</tt>, the <tt>Map</tt> reference would be identifiable
-     * as "<tt>this.Map</tt>".
-     *
-     * @param sName  the name to test, as used in the form "this.OuterName"
-     *
-     * @return true iff this TypeInfo, acting as an "outer" TypeInfo, would identify itself using
-     *         the specified name
-     */
-    public boolean hasOuterName(String sName)
-        {
-        // everything is an Object, so that doesn't help identify anything in particular
-        if (sName.equals("Object"))
-            {
-            return false;
-            }
-
-        for (IdentityConstant id : getClassChain().keySet())
-            {
-            if (id.getName().equals(sName))
-                {
-                return true;
-                }
-            }
-
-        for (IdentityConstant id : getDefaultChain().keySet())
-            {
-            if (id.getName().equals(sName))
-                {
-                return true;
-                }
-            }
-
-        return false;
         }
 
     /**
@@ -1758,7 +1678,7 @@ public class TypeInfo
         // - First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
         //   used.
         // - If that algorithm results in a single selection, then that single selection is used.
-        // - Otherwise, the redundant return types are used as a tie breaker; if that results in a
+        // - Otherwise, the redundant return types are used as a tiebreaker; if that results in a
         //   single selection, then that single selection is used.
         // - Otherwise, the ambiguity is an error.
         // TODO - how to factor in conversions?
@@ -2506,37 +2426,6 @@ public class TypeInfo
             }
         return null;
         }
-
-    private static Annotation[] mergeAnnotations(Annotation[] anno1, Annotation[] anno2)
-        {
-        if (anno1.length == 0)
-            {
-            return anno2;
-            }
-
-        if (anno2.length == 0)
-            {
-            return anno1;
-            }
-
-        ArrayList<Annotation> list = new ArrayList<>();
-        Set<Constant> setPresent = new HashSet<>();
-        appendAnnotations(list, anno1, setPresent);
-        appendAnnotations(list, anno2, setPresent);
-        return list.toArray(Annotation.NO_ANNOTATIONS);
-        }
-
-    private static void appendAnnotations(ArrayList<Annotation> list, Annotation[] aAnno, Set<Constant> setPresent)
-        {
-        for (Annotation anno : aAnno)
-            {
-            if (setPresent.add(anno.getAnnotationClass()))
-                {
-                list.add(anno);
-                }
-            }
-        }
-
     public static boolean containsAnnotation(Annotation[] annotations, String sName)
         {
         if (annotations == null || annotations.length == 0)
