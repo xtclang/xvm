@@ -774,6 +774,12 @@ class Lexer
                     case "FloatN":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
                         return LitFloatN, value.toFloatN();
+                    case "Float8e4":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat8e4, value.toFloat8e4();
+                    case "Float8e5":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat8e5, value.toFloat8e5();
                     case "BFloat16":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
                         return LitBFloat16, value.toBFloat16();
@@ -2756,6 +2762,8 @@ class Lexer
                 case LitFloat64:
                 case LitFloat128:
                 case LitFloatN:
+                case LitFloat8e4:
+                case LitFloat8e5:
                 case LitBFloat16:
                 case LitDate:
                 case LitTimeOfDay:
@@ -2971,6 +2979,8 @@ class Lexer
         LitFloat64   <Float64   >(Null             ),
         LitFloat128  <Float128  >(Null             ),
         LitFloatN    <FloatN    >(Null             ),
+        LitFloat8e4  <Float8e4  >(Null             ),
+        LitFloat8e5  <Float8e5  >(Null             ),
         LitBFloat16  <BFloat16  >(Null             ),
         LitDate      <Date      >(Null             ),
         LitTimeOfDay <TimeOfDay >(Null             ),

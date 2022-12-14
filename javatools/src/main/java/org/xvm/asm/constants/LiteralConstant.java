@@ -643,6 +643,24 @@ public class LiteralConstant
         }
 
     /**
+     * @return the equivalent Float8e4Constant for this LiteralConstant
+     */
+    public Float8e4Constant toFloat8e4Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat8e4Constant(getFloat());
+        }
+
+    /**
+     * @return the equivalent Float8e5Constant for this LiteralConstant
+     */
+    public Float8e5Constant toFloat8e5Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat8e5Constant(getFloat());
+        }
+
+    /**
      * @return the equivalent BFloat16Constant for this LiteralConstant
      */
     public BFloat16Constant toBFloat16Constant()
@@ -1725,6 +1743,10 @@ public class LiteralConstant
                     }
                 switch (sSimpleName)
                     {
+                    case "Float8e4":
+                        return toFloat8e4Constant();
+                    case "Float8e5":
+                        return toFloat8e5Constant();
                     case "BFloat16":
                         return toBFloat16Constant();
                     case "Float16":
@@ -1781,6 +1803,10 @@ public class LiteralConstant
                     }
                 switch (sSimpleName)
                     {
+                    case "Float8e4":
+                        return toFloat8e4Constant();
+                    case "Float8e5":
+                        return toFloat8e5Constant();
                     case "BFloat16":
                         return toBFloat16Constant();
                     case "Float16":

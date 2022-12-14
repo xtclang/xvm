@@ -365,6 +365,12 @@ const FloatN
         }
 
     @Override
+    Float8e4 toFloat8e4();
+
+    @Override
+    Float8e5 toFloat8e5();
+
+    @Override
     BFloat16 toBFloat16();
 
     @Override

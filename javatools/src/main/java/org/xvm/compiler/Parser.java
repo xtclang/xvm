@@ -4031,6 +4031,8 @@ public class Parser
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
             case LIT_BFLOAT16:
             case LIT_DATE:
             case LIT_TIMEOFDAY:

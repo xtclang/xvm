@@ -13,6 +13,26 @@ interface FPConvertible
     FPLiteral toFPLiteral();
 
     /**
+     * Convert the value to an 8-bit radix-2 (binary) "FP8 E4M3" floating point number.
+     *
+     * @return an 8-bit "E4M3" floating point number
+     */
+    Float8e4 toFloat8e4()
+        {
+        return toFloatN().toFloat8e4();
+        }
+
+    /**
+     * Convert the value to an 8-bit radix-2 (binary) "FP8 E5M2" floating point number.
+     *
+     * @return an 8-bit "E5M2" floating point number
+     */
+    Float8e5 toFloat8e5()
+        {
+        return toFloatN().toFloat8e5();
+        }
+
+    /**
      * Convert the value to a 16-bit radix-2 (binary) "brain" floating point number.
      *
      * @return a 16-bit "brain" floating point number

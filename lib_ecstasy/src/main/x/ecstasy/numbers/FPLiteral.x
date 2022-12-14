@@ -22,6 +22,20 @@ const FPLiteral(String text)
 
     @Auto
     @Override
+    Float8e4 toFloat8e4()
+        {
+        return toFloatN().toFloat8e4();
+        }
+
+    @Auto
+    @Override
+    Float8e5 toFloat8e5()
+        {
+        return toFloatN().toFloat8e5();
+        }
+
+    @Auto
+    @Override
     BFloat16 toBFloat16()
         {
         return toFloatN().toBFloat16();

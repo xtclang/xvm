@@ -789,6 +789,14 @@ public class Lexer
                                         fFloat = true;
                                         break;
 
+                                    case "Float8e4":
+                                        idNum = Id.LIT_FLOAT8E4;
+                                        fFloat = true;
+                                        break;
+                                    case "Float8e5":
+                                        idNum = Id.LIT_FLOAT8E5;
+                                        fFloat = true;
+                                        break;
                                     case "BFloat16":
                                         idNum = Id.LIT_BFLOAT16;
                                         fFloat = true;

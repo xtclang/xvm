@@ -1,12 +1,21 @@
-const DecN
-        extends DecimalFPNumber
-        // TODO default(0.0)
+/**
+ * Float8e5 is an 8-bit floating point number, known as "E5M2" in the proposed FP8 standard, and is
+ * intended primarily for machine learning use cases. Like [BFloat16], the motivating factor is the
+ * doubling of the number of data points in a machine learning model by halving the size of each
+ * data point, trading off some amount of precision on each data point. It is composed of a sign
+ * bit, 5 exponent bits (as implied by the name), and 2 mantissa bits. With such a tiny mantissa
+ * (and so few bits in total), these values are almost useless for most purposes, but can be quite
+ * effective in large machine learning models. A similar type, [Float8e4], adds one bit of mantissa
+ * in exchange for losing one bit of exponent.
+ */
+const Float8e5
+        extends BinaryFPNumber
+        default(0.0)
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a variable-length decimal floating point number from its bitwise machine
-     * representation.
+     * Construct an 8-bit E4M3 binary floating point number from its bitwise machine representation.
      *
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
@@ -14,13 +23,12 @@ const DecN
     @Override
     construct(Bit[] bits)
         {
-        assert bits.size >= 32 && bits.size.bitCount == 1;
+        assert:bounds bits.size == 8;
         super(bits);
         }
 
     /**
-     * Construct a variable-length decimal floating point number from its network-portable
-     * representation.
+     * Construct an 8-bit E4M3 binary floating point number from its network-portable representation.
      *
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
@@ -28,83 +36,103 @@ const DecN
     @Override
     construct(Byte[] bytes)
         {
-        assert bytes.size >= 4 && bytes.size.bitCount == 1;
+        assert:bounds bytes.size == 1;
         super(bytes);
         }
 
     /**
-     * Construct a variable-length decimal floating point number from its `String` representation.
+     * Construct an 8-bit E4M3 binary floating point number from its `String` representation.
      *
      * @param text  a floating point number, in text format
      */
     @Override
     construct(String text)
         {
-        construct DecN(new FPLiteral(text).toDecN().bits);
+        construct Float8e5(new FPLiteral(text).toFloat8e5().bits);
         }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static DecN zero()
+    static conditional Int fixedBitLength()
         {
-        TODO return 0.0;
+        return True, 8;
         }
 
     @Override
-    static DecN one()
+    static Float8e5 zero()
         {
-        TODO return 1.0;
+        return 0.0;
+        }
+
+    @Override
+    static Float8e5 one()
+        {
+        return 1.0;
+        }
+
+
+    // ----- Number properties ---------------------------------------------------------------------
+
+    @Override
+    Signum sign.get()
+        {
+        if (bits.toByte() & 0b01111111 == 0)
+            {
+            return Zero;
+            }
+
+        return bits[0] == 1 ? Negative : Positive;
         }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op DecN add(DecN n)
+    @Op Float8e5 add(Float8e5 n)
         {
         TODO
         }
 
     @Override
-    @Op DecN sub(DecN n)
+    @Op Float8e5 sub(Float8e5 n)
         {
         TODO
         }
 
     @Override
-    @Op DecN mul(DecN n)
+    @Op Float8e5 mul(Float8e5 n)
         {
         TODO
         }
 
     @Override
-    @Op DecN div(DecN n)
+    @Op Float8e5 div(Float8e5 n)
         {
         TODO
         }
 
     @Override
-    @Op DecN mod(DecN n)
+    @Op Float8e5 mod(Float8e5 n)
         {
         TODO
         }
 
     @Override
-    DecN abs()
+    Float8e5 abs()
         {
         return this < 0 ? -this : this;
         }
 
     @Override
-    @Op DecN neg()
+    @Op Float8e5 neg()
         {
         TODO
         }
 
     @Override
-    DecN pow(DecN n)
+    Float8e5 pow(Float8e5 n)
         {
         TODO
         }
@@ -113,195 +141,202 @@ const DecN
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    @RO IntN emax.get()
+    Int emax.get()
         {
-        // from IEEE 754-2008:
-        //   w    = k/16+4
-        //   emax = 3×2^(w−1)
-        return 3 * (1 << byteLength / 16 + 3);
+        return 8;
         }
 
     @Override
-    IntN emin.get()
+    Int emin.get()
         {
-        return 1 - emax;
+        return -6;
         }
 
     @Override
-    IntN bias.get()
+    Int bias.get()
         {
-        // from IEEE 754-2008:
-        //   emax+p−2
-        return emax + precision - 2;
+        return 7;
+        }
+
+    @Override
+    Int significandBitLength.get()
+        {
+        return 3;
+        }
+
+    @Override
+    Int exponentBitLength.get()
+        {
+        return 4;
         }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, IntN significand, IntN exponent) split()
+    (Boolean negative, Int significand, Int exponent) split()
         {
         TODO
         }
 
     @Override
-    DecN round(Rounding direction = TiesToAway)
+    Float8e5 round(Rounding direction = TiesToAway)
         {
         TODO
         }
 
     @Override
-    DecN floor()
+    Float8e5 floor()
         {
         TODO
         }
 
     @Override
-    DecN ceil()
+    Float8e5 ceil()
         {
         TODO
         }
 
     @Override
-    DecN exp()
+    Float8e5 exp()
         {
         TODO
         }
 
     @Override
-    DecN scaleByPow(Int n)
+    Float8e5 scaleByPow(Int n)
         {
         TODO
         }
 
     @Override
-    DecN log()
+    Float8e5 log()
         {
         TODO
         }
 
     @Override
-    DecN log2()
+    Float8e5 log2()
         {
         TODO
         }
 
     @Override
-    DecN log10()
+    Float8e5 log10()
         {
         TODO
         }
 
     @Override
-    DecN sqrt()
+    Float8e5 sqrt()
         {
         TODO
         }
 
     @Override
-    DecN cbrt()
+    Float8e5 cbrt()
         {
         TODO
         }
 
     @Override
-    DecN sin()
+    Float8e5 sin()
         {
         TODO
         }
 
     @Override
-    DecN cos()
+    Float8e5 cos()
         {
         TODO
         }
 
     @Override
-    DecN tan()
+    Float8e5 tan()
         {
         TODO
         }
 
     @Override
-    DecN asin()
+    Float8e5 asin()
         {
         TODO
         }
 
     @Override
-    DecN acos()
+    Float8e5 acos()
         {
         TODO
         }
 
     @Override
-    DecN atan()
+    Float8e5 atan()
         {
         TODO
         }
 
     @Override
-    DecN atan2(DecN y)
+    Float8e5 atan2(Float8e5 y)
         {
         TODO
         }
 
     @Override
-    DecN sinh()
+    Float8e5 sinh()
         {
         TODO
         }
 
     @Override
-    DecN cosh()
+    Float8e5 cosh()
         {
         TODO
         }
 
     @Override
-    DecN tanh()
+    Float8e5 tanh()
         {
         TODO
         }
 
     @Override
-    DecN asinh()
+    Float8e5 asinh()
         {
         TODO
         }
 
     @Override
-    DecN acosh()
+    Float8e5 acosh()
         {
         TODO
         }
 
     @Override
-    DecN atanh()
+    Float8e5 atanh()
         {
         TODO
         }
 
     @Override
-    DecN deg2rad()
+    Float8e5 deg2rad()
         {
         TODO
         }
 
     @Override
-    DecN rad2deg()
+    Float8e5 rad2deg()
         {
         TODO
         }
 
     @Override
-    DecN nextUp()
+    Float8e5 nextUp()
         {
         TODO
         }
 
     @Override
-    DecN nextDown()
+    Float8e5 nextDown()
         {
         TODO
         }
@@ -355,20 +390,28 @@ const DecN
     Float8e4 toFloat8e4();
 
     @Override
-    Float8e5 toFloat8e5();
+    Float8e5 toFloat8e5()
+        {
+        return this;
+        }
 
+    @Auto
     @Override
     BFloat16 toBFloat16();
 
+    @Auto
     @Override
     Float16 toFloat16();
 
+    @Auto
     @Override
     Float32 toFloat32();
 
+    @Auto
     @Override
     Float64 toFloat64();
 
+    @Auto
     @Override
     Float128 toFloat128();
 
@@ -376,21 +419,25 @@ const DecN
     @Override
     FloatN toFloatN()
         {
-        return toFPLiteral().toFloatN();
+        return new FloatN(bits);
         }
 
+    @Auto
     @Override
     Dec32 toDec32();
 
+    @Auto
     @Override
     Dec64 toDec64();
 
+    @Auto
     @Override
     Dec128 toDec128();
 
+    @Auto
     @Override
     DecN toDecN()
         {
-        return this;
+        return toFPLiteral().toDecN();
         }
     }

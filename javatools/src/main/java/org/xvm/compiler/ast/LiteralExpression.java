@@ -131,6 +131,8 @@ public class LiteralExpression
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
             case LIT_BFLOAT16:
                 return pool.ensureEcstasyTypeConstant("numbers." + literal.getId().TEXT);
 
@@ -215,6 +217,8 @@ public class LiteralExpression
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
             case LIT_BFLOAT16:
                 // it's just a string
                 oValue = getSource().toString(tokenPrefix.getStartPosition(), tokNumber.getEndPosition());
@@ -379,6 +383,14 @@ public class LiteralExpression
                 format = Format.FloatN;
                 break;
 
+            case LIT_FLOAT8E4:
+                format = Format.Float8e4;
+                break;
+
+            case LIT_FLOAT8E5:
+                format = Format.Float8e5;
+                break;
+
             case LIT_BFLOAT16:
                 format = Format.BFloat16;
                 break;
@@ -447,6 +459,8 @@ public class LiteralExpression
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
             case LIT_BFLOAT16:
                 return literal.toString();
 

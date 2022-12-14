@@ -891,6 +891,8 @@ FPTypeName:
     "Dec64"
     "Dec128"
     "DecN"
+    "Float8e4"
+    "Float8e5"
     "BFloat16"
     "Float16"
     "Float32"

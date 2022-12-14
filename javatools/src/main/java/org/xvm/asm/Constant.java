@@ -253,6 +253,10 @@ public abstract class Constant
             case "numbers.DecN":
                 throw new UnsupportedOperationException();
 
+            case "numbers.Float8e4":
+                return pool.ensureFloat8e4Constant(0.0f);
+            case "numbers.Float8e5":
+                return pool.ensureFloat8e5Constant(0.0f);
             case "numbers.BFloat16":
                 return pool.ensureBFloat16Constant(0.0f);
             case "numbers.Float16":
@@ -819,6 +823,8 @@ public abstract class Constant
         CUIntN    ("numbers"),
         UIntN     ("numbers"),
         FPLiteral ("numbers"),
+        Float8e4  ("numbers"),
+        Float8e5  ("numbers"),
         BFloat16  ("numbers"),
         Float16   ("numbers"),
         Float32   ("numbers"),

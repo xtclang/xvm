@@ -611,6 +611,20 @@ const IntLiteral(String text)
 
     @Auto
     @Override
+    Float8e4 toFloat8e4()
+        {
+        return toFPLiteral().toFloat8e4();
+        }
+
+    @Auto
+    @Override
+    Float8e5 toFloat8e5()
+        {
+        return toFPLiteral().toFloat8e5();
+        }
+
+    @Auto
+    @Override
     BFloat16 toBFloat16()
         {
         return toFPLiteral().toBFloat16();

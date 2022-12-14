@@ -105,6 +105,8 @@ import ecstasy.numbers.Dec64         as Dec;
 import ecstasy.numbers.Dec64;
 import ecstasy.numbers.Dec128;
 import ecstasy.numbers.DecN;
+import ecstasy.numbers.Float8e4;
+import ecstasy.numbers.Float8e5;
 import ecstasy.numbers.Float16;
 import ecstasy.numbers.Float32       as Float;
 import ecstasy.numbers.Float32;

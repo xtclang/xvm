@@ -355,6 +355,8 @@ public class ConstantPool
                 return constant;
                 }
 
+            case Float8e4:
+            case Float8e5:
             case BFloat16:
             case Float16:
             case Float32:
@@ -373,6 +375,8 @@ public class ConstantPool
                     }
                 return switch (format)
                     {
+                    case Float8e4             -> constant.toFloat8e4Constant();
+                    case Float8e5             -> constant.toFloat8e5Constant();
                     case BFloat16             -> constant.toBFloat16Constant();
                     case Float16              -> constant.toFloat16Constant();
                     case Float32              -> constant.toFloat32Constant();
@@ -568,6 +572,40 @@ public class ConstantPool
     public FPNConstant ensureDecNConstant(byte[] abVal)
         {
         return (FPNConstant) register(new FPNConstant(this, Format.DecN, abVal));
+        }
+
+    /**
+     * Given the specified floating point value, obtain a Float8e4Constant that represents it.
+     *
+     * @param flVal  the floating point value
+     *
+     * @return a Float8e4Constant for the passed floating point value
+     */
+    public Float8e4Constant ensureFloat8e4Constant(float flVal)
+        {
+        Float8e4Constant constant = (Float8e4Constant) ensureLocatorLookup(Format.Float8e4).get(flVal);
+        if (constant == null)
+            {
+            constant = (Float8e4Constant) register(new Float8e4Constant(this, flVal));
+            }
+        return constant;
+        }
+
+    /**
+     * Given the specified floating point value, obtain a Float8e5Constant that represents it.
+     *
+     * @param flVal  the floating point value
+     *
+     * @return a Float8e5Constant for the passed floating point value
+     */
+    public Float8e5Constant ensureFloat8e5Constant(float flVal)
+        {
+        Float8e5Constant constant = (Float8e5Constant) ensureLocatorLookup(Format.Float8e5).get(flVal);
+        if (constant == null)
+            {
+            constant = (Float8e5Constant) register(new Float8e5Constant(this, flVal));
+            }
+        return constant;
         }
 
     /**
@@ -2630,6 +2668,14 @@ public class ConstantPool
                 case CUIntN:
                 case UIntN:
                     constant = new IntConstant(this, format, in);
+                    break;
+
+                case Float8e4:
+                    constant = new Float8e4Constant(this, format, in);
+                    break;
+
+                case Float8e5:
+                    constant = new Float8e5Constant(this, format, in);
                     break;
 
                 case BFloat16:

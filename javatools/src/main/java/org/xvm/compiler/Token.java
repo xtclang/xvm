@@ -640,6 +640,8 @@ public class Token
         LIT_FLOAT64  ("Float64"        , true, true),
         LIT_FLOAT128 ("Float128"       , true, true),
         LIT_FLOATN   ("FloatN"         , true, true),
+        LIT_FLOAT8E4 ("Float8e4"       , true, true),
+        LIT_FLOAT8E5 ("Float8e5"       , true, true),
         LIT_BFLOAT16 ("BFloat16"       , true, true),
         LIT_DATE     (null             ),
         LIT_TIMEOFDAY(null             ),

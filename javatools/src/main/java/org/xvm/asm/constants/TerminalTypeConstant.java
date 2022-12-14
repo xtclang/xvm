@@ -1259,6 +1259,10 @@ public class TerminalTypeConstant
                 {
                 // examine the structure to determine if it represents a class or interface
                 ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
+                if (clz == null)
+                    {
+                    throw new IllegalStateException("missing class for constant: " + constant);
+                    }
                 return clz.getFormat() == Component.Format.INTERFACE
                         ? Category.IFACE : Category.CLASS;
                 }
