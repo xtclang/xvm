@@ -5,24 +5,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.ComponentResolver.ResolutionCollector;
-import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.GenericTypeResolver;
 
-import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.Container;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
@@ -54,7 +43,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <br/>where T3 is {@code TerminalTypeConstant(Parent)}
  */
 public class VirtualChildTypeConstant
-        extends AbstractDependantTypeConstant
+        extends AbstractDependantChildTypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -152,12 +141,14 @@ public class VirtualChildTypeConstant
         return m_constName.getValue();
         }
 
-    /**
-     * @return the child ClassStructure associated with this type, or (if there is none), the first
-     *        one encountered walking "up" the super chain
-     */
+    @Override
     protected ClassStructure getChildStructure()
         {
+        if (m_clzChild != null)
+            {
+            return m_clzChild;
+            }
+
         TypeConstant typeParent = getParentType();
         String       sChild     = getChildName();
 
@@ -167,10 +158,10 @@ public class VirtualChildTypeConstant
                                         getSingleUnderlyingClass(true).getComponent();
             if (parent != null)
                 {
-                ClassStructure child = (ClassStructure) parent.findChildDeep(sChild);
-                if (child != null)
+                ClassStructure clzChild = (ClassStructure) parent.findChildDeep(sChild);
+                if (clzChild != null)
                     {
-                    return child;
+                    return m_clzChild = clzChild;
                     }
                 }
             }
@@ -185,9 +176,9 @@ public class VirtualChildTypeConstant
         if (info != null)
             {
             Component child = info.getComponent();
-            if (child instanceof ClassStructure clz)
+            if (child instanceof ClassStructure clzChild)
                 {
-                return clz;
+                return m_clzChild = clzChild;
                 }
             }
 
@@ -196,12 +187,6 @@ public class VirtualChildTypeConstant
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
-
-    @Override
-    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
-        {
-        return setIds.contains(getSingleUnderlyingClass(true));
-        }
 
     @Override
     public boolean isImmutabilitySpecified()
@@ -224,18 +209,6 @@ public class VirtualChildTypeConstant
         return typeParent.isImmutabilitySpecified()
                 ? cloneSingle(getConstantPool(), typeParent.removeImmutable())
                 : this;
-        }
-
-    @Override
-    public int getMaxParamsCount()
-        {
-        return getChildStructure().getTypeParams().size();
-        }
-
-    @Override
-    public int getTypeDepth()
-        {
-        return 1 + m_typeParent.getTypeDepth();
         }
 
     @Override
@@ -266,82 +239,11 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public Constant getDefiningConstant()
-        {
-        return getSingleUnderlyingClass(true);
-        }
-
-    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return m_fThisClass
             ? pool.ensureThisVirtualChildTypeConstant(type, m_constName.getValue())
             : pool.ensureVirtualChildTypeConstant    (type, m_constName.getValue());
-        }
-
-    @Override
-    public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
-        {
-        if (containsUnresolved())
-            {
-            return ResolutionResult.POSSIBLE;
-            }
-
-        return getChildStructure().resolveName(sName, Access.PUBLIC, collector);
-        }
-
-    @Override
-    public TypeConstant resolveTypedefs()
-        {
-        TypeConstant typeOriginal = m_typeParent;
-        TypeConstant typeResolved = typeOriginal.resolveTypedefs();
-        return typeOriginal == typeResolved
-                ? this
-                : cloneSingle(getConstantPool(), typeResolved);
-        }
-
-    @Override
-    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-        {
-        TypeConstant typeOriginal = m_typeParent;
-        TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
-        return typeOriginal == typeResolved
-                ? this
-                : cloneSingle(pool, typeResolved);
-        }
-
-    @Override
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
-        {
-        TypeConstant typeBase = this;
-        if (atypeParams == null)
-            {
-            // this is a "normalization" call
-            TypeConstant typeParent  = getParentType();
-            TypeConstant typeParentN = typeParent.normalizeParameters();
-            if (typeParentN != typeParent)
-                {
-                typeBase = cloneSingle(pool, typeParentN);
-                }
-            atypeParams = ConstantPool.NO_TYPES;
-            }
-
-        ClassStructure clz = getChildStructure();
-        if (clz.isParameterized())
-            {
-            return pool.ensureParameterizedTypeConstant(typeBase,
-                clz.normalizeParameters(pool, atypeParams));
-            }
-
-        // not parameterized
-        return typeBase;
-        }
-
-    @Override
-    public TypeConstant[] collectGenericParameters()
-        {
-        return getChildStructure().getFormalType().getParamTypesArray();
         }
 
     @Override
@@ -404,94 +306,8 @@ public class VirtualChildTypeConstant
                 : pool.ensureVirtualChildTypeConstant(typeParentResolved, m_constName.getValue());
         }
 
-    @Override
-    public boolean extendsClass(IdentityConstant constClass)
-        {
-        return getChildStructure().extendsClass(constClass);
-        }
-
-    @Override
-    public Category getCategory()
-        {
-        ClassStructure clz = getChildStructure();
-        return clz.getFormat() == Component.Format.INTERFACE
-                ? Category.IFACE : Category.CLASS;
-        }
-
-    @Override
-    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
-        {
-        return fAllowInterface || getExplicitClassFormat() != Component.Format.INTERFACE;
-        }
-
-    @Override
-    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
-        {
-        assert isSingleUnderlyingClass(fAllowInterface);
-
-        return getChildStructure().getIdentityConstant();
-        }
-
-    @Override
-    public boolean isExplicitClassIdentity(boolean fAllowParams)
-        {
-        return true;
-        }
-
-    @Override
-    public Component.Format getExplicitClassFormat()
-        {
-        return getChildStructure().getFormat();
-        }
-
-    @Override
-    public TypeConstant getExplicitClassInto(boolean fResolve)
-        {
-        ClassStructure struct = getChildStructure();
-        if (struct == null || struct.getFormat() != Component.Format.MIXIN)
-            {
-            throw new IllegalStateException("mixin=" + struct);
-            }
-
-        return struct.getTypeInto();
-        }
-
-    @Override
-    public boolean containsGenericParam(String sName)
-        {
-        return getChildStructure().containsGenericParamType(sName)
-            || m_typeParent.containsGenericParam(sName);
-        }
-
-    @Override
-    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
-        ConstantPool pool       = getConstantPool();
-        TypeConstant typeParent = m_typeParent;
-
-        TypeConstant type;
-        if (typeParent.containsGenericParam(sName))
-            {
-            // the passed in list applies only to the child and should not be used by the parent
-            type = typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
-            }
-        else
-            {
-            TypeConstant typeActual = listParams.isEmpty()
-                    ? this
-                    : pool.ensureParameterizedTypeConstant(this,
-                            listParams.toArray(TypeConstant.NO_TYPES));
-            type = getChildStructure().getGenericParamType(pool, sName, typeActual);
-            if (type != null)
-                {
-                type = type.resolveGenerics(pool, typeParent);
-                }
-            }
-        return type;
-        }
 
     // ----- type comparison support ---------------------------------------------------------------
-
 
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
@@ -505,100 +321,6 @@ public class VirtualChildTypeConstant
             return cloneSingle(getConstantPool(), typeParent).calculateRelation(typeLeft);
             }
         return super.calculateRelationToLeft(typeLeft);
-        }
-
-    @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
-                                                               List<TypeConstant> listLeft)
-        {
-        ClassStructure clz = getChildStructure();
-
-        assert clz.getFormat() == Component.Format.INTERFACE;
-
-        return clz.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-        }
-
-    @Override
-    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
-        {
-        return getChildStructure().containsSubstitutableMethod(
-                getConstantPool(), signature, access, fFunction, listParams);
-        }
-
-    @Override
-    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
-        if (!listParams.isEmpty())
-            {
-            ConstantPool   pool = getConstantPool();
-            ClassStructure clz  = getChildStructure();
-
-            Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-            listParams = clz.normalizeParameters(pool, listParams);
-
-            Iterator<TypeConstant> iterParams = listParams.iterator();
-            Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
-
-            while (iterParams.hasNext())
-                {
-                TypeConstant constParam = iterParams.next();
-                String       sFormal    = iterNames.next().getValue();
-
-                if (constParam.consumesFormalType(sTypeName, access)
-                        && clz.producesFormalType(pool, sFormal, access, listParams)
-                    ||
-                    constParam.producesFormalType(sTypeName, access)
-                        && clz.consumesFormalType(pool, sFormal, access, listParams))
-                    {
-                    return Usage.YES;
-                    }
-                }
-            }
-        return Usage.NO;
-        }
-
-    @Override
-    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
-        if (!listParams.isEmpty())
-            {
-            ConstantPool   pool = getConstantPool();
-            ClassStructure clz  = getChildStructure();
-
-            Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-            listParams = clz.normalizeParameters(pool, listParams);
-
-            Iterator<TypeConstant>   iterParams = listParams.iterator();
-            Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
-
-            while (iterParams.hasNext())
-                {
-                TypeConstant constParam = iterParams.next();
-                String       sFormal    = iterNames.next().getValue();
-
-                if (constParam.producesFormalType(sTypeName, access)
-                        && clz.producesFormalType(pool, sFormal, access, listParams)
-                    ||
-                    constParam.consumesFormalType(sTypeName, access)
-                        && clz.consumesFormalType(pool, sFormal, access, listParams))
-                    {
-                    return Usage.YES;
-                    }
-                }
-            }
-        return Usage.NO;
-        }
-
-
-    // ----- run-time support ----------------------------------------------------------------------
-
-    @Override
-    public ClassTemplate getTemplate(Container container)
-        {
-        return container.getTemplate((ClassConstant) getDefiningConstant());
         }
 
 
@@ -717,5 +439,10 @@ public class VirtualChildTypeConstant
      * The origin parent's type. It can only be different from the parent type during isA() and
      * TypeInfo calculations.
      */
-    protected transient TypeConstant m_typeOriginParent;
+    private transient TypeConstant m_typeOriginParent;
+
+    /**
+     * Cached child structure.
+     */
+    private transient ClassStructure m_clzChild;
     }

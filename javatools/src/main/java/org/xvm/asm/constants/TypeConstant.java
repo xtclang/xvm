@@ -532,6 +532,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type represents an inner child class type
+     */
+    public boolean isInnerChildClass()
+        {
+        return isModifyingType() && getUnderlyingType().isInnerChildClass();
+        }
+
+    /**
      * A virtual child type is said to be a "phantom" if it represents a child with a non-existing
      * structure. For example, let's say we have classes:
      *
@@ -582,7 +590,7 @@ public abstract class TypeConstant
      */
     public TypeConstant getParentType()
         {
-        assert isVirtualChild() || isAnonymousClass();
+        assert isVirtualChild() || isInnerChildClass() || isAnonymousClass();
         return getUnderlyingType().getParentType();
         }
 

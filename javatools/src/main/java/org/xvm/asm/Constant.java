@@ -913,6 +913,7 @@ public abstract class Constant
         ParameterizedType,
         TurtleType,
         VirtualChildType,
+        InnerChildType,
         AnonymousClassType,
         PropertyClassType,
         IntersectionType,

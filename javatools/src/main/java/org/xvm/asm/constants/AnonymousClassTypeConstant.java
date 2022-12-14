@@ -5,26 +5,20 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
-import org.xvm.asm.ComponentResolver.ResolutionResult;
-import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.GenericTypeResolver;
 
-import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.Container;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * Consider a scenario from Map.x:
@@ -64,7 +58,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * {@code Map<Key, Value>.iterator().Iterator:1<Map.Key>}.
  */
 public class AnonymousClassTypeConstant
-        extends AbstractDependantTypeConstant
+        extends AbstractDependantChildTypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -117,18 +111,8 @@ public class AnonymousClassTypeConstant
         m_idAnon = (ClassConstant) getConstantPool().getConstant(m_iAnon);
         }
 
-    /**
-     * @return the id of this {@link AnonymousClassTypeConstant}
-     */
-    public ClassConstant getSignature()
-        {
-        return m_idAnon;
-        }
-
-    /**
-     * @return the anonymous class ClassStructure associated with this type
-     */
-    public ClassStructure getChildStructure()
+    @Override
+    protected ClassStructure getChildStructure()
         {
         return (ClassStructure) m_idAnon.getComponent();
         }
@@ -150,65 +134,9 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
-    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
-        {
-        return setIds.contains(m_idAnon);
-        }
-
-    @Override
-    public Constant getDefiningConstant()
-        {
-        return getSingleUnderlyingClass(true);
-        }
-
-    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureAnonymousClassTypeConstant(type, m_idAnon);
-        }
-
-    @Override
-    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
-        {
-        return false;
-        }
-
-    @Override
-    public TypeConstant ensureAutoNarrowing()
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
-        {
-        if (containsUnresolved())
-            {
-            return ResolutionResult.POSSIBLE;
-            }
-
-        return getChildStructure().resolveName(sName, access, collector);
-        }
-
-    @Override
-    public TypeConstant resolveTypedefs()
-        {
-        TypeConstant typeOriginal = m_typeParent;
-        TypeConstant typeResolved = typeOriginal.resolveTypedefs();
-        return typeOriginal == typeResolved
-                ? this
-                : cloneSingle(getConstantPool(), typeResolved);
-        }
-
-    @Override
-    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-        {
-        TypeConstant typeOriginal = m_typeParent;
-        TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
-        return typeOriginal == typeResolved
-                ? this
-                : cloneSingle(pool, typeResolved);
         }
 
     @Override
@@ -239,12 +167,6 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
-    public boolean extendsClass(IdentityConstant constClass)
-        {
-        return getChildStructure().extendsClass(constClass);
-        }
-
-    @Override
     public Category getCategory()
         {
         return Category.CLASS;
@@ -254,58 +176,6 @@ public class AnonymousClassTypeConstant
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         return true;
-        }
-
-    @Override
-    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
-        {
-        return getChildStructure().getIdentityConstant();
-        }
-
-    @Override
-    public boolean isExplicitClassIdentity(boolean fAllowParams)
-        {
-        return true;
-        }
-
-    @Override
-    public Component.Format getExplicitClassFormat()
-        {
-        return getChildStructure().getFormat();
-        }
-
-    @Override
-    public boolean containsGenericParam(String sName)
-        {
-        return m_typeParent.containsGenericParam(sName)
-            || getChildStructure().containsGenericParamType(sName);
-        }
-
-    @Override
-    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
-        ConstantPool pool       = getConstantPool();
-        TypeConstant typeParent = m_typeParent;
-
-        TypeConstant type;
-        if (typeParent.containsGenericParam(sName))
-            {
-            // the passed in list applies only to the child and should not be used by the parent
-            type = typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
-            }
-        else
-            {
-            TypeConstant typeActual = listParams.isEmpty()
-                    ? this
-                    : pool.ensureParameterizedTypeConstant(this,
-                        listParams.toArray(TypeConstant.NO_TYPES));
-            type = getChildStructure().getGenericParamType(pool, sName, typeActual);
-            if (type != null)
-                {
-                type = type.resolveGenerics(pool, m_typeParent);
-                }
-            }
-        return type;
         }
 
 
@@ -319,14 +189,6 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
-        {
-        return getChildStructure().containsSubstitutableMethod(
-                getConstantPool(), signature, access, fFunction, listParams);
-        }
-
-    @Override
     public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         return Usage.NO;
@@ -336,15 +198,6 @@ public class AnonymousClassTypeConstant
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         return Usage.NO;
-        }
-
-
-    // ----- run-time support ----------------------------------------------------------------------
-
-    @Override
-    public ClassTemplate getTemplate(Container container)
-        {
-        return container.getTemplate((ClassConstant) getDefiningConstant());
         }
 
 

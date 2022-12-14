@@ -1832,6 +1832,19 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified type and class, obtain a TypeConstant representing an inner child.
+     *
+     * @param constParent  the parent's TypeConstant (can be parameterized)
+     * @param idChild      the child identity
+     *
+     * @return the TypeConstant of the virtual child type
+     */
+    public TypeConstant ensureInnerChildTypeConstant(TypeConstant constParent, ClassConstant idChild)
+        {
+        return (TypeConstant) register(new InnerChildTypeConstant(this, constParent, idChild));
+        }
+
+    /**
      * Given the specified type and property, obtain a TypeConstant representing a property class.
      *
      * @param constParent  the parent's TypeConstant (can be parameterized)

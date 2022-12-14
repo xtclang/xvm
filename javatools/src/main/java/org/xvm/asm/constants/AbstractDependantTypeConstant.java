@@ -11,7 +11,11 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
+
+import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -76,6 +80,12 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
+        {
+        return setIds.contains(getSingleUnderlyingClass(true));
+        }
+
+    @Override
     public boolean isImmutabilitySpecified()
         {
         return false;
@@ -106,6 +116,12 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public int getTypeDepth()
+        {
+        return 1 + m_typeParent.getTypeDepth();
+        }
+
+    @Override
     public boolean isAnnotated()
         {
         return false;
@@ -121,6 +137,32 @@ public abstract class AbstractDependantTypeConstant
     public boolean isSingleDefiningConstant()
         {
         return true;
+        }
+
+    @Override
+    public Constant getDefiningConstant()
+        {
+        return getSingleUnderlyingClass(true);
+        }
+
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant typeOriginal = m_typeParent;
+        TypeConstant typeResolved = typeOriginal.resolveTypedefs();
+        return typeOriginal == typeResolved
+                ? this
+                : cloneSingle(getConstantPool(), typeResolved);
+        }
+
+    @Override
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
+        {
+        TypeConstant typeOriginal = m_typeParent;
+        TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
+        return typeOriginal == typeResolved
+                ? this
+                : cloneSingle(pool, typeResolved);
         }
 
     @Override
@@ -141,6 +183,31 @@ public abstract class AbstractDependantTypeConstant
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
+        }
+
+    @Override
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return false;
+        }
+
+    @Override
+    public TypeConstant ensureAutoNarrowing()
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
+        {
+        return this;
         }
 
     @Override
@@ -245,6 +312,15 @@ public abstract class AbstractDependantTypeConstant
     public boolean isTypeOfType()
         {
         return false;
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public ClassTemplate getTemplate(Container container)
+        {
+        return container.getTemplate((ClassConstant) getDefiningConstant());
         }
 
 

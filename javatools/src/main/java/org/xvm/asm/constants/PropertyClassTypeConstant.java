@@ -160,12 +160,6 @@ public class PropertyClassTypeConstant
         }
 
     @Override
-    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
-        {
-        return false;
-        }
-
-    @Override
     public ResolutionResult resolveContributedName(
             String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
         {
