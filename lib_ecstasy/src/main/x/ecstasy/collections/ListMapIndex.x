@@ -244,9 +244,9 @@ mixin ListMapIndex<Key extends Hashable, Value>
             OneOrN indexes = bucket;
             return switch (keyhash <=> hashFor(indexes))
                 {
-                case Lesser : new Array<OneOrN>(2, i -> {return i == 0 ? index : indexes;});
+                case Lesser : new OneOrN[2](i -> {return i == 0 ? index : indexes;});
                 case Equal  : addIndexTo(indexes, index);
-                case Greater: new Array<OneOrN>(2, i -> {return i == 0 ? indexes : index;});
+                case Greater: new OneOrN[2](i -> {return i == 0 ? indexes : index;});
                 };
             }
 

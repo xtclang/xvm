@@ -411,7 +411,7 @@ class Array<Element>
         else
             {
             Int   size   = this.size.maxOf(interval.effectiveUpperBound + 1);
-            Array result = new Array<Element>(size, i -> (interval.contains(i) ? value : this[i]));
+            Array result = new Element[size](i -> (interval.contains(i) ? value : this[i]));
             return mutability == Constant
                     ? result.freeze(True)
                     : result.toArray(mutability, True);
@@ -490,7 +490,7 @@ class Array<Element>
 
             case Persistent:
             case Constant:
-                Array result = new Array<Element>(size + 1, i -> (i < size ? this[i] : element));
+                Element[] result = new Element[size + 1](i -> (i < size ? this[i] : element));
                 return mutability == Persistent
                         ? result.toArray(Persistent, True)
                         : result.freeze(True);
@@ -525,7 +525,7 @@ class Array<Element>
                     assert Element value := iter.next();
                     return value;
                     };
-                Array<Element> result = new Array(this.size + values.size, supply);
+                Element[] result = new Element[this.size + values.size](supply);
                 return mutability == Persistent
                         ? result.toArray(Persistent, True)
                         : result.freeze(True);
@@ -692,7 +692,7 @@ class Array<Element>
             }
         else
             {
-            Array<Element> result = new Array(size, i -> (i == index ? value : this[i]));
+            Element[] result = new Element[size](i -> (i == index ? value : this[i]));
             return mutability == Persistent
                     ? result.toArray(Persistent, True)
                     : result.freeze(True);
@@ -852,7 +852,7 @@ class Array<Element>
 
             case Persistent:
             case Constant:
-                Array<Element> result = new Array(size, i -> this[i < lo ? i : i+removing]);
+                Element[] result = new Element[size](i -> this[i < lo ? i : i+removing]);
                 return mutability == Persistent
                         ? result.toArray(Persistent, True)
                         : result.freeze(True);

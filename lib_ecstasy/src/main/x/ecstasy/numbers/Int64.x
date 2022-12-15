@@ -353,7 +353,7 @@ const Int64
     @Override
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new Int128(new Array<Bit>(128, i -> bits[i < 128-bitLength ? 0 : i]));
+        return new Int128(new Bit[128](i -> bits[i < 128-bitLength ? 0 : i]));
         }
 
     @Auto
@@ -395,7 +395,7 @@ const Int64
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this >= 0;
-        return new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
+        return new UInt128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
         }
 
     @Override

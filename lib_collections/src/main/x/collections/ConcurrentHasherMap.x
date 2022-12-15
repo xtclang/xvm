@@ -71,7 +71,8 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
                 }
             }
 
-        partitions = new Array(partCount, i -> new Partition<Key, Value>(hasher, capacity, partCount));
+        partitions = new Partition[partCount]
+                        (i -> new Partition<Key, Value>(hasher, capacity, partCount));
         }
 
     /**

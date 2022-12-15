@@ -336,7 +336,7 @@ const ConstOrdinalList
      */
     static Int[] unpack(Byte[] contents, Int packedOffset, Int packedCount, Int bitsPerVal)
         {
-        return new Array<Int>(packedCount, i -> unpackOne(contents, packedOffset, i, bitsPerVal));
+        return new Int[packedCount](i -> unpackOne(contents, packedOffset, i, bitsPerVal));
         }
 
     /**

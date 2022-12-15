@@ -74,8 +74,8 @@ class RTClassTemplate
                 Argument[] arguments = parameters.size == 0
                         ? []
                         : names == Null
-                            ? new Array(parameters.size, i -> new Argument(parameters[i].as(immutable|service)))
-                            : new Array(parameters.size, i -> new Argument(parameters[i].as(immutable|service), names[i]));
+                            ? new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service)))
+                            : new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service), names[i]));
 
                 composition = new AnnotatingComposition(new AnnotationTemplate(composition, arguments), this);
                 ingredient  = composition.type;
@@ -89,7 +89,7 @@ class RTClassTemplate
                     assert count == types.size;
 
                     TypeTemplate[] constraintTemplates =
-                            new Array<TypeTemplate>(count, i -> types[i].template);
+                            new TypeTemplate[count](i -> types[i].template);
                     constraints = new ListMap(names, constraintTemplates);
                     }
                 break;
@@ -101,6 +101,6 @@ class RTClassTemplate
     // helper function to create an array of TypeParameters
     static TypeParameter[] createTypeParameters(String[] names, TypeTemplate[] types)
         {
-        return new Array(names.size, i -> new TypeParameter(names[i], types[i]));
+        return new TypeParameter[names.size](i -> new TypeParameter(names[i], types[i]));
         }
     }

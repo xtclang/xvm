@@ -293,7 +293,7 @@ interface Iterator<Element>
             }
         else if (Int size := knownSize())
             {
-            elements = new Array<Element>(size, _ -> {assert Element el := next(); return el;});
+            elements = new Element[size](_ -> {assert Element el := next(); return el;});
             }
         else
             {

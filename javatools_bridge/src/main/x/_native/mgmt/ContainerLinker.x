@@ -35,7 +35,7 @@ service ContainerLinker
             assert primaryModule := repository.getModule(primarySpec) as $"Missing {primarySpec}";
             }
 
-        ModuleTemplate[] additionalModules = new Array<ModuleTemplate>(additionalSpecs.size, i ->
+        ModuleTemplate[] additionalModules = new ModuleTemplate[additionalSpecs.size](i ->
             {
             ModuleSpec spec = additionalSpecs[i];
             if (spec.is(ModuleTemplate))

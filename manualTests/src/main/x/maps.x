@@ -588,8 +588,8 @@ module TestMaps
 
         timer.reset();
 
-        Future[] futures = new Array(concurrency,
-            i -> {
+        Future[] futures = new Future[concurrency](i ->
+            {
             Int n = new LoadGenerator().run^(map, iterations, i, range);
             return &n;
             });

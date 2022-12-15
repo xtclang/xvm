@@ -136,7 +136,7 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
     ElementOutput addArray(Iterable<IntNumber> values)
         {
         val iter = values.iterator();
-        return add(new Array<IntLiteral>(values.size, (_) ->
+        return add(new IntLiteral[values.size]((_) ->
                 {
                 assert val num := iter.next();
                 return num.toIntLiteral();
@@ -153,7 +153,7 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
     ElementOutput addArray(Iterable<FPNumber> values)
         {
         val iter = values.iterator();
-        return add(new Array<FPLiteral>(values.size, (_) ->
+        return add(new FPLiteral[values.size](_ ->
                 {
                 assert val num := iter.next();
                 return num.toFPLiteral();

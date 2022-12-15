@@ -46,7 +46,7 @@ class RTFileTemplate
         // the primary module is implicitly linked already
         moduleNamesDone.add(moduleName);
 
-        ModuleTemplate[] unresolvedModules = new Array<ModuleTemplate>();
+        ModuleTemplate[] unresolvedModules = new ModuleTemplate[];
         // iteratively link all downstream modules (moduleNamesTodo array may grow)
         for (Int i = 0; i < moduleNamesTodo.size; ++i)
             {

@@ -316,21 +316,21 @@ const UInt16
     @Override
     Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new Int32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])));
+        return new Int32(new Bit[32](i -> (i < 32-bitLength ? 0 : bits[i])));
         }
 
     @Auto
     @Override
     Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new Int64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
+        return new Int64(new Bit[64](i -> (i < 64-bitLength ? 0 : bits[i])));
         }
 
     @Auto
     @Override
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new Int128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
+        return new Int128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
         }
 
     @Auto
@@ -357,21 +357,21 @@ const UInt16
     @Override
     UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new UInt32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])));
+        return new UInt32(new Bit[32](i -> (i < 32-bitLength ? 0 : bits[i])));
         }
 
     @Auto
     @Override
     UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new UInt64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
+        return new UInt64(new Bit[64](i -> (i < 64-bitLength ? 0 : bits[i])));
         }
 
     @Auto
     @Override
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
+        return new UInt128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
         }
 
     @Auto

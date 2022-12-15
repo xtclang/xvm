@@ -1065,7 +1065,7 @@ interface Collection<Element>
         enum NonExistent {NotAValue}
         typedef (CompileType.Element | NonExistent) as Remnant;
         Iterator<CompileType.Element> iter = collection1.iterator();
-        Remnant[] remnants = new Array<Remnant>(collection1.size, _ ->
+        Remnant[] remnants = new Remnant[collection1.size](_ ->
             {
             assert val e := iter.next(); return e;
             });

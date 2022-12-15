@@ -276,7 +276,7 @@ const UIntN
         {
         assert:bounds this <= Int8.MaxValue;
         return bitLength < 8
-                ? new Int8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
+                ? new Int8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
                 : new Int8(bits[bitLength-8 ..< bitLength]);
         }
 
@@ -285,7 +285,7 @@ const UIntN
         {
         assert:bounds this <= Int16.MaxValue;
         return bitLength < 16
-                ? new Int16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
+                ? new Int16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
                 : new Int16(bits[bitLength-16 ..< bitLength]);
         }
 
@@ -294,7 +294,7 @@ const UIntN
         {
         assert:bounds this <= Int32.MaxValue;
         return bitLength < 32
-                ? new Int32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
+                ? new Int32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
                 : new Int32(bits[bitLength-32 ..< bitLength]);
         }
 
@@ -303,7 +303,7 @@ const UIntN
         {
         assert:bounds this <= Int64.MaxValue;
         return bitLength < 64
-                ? new Int64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
+                ? new Int64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
                 : new Int64(bits[bitLength-64 ..< bitLength]);
         }
 
@@ -312,7 +312,7 @@ const UIntN
         {
         assert:bounds this <= Int128.MaxValue;
         return bitLength < 128
-                ? new Int128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
+                ? new Int128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
                 : new Int128(bits[bitLength-128 ..< bitLength]);
         }
 
@@ -323,7 +323,7 @@ const UIntN
         Bit[] bits = this.bits;
         if (bits[0] == 1)
             {
-            bits = new Array<Bit>(bits.size + 8, i -> i < 8 ? 0 : bits[i-8]);
+            bits = new Bit[bits.size + 8](i -> i < 8 ? 0 : bits[i-8]);
             }
         return new IntN(bits);
         }
@@ -333,7 +333,7 @@ const UIntN
         {
         assert:bounds this <= UInt8.MaxValue;
         return bitLength < 8
-                ? new UInt8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
+                ? new UInt8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
                 : new UInt8(bits[bitLength-8 ..< bitLength]);
         }
 
@@ -342,7 +342,7 @@ const UIntN
         {
         assert:bounds this <= UInt16.MaxValue;
         return bitLength < 16
-                ? new UInt16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
+                ? new UInt16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
                 : new UInt16(bits[bitLength-16 ..< bitLength]);
         }
 
@@ -351,7 +351,7 @@ const UIntN
         {
         assert:bounds this <= UInt32.MaxValue;
         return bitLength < 32
-                ? new UInt32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
+                ? new UInt32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
                 : new UInt32(bits[bitLength-32 ..< bitLength]);
         }
 
@@ -360,7 +360,7 @@ const UIntN
         {
         assert:bounds this <= UInt64.MaxValue;
         return bitLength < 64
-                ? new UInt64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
+                ? new UInt64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
                 : new UInt64(bits[bitLength-64 ..< bitLength]);
         }
 
@@ -369,7 +369,7 @@ const UIntN
         {
         assert:bounds this <= UInt64.MaxValue;
         return bitLength < 128
-                ? new UInt128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
+                ? new UInt128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
                 : new UInt128(bits[bitLength-128 ..< bitLength]);
         }
 

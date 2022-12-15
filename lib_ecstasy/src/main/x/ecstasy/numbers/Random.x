@@ -29,7 +29,7 @@ interface Random
      */
     Byte byte()
         {
-        Bit[] bits = new Array<Bit>(8, _ -> bit());
+        Bit[] bits = new Bit[8](_ -> bit());
         return new Byte(bits);
         }
 
@@ -49,7 +49,7 @@ interface Random
      */
     Int int()
         {
-        Bit[] bits = new Array<Bit>(64, _ -> bit());
+        Bit[] bits = new Bit[64](_ -> bit());
         return new Int(bits);
         }
 
@@ -76,7 +76,7 @@ interface Random
      */
     UInt uint()
         {
-        Bit[] bits = new Array<Bit>(64, _ -> bit());
+        Bit[] bits = new Bit[64](_ -> bit());
         return new UInt(bits);
         }
 

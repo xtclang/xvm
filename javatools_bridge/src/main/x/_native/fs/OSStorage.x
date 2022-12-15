@@ -80,7 +80,7 @@ service OSStorage
             // add the native watch
             watch(pathString);
 
-            watchers = new Array<FileWatcher?>();
+            watchers = new FileWatcher?[];
             index    = 0;
 
             allWatchers.put(pathString, watchers);

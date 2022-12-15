@@ -9,7 +9,7 @@ module TestServices
         console.println($"{tag()} creating service");
         TestService svc = new TestService();
 
-        TestService[] svcs = new Array<TestService>(4, (x) -> new TestService());
+        TestService[] svcs = new TestService[4](_ -> new TestService());
 
         console.println($|{tag()} calling service async/wait-style\
                          | {svc.serviceName} {svc.serviceControl.statusIndicator}
