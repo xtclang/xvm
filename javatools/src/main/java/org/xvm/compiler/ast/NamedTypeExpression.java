@@ -1105,6 +1105,13 @@ public class NamedTypeExpression
                     typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, idTarget);
                     }
 
+                else if (clzTarget.isInnerChild())
+                    {
+                    ClassStructure clzParent = clzTarget.getContainingClass();
+
+                    typeTarget = pool.ensureInnerChildTypeConstant(clzParent.getFormalType(), idTarget);
+                    }
+
                 boolean fValid;
                 if (clzTarget.isParameterized())
                     {

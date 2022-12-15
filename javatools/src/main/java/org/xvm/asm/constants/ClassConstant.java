@@ -80,15 +80,6 @@ public class ClassConstant
         }
 
     /**
-     * @return true iff this class is a virtual child class
-     */
-    public boolean isVirtualChild()
-        {
-        ClassStructure clz = (ClassStructure) getComponent();
-        return clz != null && clz.isVirtualChild();
-        }
-
-    /**
      * @return the "outermost" class
      */
     public ClassConstant getOutermost()
@@ -315,10 +306,15 @@ public class ClassConstant
     @Override
     public TypeConstant getType()
         {
-        return isVirtualChild()
-                ? getConstantPool().ensureVirtualChildTypeConstant(
-                        getParentConstant().getType(), getName())
-                : super.getType();
+        ClassStructure clz = (ClassStructure) getComponent();
+
+        return clz.isVirtualChild()   ? getConstantPool().ensureVirtualChildTypeConstant(
+                                            getParentConstant().getType(), getName())
+             : clz.isInnerChild()     ? getConstantPool().ensureInnerChildTypeConstant(
+                                            getParentConstant().getType(), this)
+             : clz.isAnonInnerClass() ? getConstantPool().ensureAnonymousClassTypeConstant(
+                                            getParentConstant().getType(), this)
+             : super.getType();
         }
 
     @Override

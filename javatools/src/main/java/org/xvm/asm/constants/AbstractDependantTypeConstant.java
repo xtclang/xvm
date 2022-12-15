@@ -303,12 +303,6 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public boolean isConstant()
-        {
-        return false;
-        }
-
-    @Override
     public boolean isTypeOfType()
         {
         return false;

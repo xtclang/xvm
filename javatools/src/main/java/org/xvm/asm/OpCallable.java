@@ -192,12 +192,12 @@ public abstract class OpCallable extends Op
     protected MethodStructure getChildConstructor(Frame frame, ObjectHandle hParent)
         {
         // suffix "C" indicates the compile-time constants; "R" - the run-time
-        ClassConstant   idParentR   = (ClassConstant) hParent.getTemplate().getClassConstant();
-        ServiceContext  context     = frame.f_context;
-        MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+        IdentityConstant idParentR   = hParent.getTemplate().getClassConstant();
+        ServiceContext   context     = frame.f_context;
+        MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
         if (constructor != null)
             {
-            ClassConstant idParent = (ClassConstant) context.getOpInfo(this, Category.TargetClass);
+            IdentityConstant idParent = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
             if (idParent.equals(idParentR))
                 {
                 // cached constructor fits the parent's class
@@ -210,28 +210,32 @@ public abstract class OpCallable extends Op
             {
             return null;
             }
-        ClassStructure clzTargetC = (ClassStructure) constructor.getParent().getParent();
-        ClassStructure clzParentC = (ClassStructure) clzTargetC.getParent();
-        ClassConstant  idParentC  = (ClassConstant)  clzParentC.getIdentityConstant();
 
-        if (!idParentR.equals(idParentC))
+        ClassStructure clzTargetC = (ClassStructure) constructor.getParent().getParent();
+        if (clzTargetC.isVirtualChild())
             {
-            // find the run-time target's constructor;
-            // note that we don't need to resolve the actual types
-            ClassStructure clzParentR  = (ClassStructure) idParentR.getComponent();
-            ClassStructure clzChild    = clzParentR.getVirtualChild(clzTargetC.getSimpleName());
-            if (clzChild == null)
+            ClassStructure   clzParentC = (ClassStructure) clzTargetC.getParent();
+            IdentityConstant idParentC  = clzParentC.getIdentityConstant();
+
+            if (!idParentR.equals(idParentC))
                 {
-                return null;
+                // find the run-time target's constructor;
+                // note that we don't need to resolve the actual types
+                ClassStructure clzParentR  = (ClassStructure) idParentR.getComponent();
+                ClassStructure clzChild    = clzParentR.getVirtualChild(clzTargetC.getSimpleName());
+                if (clzChild == null)
+                    {
+                    return null;
+                    }
+                TypeInfo   infoTarget = clzChild.getFormalType().ensureTypeInfo();
+                MethodInfo info       = infoTarget.getMethodBySignature(
+                                            constructor.getIdentityConstant().getSignature(), true);
+                if (info == null)
+                    {
+                    return null;
+                    }
+                constructor = info.getTopmostMethodStructure(infoTarget);
                 }
-            TypeInfo   infoTarget = clzChild.getFormalType().ensureTypeInfo();
-            MethodInfo info       = infoTarget.getMethodBySignature(
-                                        constructor.getIdentityConstant().getSignature(), true);
-            if (info == null)
-                {
-                return null;
-                }
-            constructor = info.getTopmostMethodStructure(infoTarget);
             }
 
         context.setOpInfo(this, Category.TargetClass, idParentR);
@@ -248,13 +252,13 @@ public abstract class OpCallable extends Op
      */
     protected MethodStructure getTypeConstructor(Frame frame, TypeHandle hType)
         {
-        TypeConstant    typeR       = hType.getDataType();
-        ClassConstant   idTargetR   = (ClassConstant) typeR.getDefiningConstant();
-        ServiceContext  context     = frame.f_context;
-        MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+        TypeConstant     typeR       = hType.getDataType();
+        IdentityConstant idTargetR   = typeR.getSingleUnderlyingClass(false);
+        ServiceContext   context     = frame.f_context;
+        MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
         if (constructor != null)
             {
-            ClassConstant idTarget = (ClassConstant) context.getOpInfo(this, Category.TargetClass);
+            IdentityConstant idTarget = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
             if (idTarget.equals(idTargetR))
                 {
                 // cached constructor fits the parent's class
@@ -268,8 +272,8 @@ public abstract class OpCallable extends Op
             return null;
             }
 
-        ClassStructure clzTargetC = (ClassStructure) constructor.getParent().getParent();
-        ClassConstant  idTargetC  = (ClassConstant)  clzTargetC.getIdentityConstant();
+        ClassStructure   clzTargetC = (ClassStructure) constructor.getParent().getParent();
+        IdentityConstant idTargetC  = clzTargetC.getIdentityConstant();
 
         if (!idTargetR.equals(idTargetC))
             {
@@ -494,8 +498,14 @@ public abstract class OpCallable extends Op
                                  ObjectHandle hParent, ObjectHandle[] ahVar)
         {
         ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
-        TypeConstant    typeChild   = frame.poolContext().ensureThisVirtualChildTypeConstant
-                                            (hParent.getType(), structChild.getName());
+        TypeConstant    typeChild   =
+              structChild.isVirtualChild()
+                ? frame.poolContext().ensureThisVirtualChildTypeConstant(
+                        hParent.getType(), structChild.getName())
+            : structChild.isInnerChild()
+                ? frame.poolContext().ensureInnerChildTypeConstant(
+                        hParent.getType(), (ClassConstant) structChild.getIdentityConstant())
+            : structChild.getCanonicalType();
         TypeComposition clzTarget   = typeChild.ensureClass(frame);
 
         if (frame.isNextRegister(m_nRetValue))

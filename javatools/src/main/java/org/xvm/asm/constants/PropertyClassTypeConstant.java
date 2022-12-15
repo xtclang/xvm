@@ -232,6 +232,12 @@ public class PropertyClassTypeConstant
         }
 
     @Override
+    public boolean isConstant()
+        {
+        return false;
+        }
+
+    @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
         return getRefType().calculateRelationToLeft(typeLeft);

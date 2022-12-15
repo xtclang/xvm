@@ -388,55 +388,13 @@ public class ClassStructure
         }
 
     /**
-     * @return the parent class for this virtual child, or null
-     */
-    public ClassStructure getVirtualParent()
-        {
-        if (!isVirtualChild())
-            {
-            return null;
-            }
-
-        Component parent = getParent();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case MODULE:
-                case PACKAGE:
-                case METHOD:
-                    return null;
-
-                case ENUM:
-                case ENUMVALUE:
-                case INTERFACE:
-                case CLASS:
-                case MIXIN:
-                case CONST:
-                case SERVICE:
-                    return (ClassStructure) parent;
-
-                case PROPERTY:
-                    parent = parent.getParent();
-                    break;
-
-                case FILE:
-                case TYPEDEF:
-                case MULTIMETHOD:
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-        }
-
-    /**
      * @return true iff this class is the specified parent class itself, or a virtual child of that
      *         class or any of its virtual children (recursively)
      */
     public boolean isVirtualDescendant(ClassConstant idParent)
         {
         return getIdentityConstant().equals(idParent) ||
-                isVirtualChild() && getVirtualParent().isVirtualDescendant(idParent);
+                isVirtualChild() && getOuter().isVirtualDescendant(idParent);
         }
 
     /**
@@ -498,8 +456,11 @@ public class ClassStructure
                 case MULTIMETHOD:
                 case METHOD:
                 case PROPERTY:
-                    break;
+                    parent = parent.getParent();
+                    continue;
 
+                case MODULE:
+                case PACKAGE:
                 case INTERFACE:
                 case CLASS:
                 case CONST:
@@ -513,8 +474,6 @@ public class ClassStructure
                     throw new IllegalStateException(
                         parent.getIdentityConstant() + " format=" + parent.getFormat());
                 }
-
-            parent = parent.getParent();
             }
         }
 
@@ -800,7 +759,7 @@ public class ClassStructure
     public boolean isParameterizedDeep()
         {
         return isParameterized() ||
-               isVirtualChild() && getVirtualParent().isParameterized();
+               isVirtualChild() && getOuter().isParameterized();
         }
 
     /**
@@ -831,6 +790,12 @@ public class ClassStructure
                     {
                     TypeConstant typeParent = ((ClassStructure) getParent()).getFormalType();
                     typeFormal = pool.ensureVirtualChildTypeConstant(typeParent, getName());
+                    }
+                else if (isInnerChild())
+                    {
+                    TypeConstant typeParent = getOuter().getFormalType();
+                    typeFormal = pool.ensureInnerChildTypeConstant(typeParent,
+                                        (ClassConstant) getIdentityConstant());
                     }
                 else
                     {
@@ -895,6 +860,11 @@ public class ClassStructure
                 {
                 TypeConstant typeParent = ((ClassStructure) getParent()).getCanonicalType();
                 typeCanonical = pool.ensureVirtualChildTypeConstant(typeParent, getName());
+                }
+            else if (isInnerChild())
+                {
+                TypeConstant typeParent = getOuter().getCanonicalType();
+                typeCanonical = pool.ensureInnerChildTypeConstant(typeParent, (ClassConstant) constClz);
                 }
             else
                 {
@@ -1888,7 +1858,7 @@ public class ClassStructure
 
                 if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild())
                     {
-                    type = clzContrib.getVirtualParent().getGenericParamTypeImpl(pool, sName,
+                    type = clzContrib.getOuter().getGenericParamTypeImpl(pool, sName,
                             typeResolved.getParentType(), fAllowInto);
                     if (type != null)
                         {

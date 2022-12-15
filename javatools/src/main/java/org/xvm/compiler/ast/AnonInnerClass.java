@@ -250,6 +250,7 @@ public class AnonInnerClass
                 return;
 
             case VirtualChildType:  // treat it as a terminal type
+            case InnerChildType:    // treat it as a terminal type
                 break;
 
             case DifferenceType:    // treat it as an interface

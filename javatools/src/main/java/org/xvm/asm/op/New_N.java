@@ -101,7 +101,6 @@ public class New_N
             IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate    template  = frame.ensureTemplate(constClz);
             ClassComposition clzTarget = template.getCanonicalClass(frame.f_context.f_container);
-            ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
             if (frame.isNextRegister(m_nRetValue))
                 {
@@ -111,11 +110,12 @@ public class New_N
             if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    template.construct(frameCaller, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+                    template.construct(frameCaller, constructor, clzTarget, null, ahVar, m_nRetValue);
 
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
-            return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+
+            return template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

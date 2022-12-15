@@ -2114,9 +2114,9 @@ public abstract class TypeConstant
                     }
                 mapProps.put(id, prop);
                 }
-            else if (prop.getName().equals("outer") && struct.isVirtualChild())
+            else if (prop.getName().equals("outer") && struct.isInstanceChild())
                 {
-                // the "outer" property should be available in the virtual child structure at
+                // the "outer" property should be available in the child structure at
                 // compile time and the outer reference will be supplied by the run-time
                 mapProps.put(entry.getKey(), prop);
                 }

@@ -2913,6 +2913,10 @@ public class ConstantPool
                     constant = new VirtualChildTypeConstant(this, format, in);
                     break;
 
+                case InnerChildType:
+                    constant = new InnerChildTypeConstant(this, format, in);
+                    break;
+
                 case AnonymousClassType:
                     constant = new AnonymousClassTypeConstant(this, format, in);
                     break;

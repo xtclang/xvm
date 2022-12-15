@@ -76,6 +76,7 @@ public class AnnotatedTypeConstant
             {
             case TerminalType:
             case VirtualChildType:
+            case InnerChildType:
             case ParameterizedType:
             case AnnotatedType:
             case AnonymousClassType:

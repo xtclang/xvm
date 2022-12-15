@@ -568,6 +568,11 @@ public class NewExpression
                         typeResult = pool.ensureAnonymousClassTypeConstant(ctx.getThisType(), idAnon);
                         typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
                         typeResult = typeResult.resolveGenerics(pool, typeTarget);
+
+                        if (!clzAnon.isStatic())
+                            {
+                            plan = Plan.Child;
+                            }
                         }
 
                     typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
@@ -617,33 +622,30 @@ public class NewExpression
                             return null;
                         }
                     }
-                else if (fNestMate)
+                else if (fNestMate && typeTarget.isVirtualChild() || typeTarget.isInnerChildClass())
                     {
                     ClassStructure clzTarget = (ClassStructure)
                             typeTarget.getSingleUnderlyingClass(false).getComponent();
 
-                    if (clzTarget.isVirtualChild())
-                        {
-                        plan = Plan.Child;
+                    plan = Plan.Child;
 
-                        int nSteps = ctx.getStepsToOuterClass(clzTarget.getVirtualParent());
-                        if (nSteps >= 0)
+                    int nSteps = ctx.getStepsToOuterClass(clzTarget.getOuter());
+                    if (nSteps >= 0)
+                        {
+                        if (nSteps == 0 && ctx.isConstructor())
                             {
-                            if (nSteps == 0 && ctx.isConstructor())
-                                {
-                                log(errs, Severity.ERROR, Compiler.PARENT_NOT_CONSTRUCTED,
-                                        clzTarget.getSimpleName());
-                                return null;
-                                }
-                            ctx.requireThis(getStartPosition(), errs);
-                            m_nVirtualParentSteps = nSteps;
-                            }
-                        else
-                            {
-                            // TODO: a better error
-                            log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                            log(errs, Severity.ERROR, Compiler.PARENT_NOT_CONSTRUCTED,
+                                    clzTarget.getSimpleName());
                             return null;
                             }
+                        ctx.requireThis(getStartPosition(), errs);
+                        m_nParentSteps = nSteps;
+                        }
+                    else
+                        {
+                        // TODO: a better error
+                        log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                        return null;
                         }
                     }
                 }
@@ -1092,14 +1094,14 @@ public class NewExpression
                 {
                 if (left == null)
                     {
-                    if (m_nVirtualParentSteps == 0)
+                    if (m_nParentSteps == 0)
                         {
                         argOuter = new Register(ctx.getThisType(), Op.A_THIS);
                         }
                     else
                         {
                         argOuter = createRegister(typeTarget.getParentType(), true);
-                        code.add(new MoveThis(m_nVirtualParentSteps, argOuter));
+                        code.add(new MoveThis(m_nParentSteps, argOuter));
                         }
                     }
                 else
@@ -1838,7 +1840,7 @@ public class NewExpression
         @Override
         public void requireThis(long lPos, ErrorListener errs)
             {
-            if (getComponent().isStatic())
+            if (getMethod().isStatic())
                 {
                 errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
                 }
@@ -1853,8 +1855,9 @@ public class NewExpression
          */
         public boolean isInstanceChild()
             {
-            // TODO it's not immediately obvious how to capture "outer this" (GG?)
-            return isThisCaptured() | !getComponent().isStatic();
+            // there is no reason to capture a singleton parent
+            return isThisCaptured() ||
+                    !getMethod().isStatic() && !getMethod().getContainingClass().isSingleton();
             }
         }
 
@@ -1907,7 +1910,7 @@ public class NewExpression
     /**
      * In the case of "m_plan == Plan.Child" and "left == null", steps to the child's parent.
      */
-    private transient int m_nVirtualParentSteps;
+    private transient int m_nParentSteps;
     /**
      * In the case of "m_plan == Plan.Formal" and the formal type is generic, the formal property id.
      */

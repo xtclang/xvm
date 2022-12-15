@@ -62,6 +62,7 @@ public class ParameterizedTypeConstant
             {
             case TerminalType:
             case VirtualChildType:
+            case InnerChildType:
             case AnonymousClassType:
             case UnresolvedType:
                 break;

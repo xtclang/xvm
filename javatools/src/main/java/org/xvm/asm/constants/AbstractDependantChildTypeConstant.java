@@ -66,6 +66,12 @@ public abstract class AbstractDependantChildTypeConstant
         }
 
     @Override
+    public boolean isImmutable()
+        {
+        return getChildStructure().isImmutable();
+        }
+
+    @Override
     public int getMaxParamsCount()
         {
         return getChildStructure().getTypeParams().size();
@@ -188,6 +194,12 @@ public abstract class AbstractDependantChildTypeConstant
                 }
             }
         return type;
+        }
+
+    @Override
+    public boolean isConstant()
+        {
+        return getChildStructure().isConst();
         }
 
     @Override

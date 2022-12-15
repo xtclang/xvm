@@ -771,9 +771,12 @@ public class TypeInfo
 
         // otherwise it must be a class
         ClassStructure clz = (ClassStructure) child;
-        return clz.isVirtualChild()
-                ? pool.ensureVirtualChildTypeConstant(f_type, sName)
-                : clz.getIdentityConstant().getType();
+        return clz.isVirtualChild()   ? pool.ensureVirtualChildTypeConstant(f_type, sName)
+             : clz.isInnerChild()     ? pool.ensureInnerChildTypeConstant(f_type,
+                                                (ClassConstant) clz.getIdentityConstant())
+             : clz.isAnonInnerClass() ? pool.ensureAnonymousClassTypeConstant(f_type,
+                                                (ClassConstant) clz.getIdentityConstant())
+             : clz.getIdentityConstant().getType();
         }
 
     /**

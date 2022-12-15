@@ -751,6 +751,7 @@ public class xRTTypeTemplate
             case VirtualChildType:
                 return enumForm.getEnumByName("Child");
 
+            case InnerChildType:
             case AnonymousClassType:
                 return enumForm.getEnumByName("Class");
 

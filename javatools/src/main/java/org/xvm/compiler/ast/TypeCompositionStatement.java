@@ -776,7 +776,10 @@ public class TypeCompositionStatement
             case InMethod:
                 {
                 MethodStructure method = (MethodStructure) component.getParent();
-                fImplicitlyStatic |= method.isFunction();
+
+                // there is no reason to create an inner instance child of a singleton
+                fImplicitlyStatic |= method.isFunction() ||
+                                     method.getContainingClass().isSingleton();
                 break;
                 }
 

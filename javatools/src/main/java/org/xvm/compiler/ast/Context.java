@@ -1678,6 +1678,8 @@ public class Context
 
             switch (id.getFormat())
                 {
+                case Module:
+                case Package:
                 case Class:
                     {
                     if (id.equals(idParent))
@@ -1713,10 +1715,6 @@ public class Context
                         }
                     break;
                     }
-
-                case Module:
-                case Package:
-                    return -1;
 
                 default:
                     throw new IllegalStateException();
