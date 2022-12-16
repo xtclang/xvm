@@ -368,6 +368,9 @@ public class VirtualChildTypeConstant
 
         m_constName        = (StringConstant) pool.register(m_constName);
         m_typeOriginParent = (TypeConstant)   pool.register(m_typeOriginParent);
+
+        // invalidate cached structure
+        m_clzChild = null;
         }
 
     @Override
