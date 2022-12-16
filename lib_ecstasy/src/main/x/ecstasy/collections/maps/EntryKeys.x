@@ -30,45 +30,44 @@ class EntryKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     Iterator<MapKey> iterator()
         {
         return new KeyIterator(contents.entries.iterator());
-        }
 
-    protected typedef Iterator<Map<MapKey, MapValue>.Entry> as EntryIterator;
+        typedef Iterator<Map<MapKey, MapValue>.Entry> as EntryIterator;
 
-    /**
-     * Iterator that relies on an iterator of entries to produce a corresponding sequence of keys.
-     * TODO GG if this class is inside the iterator() method, compiler emits error about type param
-     */
-    protected class KeyIterator(EntryIterator entryIterator)
-            implements Iterator<MapKey>
-        {
-        @Override
-        conditional MapKey next()
+        /**
+         * Iterator that relies on an iterator of entries to produce a corresponding sequence of keys.
+         */
+        class KeyIterator(EntryIterator entryIterator)
+                implements Iterator<MapKey>
             {
-            if (Map<MapKey, MapValue>.Entry entry := entryIterator.next())
+            @Override
+            conditional MapKey next()
                 {
-                return True, entry.key;
+                if (Map<MapKey, MapValue>.Entry entry := entryIterator.next())
+                    {
+                    return True, entry.key;
+                    }
+
+                return False;
                 }
 
-            return False;
-            }
+            @Override
+            Boolean knownDistinct()
+                {
+                return True;
+                }
 
-        @Override
-        Boolean knownDistinct()
-            {
-            return True;
-            }
+            @Override
+            conditional Int knownSize()
+                {
+                return entryIterator.knownSize();
+                }
 
-        @Override
-        conditional Int knownSize()
-            {
-            return entryIterator.knownSize();
-            }
-
-        @Override
-        (Iterator<MapKey>, Iterator<MapKey>) bifurcate()
-            {
-            (EntryIterator iter1, EntryIterator iter2) = entryIterator.bifurcate();
-            return new KeyIterator(iter1), new KeyIterator(iter2);
+            @Override
+            (Iterator<MapKey>, Iterator<MapKey>) bifurcate()
+                {
+                (EntryIterator iter1, EntryIterator iter2) = entryIterator.bifurcate();
+                return new KeyIterator(iter1), new KeyIterator(iter2);
+                }
             }
         }
 

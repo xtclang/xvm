@@ -56,11 +56,9 @@ public class InnerChildTypeConstant
         {
         super(pool, typeParent);
 
-        if (typeParent.isAccessSpecified() ||
-            typeParent.isImmutabilitySpecified() ||
-            typeParent.isAnnotated())
+        if (typeParent.isAccessSpecified() || typeParent.isAnnotated())
             {
-            throw new IllegalArgumentException("parent's immutability, access or annotations cannot be specified");
+            throw new IllegalArgumentException("parent's access or annotations cannot be specified");
             }
         if (idChild == null)
             {

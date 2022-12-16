@@ -52,44 +52,43 @@ mixin KeySetBasedMap<Key, Value>
         Iterator<Map.Entry> iterator()
             {
             return new EntryIterator(contents.keys.iterator());
-            }
 
-        /**
-         * Iterator that relies on an iterator of keys to produce a corresponding sequence of entries.
-         * TODO GG if this class is inside the iterator() method, compiler emits error about type param
-         */
-        protected class EntryIterator(Iterator<Key> keyIterator)
-                implements Iterator<Map.Entry>
-            {
-            @Override
-            conditional Map.Entry next()
+            /**
+             * Iterator that relies on an iterator of keys to produce a corresponding sequence of entries.
+             */
+            class EntryIterator(Iterator<Key> keyIterator)
+                    implements Iterator<Map.Entry>
                 {
-                if (Key key := keyIterator.next())
+                @Override
+                conditional Map.Entry next()
                     {
-                    private CursorEntry entry = new CursorEntry();
-                    return True, entry.advance(key);
+                    if (Key key := keyIterator.next())
+                        {
+                        private CursorEntry entry = new CursorEntry();
+                        return True, entry.advance(key);
+                        }
+
+                    return False;
                     }
 
-                return False;
-                }
+                @Override
+                Boolean knownDistinct()
+                    {
+                    return True;
+                    }
 
-            @Override
-            Boolean knownDistinct()
-                {
-                return True;
-                }
+                @Override
+                conditional Int knownSize()
+                    {
+                    return keyIterator.knownSize();
+                    }
 
-            @Override
-            conditional Int knownSize()
-                {
-                return keyIterator.knownSize();
-                }
-
-            @Override
-            (Iterator<Map.Entry>, Iterator<Map.Entry>) bifurcate()
-                {
-                (Iterator<Key> iter1, Iterator<Key> iter2) = keyIterator.bifurcate();
-                return new EntryIterator(iter1), new EntryIterator(iter2);
+                @Override
+                (Iterator<Map.Entry>, Iterator<Map.Entry>) bifurcate()
+                    {
+                    (Iterator<Key> iter1, Iterator<Key> iter2) = keyIterator.bifurcate();
+                    return new EntryIterator(iter1), new EntryIterator(iter2);
+                    }
                 }
             }
 
@@ -164,38 +163,36 @@ mixin KeySetBasedMap<Key, Value>
         Iterator<Value> iterator()
             {
             return new ValueIterator(contents.keys.iterator());
-            }
 
-        /**
-         * Iterator that relies on an iterator of keys to produce a corresponding sequence of values.
-         * TODO GG if this class is inside the iterator() method, compiler emits errors like:
-         *      COMPILER-145: Unresolvable type parameter(s): Value.
-         */
-        protected class ValueIterator(Iterator<Key> keyIterator)
-                implements Iterator<Value>
-            {
-            @Override
-            conditional Value next()
+            /**
+             * Iterator that relies on an iterator of keys to produce a corresponding sequence of values.
+             */
+            class ValueIterator(Iterator<Key> keyIterator)
+                    implements Iterator<Value>
                 {
-                if (Key key := keyIterator.next())
+                @Override
+                conditional Value next()
                     {
-                    return this.KeyValues.contents.get(key);
+                    if (Key key := keyIterator.next())
+                        {
+                        return this.KeyValues.contents.get(key);
+                        }
+
+                    return False;
                     }
 
-                return False;
-                }
+                @Override
+                conditional Int knownSize()
+                    {
+                    return keyIterator.knownSize();
+                    }
 
-            @Override
-            conditional Int knownSize()
-                {
-                return keyIterator.knownSize();
-                }
-
-            @Override
-            (Iterator<Value>, Iterator<Value>) bifurcate()
-                {
-                (Iterator<Key> iter1, Iterator<Key> iter2) = keyIterator.bifurcate();
-                return new ValueIterator(iter1), new ValueIterator(iter2);
+                @Override
+                (Iterator<Value>, Iterator<Value>) bifurcate()
+                    {
+                    (Iterator<Key> iter1, Iterator<Key> iter2) = keyIterator.bifurcate();
+                    return new ValueIterator(iter1), new ValueIterator(iter2);
+                    }
                 }
             }
 
