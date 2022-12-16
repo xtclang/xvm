@@ -714,7 +714,7 @@ interface Map<Key, Value>
                 iter   = iter.limit(displayCount);
                 count += trunc?.size : 0;
                 }
-            for (Map<Key, Value>.Entry entry : iter)
+            for (Entry entry : iter)
                 {
                 count += entry.key.estimateStringLength() + entry.value.estimateStringLength();
                 }

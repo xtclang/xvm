@@ -151,7 +151,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         }
 
     @Override
-    @Lazy public/private Collection<Map<Key,Value>.Entry> entries.calc()
+    @Lazy public/private Collection<Entry> entries.calc()
         {
         return new Entries();
         }
@@ -255,14 +255,13 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         }
 
     @Override
-    <Result> Result process(Key key, function Result(Map<Key, Value>.Entry) compute)
+    <Result> Result process(Key key, function Result(Entry) compute)
         {
         return partitionOf(key).process^(key, compute);
         }
 
     @Override
-    <Result> conditional Result processIfPresent(Key key,
-            function Result(Map<Key, Value>.Entry) compute)
+    <Result> conditional Result processIfPresent(Key key, function Result(Entry) compute)
         {
         return partitionOf(key).processIfPresent^(key, compute);
         }
@@ -304,7 +303,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
      * A collection of the map's entries, backed by the map.
      */
     protected const Entries
-            implements Collection<Map<Key,Value>.Entry>
+            implements Collection<Entry>
         {
         @Override
         @RO Int size.get()
@@ -693,7 +692,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
         @Override
         @Concurrent
-        <Result> Result process(Key key, function Result (Map<Key, Value>.Entry) compute)
+        <Result> Result process(Key key, function Result (Entry) compute)
             {
             Entry entry = new @KeyEntry(key) Entry() {};
             @Future Result result;
@@ -733,8 +732,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
         @Override
         @Concurrent
-        <Result> conditional Result processIfPresent(Key key,
-                function Result(Map<Key, Value>.Entry) compute)
+        <Result> conditional Result processIfPresent(Key key, function Result(Entry) compute)
             {
             if (contains(key))
                 {

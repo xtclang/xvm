@@ -80,12 +80,38 @@ public class ClassConstant
         }
 
     /**
-     * @return the "outermost" class
+     * @return the parent (containing) class or null if this class is the "outermost"
+     */
+    public ClassConstant getParentClass()
+        {
+        IdentityConstant parent = getParentConstant();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case Class:
+                    return (ClassConstant) parent;
+
+                case Property:
+                case Method:
+                    // ignored (we'll use its parent)
+                    parent = parent.getNamespace();
+                    continue;
+
+                // packages and modules "terminate" this search
+                default:
+                    return null;
+                }
+            }
+        }
+
+    /**
+     * @return the "outermost" class (including itself) that is not a package or module
      */
     public ClassConstant getOutermost()
         {
         ClassConstant    outermost = this;
-        IdentityConstant parent    = outermost.getParentConstant();
+        IdentityConstant parent    = getParentConstant();
         while (true)
             {
             switch (parent.getFormat())
@@ -121,14 +147,13 @@ public class ClassConstant
                 case Method:
                 case MultiMethod:
                     ++cLevelsDown;
-                    break;
+                    parent = parent.getParentConstant();
+                    continue;
 
-                // packages and modules mean we've passed the outer-most
+                // packages and modules mean we've passed the outermost
                 default:
                     return cLevelsDown;
                 }
-
-            parent = parent.getParentConstant();
             }
         }
 
@@ -171,14 +196,13 @@ public class ClassConstant
                 case Class:
                 case Property:
                     ++cLevelsDown;
-                    break;
+                    parent = parent.getParentConstant();
+                    continue;
 
-                // methods, packages, modules all mean we've passed the outer-most
+                // methods, packages, modules all mean we've passed the outermost
                 default:
                     return cLevelsDown;
                 }
-
-            parent = parent.getParentConstant();
             }
         }
 

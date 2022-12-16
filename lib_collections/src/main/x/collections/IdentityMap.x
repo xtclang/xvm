@@ -137,7 +137,7 @@ class IdentityMap<Key, Value>
         }
 
     @Override
-    @Lazy public/private Collection<Map<Key,Value>.Entry> entries.calc()
+    @Lazy public/private Collection<Entry> entries.calc()
         {
         EntrySet entries = new EntrySet();
         if (this.IdentityMap.is(immutable))

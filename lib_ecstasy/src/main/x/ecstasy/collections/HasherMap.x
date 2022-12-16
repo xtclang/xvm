@@ -990,8 +990,7 @@ class HasherMap<Key, Value>
         }
 
     @Override
-    <Result> Result process(Key key,
-            function Result (Map<Key, Value>.Entry) compute)
+    <Result> Result process(Key key, function Result (Entry) compute)
         {
         return compute(reifyEntry(key));
         }
@@ -1507,7 +1506,7 @@ class HasherMap<Key, Value>
             }
 
         @Override
-        Map<Key, Value>.Entry reify()
+        Entry reify()
             {
             return reifyEntry(key);
             }

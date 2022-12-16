@@ -252,7 +252,7 @@ mixin KeySetBasedMap<Key, Value>
      * delegates back to the map for its functionality.
      */
     protected class CursorEntry
-            implements Map<Key, Value>.Entry
+            implements Entry
             incorporates KeyEntry<Key, Value>
         {
         construct()
@@ -269,7 +269,7 @@ mixin KeySetBasedMap<Key, Value>
         // ----- Entry interface -----------------------------------------------------------------------
 
         @Override
-        Map<Key, Value>.Entry reify()
+        Entry reify()
             {
             return reifyEntry(key);
             }

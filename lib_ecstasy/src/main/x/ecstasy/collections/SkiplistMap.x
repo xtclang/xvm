@@ -842,7 +842,7 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         @Override
-        SkiplistMap<Key, Value>.Entry reify()
+        Entry reify()
             {
             return reifyEntry(key);
             }

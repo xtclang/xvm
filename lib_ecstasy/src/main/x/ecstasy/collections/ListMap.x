@@ -630,7 +630,7 @@ class ListMap<Key, Value>
             }
 
         @Override
-        Map<Key, Value>.Entry reify()
+        Entry reify()
             {
             return reifyEntry(key);
             }

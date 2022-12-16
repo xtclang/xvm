@@ -2096,16 +2096,16 @@ service Client<Schema extends RootSchema>
 
         @Override
         protected class CursorEntry
-                implements DBMap<Key, Value>.Entry
+                implements Entry
             {
             @Override
-            Map<Key, Value>.Entry reify()
+            Entry reify()
                 {
                 return new ReifiedEntry(key);
                 }
 
             @Override
-            Map<Key, Value>.Entry original.get()
+            Entry original.get()
                 {
                 TODO CP
                 }
@@ -2115,7 +2115,7 @@ service Client<Schema extends RootSchema>
          * An implementation of the Entry interface suitable for use as the "original" entry.
          */
         protected const ReifiedEntry(Key key)
-                implements DBMap<Key, Value>.Entry  // TODO GG: would be nice to simply say "implements Entry"
+                implements Entry
                 incorporates KeyEntry<Key, Value>(key)
             {
             }
@@ -2124,7 +2124,7 @@ service Client<Schema extends RootSchema>
          * An implementation of the Entry interface suitable for use as the "original" entry.
          */
         protected const HistoricalEntry
-                implements DBMap<Key, Value>.Entry // TODO GG: ditto
+                implements Entry
             {
             construct(Key key)
                 {
@@ -2149,7 +2149,7 @@ service Client<Schema extends RootSchema>
                 }
 
             @Override
-            DBMap<Key, Value>.Entry original.get()
+            Entry original.get()
                 {
                 return this;
                 }
@@ -2185,9 +2185,7 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        conditional List<
-                         DBLog<Value>.        // TODO GG why is "DBLog<Value>." required for "Entry"
-                         Entry> select((Range<Time>|Duration)? period = Null,
+        conditional List<Entry> select((Range<Time>|Duration)? period = Null,
                                        DBUser?                 user   = Null,
                                        (UInt|Range<UInt>)?     txIds  = Null,
                                        String?                 txName = Null)
