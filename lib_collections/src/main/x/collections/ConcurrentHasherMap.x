@@ -692,7 +692,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
         @Override
         @Concurrent
-        <Result> Result process(Key key, function Result (Entry) compute)
+        <Result> Result process(Key key, function Result (Map<Key, Value>.Entry) compute)
             {
             Entry entry = new @KeyEntry(key) Entry() {};
             @Future Result result;
