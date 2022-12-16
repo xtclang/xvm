@@ -3561,19 +3561,24 @@ public abstract class TypeConstant
                                 paramContrib.getActualType().getValueString());
                         }
                     }
-                else if (!paramCurr.getActualType().isA(paramContrib.getActualType()))
+                else
                     {
-                    if (isVirtualChild())
+                    if (paramCurr.getActualType().isA(paramContrib.getActualType()))
                         {
-                        // TODO: how to validate that we can safely override?
-                        mapTypeParams.put(nid, paramContrib);
-                        continue;
+                        // keep current
                         }
-                    log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
+                    else if (paramContrib.getActualType().isA(paramCurr.getActualType()))
+                        {
+                        mapTypeParams.put(nid, paramContrib);
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
                             this.removeAccess().getValueString(), nid,
                             paramCurr.getActualType().getValueString(),
                             typeContrib.getValueString(),
                             paramContrib.getActualType().getValueString());
+                        }
                     }
                 }
             }
