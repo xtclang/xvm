@@ -37,7 +37,16 @@ class ModuleGenerator(String moduleName)
             ModuleRepository repository, Directory buildDir, Log errors)
         {
         ModuleTemplate webModule = repository.getResolvedModule(moduleName); // TODO: pass it in, instead of re-loading
-        String         hostName  = $"{moduleName}_web";
+
+        String appName   = moduleName;
+        String qualifier = "";
+        if (Int dot := appName.indexOf('.'))
+            {
+            qualifier = appName[dot ..< appName.size];
+            appName   = appName[0 ..< dot];
+            }
+
+        String hostName = $"{appName}_web{qualifier}";
 
         if (ModuleTemplate hostModule := repository.getModule(hostName))
             {
@@ -56,10 +65,9 @@ class ModuleGenerator(String moduleName)
             catch (Exception ignore) {}
             }
 
-        String appName    = moduleName; // TODO GG: allow fully qualified name
-        File   sourceFile = buildDir.fileFor($"{appName}_web.x");
+        File sourceFile = buildDir.fileFor($"{appName}_web.x");
 
-        if (createModule(sourceFile, appName, errors) &&
+        if (createModule(sourceFile, appName, qualifier, errors) &&
             compileModule(repository, sourceFile, buildDir, errors))
             {
             errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
@@ -71,10 +79,10 @@ class ModuleGenerator(String moduleName)
     /**
      * Create module source file.
      */
-    Boolean createModule(File sourceFile, String appName, Log errors)
+    Boolean createModule(File sourceFile, String appName, String qualifier, Log errors)
         {
-        String moduleSource = moduleSourceTemplate.replace("%appName%", appName);
-
+        String moduleSource = moduleSourceTemplate.replace("%appName%"  , appName)
+                                                  .replace("%qualifier%", qualifier);
         sourceFile.create();
         sourceFile.contents = moduleSource.utf8();
         return True;

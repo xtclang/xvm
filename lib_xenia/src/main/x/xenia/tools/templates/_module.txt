@@ -1,9 +1,9 @@
-module %appName%_web
+module %appName%_web%qualifier%
     {
     package web_   import web.xtclang.org;
     package xenia_ import xenia.xtclang.org;
 
-    package hosted_ import %appName%;
+    package hosted_ import %appName%%qualifier%;
 
     function void () createServer_(String hostName, File|Byte[] keyStore, String password,
                                    UInt16 httpPort = 80, UInt16 httpsPort = 443)
