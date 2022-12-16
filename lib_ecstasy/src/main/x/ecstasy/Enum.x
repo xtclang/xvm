@@ -2,9 +2,6 @@
  * Each instance of an [Enumeration] is a singleton constant that implements the Enum interface and
  * whose class is an [EnumValue].
  */
-// TODO GG: ideally, we'd like to say
-//      interface Enum<Value extends Enum<Value>>
-// and replace the return value types for next() and prev() to Value
 interface Enum
         extends immutable Const
         extends Sequential

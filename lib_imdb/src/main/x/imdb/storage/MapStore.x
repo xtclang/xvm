@@ -125,8 +125,6 @@ class MapStore<Key extends immutable Const, Value extends immutable Const>
     class TxChange
             implements oodb.DBMap<Key, Value>.TxChange
         {
-// TODO GG: consider holding a miss as "None" singleton
-//       HashMap<Key, Record<Value|None old, Value|None new>> read    = new HashMap();
         HashMap<Key, Value> read    = new HashMap();
 
         @Override
