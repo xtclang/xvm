@@ -728,7 +728,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             // the transactions have already terminated (or there were none to
             // terminate), so the "shut down" is done; reset the TxManager
             assert status == Disabled;
-            logInfos.clear();
             byClientId.clear();
             byWriteId.clear();
             byReadId.clear();
@@ -3312,6 +3311,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, safepoint, logFile.size, logFile.modified);
             logInfos[logInfos.size-1] = newInfo;
             writeStatus();
+            logInfos.clear();
             }
         }
 
