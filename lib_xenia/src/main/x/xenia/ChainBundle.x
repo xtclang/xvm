@@ -114,7 +114,7 @@ service ChainBundle
                     assert endpoint.template.vars.contains(name);
 
                     binders += (session, request, values) ->
-                        extractPathValue(request, name, param.as(Parameter), values);
+                        extractPathValue(request, name, param, values);
                     continue;
                     }
                 throw new IllegalState($"Unsupported ParameterBinder {param.ParamType}");
