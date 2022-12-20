@@ -31,10 +31,10 @@ import org.xvm.runtime.template.text.xString;
 /**
  * Native base for OSFile and OSDirectory implementations.
  */
-public abstract class OSFileNode
+public class xOSFileNode
         extends xConst
     {
-    protected OSFileNode(Container container, ClassStructure structure)
+    public xOSFileNode(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, false);
         }
@@ -42,7 +42,6 @@ public abstract class OSFileNode
     @Override
     public void initNative()
         {
-        // common native properties between OSFile and OSDirectory
         markNativeProperty("pathString");
         markNativeProperty("exists");
         markNativeProperty("readable");

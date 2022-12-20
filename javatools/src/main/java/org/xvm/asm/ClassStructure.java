@@ -2192,70 +2192,57 @@ public class ClassStructure
         }
 
     /**
-     * Helper method to find a method in this structure or the direct inheritance chain.
+     * Helper method to find a property by the name for this class and all its contributions.
      *
-     * @param sName        the method name
-     * @param atypeParam   the parameter types (optional)
-     * @param atypeReturn  the return types (optional)
+     * @param sName  the property name to find
      *
-     * @return the first method that matches the specified types of null
+     * @return the specified PropertyStructure or null if not found
      */
-    public MethodStructure findMethodDeep(String sName, TypeConstant[] atypeParam, TypeConstant[] atypeReturn)
+    public PropertyStructure findPropertyDeep(String sName)
         {
-        ClassStructure struct = this;
-        do
+        Component component = getChild(sName);
+        if (component == null)
             {
-            MultiMethodStructure mms = (MultiMethodStructure) struct.getChild(sName);
-            if (mms != null)
+            for (Contribution contrib : getContributionsAsList())
                 {
-                nextMethod:
-                for (MethodStructure method : mms.methods())
+                TypeConstant typeContrib = contrib.getTypeConstant();
+                switch (contrib.getComposition())
                     {
-                    MethodConstant constMethod = method.getIdentityConstant();
+                    case Into:
+                    case Delegates:
+                        break;
 
-                    TypeConstant[] atypeParamTest  = constMethod.getRawParams();
-                    TypeConstant[] atypeReturnTest = constMethod.getRawReturns();
-
-                    if (atypeParam != null)
-                        {
-                        int cParams = atypeParamTest.length;
-                        if (cParams != atypeParam.length)
+                    case Annotation:
+                        if (isIntoClassMixin(typeContrib))
                             {
-                            continue;
+                            break;
                             }
-
-                        for (int i = 0; i < cParams; i++)
+                        // break through
+                    case Incorporates:
+                    case Extends:
+                    case Implements:
+                        {
+                        if (typeContrib.isExplicitClassIdentity(true))
                             {
-                            if (!atypeParamTest[i].isA(atypeParam[i]))
+                            ClassStructure clzContrib = (ClassStructure)
+                                typeContrib.getSingleUnderlyingClass(true).getComponent();
+                            if (clzContrib == null)
                                 {
-                                continue nextMethod;
+                                // this method could be used before the pool is "connected"
+                                break;
+                                }
+                            PropertyStructure prop = clzContrib.findPropertyDeep(sName);
+                            if (prop != null)
+                                {
+                                return prop;
                                 }
                             }
+                        break;
                         }
-                    if (atypeReturn != null)
-                        {
-                        int cReturns = atypeReturnTest.length;
-                        if (cReturns != atypeReturn.length)
-                            {
-                            continue;
-                            }
-
-                        for (int i = 0; i < cReturns; i++)
-                            {
-                            if (!atypeReturnTest[i].isA(atypeReturn[i]))
-                                {
-                                continue nextMethod;
-                                }
-                            }
-                        }
-                    return method;
                     }
                 }
-            struct = struct.getSuper();
             }
-        while (struct != null);
-
-        return null;
+        return component instanceof PropertyStructure prop ? prop : null;
         }
 
     /**

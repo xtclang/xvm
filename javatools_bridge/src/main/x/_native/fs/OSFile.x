@@ -77,5 +77,4 @@ const OSFile
     void appendImpl(Byte[] contents);
 
     @Override immutable Byte[] contents.get() { TODO("native"); }
-    @Override Int size.get()                  { TODO("native"); }
     }

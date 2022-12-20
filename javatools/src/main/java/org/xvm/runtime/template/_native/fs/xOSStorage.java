@@ -56,7 +56,7 @@ public class xOSStorage
     @Override
     public void initNative()
         {
-        s_methodOnEvent = getStructure().findMethodDeep("onEvent", null, null);
+        s_methodOnEvent = getStructure().findMethodDeep("onEvent", Utils.ANY);
 
         markNativeProperty("homeDir");
         markNativeProperty("curDir");
@@ -102,16 +102,16 @@ public class xOSStorage
         switch (sPropName)
             {
             case "homeDir":
-                return OSFileNode.createHandle(frame, hStore,
-                    Paths.get(System.getProperty("user.home")), true, iReturn);
+                return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+                    Paths.get(System.getProperty("user.home")), iReturn);
 
             case "curDir":
-                return OSFileNode.createHandle(frame, hStore,
-                    Paths.get(System.getProperty("user.dir")), true, iReturn);
+                return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+                    Paths.get(System.getProperty("user.dir")), iReturn);
 
             case "tmpDir":
-                return OSFileNode.createHandle(frame, hStore,
-                    Paths.get(System.getProperty("java.io.tmpdir")), true, iReturn);
+                return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+                    Paths.get(System.getProperty("java.io.tmpdir")), iReturn);
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
@@ -262,9 +262,8 @@ public class xOSStorage
                     Path path = Paths.get(hPathString.getStringValue());
                     if (Files.exists(path))
                         {
-                        return Utils.assignConditionalResult(
-                            frame,
-                            OSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
+                        return Utils.assignConditionalResult(frame,
+                            xOSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
                             aiReturn);
                         }
                     return frame.assignValue(aiReturn[0], xBoolean.FALSE);

@@ -79,7 +79,7 @@ public class xOSFileChannel
                     }
                 catch (IOException e)
                     {
-                    return OSFileNode.raisePathException(frame, e, hChannel.f_path);
+                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
                     }
                 }
 
@@ -91,7 +91,7 @@ public class xOSFileChannel
                     }
                 catch (IOException e)
                     {
-                    return OSFileNode.raisePathException(frame, e, hChannel.f_path);
+                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
                     }
                 }
 

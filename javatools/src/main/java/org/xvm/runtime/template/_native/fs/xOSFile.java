@@ -47,13 +47,13 @@ import org.xvm.util.Handy;
  * Native OSFile implementation.
  */
 public class xOSFile
-        extends OSFileNode
+        extends xOSFileNode
     {
     public static xOSFile INSTANCE;
 
     public xOSFile(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -64,8 +64,6 @@ public class xOSFile
     @Override
     public void initNative()
         {
-        super.initNative();
-
         markNativeProperty("contents");
 
         markNativeMethod("open", null, null);

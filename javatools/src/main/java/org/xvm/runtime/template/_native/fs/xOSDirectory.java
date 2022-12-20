@@ -29,13 +29,13 @@ import org.xvm.runtime.template.xBoolean;
  * Native OSDirectory implementation.
  */
 public class xOSDirectory
-        extends OSFileNode
+        extends xOSFileNode
     {
     public static xOSDirectory INSTANCE;
 
     public xOSDirectory(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -46,8 +46,6 @@ public class xOSDirectory
     @Override
     public void initNative()
         {
-        super.initNative();
-
         markNativeMethod("deleteRecursively", null, null);
         markNativeMethod("filesRecursively", null, null);   // TODO as a natural implementation?
         markNativeMethod("watchRecursively", null, null);

@@ -45,7 +45,7 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.fs.OSFileNode.NodeHandle;
+import org.xvm.runtime.template._native.fs.xOSFileNode.NodeHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 

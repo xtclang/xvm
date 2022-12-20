@@ -98,7 +98,7 @@ public class xOSFileStore
                 StringHandle hPathString = (StringHandle) hArg;
 
                 Path path = Paths.get(hPathString.getStringValue());
-                return OSFileNode.createHandle(frame, hStore, path, true, iReturn);
+                return xOSFileNode.createHandle(frame, hStore, path, true, iReturn);
                 }
 
             case "fileFor":  // (pathString)
@@ -106,7 +106,7 @@ public class xOSFileStore
                 StringHandle hPathString = (StringHandle) hArg;
 
                 Path path = Paths.get(hPathString.getStringValue());
-                return OSFileNode.createHandle(frame, hStore, path, false, iReturn);
+                return xOSFileNode.createHandle(frame, hStore, path, false, iReturn);
                 }
             }
 
@@ -163,7 +163,7 @@ public class xOSFileStore
                     return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
 
-                return OSFileNode.createHandle(frame, hTarget, pathResult, fDir, iReturn);
+                return xOSFileNode.createHandle(frame, hTarget, pathResult, fDir, iReturn);
                 }
             }
 

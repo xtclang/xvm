@@ -308,30 +308,6 @@ public abstract class ClassTemplate
         return typeMask.equals(typeInception) ? clz : clz.maskAs(typeMask);
         }
 
-    /**
-     * Find the specified property in this template or direct inheritance chain.
-     *
-     * @return the specified property of null
-     */
-    protected PropertyStructure findProperty(String sPropName)
-        {
-        // we cannot use the TypeInfo here, since the TypeInfo will be build based on the information
-        // provided by this method's caller; however, we can assume a simple class hierarchy
-        ClassStructure struct = getStructure();
-        do
-            {
-            PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
-            if (prop != null)
-                {
-                return prop;
-                }
-            struct = struct.getSuper();
-            }
-        while (struct != null);
-
-        return null;
-        }
-
     @Override
     public int hashCode()
         {
@@ -2216,10 +2192,48 @@ public abstract class ClassTemplate
      */
     public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        TypeConstant[] atypeArg = getTypeConstants(this, asParamType);
-        TypeConstant[] atypeRet = getTypeConstants(this, asRetType);
+        TypeConstant[] atypeParam  = getTypeConstants(this, asParamType);
+        TypeConstant[] atypeReturn = getTypeConstants(this, asRetType);
 
-        MethodStructure method = getStructure().findMethodDeep(sName, atypeArg, atypeRet);
+        MethodStructure method = getStructure().findMethodDeep(sName, m ->
+                {
+                if (atypeParam != null)
+                    {
+                    TypeConstant[] atypeParamTest = m.getIdentityConstant().getRawParams();
+                    int            cParams        = atypeParamTest.length;
+                    if (cParams != atypeParam.length)
+                        {
+                        return false;
+                        }
+
+                    for (int i = 0; i < cParams; i++)
+                        {
+                        if (!atypeParamTest[i].isA(atypeParam[i]))
+                            {
+                            return false;
+                            }
+                        }
+                    }
+                if (atypeReturn != null)
+                    {
+                    TypeConstant[] atypeReturnTest = m.getIdentityConstant().getRawReturns();
+                    int            cReturns        = atypeReturnTest.length;
+                    if (cReturns != atypeReturn.length)
+                        {
+                        return false;
+                        }
+
+                    for (int i = 0; i < cReturns; i++)
+                        {
+                        if (!atypeReturnTest[i].isA(atypeReturn[i]))
+                            {
+                            return false;
+                            }
+                        }
+                    }
+                return true;
+                });
+
         if (method == null)
             {
             System.err.println("Missing method " + f_sName + '.' + sName + ' '
@@ -2227,7 +2241,34 @@ public abstract class ClassTemplate
             }
         else
             {
-            method.markNative();
+            if (!method.isNative())
+                {
+                ClassStructure clz = method.getContainingClass();
+                if (clz != f_struct)
+                    {
+                    if (method.isFunction())
+                        {
+                        throw new IllegalStateException("Native function " +
+                                method.getIdentityConstant().getValueString() + " at " + f_sName);
+                        }
+                    Access access = method.getAccess();
+                    if (access == Access.PRIVATE)
+                        {
+                        throw new IllegalStateException("Inaccessible method " +
+                                method.getIdentityConstant().getValueString() + " at " + f_sName);
+                        }
+
+                    ConstantPool pool         = pool();
+                    Annotation   annoOverride = pool.ensureAnnotation(pool.clzOverride());
+
+                    method = f_struct.createMethod(false, access, new Annotation[]{annoOverride},
+                                method.getReturnArray(), method.getName(), method.getParamArray(),
+                                false, false);
+                    method.setSynthetic(true);
+                    }
+
+                method.markNative();
+                }
             }
         }
 
@@ -2344,31 +2385,62 @@ public abstract class ClassTemplate
      */
     protected void markNativeProperty(String sPropName)
         {
-        PropertyStructure prop = findProperty(sPropName);
+        PropertyStructure prop = getStructure().findPropertyDeep(sPropName);
         if (prop == null)
             {
             System.err.println("Missing property " + f_sName + "." + sPropName);
             }
         else
             {
-            prop.markNative();
-
-            MethodStructure methGetter = prop.getGetter();
-            if (methGetter != null)
+            Access accessRef = prop.getAccess();
+            if (!prop.isNative())
                 {
-                methGetter.markNative();
-                }
+                ClassStructure clz = prop.getContainingClass();
+                if (clz == f_struct)
+                    {
+                    MethodStructure methGetter = prop.getGetter();
+                    if (methGetter != null)
+                        {
+                        methGetter.markNative();
+                        }
 
-            MethodStructure methSetter = prop.getSetter();
-            if (methSetter != null)
-                {
-                methSetter.markNative();
-                }
+                    MethodStructure methSetter = prop.getSetter();
+                    if (methSetter != null)
+                        {
+                        methSetter.markNative();
+                        }
 
-            if (methGetter == null && methSetter == null &&
-                    !prop.isExplicitReadOnly() && !prop.isExplicitOverride() && !prop.isRefAnnotated())
-                {
-                prop.addAnnotation(pool().clzUnassigned());
+                    if (methGetter == null && methSetter == null &&
+                            !prop.isExplicitReadOnly() && !prop.isExplicitOverride() && !prop.isRefAnnotated())
+                        {
+                        prop.addAnnotation(pool().clzUnassigned());
+                        }
+                    prop.markNative();
+                    }
+                else if (accessRef != Access.PRIVATE)
+                    {
+                    if (prop.isStatic())
+                        {
+                        throw new IllegalStateException("Native static property " +
+                                    sPropName + " at " + f_sName);
+                        }
+                    Access accessVar = prop.getVarAccess();
+                    if (accessVar == Access.PRIVATE)
+                        {
+                        throw new IllegalStateException("Inaccessible property " +
+                                    sPropName + " at " + f_sName);
+                        }
+                    ConstantPool      pool     = pool();
+                    PropertyStructure propOver = f_struct.createProperty(false, accessRef, accessVar,
+                                prop.getType(), sPropName);
+                    if (prop.containsPropertyAnnotation(pool.clzRO()))
+                        {
+                        propOver.addAnnotation(pool.clzRO());
+                        }
+                    propOver.addAnnotation(pool.clzOverride());
+                    propOver.setSynthetic(true);
+                    propOver.markNative();
+                    }
                 }
             }
         }

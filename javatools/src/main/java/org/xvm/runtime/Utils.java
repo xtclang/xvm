@@ -10,6 +10,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
+import java.util.function.Predicate;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
@@ -496,7 +498,7 @@ public abstract class Utils
                     case Op.R_NEXT:
                         if (updateResult(frameCaller))
                             {
-                            continue loop;
+                            continue; // loop;
                             }
                         else
                             {
@@ -1326,7 +1328,7 @@ public abstract class Utils
                             {
                             // all arguments are collected; construct the annotation
                             stageNext = Stage.Annotation;
-                            continue NextStep;
+                            continue; // NextStep;
                             }
 
                         Constant[] aconstArg = aAnno[iAnno].getParams();
@@ -1682,6 +1684,7 @@ public abstract class Utils
     public final static String[]       NO_NAMES     = new String[0];
 
     public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
+    public final static Predicate          ANY  = t -> true;
 
     // assigned by initNative()
     private static ClassTemplate   ANNOTATION_TEMPLATE;

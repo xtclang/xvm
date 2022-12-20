@@ -27,7 +27,7 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.fs.OSFileNode.NodeHandle;
+import org.xvm.runtime.template._native.fs.xOSFileNode.NodeHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;

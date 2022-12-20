@@ -86,7 +86,7 @@ module TestFiles
                     {
                     if (!name.indexOf('.'))
                         {
-                        console.println($"\tf {name}");
+                        console.println($"\tf {name} {node.size} bytes");
                         }
                     }
                 else
