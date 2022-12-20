@@ -149,7 +149,7 @@ public class xRTType
         // "foreign" types, which requires a native implementation
         structType.findMethod("isA"    , 1).markNative();
 
-        pool.typeType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

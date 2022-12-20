@@ -87,12 +87,12 @@ public class xConst
         {
         if (this == INSTANCE)
             {
-            ConstantPool pool = pool();
-
             // equals and Comparable support
             getStructure().findMethod("equals",   3).markNative();
             getStructure().findMethod("compare",  3).markNative();
             getStructure().findMethod("hashCode", 2).markNative();
+
+            invalidateTypeInfo();
 
             // Stringable support
             ClassStructure clzHelper = f_container.getClassStructure("_native.ConstHelper");
@@ -106,6 +106,7 @@ public class xConst
                 findMethod("construct", 4);
 
             // Nibble support
+            ConstantPool pool         = pool();
             TypeConstant typeBitArray = pool.ensureArrayType(pool.typeBit());
             NIBBLE_CONSTRUCT = f_container.getClassStructure("numbers.Nibble").
                 findMethod("construct", 1, typeBitArray);

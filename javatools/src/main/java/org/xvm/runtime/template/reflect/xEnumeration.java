@@ -47,6 +47,8 @@ public class xEnumeration
     public void initNative()
         {
         markNativeProperty("byName");
+
+        invalidateTypeInfo();
         }
 
     @Override

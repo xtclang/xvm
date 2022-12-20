@@ -94,6 +94,8 @@ abstract public class BaseFP
         markNativeMethod("toUIntN"    , null, VAR_UINT);
         markNativeMethod("toFloatN"   , null, VAR_FLOAT);
         markNativeMethod("toDecN"     , null, VAR_DEC);
+
+        invalidateTypeInfo();
         }
 
     @Override

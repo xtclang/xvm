@@ -52,6 +52,8 @@ public class xRTModuleTemplate
         markNativeProperty("qualifiedName");
         markNativeProperty("moduleNamesByPath");
         markNativeProperty("resolved");
+
+        invalidateTypeInfo();
         }
 
     @Override
