@@ -40,4 +40,26 @@ module TestSimple
                 }
             }
         }
+
+    class Test<Element>
+        {
+        void test()
+            {
+            switch (Element)
+                {
+                case String: // used to compile
+                    console.println("string");
+                    break;
+
+                default:
+                    throw new UnsupportedOperation(Element.DataType.toString());
+                }
+
+            Int i = switch (Element.is(_))
+                {
+                case Int: 1; // used to compile
+                default:  0;
+                };
+            }
+        }
     }
