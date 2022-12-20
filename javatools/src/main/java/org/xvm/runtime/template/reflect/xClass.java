@@ -79,7 +79,7 @@ public class xClass
         markNativeMethod("isSingleton" , null, null);
         markNativeMethod("defaultValue", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

@@ -72,7 +72,7 @@ public class xOSFile
         markNativeMethod("appendImpl", null, VOID);
         markNativeMethod("truncateImpl", null, VOID);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
 
         s_constructor = getStructure().findConstructor();
         }

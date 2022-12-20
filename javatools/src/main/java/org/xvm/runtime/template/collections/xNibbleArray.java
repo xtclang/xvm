@@ -44,7 +44,7 @@ public class xNibbleArray
         mixin.markNativeMethod("asBitArray", VOID, null);
         mixin.markNativeMethod("asByteArray", VOID, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

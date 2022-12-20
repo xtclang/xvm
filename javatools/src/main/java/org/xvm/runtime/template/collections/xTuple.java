@@ -85,7 +85,7 @@ public class xTuple
         markNativeMethod("setElement", null, VOID);
         markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

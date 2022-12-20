@@ -44,7 +44,7 @@ public class Identity
         markNativeMethod("equals",   null, BOOLEAN);
         markNativeMethod("hashCode", null, INT);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

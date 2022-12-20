@@ -104,7 +104,7 @@ public class xRef
         markNativeProperty("isService");
         markNativeMethod("equals", null, BOOLEAN);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

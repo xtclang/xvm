@@ -59,7 +59,7 @@ public class xOSFileChannel
 //        markNativeMethod("write", null, new String[] {"numbers.Int64", "numbers.Int64"});
 //        markNativeMethod("close", null, VOID);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
 
         FILE_CHANNEL_TEMPLATE = f_container.getTemplate("fs.FileChannel");
         }

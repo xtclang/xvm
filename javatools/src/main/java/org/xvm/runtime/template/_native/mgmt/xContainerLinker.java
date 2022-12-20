@@ -62,7 +62,7 @@ public class xContainerLinker
         markNativeMethod("loadFileTemplate", null, null);
         markNativeMethod("resolveAndLink", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

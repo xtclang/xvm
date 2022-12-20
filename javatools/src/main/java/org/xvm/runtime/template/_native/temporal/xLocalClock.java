@@ -61,7 +61,7 @@ public class xLocalClock
 
         markNativeMethod("schedule", new String[]{"temporal.Time", "temporal.Clock.Alarm"}, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

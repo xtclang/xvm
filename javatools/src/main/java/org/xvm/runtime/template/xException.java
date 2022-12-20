@@ -67,7 +67,7 @@ public class xException
 
             markNativeMethod("toString", VOID, STRING);
 
-            getCanonicalType().invalidateTypeInfo();
+            invalidateTypeInfo();
             }
         }
 

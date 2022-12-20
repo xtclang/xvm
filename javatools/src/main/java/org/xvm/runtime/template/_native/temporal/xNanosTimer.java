@@ -63,7 +63,7 @@ public class xNanosTimer
         markNativeMethod("reset"   , VOID, null);
         markNativeMethod("schedule", new String[]{"temporal.Duration", "temporal.Timer.Alarm"}, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

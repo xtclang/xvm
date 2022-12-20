@@ -66,7 +66,7 @@ public class xRegEx
         markNativeMethod("matchPrefix", STRING, null);
         markNativeMethod("replaceAll",  new String[] {"text.String", "text.String"}, STRING);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
 
         ConstantPool     pool          = pool();
         ClassTemplate    templateMatch = f_container.getTemplate("text.Match");

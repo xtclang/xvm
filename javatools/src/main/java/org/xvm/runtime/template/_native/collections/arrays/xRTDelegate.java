@@ -119,7 +119,7 @@ public class xRTDelegate
             markNativeMethod("delete", INT, THIS);
             markNativeMethod("reify", null, null);
 
-            getCanonicalType().invalidateTypeInfo();
+            invalidateTypeInfo();
             }
         }
 

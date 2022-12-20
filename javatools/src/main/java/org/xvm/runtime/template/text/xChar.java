@@ -59,7 +59,7 @@ public class xChar
 
         markNativeProperty("codepoint");
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
 
         if (this == INSTANCE)
             {

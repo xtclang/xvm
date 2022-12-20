@@ -107,7 +107,7 @@ public class xRTServer
         markNativeMethod("getBodyBytes",           null, null);
         markNativeMethod("containsNestedBodies",   null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

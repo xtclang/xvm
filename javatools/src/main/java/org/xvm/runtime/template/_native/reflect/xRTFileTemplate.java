@@ -72,7 +72,7 @@ public class xRTFileTemplate
         markNativeMethod("resolve", null, null);
         markNativeMethod("replace", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

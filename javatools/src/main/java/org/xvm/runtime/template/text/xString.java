@@ -84,7 +84,7 @@ public class xString
         markNativeMethod("equals", null, null);
         markNativeMethod("compare", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

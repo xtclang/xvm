@@ -2193,6 +2193,14 @@ public abstract class ClassTemplate
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
+     * Invalidate the TypeInfo for the canonical type.
+     */
+    protected void invalidateTypeInfo()
+        {
+        getStructure().getCanonicalType().invalidateTypeInfo();
+        }
+
+    /**
      * @return the constant pool associated with the container this template belongs to
      */
     public ConstantPool pool()

@@ -58,7 +58,7 @@ public class xByteArray
         mixin.markNativeMethod("asInt64Array", VOID, null);
         mixin.markNativeMethod("toInt64", VOID, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

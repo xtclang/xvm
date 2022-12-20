@@ -75,7 +75,7 @@ public class xRTRandom
         markNativeMethod("dec"  , VOID     , DEC  );
         markNativeMethod("float", VOID     , FLOAT);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

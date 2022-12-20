@@ -70,7 +70,7 @@ public class xContainerControl
         markNativeMethod("invoke", null, null);
         markNativeMethod("kill",   VOID, VOID);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

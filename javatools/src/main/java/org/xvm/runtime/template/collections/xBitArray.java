@@ -53,7 +53,7 @@ public class xBitArray
         mixin.markNativeMethod("toUInt8", VOID, null);
         mixin.markNativeMethod("toByteArray", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

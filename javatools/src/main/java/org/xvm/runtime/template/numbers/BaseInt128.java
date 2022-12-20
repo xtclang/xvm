@@ -83,7 +83,7 @@ public abstract class BaseInt128
         markNativeMethod("mod", THIS, THIS);
         markNativeMethod("neg", VOID, THIS);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

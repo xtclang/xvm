@@ -67,7 +67,7 @@ public class xAtomicIntNumber
         markNativeMethod("shiftRightAssign", INT, VOID);
         markNativeMethod("shiftAllRightAssign", INT, VOID);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
 
         // TODO GG: how to implement boundary checks optimally?
         }

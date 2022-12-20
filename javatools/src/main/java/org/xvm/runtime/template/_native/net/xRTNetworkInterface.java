@@ -49,7 +49,7 @@ public class xRTNetworkInterface
         markNativeMethod("nativeConnect", null, null);
         markNativeMethod("nativeListen" , null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

@@ -79,7 +79,7 @@ public class xService
             setAtomic.add("timeout");
             s_setAtomicProperties = setAtomic;
 
-            getCanonicalType().invalidateTypeInfo();
+            invalidateTypeInfo();
             }
         }
 

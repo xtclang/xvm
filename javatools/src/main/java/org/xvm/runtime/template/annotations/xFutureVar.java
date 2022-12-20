@@ -84,7 +84,7 @@ public class xFutureVar
         markNativeProperty("assigned");
         markNativeProperty("completion");
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

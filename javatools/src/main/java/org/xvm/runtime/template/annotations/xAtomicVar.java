@@ -95,7 +95,7 @@ public class xAtomicVar
 
         NUMBER_TEMPLATES = mapTemplates;
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

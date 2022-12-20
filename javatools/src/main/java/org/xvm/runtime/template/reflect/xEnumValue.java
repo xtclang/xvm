@@ -39,7 +39,7 @@ public class xEnumValue
         markNativeProperty("enumeration");
         markNativeProperty("value");
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

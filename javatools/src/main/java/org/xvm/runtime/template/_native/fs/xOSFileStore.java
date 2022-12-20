@@ -51,7 +51,7 @@ public class xOSFileStore
         markNativeMethod("fileFor", STRING, null);
         markNativeMethod("copyOrMove", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

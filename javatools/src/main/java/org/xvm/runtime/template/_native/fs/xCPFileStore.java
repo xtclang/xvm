@@ -54,7 +54,7 @@ public class xCPFileStore
         markNativeMethod("loadDirectory", null, null);
         markNativeMethod("loadFile"     , null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

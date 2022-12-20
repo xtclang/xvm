@@ -159,7 +159,7 @@ public class xArray
         ClassTemplate mixinNumber = f_container.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

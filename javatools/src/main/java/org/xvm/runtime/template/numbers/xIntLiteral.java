@@ -89,7 +89,7 @@ public class xIntLiteral
         markNativeMethod("toFloatN"          , null, new String[]{"numbers.FloatN"});
         markNativeMethod("toDecN"            , null, new String[]{"numbers.DecN"});
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

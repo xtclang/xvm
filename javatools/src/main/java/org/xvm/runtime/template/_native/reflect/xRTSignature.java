@@ -60,7 +60,7 @@ public class xRTSignature
 
         markNativeMethod("hasTemplate", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

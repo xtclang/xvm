@@ -62,7 +62,7 @@ public class xRTNetwork
         markNativeMethod("nativeListen"          , null, null);
         markNativeMethod("nativeNicByAddress"    , null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

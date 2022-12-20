@@ -61,7 +61,7 @@ public class xFPLiteral
         markNativeMethod("toDec64"   , null, new String[]{"numbers.Dec64"});
         markNativeMethod("toDec128"  , null, new String[]{"numbers.Dec128"});
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

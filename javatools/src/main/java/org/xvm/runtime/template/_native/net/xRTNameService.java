@@ -56,7 +56,7 @@ public class xRTNameService
         markNativeMethod("nativeResolve", null, null);
         markNativeMethod("nativeLookup" , null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

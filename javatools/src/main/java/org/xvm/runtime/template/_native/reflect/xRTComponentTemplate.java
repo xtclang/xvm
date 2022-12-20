@@ -75,7 +75,7 @@ public class xRTComponentTemplate
         markNativeMethod("children", null, null);
         markNativeMethod("toString", VOID, STRING);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

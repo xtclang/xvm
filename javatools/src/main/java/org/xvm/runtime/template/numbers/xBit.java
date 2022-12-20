@@ -52,7 +52,7 @@ public class xBit
         markNativeMethod("xor", THIS, THIS);
         markNativeMethod("not", VOID, THIS);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

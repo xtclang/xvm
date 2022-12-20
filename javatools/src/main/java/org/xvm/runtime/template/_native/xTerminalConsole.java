@@ -53,7 +53,7 @@ public class xTerminalConsole
         markNativeMethod("println" , OBJECT , VOID   );
         markNativeMethod("readLine", BOOLEAN, STRING );
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

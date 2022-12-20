@@ -76,7 +76,7 @@ public class xRTProperty
         markNativeMethod("of", null, null);
         markNativeMethod("set", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

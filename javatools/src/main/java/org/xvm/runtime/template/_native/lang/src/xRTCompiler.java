@@ -81,7 +81,7 @@ public class xRTCompiler
 
         markNativeMethod("compile", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

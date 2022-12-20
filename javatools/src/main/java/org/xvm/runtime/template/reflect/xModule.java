@@ -78,7 +78,7 @@ public class xModule
             markNativeProperty("simpleName");
             markNativeProperty("qualifiedName");
 
-            getCanonicalType().invalidateTypeInfo();
+            invalidateTypeInfo();
             }
         }
 

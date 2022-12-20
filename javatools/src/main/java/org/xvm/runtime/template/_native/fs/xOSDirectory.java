@@ -52,7 +52,7 @@ public class xOSDirectory
         markNativeMethod("filesRecursively", null, null);   // TODO as a natural implementation?
         markNativeMethod("watchRecursively", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
 
         s_constructor = getStructure().findConstructor();
         }

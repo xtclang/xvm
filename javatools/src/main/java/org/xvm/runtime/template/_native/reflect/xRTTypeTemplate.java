@@ -94,7 +94,7 @@ public class xRTTypeTemplate
         markNativeMethod("annotate",          null, null);
         markNativeMethod("resolveFormalType", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

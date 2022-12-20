@@ -99,7 +99,7 @@ public abstract class xUnconstrainedInteger
 // TODO markNativeMethod("shiftRight"   , INT, THIS);
 // TODO markNativeMethod("shiftAllRight", INT, THIS);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

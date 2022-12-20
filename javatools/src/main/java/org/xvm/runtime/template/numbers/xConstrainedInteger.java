@@ -126,7 +126,7 @@ public abstract class xConstrainedInteger
         markNativeMethod("shiftRight"   , INT, THIS);
         markNativeMethod("shiftAllRight", INT, THIS);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override

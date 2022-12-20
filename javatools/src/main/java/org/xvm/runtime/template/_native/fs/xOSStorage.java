@@ -70,7 +70,7 @@ public class xOSStorage
         markNativeMethod("watch", STRING, VOID);
         markNativeMethod("unwatch", STRING, VOID);
 
-        getCanonicalType().invalidateTypeInfo();
+        invalidateTypeInfo();
         }
 
     @Override
