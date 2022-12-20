@@ -169,14 +169,16 @@ public class SwitchStatement
                     if (fValid)
                         {
                         // for now, we only infer a type from a single-case blocks
-                        int cCases = 0;
+                        int           cCases   = 0;
+                        CaseStatement stmtCase = null;
                         for (int iCase = group.iFirstCase; iCase < group.iFirstStmt; iCase++)
                             {
-                            cCases += ((CaseStatement) listStmts.get(iCase)).getExpressionCount();
+                            stmtCase = (CaseStatement) listStmts.get(iCase);
+                            cCases  += stmtCase.getExpressionCount();
                             }
                         if (cCases == 1)
                             {
-                            mgr.addTypeInference(ctxBlock);
+                            mgr.addTypeInference(ctxBlock, stmtCase, errs);
                             }
                         }
 

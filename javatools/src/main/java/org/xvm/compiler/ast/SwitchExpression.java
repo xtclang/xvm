@@ -145,6 +145,7 @@ public class SwitchExpression
         List<AstNode>  listNodes = contents;
         boolean        fInCase   = false;
         int            cExprs    = 0;
+        CaseStatement  stmtPrev  = null; // used for error reporting only
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
             AstNode node = listNodes.get(iNode);
@@ -165,6 +166,7 @@ public class SwitchExpression
                     {
                     fInCase = true;
                     }
+                stmtPrev = stmtCase;
                 }
             else // it's an expression value
                 {
@@ -181,7 +183,7 @@ public class SwitchExpression
 
                 TypeConstant[] atypeReqScoped = atypeRequest;
                 Context        ctxScope       = ctxCase.enter();
-                if (fValid && mgr.addTypeInference(ctxScope))
+                if (fValid && mgr.addTypeInference(ctxScope, stmtPrev, errs))
                     {
                     if (atypeReqScoped != null && atypeReqScoped.length > 0)
                         {

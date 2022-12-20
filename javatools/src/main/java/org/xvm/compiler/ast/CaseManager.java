@@ -612,11 +612,13 @@ public class CaseManager<CookieType>
     /**
      * Add any existing type inference information to the specified context.
      *
-     * @param ctx  the context to use
+     * @param ctx       the context to use
+     * @param stmtCase  the corresponding case statement (used for error reporting only)
+     * @param errs      the error list to log to
      *
      * @return true iff the switch contains any type inferring conditions
      */
-    protected boolean addTypeInference(Context ctx)
+    protected boolean addTypeInference(Context ctx, CaseStatement stmtCase, ErrorListener errs)
         {
         if (m_lTypeExpr == 0L)
             {
@@ -629,8 +631,9 @@ public class CaseManager<CookieType>
             {
             if (constCase instanceof TypeConstant typeCase)
                 {
-                NameExpression exprTest = (NameExpression) m_listCond.get(0);
                 assert typeCase.isTypeOfType();
+
+                NameExpression exprTest = (NameExpression) m_listCond.get(0);
 
                 if ((m_afIsSwitch & 1L) == 1)
                     {
@@ -639,6 +642,12 @@ public class CaseManager<CookieType>
                     TypeConstant typeTest = exprTest.getImplicitType(ctx);
                     if (typeTest != null)
                         {
+                        if (typeTest.isTypeOfType() && !typeCase.isTypeOfType())
+                            {
+                            stmtCase.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                                            exprTest.toString(), typeCase.getValueString());
+                            return false;
+                            }
                         typeCase = IsExpression.computeInferredType(pool, typeTest, typeCase);
                         }
                     }
