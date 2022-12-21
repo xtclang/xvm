@@ -113,7 +113,8 @@ service DirRepository
                 }
             catch (Exception e)
                 {
-                // $"Error loading module from file: {file}; {e.text}"
+                @Inject Console console;
+                console.println("Failure to load a module from {file}; {e.text}");
                 continue;
                 }
             newModules.put(info.template.qualifiedName, info);
