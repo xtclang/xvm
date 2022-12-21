@@ -4,62 +4,24 @@ module TestSimple
 
     void run( )
         {
-        new Test().test1();
-        Test.test2();
+        @Inject Random rnd;
+
+        Bit[] bits0 = new Bit[12] (i-> 1);
+        report(bits0, "original");
+
+        Bit[] bits1 = bits0[1..3];
+        report(bits1, "slice");
+
+        rnd.fill(bits1); // used to assert
+        report(bits1, "slice rnd'ed");
+
+        report(bits0, "original");
         }
 
-    class Test
+    void report(Bit[] bits, String descr)
         {
-        Int external = 42;
-
-        void test1()
-            {
-            new Inner1(1).report();
-
-            class Inner1(Int value)
-                {
-                void report()
-                    {
-                    console.println(value);
-                    console.println(external); // used to fail to compile
-                    }
-                }
-            }
-
-        static void test2()
-            {
-            new Inner2(2).report();
-
-            class Inner2(Int value)
-                {
-                void report()
-                    {
-                    console.println(value);
-//                    console.println(external); // compiler error
-                    }
-                }
-            }
-        }
-
-    class Test<Element>
-        {
-        void test()
-            {
-            switch (Element)
-                {
-                case String: // used to compile
-                    console.println("string");
-                    break;
-
-                default:
-                    throw new UnsupportedOperation(Element.DataType.toString());
-                }
-
-            Int i = switch (Element.is(_))
-                {
-                case Int: 1; // used to compile
-                default:  0;
-                };
-            }
+        console.println(descr);
+        console.println(bits);
+        console.println();
         }
     }

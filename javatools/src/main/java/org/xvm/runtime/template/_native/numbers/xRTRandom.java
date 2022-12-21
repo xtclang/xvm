@@ -101,9 +101,9 @@ public class xRTRandom
                 long cSize = hArray.m_hDelegate.m_cSize;
                 if (hArray.getTemplate() instanceof xBitArray)
                     {
-                    byte[] ab = new byte[(int) (cSize / 8)];
+                    byte[] ab = new byte[(int) (cSize / 8) + 1];
                     rnd(hTarget).nextBytes(ab);
-                    xBitArray.setBits(hArray, ab);
+                    xBitArray.setBits(hArray, ab, cSize);
                     }
                 else
                     {

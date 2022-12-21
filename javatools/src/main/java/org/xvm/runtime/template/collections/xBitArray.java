@@ -17,6 +17,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.numbers.xUInt8;
 
 import org.xvm.runtime.template._native.collections.arrays.BitView;
+import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToBoolean;
@@ -207,9 +208,9 @@ public class xBitArray
         }
 
     /**
-     * Copy bytes from the specified array.
+     * Copy bits from the specified array.
      */
-    public static void setBits(ArrayHandle hArray, byte[] abVal)
+    public static void setBits(ArrayHandle hArray, byte[] abVal, long cSize)
         {
         DelegateHandle hDelegate = hArray.m_hDelegate;
 
@@ -224,10 +225,11 @@ public class xBitArray
         ClassTemplate tDelegate = hDelegate.getTemplate();
         if (tDelegate instanceof BitView tView)
             {
-            for (int i = 0, c = abVal.length; i < c; i++)
+            for (long i = 0; i < cSize; i++)
                 {
-                tView.assignByte(hDelegate, (ofStart/8) + i, abVal[i]);
+                tView.assignBit(hDelegate, ofStart + i, xRTBitDelegate.getBit(abVal, i));
                 }
+            return;
             }
         throw new UnsupportedOperationException();
         }
