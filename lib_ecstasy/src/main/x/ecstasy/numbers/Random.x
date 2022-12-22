@@ -52,7 +52,6 @@ interface Random
         {
         for (Int i = 0, Int c = bytes.size; i < c; ++i)
             {
-            // TODO GG bytes[i] = byte();
             bytes[i] = uint8();
             }
         return bytes;

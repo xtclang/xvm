@@ -43,8 +43,7 @@ const UInt
     /**
      * The maximum value for an UInt (which is the same as the maximum value for Xnt).
      */
-// TODO GG static IntLiteral MaxValue = Xnt.MaxValue;
-    static IntLiteral MaxValue = 0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
+    static IntLiteral MaxValue = Xnt.MaxValue;
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 

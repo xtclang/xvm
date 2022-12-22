@@ -34,14 +34,12 @@ const Xnt
     /**
      * The minimum value for an Xnt.
      */
-// TODO GG static IntLiteral MinValue = Int128.MinValue;
-    static IntLiteral MinValue = -0x8000_0000_0000_0000_0000_0000_0000_0000;
+    static IntLiteral MinValue = Int128.MinValue;
 
     /**
      * The maximum value for an Xnt.
      */
-// TODO GG static IntLiteral MaxValue = Int128.MaxValue;
-    static IntLiteral MaxValue =  0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
+    static IntLiteral MaxValue = Int128.MaxValue;
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
