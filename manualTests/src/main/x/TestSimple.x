@@ -2,26 +2,29 @@ module TestSimple
     {
     @Inject Console console;
 
+    package web import web.xtclang.org;
+
+    import web.*;
+    import ecstasy.reflect.*;
+
     void run( )
         {
-        @Inject Random rnd;
+        Method m = Test.test;
 
-        Bit[] bits0 = new Bit[12] (i-> 1);
-        report(bits0, "original");
+        Parameter p = m.params[0];
+        console.println(&p.actualType); // used to show RTParameter
 
-        Bit[] bits1 = bits0[1..3];
-        report(bits1, "slice");
-
-        rnd.fill(bits1); // used to assert
-        report(bits1, "slice rnd'ed");
-
-        report(bits0, "original");
+        Return r = m.returns[0];
+        console.println(&r.actualType); // used to show RTReturn
         }
 
-    void report(Bit[] bits, String descr)
+    @web.WebService("/")
+    service Test
         {
-        console.println(descr);
-        console.println(bits);
-        console.println();
+        @web.Get
+        String test(@QueryParam String test)
+            {
+            return "";
+            }
         }
     }

@@ -288,10 +288,11 @@ public class xRTSignature
         {
         assert typeValue != null;
 
-        TypeConstant typeRTReturn = frame.poolContext().
-            ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
+        ConstantPool pool   = frame.poolContext();
+        TypeConstant type   = pool.ensureParameterizedTypeConstant(ensureReturnType(), typeValue);
+        TypeConstant typeRT = pool.ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
 
-        return frame.f_context.f_container.resolveClass(typeRTReturn);
+        return ensureRTReturnTemplate().ensureClass(frame.f_context.f_container, typeRT, type);
         }
 
     /**
@@ -302,15 +303,17 @@ public class xRTSignature
         {
         assert typeValue != null;
 
-        ConstantPool pool = frame.poolContext();
-        TypeConstant typeRTParam = pool.ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
+        ConstantPool pool   = frame.poolContext();
+        TypeConstant type   = pool.ensureParameterizedTypeConstant(ensureParamType(), typeValue);
+        TypeConstant typeRT = pool.ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
 
         if (aAnno.length > 0)
             {
-            typeRTParam = pool.ensureAnnotatedTypeConstant(typeRTParam, aAnno);
+            type   = pool.ensureAnnotatedTypeConstant(type, aAnno);
+            typeRT = pool.ensureAnnotatedTypeConstant(typeRT, aAnno);
             }
 
-        return frame.f_context.f_container.resolveClass(typeRTParam);
+        return ensureRTParamTemplate().ensureClass(frame.f_context.f_container, typeRT, type);
         }
 
     /**
