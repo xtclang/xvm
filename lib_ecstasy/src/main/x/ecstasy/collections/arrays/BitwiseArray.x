@@ -1,7 +1,10 @@
+import ecstasy.numbers.Bitwise;
+
+
 /**
  * Functionality specific to arrays of integer numbers.
  */
-mixin IntNumberArray<Element extends IntNumber>
+mixin BitwiseArray<Element extends @Bitwise IntNumber>
         into Array<Element>
         extends NumberArray<Element>
     {
@@ -27,7 +30,7 @@ mixin IntNumberArray<Element extends IntNumber>
      * @return the array containing the integer values representing the left-most (most significant)
      *         bit of each integer value in this array
      */
-    IntNumberArray leftmostBitVector(Boolean inPlace = False)
+    BitwiseArray leftmostBitVector(Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -50,7 +53,7 @@ mixin IntNumberArray<Element extends IntNumber>
      * @return the array containing the integer values representing the right-most (least
      *         significant) bit of each integer value in this array
      */
-    IntNumberArray rightmostBitVector(Boolean inPlace = False)
+    BitwiseArray rightmostBitVector(Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -76,7 +79,7 @@ mixin IntNumberArray<Element extends IntNumber>
      * @return the array containing the number of bits that are zero preceding the most significant
      *         (left-most) `1` bit of each value in this array
      */
-    IntNumberArray leadingZeroCountVector(Boolean inPlace = False)
+    BitwiseArray leadingZeroCountVector(Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -102,7 +105,7 @@ mixin IntNumberArray<Element extends IntNumber>
      * @return the array containing the number of bits that are zero following the least significant
      *         (right-most) `1` bit of each value in this array
      */
-    IntNumberArray trailingZeroCountVector(Boolean inPlace = False)
+    BitwiseArray trailingZeroCountVector(Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -124,7 +127,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the bit count of each integer number in this array
      */
-    IntNumberArray bitCountVector(Boolean inPlace = False)
+    BitwiseArray bitCountVector(Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -147,7 +150,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting sums
      */
-    IntNumberArray andScalar(Element scalar, Boolean inPlace = False)
+    BitwiseArray andScalar(Element scalar, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -171,7 +174,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray andVector(IntNumberArray that)
+    BitwiseArray andVector(BitwiseArray that)
         {
         assert:bounds this.size == that.size;
 
@@ -196,7 +199,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting sums
      */
-    IntNumberArray orScalar(Element scalar, Boolean inPlace = False)
+    BitwiseArray orScalar(Element scalar, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -220,7 +223,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray orVector(IntNumberArray that)
+    BitwiseArray orVector(BitwiseArray that)
         {
         assert:bounds this.size == that.size;
 
@@ -245,7 +248,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting sums
      */
-    IntNumberArray xorScalar(Element scalar, Boolean inPlace = False)
+    BitwiseArray xorScalar(Element scalar, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -269,7 +272,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray xorVector(IntNumberArray that)
+    BitwiseArray xorVector(BitwiseArray that)
         {
         assert:bounds this.size == that.size;
 
@@ -293,7 +296,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the bitwise `NOT` of each number in this array
      */
-    IntNumberArray notVector(Boolean inPlace = False)
+    BitwiseArray notVector(Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -318,7 +321,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray shiftLeftVector(Int count, Boolean inPlace = False)
+    BitwiseArray shiftLeftVector(Int count, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -343,7 +346,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray shiftRightVector(Int count, Boolean inPlace = False)
+    BitwiseArray shiftRightVector(Int count, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -368,7 +371,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray shiftAllRightVector(Int count, Boolean inPlace = False)
+    BitwiseArray shiftAllRightVector(Int count, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -391,7 +394,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray rotateLeftVector(Int count, Boolean inPlace = False)
+    BitwiseArray rotateLeftVector(Int count, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -414,7 +417,7 @@ mixin IntNumberArray<Element extends IntNumber>
      *
      * @return the array containing the resulting values
      */
-    IntNumberArray rotateRightVector(Int count, Boolean inPlace = False)
+    BitwiseArray rotateRightVector(Int count, Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -426,32 +429,5 @@ mixin IntNumberArray<Element extends IntNumber>
             }
 
         return new Element[size](i -> this[i].rotateRight(count)).toArray(mutability, inPlace=True);
-        }
-
-
-    // ----- conversions ---------------------------------------------------------------------------
-
-    /**
-     * Convert the array of integer numbers to an array containing all range-checked integers, that
-     * check for overflow and underflow conditions.
-     *
-     * @return an array of checked integer values
-     */
-    IntNumberArray<Element - Unchecked> toChecked()
-        {
-        return new (Element-Unchecked)[size](i -> this[i].toChecked()).toArray(mutability, inPlace=True);
-        }
-
-    /**
-     * Convert the array of integer numbers to an array containing all unchecked integers, that do
-     * not check for overflow and underflow conditions.
-     *
-     * @return an array of unchecked integer values
-     */
-    IntNumberArray<@Unchecked Element> toUnchecked()
-        {
-        return Element.is(Type<Unchecked>)
-                ? this
-                : new (@Unchecked Element)[size](i -> this[i].toUnchecked()).toArray(mutability, inPlace=True);
         }
     }

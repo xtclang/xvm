@@ -3,7 +3,7 @@
  */
 mixin ByteArray<Element extends Byte>
         into Array<Element>
-        extends IntNumberArray<Element>
+        extends BitwiseArray<Element>
     {
     // ----- UTF-8 operations ----------------------------------------------------------------------
 

@@ -984,6 +984,40 @@ public class LiteralConstant
                 return translateOrder(nOrd, op);
                 }
 
+            case "IntLiteral+Xnt":
+            case "IntLiteral-Xnt":
+            case "IntLiteral*Xnt":
+            case "IntLiteral/Xnt":
+            case "IntLiteral%Xnt":
+            case "IntLiteral&Xnt":
+            case "IntLiteral|Xnt":
+            case "IntLiteral^Xnt":
+            case "IntLiteral==Xnt":
+            case "IntLiteral!=Xnt":
+            case "IntLiteral<Xnt":
+            case "IntLiteral<=Xnt":
+            case "IntLiteral>Xnt":
+            case "IntLiteral>=Xnt":
+            case "IntLiteral<=>Xnt":
+
+            case "IntLiteral+UInt":
+            case "IntLiteral-UInt":
+            case "IntLiteral*UInt":
+            case "IntLiteral/UInt":
+            case "IntLiteral%UInt":
+            case "IntLiteral&UInt":
+            case "IntLiteral|UInt":
+            case "IntLiteral^UInt":
+            case "IntLiteral==UInt":
+            case "IntLiteral!=UInt":
+            case "IntLiteral<UInt":
+            case "IntLiteral<=UInt":
+            case "IntLiteral>UInt":
+            case "IntLiteral>=UInt":
+            case "IntLiteral<=>UInt":
+                // TODO
+                throw new UnsupportedOperationException("TODO CP");
+
             case "IntLiteral+CInt8":
             case "IntLiteral-CInt8":
             case "IntLiteral*CInt8":
@@ -1634,6 +1668,14 @@ public class LiteralConstant
                     {
                     return toNibbleConstant();
                     }
+                else if (typeOut == pool.typeInt())
+                    {
+                    return toIntConstant(Format.Xnt);
+                    }
+                else if (typeOut == pool.typeUInt())
+                    {
+                    return toIntConstant(Format.UInt);
+                    }
                 else if (typeOut == pool.typeCInt8())
                     {
                     return toByteConstant(Format.CInt8);
@@ -1769,9 +1811,9 @@ public class LiteralConstant
                         return toDecNConstant();
                     }
 
-                if (pool.typeCInt64().isA(typeOut))
+                if (pool.typeInt().isA(typeOut))
                     {
-                    return toIntConstant(Format.CInt64);
+                    return toIntConstant(Format.Xnt);
                     }
                 else if (pool.typeUInt8().isA(typeOut))
                     {

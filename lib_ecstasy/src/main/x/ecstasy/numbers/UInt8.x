@@ -3,6 +3,7 @@
  */
 const UInt8
         extends UIntNumber
+        incorporates Bitwise
         default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
@@ -102,18 +103,6 @@ const UInt8
         return this & 0x80 == 0 ? 0x00 : 0xFF;
         }
 
-    @Override
-    UInt8 leftmostBit.get()
-        {
-        TODO
-        }
-
-    @Override
-    UInt8 rightmostBit.get()
-        {
-        TODO
-        }
-
     /**
      * The high nibble of the byte.
      */
@@ -134,131 +123,38 @@ const UInt8
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
-    @Op("+") UInt8 add(UInt8! n)
+    @Op("+")
+    UInt8 add(UInt8! n)
         {
         return this + n;
         }
 
     @Override
-    @Op("-") UInt8 sub(UInt8! n)
+    @Op("-")
+    UInt8 sub(UInt8! n)
         {
         return this - n;
         }
 
     @Override
-    @Op("*") UInt8 mul(UInt8! n)
+    @Op("*")
+    UInt8 mul(UInt8! n)
         {
         return this * n;
         }
 
     @Override
-    @Op("/") UInt8 div(UInt8! n)
+    @Op("/")
+    UInt8 div(UInt8! n)
         {
         return this / n;
         }
 
     @Override
-    @Op("%") UInt8 mod(UInt8! n)
+    @Op("%")
+    UInt8 mod(UInt8! n)
         {
         return this % n;
-        }
-
-    @Override
-    @Op("&") UInt8 and(UInt8! n)
-        {
-        return new UInt8(this.bits & n.bits);
-        }
-
-    @Override
-    @Op("|") UInt8 or(UInt8! n)
-        {
-        return new UInt8(this.bits | n.bits);
-        }
-
-    @Override
-    @Op("^") UInt8 xor(UInt8! n)
-        {
-        return new UInt8(this.bits ^ n.bits);
-        }
-
-    @Override
-    @Op("~") UInt8 not()
-        {
-        return new UInt8(~bits);
-        }
-
-    @Override
-    @Op("<<") UInt8 shiftLeft(Int count)
-        {
-        return new UInt8(bits << count);
-        }
-
-    @Override
-    @Op(">>") UInt8 shiftRight(Int count)
-        {
-        return new UInt8(bits >> count);
-        }
-
-    @Override
-    @Op(">>>") UInt8 shiftAllRight(Int count)
-        {
-        return new UInt8(bits >>> count);
-        }
-
-    @Override
-    UInt8 rotateLeft(Int count)
-        {
-        return new UInt8(bits.rotateLeft(count));
-        }
-
-    @Override
-    UInt8 rotateRight(Int count)
-        {
-        return new UInt8(bits.rotateRight(count));
-        }
-
-    @Override
-    UInt8 retainLSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new UInt8(bits.fill(0, 0 ..< bitLength-count));
-        }
-
-    @Override
-    UInt8 retainMSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new UInt8(bits.fill(0, count ..< bitLength));
-        }
-
-    @Override
-    UInt8 reverseBits()
-        {
-        return new UInt8(bits.reversed());
-        }
-
-    @Override
-    UInt8 reverseBytes()
-        {
-        return this;
         }
 
     @Override
@@ -313,6 +209,14 @@ const UInt8
         {
         return this.is(Unchecked) ? this : new @Unchecked UInt8(bits);
         }
+
+    @Auto
+    @Override
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)

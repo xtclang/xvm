@@ -827,6 +827,7 @@ public class NativeContainer
 
             case IntLiteral, FPLiteral:
 
+            case Xnt,      UInt:
             case CInt8,    Int8,   CUInt8,   UInt8:
             case CInt16,   Int16,  CUInt16,  UInt16:
             case CInt32,   Int32,  CUInt32,  UInt32:

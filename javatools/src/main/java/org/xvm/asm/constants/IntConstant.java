@@ -80,6 +80,7 @@ public class IntConstant
                 cBytes    = 8;
                 fUnsigned = false;
                 break;
+            case Xnt:
             case CInt128:
             case Int128:
                 cBytes    = 16;
@@ -107,6 +108,7 @@ public class IntConstant
                 cBytes    = 8;
                 fUnsigned = true;
                 break;
+            case UInt:
             case CUInt128:
             case UInt128:
                 cBytes    = 16;
@@ -129,7 +131,8 @@ public class IntConstant
                 {
                 throw new IllegalStateException("illegal unsigned value: " + pint);
                 }
-            if (pint.getUnsignedByteSize() > cBytes)
+            if (pint.getUnsignedByteSize() > cBytes
+                    || format == Format.UInt && pint.compareTo(PackedInteger.SINT16_MAX) > 0)
                 {
                 throw new IllegalStateException("value exceeds " + cBytes + " bytes: " + pint);
                 }
@@ -163,6 +166,7 @@ public class IntConstant
         {
         switch (m_fmt)
             {
+            case Xnt:
             case CInt16:
             case Int16:
             case CInt32:
@@ -175,6 +179,7 @@ public class IntConstant
             case IntN:
                 return false;
 
+            case UInt:
             case CUInt16:
             case UInt16:
             case CUInt32:
@@ -199,6 +204,8 @@ public class IntConstant
         {
         switch (m_fmt)
             {
+            case Xnt:
+            case UInt:
             case Int16:
             case Int32:
             case Int64:
@@ -260,7 +267,7 @@ public class IntConstant
                 return new IntConstant(getConstantPool(), normalize(m_fmt), m_pint);
 
             default:
-                throw new IllegalStateException();
+                throw new UnsupportedOperationException("format=" + m_fmt);
             }
         }
 
@@ -289,6 +296,8 @@ public class IntConstant
             case UInt64:
                 return 8;
 
+            case Xnt:
+            case UInt:
             case CInt128:
             case Int128:
             case CUInt128:
@@ -329,6 +338,7 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MIN;
 
+            case Xnt:
             case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MIN;
@@ -338,6 +348,7 @@ public class IntConstant
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.SINT32_MIN;
 
+            case UInt:
             case CUInt16:
             case UInt16:
             case CUInt32:
@@ -384,6 +395,8 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MAX;
 
+            case Xnt:
+            case UInt:
             case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MAX;
@@ -561,9 +574,10 @@ public class IntConstant
                     ? op.TEXT + normalize(this.getFormat()).name()
                     : normalize(this.getFormat()).name() + op.TEXT + normalize(that.getFormat()).name())
             {
-            // TODO is / .is / instanceof / .instanceof ??
-            // TODO as / .as ??
+            // TODO .is() / .as()
 
+            case "+Xnt":
+            case "+UInt":
             case "+Int16":
             case "+Int32":
             case "+Int64":
@@ -576,6 +590,8 @@ public class IntConstant
             case "+UIntN":
                 return this;
 
+            case "-Xnt":
+            case "-UInt":
             case "-Int16":
             case "-Int32":
             case "-Int64":
@@ -599,6 +615,36 @@ public class IntConstant
             case "~UInt128":
             case "~UIntN":
                 return validate(this.getValue().complement());
+
+            case "Xnt+IntLiteral":
+            case "Xnt-IntLiteral":
+            case "Xnt*IntLiteral":
+            case "Xnt/IntLiteral":
+            case "Xnt%IntLiteral":
+            case "Xnt..IntLiteral":
+            case "Xnt..<IntLiteral":
+            case "Xnt==IntLiteral":
+            case "Xnt!=IntLiteral":
+            case "Xnt<IntLiteral":
+            case "Xnt<=IntLiteral":
+            case "Xnt>IntLiteral":
+            case "Xnt>=IntLiteral":
+            case "Xnt<=>IntLiteral":
+
+            case "UInt+IntLiteral":
+            case "UInt-IntLiteral":
+            case "UInt*IntLiteral":
+            case "UInt/IntLiteral":
+            case "UInt%IntLiteral":
+            case "UInt..IntLiteral":
+            case "UInt..<IntLiteral":
+            case "UInt==IntLiteral":
+            case "UInt!=IntLiteral":
+            case "UInt<IntLiteral":
+            case "UInt<=IntLiteral":
+            case "UInt>IntLiteral":
+            case "UInt>=IntLiteral":
+            case "UInt<=>IntLiteral":
 
             case "Int16+IntLiteral":
             case "Int16-IntLiteral":
@@ -804,6 +850,8 @@ public class IntConstant
             case "UIntN>>>IntLiteral":
                 return apply(op, ((LiteralConstant) that).toIntConstant(Format.CInt64));
 
+            case "Xnt+Xnt":
+            case "UInt+UInt":
             case "Int16+Int16":
             case "Int32+Int32":
             case "Int64+Int64":
@@ -816,6 +864,8 @@ public class IntConstant
             case "UIntN+UIntN":
                 return validate(this.getValue().add(((IntConstant) that).getValue()));
 
+            case "Xnt-Xnt":
+            case "UInt-UInt":
             case "Int16-Int16":
             case "Int32-Int32":
             case "Int64-Int64":
@@ -828,6 +878,8 @@ public class IntConstant
             case "UIntN-UIntN":
                 return validate(this.getValue().sub(((IntConstant) that).getValue()));
 
+            case "Xnt*Xnt":
+            case "UInt*UInt":
             case "Int16*Int16":
             case "Int32*Int32":
             case "Int64*Int64":
@@ -840,6 +892,8 @@ public class IntConstant
             case "UIntN*UIntN":
                 return validate(this.getValue().mul(((IntConstant) that).getValue()));
 
+            case "Xnt/Xnt":
+            case "UInt/UInt":
             case "Int16/Int16":
             case "Int32/Int32":
             case "Int64/Int64":
@@ -852,6 +906,8 @@ public class IntConstant
             case "UIntN/UIntN":
                 return validate(this.getValue().div(((IntConstant) that).getValue()));
 
+            case "Xnt%Xnt":
+            case "UInt%UInt":
             case "Int16%Int16":
             case "Int32%Int32":
             case "Int64%Int64":
@@ -900,6 +956,8 @@ public class IntConstant
             case "UIntN^UIntN":
                 return validate(this.getValue().xor(((IntConstant) that).getValue()));
 
+            case "Xnt..Xnt":
+            case "UInt..UInt":
             case "Int16..Int16":
             case "Int32..Int32":
             case "Int64..Int64":
@@ -912,6 +970,8 @@ public class IntConstant
             case "UIntN..UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
 
+            case "Xnt..<Xnt":
+            case "UInt..<UInt":
             case "Int16..<Int16":
             case "Int32..<Int32":
             case "Int64..<Int64":
@@ -924,6 +984,8 @@ public class IntConstant
             case "UIntN..<UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
 
+            case "Xnt>..Xnt":
+            case "UInt>..UInt":
             case "Int16>..Int16":
             case "Int32>..Int32":
             case "Int64>..Int64":
@@ -936,6 +998,8 @@ public class IntConstant
             case "UIntN>..UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
 
+            case "Xnt>..<Xnt":
+            case "UInt>..<UInt":
             case "Int16>..<Int16":
             case "Int32>..<Int32":
             case "Int64>..<Int64":
@@ -984,6 +1048,8 @@ public class IntConstant
             case "UIntN>>>Int64":
                 return validate(this.getValue().ushr(((IntConstant) that).getValue()));
 
+            case "Xnt==Xnt":
+            case "UInt==UInt":
             case "Int16==Int16":
             case "Int32==Int32":
             case "Int64==Int64":
@@ -994,6 +1060,9 @@ public class IntConstant
             case "UInt64==UInt64":
             case "UInt128==UInt128":
             case "UIntN==UIntN":
+
+            case "Xnt!=Xnt":
+            case "UInt!=UInt":
             case "Int16!=Int16":
             case "Int32!=Int32":
             case "Int64!=Int64":
@@ -1004,6 +1073,9 @@ public class IntConstant
             case "UInt64!=UInt64":
             case "UInt128!=UInt128":
             case "UIntN!=UIntN":
+
+            case "Xnt<Xnt":
+            case "UInt<UInt":
             case "Int16<Int16":
             case "Int32<Int32":
             case "Int64<Int64":
@@ -1014,6 +1086,9 @@ public class IntConstant
             case "UInt64<UInt64":
             case "UInt128<UInt128":
             case "UIntN<UIntN":
+
+            case "Xnt<=Xnt":
+            case "UInt<=UInt":
             case "Int16<=Int16":
             case "Int32<=Int32":
             case "Int64<=Int64":
@@ -1024,6 +1099,9 @@ public class IntConstant
             case "UInt64<=UInt64":
             case "UInt128<=UInt128":
             case "UIntN<=UIntN":
+
+            case "Xnt>Xnt":
+            case "UInt>UInt":
             case "Int16>Int16":
             case "Int32>Int32":
             case "Int64>Int64":
@@ -1034,6 +1112,9 @@ public class IntConstant
             case "UInt64>UInt64":
             case "UInt128>UInt128":
             case "UIntN>UIntN":
+
+            case "Xnt>=Xnt":
+            case "UInt>=UInt":
             case "Int16>=Int16":
             case "Int32>=Int32":
             case "Int64>=Int64":
@@ -1044,6 +1125,9 @@ public class IntConstant
             case "UInt64>=UInt64":
             case "UInt128>=UInt128":
             case "UIntN>=UIntN":
+
+            case "Xnt<=>Xnt":
+            case "UInt<=>UInt":
             case "Int16<=>Int16":
             case "Int32<=>Int32":
             case "Int64<=>Int64":

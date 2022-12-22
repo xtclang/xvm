@@ -400,7 +400,7 @@ module TestMaps
         assert count2 == 8;
         }
 
-    static void testRandomOps(Map<Int, Int> map, UInt seed)
+    static void testRandomOps(Map<Int, Int> map, UInt64 seed)
         {
         Random rnd = new ecstasy.numbers.PseudoRandom(seed);
 

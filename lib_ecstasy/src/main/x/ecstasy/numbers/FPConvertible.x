@@ -6,11 +6,59 @@ interface FPConvertible
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * Convert the value to an `FPLiteral` that represents the same value.
+     * Convert the value to a radix-10 (decimal) floating point number.
      *
-     * @return a floating point literal
+     * @return a decimal value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the `Dec` range
      */
-    FPLiteral toFPLiteral();
+    Dec toDec()
+        {
+        return toDecN().toDec();
+        }
+
+    /**
+     * Convert the value to a 32-bit radix-10 (decimal) floating point number.
+     *
+     * @return a 32-bit decimal value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the 32-bit decimal range
+     */
+    Dec32 toDec32()
+        {
+        return toDecN().toDec32();
+        }
+
+    /**
+     * Convert the value to a 64-bit radix-10 (decimal) floating point number.
+     *
+     * @return a 64-bit decimal value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the 64-bit decimal range
+     */
+    Dec64 toDec64()
+        {
+        return toDecN().toDec64();
+        }
+
+    /**
+     * Convert the value to a 128-bit radix-10 (decimal) floating point number.
+     *
+     * @return a 128-bit decimal value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the 128-bit decimal range
+     */
+    Dec128 toDec128()
+        {
+        return toDecN().toDec128();
+        }
+
+    /**
+     * Convert the value to a variable-length decimal radix floating point number.
+     *
+     * @return a decimal value of variable length
+     */
+    DecN toDecN();
 
     /**
      * Convert the value to an 8-bit radix-2 (binary) "FP8 E4M3" floating point number.
@@ -90,45 +138,9 @@ interface FPConvertible
     FloatN toFloatN();
 
     /**
-     * Convert the value to a 32-bit radix-10 (decimal) floating point number.
+     * Convert the value to an `FPLiteral` that represents the same value.
      *
-     * @return a 32-bit decimal
-     *
-     * @throws OutOfBounds  if the resulting value is out of the 32-bit decimal range
+     * @return a floating point literal
      */
-    Dec32 toDec32()
-        {
-        return toDecN().toDec32();
-        }
-
-    /**
-     * Convert the value to a 64-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 64-bit decimal
-     *
-     * @throws OutOfBounds  if the resulting value is out of the 64-bit decimal range
-     */
-    Dec64 toDec64()
-        {
-        return toDecN().toDec64();
-        }
-
-    /**
-     * Convert the value to a 128-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 128-bit decimal
-     *
-     * @throws OutOfBounds  if the resulting value is out of the 128-bit decimal range
-     */
-    Dec128 toDec128()
-        {
-        return toDecN().toDec128();
-        }
-
-    /**
-     * Convert the value to a variable-length decimal radix floating point number.
-     *
-     * @return a decimal of variable length
-     */
-    DecN toDecN();
+    FPLiteral toFPLiteral();
     }

@@ -49,7 +49,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
         {
         // initialize to a random session id
         @Inject Random rnd;
-        return rnd.int() & ID_LIMIT;
+        return rnd.int64() & ID_LIMIT;
         };
 
     /**

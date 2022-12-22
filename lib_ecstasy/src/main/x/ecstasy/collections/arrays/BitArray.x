@@ -842,6 +842,16 @@ mixin BitArray<Element extends Bit>
     static Method<BitArray, <>, <Byte>> toByte = toUInt8;
 
     /**
+     * Convert the bit array to a signed integer.
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed integer range
+     */
+    Int toInt()
+        {
+        return new Int(this.freeze());
+        }
+
+    /**
      * Convert the bit array to a signed 8-bit integer.
      *
      * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range

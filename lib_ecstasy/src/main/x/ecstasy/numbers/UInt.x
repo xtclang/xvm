@@ -1,44 +1,75 @@
-const UInt64
+/**
+ * `UInt` is an automatically-sized unsigned integer, and supports the non-negative portion of the
+ * [Int128] range of values. `UInt` does **not** support the entire [UInt128] range of values, as
+ * one would naturally expect; this is a purposeful choice that allows `UInt` to provide an
+ * automatic conversion to `Int`, thus eliminating one significant potential downside of selecting
+ * `UInt` as a variable/property/parameter/return type, when so many APIs consume the `Int` type.
+ *
+ * When integer bitwise operations are not required, use the `UInt` type by default for all unsigned
+ * integer properties, variables, parameters, and return values whose runtime range is _unknown_,
+ * and thus whose ideal storage size is also unknown. Conversely, if bitwise operations (as defined
+ * by the [Bitwise] mixin) are required, or if the exact range of a value is known, then use the
+ * appropriate sized unsigned integer type ([UInt8] aka `Byte`, [UInt16], [UInt32], [UInt64],
+ * or [UInt128]) or the variably-sized unsigned integer type ([UIntN]) instead.
+ *
+ * "Automatically-sized" does not mean "variably sized" at runtime; a variably sized value means
+ * that the class for that value decides on an instance-by-instance basis what to use for the
+ * storage of the value that the instance represents. "Automatically-sized" means that the _runtime_
+ * is responsible for handling all values in the largest possible range, but is permitted to select
+ * a far smaller space for the storage of the unsigned integer value than the largest possible range
+ * would indicate, so long as the runtime can adjust that storage to handle larger values when
+ * necessary. An expected implementation for properties, for example, would utilize runtime
+ * statistics to determine the actual ranges of values encountered in classes with large numbers of
+ * instantiations, and would then reshape the storage layout of those classes, reducing the memory
+ * footprint of each instance of those classes; this operation would likely be performed during a
+ * service-level garbage collection, or when a service is idle. The reverse is not true, though:
+ * When a value is encountered that is larger than the storage size that was previously assumed to
+ * be sufficient, then the runtime must immediately provide for the storage of that value in some
+ * manner, so that information is not lost. As with all statistics-driven optimizations that require
+ * real-time de-optimization to handle unexpected and otherwise-unsupported conditions, there will
+ * be significant and unavoidable one-time costs, every time such a scenario is encountered.
+ */
+const UInt
         extends UIntNumber
-        incorporates Bitwise
         default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * The minimum value for an UInt64.
+     * The minimum value for an UInt.
      */
     static IntLiteral MinValue = 0;
 
     /**
-     * The maximum value for an UInt64.
+     * The maximum value for an UInt (which is the same as the maximum value for Xnt).
      */
-    static IntLiteral MaxValue =  0xFFFF_FFFF_FFFF_FFFF;
-
+// TODO GG static IntLiteral MaxValue = Xnt.MaxValue;
+    static IntLiteral MaxValue = 0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
     static conditional Int fixedBitLength()
         {
-        return True, 64;
+        return False;
         }
 
     @Override
-    static UInt64 zero()
+    static UInt zero()
         {
         return 0;
         }
 
     @Override
-    static UInt64 one()
+    static UInt one()
         {
         return 1;
         }
 
     @Override
-    static conditional Range<UInt64> range()
+    static conditional Range<UInt> range()
         {
+        // TODO GG verify that this is a constant (not a new Range each time)
         return True, MinValue..MaxValue;
         }
 
@@ -46,7 +77,7 @@ const UInt64
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a 64-bit unsigned integer number from its bitwise machine representation.
+     * Construct a UInt number from its bitwise machine representation.
      *
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
@@ -54,12 +85,12 @@ const UInt64
     @Override
     construct(Bit[] bits)
         {
-        assert bits.size == 64;
+        assert:bounds bits.size < 128 || bits.size == 128 && bits[0] == bits[1];
         super(bits);
         }
 
     /**
-     * Construct a 64-bit unsigned integer number from its network-portable representation.
+     * Construct a UInt number from its network-portable representation.
      *
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
@@ -67,19 +98,19 @@ const UInt64
     @Override
     construct(Byte[] bytes)
         {
-        assert bytes.size == 8;
+        assert:bounds bytes.size < 16 || bytes.size == 16 && bytes[0] & 0x80 >>> 6 == bytes[0] >>> 7;
         super(bytes);
         }
 
     /**
-     * Construct a 64-bit unsigned integer number from its `String` representation.
+     * Construct a UInt number from its `String` representation.
      *
      * @param text  an integer number, in text format
      */
     @Override
     construct(String text)
         {
-        construct UInt64(new IntLiteral(text).toUInt64().bits);
+        construct UInt(new IntLiteral(text).toUInt().bits);
         }
 
 
@@ -96,43 +127,43 @@ const UInt64
 
     @Override
     @Op("+")
-    UInt64 add(UInt64! n)
+    UInt add(UInt! n)
         {
         return this + n;
         }
 
     @Override
     @Op("-")
-    UInt64 sub(UInt64! n)
+    UInt sub(UInt! n)
         {
         return this - n;
         }
 
     @Override
     @Op("*")
-    UInt64 mul(UInt64! n)
+    UInt mul(UInt! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    UInt64 div(UInt64! n)
+    UInt div(UInt! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    UInt64 mod(UInt64! n)
+    UInt mod(UInt! n)
         {
         return this % n;
         }
 
     @Override
-    UInt64 pow(UInt64! n)
+    UInt pow(UInt! n)
         {
-        UInt64 result = 1;
+        UInt result = 1;
 
         while (n-- > 0)
             {
@@ -146,7 +177,7 @@ const UInt64
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional UInt64 next()
+    conditional UInt next()
         {
         if (this < MaxValue)
             {
@@ -157,7 +188,7 @@ const UInt64
         }
 
     @Override
-    conditional UInt64 prev()
+    conditional UInt prev()
         {
         if (this > MinValue)
             {
@@ -171,24 +202,30 @@ const UInt64
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    (UInt64 - Unchecked) toChecked()
+    (UInt - Unchecked) toChecked()
         {
-        return this.is(Unchecked) ? new UInt64(bits) : this;
+        return this.is(Unchecked) ? new UInt(bits) : this;
         }
 
     @Override
-    @Unchecked UInt64 toUnchecked()
+    @Unchecked UInt toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked UInt64(bits);
+        return this.is(Unchecked) ? this : new @Unchecked UInt(bits);
         }
 
     @Auto
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return new Xnt(bits);
+        }
 
     @Auto
     @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return this;
+        }
 
     @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
@@ -256,7 +293,8 @@ const UInt64
     @Override
     UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return this;
+        assert:bounds this <= UInt64.MaxValue;
+        return new UInt64(bits[bitLength-64 ..< bitLength]);
         }
 
     @Auto
@@ -325,35 +363,12 @@ const UInt64
     @Override
     Int estimateStringLength()
         {
-        return calculateStringSize(this, sizeArray);
+        return toInt().estimateStringLength();
         }
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        if (sign == Zero)
-            {
-            buf.add('0');
-            }
-        else
-            {
-            (UInt64 left, UInt64 digit) = this /% 10;
-            if (left.sign != Zero)
-                {
-                left.appendTo(buf);
-                }
-            buf.add(DIGITS[digit.toInt64()]);
-            }
-        return buf;
+        return toInt().appendTo(buf);
         }
-
-    // MaxValue = 18_446_744_073_709_551_615 (20 digits)
-    private static UInt64[] sizeArray =
-         [
-         9, 99, 999, 9_999, 99_999, 999_999,
-         9_999_999, 99_999_999, 999_999_999, 9_999_999_999, 99_999_999_999, 999_999_999_999,
-         9_999_999_999_999, 99_999_999_999_999, 999_999_999_999_999,
-         9_999_999_999_999_999, 99_999_999_999_999_999, 999_999_999_999_999_999,
-         9_999_999_999_999_999_999, 18_446_744_073_709_551_615
-         ];
     }

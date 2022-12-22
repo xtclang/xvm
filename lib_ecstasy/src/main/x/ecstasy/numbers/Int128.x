@@ -1,5 +1,6 @@
 const Int128
         extends IntNumber
+        incorporates Bitwise
         default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
@@ -101,18 +102,6 @@ const Int128
         return toIntN().abs().toUInt128();
         }
 
-    @Override
-    Int128 leftmostBit.get()
-        {
-        TODO
-        }
-
-    @Override
-    Int128 rightmostBit.get()
-        {
-        TODO
-        }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -156,111 +145,6 @@ const Int128
     Int128 mod(Int128! n)
         {
         return this % n;
-        }
-
-    @Override
-    @Op("&")
-    Int128 and(Int128! n)
-        {
-        return new Int128(this.bits & n.bits);
-        }
-
-    @Override
-    @Op("|")
-    Int128 or(Int128! n)
-        {
-        return new Int128(this.bits | n.bits);
-        }
-
-    @Override
-    @Op("^")
-    Int128 xor(Int128! n)
-        {
-        return new Int128(this.bits ^ n.bits);
-        }
-
-    @Override
-    @Op("~")
-    Int128 not()
-        {
-        return new Int128(~bits);
-        }
-
-    @Override
-    @Op("<<")
-    Int128 shiftLeft(Int count)
-        {
-        return new Int128(bits << count);
-        }
-
-    @Override
-    @Op(">>")
-    Int128 shiftRight(Int count)
-        {
-        return new Int128(bits >> count);
-        }
-
-    @Override
-    @Op(">>>")
-    Int128 shiftAllRight(Int count)
-        {
-        return new Int128(bits >>> count);
-        }
-
-    @Override
-    Int128 rotateLeft(Int count)
-        {
-        return new Int128(bits.rotateLeft(count));
-        }
-
-    @Override
-    Int128 rotateRight(Int count)
-        {
-        return new Int128(bits.rotateRight(count));
-        }
-
-    @Override
-    Int128 retainLSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new Int128(bits.fill(0, 0 ..< bitLength-count));
-        }
-
-    @Override
-    Int128 retainMSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new Int128(bits.fill(0, count ..< bitLength));
-        }
-
-    @Override
-    Int128 reverseBits()
-        {
-        return new Int128(bits.reversed());
-        }
-
-    @Override
-    Int128 reverseBytes()
-        {
-        return new Int128(toByteArray().reversed());
         }
 
     @Override
@@ -321,6 +205,13 @@ const Int128
         {
         return this.is(Unchecked) ? this : new @Unchecked Int128(bits);
         }
+
+    @Auto
+    @Override
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)

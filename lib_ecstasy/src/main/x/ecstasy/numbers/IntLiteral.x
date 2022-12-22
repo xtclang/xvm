@@ -553,6 +553,10 @@ const IntLiteral(String text)
 
     @Auto
     @Override
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Auto
@@ -577,6 +581,10 @@ const IntLiteral(String text)
         {
         TODO
         }
+
+    @Auto
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Auto
     @Override

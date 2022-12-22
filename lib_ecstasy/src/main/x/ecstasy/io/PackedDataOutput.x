@@ -57,7 +57,7 @@ mixin PackedDataOutput
         }
 
     @Override
-    void writeUInt64(UInt value)
+    void writeUInt64(UInt64 value)
         {
         writeIntN(value);
         }

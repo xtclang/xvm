@@ -389,6 +389,8 @@ public class ConstantPool
                     };
                 }
 
+            case Xnt:
+            case UInt:
             case CInt16:
             case Int16:
             case CInt32:
@@ -487,7 +489,8 @@ public class ConstantPool
      * Given the specified PackedInteger value and a format, obtain a IntConstant that represents it.
      *
      * @param pint    the PackedInteger value
-     * @param format  the format of the integer constant, one of {@link Format#CInt16},
+     * @param format  the format of the integer constant, one of
+     *                {@link Format#Xnt}, {@link Format#UInt}, {@link Format#CInt16},
      *                {@link Format#Int16}, {@link Format#CInt32}, {@link Format#Int32},
      *                {@link Format#CInt64}, {@link Format#Int64}, {@link Format#CInt128},
      *                {@link Format#Int128}, {@link Format#CIntN}, {@link Format#IntN},
@@ -502,6 +505,8 @@ public class ConstantPool
         {
         switch (format)
             {
+            case Xnt:
+            case UInt:
             case CInt16:
             case Int16:
             case CInt32:
@@ -2343,6 +2348,8 @@ public class ConstantPool
     public TypeConstant      typeStringBuffer() {TypeConstant      c = m_typeStringBuffer;if (c == null) {m_typeStringBuffer= c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
     public TypeConstant      typeBit()          {TypeConstant      c = m_typeBit;         if (c == null) {m_typeBit         = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
     public TypeConstant      typeNibble()       {TypeConstant      c = m_typeNibble;      if (c == null) {m_typeNibble      = c = ensureTerminalTypeConstant(clzNibble()                          );} return c;}
+    public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                             );} return c;}
+    public TypeConstant      typeUInt()         {TypeConstant      c = m_typeUInt;        if (c == null) {m_typeUInt        = c = ensureTerminalTypeConstant(clzUInt()                            );} return c;}
     public TypeConstant      typeCInt8()        {TypeConstant      c = m_typeCInt8;       if (c == null) {m_typeCInt8       = c = ensureTerminalTypeConstant(clzCInt8()                           );} return c;}
     public TypeConstant      typeInt8()         {TypeConstant      c = m_typeInt8;        if (c == null) {m_typeInt8        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt8()   );} return c;}
     public TypeConstant      typeCInt16()       {TypeConstant      c = m_typeCInt16;      if (c == null) {m_typeCInt16      = c = ensureTerminalTypeConstant(clzCInt16()                          );} return c;}
@@ -2444,6 +2451,8 @@ public class ConstantPool
     protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"            );}
     protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                  );}
     protected ClassConstant  clzNibble()       {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"               );}
+    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Xnt"                  );}
+    protected ClassConstant  clzUInt()         {return (ClassConstant) getImplicitlyImportedIdentity("UInt"                 );}
     protected ClassConstant  clzCInt8()        {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                 );}
     protected ClassConstant  clzCInt16()       {return (ClassConstant) getImplicitlyImportedIdentity("Int16"                );}
     protected ClassConstant  clzCInt32()       {return (ClassConstant) getImplicitlyImportedIdentity("Int32"                );}
@@ -2660,6 +2669,8 @@ public class ConstantPool
                     constant = new ByteConstant(this, format, in);
                     break;
 
+                case Xnt:
+                case UInt:
                 case CInt16:
                 case Int16:
                 case CInt32:
@@ -4138,6 +4149,8 @@ public class ConstantPool
     private transient TypeConstant      m_typeBitArray;
     private transient TypeConstant      m_typeByteArray;
     private transient TypeConstant      m_typeBinary;
+    private transient TypeConstant      m_typeInt;
+    private transient TypeConstant      m_typeUInt;
     private transient TypeConstant      m_typeCInt8;
     private transient TypeConstant      m_typeInt8;
     private transient TypeConstant      m_typeCInt16;

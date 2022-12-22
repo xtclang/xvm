@@ -798,6 +798,8 @@ public abstract class Constant
         IntLiteral("numbers"),
         Bit       ("numbers"),
         Nibble    ("numbers"),
+        Xnt       ("numbers"),
+        UInt      ("numbers"),
         CInt8     ("numbers"),  // C=Checked (aka a constrained integer)
         Int8      ("numbers"),  // no "C" means @Unchecked
         CInt16    ("numbers"),

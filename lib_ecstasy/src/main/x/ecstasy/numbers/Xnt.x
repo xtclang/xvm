@@ -1,19 +1,47 @@
-const Int64
+/**
+ * `Int` is an automatically-sized integer, and supports the [Int128] range of values.
+ *
+ * When integer bitwise operations are not required, use the `Int` type by default for all integer
+ * properties, variables, parameters, and return values whose runtime range is _unknown_, and thus
+ * whose ideal storage size is also unknown. Conversely, if bitwise operations (as defined by the
+ * [Bitwise] mixin) are required, or if the exact range of a value is known, then use the
+ * appropriate sized integer type ([Int8], [Int16], [Int32], [Int64], or [Int128]) or the variably-
+ * sized integer type ([IntN]) instead.
+ *
+ * "Automatically-sized" does not mean "variably sized" at runtime; a variably sized value means
+ * that the class for that value decides on an instance-by-instance basis what to use for the
+ * storage of the value that the instance represents. "Automatically-sized" means that the _runtime_
+ * is responsible for handling all values in the largest possible range, but is permitted to select
+ * a far smaller space for the storage of the integer value than the largest possible range would
+ * indicate, so long as the runtime can adjust that storage to handle larger values when necessary.
+ * An expected implementation for properties, for example, would utilize runtime statistics to
+ * determine the actual ranges of values encountered in classes with large numbers of
+ * instantiations, and would then reshape the storage layout of those classes, reducing the memory
+ * footprint of each instance of those classes; this operation would likely be performed during a
+ * service-level garbage collection, or when a service is idle. The reverse is not true, though:
+ * When a value is encountered that is larger than the storage size that was previously assumed to
+ * be sufficient, then the runtime must immediately provide for the storage of that value in some
+ * manner, so that information is not lost. As with all statistics-driven optimizations that require
+ * real-time de-optimization to handle unexpected and otherwise-unsupported conditions, there will
+ * be significant and unavoidable one-time costs, every time such a scenario is encountered.
+ */
+const Xnt
         extends IntNumber
-        incorporates Bitwise
         default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * The minimum value for an Int64.
+     * The minimum value for an Xnt.
      */
-    static IntLiteral MinValue = -0x8000_0000_0000_0000;
+// TODO GG static IntLiteral MinValue = Int128.MinValue;
+    static IntLiteral MinValue = -0x8000_0000_0000_0000_0000_0000_0000_0000;
 
     /**
-     * The maximum value for an Int64.
+     * The maximum value for an Xnt.
      */
-    static IntLiteral MaxValue =  0x7FFF_FFFF_FFFF_FFFF;
+// TODO GG static IntLiteral MaxValue = Int128.MaxValue;
+    static IntLiteral MaxValue =  0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
@@ -21,23 +49,23 @@ const Int64
     @Override
     static conditional Int fixedBitLength()
         {
-        return True, 64;
+        return False;
         }
 
     @Override
-    static Int64 zero()
+    static Xnt zero()
         {
         return 0;
         }
 
     @Override
-    static Int64 one()
+    static Xnt one()
         {
         return 1;
         }
 
     @Override
-    static conditional Range<Int64> range()
+    static conditional Range<Xnt> range()
         {
         return True, MinValue..MaxValue;
         }
@@ -54,7 +82,7 @@ const Int64
     @Override
     construct(Bit[] bits)
         {
-        assert bits.size == 64;
+        assert bits.size <= 128;
         super(bits);
         }
 
@@ -67,7 +95,7 @@ const Int64
     @Override
     construct(Byte[] bytes)
         {
-        assert bytes.size == 8;
+        assert bytes.size <= 16;
         super(bytes);
         }
 
@@ -79,7 +107,7 @@ const Int64
     @Override
     construct(String text)
         {
-        construct Int64(new IntLiteral(text).toInt64().bits);
+        construct Xnt(new IntLiteral(text).toInt().bits);
         }
 
 
@@ -97,9 +125,9 @@ const Int64
         }
 
     @Override
-    UInt64 magnitude.get()
+    UInt magnitude.get()
         {
-        return toInt128().abs().toUInt64();
+        return this.toUInt();
         }
 
 
@@ -107,56 +135,56 @@ const Int64
 
     @Override
     @Op("-#")
-    Int64 neg()
+    Xnt neg()
         {
-        return ~this + 1;
+        TODO
         }
 
     @Override
     @Op("+")
-    Int64 add(Int64! n)
+    Xnt add(Xnt! n)
         {
-        TODO return new Int64(bitAdd(bits, n.bits));
+        TODO
         }
 
     @Override
     @Op("-")
-    Int64 sub(Int64! n)
+    Xnt sub(Xnt! n)
         {
-        return this + ~n + 1;
+        TODO
         }
 
     @Override
     @Op("*")
-    Int64 mul(Int64! n)
+    Xnt mul(Xnt! n)
         {
-        return this * n;
+        TODO
         }
 
     @Override
     @Op("/")
-    Int64 div(Int64! n)
+    Xnt div(Xnt! n)
         {
-        return this / n;
+        TODO
         }
 
     @Override
     @Op("%")
-    Int64 mod(Int64! n)
+    Xnt mod(Xnt! n)
         {
-        return this % n;
+        TODO
         }
 
     @Override
-    Int64 abs()
+    Xnt abs()
         {
         return this < 0 ? -this : this;
         }
 
     @Override
-    Int64 pow(Int64! n)
+    Xnt pow(Xnt! n)
         {
-        Int64 result = 1;
+        Xnt result = 1;
 
         while (n-- > 0)
             {
@@ -170,7 +198,7 @@ const Int64
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional Int64 next()
+    conditional Xnt next()
         {
         if (this < MaxValue)
             {
@@ -181,7 +209,7 @@ const Int64
         }
 
     @Override
-    conditional Int64 prev()
+    conditional Xnt prev()
         {
         if (this > MinValue)
             {
@@ -195,23 +223,16 @@ const Int64
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    (Int64 - Unchecked) toChecked()
+    (Xnt - Unchecked) toChecked()
         {
-        return this.is(Unchecked) ? new Int64(bits) : this;
+        return this.is(Unchecked) ? new Xnt(bits) : this;
         }
 
     @Override
-    @Unchecked Int64 toUnchecked()
+    @Unchecked Xnt toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked Int64(bits);
+        return this.is(Unchecked) ? this : new @Unchecked Xnt(bits);
         }
-
-    @Auto
-    @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
@@ -235,7 +256,7 @@ const Int64
         }
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return this;
         }
@@ -278,8 +299,8 @@ const Int64
     @Override
     UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds this >= 0;
-        return new UInt64(bits);
+        assert:bounds this >= UInt64.MinValue && this <= UInt64.MaxValue;
+        return new UInt64(bits[bitLength-32 ..< bitLength]);
         }
 
     @Override
@@ -346,13 +367,13 @@ const Int64
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Int64> Int hashCode(CompileType value)
+    static <CompileType extends Xnt> Int hashCode(CompileType value)
         {
-        return value;
+        return value.bits.hashCode();
         }
 
     @Override
-    static <CompileType extends Int64> Boolean equals(CompileType value1, CompileType value2)
+    static <CompileType extends Xnt> Boolean equals(CompileType value1, CompileType value2)
         {
         return value1.bits == value2.bits;
         }

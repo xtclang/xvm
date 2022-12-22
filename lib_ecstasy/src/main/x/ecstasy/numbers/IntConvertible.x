@@ -17,6 +17,22 @@ interface IntConvertible
     IntLiteral toIntLiteral(Rounding direction = TowardZero);
 
     /**
+     * Convert the value to a signed integer.
+     *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
+     * @return a signed integer
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed integer range
+     *                      and `truncate` is not `True`
+     */
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toIntN(direction).toInt(truncate);
+        }
+
+    /**
      * Convert the value to a signed 8-bit integer.
      *
      * @param truncate   pass `True` to silently truncate the integer value if necessary
@@ -125,6 +141,22 @@ interface IntConvertible
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toIntN(direction).toUInt8(truncate);
+        }
+
+    /**
+     * Convert the value to an unsigned integer.
+     *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
+     * @return an unsigned integer
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned integer range
+     *                      and `truncate` is not `True`
+     */
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toIntN(direction).toUInt(truncate);
         }
 
     /**

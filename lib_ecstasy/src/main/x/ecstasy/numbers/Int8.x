@@ -1,5 +1,6 @@
 const Int8
         extends IntNumber
+        incorporates Bitwise
         default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
@@ -101,18 +102,6 @@ const Int8
         return toInt16().abs().toUInt8();
         }
 
-    @Override
-    Int8 leftmostBit.get()
-        {
-        TODO
-        }
-
-    @Override
-    Int8 rightmostBit.get()
-        {
-        TODO
-        }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -156,111 +145,6 @@ const Int8
     Int8 mod(Int8! n)
         {
         return this % n;
-        }
-
-    @Override
-    @Op("&")
-    Int8 and(Int8! n)
-        {
-        return new Int8(this.bits & n.bits);
-        }
-
-    @Override
-    @Op("|")
-    Int8 or(Int8! n)
-        {
-        return new Int8(this.bits | n.bits);
-        }
-
-    @Override
-    @Op("^")
-    Int8 xor(Int8! n)
-        {
-        return new Int8(this.bits ^ n.bits);
-        }
-
-    @Override
-    @Op("~")
-    Int8 not()
-        {
-        return new Int8(~bits);
-        }
-
-    @Override
-    @Op("<<")
-    Int8 shiftLeft(Int count)
-        {
-        return new Int8(bits << count);
-        }
-
-    @Override
-    @Op(">>")
-    Int8 shiftRight(Int count)
-        {
-        return new Int8(bits >> count);
-        }
-
-    @Override
-    @Op(">>>")
-    Int8 shiftAllRight(Int count)
-        {
-        return new Int8(bits >>> count);
-        }
-
-    @Override
-    Int8 rotateLeft(Int count)
-        {
-        return new Int8(bits.rotateLeft(count));
-        }
-
-    @Override
-    Int8 rotateRight(Int count)
-        {
-        return new Int8(bits.rotateRight(count));
-        }
-
-    @Override
-    Int8 retainLSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new Int8(bits.fill(0, 0 ..< bitLength-count));
-        }
-
-    @Override
-    Int8 retainMSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new Int8(bits.fill(0, count ..< bitLength));
-        }
-
-    @Override
-    Int8 reverseBits()
-        {
-        return new Int8(bits.reversed());
-        }
-
-    @Override
-    Int8 reverseBytes()
-        {
-        return this;
         }
 
     @Override
@@ -321,6 +205,13 @@ const Int8
         {
         return this.is(Unchecked) ? this : new @Unchecked Int8(bits);
         }
+
+    @Auto
+    @Override
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)

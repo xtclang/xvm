@@ -428,25 +428,6 @@
          */
         static conditional Range<Number> range();
 
-// REVIEW for FP?
-//        /**
-//         * Determine the range of positive values.
-//         *
-//         * @return True iff the numeric type has a known range that includes positive numbers
-//         * @return (conditional) the range from the smallest (least magnitude) to the largest
-//         *         (greatest magnitude) positive value
-//         */
-//        static conditional Range<Number> positiveRange();
-//
-//        /**
-//         * Determine if the numeric type is signed, and if so, the range of negative values.
-//         *
-//         * @return True iff the numeric type has a known range that includes negative numbers
-//         * @return (conditional) the range from the smallest (least magnitude) to the largest
-//         *         (greatest magnitude) negative value
-//         */
-//        static conditional Range<Number> negativeRange();
-
         /**
          * Obtain a function that converts from this type to the specified numeric type.
          *
@@ -471,9 +452,8 @@
          *                    point format
          * @return exponentBitLength  the size, in bits, of the exponent data
          */
-        // TODO
-        // static conditional (Int radix, Int precision, Int emax, Int emin, Int bias,
-        //         Int significandBitLength, Int exponentBitLength) fixedLengthFP();
+//        static conditional (Int radix, Int precision, Int emax, Int emin, Int bias,
+//                            Int significandBitLength, Int exponentBitLength) fixedLengthFP();
         }
 
     @Override
@@ -538,6 +518,8 @@
             case Dec128             : n -> n.toDec128()               .as(To);
             case DecN               : n -> n.toDecN()                 .as(To);
 
+            case Float8e4           : n -> n.toFloat8e4()             .as(To);
+            case Float8e5           : n -> n.toFloat8e5()             .as(To);
             case BFloat16           : n -> n.toBFloat16()             .as(To);
             case Float16            : n -> n.toFloat16()              .as(To);
             case Float32            : n -> n.toFloat32()              .as(To);

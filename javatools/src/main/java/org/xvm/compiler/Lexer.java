@@ -739,7 +739,9 @@ public class Lexer
                                     case "Int32":
                                         idNum = Id.LIT_INT32;
                                         break;
-                                    case "Int":
+                                    case "Int":                     // TODO CP split out int type vs int64
+                                        System.err.println("Lexer: split out int type vs int64");
+                                        // fall through
                                     case "Int64":
                                         idNum = Id.LIT_INT64;
                                         break;
@@ -760,7 +762,9 @@ public class Lexer
                                     case "UInt32":
                                         idNum = Id.LIT_UINT32;
                                         break;
-                                    case "UInt":
+                                    case "UInt":                    // TODO CP split out uint type vs uint64
+                                        System.err.println("Lexer: split out uint type vs uint64");
+                                        // fall through
                                     case "UInt64":
                                         idNum = Id.LIT_UINT64;
                                         break;
@@ -775,7 +779,9 @@ public class Lexer
                                         idNum  = Id.LIT_DEC32;
                                         fFloat = true;
                                         break;
-                                    case "Dec":
+                                    case "Dec":                     // TODO CP split out dec type vs dec64
+                                        System.err.println("Lexer: split out dec type vs dec64");
+                                        // fall through
                                     case "Dec64":
                                         idNum  = Id.LIT_DEC64;
                                         fFloat = true;
@@ -809,7 +815,6 @@ public class Lexer
                                         idNum = Id.LIT_FLOAT32;
                                         fFloat = true;
                                         break;
-                                    case "Float":
                                     case "Float64":
                                         idNum = Id.LIT_FLOAT64;
                                         fFloat = true;
