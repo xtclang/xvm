@@ -24,6 +24,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -573,7 +574,8 @@ public abstract class Expression
 
         // if a required type is specified and the expression type isn't of the required type, then
         // an @Auto conversion can be used, assuming that we haven't already given up on the type
-        // or already applied a type conversion
+        // or already applied a type conversion; note that a SingletonConstant value indicates
+        // a run-time constant that may not be computable at compile time
         MethodConstant idConv = null;
         if (typeRequired != null && fit.isFit() && !isA(ctx, typeActual, typeRequired))
             {
@@ -587,7 +589,7 @@ public abstract class Expression
                         typeRequired.getValueString(), typeActual.getValueString());
                 fit = TypeFit.NoFit;
                 }
-            else if (constVal != null)
+            else if (constVal != null && !(constVal instanceof SingletonConstant))
                 {
                 // an "out-of-range" error may be logged there, but we'll continue as a "fit"
                 // nevertheless
