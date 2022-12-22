@@ -3,15 +3,17 @@ import Catalog.MethodInfo;
 import Catalog.WebServiceInfo;
 
 import web.AcceptList;
+import web.Body;
+import web.BodyParam;
 import web.ErrorHandler;
 import web.HttpMethod;
 import web.HttpStatus;
 import web.MediaType;
 import web.ParameterBinding;
-import web.UriParam;
 import web.QueryParam;
 import web.Response;
 import web.Session;
+import web.UriParam;
 import web.WebService;
 
 import web.codecs.Codec;
@@ -115,6 +117,12 @@ service ChainBundle
 
                     binders += (session, request, values) ->
                         extractPathValue(request, name, param, values);
+                    continue;
+                    }
+                if (param.is(BodyParam))
+                    {
+                    binders += (session, request, values) ->
+                        extractBodyValue(request, name, param, values);
                     continue;
                     }
                 throw new IllegalState($"Unsupported ParameterBinder {param.ParamType}");
@@ -338,13 +346,12 @@ service ChainBundle
     /**
      * Extract the path value from the Request and append it to the values Tuple.
      */
-    private static Tuple extractPathValue(Request request, String path, Parameter param, Tuple values)
+    private Tuple extractPathValue(Request request, String path, Parameter param, Tuple values)
         {
         Object paramValue;
         if (UriTemplate.Value value := request.matchResult.get(path))
             {
-            // TODO: convert
-            paramValue = value;
+            paramValue = convertValue(value, param.ParamType, param.is(UriParam) ? param.format : Null);
             }
         else if (param.ParamType defaultValue := param.defaultValue())
             {
@@ -360,15 +367,12 @@ service ChainBundle
     /**
      * Extract the query value from the Request and append it to the values Tuple.
      */
-    private static Tuple extractQueryValue(Request request, String name, Parameter param, Tuple values)
+    private Tuple extractQueryValue(Request request, String name, QueryParam param, Tuple values)
         {
         Object paramValue;
         if (UriTemplate.Value value := request.queryParams.get(name))
             {
-            // TODO:
-            // Format format ?:= registry.giveMeAFormatByType(paramType)
-            // f = format.convert
-            paramValue = value;
+            paramValue = convertValue(value, param.ParamType, param.format);
             }
         else if (param.ParamType defaultValue := param.defaultValue())
             {
@@ -376,8 +380,72 @@ service ChainBundle
             }
         else
             {
-            throw new IllegalState($"Missing path parameter: {name.quoted}");
+            throw new IllegalState($"Missing query parameter: {name.quoted}");
             }
+        return values.add(paramValue.as(param.ParamType));
+        }
+
+    /**
+     * Convert the specified value into the specified type using the specified format (optional).
+     */
+    private Object convertValue(UriTemplate.Value value, Type type, String? formatName)
+        {
+        if (&value.actualType.isA(type))
+            {
+            return value;
+            }
+
+        Format<type.DataType> format;
+        if (formatName != Null)
+            {
+            if (!(format := registry.findFormat(formatName, type.DataType)))
+                {
+                throw new IllegalState($"Unsupported format: {formatName.quoted} for type {type}");
+                }
+            }
+        else
+            {
+            TODO // format ?:= registry.findFormatByType(type.DataType);
+            }
+
+        if (value.is(String))
+            {
+            return format.decode(value);
+            }
+
+        // List<String> | Map<String, String
+        TODO
+        }
+
+    /**
+     * Extract the body value from the Request and append it to the values Tuple.
+     */
+    private Tuple extractBodyValue(Request request, String name, BodyParam param, Tuple values)
+        {
+        Body? body = request.body;
+        if (body == Null)
+            {
+            throw new IllegalState($"Request has no body");
+            }
+
+        Object paramValue;
+        switch (param.ParamType.is(_))
+            {
+            case Type<Byte[]>:
+                paramValue = body.bytes;
+                break;
+
+            default:
+                Type type = param.ParamType;
+                if (Codec<type.DataType> codec := registry.findCodec(body.mediaType, type.DataType))
+                    {
+                    paramValue = codec.decode(body.bytes);
+                    break;
+                    }
+
+                throw new IllegalState($"Unsupported BodyParam type: \"{param.ParamType}\"");
+            }
+
         return values.add(paramValue.as(param.ParamType));
         }
 
