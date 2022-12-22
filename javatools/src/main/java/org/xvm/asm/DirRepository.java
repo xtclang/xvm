@@ -186,7 +186,7 @@ public class DirRepository
             }
 
         File[] files = m_dir.listFiles(ModulesOnly);
-        if (files.length != modulesByFile.size())
+        if (files == null || files.length != modulesByFile.size())
             {
             return false;
             }
