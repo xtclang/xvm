@@ -68,7 +68,6 @@ const UInt
     @Override
     static conditional Range<UInt> range()
         {
-        // TODO GG verify that this is a constant (not a new Range each time)
         return True, MinValue..MaxValue;
         }
 
