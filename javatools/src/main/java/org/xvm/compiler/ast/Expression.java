@@ -884,11 +884,14 @@ public abstract class Expression
                         aconstVal[i] = constConv;
                         }
 
-                    if (aIdConv == null && idConv != null)
+                    if (idConv != null)
                         {
-                        aIdConv = new MethodConstant[cActual];
+                        if (aIdConv == null)
+                            {
+                            aIdConv = new MethodConstant[cActual];
+                            }
+                        aIdConv[i] = idConv;
                         }
-                    aIdConv[i] = idConv;
                     }
                 }
             }

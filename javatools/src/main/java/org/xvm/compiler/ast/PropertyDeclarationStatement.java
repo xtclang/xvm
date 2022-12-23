@@ -233,7 +233,7 @@ public class PropertyDeclarationStatement
      */
     public void markSynthetic()
         {
-        fSynthetic = true;
+        m_fSynthetic = true;
         }
 
 
@@ -346,7 +346,7 @@ public class PropertyDeclarationStatement
             {
             prop.indicateInitialValue();
             }
-        prop.setSynthetic(fSynthetic);
+        prop.setSynthetic(m_fSynthetic);
         setComponent(prop);
 
         // the annotations either have to be registered on the type or on the property, so
@@ -449,9 +449,8 @@ public class PropertyDeclarationStatement
                     // if in the process of compiling the initializer, it became obvious that the
                     // result was a constant value, then just take that constant value and discard
                     // the initializer
-                    // REVIEW CP !valueTest.isCompletable() && valueTest.isRuntimeConstant())
-                    Expression valueTest       = stmtInit.getInitializerExpression();
-                    boolean    fConstant       = valueTest != null && valueTest.isConstant();
+                    Expression exprTest        = stmtInit.getInitializerExpression();
+                    boolean    fConstant       = exprTest != null && exprTest.isConstant();
                     boolean    fMethodRequired = !fConstant;
 
                     // if we have proven, by testing a fast-forward compile of a temp copy of the
@@ -459,9 +458,24 @@ public class PropertyDeclarationStatement
                     // get that constant value, and store it as the initial value for the property
                     if (fConstant)
                         {
-                        Constant constValue = valueTest.toConstant();
-                        assert !constValue.containsUnresolved();
-                        prop.setInitialValue(valueTest.validateAndConvertConstant(constValue, type, errs));
+                        Constant constValue = exprTest.toConstant();
+                        if (constValue.containsUnresolved())
+                            {
+                            if (m_cDeferred++ <= 0x30) // see Compiler.validateExpressions
+                                {
+                                stmtClone.discardInitializer(methodInit);
+                                stmtInit.discard(true);
+                                mgr.requestRevisit();
+                                }
+                            else
+                                {
+                                log(errs, Severity.ERROR, Compiler.CIRCULAR_INITIALIZER,
+                                        prop.getName());
+                                }
+                            return;
+                            }
+
+                        prop.setInitialValue(exprTest.validateAndConvertConstant(constValue, type, errs));
 
                         // despite having a constant initial value, the property may still require
                         // an initializer; the simplest example being a property whose value is a
@@ -519,7 +533,8 @@ public class PropertyDeclarationStatement
                         // "catch up" the newly created initializer to our stage
                         if (!new StageMgr(initializer, Stage.Validated, errs).fastForward(10))
                             {
-                            assert false;
+                            // basically an assertion
+                            log(errs, Severity.FATAL, Compiler.FATAL_ERROR, initializer);
                             }
                         }
                     }
@@ -594,8 +609,7 @@ public class PropertyDeclarationStatement
             NameExpression   exprProp        = (NameExpression) assignment.getLValueExpression();
             ConstantPool     pool            = pool();
             PropertyConstant idProp          = (PropertyConstant) exprProp.getIdentity(ctx);
-            TypeConstant     typeVar         = idProp.getRefType(pool.ensureAccessTypeConstant(
-                                               ctx.getThisType(), Access.PRIVATE));  // REVIEW GG should context always give us PRIVATE type?
+            TypeConstant     typeVar         = idProp.getRefType(ctx.getThisType().ensureAccess(Access.PRIVATE));
             Register         regPropRef      = new Register(typeVar, Op.A_STACK);
             Register         regAssigned     = new Register(pool.typeBoolean(), Op.A_STACK);
             Label            labelSkipAssign = new Label("skip_assign_" + idProp.getName());
@@ -745,8 +759,17 @@ public class PropertyDeclarationStatement
     protected Token                      doc;
 
     protected transient MethodDeclarationStatement initializer;
-    protected transient boolean                    fSynthetic;
     protected transient AssignmentStatement        assignment;
+
+    /**
+     * Indicates that this property declaration is "synthetic".
+     */
+    protected transient boolean m_fSynthetic;
+
+    /**
+     * The counter for initial value resolution deferrals.
+     */
+    private transient int m_cDeferred;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
             "condition", "annotations", "type", "value", "body", "initializer", "assignment");

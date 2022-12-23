@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.DeferredValueConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -337,7 +338,7 @@ public class PropertyStructure
 
     public void indicateInitialValue()
         {
-        m_fHasValue = true;
+        m_constVal = new DeferredValueConstant(getConstantPool());
         }
 
     /**
@@ -349,7 +350,7 @@ public class PropertyStructure
      */
     public boolean hasInitialValue()
         {
-        return m_fHasValue || m_constVal != null;
+        return m_constVal != null;
         }
 
     /**
@@ -368,8 +369,7 @@ public class PropertyStructure
      */
     public void setInitialValue(Constant constVal)
         {
-        m_fHasValue = false;
-        m_constVal  = constVal;
+        m_constVal = constVal;
         }
 
     /**
@@ -779,6 +779,7 @@ public class PropertyStructure
         m_type = (TypeConstant) pool.register(m_type);
         if (m_constVal != null)
             {
+            assert !(m_constVal instanceof DeferredValueConstant);
             m_constVal = pool.register(m_constVal);
             }
         }
@@ -788,7 +789,7 @@ public class PropertyStructure
             throws IOException
         {
         // the value should have already been resolved by this point
-        assert !m_fHasValue;
+        assert !(m_constVal instanceof DeferredValueConstant);
 
         super.assemble(out);
 
@@ -860,11 +861,6 @@ public class PropertyStructure
      * Indicates that the property has native accessors.
      */
     private transient boolean m_fNative;
-
-    /**
-     * Indicates that the property has a value, even if it hasn't been determined yet.
-     */
-    private transient boolean m_fHasValue;
 
     /**
      * A cached array of the annotations that apply to the property itself.

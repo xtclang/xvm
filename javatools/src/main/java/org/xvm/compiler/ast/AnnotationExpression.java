@@ -317,7 +317,7 @@ public class AnnotationExpression
                         listArgs.set(iArg, exprNew);
                         }
 
-                    if (exprNew.isRuntimeConstant())
+                    if (exprNew.isConstant())
                         {
                         // update the Annotation directly
                         // Note: this is quite unusual, in that normally things like an annotation are

@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.DeferredValueConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -293,6 +294,10 @@ public abstract class Constant
      */
     public Constant apply(Token.Id op, Constant that)
         {
+        if (that instanceof DeferredValueConstant)
+            {
+            return that;
+            }
         throw new UnsupportedOperationException("this=" + getClass().getSimpleName()
                 + ", op=" + op.TEXT
                 + that == null ? "" : ", that=" + that.getClass().getSimpleName());
@@ -888,6 +893,7 @@ public abstract class Constant
          * Pseudo identifiers.
          */
         UnresolvedName,
+        DeferredValue,
         ThisClass,
         ParentClass,
         ChildClass,

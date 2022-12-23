@@ -1148,7 +1148,8 @@ public abstract class ObjectHandle
             ObjectHandle hConst = f_constSingleton.getHandle();
             if (hConst instanceof InitializingHandle)
                 {
-                throw new IllegalStateException("Circular initialization");
+                throw new IllegalStateException("Circular initialization \"" +
+                        f_constSingleton.getValue().getValueString() + '"');
                 }
             return hConst;
             }

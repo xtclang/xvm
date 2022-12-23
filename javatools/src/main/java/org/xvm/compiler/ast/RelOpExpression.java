@@ -593,7 +593,6 @@ public class RelOpExpression
                     expr1     = expr1New;
                     expr1Copy = null;
                     errsAct   = errsAlt;
-                    break findAlternative;
                     }
                 }
             }
@@ -958,6 +957,13 @@ public class RelOpExpression
         {
         // these can only complete if both sub-expressions can complete
         return expr1.isCompletable() && expr2.isCompletable();
+        }
+
+    @Override
+    public boolean isRuntimeConstant()
+        {
+        return super.isRuntimeConstant() ||
+                expr1.isRuntimeConstant() && expr2.isRuntimeConstant();
         }
 
     @Override
