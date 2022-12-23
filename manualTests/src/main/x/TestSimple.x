@@ -2,29 +2,29 @@ module TestSimple
     {
     @Inject Console console;
 
-    package web import web.xtclang.org;
+    package json import json.xtclang.org;
 
-    import web.*;
-    import ecstasy.reflect.*;
+    import json.Schema;
 
-    void run( )
+    void run()
         {
-        Method m = Test.test;
-
-        Parameter p = m.params[0];
-        console.println(&p.actualType); // used to show RTParameter
-
-        Return r = m.returns[0];
-        console.println(&r.actualType); // used to show RTReturn
+        console.println(C1.value); // used to throw at run-time
+        console.println(C1.range); // used to throw at run-time
         }
 
-    @web.WebService("/")
-    service Test
+    class C1
         {
-        @web.Get
-        String test(@QueryParam String test)
-            {
-            return "";
-            }
+        static Int value = C2.value;
+        static Range<Int> range = 1..C2.value;
+        }
+
+    class C2
+        {
+        static Int value = C3.value * 2;
+        }
+
+    class C3
+        {
+        static Int value = C1.value;
         }
     }

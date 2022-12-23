@@ -573,7 +573,7 @@ public class Compiler
     // ----- compiler errors -----------------------------------------------------------------------
 
     /**
-     * Unknown fatal error.
+     * Unknown fatal error. {0}
      */
     public static final String FATAL_ERROR                        = "COMPILER-01";
     /**
@@ -689,7 +689,7 @@ public class Compiler
      */
     public static final String CONDITIONAL_IMPORT                 = "COMPILER-29";
     /**
-     * Unresolvable names.
+     * Unresolvable name "{0}".
      */
     public static final String INFINITE_RESOLVE_LOOP              = "COMPILER-30";
     /**
@@ -1318,6 +1318,10 @@ public class Compiler
      * The literal path expression type is ambiguous; specify a literal type prefix, such as "Path:", "FileStore:", "Directory:", or "Path:".
      */
     public static final String AMBIGUOUS_PATH_TYPE                 = "COMPILER-184";
+    /**
+     * Circular value initializer for property {0}.
+     */
+    public static final String CIRCULAR_INITIALIZER                = "COMPILER-185";
     /**
      * {0} is not yet implemented.
      */
