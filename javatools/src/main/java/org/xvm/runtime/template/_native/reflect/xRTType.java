@@ -973,7 +973,7 @@ public class xRTType
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
         TypeConstant typeThis = hType.getDataType();

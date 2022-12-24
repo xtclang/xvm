@@ -24,7 +24,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
@@ -41,7 +40,7 @@ import org.xvm.util.PackedInteger;
  * Abstract base for Int128 and UInt128.
  */
 public abstract class BaseInt128
-        extends xConst
+        extends xIntNumber
     {
     public final boolean f_fSigned;
 
@@ -315,7 +314,7 @@ public abstract class BaseInt128
 
         if (ll.signum() >= 0)
             {
-            frame.assignValue(iReturn, hTarget);
+            return frame.assignValue(iReturn, hTarget);
             }
 
         LongLong llr = ll.negate();
