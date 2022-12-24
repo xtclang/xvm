@@ -25,7 +25,7 @@ public class xInt128
         }
 
     /**
-     * Converts an object of "this" integer type to the type represented by the template.
+     * Converts an object of "this" integer type to the type represented by the specified template.
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */

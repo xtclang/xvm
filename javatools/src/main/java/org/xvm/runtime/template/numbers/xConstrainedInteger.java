@@ -370,11 +370,8 @@ public abstract class xConstrainedInteger
                 return invokeRotateR(frame, hTarget, hArg, iReturn);
 
             case "stepsTo":
-                {
-                long lFrom = ((JavaLong) hTarget ).getValue();
-                long lTo   = ((JavaLong) hArg).getValue();
-                return frame.assignValue(iReturn, makeJavaLong(lTo - lFrom));
-                }
+                // the return value must be an Int!
+                return xInt64.INSTANCE.invokeSub(frame, hArg, hTarget, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -884,7 +881,7 @@ public abstract class xConstrainedInteger
      * Produce a long value from the specified byte array.
      *
      * @param aBytes   the byte array
-     * @param of       the ofset of the first byte to use
+     * @param of       the offset of the first byte to use
      * @param cBytes   the number of bytes to use
      * @param fSigned  true if the value is a signed value
      *
