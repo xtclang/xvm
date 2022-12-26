@@ -221,15 +221,9 @@ const Xnt
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    (Xnt - Unchecked) toChecked()
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return this.is(Unchecked) ? new Xnt(bits) : this;
-        }
-
-    @Override
-    @Unchecked Xnt toUnchecked()
-        {
-        return this.is(Unchecked) ? this : new @Unchecked Xnt(bits);
+        return this;
         }
 
     @Override
@@ -254,9 +248,10 @@ const Xnt
         }
 
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return this;
+        assert:bounds this >= Int64.MinValue && this <= Int64.MaxValue;
+        return new Int64(bits[bitLength-64 ..< bitLength]);
         }
 
     @Auto
@@ -271,6 +266,12 @@ const Xnt
     IntN toIntN(Rounding direction = TowardZero)
         {
         return new IntN(bits);
+        }
+
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return magnitude;
         }
 
     @Override
@@ -298,7 +299,7 @@ const Xnt
     UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         assert:bounds this >= UInt64.MinValue && this <= UInt64.MaxValue;
-        return new UInt64(bits[bitLength-32 ..< bitLength]);
+        return new UInt64(bits[bitLength-64 ..< bitLength]);
         }
 
     @Override

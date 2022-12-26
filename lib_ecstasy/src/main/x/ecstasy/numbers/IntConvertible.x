@@ -128,22 +128,6 @@ interface IntConvertible
     IntN toIntN(Rounding direction = TowardZero);
 
     /**
-     * Convert the value to an unsigned 8-bit integer.
-     *
-     * @param truncate   pass `True` to silently truncate the integer value if necessary
-     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
-     *
-     * @return an unsigned 8-bit integer
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
-     *                      and `truncate` is not `True`
-     */
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
-        return toIntN(direction).toUInt8(truncate);
-        }
-
-    /**
      * Convert the value to an unsigned integer.
      *
      * @param truncate   pass `True` to silently truncate the integer value if necessary
@@ -157,6 +141,22 @@ interface IntConvertible
     UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toIntN(direction).toUInt(truncate);
+        }
+
+    /**
+     * Convert the value to an unsigned 8-bit integer.
+     *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
+     * @return an unsigned 8-bit integer
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
+     *                      and `truncate` is not `True`
+     */
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toIntN(direction).toUInt8(truncate);
         }
 
     /**

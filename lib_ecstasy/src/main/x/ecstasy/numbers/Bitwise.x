@@ -45,7 +45,7 @@ mixin Bitwise
             return this;
             }
 
-        TODO use above algorith in reverse
+        TODO use above algorithm in reverse
         }
 
     /**
@@ -216,4 +216,17 @@ mixin Bitwise
         {
         TODO
         }
+
+
+    // ----- conversions ---------------------------------------------------------------------------
+
+    /**
+     * Obtain the integer number as an integer that checks for overflow and underflow conditions.
+     */
+    (Bitwise - Unchecked) toChecked();
+
+    /**
+     * Obtain the integer number as an integer that does not check for overflow or underflow.
+     */
+    @Unchecked Bitwise toUnchecked();
     }

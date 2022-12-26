@@ -199,18 +199,6 @@ const UInt
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    @Override
-    (UInt - Unchecked) toChecked()
-        {
-        return this.is(Unchecked) ? new UInt(bits) : this;
-        }
-
-    @Override
-    @Unchecked UInt toUnchecked()
-        {
-        return this.is(Unchecked) ? this : new @Unchecked UInt(bits);
-        }
-
     @Auto
     @Override
     Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)

@@ -97,16 +97,6 @@
         return toBitArray().toBooleanArray();
         }
 
-    /**
-     * Obtain the integer number as an integer that checks for overflow and underflow conditions.
-     */
-    (IntNumber - Unchecked) toChecked();
-
-    /**
-     * Obtain the integer number as an integer that does not check for overflow or underflow.
-     */
-    @Unchecked IntNumber toUnchecked();
-
     @Override
     IntLiteral toIntLiteral(Rounding direction = TowardZero)
         {
