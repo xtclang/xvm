@@ -81,46 +81,6 @@ public abstract class xUnsignedConstrainedInt
 
     // ----- Uint64 helpers ------------------------------------------------------------------------
 
-    public long mulUnassigned(Frame frame, long l1, long l2)
-        {
-        if (l1 <= 0)
-            {
-            // the first factor is bigger or equal than 2^63, so the answer is either 0 or l1
-            if (l2 == 0 || l1 == 0)
-                {
-                return 0;
-                }
-            if (l2 == 1)
-                {
-                return l1;
-                }
-            return overflow(frame);
-            }
-
-        if (l2 <= 0)
-            {
-            // the first factor is bigger or equal than 2^63, so the answer is either 0 or l1
-            if (l1 == 0 || l2 == 0)
-                {
-                return 0;
-                }
-            if (l1 == 1)
-                {
-                return l2;
-                }
-            return overflow(frame);
-            }
-
-        long lr = l1 * l2;
-
-        if (f_fChecked &&
-                (l1 | l2) >>> 31 != 0 && divUnassigned(lr, l2) != l1)
-            {
-            return overflow(frame);
-            }
-        return lr;
-        }
-
     public long divUnassigned(long l1, long l2)
         {
         if (l2 < 0)
