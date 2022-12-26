@@ -34,7 +34,7 @@ interface Hasher<Value>
      * (The opposite is not true: Two objects that have the same `hashOf` value are not
      * required to evaluate as `areEqual` of `True`.
      */
-    Int hashOf(Value value);
+    Int64 hashOf(Value value);
 
     /**
      * Determine the equality (the sameness) of two specified values.

@@ -188,7 +188,7 @@ module TestMaps
         // test very bad hashing
         const Point(Int x)
             {
-            static <CompileType extends Point> Int hashCode(CompileType value)
+            static <CompileType extends Point> Int64 hashCode(CompileType value)
                 {
                 return 100 + value.x % 3;
                 }

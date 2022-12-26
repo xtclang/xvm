@@ -295,7 +295,7 @@ interface Ref<Referent>
             extends immutable Hashable
         {
         @Override
-        static <CompileType extends Identity> Int hashCode(CompileType value)
+        static <CompileType extends Identity> Int64 hashCode(CompileType value)
             {
             // the implementation of the Identity hash code is naturally self-referential; this code
             // cannot work in actuality; see also: infinite recursion

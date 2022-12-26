@@ -2123,7 +2123,7 @@ const Uri
     // ----- Comparable, Orderable & Hashable funky interface implementations ----------------------
 
     @Override
-    static <CompileType extends Uri> Int hashCode(CompileType value)
+    static <CompileType extends Uri> Int64 hashCode(CompileType value)
         {
         return value.hashCache;
         }

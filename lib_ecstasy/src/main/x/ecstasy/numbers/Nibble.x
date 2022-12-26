@@ -359,7 +359,7 @@ const Nibble(Bit[] bits)
     /**
      * Calculate a hash code for the specified Enum value.
      */
-    static <CompileType extends Nibble> Int hashCode(CompileType value)
+    static <CompileType extends Nibble> Int64 hashCode(CompileType value)
         {
         return value.toInt64();
         }

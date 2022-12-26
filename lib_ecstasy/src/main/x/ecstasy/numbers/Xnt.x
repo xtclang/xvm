@@ -366,7 +366,7 @@ const Xnt
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Xnt> Int hashCode(CompileType value)
+    static <CompileType extends Xnt> Int64 hashCode(CompileType value)
         {
         return value.bits.hashCode();
         }

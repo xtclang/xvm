@@ -44,7 +44,7 @@ interface Package
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Package> Int hashCode(CompileType value)
+    static <CompileType extends Package> Int64 hashCode(CompileType value)
         {
         return &value.actualClass.name.hashCode();
         }

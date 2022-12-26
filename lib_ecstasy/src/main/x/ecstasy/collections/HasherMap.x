@@ -1516,7 +1516,7 @@ class HasherMap<Key, Value>
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends HasherMap> Int hashCode(CompileType value)
+    static <CompileType extends HasherMap> Int64 hashCode(CompileType value)
         {
         Int                     hash   = value.size;
         Hasher<CompileType.Key> hasher = value.hasher;

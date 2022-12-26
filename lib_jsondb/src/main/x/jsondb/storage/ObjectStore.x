@@ -1021,7 +1021,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     // ----- Hashable funky interface --------------------------------------------------------------
 
     @Override
-    static <CompileType extends ObjectStore> Int hashCode(CompileType value)
+    static <CompileType extends ObjectStore> Int64 hashCode(CompileType value)
         {
         // use the hash code of the path; we are not expecting ObjectStore instances from multiple
         // different databases to end up in the same hashed data structure, so this should be more

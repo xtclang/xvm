@@ -346,7 +346,7 @@ const Int64
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Int64> Int hashCode(CompileType value)
+    static <CompileType extends Int64> Int64 hashCode(CompileType value)
         {
         return value;
         }

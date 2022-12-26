@@ -7,7 +7,7 @@ interface Hashable
      * Note: if the `equals` function returns "True" for two distinct objects, this function must
      *       yield the same hash value for both objects.
      */
-    static <CompileType extends Hashable> Int hashCode(CompileType value);
+    static <CompileType extends Hashable> Int64 hashCode(CompileType value);
 
     /**
      * Compare two objects of the same Hashable type for equality.

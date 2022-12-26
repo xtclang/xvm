@@ -19,7 +19,7 @@
  *
  *   const Point(Int x, Int y)
  *       {
- *       @Lazy Int hash.calc()
+ *       @Lazy Int64 hash.calc()
  *           {
  *           return x ^ y;
  *           }

@@ -324,7 +324,7 @@ module SockShopUser
         /**
          * Calculate a hash code for the specified User instances.
          */
-        static <CompileType extends User> Int hashCode(CompileType value)
+        static <CompileType extends User> Int64 hashCode(CompileType value)
             {
             return value.username.hashCode();
             }
@@ -361,7 +361,7 @@ module SockShopUser
         /**
          * Calculate a hash code for the specified Address instances.
          */
-        static <CompileType extends Address> Int hashCode(CompileType value)
+        static <CompileType extends Address> Int64 hashCode(CompileType value)
             {
             return value.addressId.hashCode();
             }
@@ -405,7 +405,7 @@ module SockShopUser
         /**
          * Calculate a hash code for the specified Card instances.
          */
-        static <CompileType extends Card> Int hashCode(CompileType value)
+        static <CompileType extends Card> Int64 hashCode(CompileType value)
             {
             return value.cardId.hashCode();
             }
