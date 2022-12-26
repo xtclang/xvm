@@ -34,15 +34,6 @@ public class xUncheckedUInt64
         }
 
     @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
-        return frame.assignValue(iReturn, makeJavaLong(mulUnassigned(frame, l1, l2)));
-        }
-
-    @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         long l1 = ((JavaLong) hTarget).getValue();
@@ -68,17 +59,5 @@ public class xUncheckedUInt64
             }
 
         return frame.assignValue(iReturn, makeJavaLong(modUnassigned(l1, l2)));
-        }
-
-    @Override
-    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
-        {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-
-        long lQuo = divUnassigned(l1, l2);
-        long lRem = modUnassigned(l1, l2);
-
-        return frame.assignValues(aiReturn, makeJavaLong(lQuo), makeJavaLong(lRem));
         }
     }
