@@ -37,21 +37,6 @@ public class xInt64
         }
 
     @Override
-    public void initNative()
-        {
-        super.initNative();
-
-        if (this == INSTANCE)
-            {
-            ClassComposition clz = getCanonicalClass();
-            for (int i = 0; i < cache.length; ++i)
-                {
-                cache[i] = new JavaLong(clz, i);
-                }
-            }
-        }
-
-    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xUInt64.INSTANCE;
@@ -99,17 +84,6 @@ public class xInt64
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
-
-    @Override
-    public JavaLong makeJavaLong(long lValue)
-        {
-        if (lValue == (lValue & 0x7F))
-            {
-            // TODO: cache some negative values as well
-            return INSTANCE.cache[(int) lValue];
-            }
-        return super.makeJavaLong(lValue);
         }
 
     public static JavaLong makeHandle(long lValue)

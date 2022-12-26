@@ -66,7 +66,7 @@ public abstract class xConstrainedInteger
     @Override
     public void initNative()
         {
-        String sName = f_sName;
+        super.initNative();
 
         if (f_fSigned)
             {
@@ -81,26 +81,6 @@ public abstract class xConstrainedInteger
 
         markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("toInt8"  , null, sName.equals("numbers.Int8")   ? THIS : new String[]{"numbers.Int8"});
-        markNativeMethod("toInt16" , null, sName.equals("numbers.Int16")  ? THIS : new String[]{"numbers.Int16"});
-        markNativeMethod("toInt32" , null, sName.equals("numbers.Int32")  ? THIS : new String[]{"numbers.Int32"});
-        markNativeMethod("toInt64" , null, sName.equals("numbers.Int64")  ? THIS : new String[]{"numbers.Int64"});
-        markNativeMethod("toUInt8" , null, sName.equals("numbers.UInt8")  ? THIS : new String[]{"numbers.UInt8"});
-        markNativeMethod("toUInt16", null, sName.equals("numbers.UInt16") ? THIS : new String[]{"numbers.UInt16"});
-        markNativeMethod("toUInt32", null, sName.equals("numbers.UInt32") ? THIS : new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt64", null, sName.equals("numbers.UInt64") ? THIS : new String[]{"numbers.UInt64"});
-
-        markNativeMethod("toFloat16"     , null, new String[]{"numbers.Float16"});
-        markNativeMethod("toFloat32"     , null, new String[]{"numbers.Float32"});
-        markNativeMethod("toFloat64"     , null, new String[]{"numbers.Float64"});
-
-        markNativeMethod("toInt128"      , null, new String[]{"numbers.Int128"});
-        markNativeMethod("toUInt128"     , null, new String[]{"numbers.UInt128"});
-        markNativeMethod("toIntN"        , null, new String[]{"numbers.IntN"});
-        markNativeMethod("toUIntN"       , null, new String[]{"numbers.UIntN"});
-        markNativeMethod("toFloatN"      , null, new String[]{"numbers.FloatN"});
-        markNativeMethod("toDecN"        , null, new String[]{"numbers.DecN"});
-        markNativeMethod("toChar"        , null, new String[]{"text.Char"});
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
@@ -426,6 +406,12 @@ public abstract class xConstrainedInteger
                     return frame.assignValue(iReturn, hTarget);
                     }
 
+                if (template instanceof xIntBase templateTo)
+                    {
+                    return frame.assignValue(iReturn,
+                            templateTo.makeLong(((JavaLong) hTarget).getValue()));
+                    }
+
                 if (template instanceof xConstrainedInteger templateTo)
                     {
                     long lValue = ((JavaLong) hTarget).getValue();
@@ -468,8 +454,12 @@ public abstract class xConstrainedInteger
                 if (template instanceof xChar)
                     {
                     long l = ((JavaLong) hTarget).getValue();
-                    if (l > 0x10_FFFF)
+                    if (l < 0 || l > 0x10_FFFF)
                         {
+                        if (f_fChecked)
+                            {
+                            return overflow(frame);
+                            }
                         l &= 0x0F_FFFF;
                         }
                     return frame.assignValue(iReturn, xChar.makeHandle(l));

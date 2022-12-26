@@ -29,6 +29,16 @@ public class LongLong
         this(lValue, lValue >= 0 ? 0 : -1L);
         }
 
+    /**
+     * @return true iff the value is small enough to fit into a <tt>long</tt>
+     */
+    public boolean isSmall(boolean fSigned)
+        {
+        return fSigned
+                ? m_lLow >= 0 ? m_lHigh == 0L : m_lHigh == -1L
+                : m_lHigh == 0L;
+        }
+
     public LongLong add(LongLong ll)
         {
         long l1L = m_lLow;
@@ -659,14 +669,11 @@ public class LongLong
         return toBigInteger().toString();
         }
 
-    public static final LongLong ZERO = new LongLong(0, 0);
-    public static final LongLong[] ZEROx2 = new LongLong[] {ZERO, ZERO};
-    public static final LongLong ONE = new LongLong(1, 0);
-    public static final LongLong NEG_ONE = new LongLong(-1, -1);
-    public static final LongLong MAX_VALUE = new LongLong(-1, Long.MAX_VALUE);
-    public static final LongLong MIN_VALUE = new LongLong(0, Long.MIN_VALUE);
-    public static final LongLong MAX_VALUE_UNSIGNED = new LongLong(-1, -1);
-    public static final LongLong OVERFLOW = new Overflow();
+    public static final LongLong   OVERFLOW   = new Overflow();
+    public static final LongLong   ZERO       = new LongLong(0, 0);
+    public static final LongLong   MAX_VALUE  = new LongLong(-1, Long.MAX_VALUE);
+    public static final LongLong   MIN_VALUE  = new LongLong(0, Long.MIN_VALUE);
+    public static final LongLong[] ZEROx2     = new LongLong[] {ZERO, ZERO};
     public static final LongLong[] OVERFLOWx2 = new LongLong[] {OVERFLOW, OVERFLOW};
 
     protected static final BigInteger BIG_MASK64 = new BigInteger("FFFFFFFFFFFFFFFF", 16);

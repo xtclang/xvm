@@ -349,12 +349,16 @@ const UInt
     @Override
     Int estimateStringLength()
         {
-        return toInt().estimateStringLength();
+        return this <= UInt64.MaxValue
+                ? toUInt64() .estimateStringLength()
+                : toUInt128().estimateStringLength();
         }
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        return toInt().appendTo(buf);
+        return this <= UInt64.MaxValue
+                ? toUInt64() .appendTo(buf)
+                : toUInt128().appendTo(buf);
         }
     }

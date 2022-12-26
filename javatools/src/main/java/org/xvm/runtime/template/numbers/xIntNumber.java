@@ -20,5 +20,8 @@ public class xIntNumber
     @Override
     public void initNative()
         {
+        super.initNative();
+
+        markNativeMethod("toChar", null, new String[]{"text.Char"});
         }
     }

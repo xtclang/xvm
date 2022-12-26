@@ -4,7 +4,7 @@ module TestNumbers
 
     void run()
         {
-        testUInt();
+        testUInt64();
         testByte();
         testInt128();
         testUInt128();
@@ -17,27 +17,27 @@ module TestNumbers
         testAggregator();
         }
 
-    void testUInt()
+    void testUInt64()
         {
         console.println("\n** testUInt()");
 
-        UInt n1 = 42;
+        UInt64 n1 = 42;
         console.println("n1=" + n1);
 
-        Bit[] bits = n1.toBitArray();
-        UInt  n11  = new UInt(bits);
+        Bit[] bits = n1.toUInt64().toBitArray();
+        UInt64 n11  = new UInt64(bits);
         assert n11 == n1;
 
         Byte[] bytes = n1.toByteArray();
-        UInt   n12   = new UInt(bytes);
+        UInt64 n12   = new UInt64(bytes);
         assert n12 == n1;
 
-        UInt n2 = 0xFFFF_FFFF_FFFF_FFFF;
+        UInt64 n2 = 0xFFFF_FFFF_FFFF_FFFF;
         console.println("n2=" + n2);
         console.println("-1=" + (--n2));
         console.println("+1=" + (++n2));
 
-        UInt d3 = n2 / 1000;
+        UInt64 d3 = n2 / 1000;
         console.println("d3=" + d3);
         console.println("n3=" + (d3*1000 + n2 % 1000));
 
@@ -50,17 +50,17 @@ module TestNumbers
             {
             }
 
-        Int un1 = Int.MaxValue.toInt64().toUnchecked();
-        Int un2 = un1 + 1;
+        Int64 un1 = Int.MaxValue.toInt64().toUnchecked();
+        Int64 un2 = un1 + 1;
 
-        assert un2 == Int.MinValue; // wraps around w/out exception
-        assert un2.is(@Unchecked Int);
+        assert un2 == Int64.MinValue; // wraps around w/out exception
+        assert un2.is(@Unchecked Int64);
 
-        UInt un3 = UInt.MaxValue.toUInt64().toUnchecked();
-        UInt un4 = ++un3;
+        UInt64 un3 = UInt64.MaxValue.toUInt64().toUnchecked();
+        UInt64 un4 = ++un3;
         assert un4 == 0;
 
-        assert un4.is(@Unchecked UInt);
+        assert un4.is(@Unchecked UInt64);
         }
 
     void testByte()

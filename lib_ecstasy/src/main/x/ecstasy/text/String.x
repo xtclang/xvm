@@ -39,8 +39,7 @@ const String
      */
     private @Lazy Int hash.calc()
         {
-        @Unchecked Int hash = Int:982_451_653.toUnchecked();      // start with a prime number
-        Int len = chars.size;
+        @Unchecked Int64 hash = Int64:982_451_653.toUnchecked(); // start with a prime number
         for (Char char : chars)
             {
             hash = hash * 31 + char.toInt64();

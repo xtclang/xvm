@@ -173,7 +173,7 @@ module TestAnnotations
         }
 
     @Tagged(weight=1)
-    void testMethodMixin(@Tagged(weight=2) (@Unchecked Int)? i = Null)
+    void testMethodMixin(@Tagged(weight=2) (@Unchecked Int64)? i = Null)
         {
         Method m = testMethodMixin;
         console.println(m);

@@ -52,8 +52,6 @@ const IntNumberMapping<Serializable extends IntNumber>
             numbers.IntN       = (lit) -> lit.toIntN(),
             numbers.UIntN      = (lit) -> lit.toUIntN(),
 
-            @Unchecked numbers.IntNumber  = (lit) -> lit.toIntN()   .toUnchecked(),
-            @Unchecked numbers.UIntNumber = (lit) -> lit.toUIntN()  .toUnchecked(),
             @Unchecked numbers.Int8       = (lit) -> lit.toInt8()   .toUnchecked(),
             @Unchecked numbers.Int16      = (lit) -> lit.toInt16()  .toUnchecked(),
             @Unchecked numbers.Int32      = (lit) -> lit.toInt32()  .toUnchecked(),
