@@ -84,7 +84,7 @@ public class xRTRandom
         markNativeMethod("bit"    , VOID     , BIT      );
         markNativeMethod("fill"   , BITARRAY , BITARRAY );
         markNativeMethod("fill"   , BYTEARRAY, BYTEARRAY);
-        markNativeMethod("int"    , XNT      , XNT      );
+        markNativeMethod("xnt"    , XNT      , XNT      );
         markNativeMethod("uint"   , UINT     , UINT     );
         markNativeMethod("int8"   , VOID     , INT8     );
         markNativeMethod("int16"  , VOID     , INT16    );
@@ -137,7 +137,7 @@ public class xRTRandom
                 return Op.R_NEXT;
                 }
 
-            case "int":
+            case "xnt":
                 // TODO hArg is a Xnt handle
                 return invokeInt(frame, hTarget, hArg, iReturn);
 

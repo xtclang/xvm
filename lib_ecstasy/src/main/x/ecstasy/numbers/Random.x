@@ -65,7 +65,7 @@ interface Random
      *
      * @return a random signed integer value in the range `0..<max`
      */
-    Xnt int(Xnt max)
+    Xnt xnt(Xnt max)
         {
         assert max > 0;
         UInt128 umax     = max.toUInt128();
@@ -98,19 +98,19 @@ interface Random
      *
      * @return a random 64-bit signed integer value within in the specified range
      */
-    Xnt int(Range<Xnt> range)
+    Xnt xnt(Range<Xnt> range)
         {
-        return range.effectiveLowerBound + int(range.size);
+        return range.effectiveLowerBound + xnt(range.size);
         }
 
 // TODO temporary; remove
     Int64 int(Int64 max)
         {
-        return int(max.toInt()).toInt64();
+        return xnt(max.toInt()).toInt64();
         }
     Int64 int(Range<Int64> range)
         {
-        return int(new Range(range.first.toInt(), range.last.toInt(), range.firstExclusive, range.lastExclusive)).toInt64();
+        return xnt(new Range(range.first.toInt(), range.last.toInt(), range.firstExclusive, range.lastExclusive)).toInt64();
         }
 // TODO end remove
 
@@ -124,7 +124,7 @@ interface Random
      */
     UInt uint(UInt max)
         {
-        return int(max.toInt()).toUInt();
+        return xnt(max.toInt()).toUInt();
         }
 
     /**
