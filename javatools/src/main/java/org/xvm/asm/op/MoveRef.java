@@ -84,8 +84,8 @@ public class MoveRef
             {
             ObjectHandle hReferent = switch (m_nFromValue)
                 {
-                case A_THIS, A_TARGET, A_STRUCT, A_STACK
-                        -> frame.getPredefinedArgument(m_nFromValue);
+                case A_SUPER, A_THIS, A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE, A_STRUCT, A_CLASS,
+                     A_SERVICE, A_STACK -> frame.getPredefinedArgument(m_nFromValue);
                 default -> throw new IllegalStateException();
                 };
 
