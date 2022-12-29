@@ -5,15 +5,17 @@ import ecstasy.collections.MapSet;
  */
 class IdentitySet<Element>
         extends MapSet<Element>
+        implements Replicable
     {
     /**
      * Construct the IdentitySet with an (optional) initial capacity.
      *
      * @param initCapacity  (optional) the number of expected element values
      */
+    @Override
     construct(Int initCapacity = 0)
         {
-        super(new IdentityMap<Element, Nullable>(initCapacity));
+        construct MapSet(new IdentityMap<Element, Nullable>(initCapacity));
         }
 
     /**
@@ -34,7 +36,7 @@ class IdentitySet<Element>
                 {
                 map.put(value, Null);
                 }
-            super(map);
+            construct MapSet(map);
             }
         }
 

@@ -235,6 +235,29 @@ public class SignatureConstant
         }
 
     /**
+     * @return true iff this signature contains any formal type parameters
+     */
+    public boolean containsTypeParameters()
+        {
+        for (TypeConstant type : m_aconstParams)
+            {
+            if (type.containsTypeParameter(true))
+                {
+                return true;
+                }
+            }
+
+        for (TypeConstant type : m_aconstReturns)
+            {
+            if (type.containsTypeParameter(true))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * Create an equivalent signature with generic types resolved based on the specified resolver.
      *
      * @param pool      the ConstantPool to place a potentially created new constant into

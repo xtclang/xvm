@@ -191,7 +191,7 @@ public class ClassStructure
     /**
      * @return true iff this class is annotated by the specified annotation
      */
-    protected boolean containsAnnotation(ClassConstant idAnno)
+    public boolean containsAnnotation(ClassConstant idAnno)
         {
         for (Contribution contrib : getContributionsAsList())
             {

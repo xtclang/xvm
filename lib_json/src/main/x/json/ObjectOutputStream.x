@@ -390,7 +390,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         {
         construct(ParentOutput parent, (String|Int)? id = Null)
             {
-            super(parent, id);
+            construct DocOutputStream(parent, id);
             }
 
         @Override
@@ -469,7 +469,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         {
         construct(ParentOutput parent, (String|Int)? id = Null)
             {
-            super(parent, id);
+            construct DocOutputStream(parent, id);
             }
         finally
             {
@@ -560,7 +560,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         {
         construct(ParentOutput parent, (String|Int)? id = Null, Metadata? metadata = Null)
             {
-            super(parent, id);
+            construct DocOutputStream(parent, id);
             }
         finally
             {

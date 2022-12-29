@@ -38,7 +38,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
               Mapping<Value>   valueMapping,
               )
         {
-        super(catalog, info);
+        construct ObjectStore(catalog, info);
 
         this.jsonSchema   = catalog.jsonSchema;
         this.keyMapping   = keyMapping;
@@ -79,6 +79,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     protected class Changes
         {
+        @Override
         construct(Int writeId, Future<Int> pendingReadId)
             {
             super(writeId, pendingReadId);

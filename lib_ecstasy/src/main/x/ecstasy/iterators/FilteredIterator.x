@@ -7,7 +7,7 @@ class FilteredIterator<Element>
     construct(Iterator<Element> iter, function Boolean include(Element))
         {
         this.include = include;
-        super(iter);
+        construct DelegatingIterator(iter);
         }
 
     protected/private function Boolean include(Element);

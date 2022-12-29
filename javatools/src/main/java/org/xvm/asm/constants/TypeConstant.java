@@ -3822,7 +3822,18 @@ public abstract class TypeConstant
 
                         List<MethodConstant> listMatches =
                                 collectConstructors(methodContrib, mapMethods);
-                        if (!listMatches.isEmpty())
+                        if (listMatches.isEmpty())
+                            {
+                            if (fSelf && methodContrib.getHead().isOverride())
+                                {
+                                MethodConstant id = methodContrib.getIdentity();
+                                id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                                        idContrib.getNamespace().getValueString(),
+                                        id.getSignature().getValueString(),
+                                        id.getNamespace().getValueString());
+                                }
+                            }
+                        else
                             {
                             for (MethodConstant idBase : listMatches)
                                 {

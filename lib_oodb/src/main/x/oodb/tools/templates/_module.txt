@@ -84,7 +84,7 @@ module %appName%_jsondb%qualifier%
                   Boolean                 readOnly = False,
                   function void(Client_)? notifyOnClose = Null)
             {
-            super(catalog, clientId, dbUser, readOnly, notifyOnClose);
+            construct Client_(catalog, clientId, dbUser, readOnly, notifyOnClose);
             }
 
         @Override

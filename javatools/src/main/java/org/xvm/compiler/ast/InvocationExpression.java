@@ -2097,6 +2097,10 @@ public class InvocationExpression
                     log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR,
                             ctx.getThisType().getValueString());
                     }
+                else if (sName.equals("super"))
+                    {
+                    log(errs, Severity.ERROR, Compiler.NON_VIRTUAL_SUPER);
+                    }
                 else
                     {
                     TypeConstant typeTarget = ctx.getThisType();

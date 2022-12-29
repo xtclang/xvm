@@ -46,7 +46,7 @@ service JsonProcessorStore<Message extends immutable Const>
               Mapping<Message> messageMapping,
               )
         {
-        super(catalog, info);
+        construct ObjectStore(catalog, info);
 
         this.messageMapping = messageMapping;
         this.jsonSchema     = catalog.jsonSchema;
@@ -104,6 +104,7 @@ service JsonProcessorStore<Message extends immutable Const>
     @Override
     protected class Changes
         {
+        @Override
         construct(Int writeId, Future<Int> pendingReadId)
             {
             super(writeId, pendingReadId);

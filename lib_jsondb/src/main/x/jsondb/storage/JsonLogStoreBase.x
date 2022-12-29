@@ -21,7 +21,7 @@ service JsonLogStoreBase<Element extends immutable Const>
               Int              maxFileSize,
               )
         {
-        super(catalog, info);
+        construct ObjectStore(catalog, info);
 
         this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;

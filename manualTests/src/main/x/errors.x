@@ -72,7 +72,7 @@ module TestCompilerErrors
         {
         if ((s != Null) || (i == 0))
             {
-            i = s.size;
+            i = s.size;  // should not compile
             }
         }
 
@@ -83,7 +83,46 @@ module TestCompilerErrors
             }
         else
             {
-            i = s.size;
+            i = s.size; // should not compile
+            }
+        }
+
+    package TestVirtualSuper
+        {
+        interface Iface
+            {
+            void f();
+            }
+
+        @Mix
+        class Base
+                implements Iface
+            {
+            @Override
+            void f(Boolean flag = False)
+                {
+                super(); // should not compile
+                }
+            }
+
+        class Derived
+                extends Base
+            {
+            @Override
+            Int f(Boolean flag=False)
+                {
+                return super(flag); // should not compile
+                }
+            }
+
+        mixin Mix
+            into Base
+            {
+            @Override
+            void f(Boolean flag=False)
+                {
+                super(flag);
+                }
             }
         }
     }

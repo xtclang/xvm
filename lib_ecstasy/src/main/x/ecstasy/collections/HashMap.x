@@ -34,7 +34,7 @@ class HashMap<Key extends Hashable, Value>
     construct(Map<Key, Value> that)
         {
         assert Hasher<Key> hasher := Key.hashed();
-        super(hasher, that);
+        construct HasherMap(hasher, that);
         }
 
     @Override

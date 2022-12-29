@@ -12,10 +12,9 @@ class HasherSet<Element>
      * @param hasher        the [Hasher] to use
      * @param initCapacity  (optional) the number of expected element values
      */
-    @Override
     construct(Hasher<Element> hasher, Int initCapacity = 0)
         {
-        super(new HasherMap<Element, Nullable>(hasher, initCapacity));
+        construct MapSet(new HasherMap<Element, Nullable>(hasher, initCapacity));
         }
 
     /**
@@ -37,7 +36,7 @@ class HasherSet<Element>
                 {
                 map.put(value, Null);
                 }
-            super(map);
+            construct MapSet(map);
             }
         }
 
