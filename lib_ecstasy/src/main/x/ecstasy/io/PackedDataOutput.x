@@ -29,7 +29,7 @@ mixin PackedDataOutput
     @Override
     void writeInt64(Int64 value)
         {
-        writeInt128(this, value);
+        writeInt128(value);
         }
 
     @Override
