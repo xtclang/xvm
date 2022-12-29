@@ -20,7 +20,7 @@ service JsonNtxLogStore<Element extends immutable Const>
               Int              maxFileSize,
               )
         {
-        super(catalog, info, elementMapping, expiry, truncateSize, maxFileSize);
+        construct JsonLogStoreBase(catalog, info, elementMapping, expiry, truncateSize, maxFileSize);
         }
 
 

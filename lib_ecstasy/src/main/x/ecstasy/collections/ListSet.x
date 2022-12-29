@@ -3,7 +3,8 @@
  * insertion.
  */
 class ListSet<Element>
-         extends MapSet<Element>
+        extends MapSet<Element>
+        implements Replicable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -21,7 +22,7 @@ class ListSet<Element>
             {
             map.put(value, Null);
             }
-        super(map);
+        construct MapSet(map);
         }
 
     /**

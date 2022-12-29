@@ -284,7 +284,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         {
         construct(Directory origDir)
             {
-            super(origDir);
+            construct FileNodeWrapper(origDir);
             }
 
         protected Directory origDir.get()
@@ -404,7 +404,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         {
         construct(File origFile)
             {
-            super(origFile);
+            construct FileNodeWrapper(origFile);
             }
 
         protected File origFile.get()

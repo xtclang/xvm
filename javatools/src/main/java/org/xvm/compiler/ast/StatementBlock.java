@@ -35,6 +35,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -1284,14 +1285,31 @@ public class StatementBlock
                 case "super":
                     {
                     // see isReservedNameReadable()
-                    MethodConstant idMethod   = getMethod().getIdentityConstant();
-                    Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
-                    TypeConstant   typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
-                    MethodInfo     infoMethod = typeCtx.ensureTypeInfo().getMethodById(idMethod);
+                    MethodStructure   method      = getMethod();
+                    MethodConstant    idMethod    = method.getIdentityConstant();
+                    Access            access      = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                    TypeConstant      typeCtx     = pool.ensureAccessTypeConstant(typeThis, access);
+                    TypeInfo          infoType    = typeCtx.ensureTypeInfo();
+                    MethodInfo        infoMethod  = infoType.getMethodById(idMethod);
+                    SignatureConstant sigSuper    = infoMethod == null ? null : infoMethod.getSuper(infoType);
 
-                    type = (infoMethod == null
-                            ? idMethod.getSignature()
-                            : infoMethod.getSignature()).asFunctionType();
+                    if (sigSuper == null)
+                        {
+                        if (method.isConstructor()
+                                && method.findAnnotation(pool.clzOverride()) != null
+                                && getThisClass().containsAnnotation(pool.clzOverride()))
+                            {
+                            // an "@Override" virtual child may not have a compile-time super;
+                            // assume an identical signature
+                            sigSuper = idMethod.getSignature();
+                            }
+                        else
+                            {
+                            return null;
+                            }
+                        }
+
+                    type = sigSuper.asFunctionType();
                     nReg = Op.A_SUPER;
                     break;
                     }

@@ -64,7 +64,6 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public class MethodStructure
         extends Component
-        implements GenericTypeResolver
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -1474,30 +1473,6 @@ public class MethodStructure
                 mapValues.put(param.getName(), param.getDefaultValue());
                 }
             }
-        }
-
-
-    // ----- GenericTypeResolver interface ---------------------------------------------------------
-
-    @Override
-    public TypeConstant resolveGenericType(String sFormalName)
-        {
-        // look for a name match only amongst the method's formal type parameters
-        for (int i = 0, c = getTypeParamCount(); i < c; i++)
-            {
-            Parameter param = getParam(i);
-
-            if (sFormalName.equals(param.getName()))
-                {
-                TypeConstant typeType = param.getType();
-
-                // type parameter's type must be of Type<DataType>
-                assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;
-                return typeType.getParamType(0);
-                }
-            }
-
-        return null;
         }
 
 

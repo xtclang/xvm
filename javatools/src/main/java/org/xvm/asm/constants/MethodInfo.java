@@ -279,24 +279,26 @@ public class MethodInfo
      */
     public MethodInfo layerOnVirtualConstructor(MethodInfo that)
         {
-        MethodBody bodyVirt = null;
-        for (MethodBody body : m_aBody)
+        MethodBody[] aThis = m_aBody;
+        int          cThis = -1;
+        for (int i = aThis.length - 1; i >=0; --i)
             {
-            if (body.isVirtualConstructor())
+            if (aThis[i].isVirtualConstructor())
                 {
-                bodyVirt = body;
+                // keep all on top of the first virtual
+                cThis = i + 1;
                 break;
                 }
             }
-        assert bodyVirt != null;
+        assert cThis > 0;
 
         // add the base virtual constructor at the bottom
         MethodBody[] aThat = that.m_aBody;
         int          cThat = aThat.length;
-        MethodBody[] aNew  = new MethodBody[cThat + 1];
+        MethodBody[] aNew  = new MethodBody[cThat + cThis];
 
         System.arraycopy(aThat, 0, aNew, 0, cThat);
-        aNew[cThat] = bodyVirt;
+        System.arraycopy(aThis, 0, aNew, cThat, cThis);
 
         return new MethodInfo(aNew);
         }
@@ -1071,10 +1073,18 @@ public class MethodInfo
      */
     public boolean hasSuper(TypeInfo infoType)
         {
+        return getSuper(infoType) != null;
+        }
+
+    /**
+     * @return the "super" signature
+     */
+    public SignatureConstant getSuper(TypeInfo infoType)
+        {
         MethodBody[] chain = m_aBodyResolved;
         if (chain != null)
             {
-            return chain.length > 1;
+            return chain.length > 1 ? chain[1].getSignature() : null;
             }
 
         // the logic below is a specialized version of the ensureOptimizedMethodChain() method
@@ -1084,7 +1094,7 @@ public class MethodInfo
 
         if (bodyHead.getImplementation() == Implementation.Capped)
             {
-            return infoType.getMethodByNestedId(bodyHead.getNarrowingNestedIdentity()).hasSuper(infoType);
+            return infoType.getMethodByNestedId(bodyHead.getNarrowingNestedIdentity()).getSuper(infoType);
             }
 
         // an accessor for a property with a field always has super()
@@ -1097,14 +1107,15 @@ public class MethodInfo
                 PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
                 if (infoProp.hasField())
                     {
-                    return true;
+                    return method.getIdentityConstant().getSignature();
                     }
                 }
             }
 
         boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
 
-        int cMethods = 0;
+        int        cMethods  = 0;
+        MethodBody bodySuper = null;
         for (int i = 0, c = chain.length; i < c; ++i)
             {
             MethodBody body = chain[i];
@@ -1115,14 +1126,16 @@ public class MethodInfo
                         {
                         cMethods++;
                         }
-                    // fall through
+                    break;
+
                 case Declared:
                 case Abstract:
                 case SansCode:
+                case Capped:
                     break;
 
                 case Default:
-                    // only the first one is kept, and it will be placed at the end of the chain
+                    // only the first one is kept; so our count could be a bit off
                     cMethods++;
                     break;
 
@@ -1130,7 +1143,7 @@ public class MethodInfo
                 case Field:
                 case Native:
                 case Explicit:
-                    if (!fMixin)
+                    if (cMethods > 0 && !fMixin)
                         {
                         // some of the bodies could represent an annotation mixins methods
                         // (e.g. @M class C {}, where both C and M have this method),
@@ -1139,19 +1152,39 @@ public class MethodInfo
                         if (typeThis.isSingleDefiningConstant() &&
                             typeThis.getDefiningConstant().equals(body.getIdentity().getNamespace()))
                             {
-                            cMethods = 0;
+                            cMethods  = 0;
+                            bodySuper = null;
                             }
                         }
                     cMethods++;
                     break;
 
                 default:
-                case Capped:
                     throw new IllegalStateException();
+                }
+            if (cMethods == 2 && bodySuper == null)
+                {
+                bodySuper = body;
                 }
             }
 
-        return cMethods > 1;
+        if (bodySuper == null)
+            {
+            return null;
+            }
+
+        SignatureConstant sigSuper = bodySuper.getSignature();
+        if (sigSuper.containsAutoNarrowing(false))
+            {
+            sigSuper = sigSuper.resolveAutoNarrowing(pool(), infoType.getType(), null);
+            }
+        if (sigSuper.containsTypeParameters())
+            {
+            // formal type parameters need to be resolved by the "head"
+            sigSuper = sigSuper.resolveGenericTypes(pool(), getHead().getIdentity());
+            }
+
+        return sigSuper;
         }
 
     /**

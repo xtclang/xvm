@@ -17,6 +17,7 @@ service JsonCounterStore(Catalog catalog, DBObjectInfo info)
     @Override
     protected class Changes
         {
+        @Override
         construct(Int writeId, Future<Int> pendingReadId)
             {
             super(writeId, pendingReadId);

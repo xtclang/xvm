@@ -1323,6 +1323,10 @@ public class Compiler
      */
     public static final String CIRCULAR_INITIALIZER                = "COMPILER-185";
     /**
+     * The "super" function is not defined within a non-virtual constructor.
+     */
+    public static final String NON_VIRTUAL_SUPER                   = "COMPILER-186";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

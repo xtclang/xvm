@@ -16,7 +16,7 @@ const CPDirectory(Object cookie, FileStore? fileStore, Path path, Time created, 
     {
     construct (Object cookie)
         {
-        super(cookie);
+        construct CPFileNode(cookie);
 
         fileStore = new CPFileStore(path.name, cookie);
         path      = ROOT;

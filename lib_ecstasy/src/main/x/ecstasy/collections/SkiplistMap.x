@@ -2499,7 +2499,7 @@ class SkiplistMap<Key extends Orderable, Value>
         {
         construct()
             {
-            super();
+            construct AbstractStore();
 
             // determine the size of the numeric type
             Type numType;
@@ -2677,7 +2677,7 @@ class SkiplistMap<Key extends Orderable, Value>
         {
         construct(Int initCapacity)
             {
-            super();
+            construct AbstractStore();
             contents = new Array<Element|Int>(initCapacity);
             }
 

@@ -10,6 +10,7 @@ import ecstasy.Duplicable;
  */
 class SparseIntSet
         implements OrderedSet<Int>
+        implements Replicable
         implements Duplicable
         implements Freezable
     {

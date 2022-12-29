@@ -7,7 +7,7 @@ class LimitedIterator<Element>
     construct(Iterator<Element> iter, Int remain)
         {
         this.remain = remain;
-        super(iter);
+        construct DelegatingIterator(iter);
         }
 
     protected/private Int remain;

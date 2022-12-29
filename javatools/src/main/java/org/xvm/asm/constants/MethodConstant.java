@@ -15,6 +15,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -27,6 +28,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public class MethodConstant
         extends IdentityConstant
+        implements GenericTypeResolver
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -276,6 +278,30 @@ public class MethodConstant
         {
         assert !isFunction();
         return m_constSig.asBjarneLambdaType(getConstantPool(), getNamespace().getType());
+        }
+
+
+    // ----- GenericTypeResolver interface ---------------------------------------------------------
+
+    @Override
+    public TypeConstant resolveGenericType(String sFormalName)
+        {
+        MethodStructure method = (MethodStructure) getComponent();
+        if (method != null)
+            {
+            // look for a name match only amongst the method's formal type parameters
+            // and replace it with this method's formal type parameter type
+            for (int i = 0, c = method.getTypeParamCount(); i < c; i++)
+                {
+                Parameter param = method.getParam(i);
+
+                if (sFormalName.equals(param.getName()))
+                    {
+                    return param.asTypeParameterConstant(this).getType();
+                    }
+                }
+            }
+        return null;
         }
 
 

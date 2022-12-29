@@ -5,15 +5,17 @@
  */
 class HashSet<Element extends Hashable>
         extends MapSet<Element>
+        implements Replicable
     {
     /**
      * Construct the HashSet with an (optional) initial capacity.
      *
      * @param initCapacity  (optional) the number of expected element values
      */
+    @Override
     construct(Int initCapacity = 0)
         {
-        super(new HashMap<Element, Nullable>(initCapacity));
+        construct MapSet(new HashMap<Element, Nullable>(initCapacity));
         }
 
     /**
@@ -34,7 +36,7 @@ class HashSet<Element extends Hashable>
                 {
                 map.put(value, Null);
                 }
-            super(map);
+            construct MapSet(map);
             }
         }
 

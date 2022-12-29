@@ -1798,7 +1798,7 @@ service Client<Schema extends RootSchema>
         {
         construct(DBObjectInfo info_, CounterStore store_)
             {
-            super(info_, store_);
+            construct DBValueImpl(info_, store_);
             }
 
         @Override

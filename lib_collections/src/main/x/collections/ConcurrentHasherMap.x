@@ -21,6 +21,7 @@ import ecstasy.collections.maps.KeyEntry;
  */
 const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         implements Map<Key, Value>
+        implements Duplicable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -31,7 +32,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
      * @param initCapacity  the number of expected entries
      * @param parallelism   the target parallelism to optimize for
      */
-    @Override
     construct(Hasher<Key> hasher, Int initCapacity = 0, Int parallelism = 16)
         {
         assert:arg parallelism > 0;
@@ -83,7 +83,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
      *                      ConcurrentHasherMap
      * @param parallelism   the target parallelism to optimize for
      */
-    @Override
     construct(Hasher<Key> hasher, Map<Key, Value> that, Int parallelism = 16)
         {
         if (that.is(ConcurrentHasherMap) && hasher == that.hasher)
@@ -111,6 +110,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
      *                      this ConcurrentHasherMap
      * @param parallelism   the target parallelism to optimize for
      */
+    @Override
     construct(ConcurrentHasherMap<Key, Value> that, Int parallelism = 16)
         {
         this.hasher     = that.hasher;
@@ -446,7 +446,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         {
         construct (Iterator<Element> iter1, Iterator<Element> iter2)
             {
-            super(iter1, iter2);
+            construct CompoundIterator(iter1, iter2);
             }
         }
 
