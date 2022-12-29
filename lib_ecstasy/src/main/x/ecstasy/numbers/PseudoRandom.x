@@ -17,7 +17,7 @@ service PseudoRandom(UInt64 seed = 0)
             @Inject Clock clock;
             Time now = clock.now;
 
-            seed = now.date.epochDay.magnitude ^ now.timeOfDay.picos;
+            seed = (now.date.epochDay.toUInt64() ^ now.timeOfDay.picos.toUInt64()).magnitude;
             if (seed == 0)
                 {
                 seed = 42; // RIP DNA

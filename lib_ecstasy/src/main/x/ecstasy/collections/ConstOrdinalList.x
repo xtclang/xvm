@@ -39,18 +39,18 @@ const ConstOrdinalList
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
 
-        Int valueCount = values.size;
-        out.writeInt128(valueCount);
+        Int64 valueCount = values.size.toInt64();
+        out.writeInt64(valueCount);
 
         if (valueCount > 0)
             {
             (Int highest, Int defaultVal) = analyzeValues(values);
-            out.writeInt128(defaultVal);
+            out.writeInt64(defaultVal.toInt64());
 
             // calculate bits per value
-            Int bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x3F;
-            assert 0 < bitsPerVal < 128;
-            out.writeInt128(bitsPerVal);
+            Int64 bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x3F;
+            assert 0 < bitsPerVal <= 63;
+            out.writeInt64(bitsPerVal);
 
             // calculate a minimum run length based on expected node sizes (assume 6 byte overhead)
             Int minRunLen = (6 * 8 - 1) / bitsPerVal + 1;
@@ -63,7 +63,7 @@ const ConstOrdinalList
             ensureFastNode(nodes, values, fastAccess, minRunLen);
 
             // last field in the header is the index of the first value from the first node
-            out.writeInt128(nodes.size == 0 ? valueCount : nodes[0].index);
+            out.writeInt64(nodes.size == 0 ? valueCount : nodes[0].index.toInt64());
 
             if (nodes.size > 0)
                 {
@@ -295,28 +295,27 @@ const ConstOrdinalList
      */
     static Byte[] pack(Int[] vals, Int packFirst, Int packCount, Int bitsPerVal)
         {
-        Int128 mask   = 1 << bitsPerVal-1 >> bitsPerVal;
         Int    binLen = (packCount * bitsPerVal + 7) / 8;
         Byte[] binVal = new Byte[binLen];
 
         for (Int i = 0; i < packCount; ++i)
             {
-            Int128 curVal    = vals[packFirst+i] & mask;
-            Int    bitOffset = i * bitsPerVal;
-            while (curVal != 0)
+            Int128 val       = vals[packFirst+i];
+            Int64  bitOffset = (i * bitsPerVal).toInt64();
+            while (val != 0)
                 {
-                Int  byteOffset = bitOffset / 8;
-                Byte byte       = binVal[byteOffset];
+                Int64 byteOffset = bitOffset / 8;
+                Byte  byte       = binVal[byteOffset];
 
                 // how many bits will fit into this Byte?
-                Int bitCount = 8 - (bitOffset & 0x7);
-                Int bitShift = 8 - bitCount;
+                Int64 bitCount = 8 - (bitOffset & 0x7);
+                Int64 bitShift = 8 - bitCount;
 
-                byte |= (curVal << bitShift).toByte(truncate=True);
+                byte |= (val << bitShift).toByte(); // TODO CP REVIEW GG this should throw .. we need a "slice byte"
                 binVal[byteOffset] = byte;
 
-                curVal     >>>= bitCount;
-                bitOffset    += bitCount;
+                val     >>>= bitCount;
+                bitOffset += bitCount;
                 }
             }
 
@@ -354,17 +353,17 @@ const ConstOrdinalList
      */
     static Int unpackOne(Byte[] contents, Int packedOffset, Int packedIndex, Int bitsPerVal)
         {
-        Int val = 0;
+        Int64 val = 0;
 
         Int bitOffset     = packedIndex * bitsPerVal;
         Int remainingBits = bitsPerVal;
         while (remainingBits > 0)
             {
-            Int  partOffset = bitOffset & 0x7;
-            Int  partLength = (8 - partOffset).minOf(remainingBits);
-            Byte bytePart   = contents[packedOffset + bitOffset / 8] >>> partOffset;
+            Byte  byteVal    = contents[packedOffset + bitOffset / 8];
+            Int64 partOffset = bitOffset.toInt64() & 0x7;
+            Int64 partLength = (8 - partOffset).minOf(remainingBits).toInt64();
 
-            val |= bytePart & (1 << partLength) - 1 << bitsPerVal - remainingBits;
+            val |= byteVal >>> partOffset & (1 << partLength) - 1 << bitsPerVal - remainingBits;
 
             bitOffset      += partLength;
             remainingBits  -= partLength;
@@ -592,7 +591,7 @@ const ConstOrdinalList
      */
     private static void createSkips(Node[] nodes, Range<Int> indexes)
         {
-        Int count = indexes.size;
+        UInt64 count = indexes.size.toUInt64();
         if (count <= 2)
             {
             return;
@@ -625,7 +624,7 @@ const ConstOrdinalList
             Node node = nodes[i];
             assert nodeNext?.index > node.index;
 
-            Int    jumpIndex = node.jumpIndex == 0 ? 0 : node.jumpIndex - node.index;
+            Int64  jumpIndex = node.jumpIndex == 0 ? 0 : (node.jumpIndex - node.index).toInt64();
             Int    valCount  = node.runLenEnc ? -node.length : node.length;
             Int    nextIndex = nodeNext?.index - node.index : valCount;
             Int    val       = 0;
@@ -670,16 +669,16 @@ const ConstOrdinalList
                 }
 
             @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
-            out.writeInt128(jumpIndex);
+            out.writeInt64(jumpIndex.toInt64());
             if (jumpIndex != 0)
                 {
-                out.writeInt128(jumpOffset);
+                out.writeInt64(jumpOffset.toInt64());
                 }
-            out.writeInt128(nextIndex);
-            out.writeInt128(valCount);
+            out.writeInt64(nextIndex.toInt64());
+            out.writeInt64(valCount.toInt64());
             if (node.runLenEnc)
                 {
-                out.writeInt128(val);
+                out.writeInt64(val.toInt64());
                 }
             else
                 {

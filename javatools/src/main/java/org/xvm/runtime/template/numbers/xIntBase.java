@@ -31,6 +31,8 @@ import org.xvm.util.PackedInteger;
 public abstract class xIntBase
         extends xIntNumber
     {
+    public static xInt INSTANCE;
+
     public xIntBase(Container container, ClassStructure structure, boolean fUnsigned)
         {
         super(container, structure, false);

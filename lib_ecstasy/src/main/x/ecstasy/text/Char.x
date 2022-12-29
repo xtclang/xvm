@@ -2,11 +2,7 @@ import collections.ConstOrdinalList;
 
 import io.IllegalUTF;
 
-import numbers.IntConvertible;
-
-
 const Char(UInt32 codepoint)
-        implements IntConvertible
         implements Sequential
         implements Destringable
         default('\u0000')
@@ -17,10 +13,9 @@ const Char(UInt32 codepoint)
         {
         assert codepoint <= 0x10FFFF as $"Character code-point ({codepoint}) out of Unicode range";
 
-        assert !(0xD7FF < codepoint < 0xE000) as
-                $|Character code-point ({codepoint}) is a Unicode surrogate value;\
-                 | surrogate values are not valid Unicode characters
-                ;
+        assert !(0xD7FF < codepoint < 0xE000) as $|Character code-point ({codepoint}) is a surrogate;\
+                                                  | surrogates are not valid Unicode characters
+                                                 ;
         }
 
     /**
@@ -235,28 +230,117 @@ const Char(UInt32 codepoint)
     /**
      * @return the character's codepoint as an integer
      */
-    @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
+    Int toInt()
         {
         return codepoint.toInt();
         }
 
     /**
+     * @return the character's codepoint as an 8-bit signed integer
+     * @throws an exception if the codepoint is not in the range 0..127
+     */
+    Int8 toInt8()
+        {
+        return codepoint.toInt8();
+        }
+
+    /**
+     * @return the character's codepoint as a 16-bit signed integer
+     * @throws an exception if the codepoint is not in the range 0..32767
+     */
+    Int16 toInt16()
+       {
+       return codepoint.toInt16();
+       }
+
+    /**
+     * @return the character's codepoint as a 32-bit signed integer
+     */
+    Int32 toInt32()
+       {
+       return codepoint.toInt32();
+       }
+
+    /**
+     * @return the character's codepoint as a 64-bit signed integer
+     */
+    Int64 toInt64()
+        {
+        return codepoint.toInt64();
+        }
+
+    /**
+     * @return the character's codepoint as a 128-bit signed integer
+     */
+    Int128 toInt128()
+        {
+        return codepoint.toInt128();
+        }
+
+    /**
      * @return the character's codepoint as a variable-length signed integer
      */
-    @Override
-    IntN toIntN(Rounding direction = TowardZero)
+    IntN toIntN()
         {
         return codepoint.toIntN();
         }
 
     /**
+     * @return the character's codepoint as an unsigned integer
+     */
+    UInt toUInt()
+        {
+        return codepoint.toUInt();
+        }
+
+    /**
+     * @return the character's codepoint as an 8-bit unsigned integer
+     * @throws an exception if the codepoint is not in the range 0..255
+     */
+    UInt8 toUInt8()
+        {
+        return codepoint.toUInt8();
+        }
+
+    /**
+     * @return the character's codepoint as a 16-bit unsigned integer
+     * @throws an exception if the codepoint is not in the range 0..65535
+     */
+    UInt16 toUInt16()
+        {
+        return codepoint.toUInt16();
+        }
+
+    /**
      * @return the character's codepoint as a 32-bit unsigned integer
      */
-    @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
+    UInt32 toUInt32()
         {
         return codepoint;
+        }
+
+    /**
+     * @return the character's codepoint as a 64-bit unsigned integer
+     */
+    UInt64 toUInt64()
+        {
+        return codepoint.toUInt64();
+        }
+
+    /**
+     * @return the character's codepoint as a 128-bit unsigned integer
+     */
+    UInt128 toUInt128()
+        {
+        return codepoint.toUInt128();
+        }
+
+    /**
+     * @return the character's codepoint as a variable-length unsigned integer
+     */
+    UIntN toUIntN()
+        {
+        return codepoint.toUIntN();
         }
 
     /**

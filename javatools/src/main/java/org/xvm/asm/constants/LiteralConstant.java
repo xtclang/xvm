@@ -1785,119 +1785,119 @@ public class LiteralConstant
             {
             case IntLiteral:
                 {
-                if (typeOut.equals(pool.typeBit()))
+                if (typeOut == pool.typeBit())
                     {
                     return toBitConstant();
                     }
-                else if (typeOut.equals(pool.typeNibble()))
+                else if (typeOut == pool.typeNibble())
                     {
                     return toNibbleConstant();
                     }
-                else if (typeOut.equals(pool.typeInt()))
+                else if (typeOut == pool.typeInt())
                     {
                     return toIntConstant(Format.Int);
                     }
-                else if (typeOut.equals(pool.typeCInt8()))
+                else if (typeOut == pool.typeCInt8())
                     {
                     return toByteConstant(Format.CInt8);
                     }
-                else if (typeOut.equals(pool.typeInt8()))
+                else if (typeOut == pool.typeInt8())
                     {
                     return toByteConstant(Format.Int8);
                     }
-                else if (typeOut.equals(pool.typeCInt16()))
+                else if (typeOut == pool.typeCInt16())
                     {
                     return toIntConstant(Format.CInt16);
                     }
-                else if (typeOut.equals(pool.typeInt16()))
+                else if (typeOut == pool.typeInt16())
                     {
                     return toIntConstant(Format.Int16);
                     }
-                else if (typeOut.equals(pool.typeCInt32()))
+                else if (typeOut == pool.typeCInt32())
                     {
                     return toIntConstant(Format.CInt32);
                     }
-                else if (typeOut.equals(pool.typeInt32()))
+                else if (typeOut == pool.typeInt32())
                     {
                     return toIntConstant(Format.Int32);
                     }
-                else if (typeOut.equals(pool.typeCInt64()))
+                else if (typeOut == pool.typeCInt64())
                     {
                     return toIntConstant(Format.CInt64);
                     }
-                else if (typeOut.equals(pool.typeInt64()))
+                else if (typeOut == pool.typeInt64())
                     {
                     return toIntConstant(Format.Int64);
                     }
-                else if (typeOut.equals(pool.typeCInt128()))
+                else if (typeOut == pool.typeCInt128())
                     {
                     return toIntConstant(Format.CInt128);
                     }
-                else if (typeOut.equals(pool.typeInt128()))
+                else if (typeOut == pool.typeInt128())
                     {
                     return toIntConstant(Format.Int128);
                     }
-                else if (typeOut.equals(pool.typeCIntN()))
+                else if (typeOut == pool.typeCIntN())
                     {
                     return toIntConstant(Format.CIntN);
                     }
-                else if (typeOut.equals(pool.typeIntN()))
+                else if (typeOut == pool.typeIntN())
                     {
                     return toIntConstant(Format.IntN);
                     }
-                else if (typeOut.equals(pool.typeUInt()))
+                else if (typeOut == pool.typeUInt())
                     {
                     return toIntConstant(Format.UInt);
                     }
-                else if (typeOut.equals(pool.typeCUInt8()))
+                else if (typeOut == pool.typeCUInt8())
                     {
                     return toByteConstant(Format.CUInt8);
                     }
-                else if (typeOut.equals(pool.typeUInt8()))
+                else if (typeOut == pool.typeUInt8())
                     {
                     return toByteConstant(Format.UInt8);
                     }
-                else if (typeOut.equals(pool.typeCUInt16()))
+                else if (typeOut == pool.typeCUInt16())
                     {
                     return toIntConstant(Format.CUInt16);
                     }
-                else if (typeOut.equals(pool.typeUInt16()))
+                else if (typeOut == pool.typeUInt16())
                     {
                     return toIntConstant(Format.UInt16);
                     }
-                else if (typeOut.equals(pool.typeCUInt32()))
+                else if (typeOut == pool.typeCUInt32())
                     {
                     return toIntConstant(Format.CUInt32);
                     }
-                else if (typeOut.equals(pool.typeUInt32()))
+                else if (typeOut == pool.typeUInt32())
                     {
                     return toIntConstant(Format.UInt32);
                     }
-                else if (typeOut.equals(pool.typeCUInt64()))
+                else if (typeOut == pool.typeCUInt64())
                     {
                     return toIntConstant(Format.CUInt64);
                     }
-                else if (typeOut.equals(pool.typeUInt64()))
+                else if (typeOut == pool.typeUInt64())
                     {
                     return toIntConstant(Format.UInt64);
                     }
-                else if (typeOut.equals(pool.typeCUInt128()))
+                else if (typeOut == pool.typeCUInt128())
                     {
                     return toIntConstant(Format.CUInt128);
                     }
-                else if (typeOut.equals(pool.typeUInt128()))
+                else if (typeOut == pool.typeUInt128())
                     {
                     return toIntConstant(Format.UInt128);
                     }
-                else if (typeOut.equals(pool.typeCUIntN()))
+                else if (typeOut == pool.typeCUIntN())
                     {
                     return toIntConstant(Format.CUIntN);
                     }
-                else if (typeOut.equals(pool.typeUIntN()))
+                else if (typeOut == pool.typeUIntN())
                     {
                     return toIntConstant(Format.UIntN);
                     }
-                else if (typeOut.equals(pool.typeFPLiteral()))
+                else if (typeOut == pool.typeFPLiteral())
                     {
                     return pool.ensureLiteralConstant(Format.FPLiteral, getValue());
                     }
