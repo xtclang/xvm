@@ -172,6 +172,127 @@ const UInt
         }
 
 
+    // ----- Bitwise operations (but only a subset -------------------------------------------------
+
+    /**
+     * If any bits are set in this integer, then return an integer with only the most significant
+     * (left-most) of those bits set, otherwise return zero.
+     */
+    @RO UInt leftmostBit.get()
+        {
+        return this == 0
+                ? this
+                : toUInt128().leftmostBit.toUInt();
+        }
+
+    /**
+     * If any bits are set in this integer, then return an integer with only the least significant
+     * (right-most) of those bits set, otherwise return zero.
+     */
+    @RO UInt rightmostBit.get()
+        {
+        return this == 0
+                ? this
+                : toUInt128().rightmostBit.toUInt();
+        }
+
+    /**
+     * The number of bits that are zero following the least significant (right-most) `1` bit.
+     * This scans from right-to-left (least significant to most significant).
+     *
+     * For an integer with `bitCount==1`, this provides the log2 value of the integer.
+     */
+    Int trailingZeroCount.get()
+        {
+        // the UInt is a (max) 127-bit integer
+        return this == 0
+                ? 127
+                : toUInt128().bitCount;
+        }
+
+    /**
+     * The number of bits that are set (non-zero) in the integer. This is also referred to as a
+     * _population count_, or `POPCNT`.
+     */
+    Int bitCount.get()
+        {
+        return toUInt128().bitCount;
+        }
+
+    /**
+     * Bitwise AND.
+     */
+    @Op("&") UInt and(UInt that)
+        {
+        return toUInt128().and(that.toUInt128()).toUInt();
+        }
+
+    /**
+     * Bitwise OR.
+     */
+    @Op("|") UInt or(UInt that)
+        {
+        return toUInt128().or(that.toUInt128()).toUInt();
+        }
+
+    /**
+     * Bitwise XOR.
+     */
+    @Op("^") UInt xor(UInt that)
+        {
+        return toUInt128().xor(that.toUInt128()).toUInt();
+        }
+
+    /**
+     * Bitwise NOT.
+     */
+    @Op("~") UInt not()
+        {
+        // warning: this will almost certainly cause the result to expand to the full 128 bits
+        return (toUInt128().not() & ~(1 << 127)).toUInt();
+        }
+
+    /**
+     * Shift bits left. This is both a logical left shift and arithmetic left shift, for
+     * both signed and unsigned integer values.
+     */
+    @Op("<<") UInt shiftLeft(Int count)
+        {
+        // the UInt is a (max) 127-bit integer, so the left most bit must be zero
+        return (toUInt128().shiftLeft(count) & ~(1<<127)).toUInt();
+        }
+
+    /**
+     * Shift bits right. For signed integer values, this is an arithmetic right shift. For
+     * unsigned integer values, this is both a logical right shift and arithmetic right
+     * shift.
+     */
+    @Op(">>") UInt shiftRight(Int count)
+        {
+        return shiftAllRight(count);
+        }
+
+    /**
+     * "Unsigned" shift bits right. For signed integer values, this is an logical right
+     * shift. For unsigned integer values, this is both a logical right shift and arithmetic
+     * right shift.
+     */
+    @Op(">>>") UInt shiftAllRight(Int count)
+        {
+        return toUInt128().shiftAllRight(count).toUInt();
+        }
+
+    /**
+     * Keep the specified number of least-significant (right-most) bit values unchanged, zeroing any
+     * remaining bits. Note that for negative values, if any bits are zeroed, this will change the
+     * sign of the resulting value.
+     */
+    UInt retainLSBits(Int count)
+        {
+        return toUInt128().retainLSBits(count).toUInt();
+        }
+
+
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override

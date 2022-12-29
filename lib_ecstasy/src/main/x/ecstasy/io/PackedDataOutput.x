@@ -17,25 +17,25 @@ mixin PackedDataOutput
     @Override
     void writeInt16(Int16 value)
         {
-        writeInt64(value);
+        writeInt128(value);
         }
 
     @Override
     void writeInt32(Int32 value)
         {
-        writeInt64(value);
+        writeInt128(value);
         }
 
     @Override
     void writeInt64(Int64 value)
         {
-        writePackedInt(this, value);
+        writeInt128(this, value);
         }
 
     @Override
     void writeInt128(Int128 value)
         {
-        writeIntN(value);
+        writePackedInt(this, value);
         }
 
     @Override

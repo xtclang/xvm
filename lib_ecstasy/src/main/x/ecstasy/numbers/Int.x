@@ -193,6 +193,116 @@ const Int
         }
 
 
+    // ----- Bitwise operations (but only a subset -------------------------------------------------
+
+    /**
+     * If any bits are set in this integer, then return an integer with only the most significant
+     * (left-most) of those bits set, otherwise return zero.
+     */
+    @RO Int leftmostBit.get()
+        {
+        // this will exhibit potentially unexpected behavior for negative values, since -1 can be
+        // stored in a small number of bits but 0x800000000000000000000000000000000 cannot be
+        return this == 0
+                ? this
+                : toInt128().leftmostBit.toInt();
+        }
+
+    /**
+     * If any bits are set in this integer, then return an integer with only the least significant
+     * (right-most) of those bits set, otherwise return zero.
+     */
+    @RO Int rightmostBit.get()
+        {
+        return this == 0
+                ? this
+                : toInt128().rightmostBit.toInt();
+        }
+
+    /**
+     * The number of bits that are zero following the least significant (right-most) `1` bit.
+     * This scans from right-to-left (least significant to most significant).
+     *
+     * For an integer with `bitCount==1`, this provides the log2 value of the integer.
+     */
+    Int trailingZeroCount.get()
+        {
+        return toInt128().bitCount;
+        }
+
+    /**
+     * The number of bits that are set (non-zero) in the integer. This is also referred to as a
+     * _population count_, or `POPCNT`.
+     */
+    Int bitCount.get()
+        {
+        // warning: for negative values, this will almost always return a value larger than the
+        // number of bits used to the Int value itself, as the result of sign extension
+        return toInt128().bitCount;
+        }
+
+    /**
+     * Bitwise AND.
+     */
+    @Op("&") Int and(Int that)
+        {
+        return toInt128().and(that.toInt128()).toInt();
+        }
+
+    /**
+     * Bitwise OR.
+     */
+    @Op("|") Int or(Int that)
+        {
+        return toInt128().or(that.toInt128()).toInt();
+        }
+
+    /**
+     * Bitwise XOR.
+     */
+    @Op("^") Int xor(Int that)
+        {
+        return toInt128().xor(that.toInt128()).toInt();
+        }
+
+    /**
+     * Bitwise NOT.
+     */
+    @Op("~") Int not()
+        {
+        return toInt128().not().toInt();
+        }
+
+    /**
+     * Shift bits left. This is both a logical left shift and arithmetic left shift, for
+     * both signed and unsigned integer values.
+     */
+    @Op("<<") Int shiftLeft(Int count)
+        {
+        return toInt128().shiftLeft(count).toInt();
+        }
+
+    /**
+     * Shift bits right. For signed integer values, this is an arithmetic right shift. For
+     * unsigned integer values, this is both a logical right shift and arithmetic right
+     * shift.
+     */
+    @Op(">>") Int shiftRight(Int count)
+        {
+        return toInt128().shiftRight(count).toInt();
+        }
+
+    /**
+     * Keep the specified number of least-significant (right-most) bit values unchanged, zeroing any
+     * remaining bits. Note that for negative values, if any bits are zeroed, this will change the
+     * sign of the resulting value.
+     */
+    Int retainLSBits(Int count)
+        {
+        return toInt128().retainLSBits(count).toInt();
+        }
+
+
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
