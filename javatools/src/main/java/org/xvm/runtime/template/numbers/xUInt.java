@@ -34,7 +34,7 @@ public class xUInt
     @Override
     protected xIntBase getComplimentaryTemplate()
         {
-        return xXnt.INSTANCE;
+        return xInt.INSTANCE;
         }
 
     @Override

@@ -847,16 +847,16 @@ mixin BitArray<Element extends Bit>
         }
 
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
         if (size > 128)
             {
-            return new Xnt(this);
+            return new Int(this);
             }
 
         // verify that the bit array is sign-extended
         assert:bounds truncate || !this[0 ..< size-128].contains(~this[size-128]);
-        return new Xnt(this[size-128 ..< size]);
+        return new Int(this[size-128 ..< size]);
         }
 
     @Override
@@ -962,7 +962,8 @@ mixin BitArray<Element extends Bit>
     @Override
     IntN toIntN(Rounding direction = TowardZero)
         {
-        Bit[] bits = this;
+        Bit[]  bits = this;
+        UInt64 size = this.size.toUInt64();
         if (size & 0b111 != 0)
             {
             // sign-extend the value out to a byte (8-bit) boundary
@@ -1080,7 +1081,8 @@ mixin BitArray<Element extends Bit>
     @Override
     UIntN toUIntN(Rounding direction = TowardZero)
         {
-        Bit[] bits = this;
+        Bit[]  bits = this;
+        UInt64 size = this.size.toUInt64();
         if (size & 0b111 != 0)
             {
             // zero-extend the value out to a byte (8-bit) boundary

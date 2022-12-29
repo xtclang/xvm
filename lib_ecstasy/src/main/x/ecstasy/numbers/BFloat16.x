@@ -74,13 +74,14 @@ const BFloat16
         // note that this allows one more significant bit than can be stored, because IEEE754 uses
         // an implicit leading '1' bit (for non-zero, and non-sub-normal values) that is not encoded
         // into the resulting IEEE754 value
-        Int sigCount = 64 - significand.leadingZeroCount;
+        // TODO CP: is "64" right?
+        Int sigCount = 64 - significand.toInt16().leadingZeroCount;
         assert:bounds significand > 0 && sigCount - 1 <= SIG_BITS;
         assert:bounds EMIN <= exponent <= EMAX;
 
         Bit[] signBits = negative ? [1] : [0];
         Bit[] expBits  = (exponent + BIAS).toBitArray()[64-EXP_BITS ..< 64];
-        Bit[] sigBits  = (significand << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS ..< 64];
+        Bit[] sigBits  = (significand.toInt16() << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS ..< 64];
         construct BFloat16(signBits + expBits + sigBits);
         }
 

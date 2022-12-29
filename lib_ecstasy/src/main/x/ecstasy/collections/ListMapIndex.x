@@ -101,7 +101,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
         Int      hi   = tree.size - 1;
         while (lo <= hi)
             {
-            Int mid = (lo + hi) >>> 1;
+            Int mid = (lo + hi) / 2;
             OneOrN indexes = tree[mid];
             switch (hashFor(indexes) <=> keyhash)
                 {
@@ -256,7 +256,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
         Int      hi   = tree.size - 1;
         while (lo <= hi)
             {
-            Int    mid     = (lo + hi) >>> 1;
+            Int    mid     = (lo + hi) / 2;
             OneOrN indexes = tree[mid];
             switch (hashFor(indexes) <=> keyhash)
                 {
@@ -316,7 +316,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
         Int      hi   = tree.size - 1;
         while (lo <= hi)
             {
-            Int    mid     = (lo + hi) >>> 1;
+            Int    mid     = (lo + hi) / 2;
             OneOrN indexes = tree[mid];
             switch (hashFor(indexes) <=> keyhash)
                 {

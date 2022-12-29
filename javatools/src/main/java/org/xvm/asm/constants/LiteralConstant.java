@@ -988,21 +988,17 @@ public class LiteralConstant
                 return translateOrder(nOrd, op);
                 }
 
-            case "IntLiteral+Xnt":
-            case "IntLiteral-Xnt":
-            case "IntLiteral*Xnt":
-            case "IntLiteral/Xnt":
-            case "IntLiteral%Xnt":
-            case "IntLiteral&Xnt":
-            case "IntLiteral|Xnt":
-            case "IntLiteral^Xnt":
-            case "IntLiteral==Xnt":
-            case "IntLiteral!=Xnt":
-            case "IntLiteral<Xnt":
-            case "IntLiteral<=Xnt":
-            case "IntLiteral>Xnt":
-            case "IntLiteral>=Xnt":
-            case "IntLiteral<=>Xnt":
+            case "IntLiteral+Int":
+            case "IntLiteral-Int":
+            case "IntLiteral*Int":
+            case "IntLiteral/Int":
+            case "IntLiteral%Int":
+            case "IntLiteral&Int":
+            case "IntLiteral|Int":
+            case "IntLiteral^Int":
+            case "IntLiteral<<Int":
+            case "IntLiteral>>Int":
+            case "IntLiteral>>>Int":
                 // TODO
                 throw new UnsupportedOperationException("TODO CP");
 
@@ -1014,6 +1010,59 @@ public class LiteralConstant
             case "IntLiteral&UInt":
             case "IntLiteral|UInt":
             case "IntLiteral^UInt":
+                {
+                PackedInteger piThis   = this.getPackedInteger();
+                PackedInteger piThat   = ((IntConstant) that).getValue();
+                PackedInteger piResult;
+                switch (op)
+                    {
+                    case ADD:
+                        piResult = piThis.add(piThat);
+                        break;
+                    case SUB:
+                        piResult = piThis.sub(piThat);
+                        break;
+                    case MUL:
+                        piResult = piThis.mul(piThat);
+                        break;
+                    case DIV:
+                        piResult = piThis.div(piThat);
+                        break;
+                    case MOD:
+                        piResult = piThis.mod(piThat);
+                        break;
+                    case BIT_AND:
+                        piResult = piThis.and(piThat);
+                        break;
+                    case BIT_OR:
+                        piResult = piThis.or(piThat);
+                        break;
+                    case BIT_XOR:
+                        piResult = piThis.xor(piThat);
+                        break;
+                    case SHL:
+                        piResult = piThis.shl(piThat);
+                        break;
+                    case SHR:
+                        piResult = piThis.shr(piThat);
+                        break;
+                    case USHR:
+                        piResult = piThis.ushr(piThat);
+                        break;
+                    default:
+                        throw new UnsupportedOperationException(op.TEXT);
+                    }
+                return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(this.getRadix()));
+                }
+
+            case "IntLiteral==Int":
+            case "IntLiteral!=Int":
+            case "IntLiteral<Int":
+            case "IntLiteral<=Int":
+            case "IntLiteral>Int":
+            case "IntLiteral>=Int":
+            case "IntLiteral<=>Int":
+
             case "IntLiteral==UInt":
             case "IntLiteral!=UInt":
             case "IntLiteral<UInt":
@@ -1021,8 +1070,7 @@ public class LiteralConstant
             case "IntLiteral>UInt":
             case "IntLiteral>=UInt":
             case "IntLiteral<=>UInt":
-                // TODO
-                throw new UnsupportedOperationException("TODO CP");
+                return this.toIntConstant(that.getFormat()).apply(op, that);
 
             case "IntLiteral+CInt8":
             case "IntLiteral-CInt8":
@@ -1747,11 +1795,7 @@ public class LiteralConstant
                     }
                 else if (typeOut == pool.typeInt())
                     {
-                    return toIntConstant(Format.Xnt);
-                    }
-                else if (typeOut == pool.typeUInt())
-                    {
-                    return toIntConstant(Format.UInt);
+                    return toIntConstant(Format.Int);
                     }
                 else if (typeOut == pool.typeCInt8())
                     {
@@ -1800,6 +1844,10 @@ public class LiteralConstant
                 else if (typeOut == pool.typeIntN())
                     {
                     return toIntConstant(Format.IntN);
+                    }
+                else if (typeOut == pool.typeUInt())
+                    {
+                    return toIntConstant(Format.UInt);
                     }
                 else if (typeOut == pool.typeCUInt8())
                     {
@@ -1892,7 +1940,7 @@ public class LiteralConstant
 
                 if (pool.typeInt().isA(typeOut))
                     {
-                    return toIntConstant(Format.Xnt);
+                    return toIntConstant(Format.Int);
                     }
                 else if (pool.typeUInt8().isA(typeOut))
                     {

@@ -579,6 +579,8 @@ public abstract class Expression
         MethodConstant idConv = null;
         if (typeRequired != null && fit.isFit() && !isA(ctx, typeActual, typeRequired))
             {
+            typeRequired = typeRequired.removeAutoNarrowing();
+
             // a conversion may be necessary to deliver the required type, but only one
             // conversion (per expression value) is allowed
             if (fit.isConverting() ||

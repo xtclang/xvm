@@ -212,7 +212,7 @@ const UInt8
 
     @Auto
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Auto
     @Override

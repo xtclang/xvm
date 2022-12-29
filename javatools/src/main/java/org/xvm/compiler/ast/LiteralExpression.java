@@ -306,7 +306,7 @@ public class LiteralExpression
                 break;
 
             case LIT_INTA:
-                format = Format.Xnt;
+                format = Format.Int;
                 break;
 
             case LIT_INT8:

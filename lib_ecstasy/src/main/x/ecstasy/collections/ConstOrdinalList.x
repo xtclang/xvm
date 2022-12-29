@@ -39,16 +39,16 @@ const ConstOrdinalList
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
 
-        Int valueCount = values.size;
+        Int64 valueCount = values.size.toInt64();
         out.writeInt64(valueCount);
 
         if (valueCount > 0)
             {
             (Int highest, Int defaultVal) = analyzeValues(values);
-            out.writeInt64(defaultVal);
+            out.writeInt64(defaultVal.toInt64());
 
             // calculate bits per value
-            Int bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x3F;
+            Int64 bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x3F;
             assert 0 < bitsPerVal <= 63;
             out.writeInt64(bitsPerVal);
 
@@ -63,7 +63,7 @@ const ConstOrdinalList
             ensureFastNode(nodes, values, fastAccess, minRunLen);
 
             // last field in the header is the index of the first value from the first node
-            out.writeInt64(nodes.size == 0 ? valueCount : nodes[0].index);
+            out.writeInt64(nodes.size == 0 ? valueCount : nodes[0].index.toInt64());
 
             if (nodes.size > 0)
                 {
@@ -300,16 +300,16 @@ const ConstOrdinalList
 
         for (Int i = 0; i < packCount; ++i)
             {
-            Int val       = vals[packFirst+i];
-            Int bitOffset = i * bitsPerVal;
+            Int128 val       = vals[packFirst+i];
+            Int64  bitOffset = (i * bitsPerVal).toInt64();
             while (val != 0)
                 {
-                Int  byteOffset = bitOffset / 8;
-                Byte byte       = binVal[byteOffset];
+                Int64 byteOffset = bitOffset / 8;
+                Byte  byte       = binVal[byteOffset];
 
                 // how many bits will fit into this Byte?
-                Int bitCount = 8 - (bitOffset & 0x7);
-                Int bitShift = 8 - bitCount;
+                Int64 bitCount = 8 - (bitOffset & 0x7);
+                Int64 bitShift = 8 - bitCount;
 
                 byte |= (val << bitShift).toByte(); // TODO CP REVIEW GG this should throw .. we need a "slice byte"
                 binVal[byteOffset] = byte;
@@ -353,15 +353,15 @@ const ConstOrdinalList
      */
     static Int unpackOne(Byte[] contents, Int packedOffset, Int packedIndex, Int bitsPerVal)
         {
-        Int val = 0;
+        Int64 val = 0;
 
         Int bitOffset     = packedIndex * bitsPerVal;
         Int remainingBits = bitsPerVal;
         while (remainingBits > 0)
             {
-            Int  byteVal    = contents[packedOffset + bitOffset / 8];
-            Int  partOffset = bitOffset & 0x7;
-            Int  partLength = (8 - partOffset).minOf(remainingBits);
+            Byte  byteVal    = contents[packedOffset + bitOffset / 8];
+            Int64 partOffset = bitOffset.toInt64() & 0x7;
+            Int64 partLength = (8 - partOffset).minOf(remainingBits).toInt64();
 
             val |= byteVal >>> partOffset & (1 << partLength) - 1 << bitsPerVal - remainingBits;
 
@@ -591,7 +591,7 @@ const ConstOrdinalList
      */
     private static void createSkips(Node[] nodes, Range<Int> indexes)
         {
-        Int count = indexes.size;
+        UInt64 count = indexes.size.toUInt64();
         if (count <= 2)
             {
             return;
@@ -624,7 +624,7 @@ const ConstOrdinalList
             Node node = nodes[i];
             assert nodeNext?.index > node.index;
 
-            Int    jumpIndex = node.jumpIndex == 0 ? 0 : node.jumpIndex - node.index;
+            Int64  jumpIndex = node.jumpIndex == 0 ? 0 : (node.jumpIndex - node.index).toInt64();
             Int    valCount  = node.runLenEnc ? -node.length : node.length;
             Int    nextIndex = nodeNext?.index - node.index : valCount;
             Int    val       = 0;
@@ -669,16 +669,16 @@ const ConstOrdinalList
                 }
 
             @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
-            out.writeInt64(jumpIndex);
+            out.writeInt64(jumpIndex.toInt64());
             if (jumpIndex != 0)
                 {
-                out.writeInt64(jumpOffset);
+                out.writeInt64(jumpOffset.toInt64());
                 }
-            out.writeInt64(nextIndex);
-            out.writeInt64(valCount);
+            out.writeInt64(nextIndex.toInt64());
+            out.writeInt64(valCount.toInt64());
             if (node.runLenEnc)
                 {
-                out.writeInt64(val);
+                out.writeInt64(val.toInt64());
                 }
             else
                 {

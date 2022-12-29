@@ -80,7 +80,7 @@ public class IntConstant
                 cBytes    = 8;
                 fUnsigned = false;
                 break;
-            case Xnt:
+            case Int:
             case CInt128:
             case Int128:
                 cBytes    = 16;
@@ -166,7 +166,7 @@ public class IntConstant
         {
         switch (m_fmt)
             {
-            case Xnt:
+            case Int:
             case CInt16:
             case Int16:
             case CInt32:
@@ -204,8 +204,6 @@ public class IntConstant
         {
         switch (m_fmt)
             {
-            case Xnt:
-            case UInt:
             case Int16:
             case Int32:
             case Int64:
@@ -218,11 +216,13 @@ public class IntConstant
             case UIntN:
                 return true;
 
+            case Int:
             case CInt16:
             case CInt32:
             case CInt64:
             case CInt128:
             case CIntN:
+            case UInt:
             case CUInt16:
             case CUInt32:
             case CUInt64:
@@ -296,7 +296,7 @@ public class IntConstant
             case UInt64:
                 return 8;
 
-            case Xnt:
+            case Int:
             case UInt:
             case CInt128:
             case Int128:
@@ -338,7 +338,7 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MIN;
 
-            case Xnt:
+            case Int:
             case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MIN;
@@ -395,7 +395,7 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MAX;
 
-            case Xnt:
+            case Int:
             case UInt:
             case CInt128:
             case Int128:
@@ -576,7 +576,7 @@ public class IntConstant
             {
             // TODO .is() / .as()
 
-            case "+Xnt":
+            case "+Int":
             case "+UInt":
             case "+Int16":
             case "+Int32":
@@ -590,7 +590,7 @@ public class IntConstant
             case "+UIntN":
                 return this;
 
-            case "-Xnt":
+            case "-Int":
             case "-UInt":
             case "-Int16":
             case "-Int32":
@@ -616,20 +616,20 @@ public class IntConstant
             case "~UIntN":
                 return validate(this.getValue().complement());
 
-            case "Xnt+IntLiteral":
-            case "Xnt-IntLiteral":
-            case "Xnt*IntLiteral":
-            case "Xnt/IntLiteral":
-            case "Xnt%IntLiteral":
-            case "Xnt..IntLiteral":
-            case "Xnt..<IntLiteral":
-            case "Xnt==IntLiteral":
-            case "Xnt!=IntLiteral":
-            case "Xnt<IntLiteral":
-            case "Xnt<=IntLiteral":
-            case "Xnt>IntLiteral":
-            case "Xnt>=IntLiteral":
-            case "Xnt<=>IntLiteral":
+            case "Int+IntLiteral":
+            case "Int-IntLiteral":
+            case "Int*IntLiteral":
+            case "Int/IntLiteral":
+            case "Int%IntLiteral":
+            case "Int..IntLiteral":
+            case "Int..<IntLiteral":
+            case "Int==IntLiteral":
+            case "Int!=IntLiteral":
+            case "Int<IntLiteral":
+            case "Int<=IntLiteral":
+            case "Int>IntLiteral":
+            case "Int>=IntLiteral":
+            case "Int<=>IntLiteral":
 
             case "UInt+IntLiteral":
             case "UInt-IntLiteral":
@@ -850,7 +850,7 @@ public class IntConstant
             case "UIntN>>>IntLiteral":
                 return apply(op, ((LiteralConstant) that).toIntConstant(Format.CInt64));
 
-            case "Xnt+Xnt":
+            case "Int+Int":
             case "UInt+UInt":
             case "Int16+Int16":
             case "Int32+Int32":
@@ -864,7 +864,7 @@ public class IntConstant
             case "UIntN+UIntN":
                 return validate(this.getValue().add(((IntConstant) that).getValue()));
 
-            case "Xnt-Xnt":
+            case "Int-Int":
             case "UInt-UInt":
             case "Int16-Int16":
             case "Int32-Int32":
@@ -878,7 +878,7 @@ public class IntConstant
             case "UIntN-UIntN":
                 return validate(this.getValue().sub(((IntConstant) that).getValue()));
 
-            case "Xnt*Xnt":
+            case "Int*Int":
             case "UInt*UInt":
             case "Int16*Int16":
             case "Int32*Int32":
@@ -892,7 +892,7 @@ public class IntConstant
             case "UIntN*UIntN":
                 return validate(this.getValue().mul(((IntConstant) that).getValue()));
 
-            case "Xnt/Xnt":
+            case "Int/Int":
             case "UInt/UInt":
             case "Int16/Int16":
             case "Int32/Int32":
@@ -906,7 +906,7 @@ public class IntConstant
             case "UIntN/UIntN":
                 return validate(this.getValue().div(((IntConstant) that).getValue()));
 
-            case "Xnt%Xnt":
+            case "Int%Int":
             case "UInt%UInt":
             case "Int16%Int16":
             case "Int32%Int32":
@@ -956,7 +956,7 @@ public class IntConstant
             case "UIntN^UIntN":
                 return validate(this.getValue().xor(((IntConstant) that).getValue()));
 
-            case "Xnt..Xnt":
+            case "Int..Int":
             case "UInt..UInt":
             case "Int16..Int16":
             case "Int32..Int32":
@@ -970,7 +970,7 @@ public class IntConstant
             case "UIntN..UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
 
-            case "Xnt..<Xnt":
+            case "Int..<Int":
             case "UInt..<UInt":
             case "Int16..<Int16":
             case "Int32..<Int32":
@@ -984,7 +984,7 @@ public class IntConstant
             case "UIntN..<UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
 
-            case "Xnt>..Xnt":
+            case "Int>..Int":
             case "UInt>..UInt":
             case "Int16>..Int16":
             case "Int32>..Int32":
@@ -998,7 +998,7 @@ public class IntConstant
             case "UIntN>..UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
 
-            case "Xnt>..<Xnt":
+            case "Int>..<Int":
             case "UInt>..<UInt":
             case "Int16>..<Int16":
             case "Int32>..<Int32":
@@ -1022,6 +1022,16 @@ public class IntConstant
             case "UInt64<<Int64":
             case "UInt128<<Int64":
             case "UIntN<<Int64":
+            case "Int16<<Int":
+            case "Int32<<Int":
+            case "Int64<<Int":
+            case "Int128<<Int":
+            case "IntN<<Int":
+            case "UInt16<<Int":
+            case "UInt32<<Int":
+            case "UInt64<<Int":
+            case "UInt128<<Int":
+            case "UIntN<<Int":
                 return validate(this.getValue().shl(((IntConstant) that).getValue()));
 
             case "Int16>>Int64":
@@ -1034,6 +1044,16 @@ public class IntConstant
             case "UInt64>>Int64":
             case "UInt128>>Int64":
             case "UIntN>>Int64":
+            case "Int16>>Int":
+            case "Int32>>Int":
+            case "Int64>>Int":
+            case "Int128>>Int":
+            case "IntN>>Int":
+            case "UInt16>>Int":
+            case "UInt32>>Int":
+            case "UInt64>>Int":
+            case "UInt128>>Int":
+            case "UIntN>>Int":
                 return validate(this.getValue().shr(((IntConstant) that).getValue()));
 
             case "Int16>>>Int64":
@@ -1046,9 +1066,19 @@ public class IntConstant
             case "UInt64>>>Int64":
             case "UInt128>>>Int64":
             case "UIntN>>>Int64":
+            case "Int16>>>Int":
+            case "Int32>>>Int":
+            case "Int64>>>Int":
+            case "Int128>>>Int":
+            case "IntN>>>Int":
+            case "UInt16>>>Int":
+            case "UInt32>>>Int":
+            case "UInt64>>>Int":
+            case "UInt128>>>Int":
+            case "UIntN>>>Int":
                 return validate(this.getValue().ushr(((IntConstant) that).getValue()));
 
-            case "Xnt==Xnt":
+            case "Int==Int":
             case "UInt==UInt":
             case "Int16==Int16":
             case "Int32==Int32":
@@ -1061,7 +1091,7 @@ public class IntConstant
             case "UInt128==UInt128":
             case "UIntN==UIntN":
 
-            case "Xnt!=Xnt":
+            case "Int!=Int":
             case "UInt!=UInt":
             case "Int16!=Int16":
             case "Int32!=Int32":
@@ -1074,7 +1104,7 @@ public class IntConstant
             case "UInt128!=UInt128":
             case "UIntN!=UIntN":
 
-            case "Xnt<Xnt":
+            case "Int<Int":
             case "UInt<UInt":
             case "Int16<Int16":
             case "Int32<Int32":
@@ -1087,7 +1117,7 @@ public class IntConstant
             case "UInt128<UInt128":
             case "UIntN<UIntN":
 
-            case "Xnt<=Xnt":
+            case "Int<=Int":
             case "UInt<=UInt":
             case "Int16<=Int16":
             case "Int32<=Int32":
@@ -1100,7 +1130,7 @@ public class IntConstant
             case "UInt128<=UInt128":
             case "UIntN<=UIntN":
 
-            case "Xnt>Xnt":
+            case "Int>Int":
             case "UInt>UInt":
             case "Int16>Int16":
             case "Int32>Int32":
@@ -1113,7 +1143,7 @@ public class IntConstant
             case "UInt128>UInt128":
             case "UIntN>UIntN":
 
-            case "Xnt>=Xnt":
+            case "Int>=Int":
             case "UInt>=UInt":
             case "Int16>=Int16":
             case "Int32>=Int32":
@@ -1126,7 +1156,7 @@ public class IntConstant
             case "UInt128>=UInt128":
             case "UIntN>=UIntN":
 
-            case "Xnt<=>Xnt":
+            case "Int<=>Int":
             case "UInt<=>UInt":
             case "Int16<=>Int16":
             case "Int32<=>Int32":

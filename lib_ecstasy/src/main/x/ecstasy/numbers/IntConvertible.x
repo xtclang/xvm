@@ -18,7 +18,7 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the signed integer range
      *                      and `truncate` is not `True`
      */
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return toIntN(direction).toInt(truncate);
         }

@@ -112,7 +112,7 @@ public class xArray
                 // must not be called
                 // 1) construct(Int size, Element | function Element (Int) supply)
                 // 2) construct(Mutability mutability, Element... elements)
-                if (typeParam0.equals(pool.typeCInt64()))
+                if (typeParam0.equals(pool.typeInt()))
                     {
                     CONSTRUCTORS[1] = method.getIdentityConstant();
                     }
@@ -321,7 +321,7 @@ public class xArray
                         if (typeValue.isA(pool.typeFunction()))
                             {
                             TypeConstant[] atypeParam = pool.extractFunctionParams(typeValue);
-                            if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeCInt64()))
+                            if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeInt()))
                                 {
                                 break IsFunction;
                                 }

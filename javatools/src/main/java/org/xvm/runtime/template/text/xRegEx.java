@@ -75,7 +75,7 @@ public class xRegEx
         m_clzMatchStruct   = clzMatch.ensureAccess(Constants.Access.STRUCT);
         m_constructorMatch = templateMatch.getStructure().findMethod("construct", 3);
 
-        TypeConstant typeRange = pool.ensureRangeType(pool.typeCInt64());
+        TypeConstant typeRange = pool.ensureRangeType(pool.typeInt());
         m_clzRangeOfInt = f_container.resolveClass(typeRange);
 
         TypeConstant typeRangeArray = pool.ensureArrayType(pool.ensureNullableTypeConstant(typeRange));

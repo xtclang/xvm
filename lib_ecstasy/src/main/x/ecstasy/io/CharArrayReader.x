@@ -66,10 +66,10 @@ class CharArrayReader(immutable Char[] chars)
             assert:arg lineNumber >= 0 && lineNumber <= 0xFFFFF;
             assert:arg lineOffset >= 0 && lineOffset <= 0xFFFFF;
 
-            combo = offset << 20 | lineNumber << 20 | lineOffset;
+            combo = offset.toInt64() << 20 | lineNumber.toInt64() << 20 | lineOffset.toInt64();
             }
 
-        private Int combo;
+        private Int64 combo;
 
         @Override
         Int offset.get()

@@ -33,13 +33,13 @@ const Dec
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
-    @Override
+    @Override // TODO GG: this should not compile
     construct(Bit[] bits)
         {
         switch (bits.size)
             {
             case 28, 32, 60, 64, 128:
-                super(bits);
+                construct DecimalFPNumber(bits);
                 break;
 
             default:
@@ -59,7 +59,7 @@ const Dec
         switch (bytes.size)
             {
             case 4, 8, 16:
-                super(bytes);
+                construct DecimalFPNumber(bytes);
                 break;
 
             default:
@@ -478,7 +478,7 @@ const Dec
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Dec> Int hashCode(CompileType value)
+    static <CompileType extends Dec> Int64 hashCode(CompileType value)
         {
         return value.toDec128().hashCode();
         }

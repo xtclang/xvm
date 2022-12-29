@@ -20,6 +20,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.numbers.xUncheckedInt16;
 import org.xvm.runtime.template.numbers.xUncheckedInt32;
 import org.xvm.runtime.template.numbers.xUncheckedInt64;
@@ -72,6 +73,9 @@ public class xAtomicVar
         Map<TypeConstant, xAtomicIntNumber> mapTemplates = new HashMap<>();
 
         // checked
+        // TODO GG: implement atomics
+        // mapTemplates.put(pool.typeInt(),     new xAtomicIntNumber(xInt  .INSTANCE));
+        // mapTemplates.put(pool.typeUInt(),     new xAtomicUIntNumber(xInt  .INSTANCE));
         mapTemplates.put(pool.typeCInt8(),   new xAtomicIntNumber(xInt8 .INSTANCE));
         mapTemplates.put(pool.typeCInt16(),  new xAtomicIntNumber(xInt16.INSTANCE));
         mapTemplates.put(pool.typeCInt32(),  new xAtomicIntNumber(xInt32.INSTANCE));

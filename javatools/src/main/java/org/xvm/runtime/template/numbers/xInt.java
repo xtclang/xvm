@@ -15,12 +15,12 @@ import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 /**
  * Native Int support.
  */
-public class xXnt
+public class xInt
         extends xIntBase
     {
-    public static xXnt INSTANCE;
+    public static xInt INSTANCE;
 
-    public xXnt(Container container, ClassStructure structure, boolean fInstance)
+    public xInt(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, /*signed*/ true);
 

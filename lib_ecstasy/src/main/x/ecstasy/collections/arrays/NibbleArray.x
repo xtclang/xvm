@@ -84,9 +84,9 @@ mixin NibbleArray<Element extends Nibble>
                             {
                             assert:bounds index < size;
                             Int    nibbleIndex   = index/4;
-                            Int    oldValue      = nibbles[nibbleIndex];
-                            Int    mask          = 1 << index%4;
-                            Int    newValue      = v == 1 ? oldValue | mask : oldValue & ~mask;
+                            Int64  oldValue      = nibbles[nibbleIndex];
+                            Int64  mask          = 1 << index%4;
+                            Int64  newValue      = v == 1 ? oldValue | mask : oldValue & ~mask;
                             nibbles[nibbleIndex] = newValue.toNibble();
                             }
                         }
@@ -261,7 +261,7 @@ mixin NibbleArray<Element extends Nibble>
         }
 
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return asBitArray().toInt(truncate, direction);
         }

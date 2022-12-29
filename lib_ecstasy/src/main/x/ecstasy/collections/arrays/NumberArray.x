@@ -588,7 +588,7 @@ mixin NumberArray<Element extends Number>
      * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
      *                      exactly matches the size of the result
      */
-    Xnt toInt()
+    Int toInt()
         {
         return asBitArray().toInt();
         }

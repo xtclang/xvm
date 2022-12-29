@@ -803,7 +803,7 @@ public abstract class Constant
         IntLiteral("numbers"),
         Bit       ("numbers"),
         Nibble    ("numbers"),
-        Xnt       ("numbers"),
+        Int       ("numbers"),
         CInt8     ("numbers"),  // C=Checked (aka a constrained integer)
         Int8      ("numbers"),  // no "C" means @Unchecked
         CInt16    ("numbers"),
@@ -995,7 +995,7 @@ public abstract class Constant
             {
             return switch (this)
                 {
-                case Xnt      -> pool.typeInt();
+                case Int      -> pool.typeInt();
                 case CInt8    -> pool.typeCInt8();
                 case Int8     -> pool.typeInt8();
                 case CInt16   -> pool.typeCInt16();

@@ -63,7 +63,7 @@
     Int significandBitLength.get()
         {
         // k – round(4 × log2 (k)) + 12
-        Int k = bitLength;
+        Int64 k = bitLength.toInt64();
         return k - 4 * k.trailingZeroCount + 12;
         }
 
@@ -71,7 +71,7 @@
     Int exponentBitLength.get()
         {
         // round(4 × log2 (k)) – 13
-        Int k = bitLength;
+        Int64 k = bitLength.toInt64();
         return 4 * k.trailingZeroCount - 13;
         }
 

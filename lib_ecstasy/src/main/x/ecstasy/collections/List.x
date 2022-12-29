@@ -63,7 +63,7 @@ interface List<Element>
             Int hi = size - 1;
             while (lo <= hi)
                 {
-                Int     mid = (lo + hi) >>> 1;
+                Int     mid = (lo + hi) / 2;
                 Element cur = this[mid];
                 switch (orderer(value, cur))
                     {
@@ -489,7 +489,7 @@ interface List<Element>
                 Int last  = size - 1;
                 do
                     {
-                    Int midpoint = (first + last) >>> 1;
+                    Int midpoint = (first + last) / 2;
                     switch (order(this[midpoint]))
                         {
                         case Lesser:

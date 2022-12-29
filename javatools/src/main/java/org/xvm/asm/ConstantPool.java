@@ -390,7 +390,7 @@ public class ConstantPool
                     };
                 }
 
-            case Xnt:
+            case Int:
             case UInt:
             case CInt16:
             case Int16:
@@ -491,7 +491,7 @@ public class ConstantPool
      *
      * @param pint    the PackedInteger value
      * @param format  the format of the integer constant, one of
-     *                {@link Format#Xnt}, {@link Format#UInt}, {@link Format#CInt16},
+     *                {@link Format#Int}, {@link Format#UInt}, {@link Format#CInt16},
      *                {@link Format#Int16}, {@link Format#CInt32}, {@link Format#Int32},
      *                {@link Format#CInt64}, {@link Format#Int64}, {@link Format#CInt128},
      *                {@link Format#Int128}, {@link Format#CIntN}, {@link Format#IntN},
@@ -506,7 +506,7 @@ public class ConstantPool
         {
         switch (format)
             {
-            case Xnt:
+            case Int:
             case UInt:
             case CInt16:
             case Int16:
@@ -2469,7 +2469,7 @@ public class ConstantPool
     protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"            );}
     protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                  );}
     protected ClassConstant  clzNibble()       {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"               );}
-    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Xnt"                  );}
+    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Int"                  );}
     protected ClassConstant  clzUInt()         {return (ClassConstant) getImplicitlyImportedIdentity("UInt"                 );}
     protected ClassConstant  clzDec()          {return (ClassConstant) getImplicitlyImportedIdentity("Dec"                  );}
     protected ClassConstant  clzCInt8()        {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                 );}
@@ -2687,7 +2687,7 @@ public class ConstantPool
                     constant = new ByteConstant(this, format, in);
                     break;
 
-                case Xnt:
+                case Int:
                 case UInt:
                 case CInt16:
                 case Int16:

@@ -228,6 +228,14 @@ const Char(UInt32 codepoint)
     // number, and a conversion fails if the codepoint is out of range of the desired type
 
     /**
+     * @return the character's codepoint as an integer
+     */
+    Int toInt()
+        {
+        return codepoint.toInt();
+        }
+
+    /**
      * @return the character's codepoint as an 8-bit signed integer
      * @throws an exception if the codepoint is not in the range 0..127
      */
@@ -275,6 +283,14 @@ const Char(UInt32 codepoint)
     IntN toIntN()
         {
         return codepoint.toIntN();
+        }
+
+    /**
+     * @return the character's codepoint as an unsigned integer
+     */
+    UInt toUInt()
+        {
+        return codepoint.toUInt();
         }
 
     /**
@@ -357,9 +373,9 @@ const Char(UInt32 codepoint)
         if (codepoint <= 0x7F)
             {
             return 0x09 <= codepoint <= 0x20
-                    //                              2               1      0
-                    //                              0FEDCBA9876543210FEDCBA9
-                    && 1.as(Int) << codepoint-9 & 0b111110100000000000011111 != 0;
+                    //                             2               1      0
+                    //                             0FEDCBA9876543210FEDCBA9
+                    && UInt64:1 << codepoint-9 & 0b111110100000000000011111 != 0;
             }
 
         return switch (codepoint)

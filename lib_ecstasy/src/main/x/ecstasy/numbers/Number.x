@@ -492,7 +492,7 @@
             case @Unchecked Int128  : n -> n.toInt128() .toUnchecked().as(To);
             case @Unchecked IntN    : n -> n.toIntN()   .toUnchecked().as(To);
 
-            case Xnt                : n -> n.toInt()                  .as(To);
+            case Int                : n -> n.toInt()                  .as(To);
             case Int8               : n -> n.toInt8()                 .as(To);
             case Int16              : n -> n.toInt16()                .as(To);
             case Int32              : n -> n.toInt32()                .as(To);

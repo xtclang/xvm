@@ -709,7 +709,7 @@ class Lexer
                         return LitNibble, value.toNibble();
 
                     case "Int":
-                        IntLiteral value = eatIntLiteral(before, Xnt.MinValue, Xnt.MaxValue, True);
+                        IntLiteral value = eatIntLiteral(before, Int.MinValue, Int.MaxValue, True);
                         return LitInt, value.toInt();
                     case "Int8":
                         IntLiteral value = eatIntLiteral(before, Int8.MinValue, Int8.MaxValue, True);
@@ -2288,13 +2288,13 @@ class Lexer
 
                         maybeHex: if (hexits > 0)
                             {
-                            Int codepoint = 0;
+                            UInt32 codepoint = 0;
                             while (hexits > 0)
                                 {
                                 if (Char chX := reader.next())
                                     {
                                     ++rewind;
-                                    if (Int n := chX.asciiHexit())
+                                    if (UInt8 n := chX.asciiHexit())
                                         {
                                         codepoint = codepoint << 4 | n;
                                         }
@@ -2968,7 +2968,7 @@ class Lexer
         LitString    <String    >(Null             ),
         LitBinStr    <Byte[]    >(Null             ),
         LitIntStr    <IntLiteral>(Null             ),
-        LitInt       <Xnt       >(Null             ),
+        LitInt       <Int       >(Null             ),
         LitInt8      <Int8      >(Null             ),
         LitInt16     <Int16     >(Null             ),
         LitInt32     <Int32     >(Null             ),

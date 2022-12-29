@@ -27,7 +27,7 @@ mixin PackedDataInput
     @Override
     Int64 readInt64()
         {
-        return readPackedInt(this);
+        return readPackedInt(this).toInt64();
         }
 
     @Override

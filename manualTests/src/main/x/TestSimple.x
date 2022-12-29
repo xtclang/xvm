@@ -4,7 +4,7 @@ module TestSimple
 
     void run()
         {
-        Xnt i;
+        Int i;
 
         i = Int64.MaxValue;  // 9223372036854775807 (0x7FFFFFFFFFFFFFFF)
         console.println("i=Int64.MaxValue");

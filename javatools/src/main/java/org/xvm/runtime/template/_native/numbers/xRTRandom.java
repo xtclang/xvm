@@ -67,7 +67,6 @@ public class xRTRandom
         String[] BITARRAY  = new String[] {"collections.Array<numbers.Bit>"};
         String[] BYTE      = new String[] {"numbers.UInt8"};
         String[] BYTEARRAY = new String[] {"collections.Array<numbers.UInt8>"};
-        String[] XNT       = new String[] {"numbers.Xnt"};
         String[] UINT      = new String[] {"numbers.UInt"};
         String[] INT8      = new String[] {"numbers.Int8"};
         String[] INT16     = new String[] {"numbers.Int16"};
@@ -84,7 +83,7 @@ public class xRTRandom
         markNativeMethod("bit"    , VOID     , BIT      );
         markNativeMethod("fill"   , BITARRAY , BITARRAY );
         markNativeMethod("fill"   , BYTEARRAY, BYTEARRAY);
-        markNativeMethod("xnt"    , XNT      , XNT      );
+        markNativeMethod("int"    , INT      , INT      );
         markNativeMethod("uint"   , UINT     , UINT     );
         markNativeMethod("int8"   , VOID     , INT8     );
         markNativeMethod("int16"  , VOID     , INT16    );
@@ -137,8 +136,8 @@ public class xRTRandom
                 return Op.R_NEXT;
                 }
 
-            case "xnt":
-                // TODO hArg is a Xnt handle
+            case "int":
+                // TODO hArg is a Int handle
                 return invokeInt(frame, hTarget, hArg, iReturn);
 
             case "uint":

@@ -25,19 +25,19 @@
  * real-time de-optimization to handle unexpected and otherwise-unsupported conditions, there will
  * be significant and unavoidable one-time costs, every time such a scenario is encountered.
  */
-const Xnt  // TODO rename as Int
+const Int
         extends IntNumber
         default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * The minimum value for an Xnt.
+     * The minimum value for an Int.
      */
     static IntLiteral MinValue = Int128.MinValue;
 
     /**
-     * The maximum value for an Xnt.
+     * The maximum value for an Int.
      */
     static IntLiteral MaxValue = Int128.MaxValue;
 
@@ -51,19 +51,19 @@ const Xnt  // TODO rename as Int
         }
 
     @Override
-    static Xnt zero()
+    static Int zero()
         {
         return 0;
         }
 
     @Override
-    static Xnt one()
+    static Int one()
         {
         return 1;
         }
 
     @Override
-    static conditional Range<Xnt> range()
+    static conditional Range<Int> range()
         {
         return True, MinValue..MaxValue;
         }
@@ -105,7 +105,7 @@ const Xnt  // TODO rename as Int
     @Override
     construct(String text)
         {
-        construct Xnt(new IntLiteral(text).toInt().bits);
+        construct Int(new IntLiteral(text).toInt().bits);
         }
 
 
@@ -133,56 +133,56 @@ const Xnt  // TODO rename as Int
 
     @Override
     @Op("-#")
-    Xnt neg()
+    Int neg()
         {
         TODO
         }
 
     @Override
     @Op("+")
-    Xnt add(Xnt! n)
+    Int add(Int! n)
         {
         TODO
         }
 
     @Override
     @Op("-")
-    Xnt sub(Xnt! n)
+    Int sub(Int! n)
         {
         TODO
         }
 
     @Override
     @Op("*")
-    Xnt mul(Xnt! n)
+    Int mul(Int! n)
         {
         TODO
         }
 
     @Override
     @Op("/")
-    Xnt div(Xnt! n)
+    Int div(Int! n)
         {
         TODO
         }
 
     @Override
     @Op("%")
-    Xnt mod(Xnt! n)
+    Int mod(Int! n)
         {
         TODO
         }
 
     @Override
-    Xnt abs()
+    Int abs()
         {
         return this < 0 ? -this : this;
         }
 
     @Override
-    Xnt pow(Xnt! n)
+    Int pow(Int! n)
         {
-        Xnt result = 1;
+        Int result = 1;
 
         while (n-- > 0)
             {
@@ -196,7 +196,7 @@ const Xnt  // TODO rename as Int
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional Xnt next()
+    conditional Int next()
         {
         if (this < MaxValue)
             {
@@ -207,7 +207,7 @@ const Xnt  // TODO rename as Int
         }
 
     @Override
-    conditional Xnt prev()
+    conditional Int prev()
         {
         if (this > MinValue)
             {
@@ -221,7 +221,7 @@ const Xnt  // TODO rename as Int
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
         return this;
         }
@@ -366,13 +366,13 @@ const Xnt  // TODO rename as Int
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Xnt> Int64 hashCode(CompileType value)
+    static <CompileType extends Int> Int64 hashCode(CompileType value)
         {
         return value.bits.hashCode();
         }
 
     @Override
-    static <CompileType extends Xnt> Boolean equals(CompileType value1, CompileType value2)
+    static <CompileType extends Int> Boolean equals(CompileType value1, CompileType value2)
         {
         return value1.bits == value2.bits;
         }

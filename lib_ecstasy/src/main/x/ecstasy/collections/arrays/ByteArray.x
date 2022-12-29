@@ -195,7 +195,7 @@ mixin ByteArray<Element extends Byte>
         // the result, and the next byte provides bits 0..7 of the result
         if (b & 0x02 != 0)
             {
-            Int n = (b >> 3).toInt64() << 8 | this[index+1];
+            Int64 n = (b >> 3).toInt64() << 8 | this[index+1];
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             return b & 0x04 != 0
@@ -210,10 +210,10 @@ mixin ByteArray<Element extends Byte>
 
         Int  curOffset  = index + 1;
         Int  nextOffset = curOffset + byteCount;
-        Int  n          = new Int8(this[curOffset++].toBitArray());     // sign-extend
+        Int8 n          = new Int8(this[curOffset++].toBitArray());     // sign-extend
         while (curOffset < nextOffset)
             {
-            n = n << 8 | this[curOffset++];
+            n = n << 8 | this[curOffset++].toInt8();
             }
         return n, nextOffset;
         }

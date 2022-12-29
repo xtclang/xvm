@@ -1023,9 +1023,9 @@ class Array<Element>
         /**
          * Calculate a hash code for a given array.
          */
-        static <CompileType extends ArrayHasher> Int hashCode(CompileType array)
+        static <CompileType extends ArrayHasher> Int64 hashCode(CompileType array)
             {
-            Int hash = 0;
+            Int64 hash = 0;
             for (CompileType.Element el : array)
                 {
                 hash += CompileType.Element.hashCode(el);

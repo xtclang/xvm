@@ -233,6 +233,16 @@ const Nibble(Bit[] bits)
         }
 
     /**
+     * @return the Int value corresponding to the magnitude of the nibble, in the range `[0..F]`
+     */
+    @Auto
+    @Override
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toUInt8().toInt();
+        }
+
+    /**
      * @return the Int8 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto

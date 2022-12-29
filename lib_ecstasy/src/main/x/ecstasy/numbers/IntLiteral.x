@@ -295,7 +295,7 @@ const IntLiteral(String text)
             }
 
         // round up to nearest power of 2 (at least 8)
-        return (count * 2 - 1).leftmostBit.maxOf(8);
+        return (count * 2 - 1).toInt64().leftmostBit.maxOf(8);
         }
 
     /**
@@ -313,7 +313,7 @@ const IntLiteral(String text)
             return 8;
             }
 
-        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8).toInt64();
+        return (magnitude.toInt64().leftmostBit.trailingZeroCount * 2 + 1).toInt64().leftmostBit.maxOf(8);
         }
 
     /**
@@ -553,7 +553,7 @@ const IntLiteral(String text)
 
     @Auto
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero);
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Auto
     @Override

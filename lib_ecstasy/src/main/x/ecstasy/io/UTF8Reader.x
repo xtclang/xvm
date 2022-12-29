@@ -90,10 +90,11 @@ class UTF8Reader
             assert:arg lineOffset >= 0 && lineOffset <= 0xFFFF;
             assert:arg rawOffset  >= 0 && rawOffset  <= 0xFFF;
 
-            combo = offset << 16 | lineNumber << 16 | lineOffset << 12 | rawOffset;
+            combo = offset.toInt64() << 16 | lineNumber.toInt64() << 16
+                  | lineOffset.toInt64() << 12 | rawOffset.toInt64();
             }
 
-        private Int combo;
+        private Int64 combo;
 
         @Override
         Int offset.get()

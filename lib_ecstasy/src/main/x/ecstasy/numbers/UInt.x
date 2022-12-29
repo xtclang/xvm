@@ -41,9 +41,9 @@ const UInt
     static IntLiteral MinValue = 0;
 
     /**
-     * The maximum value for an UInt (which is the same as the maximum value for Xnt).
+     * The maximum value for an UInt (which is the same as the maximum value for Int).
      */
-    static IntLiteral MaxValue = Xnt.MaxValue;
+    static IntLiteral MaxValue = Int.MaxValue;
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
@@ -201,9 +201,9 @@ const UInt
 
     @Auto
     @Override
-    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new Xnt(bits);
+        return new Int(bits);
         }
 
     @Auto
