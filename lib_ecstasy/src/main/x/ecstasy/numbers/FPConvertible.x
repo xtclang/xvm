@@ -142,5 +142,8 @@ interface FPConvertible
      *
      * @return a floating point literal
      */
-    FPLiteral toFPLiteral();
+    FPLiteral toFPLiteral()
+        {
+        return toDecN().toFPLiteral();
+        }
     }

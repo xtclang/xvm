@@ -15,7 +15,35 @@ const FPLiteral(String text)
 
     @Auto
     @Override
-    FloatN toFloatN()
+    Dec toDec()
+        {
+        return toDecN().toDec();
+        }
+
+    @Auto
+    @Override
+    Dec32 toDec32()
+        {
+        return toDecN().toDec32();
+        }
+
+    @Auto
+    @Override
+    Dec64 toDec64()
+        {
+        return toDecN().toDec64();
+        }
+
+    @Auto
+    @Override
+    Dec128 toDec128()
+        {
+        return toDecN().toDec128();
+        }
+
+    @Auto
+    @Override
+    DecN toDecN()
         {
         TODO
         }
@@ -71,30 +99,9 @@ const FPLiteral(String text)
 
     @Auto
     @Override
-    DecN toDecN()
+    FloatN toFloatN()
         {
         TODO
-        }
-
-    @Auto
-    @Override
-    Dec32 toDec32()
-        {
-        return toDecN().toDec32();
-        }
-
-    @Auto
-    @Override
-    Dec64 toDec64()
-        {
-        return toDecN().toDec64();
-        }
-
-    @Auto
-    @Override
-    Dec128 toDec128()
-        {
-        return toDecN().toDec128();
         }
 
     @Override

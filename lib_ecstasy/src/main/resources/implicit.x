@@ -100,8 +100,8 @@ import ecstasy.io.Writer;
 
 import ecstasy.numbers.BFloat16;
 import ecstasy.numbers.Bit;
+import ecstasy.numbers.Dec;
 import ecstasy.numbers.Dec32;
-import ecstasy.numbers.Dec64         as Dec;
 import ecstasy.numbers.Dec64;
 import ecstasy.numbers.Dec128;
 import ecstasy.numbers.DecN;

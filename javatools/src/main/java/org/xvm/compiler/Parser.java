@@ -4008,12 +4008,14 @@ public class Parser
             case LIT_STRING:
             case LIT_BINSTR:
             case LIT_INT:
+            case LIT_INTA:
             case LIT_INT8:
             case LIT_INT16:
             case LIT_INT32:
             case LIT_INT64:
             case LIT_INT128:
             case LIT_INTN:
+            case LIT_UINTA:
             case LIT_UINT8:
             case LIT_UINT16:
             case LIT_UINT32:
@@ -4021,19 +4023,20 @@ public class Parser
             case LIT_UINT128:
             case LIT_UINTN:
             case LIT_DEC:
+            case LIT_DECA:
             case LIT_DEC32:
             case LIT_DEC64:
             case LIT_DEC128:
             case LIT_DECN:
             case LIT_FLOAT:
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
+            case LIT_BFLOAT16:
             case LIT_FLOAT16:
             case LIT_FLOAT32:
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
-            case LIT_FLOAT8E4:
-            case LIT_FLOAT8E5:
-            case LIT_BFLOAT16:
             case LIT_DATE:
             case LIT_TIMEOFDAY:
             case LIT_TIME:

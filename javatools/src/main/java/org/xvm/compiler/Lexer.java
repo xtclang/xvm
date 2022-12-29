@@ -730,6 +730,9 @@ public class Lexer
                                         idNum = Id.LIT_NIBBLE;
                                         break;
 
+                                    case "Int":
+                                        idNum = Id.LIT_INTA;
+                                        break;
                                     case "Int8":
                                         idNum = Id.LIT_INT8;
                                         break;
@@ -739,9 +742,6 @@ public class Lexer
                                     case "Int32":
                                         idNum = Id.LIT_INT32;
                                         break;
-                                    case "Int":                     // TODO CP split out int type vs int64
-                                        System.err.println("Lexer: split out int type vs int64");
-                                        // fall through
                                     case "Int64":
                                         idNum = Id.LIT_INT64;
                                         break;
@@ -752,6 +752,9 @@ public class Lexer
                                         idNum = Id.LIT_INTN;
                                         break;
 
+                                    case "UInt":
+                                        idNum = Id.LIT_UINTA;
+                                        break;
                                     case "Byte":
                                     case "UInt8":
                                         idNum = Id.LIT_UINT8;
@@ -762,9 +765,6 @@ public class Lexer
                                     case "UInt32":
                                         idNum = Id.LIT_UINT32;
                                         break;
-                                    case "UInt":                    // TODO CP split out uint type vs uint64
-                                        System.err.println("Lexer: split out uint type vs uint64");
-                                        // fall through
                                     case "UInt64":
                                         idNum = Id.LIT_UINT64;
                                         break;
@@ -775,13 +775,14 @@ public class Lexer
                                         idNum = Id.LIT_UINTN;
                                         break;
 
+                                    case "Dec":
+                                        idNum  = Id.LIT_DECA;
+                                        fFloat = true;
+                                        break;
                                     case "Dec32":
                                         idNum  = Id.LIT_DEC32;
                                         fFloat = true;
                                         break;
-                                    case "Dec":                     // TODO CP split out dec type vs dec64
-                                        System.err.println("Lexer: split out dec type vs dec64");
-                                        // fall through
                                     case "Dec64":
                                         idNum  = Id.LIT_DEC64;
                                         fFloat = true;

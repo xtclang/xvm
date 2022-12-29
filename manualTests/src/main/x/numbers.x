@@ -286,7 +286,7 @@ module TestNumbers
         console.println("\n** testInfinity()");
 
         Float64 f = -123456789.987654321;
-        Dec     d = f.toDec64();
+        Dec     d = f.toDec();
         while (True)
             {
             console.println($"f={f} d={d}");
@@ -304,7 +304,7 @@ module TestNumbers
                 break;
                 }
 
-            d = f.toDec64();
+            d = f.toDec();
             f = -f*f;
             d = -d*d;
             }

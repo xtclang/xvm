@@ -393,12 +393,12 @@ class Parser
         {
         if (token?.id == FPVal)
             {
-            return True, parseDoc().as(FPLiteral).toDec64();
+            return True, parseDoc().as(FPLiteral).toDec();
             }
 
         if (token?.id == IntVal)
             {
-            return True, parseDoc().as(IntLiteral).toDec64();
+            return True, parseDoc().as(IntLiteral).toDec();
             }
 
         return False;

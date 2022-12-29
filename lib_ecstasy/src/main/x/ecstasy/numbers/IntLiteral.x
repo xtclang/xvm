@@ -612,9 +612,37 @@ const IntLiteral(String text)
 
     @Auto
     @Override
-    FPLiteral toFPLiteral()
+    Dec toDec()
         {
-        return new FPLiteral(text);
+        return toFPLiteral().toDec();
+        }
+
+    @Auto
+    @Override
+    Dec32 toDec32()
+        {
+        return toFPLiteral().toDec32();
+        }
+
+    @Auto
+    @Override
+    Dec64 toDec64()
+        {
+        return toFPLiteral().toDec64();
+        }
+
+    @Auto
+    @Override
+    Dec128 toDec128()
+        {
+        return toFPLiteral().toDec128();
+        }
+
+    @Auto
+    @Override
+    DecN toDecN()
+        {
+        return toFPLiteral().toDecN();
         }
 
     @Auto
@@ -675,30 +703,9 @@ const IntLiteral(String text)
 
     @Auto
     @Override
-    Dec32 toDec32()
+    FPLiteral toFPLiteral()
         {
-        return toFPLiteral().toDec32();
-        }
-
-    @Auto
-    @Override
-    Dec64 toDec64()
-        {
-        return toFPLiteral().toDec64();
-        }
-
-    @Auto
-    @Override
-    Dec128 toDec128()
-        {
-        return toFPLiteral().toDec128();
-        }
-
-    @Auto
-    @Override
-    DecN toDecN()
-        {
-        return toFPLiteral().toDecN();
+        return new FPLiteral(text);
         }
 
     @Override

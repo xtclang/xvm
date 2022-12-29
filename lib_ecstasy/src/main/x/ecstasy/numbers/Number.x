@@ -492,6 +492,7 @@
             case @Unchecked Int128  : n -> n.toInt128() .toUnchecked().as(To);
             case @Unchecked IntN    : n -> n.toIntN()   .toUnchecked().as(To);
 
+            case Xnt                : n -> n.toInt()                  .as(To);
             case Int8               : n -> n.toInt8()                 .as(To);
             case Int16              : n -> n.toInt16()                .as(To);
             case Int32              : n -> n.toInt32()                .as(To);
@@ -506,6 +507,7 @@
             case @Unchecked UInt128 : n -> n.toUInt128().toUnchecked().as(To);
             case @Unchecked UIntN   : n -> n.toUIntN()  .toUnchecked().as(To);
 
+            case UInt               : n -> n.toUInt()                 .as(To);
             case UInt8              : n -> n.toUInt8()                .as(To);
             case UInt16             : n -> n.toUInt16()               .as(To);
             case UInt32             : n -> n.toUInt32()               .as(To);
@@ -513,6 +515,7 @@
             case UInt128            : n -> n.toUInt128()              .as(To);
             case UIntN              : n -> n.toUIntN()                .as(To);
 
+            case Dec                : n -> n.toDec()                  .as(To);
             case Dec32              : n -> n.toDec32()                .as(To);
             case Dec64              : n -> n.toDec64()                .as(To);
             case Dec128             : n -> n.toDec128()               .as(To);

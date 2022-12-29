@@ -5,6 +5,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
@@ -186,6 +187,107 @@ public abstract class Decimal
         // G0..G4 must all be 1 for NaN
         // G5 must be 0 for quiet
         return (leftmost7Bits() & 0b0111111) == 0b0111110;
+        }
+
+    /**
+     * Convert the specified BigDecimal value to the smallest Decimal form (32-bit, 64-bit, or
+     * 128-bit) that can hold it.
+     *
+     * @param bigdec  the value to convert to a Decimal form
+     *
+     * @return the smallest Decimal form that can hold the specified value
+     */
+    public static Decimal valueOf(BigDecimal bigdec)
+        {
+        Decimal dec128 = new Decimal128(bigdec);
+        Decimal dec64  = new Decimal64(bigdec);
+        if (!dec64.isSameValue(dec128))
+            {
+            return dec128;
+            }
+        Decimal dec32 = new Decimal32(bigdec);
+        return dec32.isSameValue(dec64) ? dec32 : dec64;
+        }
+
+    /**
+     * Compare any two decimal values for equality.
+     *
+     * @param that  any of a Decimal32, Decimal64, or Decimal128
+     *
+     * @return true iff the two values are equal in terms of their sign, significand, and exponent
+     */
+    public boolean isSameValue(Decimal that)
+        {
+        if (this == that)
+            {
+            return true;
+            }
+
+        if (that == null)
+            {
+            return false;
+            }
+
+        if (this.getClass() == that.getClass())
+            {
+            return this.equals(that);
+            }
+
+        if (!(this.isFinite() && that.isFinite()))
+            {
+            return this.isSigned()       == that.isSigned()
+                && this.isInfinite()     == that.isInfinite()
+                && this.isQuietNaN()     == that.isQuietNaN()
+                && this.isSignalingNaN() == that.isSignalingNaN();
+            }
+
+        Decimal dec1 = this;
+        Decimal dec2 = that;
+        switch ((dec1.getBitLength() << 8) | dec2.getBitLength())
+            {
+            case ( 64 << 8) | 32:
+                dec1 = that;
+                dec2 = this;
+                // fall through
+            case ( 32 << 8) | 64:
+                {
+                Decimal32 dec32 = (Decimal32) dec1;
+                Decimal64 dec64 = (Decimal64) dec2;
+                return dec32.isSigned()       == dec64.isSigned()
+                    && dec32.getExponent()    == dec64.getExponent()
+                    && dec32.getSignificand() == dec64.getSignificand();
+                }
+
+            case (128 << 8) | 32:
+                dec1 = that;
+                dec2 = this;
+                // fall through
+            case ( 32 << 8) | 128:
+                {
+                Decimal32  dec32  = (Decimal32)  dec1;
+                Decimal128 dec128 = (Decimal128) dec2;
+                return dec32.isSigned()       == dec128.isSigned()
+                    && dec32.getExponent()    == dec128.getExponent()
+                    && BigInteger.valueOf(dec32.getSignificand()).equals(dec128.getSignificand());
+                }
+
+            case (128 << 8) | 64:
+                dec1 = that;
+                dec2 = this;
+                // fall through
+            case ( 64 << 8) | 128:
+                {
+                Decimal64  dec64  = (Decimal64)  dec1;
+                Decimal128 dec128 = (Decimal128) dec2;
+                return dec64.isSigned()       == dec128.isSigned()
+                    && dec64.getExponent()    == dec128.getExponent()
+                    && BigInteger.valueOf(dec64.getSignificand()).equals(dec128.getSignificand());
+                }
+
+            default:
+                throw new UnsupportedOperationException("dec1=" + dec1.getClass().getName()
+                                                    + ", dec2=" + dec1.getClass().getName());
+            }
         }
 
     /**

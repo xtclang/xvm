@@ -804,7 +804,6 @@ public abstract class Constant
         Bit       ("numbers"),
         Nibble    ("numbers"),
         Xnt       ("numbers"),
-        UInt      ("numbers"),
         CInt8     ("numbers"),  // C=Checked (aka a constrained integer)
         Int8      ("numbers"),  // no "C" means @Unchecked
         CInt16    ("numbers"),
@@ -817,6 +816,7 @@ public abstract class Constant
         Int128    ("numbers"),
         CIntN     ("numbers"),
         IntN      ("numbers"),
+        UInt      ("numbers"),
         CUInt8    ("numbers"),
         UInt8     ("numbers"),
         CUInt16   ("numbers"),
@@ -830,6 +830,11 @@ public abstract class Constant
         CUIntN    ("numbers"),
         UIntN     ("numbers"),
         FPLiteral ("numbers"),
+        Dec       ("numbers"),
+        Dec32     ("numbers"),
+        Dec64     ("numbers"),
+        Dec128    ("numbers"),
+        DecN      ("numbers"),
         Float8e4  ("numbers"),
         Float8e5  ("numbers"),
         BFloat16  ("numbers"),
@@ -838,10 +843,6 @@ public abstract class Constant
         Float64   ("numbers"),
         Float128  ("numbers"),
         FloatN    ("numbers"),
-        Dec32     ("numbers"),
-        Dec64     ("numbers"),
-        Dec128    ("numbers"),
-        DecN      ("numbers"),
         Char      ("text"),
         String    ("text"),
         RegEx     ("text"),
@@ -994,6 +995,7 @@ public abstract class Constant
             {
             return switch (this)
                 {
+                case Xnt      -> pool.typeInt();
                 case CInt8    -> pool.typeCInt8();
                 case Int8     -> pool.typeInt8();
                 case CInt16   -> pool.typeCInt16();
@@ -1006,6 +1008,7 @@ public abstract class Constant
                 case Int128   -> pool.typeInt128();
                 case CIntN    -> pool.typeCIntN();
                 case IntN     -> pool.typeIntN();
+                case UInt     -> pool.typeUInt();
                 case CUInt8   -> pool.typeCUInt8();
                 case UInt8    -> pool.typeUInt8();
                 case CUInt16  -> pool.typeCUInt16();
@@ -1018,6 +1021,7 @@ public abstract class Constant
                 case UInt128  -> pool.typeUInt128();
                 case CUIntN   -> pool.typeCUIntN();
                 case UIntN    -> pool.typeUIntN();
+                case Dec      -> pool.typeDec();
                 default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());
                 };
             }

@@ -8,15 +8,6 @@ interface IntConvertible
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * Convert the value to an `IntLiteral` that represents the same value.
-     *
-     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
-     *
-     * @return an integer literal
-     */
-    IntLiteral toIntLiteral(Rounding direction = TowardZero);
-
-    /**
      * Convert the value to a signed integer.
      *
      * @param truncate   pass `True` to silently truncate the integer value if necessary
@@ -244,5 +235,17 @@ interface IntConvertible
     UIntN toUIntN(Rounding direction = TowardZero)
         {
         return toIntN(direction).toUIntN();
+        }
+
+    /**
+     * Convert the value to an `IntLiteral` that represents the same value.
+     *
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
+     * @return an integer literal
+     */
+    IntLiteral toIntLiteral(Rounding direction = TowardZero)
+        {
+        return toIntN().toIntLiteral();
         }
     }

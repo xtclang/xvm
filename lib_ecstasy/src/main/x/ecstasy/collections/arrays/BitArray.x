@@ -1,8 +1,14 @@
+import numbers.IntConvertible;
+import numbers.FPConvertible;
+
+
 /**
  * Functionality specific to an array of bits.
  */
 mixin BitArray<Element extends Bit>
         into Array<Element>
+        implements IntConvertible
+        implements FPConvertible
     {
     construct()
         {
@@ -28,7 +34,8 @@ mixin BitArray<Element extends Bit>
      *
      * @throws OutOfBounds  if the array sizes do not match
      */
-    @Op("&") BitArray and(Bit![] that, Boolean inPlace = False)
+    @Op("&")
+    BitArray and(Bit![] that, Boolean inPlace = False)
         {
         assert:bounds this.size == that.size;
 
@@ -60,7 +67,8 @@ mixin BitArray<Element extends Bit>
      *
      * @throws OutOfBounds  if the array sizes do not match
      */
-    @Op("|") BitArray or(Bit![] that, Boolean inPlace = False)
+    @Op("|")
+    BitArray or(Bit![] that, Boolean inPlace = False)
         {
         assert:bounds this.size == that.size;
 
@@ -87,7 +95,8 @@ mixin BitArray<Element extends Bit>
      *
      * @throws OutOfBounds  if the array sizes do not match
      */
-    @Op("^") BitArray xor(Bit![] that, Boolean inPlace = False)
+    @Op("^")
+    BitArray xor(Bit![] that, Boolean inPlace = False)
         {
         assert:bounds this.size == that.size;
 
@@ -111,7 +120,8 @@ mixin BitArray<Element extends Bit>
      *
      * @return the resulting array, which _may_ be `this` iff inPlace is `True`
      */
-    @Op("~") BitArray not(Boolean inPlace = False)
+    @Op("~")
+    BitArray not(Boolean inPlace = False)
         {
         if (inPlace && this.inPlace)
             {
@@ -137,7 +147,8 @@ mixin BitArray<Element extends Bit>
      *
      * @return the resulting array, which _may_ be `this` iff inPlace is `True`
      */
-    @Op("<<") BitArray shiftLeft(Int count, Boolean inPlace = False)
+    @Op("<<")
+    BitArray shiftLeft(Int count, Boolean inPlace = False)
         {
         if (count < 0)
             {
@@ -181,7 +192,8 @@ mixin BitArray<Element extends Bit>
      *
      * @return the resulting array, which _may_ be `this` iff inPlace is `True`
      */
-    @Op(">>") BitArray shiftRight(Int count, Boolean inPlace = False)
+    @Op(">>")
+    BitArray shiftRight(Int count, Boolean inPlace = False)
         {
         if (count < 0)
             {
@@ -834,29 +846,21 @@ mixin BitArray<Element extends Bit>
             }
         }
 
-    /**
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<BitArray, <>, <Byte>> toByte = toUInt8;
-
-    /**
-     * Convert the bit array to a signed integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed integer range
-     */
-    Int toInt()
+    @Override
+    Xnt toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return new Int(this.freeze());
+        if (size > 128)
+            {
+            return new Xnt(this);
+            }
+
+        // verify that the bit array is sign-extended
+        assert:bounds truncate || !this[0 ..< size-128].contains(~this[size-128]);
+        return new Xnt(this[size-128 ..< size]);
         }
 
-    /**
-     * Convert the bit array to a signed 8-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
-     */
-    Int8 toInt8()
+    @Override
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 8)
             {
@@ -870,17 +874,13 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0 ..< size-8].contains(~this[size-8]);
+                assert:bounds truncate || !this[0 ..< size-8].contains(~this[size-8]);
                 return new Int8(this[size-8 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to a signed 16-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
-     */
-    Int16 toInt16()
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 16)
             {
@@ -894,17 +894,13 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0 ..< size-16].contains(~this[size-16]);
+                assert:bounds truncate || !this[0 ..< size-16].contains(~this[size-16]);
                 return new Int16(this[size-16 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to a signed 32-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
-     */
-    Int32 toInt32()
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 32)
             {
@@ -918,17 +914,13 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0 ..< size-32].contains(~this[size-32]);
+                assert:bounds truncate || !this[0 ..< size-32].contains(~this[size-32]);
                 return new Int32(this[size-32 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to a signed 64-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
-     */
-    Int64 toInt64()
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 64)
             {
@@ -942,17 +934,13 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0 ..< size-64].contains(~this[size-64]);
+                assert:bounds truncate || !this[0 ..< size-64].contains(~this[size-64]);
                 return new Int64(this[size-64 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to a signed 128-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
-     */
-    Int128 toInt128()
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 128)
             {
@@ -966,19 +954,13 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0 ..< size-128].contains(~this[size-128]);
+                assert:bounds truncate || !this[0 ..< size-128].contains(~this[size-128]);
                 return new Int128(this[size-128 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to a variable-length signed integer.
-     *
-     * @return a variable-length signed integer value
-     *
-     * @throws OutOfBounds if the bit array is not a supported size for the resulting numeric type
-     */
-    IntN toIntN()
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
         {
         Bit[] bits = this;
         if (size & 0b111 != 0)
@@ -992,12 +974,21 @@ mixin BitArray<Element extends Bit>
         return new IntN(bits);
         }
 
-    /**
-     * Convert the bit array to an unsigned 8-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
-     */
-    UInt8 toUInt8()
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        if (size <= 128)
+            {
+            return new UInt(this);
+            }
+
+        // verify that the rest of the bit array is zeros
+        assert:bounds truncate || !this[0 ..< size-128].contains(Bit:1.as(Element)); // TODO GG: .contains(1);
+        return new UInt(this[size-128 ..< size]);
+        }
+
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 8)
             {
@@ -1009,17 +1000,13 @@ mixin BitArray<Element extends Bit>
                 return new UInt8(this);
 
             case Greater:
-                assert:bounds !this[0 ..< size-8].contains(One);
+                assert:bounds truncate || !this[0 ..< size-8].contains(One);
                 return new UInt8(this[size-8 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to an unsigned 16-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
-     */
-    UInt16 toUInt16()
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 16)
             {
@@ -1031,17 +1018,13 @@ mixin BitArray<Element extends Bit>
                 return new UInt16(this);
 
             case Greater:
-                assert:bounds !this[0 ..< size-16].contains(One);
+                assert:bounds truncate || !this[0 ..< size-16].contains(One);
                 return new UInt16(this[size-16 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to an unsigned 32-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
-     */
-    UInt32 toUInt32()
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 32)
             {
@@ -1053,17 +1036,13 @@ mixin BitArray<Element extends Bit>
                 return new UInt32(this);
 
             case Greater:
-                assert:bounds !this[0 ..< size-32].contains(One);
+                assert:bounds truncate || !this[0 ..< size-32].contains(One);
                 return new UInt32(this[size-32 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to an unsigned 64-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
-     */
-    UInt64 toUInt64()
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 64)
             {
@@ -1075,17 +1054,13 @@ mixin BitArray<Element extends Bit>
                 return new UInt64(this);
 
             case Greater:
-                assert:bounds !this[0 ..< size-64].contains(One);
+                assert:bounds truncate || !this[0 ..< size-64].contains(One);
                 return new UInt64(this[size-64 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to an unsigned 128-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
-     */
-    UInt128 toUInt128()
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
         switch (size <=> 128)
             {
@@ -1097,19 +1072,13 @@ mixin BitArray<Element extends Bit>
                 return new UInt128(this);
 
             case Greater:
-                assert:bounds !this[0 ..< size-128].contains(One);
+                assert:bounds truncate || !this[0 ..< size-128].contains(One);
                 return new UInt128(this[size-128 ..< size]);
             }
         }
 
-    /**
-     * Convert the bit array to a variable-length unsigned integer.
-     *
-     * @return a variable-length unsigned integer value
-     *
-     * @throws OutOfBounds if the bit array is not a supported size for the resulting numeric type
-     */
-    UIntN toUIntN()
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
         Bit[] bits = this;
         if (size & 0b111 != 0)
@@ -1123,132 +1092,93 @@ mixin BitArray<Element extends Bit>
         return new UIntN(bits);
         }
 
-    /**
-     * Convert the bit array to a 16-bit radix-2 (binary) "brain" floating point number.
-     *
-     * @return a 16-bit "brain" floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
-    BFloat16 toBFloat16()
+    @Override
+    Dec toDec()
         {
-        assert:bounds size == 16;
-        return new BFloat16(this);
+        assert:bounds size == 28 || size == 32 || size == 60 || size == 64 || size == 128;
+        return new Dec(this);
         }
 
-    /**
-     * Convert the bit array to a 16-bit radix-2 (binary) floating point number.
-     *
-     * @return a 16-bit floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
-    Float16 toFloat16()
-        {
-        assert:bounds size == 16;
-        return new Float16(this);
-        }
-
-    /**
-     * Convert the bit array to a 32-bit radix-2 (binary) floating point number.
-     *
-     * @return a 32-bit floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
-    Float32 toFloat32()
-        {
-        assert:bounds size == 32;
-        return new Float32(this);
-        }
-
-    /**
-     * Convert the bit array to a 64-bit radix-2 (binary) floating point number.
-     *
-     * @return a 64-bit floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
-    Float64 toFloat64()
-        {
-        assert:bounds size == 64;
-        return new Float64(this);
-        }
-
-    /**
-     * Convert the bit array to a 128-bit radix-2 (binary) floating point number.
-     *
-     * @return a 128-bit floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
-    Float128 toFloat128()
-        {
-        assert:bounds size == 128;
-        return new Float128(this);
-        }
-
-    /**
-     * Convert the bit array to a variable-length binary radix floating point number.
-     *
-     * @return a variable-length floating point value
-     *
-     * @throws OutOfBounds if the bit array is not a supported size for the resulting numeric type
-     */
-    FloatN toFloatN()
-        {
-        return new FloatN(this);
-        }
-
-    /**
-     * Convert the bit array to a 32-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 32-bit decimal floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
+    @Override
     Dec32 toDec32()
         {
         assert:bounds size == 32;
         return new Dec32(this);
         }
 
-    /**
-     * Convert the bit array to a 64-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 64-bit decimal floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
+    @Override
     Dec64 toDec64()
         {
         assert:bounds size == 64;
         return new Dec64(this);
         }
 
-    /**
-     * Convert the bit array to a 128-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 128-bit decimal floating point value
-     *
-     * @throws OutOfBounds if the bit array is not exactly the size of the resulting numeric type
-     */
+    @Override
     Dec128 toDec128()
         {
         assert:bounds size == 128;
         return new Dec128(this);
         }
 
-    /**
-     * Convert the bit array to a variable-length decimal radix floating point number.
-     *
-     * @return a variable-length decimal floating point value
-     *
-     * @throws OutOfBounds if the bit array is not a supported size for the resulting numeric type
-     */
+    @Override
     DecN toDecN()
         {
         return new DecN(this);
+        }
+
+    @Override
+    Float8e4 toFloat8e4()
+        {
+        assert:bounds size == 8;
+        return new Float8e4(this);
+        }
+
+    @Override
+    Float8e5 toFloat8e5()
+        {
+        assert:bounds size == 8;
+        return new Float8e5(this);
+        }
+
+    @Override
+    BFloat16 toBFloat16()
+        {
+        assert:bounds size == 16;
+        return new BFloat16(this);
+        }
+
+    @Override
+    Float16 toFloat16()
+        {
+        assert:bounds size == 16;
+        return new Float16(this);
+        }
+
+    @Override
+    Float32 toFloat32()
+        {
+        assert:bounds size == 32;
+        return new Float32(this);
+        }
+
+    @Override
+    Float64 toFloat64()
+        {
+        assert:bounds size == 64;
+        return new Float64(this);
+        }
+
+    @Override
+    Float128 toFloat128()
+        {
+        assert:bounds size == 128;
+        return new Float128(this);
+        }
+
+    @Override
+    FloatN toFloatN()
+        {
+        return new FloatN(this);
         }
 
 

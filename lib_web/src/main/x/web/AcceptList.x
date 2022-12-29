@@ -338,7 +338,7 @@ const AcceptList
                         // the quality key ("q") is reserved for use by the Accept header
                         try
                             {
-                            quality = new FPLiteral(val).toDec64();
+                            quality = new FPLiteral(val).toDec();
                             }
                         catch (Exception e)
                             {

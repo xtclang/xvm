@@ -68,7 +68,7 @@ interface Random
     Xnt xnt(Xnt max)
         {
         assert max > 0;
-        UInt128 umax     = max.toUInt128();
+        UInt128 umax     = max.toUInt128(); // REVIEW CP
         Int     nonzeros = 128 - umax.leadingZeroCount;
         Bit[]   rndbits  = fill(new Bit[nonzeros]);
         if (umax & umax-1 == 0)

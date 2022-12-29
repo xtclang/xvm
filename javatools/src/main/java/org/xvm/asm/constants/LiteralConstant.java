@@ -469,6 +469,8 @@ public class LiteralConstant
         BigDecimal bigdec = getBigDecimal();
         switch (format)
             {
+            case Dec:
+                return Decimal.valueOf(bigdec);
             case Dec32:
                 return new Decimal32(bigdec);
             case Dec64:
@@ -773,10 +775,12 @@ public class LiteralConstant
      * @return the equivalent DecimalConstant of the specified format for this LiteralConstant
      *         holding a FPLiteral value
      */
-    public DecimalConstant toDecimalConstant(Format format)
+    public Constant toDecimalConstant(Format format)
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
-        return getConstantPool().ensureDecConstant(getDecimal(format));
+        return format == Format.Dec
+                ? getConstantPool().ensureDecAConstant(getDecimal(Format.Dec))
+                : getConstantPool().ensureDecConstant(getDecimal(format));
         }
 
     /**
@@ -999,6 +1003,8 @@ public class LiteralConstant
             case "IntLiteral>Xnt":
             case "IntLiteral>=Xnt":
             case "IntLiteral<=>Xnt":
+                // TODO
+                throw new UnsupportedOperationException("TODO CP");
 
             case "IntLiteral+UInt":
             case "IntLiteral-UInt":
@@ -1404,29 +1410,170 @@ public class LiteralConstant
             case "IntLiteral<=>UIntN":
                 return this.toIntConstant(that.getFormat()).apply(op, that);
 
-            case "IntLiteral+Float16":
-            case "IntLiteral-Float16":
-            case "IntLiteral*Float16":
-            case "IntLiteral/Float16":
-            case "IntLiteral==Float16":
-            case "IntLiteral!=Float16":
-            case "IntLiteral<Float16":
-            case "IntLiteral<=Float16":
-            case "IntLiteral>Float16":
-            case "IntLiteral>=Float16":
-            case "IntLiteral<=>Float16":
-            case "FPLiteral+Float16":
-            case "FPLiteral-Float16":
-            case "FPLiteral*Float16":
-            case "FPLiteral/Float16":
-            case "FPLiteral==Float16":
-            case "FPLiteral!=Float16":
-            case "FPLiteral<Float16":
-            case "FPLiteral<=Float16":
-            case "FPLiteral>Float16":
-            case "FPLiteral>=Float16":
-            case "FPLiteral<=>Float16":
-                return this.toFloat16Constant().apply(op, that);
+            case "IntLiteral+Dec":
+            case "IntLiteral-Dec":
+            case "IntLiteral*Dec":
+            case "IntLiteral/Dec":
+            case "IntLiteral==Dec":
+            case "IntLiteral!=Dec":
+            case "IntLiteral<Dec":
+            case "IntLiteral<=Dec":
+            case "IntLiteral>Dec":
+            case "IntLiteral>=Dec":
+            case "IntLiteral<=>Dec":
+            case "FPLiteral+Dec":
+            case "FPLiteral-Dec":
+            case "FPLiteral*Dec":
+            case "FPLiteral/Dec":
+            case "FPLiteral==Dec":
+            case "FPLiteral!=Dec":
+            case "FPLiteral<Dec":
+            case "FPLiteral<=Dec":
+            case "FPLiteral>Dec":
+            case "FPLiteral>=Dec":
+            case "FPLiteral<=>Dec":
+
+            case "IntLiteral+Dec32":
+            case "IntLiteral-Dec32":
+            case "IntLiteral*Dec32":
+            case "IntLiteral/Dec32":
+            case "IntLiteral==Dec32":
+            case "IntLiteral!=Dec32":
+            case "IntLiteral<Dec32":
+            case "IntLiteral<=Dec32":
+            case "IntLiteral>Dec32":
+            case "IntLiteral>=Dec32":
+            case "IntLiteral<=>Dec32":
+            case "FPLiteral+Dec32":
+            case "FPLiteral-Dec32":
+            case "FPLiteral*Dec32":
+            case "FPLiteral/Dec32":
+            case "FPLiteral==Dec32":
+            case "FPLiteral!=Dec32":
+            case "FPLiteral<Dec32":
+            case "FPLiteral<=Dec32":
+            case "FPLiteral>Dec32":
+            case "FPLiteral>=Dec32":
+            case "FPLiteral<=>Dec32":
+
+            case "IntLiteral+Dec64":
+            case "IntLiteral-Dec64":
+            case "IntLiteral*Dec64":
+            case "IntLiteral/Dec64":
+            case "IntLiteral==Dec64":
+            case "IntLiteral!=Dec64":
+            case "IntLiteral<Dec64":
+            case "IntLiteral<=Dec64":
+            case "IntLiteral>Dec64":
+            case "IntLiteral>=Dec64":
+            case "IntLiteral<=>Dec64":
+            case "FPLiteral+Dec64":
+            case "FPLiteral-Dec64":
+            case "FPLiteral*Dec64":
+            case "FPLiteral/Dec64":
+            case "FPLiteral==Dec64":
+            case "FPLiteral!=Dec64":
+            case "FPLiteral<Dec64":
+            case "FPLiteral<=Dec64":
+            case "FPLiteral>Dec64":
+            case "FPLiteral>=Dec64":
+            case "FPLiteral<=>Dec64":
+
+            case "IntLiteral+Dec128":
+            case "IntLiteral-Dec128":
+            case "IntLiteral*Dec128":
+            case "IntLiteral/Dec128":
+            case "IntLiteral==Dec128":
+            case "IntLiteral!=Dec128":
+            case "IntLiteral<Dec128":
+            case "IntLiteral<=Dec128":
+            case "IntLiteral>Dec128":
+            case "IntLiteral>=Dec128":
+            case "IntLiteral<=>Dec128":
+            case "FPLiteral+Dec128":
+            case "FPLiteral-Dec128":
+            case "FPLiteral*Dec128":
+            case "FPLiteral/Dec128":
+            case "FPLiteral==Dec128":
+            case "FPLiteral!=Dec128":
+            case "FPLiteral<Dec128":
+            case "FPLiteral<=Dec128":
+            case "FPLiteral>Dec128":
+            case "FPLiteral>=Dec128":
+            case "FPLiteral<=>Dec128":
+                return this.toDecimalConstant(that.getFormat()).apply(op, that);
+
+            case "IntLiteral+DecN":
+            case "IntLiteral-DecN":
+            case "IntLiteral*DecN":
+            case "IntLiteral/DecN":
+            case "IntLiteral==DecN":
+            case "IntLiteral!=DecN":
+            case "IntLiteral<DecN":
+            case "IntLiteral<=DecN":
+            case "IntLiteral>DecN":
+            case "IntLiteral>=DecN":
+            case "IntLiteral<=>DecN":
+            case "FPLiteral+DecN":
+            case "FPLiteral-DecN":
+            case "FPLiteral*DecN":
+            case "FPLiteral/DecN":
+            case "FPLiteral==DecN":
+            case "FPLiteral!=DecN":
+            case "FPLiteral<DecN":
+            case "FPLiteral<=DecN":
+            case "FPLiteral>DecN":
+            case "FPLiteral>=DecN":
+            case "FPLiteral<=>DecN":
+                return this.toDecNConstant().apply(op, that);
+
+            case "IntLiteral+Float8e4":
+            case "IntLiteral-Float8e4":
+            case "IntLiteral*Float8e4":
+            case "IntLiteral/Float8e4":
+            case "IntLiteral==Float8e4":
+            case "IntLiteral!=Float8e4":
+            case "IntLiteral<Float8e4":
+            case "IntLiteral<=Float8e4":
+            case "IntLiteral>Float8e4":
+            case "IntLiteral>=Float8e4":
+            case "IntLiteral<=>Float8e4":
+            case "FPLiteral+Float8e4":
+            case "FPLiteral-Float8e4":
+            case "FPLiteral*Float8e4":
+            case "FPLiteral/Float8e4":
+            case "FPLiteral==Float8e4":
+            case "FPLiteral!=Float8e4":
+            case "FPLiteral<Float8e4":
+            case "FPLiteral<=Float8e4":
+            case "FPLiteral>Float8e4":
+            case "FPLiteral>=Float8e4":
+            case "FPLiteral<=>Float8e4":
+                return this.toFloat8e4Constant().apply(op, that);
+
+            case "IntLiteral+Float8e5":
+            case "IntLiteral-Float8e5":
+            case "IntLiteral*Float8e5":
+            case "IntLiteral/Float8e5":
+            case "IntLiteral==Float8e5":
+            case "IntLiteral!=Float8e5":
+            case "IntLiteral<Float8e5":
+            case "IntLiteral<=Float8e5":
+            case "IntLiteral>Float8e5":
+            case "IntLiteral>=Float8e5":
+            case "IntLiteral<=>Float8e5":
+            case "FPLiteral+Float8e5":
+            case "FPLiteral-Float8e5":
+            case "FPLiteral*Float8e5":
+            case "FPLiteral/Float8e5":
+            case "FPLiteral==Float8e5":
+            case "FPLiteral!=Float8e5":
+            case "FPLiteral<Float8e5":
+            case "FPLiteral<=Float8e5":
+            case "FPLiteral>Float8e5":
+            case "FPLiteral>=Float8e5":
+            case "FPLiteral<=>Float8e5":
+                return this.toFloat8e5Constant().apply(op, that);
 
             case "IntLiteral+BFloat16":
             case "IntLiteral-BFloat16":
@@ -1451,6 +1598,30 @@ public class LiteralConstant
             case "FPLiteral>=BFloat16":
             case "FPLiteral<=>BFloat16":
                 return this.toBFloat16Constant().apply(op, that);
+
+            case "IntLiteral+Float16":
+            case "IntLiteral-Float16":
+            case "IntLiteral*Float16":
+            case "IntLiteral/Float16":
+            case "IntLiteral==Float16":
+            case "IntLiteral!=Float16":
+            case "IntLiteral<Float16":
+            case "IntLiteral<=Float16":
+            case "IntLiteral>Float16":
+            case "IntLiteral>=Float16":
+            case "IntLiteral<=>Float16":
+            case "FPLiteral+Float16":
+            case "FPLiteral-Float16":
+            case "FPLiteral*Float16":
+            case "FPLiteral/Float16":
+            case "FPLiteral==Float16":
+            case "FPLiteral!=Float16":
+            case "FPLiteral<Float16":
+            case "FPLiteral<=Float16":
+            case "FPLiteral>Float16":
+            case "FPLiteral>=Float16":
+            case "FPLiteral<=>Float16":
+                return this.toFloat16Constant().apply(op, that);
 
             case "IntLiteral+Float32":
             case "IntLiteral-Float32":
@@ -1547,100 +1718,6 @@ public class LiteralConstant
             case "FPLiteral>=FloatN":
             case "FPLiteral<=>FloatN":
                 return this.toFloatNConstant().apply(op, that);
-
-            case "IntLiteral+Dec32":
-            case "IntLiteral-Dec32":
-            case "IntLiteral*Dec32":
-            case "IntLiteral/Dec32":
-            case "IntLiteral==Dec32":
-            case "IntLiteral!=Dec32":
-            case "IntLiteral<Dec32":
-            case "IntLiteral<=Dec32":
-            case "IntLiteral>Dec32":
-            case "IntLiteral>=Dec32":
-            case "IntLiteral<=>Dec32":
-            case "FPLiteral+Dec32":
-            case "FPLiteral-Dec32":
-            case "FPLiteral*Dec32":
-            case "FPLiteral/Dec32":
-            case "FPLiteral==Dec32":
-            case "FPLiteral!=Dec32":
-            case "FPLiteral<Dec32":
-            case "FPLiteral<=Dec32":
-            case "FPLiteral>Dec32":
-            case "FPLiteral>=Dec32":
-            case "FPLiteral<=>Dec32":
-
-            case "IntLiteral+Dec64":
-            case "IntLiteral-Dec64":
-            case "IntLiteral*Dec64":
-            case "IntLiteral/Dec64":
-            case "IntLiteral==Dec64":
-            case "IntLiteral!=Dec64":
-            case "IntLiteral<Dec64":
-            case "IntLiteral<=Dec64":
-            case "IntLiteral>Dec64":
-            case "IntLiteral>=Dec64":
-            case "IntLiteral<=>Dec64":
-            case "FPLiteral+Dec64":
-            case "FPLiteral-Dec64":
-            case "FPLiteral*Dec64":
-            case "FPLiteral/Dec64":
-            case "FPLiteral==Dec64":
-            case "FPLiteral!=Dec64":
-            case "FPLiteral<Dec64":
-            case "FPLiteral<=Dec64":
-            case "FPLiteral>Dec64":
-            case "FPLiteral>=Dec64":
-            case "FPLiteral<=>Dec64":
-
-            case "IntLiteral+Dec128":
-            case "IntLiteral-Dec128":
-            case "IntLiteral*Dec128":
-            case "IntLiteral/Dec128":
-            case "IntLiteral==Dec128":
-            case "IntLiteral!=Dec128":
-            case "IntLiteral<Dec128":
-            case "IntLiteral<=Dec128":
-            case "IntLiteral>Dec128":
-            case "IntLiteral>=Dec128":
-            case "IntLiteral<=>Dec128":
-            case "FPLiteral+Dec128":
-            case "FPLiteral-Dec128":
-            case "FPLiteral*Dec128":
-            case "FPLiteral/Dec128":
-            case "FPLiteral==Dec128":
-            case "FPLiteral!=Dec128":
-            case "FPLiteral<Dec128":
-            case "FPLiteral<=Dec128":
-            case "FPLiteral>Dec128":
-            case "FPLiteral>=Dec128":
-            case "FPLiteral<=>Dec128":
-                return this.toDecimalConstant(that.getFormat()).apply(op, that);
-
-            case "IntLiteral+DecN":
-            case "IntLiteral-DecN":
-            case "IntLiteral*DecN":
-            case "IntLiteral/DecN":
-            case "IntLiteral==DecN":
-            case "IntLiteral!=DecN":
-            case "IntLiteral<DecN":
-            case "IntLiteral<=DecN":
-            case "IntLiteral>DecN":
-            case "IntLiteral>=DecN":
-            case "IntLiteral<=>DecN":
-            case "FPLiteral+DecN":
-            case "FPLiteral-DecN":
-            case "FPLiteral*DecN":
-            case "FPLiteral/DecN":
-            case "FPLiteral==DecN":
-            case "FPLiteral!=DecN":
-            case "FPLiteral<DecN":
-            case "FPLiteral<=DecN":
-            case "FPLiteral>DecN":
-            case "FPLiteral>=DecN":
-            case "FPLiteral<=>DecN":
-                return this.toDecNConstant().apply(op, that);
 
             // case Date: // TODO can add a duration
             // case TimeOfDay: // TODO can add a duration
@@ -1785,6 +1862,16 @@ public class LiteralConstant
                     }
                 switch (sSimpleName)
                     {
+                    case "Dec":
+                        return toDecimalConstant(Format.Dec);
+                    case "Dec32":
+                        return toDecimalConstant(Format.Dec32);
+                    case "Dec64":
+                        return toDecimalConstant(Format.Dec64);
+                    case "Dec128":
+                        return toDecimalConstant(Format.Dec128);
+                    case "DecN":
+                        return toDecNConstant();
                     case "Float8e4":
                         return toFloat8e4Constant();
                     case "Float8e5":
@@ -1801,14 +1888,6 @@ public class LiteralConstant
                         return toFloat128Constant();
                     case "FloatN":
                         return toFloatNConstant();
-                    case "Dec32":
-                        return toDecimalConstant(Format.Dec32);
-                    case "Dec64":
-                        return toDecimalConstant(Format.Dec64);
-                    case "Dec128":
-                        return toDecimalConstant(Format.Dec128);
-                    case "DecN":
-                        return toDecNConstant();
                     }
 
                 if (pool.typeInt().isA(typeOut))
@@ -1845,6 +1924,16 @@ public class LiteralConstant
                     }
                 switch (sSimpleName)
                     {
+                    case "Dec":
+                        return toDecimalConstant(Format.Dec);
+                    case "Dec32":
+                        return toDecimalConstant(Format.Dec32);
+                    case "Dec64":
+                        return toDecimalConstant(Format.Dec64);
+                    case "Dec128":
+                        return toDecimalConstant(Format.Dec128);
+                    case "DecN":
+                        return toDecNConstant();
                     case "Float8e4":
                         return toFloat8e4Constant();
                     case "Float8e5":
@@ -1861,19 +1950,11 @@ public class LiteralConstant
                         return toFloat128Constant();
                     case "FloatN":
                         return toFloatNConstant();
-                    case "Dec32":
-                        return toDecimalConstant(Format.Dec32);
-                    case "Dec64":
-                        return toDecimalConstant(Format.Dec64);
-                    case "Dec128":
-                        return toDecimalConstant(Format.Dec128);
-                    case "DecN":
-                        return toDecNConstant();
                     }
 
                 // go through the entire list of possibilities
-                for (Format format = Format.Float16;
-                     format.ordinal() <= Format.DecN.ordinal(); format = format.next())
+                for (Format format = Format.Dec;
+                     format.ordinal() <= Format.FloatN.ordinal(); format = format.next())
                     {
                     TypeConstant typeSupported = format.getType(pool);
                     if (typeSupported.isA(typeOut))

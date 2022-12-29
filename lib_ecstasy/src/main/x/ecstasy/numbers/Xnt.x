@@ -25,7 +25,7 @@
  * real-time de-optimization to handle unexpected and otherwise-unsupported conditions, there will
  * be significant and unavoidable one-time costs, every time such a scenario is encountered.
  */
-const Xnt
+const Xnt  // TODO rename as Int
         extends IntNumber
         default(0)
     {
