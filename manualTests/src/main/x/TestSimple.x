@@ -2,29 +2,28 @@ module TestSimple
     {
     @Inject Console console;
 
-    package json import json.xtclang.org;
-
-    import json.Schema;
-
     void run()
         {
-        console.println(C1.value); // used to throw at run-time
-        console.println(C1.range); // used to throw at run-time
-        }
+        immutable Int32[] ints = [1, 2, 3];
+        for (Int i : ints)            // used to fail to compile
+            {
+            console.println(i);
+            }
 
-    class C1
-        {
-        static Int value = C2.value;
-        static Range<Int> range = 1..C2.value;
-        }
+        for (Int i : ints.iterator())  // used to fail to compile
+            {
+            console.println(i);
+            }
 
-    class C2
-        {
-        static Int value = C3.value * 2;
-        }
+        Map<Int8, Int16> map = Map:[1=11, 2=12];
+        for ((Int k, Int v) : map)     // used to fail to compile
+            {
+            console.println($"k={k}; v={v}");
+            }
 
-    class C3
-        {
-        static Int value = C1.value;
+        for (Int k : map)               // used to fail to compile
+            {
+            console.println($"k={k}");
+            }
         }
     }

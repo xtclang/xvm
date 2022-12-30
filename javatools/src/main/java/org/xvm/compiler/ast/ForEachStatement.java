@@ -411,13 +411,14 @@ public class ForEachStatement
             TypeConstant typeLVal  = exprLVal.getType();
             TypeConstant typeRVal  = null;
             int          cLVals    = 0;
-            boolean      fFoundFit = false;
+            boolean      fConvert  = false;
 
             if (typeLVal != null)
                 {
                 ctx = ctx.enterInferring(typeLVal);
                 }
 
+            TypeConstant[] atypeLVals = null;
             for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i)
                 {
                 plan     = Plan.valueOf(i);
@@ -432,7 +433,7 @@ public class ForEachStatement
 
                 if (exprRVal.testFit(ctx, typeRVal, false, null).isFit())
                     {
-                    fFoundFit = true;
+                    atypeLVals = exprLVal.getTypes();
                     break;
                     }
                 }
@@ -440,11 +441,11 @@ public class ForEachStatement
             // to validate with that required type (i.e. treat Iterable as the default required type)
             m_plan = plan;
 
-            if (fValid && fFoundFit)
+            if (fValid && atypeLVals != null)
                 {
                 // get as specific as possible with the required type for the R-Value
-                TypeConstant[] atypeLVals = exprLVal.getTypes();
-                int            cMaxLVals  = plan == Plan.MAP ? 2 : 1;
+                TypeConstant typeRValExact = null;
+                int          cMaxLVals     = plan == Plan.MAP ? 2 : 1;
 
                 cLVals = atypeLVals.length;
                 if (cLVals < 1 || cLVals > cMaxLVals)
@@ -452,7 +453,7 @@ public class ForEachStatement
                     if (cLVals > 1 && cMaxLVals == 1)
                         {
                         m_fTupleLValue = true;
-                        typeRVal       = pool.ensureParameterizedTypeConstant(typeRVal,
+                        typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal,
                                                 pool.ensureTupleType(atypeLVals));
                         }
                     else
@@ -463,7 +464,18 @@ public class ForEachStatement
                     }
                 else
                     {
-                    typeRVal = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
+                    typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
+                    }
+
+                if (exprRVal.testFit(ctx, typeRValExact, false, null).isFit())
+                    {
+                    typeRVal = typeRValExact;
+                    }
+                else
+                    {
+                    // the specific container type didn't fit; proceed with the basic type,
+                    // may need to convert r-values
+                    fConvert = true;
                     }
                 }
 
@@ -479,7 +491,7 @@ public class ForEachStatement
                 if (fValid)
                     {
                     // update "var"/"val" type declarations on the LValues with their actual types
-                    TypeConstant[] aTypeLVals;
+                    TypeConstant[] atypeRVals;
                     switch (plan)
                         {
                         default:
@@ -495,24 +507,24 @@ public class ForEachStatement
                                 int cRVals = typeEl.getParamsCount();
                                 if (cLVals <= cRVals)
                                     {
-                                    aTypeLVals = typeEl.getParamTypesArray();
+                                    atypeRVals = typeEl.getParamTypesArray();
                                     }
                                 else
                                     {
                                     condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT,
                                                 1, cRVals);
-                                    aTypeLVals = null;
+                                    atypeRVals = null;
                                     fValid     = false;
                                     }
                                 }
                             else
                                 {
-                                aTypeLVals = new TypeConstant[] {typeEl};
+                                atypeRVals = new TypeConstant[] {typeEl};
                                 }
                             break;
                             }
                         case MAP:
-                            aTypeLVals = new TypeConstant[] { getKeyType(), getValueType() };
+                            atypeRVals = new TypeConstant[] { getKeyType(), getValueType() };
 
                             if (isLabeled())
                                 {
@@ -520,7 +532,7 @@ public class ForEachStatement
                                 if (regLabel != null)
                                     {
                                     regLabel.specifyActualType(pool.ensureParameterizedTypeConstant(
-                                            regLabel.getType(), aTypeLVals));
+                                            regLabel.getType(), atypeRVals));
                                     }
                                 }
                             break;
@@ -528,8 +540,40 @@ public class ForEachStatement
 
                     if (fValid)
                         {
-                        assert aTypeLVals.length >= exprLVal.getValueCount();
-                        exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, aTypeLVals);
+                        assert atypeRVals.length >= cLVals;
+
+                        exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, atypeRVals);
+
+                        if (fConvert)
+                            {
+                            for (int i = 0; i < cLVals; i++)
+                                {
+                                TypeConstant typeR = atypeRVals[i];
+                                TypeConstant typeL = atypeLVals[i];
+                                if (!typeL.isA(typeR))
+                                    {
+                                    MethodConstant idConv =
+                                            typeR.ensureTypeInfo(errs).findConversion(typeL);
+                                    if (idConv == null)
+                                        {
+                                        // cannot provide the required type
+                                        exprRVal.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                                typeL.getValueString(), typeR.getValueString());
+                                        fValid = false;
+                                        }
+                                    else
+                                        {
+                                        if (m_aidConvKey == null)
+                                            {
+                                            m_aidConvKey = new MethodConstant[cLVals];
+                                            m_atypeConv = new TypeConstant[cLVals];
+                                            }
+                                        m_aidConvKey[i]   = idConv;
+                                        m_atypeConv[i] = typeR;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -719,7 +763,8 @@ public class ForEachStatement
         //
         // VAR     cond Boolean             ; hidden variable that holds the conditional result
         // Repeat:
-        // NVOK_0N iter Iterator.next() -> cond, val   ; assign the conditional result and the value
+        // NVOK_0N iter Iterator.next() -> cond, val ; assign the conditional result and the value
+        //                                             (with optional conversion)
         // JMP_F   cond, Exit               ; exit when the conditional result is false
         // {...}                            ; body
         // Continue:
@@ -740,8 +785,19 @@ public class ForEachStatement
         Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(labelRepeat);
 
-        code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argVal}));
-        code.add(new JumpFalse(regCond, getEndLabel()));
+        MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
+        if (idConv == null)
+            {
+            code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argVal}));
+            code.add(new JumpFalse(regCond, getEndLabel()));
+            }
+        else
+            {
+            Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+            code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regTemp}));
+            code.add(new JumpFalse(regCond, getEndLabel()));
+            code.add(new Invoke_01(regTemp, idConv, argVal));
+            }
         if (fTempVal)
             {
             lvalVal.assign(argVal, code, errs);
@@ -909,6 +965,7 @@ public class ForEachStatement
         // Repeat:
         // IS_EQ   count end -> last        ; compare current index to end index
         // I_GET   seq [count] -> lval      ; whatever code Assignable generates for "lval=seq[count]"
+        //                                    (with optional conversion)
         // {...}                            ; body
         // Continue:
         // JMP_T last Exit                  ; exit after last iteration
@@ -969,7 +1026,17 @@ public class ForEachStatement
         code.add(lblRepeat);
         code.add(new IsEq(regCount, regEnd, regLast, pool.typeCInt64()));
 
-        code.add(new I_Get(regSeq, regCount, argVal));
+        MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
+        if (idConv == null)
+            {
+            code.add(new I_Get(regSeq, regCount, argVal));
+            }
+        else
+            {
+            Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+            code.add(new I_Get(regSeq, regCount, regTemp));
+            code.add(new Invoke_01(regTemp, idConv, argVal));
+            }
 
         if (m_fTupleLValue)
             {
@@ -1061,7 +1128,9 @@ public class ForEachStatement
             // NVOK_0N iter Iterator.next() -> cond, entry ; assign the conditional result and the value
             // JMP_F   cond, Exit               ; exit when the conditional result is false
             // P_GET   Entry.key, entry -> key
+            // (optional conversion)
             // P_GET   Entry.value, entry -> value
+            // (optional conversion)
             // {...}                            ; body
             // Continue:
             // MOV False first                  ; (optional) no longer the L.first
@@ -1104,7 +1173,18 @@ public class ForEachStatement
                     ? new Register(typeKey, Op.A_STACK)
                     : lvalKey.getLocalArgument();
 
-            code.add(new P_Get(idKey, regEntry, argKey));
+            MethodConstant idConvKey = m_aidConvKey == null ? null : m_aidConvKey[0];
+            if (idConvKey == null)
+                {
+                code.add(new P_Get(idKey, regEntry, argKey));
+                }
+            else
+                {
+                Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+                code.add(new P_Get(idKey, regEntry, regTemp));
+                code.add(new Invoke_01(regTemp, idConvKey, argKey));
+                }
+
             if (fTempKey)
                 {
                 lvalKey.assign(argKey, code, errs);
@@ -1118,7 +1198,18 @@ public class ForEachStatement
                         ? new Register(typeValue, Op.A_STACK)
                         : lvalVal.getLocalArgument();
 
-                code.add(new P_Get(idValue, regEntry, argVal));
+                MethodConstant idConvVal = m_aidConvKey == null ? null : m_aidConvKey[1];
+                if (idConvVal == null)
+                    {
+                    code.add(new P_Get(idValue, regEntry, argVal));
+                    }
+                else
+                    {
+                    Register regTemp = new Register(m_atypeConv[1], Op.A_STACK);
+                    code.add(new P_Get(idValue, regEntry, regTemp));
+                    code.add(new Invoke_01(regTemp, idConvVal, argVal));
+                    }
+
                 if (fTempVal)
                     {
                     lvalVal.assign(argVal, code, errs);
@@ -1135,6 +1226,7 @@ public class ForEachStatement
             // VAR     key Key                  ; the key
             // Repeat:
             // NVOK_0N iter Iterator.next() -> cond, key ; assign the conditional result and the value
+            //                                            (with optional conversion)
             // JMP_F   cond, Exit               ; exit when the conditional result is false
             // P_GET   Entry.key, entry -> key
             // {...}                            ; body
@@ -1162,8 +1254,19 @@ public class ForEachStatement
                     ? new Register(typeKey, Op.A_STACK)
                     : lvalKey.getLocalArgument();
 
-            code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argKey}));
-            code.add(new JumpFalse(regCond, getEndLabel()));
+            MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
+            if (idConv == null)
+                {
+                code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argKey}));
+                code.add(new JumpFalse(regCond, getEndLabel()));
+                }
+            else
+                {
+                Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+                code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regTemp}));
+                code.add(new JumpFalse(regCond, getEndLabel()));
+                code.add(new Invoke_01(regTemp, idConv, argKey));
+                }
 
             if (fTempKey)
                 {
@@ -1274,23 +1377,22 @@ public class ForEachStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected StatementBlock        block;
+    protected StatementBlock           block;
 
-    private transient Label         m_labelContinue;
-
-    private transient Expression    m_exprLValue;
-    private transient Expression    m_exprRValue;
-    private transient Plan          m_plan;
-
-    private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
-    private transient Register      m_regFirst;
-    private transient Register      m_regLast;
-    private transient Register      m_regCount;
-    private transient Register      m_regEntry;
-    private transient Register      m_regKeyType;
-    private transient Register      m_regValType;
-    private transient boolean       m_fTupleLValue;
+    private transient Label            m_labelContinue;                                           private transient Expression       m_exprLValue;
+    private transient Expression       m_exprRValue;
+    private transient Plan             m_plan;
+    private transient Context          m_ctxLabelVars;
+    private transient ErrorListener    m_errsLabelVars;
+    private transient Register         m_regFirst;
+    private transient Register         m_regLast;
+    private transient Register         m_regCount;
+    private transient Register         m_regEntry;
+    private transient Register         m_regKeyType;
+    private transient Register         m_regValType;
+    private transient boolean          m_fTupleLValue;
+    private transient MethodConstant[] m_aidConvKey;
+    private transient TypeConstant[]   m_atypeConv;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
