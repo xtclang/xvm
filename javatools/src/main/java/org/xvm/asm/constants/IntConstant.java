@@ -1012,6 +1012,7 @@ public class IntConstant
             case "UIntN>..<UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, true);
 
+            case "Int<<Int":
             case "Int16<<Int64":
             case "Int32<<Int64":
             case "Int64<<Int64":
@@ -1027,6 +1028,7 @@ public class IntConstant
             case "Int64<<Int":
             case "Int128<<Int":
             case "IntN<<Int":
+            case "UInt<<Int":
             case "UInt16<<Int":
             case "UInt32<<Int":
             case "UInt64<<Int":
@@ -1034,6 +1036,7 @@ public class IntConstant
             case "UIntN<<Int":
                 return validate(this.getValue().shl(((IntConstant) that).getValue()));
 
+            case "Int>>Int":
             case "Int16>>Int64":
             case "Int32>>Int64":
             case "Int64>>Int64":
@@ -1049,6 +1052,7 @@ public class IntConstant
             case "Int64>>Int":
             case "Int128>>Int":
             case "IntN>>Int":
+            case "UInt>>Int":
             case "UInt16>>Int":
             case "UInt32>>Int":
             case "UInt64>>Int":
