@@ -2128,7 +2128,7 @@ const Uri
         return value.hashCache;
         }
 
-    private @Lazy Int hashCache.calc()
+    private @Lazy Int64 hashCache.calc()
         {
         return (scheme?   .hashCode() : 481667)
             ^^ (authority?.hashCode() : 240073)

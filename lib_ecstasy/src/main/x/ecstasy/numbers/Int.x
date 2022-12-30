@@ -193,7 +193,7 @@ const Int
         }
 
 
-    // ----- Bitwise operations (but only a subset -------------------------------------------------
+    // ----- Bitwise operations (but only a subset) ------------------------------------------------
 
     /**
      * If any bits are set in this integer, then return an integer with only the most significant
