@@ -36,7 +36,7 @@ interface IntConvertible
      */
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt8(truncate);
+        return toInt(truncate, direction).toInt8(truncate);
         }
 
     /**
@@ -52,7 +52,7 @@ interface IntConvertible
      */
     Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt16(truncate);
+        return toInt(truncate, direction).toInt16(truncate);
         }
 
     /**
@@ -68,7 +68,7 @@ interface IntConvertible
      */
     Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt32(truncate);
+        return toInt(truncate, direction).toInt32(truncate);
         }
 
     /**
@@ -84,7 +84,7 @@ interface IntConvertible
      */
     Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt64(truncate);
+        return toInt(truncate, direction).toInt64(truncate);
         }
 
     /**
@@ -100,7 +100,7 @@ interface IntConvertible
      */
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt128(truncate);
+        return toInt(truncate, direction).toInt128(truncate);
         }
 
     /**
@@ -131,7 +131,7 @@ interface IntConvertible
      */
     UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt(truncate);
+        return toInt(truncate, direction).toUInt(truncate);
         }
 
     /**
@@ -147,7 +147,7 @@ interface IntConvertible
      */
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt8(truncate);
+        return toUInt(truncate, direction).toUInt8(truncate);
         }
 
     /**
@@ -171,7 +171,7 @@ interface IntConvertible
      */
     UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt16(truncate);
+        return toUInt(truncate, direction).toUInt16(truncate);
         }
 
     /**
@@ -187,7 +187,7 @@ interface IntConvertible
      */
     UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt32(truncate);
+        return toUInt(truncate, direction).toUInt32(truncate);
         }
 
     /**
@@ -203,7 +203,7 @@ interface IntConvertible
      */
     UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt64(truncate);
+        return toUInt(truncate, direction).toUInt64(truncate);
         }
 
     /**
@@ -219,6 +219,7 @@ interface IntConvertible
      */
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
+        // this cannot use toUInt(), because UInt is only127 bits
         return toIntN(direction).toUInt128(truncate);
         }
 

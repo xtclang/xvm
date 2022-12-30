@@ -127,6 +127,7 @@ import ecstasy.numbers.IntLiteral;
 import ecstasy.numbers.IntNumber;
 import ecstasy.numbers.Nibble;
 import ecstasy.numbers.Number;
+import ecstasy.numbers.Number.Rounding;
 import ecstasy.numbers.Number.Signum;
 import ecstasy.numbers.Random;
 import ecstasy.numbers.UInt;
