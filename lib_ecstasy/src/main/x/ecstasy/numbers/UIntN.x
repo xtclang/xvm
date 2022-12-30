@@ -17,7 +17,7 @@ const UIntN
     @Override
     construct(Bit[] bits)
         {
-        assert bits.size >= 8 && bits.size.toUIntN().bitCount == 1;
+        assert bits.size >= 8 && bits.size.bitCount == 1;
         super(bits);
         }
 

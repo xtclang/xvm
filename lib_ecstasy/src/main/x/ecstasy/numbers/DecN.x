@@ -28,7 +28,7 @@ const DecN
     @Override
     construct(Byte[] bytes)
         {
-        assert bytes.size >= 4 && bytes.size.toUIntN().bitCount == 1; // TODO CP: UInt size, UInt.bitCount
+        assert bytes.size >= 4 && bytes.size.bitCount == 1;
         super(bytes);
         }
 

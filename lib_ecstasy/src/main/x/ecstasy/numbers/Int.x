@@ -227,7 +227,7 @@ const Int
      */
     Int trailingZeroCount.get()
         {
-        return toInt128().bitCount;
+        return toInt128().trailingZeroCount;
         }
 
     /**

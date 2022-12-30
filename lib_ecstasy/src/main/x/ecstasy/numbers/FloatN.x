@@ -28,7 +28,7 @@ const FloatN
     @Override
     construct(Byte[] bytes)
         {
-        assert:bounds bytes.size >= 2 && bytes.size.toUIntN().bitCount == 1;
+        assert:bounds bytes.size >= 2 && bytes.size.bitCount == 1;
         super(bytes);
         }
 
