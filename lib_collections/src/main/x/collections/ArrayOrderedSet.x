@@ -217,7 +217,7 @@ class ArrayOrderedSet<Element>
         Int hi = array.size - 1;
         while (lo <= hi)
             {
-            Int mid = (lo + hi) / 2;
+            Int mid = (lo + hi) >> 1;
             switch (compare(value, array[mid]))
                 {
                 case Lesser:

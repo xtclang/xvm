@@ -24,7 +24,7 @@ public class xNumber
         {
         String sName = f_sName;
 
-        markNativeMethod("toInt"   , null, sName.equals("numbers.Int")    ? THIS : new String[]{"numbers.Int"});
+        markNativeMethod("toInt"   , null, sName.equals("numbers.Xnt")    ? THIS : new String[]{"numbers.Xnt"});
         markNativeMethod("toInt8"  , null, sName.equals("numbers.Int8")   ? THIS : new String[]{"numbers.Int8"});
         markNativeMethod("toInt16" , null, sName.equals("numbers.Int16")  ? THIS : new String[]{"numbers.Int16"});
         markNativeMethod("toInt32" , null, sName.equals("numbers.Int32")  ? THIS : new String[]{"numbers.Int32"});
