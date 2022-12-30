@@ -14,7 +14,7 @@ const DecN
     @Override
     construct(Bit[] bits)
         {
-        assert bits.size >= 32 && bits.bitCount == 1;
+        assert bits.size >= 32 && bits.size.bitCount == 1;
         super(bits);
         }
 
