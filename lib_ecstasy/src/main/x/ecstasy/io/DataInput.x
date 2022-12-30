@@ -236,7 +236,7 @@ interface DataInput
      */
     Date readDate()
         {
-        return new Date(readInt64());
+        return new Date(readInt32());
         }
 
     /**
@@ -244,7 +244,7 @@ interface DataInput
      */
     TimeOfDay readTime()
         {
-        return new TimeOfDay(readInt64());
+        return new TimeOfDay(readUInt64());
         }
 
     /**
