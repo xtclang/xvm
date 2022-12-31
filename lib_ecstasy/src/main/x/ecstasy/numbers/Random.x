@@ -68,10 +68,9 @@ interface Random
     Int int(Int max)
         {
         assert max > 0;
-        UInt128 umax     = max.toUInt128(); // REVIEW CP
-        Int     nonzeros = 128 - umax.leadingZeroCount;
-        Bit[]   rndbits  = fill(new Bit[nonzeros]);
-        if (umax & umax-1 == 0)
+        Int    fillCount = (max-1).leftmostBit.trailingZeroCount + 1;
+        Bit[]  rndbits   = fill(new Bit[fillCount]);
+        if (max & max-1 == 0)
             {
             // max is a power of 2, so we're done
             return rndbits.toInt();
@@ -102,17 +101,6 @@ interface Random
         {
         return range.effectiveLowerBound + int(range.size);
         }
-
-// TODO temporary; remove
-    Int64 int(Int64 max)
-        {
-        return int(max.toInt()).toInt64();
-        }
-    Int64 int(Range<Int64> range)
-        {
-        return int(new Range(range.first.toInt(), range.last.toInt(), range.firstExclusive, range.lastExclusive)).toInt64();
-        }
-// TODO end remove
 
     /**
      * Select a random number that is between `0` (inclusive) and the specified maximum value
@@ -320,14 +308,14 @@ interface Random
     /**
      * @return a random 128-bit binary floating point value in the range `0..<1`.
      */
-// TODO
-//    Float128 float128()
-//        {
-//        static Int      precision = 1 << 113;
-//        static Float128 scalar    = 1.0 / precision.toFloat128();
-//
-//        // initialize only the least significant 53 bits of information; leave [0..10] blank
-//        Int n = int(precision);
-//        return n.toFloat128() * scalar;
-//        }
+    Float128 float128()
+        {
+        TODO
+        // static Int      precision = 1 << 113;
+        // static Float128 scalar    = 1.0 / precision.toFloat128();
+        //
+        // // initialize only the least significant 53 bits of information; leave [0..10] blank
+        // Int n = int(precision);
+        // return n.toFloat128() * scalar;
+        }
     }
