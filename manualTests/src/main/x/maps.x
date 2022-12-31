@@ -190,7 +190,7 @@ module TestMaps
             {
             static <CompileType extends Point> Int64 hashCode(CompileType value)
                 {
-                return 100 + value.x % 3;
+                return 100 + value.x.toInt64() % 3;
                 }
             }
 

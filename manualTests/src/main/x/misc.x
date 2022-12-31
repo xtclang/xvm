@@ -63,7 +63,7 @@ module TestMisc
         console.println("a ^ b = "   + (a ^ b));
         console.println("a << b = "  + (a << b));
         console.println("a >> b = "  + (a >> b));
-        console.println("a >>> b = " + (a >>> b));
+        console.println("a >>> b = " + (a.toInt64() >>> b));
 
         console.println("\n** pre/post inc/dec");
         console.println("a   = " + a);

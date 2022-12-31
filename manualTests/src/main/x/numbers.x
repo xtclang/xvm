@@ -323,16 +323,16 @@ module TestNumbers
         function Float64(Int) convert2 = Number.converterFor(Int, Float64);
         console.println($"using converter: int={n}, float64={convert2(n)}");
 
-        Int[]  ints  = [1, 2, 3];
-        Bit[]  bits  = ints.asBitArray();
-        Byte[] bytes = ints.asByteArray();
+        Int64[] ints  = [1, 2, 3];
+        Bit[]   bits  = ints.asBitArray();
+        Byte[]  bytes = ints.asByteArray();
 
         assert bits.toByteArray().toInt64Array() == ints;
         assert bits.reify(Mutable).toByteArray().toInt64Array() == ints;
         assert bytes.toInt64Array() == ints;
         assert bytes.reify(Fixed).toInt64Array() == ints;
 
-        Int[] slice = ints[1..2];
+        Int64[] slice = ints[1..2];
         assert slice.asByteArray().asInt64Array() == slice;
         assert slice.asByteArray().reify().asInt64Array() == slice;
 

@@ -838,12 +838,14 @@ public class ForEachStatement
                 case "numbers.Bit":
                 case "numbers.Nibble":
                 case "text.Char":
+                case "numbers.Int":
                 case "numbers.Int8":
                 case "numbers.Int16":
                 case "numbers.Int32":
                 case "numbers.Int64":
                 case "numbers.Int128":
                 case "numbers.IntN":
+                case "numbers.UInt":
                 case "numbers.UInt8":
                 case "numbers.UInt16":
                 case "numbers.UInt32":
