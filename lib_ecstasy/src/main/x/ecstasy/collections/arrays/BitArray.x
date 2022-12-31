@@ -963,7 +963,6 @@ mixin BitArray<Element extends Bit>
     IntN toIntN(Rounding direction = TowardZero)
         {
         Bit[]  bits = this;
-        UInt64 size = this.size.toUInt64();
         if (size & 0b111 != 0)
             {
             // sign-extend the value out to a byte (8-bit) boundary
@@ -1082,7 +1081,6 @@ mixin BitArray<Element extends Bit>
     UIntN toUIntN(Rounding direction = TowardZero)
         {
         Bit[]  bits = this;
-        UInt64 size = this.size.toUInt64();
         if (size & 0b111 != 0)
             {
             // zero-extend the value out to a byte (8-bit) boundary
