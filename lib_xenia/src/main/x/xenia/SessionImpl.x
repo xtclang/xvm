@@ -32,7 +32,7 @@ service SessionImpl
      * @param sessionId    the internal session identifier
      * @param requestInfo  the request information
      */
-    construct(SessionManager manager, Int sessionId, RequestInfo requestInfo)
+    construct(SessionManager manager, Int64 sessionId, RequestInfo requestInfo)
         {
         initialize(this, manager, sessionId, requestInfo);
         }
@@ -48,7 +48,7 @@ service SessionImpl
      */
     static void initialize((struct SessionImpl) structure,
                            SessionManager       manager,
-                           Int                  sessionId,
+                           Int64                sessionId,
                            RequestInfo          requestInfo)
         {
         Time now = xenia.clock.now;
@@ -182,7 +182,7 @@ service SessionImpl
     /**
      * Information about a system redirect.
      */
-    protected static const PendingRedirect_(Int id, Uri uri, Time created);
+    protected static const PendingRedirect_(Int64 id, Uri uri, Time created);
 
     /**
      * Information collected for each log entry.
@@ -458,10 +458,10 @@ service SessionImpl
         // TODO limit the number of pending redirects; return error
 
         // allocate a unique id
-        Int id;
+        Int64 id;
         do
             {
-            id = xenia.rnd.int(100k) + 1;
+            id = xenia.rnd.int(100k).toInt64() + 1;
             }
         while (pendingRedirects_?.any(r -> r.id == id));
 
@@ -479,7 +479,7 @@ service SessionImpl
      * @return True iff the specified id is a redirect that is registered on this session
      * @return (conditional) the Uri that caused the redirect
      */
-    conditional Uri claimRedirect_(Int id)
+    conditional Uri claimRedirect_(Int64 id)
         {
         if (PendingRedirect_[] redirects ?= pendingRedirects_)
             {
@@ -504,7 +504,7 @@ service SessionImpl
      *
      * @return the session identifier string
      */
-    static String idToString_(Int id)
+    static String idToString_(Int64 id)
         {
         Byte[] bytes = id == 0 ? [0] : id.toByteArray()[id.leadingZeroCount / 8 ..< 8];
         return Base64Format.Instance.encode(bytes);

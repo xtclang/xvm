@@ -1620,16 +1620,16 @@ class HasherMap<Key, Value>
         assert capacity >= 0;
 
         // shoot for 20% empty buckets (i.e. 50% oversize)
-        Int target = capacity + (capacity / 2) + 15;
+        Int64 target = (capacity + (capacity / 2) + 15).toInt64();
 
         (_, Int index) = PRIMES.binarySearch(target);
-        Int64 bucketCount = (index < PRIMES.size ? PRIMES[index] : target).toInt64();
+        Int bucketCount = index < PRIMES.size ? PRIMES[index] : target;
 
         // shrink when falls below 20% capacity
-        Int shrinkThreshold = index <= 8 ? -1 : ((bucketCount >>> 2) - (bucketCount >>> 5) - (bucketCount >>> 6));
+        Int shrinkThreshold = index <= 8 ? -1 : ((bucketCount >> 2) - (bucketCount >> 5) - (bucketCount >> 6));
 
         // grow when around 80% capacity
-        Int growThreshold = bucketCount - (bucketCount >>> 2) + (bucketCount >>> 5) + (bucketCount >>> 6);
+        Int growThreshold = bucketCount - (bucketCount >> 2) + (bucketCount >> 5) + (bucketCount >> 6);
 
         return bucketCount, growThreshold, shrinkThreshold;
         }
@@ -1637,7 +1637,7 @@ class HasherMap<Key, Value>
     /**
      * Primes used for bucket array sizes (to ensure a prime modulo).
      */
-    static Int[] PRIMES =
+    static Int64[] PRIMES =
         [
         7, 13, 23, 37, 47, 61, 79, 107, 137, 181, 229, 283, 349, 419, 499, 599, 727, 863, 1013,
         1187, 1399, 1697, 2039, 2503, 3253, 4027, 5113, 6679, 8999, 11987, 16381, 21023, 28351,

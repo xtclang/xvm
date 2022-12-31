@@ -61,10 +61,10 @@ service SystemService
                     return NotFound;
                     }
 
-                Int redirect;
+                Int64 redirect;
                 try
                     {
-                    redirect = new Int(parts[1]);
+                    redirect = new Int64(parts[1]);
                     }
                 catch (Exception e)
                     {
@@ -91,7 +91,7 @@ service SystemService
      */
     protected HttpStatus|Response|String validateSessionCookies(String      uriString,
                                                                 RequestInfo info,
-                                                                Int         redirect)
+                                                                Int64       redirect)
         {
         (String? txtTemp, String? tlsTemp, String? consent, Int failures)
                 = Dispatcher.extractSessionCookies(info);

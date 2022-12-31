@@ -29,7 +29,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     /**
      * The means to instantiate sessions.
      */
-    typedef function SessionImpl(SessionManager, Int, RequestInfo) as SessionProducer;
+    typedef function SessionImpl(SessionManager, Int64, RequestInfo) as SessionProducer;
     protected/private SessionProducer instantiateSession;
 
     /**
@@ -45,7 +45,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     /**
      * The most recently generated session id.
      */
-    protected/private Int previousId =
+    protected/private Int64 previousId =
         {
         // initialize to a random session id
         @Inject Random rnd;
@@ -280,7 +280,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      */
     HttpStatus|SessionImpl createSession(RequestInfo requestInfo)
         {
-        Int         id      = generateId();
+        Int64       id      = generateId();
         SessionImpl session = instantiateSession(this, id, requestInfo);
         sessions.put(id, session);
 
@@ -294,11 +294,11 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *
      * @return an unused session ID
      */
-    Int generateId()
+    Int64 generateId()
         {
         while (True)
             {
-            Int id = previousId + ID_GAP & ID_LIMIT;
+            Int64 id = previousId + ID_GAP & ID_LIMIT;
             previousId = id;
 
             switch (getStatusById(id))
@@ -320,7 +320,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
                     // at once (so the previousId may have already been changed by someone else,
                     // after we changed it above)
                     @Inject Random rnd;
-                    Int adjust = HashMap.PRIMES[rnd.int(HashMap.PRIMES.size)];
+                    Int64 adjust = HashMap.PRIMES[rnd.int(HashMap.PRIMES.size)];
                     previousId = previousId + adjust & ID_LIMIT;
                     break;
                 }
