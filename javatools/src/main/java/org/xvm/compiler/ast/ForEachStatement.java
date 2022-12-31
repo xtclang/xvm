@@ -542,16 +542,16 @@ public class ForEachStatement
                         {
                         assert atypeRVals.length >= cLVals;
 
-                        exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, atypeRVals);
-
                         if (fConvert)
                             {
+                            atypeRVals = atypeRVals.clone();
                             for (int i = 0; i < cLVals; i++)
                                 {
                                 TypeConstant typeR = atypeRVals[i];
                                 TypeConstant typeL = atypeLVals[i];
                                 if (!typeL.isA(typeR))
                                     {
+                                    atypeRVals[i] = typeL; // remove the inference
                                     MethodConstant idConv =
                                             typeR.ensureTypeInfo(errs).findConversion(typeL);
                                     if (idConv == null)
@@ -566,14 +566,15 @@ public class ForEachStatement
                                         if (m_aidConvKey == null)
                                             {
                                             m_aidConvKey = new MethodConstant[cLVals];
-                                            m_atypeConv = new TypeConstant[cLVals];
+                                            m_atypeConv  = new TypeConstant[cLVals];
                                             }
-                                        m_aidConvKey[i]   = idConv;
-                                        m_atypeConv[i] = typeR;
+                                        m_aidConvKey[i] = idConv;
+                                        m_atypeConv[i]  = typeR;
                                         }
                                     }
                                 }
                             }
+                        exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, atypeRVals);
                         }
                     }
                 }
