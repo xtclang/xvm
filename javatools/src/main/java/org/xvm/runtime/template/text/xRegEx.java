@@ -28,7 +28,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -60,8 +60,8 @@ public class xRegEx
         {
         markNativeProperty("pattern");
 
-        markNativeMethod("construct",   new String[] {"text.String", "numbers.Int64"}, VOID);
-        markNativeMethod("find",        new String[] {"text.String", "numbers.Int64"}, null);
+        markNativeMethod("construct",   new String[] {"text.String", "numbers.Int"}, VOID);
+        markNativeMethod("find",        new String[] {"text.String", "numbers.Int"}, null);
         markNativeMethod("match",       STRING, null);
         markNativeMethod("matchPrefix", STRING, null);
         markNativeMethod("replaceAll",  new String[] {"text.String", "text.String"}, STRING);
@@ -245,9 +245,9 @@ public class xRegEx
             if (nStart >= 0)
                 {
                 GenericHandle hRange = new GenericHandle(clzRange);
-                hRange.setField(frame, "lowerBound",     xInt64.makeHandle(nStart));
+                hRange.setField(frame, "lowerBound",     xInt.makeHandle(nStart));
                 hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
-                hRange.setField(frame, "upperBound",     xInt64.makeHandle(match.end(i)));
+                hRange.setField(frame, "upperBound",     xInt.makeHandle(match.end(i)));
                 hRange.setField(frame, "upperExclusive", xBoolean.TRUE);
                 hRange.setField(frame, "descending",     xBoolean.FALSE);
                 hRange.makeImmutable();

@@ -71,16 +71,13 @@ public abstract class xConstrainedInteger
         if (f_fSigned)
             {
             markNativeProperty("magnitude");
+
+            markNativeMethod("abs", VOID, THIS);
             }
-        markNativeProperty("bits");
-        markNativeProperty("bitCount");
-        markNativeProperty("leftmostBit");
-        markNativeProperty("rightmostBit");
+
         markNativeProperty("leadingZeroCount");
-        markNativeProperty("trailingZeroCount");
 
         markNativeMethod("toUnchecked", VOID, null);
-
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
@@ -91,7 +88,6 @@ public abstract class xConstrainedInteger
         markNativeMethod("stepsTo"      , THIS, INT );
 
         // @Op methods
-        markNativeMethod("abs"          , VOID, THIS);
         markNativeMethod("add"          , THIS, THIS);
         markNativeMethod("sub"          , THIS, THIS);
         markNativeMethod("mul"          , THIS, THIS);
@@ -256,7 +252,7 @@ public abstract class xConstrainedInteger
                         }
                     }
 
-                return frame.assignValue(iReturn, xInt64.makeHandle(cDigits));
+                return frame.assignValue(iReturn, xInt.makeHandle(cDigits));
                 }
 
             case "bits":
@@ -270,8 +266,11 @@ public abstract class xConstrainedInteger
             case "bitCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt64.makeHandle(Long.bitCount(l)));
+                return frame.assignValue(iReturn, xInt.makeHandle(Long.bitCount(l)));
                 }
+
+            case "bitLength":
+                return frame.assignValue(iReturn, xInt.makeHandle(f_cNumBits));
 
             case "leftmostBit":
                 {
@@ -288,13 +287,13 @@ public abstract class xConstrainedInteger
             case "leadingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfLeadingZeros(l))));
+                return frame.assignValue(iReturn, xInt.makeHandle((Long.numberOfLeadingZeros(l))));
                 }
 
             case "trailingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfTrailingZeros(l))));
+                return frame.assignValue(iReturn, xInt.makeHandle((Long.numberOfTrailingZeros(l))));
                 }
             }
 
@@ -379,11 +378,13 @@ public abstract class xConstrainedInteger
                 return frame.assignValue(iReturn, getUncheckedTemplate().makeJavaLong(l));
                 }
 
+            case "toInt":
             case "toInt8":
             case "toInt16":
             case "toInt32":
             case "toInt64":
             case "toInt128":
+            case "toUInt":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":

@@ -18,6 +18,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.runtime.template.collections.xArray;
+
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 
 import org.xvm.runtime.template.text.xChar;
@@ -31,17 +33,11 @@ import org.xvm.util.PackedInteger;
 public abstract class xIntBase
         extends xIntNumber
     {
-    public xIntBase(Container container, ClassStructure structure, boolean fUnsigned)
+    public xIntBase(Container container, ClassStructure structure, boolean fSigned)
         {
         super(container, structure, false);
 
-        f_fSigned  = fUnsigned;
-        }
-
-    @Override
-    public void initNative()
-        {
-        super.initNative();
+        f_fSigned = fSigned;
         }
 
     /**
@@ -68,6 +64,109 @@ public abstract class xIntBase
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "bits":
+                {
+                if (hTarget instanceof JavaLong hLong)
+                    {
+                    long l     = hLong.getValue();
+                    int  cBits = 64;
+
+                    return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
+                        xConstrainedInteger.toByteArray(l, cBits >>> 3),
+                            cBits, xArray.Mutability.Constant));
+                    }
+                else
+                    {
+                    LongLongHandle hLong2 = (LongLongHandle) hTarget;
+                    // TODO
+                    throw new UnsupportedOperationException("bits");
+                    }
+                }
+
+            case "leftmostBit":
+                {
+                if (hTarget instanceof JavaLong hLong)
+                    {
+                    long l = hLong.getValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(Long.highestOneBit(l)));
+                    }
+                else
+                    {
+                    LongLong ll = ((LongLongHandle) hTarget).getValue();
+                    long     lH = ll.getHighValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(lH == 0
+                        ? Long.highestOneBit(ll.getLowValue())
+                        : Long.highestOneBit(lH) + 64));
+                    }
+                }
+
+            case "rightmostBit":
+                {
+                if (hTarget instanceof JavaLong hLong)
+                    {
+                    long l = hLong.getValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(Long.lowestOneBit(l)));
+                    }
+                else
+                    {
+                    LongLong ll   = ((LongLongHandle) hTarget).getValue();
+                    long     lLow = ll.getLowValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(lLow == 0
+                        ? 64 + Long.lowestOneBit(ll.getHighValue())
+                        : Long.lowestOneBit(lLow)));
+                    }
+                }
+
+            case "leadingZeroCount":
+                {
+                if (hTarget instanceof JavaLong hLong)
+                    {
+                    long l = hLong.getValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(Long.numberOfLeadingZeros(l)));
+                    }
+                else
+                    {
+                    LongLong ll = ((LongLongHandle) hTarget).getValue();
+                    long     lH = ll.getHighValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(lH == 0
+                        ? 64 + Long.numberOfLeadingZeros(ll.getLowValue())
+                        : Long.numberOfLeadingZeros(lH)));
+                    }
+                }
+
+            case "trailingZeroCount":
+                {
+                if (hTarget instanceof JavaLong hLong)
+                    {
+                    long l = hLong.getValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(Long.numberOfTrailingZeros(l)));
+                    }
+                else
+                    {
+                    LongLong ll   = ((LongLongHandle) hTarget).getValue();
+                    long     lLow = ll.getLowValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(lLow == 0
+                        ? 64 + Long.numberOfTrailingZeros(ll.getHighValue())
+                        : Long.numberOfTrailingZeros(lLow)));
+                    }
+                }
+            }
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

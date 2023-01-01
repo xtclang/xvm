@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.io.File;
 import java.io.IOException;
 
+import java.lang.reflect.Modifier;
 import java.net.URLDecoder;
 
 import java.nio.charset.StandardCharsets;
@@ -170,16 +171,18 @@ public class NativeContainer
                 }
 
             Class<ClassTemplate> clz = entry.getValue();
-
-            try
+            if (!Modifier.isAbstract(clz.getModifiers()))
                 {
-                storeNativeTemplate(clz.getConstructor(
-                    Container.class, ClassStructure.class, Boolean.TYPE).
-                    newInstance(this, structClass, Boolean.TRUE));
-                }
-            catch (Exception e)
-                {
-                throw new RuntimeException("Constructor failed for " + clz.getName(), e);
+                try
+                    {
+                    storeNativeTemplate(clz.getConstructor(
+                        Container.class, ClassStructure.class, Boolean.TYPE).
+                        newInstance(this, structClass, Boolean.TRUE));
+                    }
+                catch (Exception e)
+                    {
+                    throw new RuntimeException("Constructor failed for " + clz.getName(), e);
+                    }
                 }
             }
 
@@ -836,7 +839,7 @@ public class NativeContainer
             case CIntN,    IntN,   CUIntN,   UIntN:
             case BFloat16:
             case Float16, Float32, Float64, Float128, FloatN:
-            case          Dec32,   Dec64,   Dec128,   DecN:
+            case Dec,     Dec32,   Dec64,   Dec128,   DecN:
 
             case Array, UInt8Array:
             case Date, TimeOfDay, Time, Duration:

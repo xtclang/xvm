@@ -350,7 +350,7 @@ public abstract class ClassTemplate
      */
     public int createConstHandle(Frame frame, Constant constant)
         {
-        return frame.raiseException("Unknown constant:" + constant);
+        return frame.raiseException("Unknown constant: " + constant);
         }
 
     /**
@@ -2684,7 +2684,7 @@ public abstract class ClassTemplate
     public static String[] VOID    = new String[0];
     public static String[] THIS    = new String[] {"this"};
     public static String[] OBJECT  = new String[] {"Object"};
-    public static String[] INT     = new String[] {"numbers.Int64"};
+    public static String[] INT     = new String[] {"numbers.Int"};
     public static String[] STRING  = new String[] {"text.String"};
     public static String[] BOOLEAN = new String[] {"Boolean"};
 

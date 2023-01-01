@@ -90,6 +90,4 @@ public class xInt64
         {
         return INSTANCE.makeJavaLong(lValue);
         }
-
-    private final JavaLong[] cache = new JavaLong[128];
     }

@@ -49,10 +49,10 @@ public class xBitArray
         ClassTemplate mixin = f_container.getTemplate("collections.arrays.BitArray");
 
         mixin.markNativeMethod("asBooleanArray", VOID, null);
-        mixin.markNativeMethod("asByteArray", VOID, null);
-        mixin.markNativeMethod("asNibbleArray", VOID, null);
-        mixin.markNativeMethod("toUInt8", VOID, null);
-        mixin.markNativeMethod("toByteArray", null, null);
+        mixin.markNativeMethod("asByteArray"   , VOID, null);
+        mixin.markNativeMethod("asNibbleArray" , VOID, null);
+        mixin.markNativeMethod("toUInt8"       , null, null);
+        mixin.markNativeMethod("toByteArray"   , null, null);
 
         invalidateTypeInfo();
         }

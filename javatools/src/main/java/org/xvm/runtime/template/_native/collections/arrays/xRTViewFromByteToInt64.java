@@ -15,7 +15,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.util.Handy;
 
@@ -90,7 +90,7 @@ public class xRTViewFromByteToInt64
             byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
             long   l  = Handy.byteArrayToLong(ab, 0);
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(l));
+            return frame.assignValue(iReturn, xInt.makeHandle(l));
             }
 
         throw new UnsupportedOperationException();

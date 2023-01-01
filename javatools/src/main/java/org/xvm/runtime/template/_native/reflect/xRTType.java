@@ -57,6 +57,7 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
+import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
@@ -1480,7 +1481,7 @@ public class xRTType
             }
 
         ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
-        ahArg[0] = xInt64.makeHandle(nRegister);
+        ahArg[0] = xInt.makeHandle(nRegister);
 
         int iResult = clz.getTemplate().construct(frame, ctor, clz, null, ahArg, Op.A_STACK);
         switch (iResult)

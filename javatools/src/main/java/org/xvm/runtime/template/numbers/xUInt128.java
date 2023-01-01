@@ -1,11 +1,11 @@
 package org.xvm.runtime.template.numbers;
 
+
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
+
 
 public class xUInt128
         extends BaseInt128
@@ -22,16 +22,10 @@ public class xUInt128
             }
         }
 
-    /**
-     * Converts an object of "this" integer type to the type represented by the template.
-     *
-     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
-     */
+    @Override
     protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                           ObjectHandle hTarget, int iReturn)
+                                           LongLong ll, int iReturn)
         {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-
         if (ll.getHighValue() != 0)
             {
             return overflow(frame);

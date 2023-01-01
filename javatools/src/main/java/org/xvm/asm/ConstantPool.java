@@ -482,7 +482,7 @@ public class ConstantPool
      */
     public IntConstant ensureIntConstant(PackedInteger pint)
         {
-        return ensureIntConstant(pint, Format.CInt64);
+        return ensureIntConstant(pint, Format.Int);
         }
 
 

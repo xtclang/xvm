@@ -36,6 +36,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
 
+
 /**
  * Abstract base for Int128 and UInt128.
  */
@@ -54,33 +55,27 @@ public abstract class BaseInt128
     @Override
     public void initNative()
         {
-        String sName = f_sName;
+        super.initNative();
 
-        if (f_fSigned)
-            {
-            markNativeProperty("magnitude");
-            }
+        markNativeProperty("bitLength");
+        markNativeProperty("leadingZeroCount");
+
         markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("toInt128" , null, sName.equals("numbers.Int128") ? THIS : new String[]{"numbers.Int128"});
-        markNativeMethod("toInt64"  , null, new String[]{"numbers.Int64"});
-        markNativeMethod("toInt32"  , null, new String[]{"numbers.Int32"});
-        markNativeMethod("toInt16"  , null, new String[]{"numbers.Int16"});
-        markNativeMethod("toInt8"   , null, new String[]{"numbers.Int8"});
-        markNativeMethod("toUInt128", null, sName.equals("numbers.UInt128") ? THIS : new String[]{"numbers.UInt128"});
-        markNativeMethod("toUInt64" , null, new String[]{"numbers.UInt64"});
-        markNativeMethod("toUInt32" , null, new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt16" , null, new String[]{"numbers.UInt16"});
-        markNativeMethod("toUInt8"  , null, new String[]{"numbers.UInt8"});
-
         // @Op methods
-        markNativeMethod("abs", VOID, THIS);
-        markNativeMethod("add", THIS, THIS);
-        markNativeMethod("sub", THIS, THIS);
-        markNativeMethod("mul", THIS, THIS);
-        markNativeMethod("div", THIS, THIS);
-        markNativeMethod("mod", THIS, THIS);
-        markNativeMethod("neg", VOID, THIS);
+        markNativeMethod("add"          , THIS, THIS);
+        markNativeMethod("sub"          , THIS, THIS);
+        markNativeMethod("mul"          , THIS, THIS);
+        markNativeMethod("div"          , THIS, THIS);
+        markNativeMethod("mod"          , THIS, THIS);
+        markNativeMethod("neg"          , VOID, THIS);
+        markNativeMethod("and"          , THIS, THIS);
+        markNativeMethod("or"           , THIS, THIS);
+        markNativeMethod("xor"          , THIS, THIS);
+        markNativeMethod("not"          , VOID, THIS);
+        markNativeMethod("shiftLeft"    , INT, THIS);
+        markNativeMethod("shiftRight"   , INT, THIS);
+        markNativeMethod("shiftAllRight", INT, THIS);
 
         invalidateTypeInfo();
         }
@@ -197,19 +192,54 @@ public abstract class BaseInt128
         {
         switch (sPropName)
             {
-            case "magnitude":
+            case "bitCount":
                 {
-                if (f_fSigned)
-                    {
-                    LongLong ll = ((LongLongHandle) hTarget).getValue();
-                    if (ll.signum() < 0)
-                        {
-                        ll = new LongLong(ll.getLowValue(), -ll.getHighValue());
-                        }
+                LongLong ll = ((LongLongHandle) hTarget).getValue();
+                return frame.assignValue(iReturn, xInt.makeHandle(
+                    Long.bitCount(ll.getLowValue()) + Long.bitCount(ll.getHighValue())));
+                }
 
-                    return frame.assignValue(iReturn, xUInt128.INSTANCE.makeLongLong(ll));
-                    }
-                return frame.assignValue(iReturn, hTarget);
+            case "bitLength":
+                return frame.assignValue(iReturn, xInt.makeHandle(128));
+
+            case "leftmostBit":
+                {
+                LongLong ll = ((LongLongHandle) hTarget).getValue();
+                long     lH = ll.getHighValue();
+
+                return frame.assignValue(iReturn, xInt.makeHandle(lH == 0
+                    ? Long.highestOneBit(ll.getLowValue())
+                    : Long.highestOneBit(lH) + 64));
+                }
+
+            case "rightmostBit":
+                {
+                LongLong ll   = ((LongLongHandle) hTarget).getValue();
+                long     lLow = ll.getLowValue();
+
+                return frame.assignValue(iReturn, xInt.makeHandle(lLow == 0
+                    ? 64 + Long.lowestOneBit(ll.getHighValue())
+                    : Long.lowestOneBit(lLow)));
+                }
+
+            case "leadingZeroCount":
+                {
+                LongLong ll = ((LongLongHandle) hTarget).getValue();
+                long     lH = ll.getHighValue();
+
+                return frame.assignValue(iReturn, xInt.makeHandle(lH == 0
+                    ? 64 + Long.numberOfLeadingZeros(ll.getLowValue())
+                    : Long.numberOfLeadingZeros(lH)));
+                }
+
+            case "trailingZeroCount":
+                {
+                LongLong ll   = ((LongLongHandle) hTarget).getValue();
+                long     lLow = ll.getLowValue();
+
+                return frame.assignValue(iReturn, xInt.makeHandle(lLow == 0
+                    ? 64 + Long.numberOfTrailingZeros(ll.getHighValue())
+                    : Long.numberOfTrailingZeros(lLow)));
                 }
             }
 
@@ -237,8 +267,33 @@ public abstract class BaseInt128
             case "div":
                 return invokeDiv(frame, hTarget, hArg, iReturn);
 
+            case "mod":
+                return invokeMod(frame, hTarget, hArg, iReturn);
+
             case "neg":
                 return invokeNeg(frame, hTarget, iReturn);
+
+            case "and":
+                return invokeAnd(frame, hTarget, hArg, iReturn);
+
+            case "or":
+                return invokeOr(frame, hTarget, hArg, iReturn);
+
+            case "xor":
+                return invokeXor(frame, hTarget, hArg, iReturn);
+
+            case "not":
+                return invokeCompl(frame, hTarget, iReturn);
+
+            case "shiftLeft":
+                return invokeShl(frame, hTarget, hArg, iReturn);
+
+            case "shiftRight":
+                return invokeShr(frame, hTarget, hArg, iReturn);
+
+            case "shiftAllRight":
+                return invokeShrAll(frame, hTarget, hArg, iReturn);
+
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -255,11 +310,13 @@ public abstract class BaseInt128
                 return frame.raiseException(xException.unsupportedOperation(frame, "toUnchecked"));
                 }
 
+            case "toInt":
             case "toInt8":
             case "toInt16":
             case "toInt32":
             case "toInt64":
             case "toInt128":
+            case "toUInt":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":
@@ -274,15 +331,20 @@ public abstract class BaseInt128
                     return frame.assignValue(iReturn, hTarget);
                     }
 
+                LongLong llValue = ((LongLongHandle) hTarget).getValue();
+
                 if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return convertToConstrainedType(frame, templateTo, hTarget, iReturn);
+                    return convertToConstrainedType(frame, templateTo, llValue, iReturn);
+                    }
+
+                if (template instanceof xIntBase templateTo)
+                    {
+                    return frame.assignValue(iReturn, templateTo.makeHandle(llValue));
                     }
 
                 if (template instanceof BaseInt128 templateTo)
                     {
-                    LongLong llValue = ((LongLongHandle) hTarget).getValue();
-
                     if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)
                         {
                         // cannot assign negative value to the unsigned type
@@ -602,12 +664,12 @@ public abstract class BaseInt128
         }
 
     /**
-     * Converts an object of "this" integer type to the type represented by the template.
+     * Converts a LongLong value of "this" integer type to the type represented by the template.
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
     abstract protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                                    ObjectHandle hTarget, int iReturn);
+                                                    LongLong llValue, int iReturn);
 
     public LongLongHandle makeLongLong(LongLong ll)
         {

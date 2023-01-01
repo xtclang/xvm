@@ -50,7 +50,7 @@ module TestNumbers
             {
             }
 
-        Int64 un1 = Int.MaxValue.toInt64().toUnchecked();
+        Int64 un1 = Int64.MaxValue.toInt64().toUnchecked();
         Int64 un2 = un1 + 1;
 
         assert un2 == Int64.MinValue; // wraps around w/out exception
@@ -246,36 +246,36 @@ module TestNumbers
         {
         console.println("\n** testDec64()");
 
-        Dec n1 = 4.2;
+        Dec64 n1 = 4.2;
         console.println("n1=" + n1);
 
         Byte[] bytes = n1.toByteArray();
-        Dec  n11   = new Dec(bytes);
-        assert n11 == n1;
+        Dec64  n11   = new Dec64(bytes);
+        assert n11 == n1.toDec64();
 
         Bit[]  bits = n1.toBitArray();
-        Dec  n12  = new Dec(bits);
+        Dec64  n12  = new Dec64(bits);
         assert n12 == n1;
 
-        Dec n2 = n1 + 1;
+        Dec64 n2 = n1 + 1;
         console.println("-1=" + n2);
         console.println("+1=" + (n2 - 1));
 
-        Dec n3 = n1*10;
+        Dec64 n3 = n1*10;
         console.println("*10=" + n3);
         console.println("/10=" + (n3 / 10));
 
         console.println("PI=" + FPNumber.PI);
-        Dec pi64 = FPNumber.PI;
+        Dec64 pi64 = FPNumber.PI;
         console.println("pi64=" + pi64);
 
         // see http://www.cplusplus.com/reference/cmath/round/
-        Dec[] numbers = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
+        Dec64[] numbers = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
 
         console.println();
         console.println("value\tround\tfloor\tceil\ttoZero");
         console.println("-----\t-----\t-----\t----\t-----");
-        for (Dec d : numbers)
+        for (Dec64 d : numbers)
             {
             console.println($"{d},\t{d.round()},\t{d.floor()},\t{d.ceil()},\t{d.round(TowardZero)}");
             }
@@ -286,7 +286,7 @@ module TestNumbers
         console.println("\n** testInfinity()");
 
         Float64 f = -123456789.987654321;
-        Dec     d = f.toDec();
+        Dec64   d = f.toDec64();
         while (True)
             {
             console.println($"f={f} d={d}");
@@ -304,7 +304,7 @@ module TestNumbers
                 break;
                 }
 
-            d = f.toDec();
+            d = f.toDec64();
             f = -f*f;
             d = -d*d;
             }

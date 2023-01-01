@@ -32,6 +32,14 @@ public class xUInt
         }
 
     @Override
+    public void initNative()
+        {
+        super.initNative();
+
+        invalidateTypeInfo();
+        }
+
+    @Override
     protected xIntBase getComplimentaryTemplate()
         {
         return xInt.INSTANCE;

@@ -849,7 +849,7 @@ mixin BitArray<Element extends Bit>
     @Override
     Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        if (size > 128)
+        if (size <= 128)
             {
             return new Int(this);
             }

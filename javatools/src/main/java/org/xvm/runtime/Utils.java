@@ -33,6 +33,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext.Synchronicity;
 
+import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -44,7 +45,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 import org.xvm.runtime.template.reflect.xModule;
@@ -1490,7 +1491,7 @@ public abstract class Utils
 
                 MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
                 ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
-                ahArg[0] = xInt64.makeHandle(index); // ordinal
+                ahArg[0] = xInt.makeHandle(index); // ordinal
                 ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
                 ahArg[2] = xBoolean.makeHandle(fFormal);
                 if (constDefault == null)

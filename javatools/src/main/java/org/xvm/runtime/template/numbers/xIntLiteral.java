@@ -72,12 +72,14 @@ public class xIntLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
+        markNativeMethod("toInt"             , null, new String[]{"numbers.Int"});
         markNativeMethod("toInt8"            , null, new String[]{"numbers.Int8"});
         markNativeMethod("toInt16"           , null, new String[]{"numbers.Int16"});
         markNativeMethod("toInt32"           , null, new String[]{"numbers.Int32"});
         markNativeMethod("toInt64"           , null, new String[]{"numbers.Int64"});
         markNativeMethod("toInt128"          , null, new String[]{"numbers.Int128"});
 
+        markNativeMethod("toUInt"            , null, new String[]{"numbers.UInt"});
         markNativeMethod("toUInt8"           , null, new String[]{"numbers.UInt8"});
         markNativeMethod("toUInt16"          , null, new String[]{"numbers.UInt16"});
         markNativeMethod("toUInt32"          , null, new String[]{"numbers.UInt32"});
@@ -328,11 +330,13 @@ public class xIntLiteral
             case "not":
                 return invokeCompl(frame, hTarget, iReturn);
 
+            case "toInt":
             case "toInt8":
             case "toInt16":
             case "toInt32":
             case "toInt64":
             case "toInt128":
+            case "toUInt":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":
@@ -352,6 +356,13 @@ public class xIntLiteral
                     {
                     return templateTo.convertLong(frame, piValue, iReturn);
                     }
+
+                if (template instanceof xIntBase templateTo)
+                    {
+                    return frame.assignValue(iReturn,
+                        templateTo.makeHandle(LongLong.fromBigInteger(piValue.getBigInteger())));
+                    }
+
                 if (template instanceof BaseInt128 templateTo)
                     {
                     BigInteger  biValue = piValue.getBigInteger();

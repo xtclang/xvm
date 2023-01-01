@@ -2,7 +2,6 @@ package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -24,16 +23,38 @@ public class xInt128
             }
         }
 
-    /**
-     * Converts an object of "this" integer type to the type represented by the specified template.
-     *
-     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
-     */
-    protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                           ObjectHandle hTarget, int iReturn)
+    @Override
+    public void initNative()
         {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
+        markNativeProperty("magnitude");
 
+        markNativeMethod("abs", VOID, THIS);
+
+        super.initNative();
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "magnitude":
+                {
+                LongLong ll = ((LongLongHandle) hTarget).getValue();
+                if (ll.signum() < 0)
+                    {
+                    ll = new LongLong(ll.getLowValue(), -ll.getHighValue());
+                    }
+                return frame.assignValue(iReturn, xUInt128.INSTANCE.makeLongLong(ll));
+                }
+            }
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
+                                           LongLong ll, int iReturn)
+        {
         long lHigh = ll.getHighValue();
         long lLow  = ll.getLowValue();
 

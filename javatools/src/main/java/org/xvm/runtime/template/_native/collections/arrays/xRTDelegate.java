@@ -31,7 +31,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 
 /**
@@ -113,7 +113,7 @@ public class xRTDelegate
             markNativeProperty("size");
 
             markNativeMethod("getElement", INT, ELEMENT_TYPE);
-            markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
+            markNativeMethod("setElement", new String[] {"numbers.Int", "Element"}, VOID);
             markNativeMethod("elementAt", INT, new String[] {"reflect.Var<Element>"});
             markNativeMethod("insert", null, THIS);
             markNativeMethod("delete", INT, THIS);
@@ -341,7 +341,7 @@ public class xRTDelegate
         {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_ahValue.length));
+        return frame.assignValue(iReturn, xInt.makeHandle(hDelegate.m_ahValue.length));
         }
 
     /**
@@ -378,7 +378,7 @@ public class xRTDelegate
         {
         DelegateHandle hDelegate = (DelegateHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_cSize));
+        return frame.assignValue(iReturn, xInt.makeHandle(hDelegate.m_cSize));
         }
 
     /**

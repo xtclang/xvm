@@ -35,7 +35,7 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
@@ -336,7 +336,7 @@ public class xArray
                             ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
                             Utils.ValueSupplier supplier    = (frameCaller, index) ->
                                 {
-                                ahArg[0] = xInt64.makeHandle(index);
+                                ahArg[0] = xInt.makeHandle(index);
                                 return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
                                 };
                             return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);

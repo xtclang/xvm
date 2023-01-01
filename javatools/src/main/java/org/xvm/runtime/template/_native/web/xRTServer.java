@@ -384,7 +384,7 @@ public class xRTServer
         {
         InetSocketAddress addr = hCtx.f_exchange.getRemoteAddress();
 
-        return frame.assignValue(iResult, xInt64.makeHandle(addr.getPort()));
+        return frame.assignValue(iResult, xUInt16.INSTANCE.makeJavaLong(addr.getPort()));
         }
 
     /**
@@ -405,7 +405,7 @@ public class xRTServer
         {
         InetSocketAddress addr = hCtx.f_exchange.getLocalAddress();
 
-        return frame.assignValue(iResult, xInt64.makeHandle(addr.getPort()));
+        return frame.assignValue(iResult, xUInt16.INSTANCE.makeJavaLong(addr.getPort()));
         }
 
     /**

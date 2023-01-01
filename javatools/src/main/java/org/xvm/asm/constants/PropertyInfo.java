@@ -1188,7 +1188,8 @@ public class PropertyInfo
             m_chainGet = chain = isDelegating()
                     ? createDelegatingChain(infoType, idGet)
                     : augmentPropertyChain(
-                            infoType.getOptimizedMethodChain(idGet), infoType, idGet);
+                        isNative() ? null : infoType.getOptimizedMethodChain(idGet),
+                        infoType, idGet);
             }
 
         return chain;

@@ -43,6 +43,7 @@ public class xInt
                 cache[i] = new JavaLong(clz, i);
                 }
             }
+        invalidateTypeInfo();
         }
 
     @Override
@@ -176,6 +177,11 @@ public class xInt
             return cache[(int) lValue];
             }
         return new JavaLong(getCanonicalClass(), lValue);
+        }
+
+    public static JavaLong makeHandle(long lValue)
+        {
+        return INSTANCE.makeLong(lValue);
         }
 
     private final JavaLong[] cache = new JavaLong[128];

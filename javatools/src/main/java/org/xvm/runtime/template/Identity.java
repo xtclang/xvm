@@ -42,7 +42,7 @@ public class Identity
     public void initNative()
         {
         markNativeMethod("equals",   null, BOOLEAN);
-        markNativeMethod("hashCode", null, INT);
+        markNativeMethod("hashCode", null, new String[] {"numbers.Int64"});
 
         invalidateTypeInfo();
         }

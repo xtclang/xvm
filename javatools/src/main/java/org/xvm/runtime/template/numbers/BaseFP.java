@@ -29,7 +29,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * Base class for native FPNumber (Float* and Dec*) support.
  */
 abstract public class BaseFP
-        extends xConst
+        extends xNumber
     {
     public BaseFP(Container container, ClassStructure structure, int cBits)
         {
@@ -41,8 +41,9 @@ abstract public class BaseFP
     @Override
     public void initNative()
         {
+        super.initNative();
+
         // properties
-        markNativeProperty("bits");
         markNativeProperty("infinity");
         markNativeProperty("NaN");
 
@@ -85,15 +86,6 @@ abstract public class BaseFP
         markNativeMethod("rad2deg"    , VOID, THIS);
         markNativeMethod("nextUp"     , VOID, THIS);
         markNativeMethod("nextDown"   , VOID, THIS);
-
-        // conversions
-        markNativeMethod("toInt64"    , null, INT);
-        markNativeMethod("toDec64"    , null, DEC64);
-        markNativeMethod("toFloat64"  , null, FLOAT64);
-        markNativeMethod("toIntN"     , null, VAR_INT);
-        markNativeMethod("toUIntN"    , null, VAR_UINT);
-        markNativeMethod("toFloatN"   , null, VAR_FLOAT);
-        markNativeMethod("toDecN"     , null, VAR_DEC);
 
         invalidateTypeInfo();
         }
@@ -202,16 +194,6 @@ abstract public class BaseFP
      * The log2(10) value.
      */
     public static final double LOG2_10 = 1.0/Math.log10(2);
-
-    /**
-     * Useful type signatures.
-     */
-    public static String[] DEC64     = new String[]{"numbers.Dec64"};
-    public static String[] FLOAT64   = new String[]{"numbers.Float64"};
-    public static String[] VAR_INT   = new String[]{"numbers.IntN"};
-    public static String[] VAR_UINT  = new String[]{"numbers.UIntN"};
-    public static String[] VAR_FLOAT = new String[]{"numbers.FloatN"};
-    public static String[] VAR_DEC   = new String[]{"numbers.DecN"};
 
     /**
      * The number of bits for this Float type.
