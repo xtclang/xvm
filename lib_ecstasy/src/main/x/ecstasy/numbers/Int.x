@@ -277,7 +277,7 @@ const Int
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for
      * both signed and unsigned integer values.
      */
-    @Op("<<") Int shiftLeft(Int count)
+    @Op("<<") Int shiftLeft(Int! count)
         {
         return toInt128().shiftLeft(count).toInt();
         }
@@ -287,7 +287,7 @@ const Int
      * unsigned integer values, this is both a logical right shift and arithmetic right
      * shift.
      */
-    @Op(">>") Int shiftRight(Int count)
+    @Op(">>") Int shiftRight(Int! count)
         {
         return toInt128().shiftRight(count).toInt();
         }
@@ -297,7 +297,7 @@ const Int
      * remaining bits. Note that for negative values, if any bits are zeroed, this will change the
      * sign of the resulting value.
      */
-    Int retainLSBits(Int count)
+    Int retainLSBits(Int! count)
         {
         return toInt128().retainLSBits(count).toInt();
         }

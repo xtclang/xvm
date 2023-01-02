@@ -446,7 +446,7 @@ interface DataOutput
 
         // test for Small and Medium
         Int128 n128     = n.toInt128();
-        Int64  bitCount = 65 - n128.maxOf(~n128).leadingZeroCount.toInt64();
+        Int    bitCount = 128 - n128.maxOf(~n128).leadingZeroCount;
         if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
             {
             Int32 n32 = n128.toInt32();
@@ -468,7 +468,7 @@ interface DataOutput
             return;
             }
 
-        Int64 byteCount = bitCount + 7 >>> 3;
+        Int byteCount = bitCount + 7 >> 3;
         out.writeByte((byteCount - 1 << 2).toByteArray()[7]);
         out.writeBytes(n.toByteArray(), 8 - byteCount, byteCount);
         }
