@@ -1620,9 +1620,9 @@ class HasherMap<Key, Value>
         assert capacity >= 0;
 
         // shoot for 20% empty buckets (i.e. 50% oversize)
-        Int64 target = (capacity + (capacity / 2) + 15).toInt64();
+        Int target = (capacity + (capacity >> 1) + 15);
 
-        (_, Int index) = PRIMES.binarySearch(target);
+        (_, Int index) = PRIMES.binarySearch(target.toInt64());
         Int bucketCount = index < PRIMES.size ? PRIMES[index] : target;
 
         // shrink when falls below 20% capacity
