@@ -354,7 +354,7 @@ interface DataInput
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         Int size = 1 + (b >>> 2);
-        assert:bounds size <= 8;
+        assert:bounds size <= 16;
 
         Int128 n = in.readInt8();
         while (--size > 0)
@@ -406,9 +406,9 @@ interface DataInput
         Int size = 1 + (b >>> 2);
         assert:bounds size <= 8;
 
-        if (size <= 8)
+        if (size <= 16)
             {
-            Int64 n = in.readInt8();                      // use sign extension on the first byte
+            Int128 n = in.readInt8();                   // use sign extension on the first byte
             while (--size > 0)
                 {
                 n = n << 8 | in.readByte();             // additional bytes remain bitwise intact
