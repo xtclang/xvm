@@ -73,7 +73,8 @@ class UTF8Reader
             extends AbstractPos;
 
     /**
-     * A Position implementation that packs all the data into a single Int.
+     * A Position implementation that packs all the data into a single Int64.
+     * REVIEW GG This is **exactly** the use case for auto-sized Int: use 4x Int values, and let the runtime decide
      */
     private static const TinyPos
             extends AbstractPos
@@ -90,8 +91,7 @@ class UTF8Reader
             assert:arg lineOffset >= 0 && lineOffset <= 0xFFFF;
             assert:arg rawOffset  >= 0 && rawOffset  <= 0xFFF;
 
-            combo = offset.toInt64() << 16 | lineNumber.toInt64() << 16
-                  | lineOffset.toInt64() << 12 | rawOffset.toInt64();
+            combo = (offset << 16 | lineNumber << 16 | lineOffset << 12 | rawOffset).toInt64();
             }
 
         private Int64 combo;
