@@ -1178,7 +1178,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
         // create the new storage
         Type<IntNumber>     newType   = IndexStore.nextBigger(oldNodes.Index);
-        Int                 capacity  = size + (size / 4);                // 25% larger
+        Int                 capacity  = size + (size >> 2);                 // 25% larger
         ElementStore<Key>   newKeys   = createElementStore(newType, Key, capacity);
         ElementStore<Value> newValues = createElementStore(newType, Value, capacity);
         IndexStore          newNodes  = createIndexStore(newType, capacity, newKeys, newValues);
@@ -1195,8 +1195,8 @@ class SkiplistMap<Key extends Orderable, Value>
 
         // to copy all of the data from the old to the new, we will follow the "0 level" linked
         // list of all nodes in the old index store
-        Int64 count   = 0;
-        Int   oldNode = oldNodes.getIndex(oldNodes.headNode, oldNodes.maxHeight, 0);
+        Int count   = 0;
+        Int oldNode = oldNodes.getIndex(oldNodes.headNode, oldNodes.maxHeight, 0);
         while (oldNode != oldNil)
             {
             ++count;
