@@ -400,24 +400,6 @@ const IntLiteral(String text)
         return this >>> count;
         }
 
-    /**
-     * Obtain a range beginning with this number and proceeding to the specified number.
-     * REVIEW GG CP this seems wrong
-     */
-    @Op("..") Range<Int> to(Int n)
-        {
-        return new Range<Int>(this.toInt64(), n);
-        }
-
-    /**
-     * Obtain a range beginning with this number and proceeding to the specified number.
-     * REVIEW GG CP this seems wrong
-     */
-    @Op("..<") Range<Int> toExcluding(Int n)
-        {
-        return new Range<Int>(this.toInt64(), n, lastExclusive=True);
-        }
-
 
     // ----- Number API ----------------------------------------------------------------------------
 

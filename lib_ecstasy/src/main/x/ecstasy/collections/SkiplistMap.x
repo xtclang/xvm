@@ -196,8 +196,9 @@ class SkiplistMap<Key extends Orderable, Value>
             else
                 {
                 // flip a coin to figure out how much "height" the new node will have
+                // 50% -> 1; 25% -> 2; 12% -> 3, ...
                 private Random rnd = new numbers.PseudoRandom();
-                height = nodes.maxHeight.minOf(rnd.int64().trailingZeroCount+1);    // REVIEW CP GG
+                height = nodes.maxHeight.minOf(rnd.int64().trailingZeroCount+1);
 
                 // create the new node
                 if (node := nodes.alloc(height))

@@ -74,7 +74,6 @@ class UTF8Reader
 
     /**
      * A Position implementation that packs all the data into a single Int64.
-     * REVIEW GG This is **exactly** the use case for auto-sized Int: use 4x Int values, and let the runtime decide
      */
     private static const TinyPos
             extends AbstractPos
