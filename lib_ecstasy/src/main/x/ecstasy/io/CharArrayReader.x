@@ -54,7 +54,8 @@ class CharArrayReader(immutable Char[] chars)
             extends Reader.AbstractPos;
 
     /**
-     * A Position implementation that packs all the data into a single Int.
+     * A Position implementation that packs all the data into a single Int64.
+     * REVIEW GG This is **exactly** the use case for auto-sized Int: use 3x Int values, and let the runtime decide
      */
     private static const TinyPos
             extends Reader.AbstractPos
