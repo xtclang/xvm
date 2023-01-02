@@ -76,17 +76,17 @@ mixin NibbleArray<Element extends Nibble>
                         Bit get()
                             {
                             assert:bounds index < size;
-                            return (nibbles[index/4].toInt64() & 1 << index%4 != 0).toBit();
+                            return (nibbles[index/4].toInt() & 1 << index%4 != 0).toBit();
                             }
 
                         @Override
                         void set(Bit v)
                             {
                             assert:bounds index < size;
-                            Int    nibbleIndex   = index/4;
-                            Int64  oldValue      = nibbles[nibbleIndex];
-                            Int64  mask          = 1 << index%4;
-                            Int64  newValue      = v == 1 ? oldValue | mask : oldValue & ~mask;
+                            Int nibbleIndex   = index/4;
+                            Int oldValue      = nibbles[nibbleIndex];
+                            Int mask          = 1 << index%4;
+                            Int newValue      = v == 1 ? oldValue | mask : oldValue & ~mask;
                             nibbles[nibbleIndex] = newValue.toNibble();
                             }
                         }
