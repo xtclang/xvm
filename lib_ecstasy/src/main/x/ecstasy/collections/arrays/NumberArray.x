@@ -1,9 +1,14 @@
+import numbers.IntConvertible;
+import numbers.FPConvertible;
+
+
 /**
  * Functionality specific to arrays of numbers.
  */
 mixin NumberArray<Element extends Number>
         into Array<Element>
-        // TODO implements IntConvertible, FPConvertible (e.g. see BitArray)
+        implements IntConvertible
+        implements FPConvertible
     {
     /**
      * Calculate the negatives for each number in this array.
@@ -573,213 +578,91 @@ mixin NumberArray<Element extends Number>
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    /**
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<ByteArray, <>, <Byte>> toByte = toUInt8;
-
-    /**
-     * Convert the array of numbers to a signed integer.
-     *
-     * @return the Int value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    Int toInt()
+    @Override
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toInt();
+        return asBitArray().toInt(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to a signed 8-bit integer.
-     *
-     * @return the Int8 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    Int8 toInt8()
+    @Override
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 8;
-        return asBitArray().toInt8();
+        return asBitArray().toInt8(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to a signed 16-bit integer.
-     *
-     * @return the Int16 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    Int16 toInt16()
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 16;
-        return asBitArray().toInt16();
+        return asBitArray().toInt16(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to a signed 32-bit integer.
-     *
-     * @return the Int32 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    Int32 toInt32()
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 32;
-        return asBitArray().toInt32();
+        return asBitArray().toInt32(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to a signed 64-bit integer.
-     *
-     * @return the Int64 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    Int64 toInt64()
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 64;
-        return asBitArray().toInt64();
+        return asBitArray().toInt64(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to a signed 128-bit integer.
-     *
-     * @return the Int128 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    Int128 toInt128()
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 128;
-        return asBitArray().toInt128();
+        return asBitArray().toInt128(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to a variable-length signed integer.
-     *
-     * @return the IntN value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers is too large to be converted to a
-     *                      variable-length signed integer
-     */
-    IntN toIntN()
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
         {
-        return asBitArray().toIntN();
+        return asBitArray().toIntN(direction);
         }
 
-    /**
-     * Convert the array of numbers to an unsigned integer.
-     *
-     * @return the UInt value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    UInt toUInt()
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toUInt();
+        return asBitArray().toUInt(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to an unsigned 8-bit integer.
-     *
-     * @return the UInt8 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    UInt8 toUInt8()
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 8;
-        return asBitArray().toUInt8();
+        return asBitArray().toUInt8(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to an unsigned 16-bit integer.
-     *
-     * @return the UInt16 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    UInt16 toUInt16()
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 16;
-        return asBitArray().toUInt16();
+        return asBitArray().toUInt16(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to an unsigned 32-bit integer.
-     *
-     * @return the UInt32 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    UInt32 toUInt32()
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 32;
-        return asBitArray().toUInt32();
+        return asBitArray().toUInt32(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to an unsigned 64-bit integer.
-     *
-     * @return the UInt64 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    UInt64 toUInt64()
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 64;
-        return asBitArray().toUInt64();
+        return asBitArray().toUInt64(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to an unsigned 128-bit integer.
-     *
-     * @return the UInt128 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
-    UInt128 toUInt128()
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        assert:bounds asBitArray().size == 128;
-        return asBitArray().toUInt128();
+        return asBitArray().toUInt128(truncate, direction);
         }
 
-    /**
-     * Convert the array of numbers to a variable-length unsigned integer.
-     *
-     * @return the UIntN value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers is too large to be converted to a
-     *                      variable-length unsigned integer
-     */
-    UIntN toUIntN()
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
-        return asBitArray().toUIntN();
+        return asBitArray().toUIntN(direction);
         }
 
-    /**
-     * Convert the array of numbers to a radix-10 (decimal) floating point number.
-     *
-     * @return the Dec value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Dec toDec()
         {
         Bit[] bits = asBitArray();
@@ -789,167 +672,83 @@ mixin NumberArray<Element extends Number>
         return bits.toDec();
         }
 
-    /**
-     * Convert the array of numbers to a 32-bit radix-10 (decimal) floating point number.
-     *
-     * @return the Dec32 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Dec32 toDec32()
         {
         assert:bounds asBitArray().size == 32;
         return asBitArray().toDec32();
         }
 
-    /**
-     * Convert the array of numbers to a 64-bit radix-10 (decimal) floating point number.
-     *
-     * @return the Dec64 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Dec64 toDec64()
         {
         assert:bounds asBitArray().size == 64;
         return asBitArray().toDec64();
         }
 
-    /**
-     * Convert the array of numbers to a 128-bit radix-10 (decimal) floating point number.
-     *
-     * @return the Dec128 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Dec128 toDec128()
         {
         assert:bounds asBitArray().size == 128;
         return asBitArray().toDec128();
         }
 
-    /**
-     * Convert the array of numbers to a variable-length decimal radix floating point number.
-     *
-     * @return the DecN value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      is a legal size for a decimal radix floating point number
-     */
+    @Override
     DecN toDecN()
         {
         return asBitArray().toDecN();
         }
 
-    /**
-     * Convert the array of numbers to a 8-bit radix-2 (binary) "E4M3" floating point number.
-     *
-     * @return the Float8e4 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Float8e4 toFloat8e4()
         {
         assert:bounds asBitArray().size == 8;
         return asBitArray().toFloat8e4();
         }
 
-    /**
-     * Convert the array of numbers to a 8-bit radix-2 (binary) "E5M2" floating point number.
-     *
-     * @return the Float8e5 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Float8e5 toFloat8e5()
         {
         assert:bounds asBitArray().size == 8;
         return asBitArray().toFloat8e5();
         }
 
-    /**
-     * Convert the array of numbers to a 16-bit radix-2 (binary) "brain" floating point number.
-     *
-     * @return the BFloat16 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     BFloat16 toBFloat16()
         {
         assert:bounds asBitArray().size == 16;
         return asBitArray().toBFloat16();
         }
 
-    /**
-     * Convert the array of numbers to a 16-bit radix-2 (binary) floating point number.
-     *
-     * @return the Float16 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Float16 toFloat16()
         {
         assert:bounds asBitArray().size == 16;
         return asBitArray().toFloat16();
         }
 
-    /**
-     * Convert the array of numbers to a 32-bit radix-2 (binary) floating point number.
-     *
-     * @return the Float32 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Float32 toFloat32()
         {
         assert:bounds asBitArray().size == 32;
         return asBitArray().toFloat32();
         }
 
-    /**
-     * Convert the array of numbers to a 64-bit radix-2 (binary) floating point number.
-     *
-     * @return the Float64 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Float64 toFloat64()
         {
         assert:bounds asBitArray().size == 64;
         return asBitArray().toFloat64();
         }
 
-    /**
-     * Convert the array of numbers to a 128-bit radix-2 (binary) floating point number.
-     *
-     * @return the Float128 value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      exactly matches the size of the result
-     */
+    @Override
     Float128 toFloat128()
         {
         assert:bounds asBitArray().size == 128;
         return asBitArray().toFloat128();
         }
 
-    /**
-     * Convert the array of numbers to a variable-length binary radix floating point number.
-     *
-     * @return the FloatN value corresponding the arrangement of bytes represented by this array
-     *
-     * @throws OutOfBounds  if the array of numbers does not correspond to a byte array whose size
-     *                      is a legal size for a binary radix floating point number
-     */
+    @Override
     FloatN toFloatN()
         {
         return asBitArray().toFloatN();
