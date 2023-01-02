@@ -354,7 +354,7 @@ interface DataInput
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         Int size = 1 + (b >>> 2);
-        assert:bounds size <= 16;
+        assert:bounds size <= 16;   // an Int is limited to a 16-byte value
 
         Int128 n = in.readInt8();
         while (--size > 0)
@@ -404,8 +404,6 @@ interface DataInput
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         Int size = 1 + (b >>> 2);
-        assert:bounds size <= 8;
-
         if (size <= 16)
             {
             Int128 n = in.readInt8();                   // use sign extension on the first byte
@@ -414,6 +412,13 @@ interface DataInput
                 n = n << 8 | in.readByte();             // additional bytes remain bitwise intact
                 }
             return n;
+            }
+
+        // all 1 bits in positions 2..7 indicates an extended format
+        if (size==65)
+            {
+            size = readPackedInt(in);
+            assert:bounds 64 < size <= 1M;              // arbitrary limit (2^8388608)
             }
 
         Byte[] bytes = new Byte[size];
