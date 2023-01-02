@@ -27,6 +27,9 @@ public abstract class xIntNumber
         markNativeProperty("rightmostBit");
         markNativeProperty("trailingZeroCount");
 
+        markNativeMethod("shiftLeft" , INT, THIS);
+        markNativeMethod("shiftRight", INT, THIS);
+
         super.initNative();
         }
     }

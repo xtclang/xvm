@@ -22,11 +22,19 @@ public class LongLong
         }
 
     /**
-     * Construct a LongLong object based on the low long value.
+     * Construct a signed LongLong object based on the low long value.
      */
     public LongLong(long lValue)
         {
-        this(lValue, lValue >= 0 ? 0 : -1L);
+        this(lValue, lValue >= 0 ? 0L : -1L);
+        }
+
+    /**
+     * Construct a LongLong object based on the low long value.
+     */
+    public LongLong(long lValue, boolean fSigned)
+        {
+        this(lValue, lValue >= 0 || !fSigned ? 0L : -1L);
         }
 
     /**

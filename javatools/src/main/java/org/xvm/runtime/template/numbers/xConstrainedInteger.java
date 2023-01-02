@@ -88,8 +88,6 @@ public abstract class xConstrainedInteger
         markNativeMethod("or"           , THIS, THIS);
         markNativeMethod("xor"          , THIS, THIS);
         markNativeMethod("not"          , VOID, THIS);
-        markNativeMethod("shiftLeft"    , INT, THIS);
-        markNativeMethod("shiftRight"   , INT, THIS);
         markNativeMethod("shiftAllRight", INT, THIS);
 
         invalidateTypeInfo();

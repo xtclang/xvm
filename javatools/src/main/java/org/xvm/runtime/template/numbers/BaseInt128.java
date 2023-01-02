@@ -15,6 +15,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -130,7 +131,7 @@ public abstract class BaseInt128
             }
 
         long lLo = xConstrainedInteger.fromByteArray(ab, 0, 8, false);
-        long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, false);
+        long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, f_fSigned);
         return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
         }
 
@@ -144,7 +145,7 @@ public abstract class BaseInt128
             }
 
         long lLo = xConstrainedInteger.fromByteArray(ab, 0, 8, false);
-        long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, false);
+        long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, f_fSigned);
         return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
         }
 
@@ -506,27 +507,27 @@ public abstract class BaseInt128
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+        int      c   = (int) ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.shl(ll2)));
+        return frame.assignValue(iReturn, makeLongLong(ll1.shl(c)));
         }
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+        int      c   = (int) ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.shr(ll2)));
+        return frame.assignValue(iReturn, makeLongLong(ll1.shr(c)));
         }
 
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+        int      c   = (int) ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.ushr(ll2)));
+        return frame.assignValue(iReturn, makeLongLong(ll1.ushr(c)));
         }
 
     @Override
@@ -618,10 +619,7 @@ public abstract class BaseInt128
      */
     protected int convertLong(Frame frame, long lValue, int iReturn)
         {
-        return frame.assignValue(iReturn, makeLongLong(
-            f_fSigned
-                ? new LongLong(lValue)
-                : new LongLong(lValue, 0)));
+        return frame.assignValue(iReturn, makeLongLong(new LongLong(lValue, f_fSigned)));
         }
 
     /**

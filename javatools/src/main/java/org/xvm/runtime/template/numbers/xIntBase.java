@@ -115,12 +115,15 @@ public abstract class xIntBase
     private int constructFomBytesImpl(Frame frame, byte[] ab, int cBytes, int iReturn)
         {
         long lLo = xConstrainedInteger.fromByteArray(ab, 0, Math.min(8, cBytes), false);
-        if (cBytes > 8)
+        if (cBytes <= 8)
             {
-            long lHi = xConstrainedInteger.fromByteArray(ab, 8, Math.min(8, cBytes -8), false);
-            return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+            return frame.assignValue(iReturn, lLo < 0 && f_fSigned
+                ? makeLongLong(new LongLong(lLo, 0L)) // positive value that doesn't fit 64 bits
+                : makeLong(lLo));
             }
-        return frame.assignValue(iReturn, makeLong(lLo));
+
+        long lHi = xConstrainedInteger.fromByteArray(ab, 8, Math.min(8, cBytes -8), f_fSigned);
+        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
         }
 
     @Override
@@ -132,17 +135,22 @@ public abstract class xIntBase
                 xException.illegalArgument(frame, "Invalid bit count: " + cBits));
             }
 
-        int cBytes;
         if (cBits % 8 == 0)
             {
-            cBytes = cBits >>>3;
+            return constructFomBytesImpl(frame, ab, cBits >>> 3, iReturn);
             }
-        else
+
+        int cBytes = (cBits + 7) >>> 3;
+        int cShift = (cBytes << 3) - cBits;
+
+        long lLo = xConstrainedInteger.fromByteArray(ab, 0, Math.min(8, cBytes), false);
+        if (cBytes <= 8)
             {
-            // TODO GG: clone and zero-out the tail
-            cBytes = (cBits + 7) >>> 3;
+            return frame.assignValue(iReturn, makeLong(lLo >>> cShift));
             }
-        return constructFomBytesImpl(frame, ab, cBytes, iReturn);
+
+        long lHi = xConstrainedInteger.fromByteArray(ab, 8, Math.min(8, cBytes -8), f_fSigned);
+        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi >>> cShift)));
         }
 
     @Override
@@ -152,9 +160,9 @@ public abstract class xIntBase
             {
             case "bits":
                 {
-                if (hTarget instanceof JavaLong hLong)
+                if (hTarget instanceof JavaLong hL)
                     {
-                    long l     = hLong.getValue();
+                    long l     = hL.getValue();
                     int  cBits = 64;
 
                     return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
@@ -163,7 +171,7 @@ public abstract class xIntBase
                     }
                 else
                     {
-                    LongLongHandle hLong2 = (LongLongHandle) hTarget;
+                    LongLongHandle hL2 = (LongLongHandle) hTarget;
                     // TODO
                     throw new UnsupportedOperationException("bits");
                     }
@@ -171,9 +179,9 @@ public abstract class xIntBase
 
             case "leftmostBit":
                 {
-                if (hTarget instanceof JavaLong hLong)
+                if (hTarget instanceof JavaLong hL)
                     {
-                    long l = hLong.getValue();
+                    long l = hL.getValue();
 
                     return frame.assignValue(iReturn, xInt.makeHandle(Long.highestOneBit(l)));
                     }
@@ -190,9 +198,9 @@ public abstract class xIntBase
 
             case "rightmostBit":
                 {
-                if (hTarget instanceof JavaLong hLong)
+                if (hTarget instanceof JavaLong hL)
                     {
-                    long l = hLong.getValue();
+                    long l = hL.getValue();
 
                     return frame.assignValue(iReturn, xInt.makeHandle(Long.lowestOneBit(l)));
                     }
@@ -209,9 +217,9 @@ public abstract class xIntBase
 
             case "leadingZeroCount":
                 {
-                if (hTarget instanceof JavaLong hLong)
+                if (hTarget instanceof JavaLong hL)
                     {
-                    long l = hLong.getValue();
+                    long l = hL.getValue();
 
                     return frame.assignValue(iReturn, xInt.makeHandle(Long.numberOfLeadingZeros(l)));
                     }
@@ -228,9 +236,9 @@ public abstract class xIntBase
 
             case "trailingZeroCount":
                 {
-                if (hTarget instanceof JavaLong hLong)
+                if (hTarget instanceof JavaLong hL)
                     {
-                    long l = hLong.getValue();
+                    long l = hL.getValue();
 
                     return frame.assignValue(iReturn, xInt.makeHandle(Long.numberOfTrailingZeros(l)));
                     }
@@ -268,6 +276,24 @@ public abstract class xIntBase
 
             case "mod":
                 return invokeMod(frame, hTarget, hArg, iReturn);
+
+            case "neg":
+                return invokeNeg(frame, hTarget, iReturn);
+
+            case "and":
+                return invokeAnd(frame, hTarget, hArg, iReturn);
+
+            case "or":
+                return invokeOr(frame, hTarget, hArg, iReturn);
+
+            case "xor":
+                return invokeXor(frame, hTarget, hArg, iReturn);
+
+            case "shiftLeft":
+                return invokeShl(frame, hTarget, hArg, iReturn);
+
+            case "shiftRight":
+                return invokeShr(frame, hTarget, hArg, iReturn);
 
             case "stepsTo":
                 return invokeSub(frame, hArg, hTarget, iReturn);
@@ -316,10 +342,10 @@ public abstract class xIntBase
 
                 if (template == getComplimentaryTemplate())
                     {
-                    if (hTarget instanceof JavaLong hLong)
+                    if (hTarget instanceof JavaLong hL)
                         {
                         return frame.assignValue(iReturn,
-                                ((xIntBase) template).makeLong(hLong.getValue()));
+                                ((xIntBase) template).makeLong(hL.getValue()));
                         }
                     else
                         {
@@ -332,9 +358,9 @@ public abstract class xIntBase
                 if (template instanceof xConstrainedInteger templateTo)
                     {
                     long lValue;
-                    if (hTarget instanceof JavaLong hLong)
+                    if (hTarget instanceof JavaLong hL)
                         {
-                        lValue = hLong.getValue();
+                        lValue = hL.getValue();
                         }
                     else
                         {
@@ -350,8 +376,8 @@ public abstract class xIntBase
 
                 if (template instanceof xUnconstrainedInteger templateTo)
                     {
-                    PackedInteger piValue = hTarget instanceof JavaLong hLong
-                            ? PackedInteger.valueOf(hLong.getValue())
+                    PackedInteger piValue = hTarget instanceof JavaLong hL
+                            ? PackedInteger.valueOf(hL.getValue())
                             : new PackedInteger(((LongLongHandle) hTarget).getValue().toBigInteger());
                     return frame.assignValue(iReturn, templateTo.makeInt(piValue));
                     }
@@ -359,9 +385,9 @@ public abstract class xIntBase
                 if (template instanceof BaseBinaryFP templateTo)
                     {
                     long lValue;
-                    if (hTarget instanceof JavaLong hLong)
+                    if (hTarget instanceof JavaLong hL)
                         {
-                        lValue = hLong.getValue();
+                        lValue = hL.getValue();
                         }
                     else
                         {
@@ -378,9 +404,9 @@ public abstract class xIntBase
 
                 if (template instanceof BaseInt128 templateTo)
                     {
-                    if (hTarget instanceof JavaLong hLong)
+                    if (hTarget instanceof JavaLong hL)
                         {
-                        long lValue = hLong.getValue();
+                        long lValue = hL.getValue();
 
                         if (lValue < 0 && f_fSigned && !templateTo.f_fSigned)
                             {
@@ -406,9 +432,9 @@ public abstract class xIntBase
                 if (template instanceof xChar)
                     {
                     long lValue;
-                    if (hTarget instanceof JavaLong hLong)
+                    if (hTarget instanceof JavaLong hL)
                         {
-                        lValue = hLong.getValue();
+                        lValue = hL.getValue();
                         }
                     else
                         {
@@ -432,6 +458,9 @@ public abstract class xIntBase
 
             case "neg":
                 return invokeNeg(frame, hTarget, iReturn);
+
+            case "not":
+                return invokeCompl(frame, hTarget, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -463,7 +492,8 @@ public abstract class xIntBase
                 if (checkAddOverflow(l1, l2, lr))
                     {
                     // long overflow
-                    LongLong llr = new LongLong(l1).add(new LongLong(l2));
+                    LongLong llr = new LongLong(l1, f_fSigned).add(
+                                   new LongLong(l2, f_fSigned));
                     return frame.assignValue(iReturn, makeLongLong(llr));
                     }
 
@@ -472,7 +502,7 @@ public abstract class xIntBase
             else
                 {
                 LongLong ll2 = ((LongLongHandle) hTarget).getValue();
-                LongLong llr = new LongLong(l1).add(ll2);
+                LongLong llr = new LongLong(l1, f_fSigned).add(ll2);
                 if (llr == LongLong.OVERFLOW)
                     {
                     return overflow(frame);
@@ -486,7 +516,7 @@ public abstract class xIntBase
             if (hArg instanceof JavaLong h2)
                 {
                 long     l2  = h2.getValue();
-                LongLong llr = ll1.add(new LongLong(l2));
+                LongLong llr = ll1.add(new LongLong(l2, f_fSigned));
                 if (llr == LongLong.OVERFLOW)
                     {
                     return overflow(frame);
@@ -525,7 +555,8 @@ public abstract class xIntBase
                 if (checkSubOverflow(l1, l2, lr))
                     {
                     // long overflow
-                    LongLong llr = new LongLong(l1).sub(new LongLong(l2));
+                    LongLong llr = new LongLong(l1, f_fSigned).sub(
+                                   new LongLong(l2, f_fSigned));
                     return frame.assignValue(iReturn, makeLongLong(llr));
                     }
 
@@ -534,7 +565,7 @@ public abstract class xIntBase
             else
                 {
                 LongLong ll2 = ((LongLongHandle) hTarget).getValue();
-                LongLong llr = new LongLong(l1).sub(ll2);
+                LongLong llr = new LongLong(l1, f_fSigned).sub(ll2);
                 if (llr == LongLong.OVERFLOW)
                     {
                     return overflow(frame);
@@ -548,7 +579,7 @@ public abstract class xIntBase
             if (hArg instanceof JavaLong h2)
                 {
                 long     l2  = h2.getValue();
-                LongLong llr = ll1.sub(new LongLong(l2));
+                LongLong llr = ll1.sub(new LongLong(l2, f_fSigned));
                 if (llr == LongLong.OVERFLOW)
                     {
                     return overflow(frame);
@@ -593,7 +624,8 @@ public abstract class xIntBase
                 long lr = l1 * l2;
                 if (checkMulOverflow(l1, l2, lr))
                     {
-                    LongLong llr = new LongLong(l1).mul(new LongLong(l2));
+                    LongLong llr = new LongLong(l1, f_fSigned).mul(
+                                   new LongLong(l2, f_fSigned));
                     return frame.assignValue(iReturn, makeLongLong(llr));
                     }
 
@@ -602,7 +634,7 @@ public abstract class xIntBase
             else
                 {
                 LongLong ll2 = ((LongLongHandle) hTarget).getValue();
-                LongLong llr = new LongLong(l1).mul(ll2);
+                LongLong llr = new LongLong(l1, f_fSigned).mul(ll2);
                 if (llr == LongLong.OVERFLOW)
                     {
                     return overflow(frame);
@@ -616,7 +648,7 @@ public abstract class xIntBase
             if (hArg instanceof JavaLong h2)
                 {
                 long     l2  = h2.getValue();
-                LongLong llr = ll1.mul(new LongLong(l2));
+                LongLong llr = ll1.mul(new LongLong(l2, f_fSigned));
                 if (llr == LongLong.OVERFLOW)
                     {
                     return overflow(frame);
@@ -715,7 +747,7 @@ public abstract class xIntBase
                     }
                 LongLong llr = f_fSigned
                         ? new LongLong(l1).mod(ll2)
-                        : new LongLong(l1).modUnsigned(ll2);
+                        : new LongLong(l1, false).modUnsigned(ll2);
                 return frame.assignValue(iReturn, makeHandle(llr));
                 }
             }
@@ -731,7 +763,7 @@ public abstract class xIntBase
                     }
                 LongLong llr = f_fSigned
                         ? ll1.mod(new LongLong(l2))
-                        : ll1.modUnsigned(new LongLong(l2));
+                        : ll1.modUnsigned(new LongLong(l2, false));
                 return frame.assignValue(iReturn, makeHandle(llr));
                 }
             else
@@ -746,6 +778,143 @@ public abstract class xIntBase
                         : ll1.modUnsigned(ll2);
                 return frame.assignValue(iReturn, makeHandle(llr));
                 }
+            }
+        }
+
+    @Override
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        LongLong ll1, ll2;
+        if (hTarget instanceof JavaLong h1)
+            {
+            long l1 = h1.getValue();
+            if (hArg instanceof JavaLong h2)
+                {
+                return frame.assignValue(iReturn, makeLong(l1 & h2.getValue()));
+                }
+
+            ll1 = new LongLong(l1, f_fSigned);
+            ll2 = ((LongLongHandle) hTarget).getValue();
+            }
+        else
+            {
+            LongLongHandle h1 = (LongLongHandle) hTarget;
+            ll1 = h1.getValue();
+            ll2 = hArg instanceof JavaLong h2
+                    ? new LongLong(h2.getValue(), f_fSigned)
+                    : h1.getValue();
+            }
+        return frame.assignValue(iReturn, makeHandle(ll1.and(ll2)));
+        }
+
+    @Override
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        LongLong ll1, ll2;
+        if (hTarget instanceof JavaLong h1)
+            {
+            long l1 = h1.getValue();
+            if (hArg instanceof JavaLong h2)
+                {
+                return frame.assignValue(iReturn, makeLong(l1 | h2.getValue()));
+                }
+
+            ll1 = new LongLong(l1, f_fSigned);
+            ll2 = ((LongLongHandle) hTarget).getValue();
+            }
+        else
+            {
+            LongLongHandle h1 = (LongLongHandle) hTarget;
+            ll1 = h1.getValue();
+            ll2 = hArg instanceof JavaLong h2
+                    ? new LongLong(h2.getValue(), f_fSigned)
+                    : h1.getValue();
+            }
+        return frame.assignValue(iReturn, makeHandle(ll1.or(ll2)));
+        }
+
+    @Override
+    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        LongLong ll1, ll2;
+        if (hTarget instanceof JavaLong h1)
+            {
+            long l1 = h1.getValue();
+            if (hArg instanceof JavaLong h2)
+                {
+                return frame.assignValue(iReturn, makeLong(l1 ^ h2.getValue()));
+                }
+
+            ll1 = new LongLong(l1, f_fSigned);
+            ll2 = ((LongLongHandle) hTarget).getValue();
+            }
+        else
+            {
+            LongLongHandle h1 = (LongLongHandle) hTarget;
+            ll1 = h1.getValue();
+            ll2 = hArg instanceof JavaLong h2
+                    ? new LongLong(h2.getValue(), f_fSigned)
+                    : h1.getValue();
+            }
+        return frame.assignValue(iReturn, makeHandle(ll1.xor(ll2)));
+        }
+
+    @Override
+    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        if (hTarget instanceof JavaLong hL)
+            {
+            return frame.assignValue(iReturn, makeLong(~hL.getValue()));
+            }
+        else
+            {
+            LongLong ll = ((LongLongHandle) hTarget).getValue();
+            return frame.assignValue(iReturn, makeLongLong(ll.complement()));
+            }
+        }
+
+    @Override
+    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        int c = (int) ((JavaLong) hArg).getValue();
+        if (hTarget instanceof JavaLong hL)
+            {
+            return frame.assignValue(iReturn, makeLong(hL.getValue() << c));
+            }
+        else
+            {
+            LongLong ll = ((LongLongHandle) hTarget).getValue();
+            return frame.assignValue(iReturn, makeLongLong(ll.shl(c)));
+            }
+        }
+
+    @Override
+    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        int c = (int) ((JavaLong) hArg).getValue();
+        if (hTarget instanceof JavaLong hL)
+            {
+            return frame.assignValue(iReturn, makeLong(hL.getValue() >> c));
+            }
+        else
+            {
+            LongLong ll = ((LongLongHandle) hTarget).getValue();
+            return frame.assignValue(iReturn, makeLongLong(ll.shr(c)));
+            }
+        }
+
+    @Override
+    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        int c = (int) ((JavaLong) hArg).getValue();
+        if (hTarget instanceof JavaLong hL)
+            {
+            return frame.assignValue(iReturn, makeLong(hL.getValue() >>> c));
+            }
+        else
+            {
+            LongLong ll = ((LongLongHandle) hTarget).getValue();
+            return frame.assignValue(iReturn, makeLongLong(ll.ushr(c)));
             }
         }
 
@@ -808,7 +977,7 @@ public abstract class xIntBase
                 }
             else
                 {
-                LongLong ll1 = new LongLong(l1);
+                LongLong ll1 = new LongLong(l1, f_fSigned);
                 LongLong ll2 = ((LongLongHandle) hValue2).getValue();
                 return frame.assignValue(iReturn, xOrdered.makeHandle(
                     f_fSigned ? ll1.compare(ll2) : ll1.compareUnsigned(ll2)));
@@ -819,7 +988,7 @@ public abstract class xIntBase
             LongLong ll1 = ((LongLongHandle) hValue1).getValue();
             if (hValue2 instanceof JavaLong h2)
                 {
-                LongLong ll2 = new LongLong(h2.getValue());
+                LongLong ll2 = new LongLong(h2.getValue(), f_fSigned);
                 return frame.assignValue(iReturn, xOrdered.makeHandle(
                     f_fSigned ? ll1.compare(ll2) : ll1.compareUnsigned(ll2)));
                 }

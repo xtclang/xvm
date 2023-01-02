@@ -440,7 +440,7 @@ interface DataOutput
         // test for Tiny
         if (-64 <= n <= 63)
             {
-            out.writeByte((n.toByte() << 1 | 0x01).toByteArray()[7]);
+            out.writeByte((n << 1 | 0x01).toByte(truncate=True));
             return;
             }
 
