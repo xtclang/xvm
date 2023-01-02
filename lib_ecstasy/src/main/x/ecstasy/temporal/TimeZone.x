@@ -30,7 +30,7 @@
  *   useful for acting like a UTC time, but whose Time values are incapable of being compared
  *   with those of any other TimeZone.
  */
-const TimeZone(Int picos, String? name = Null)
+const TimeZone(Int64 picos, String? name = Null)
     {
     /**
      * Construct a resolved TimeZone.
@@ -39,7 +39,7 @@ const TimeZone(Int picos, String? name = Null)
      *               picosecond value in order to calculate a TimeZone-adjusted picosecond value
      * @param name   the name of the TimeZone
      */
-    construct(Int picos, String? name = Null)
+    construct(Int64 picos, String? name = Null)
         {
         assert picos.abs() <= TimeOfDay.PICOS_PER_DAY;
         this.picos = picos;
@@ -105,7 +105,7 @@ const TimeZone(Int picos, String? name = Null)
             if (0 <= hours <= 16 && 0 <= mins <= 59)
                 {
                 Int offset = (hours * TimeOfDay.PICOS_PER_HOUR + mins * TimeOfDay.PICOS_PER_MINUTE);
-                construct TimeZone((tz[0]=='-' ? -1 : +1) * offset);
+                construct TimeZone((tz[0]=='-' ? -1 : +1) * offset.toInt64());
                 return;
                 }
             }
@@ -306,7 +306,7 @@ const TimeZone(Int picos, String? name = Null)
     /**
      * Normalize a potentially-large timezone offset to the range -12:00:00 .. +12:00:00.
      */
-    private static Int normalize(Int128 picos)
+    private static Int64 normalize(Int128 picos)
         {
         Boolean negative = picos < 0;
         if (negative)
@@ -314,7 +314,7 @@ const TimeZone(Int picos, String? name = Null)
             picos = picos.abs();
             }
 
-        Int normalized = (picos % TimeOfDay.PICOS_PER_DAY).toInt64();
+        Int64 normalized = (picos % TimeOfDay.PICOS_PER_DAY).toInt64();
         if (normalized > 12 * TimeOfDay.PICOS_PER_HOUR)
             {
             normalized -= TimeOfDay.PICOS_PER_DAY;

@@ -286,7 +286,7 @@ interface DataOutput
      */
     void writeDate(Date value)
         {
-        writeInt64(value.epochDay.toInt64());
+        writeInt32(value.epochDay);
         }
 
     /**
@@ -296,7 +296,7 @@ interface DataOutput
      */
     void writeTime(TimeOfDay value)
         {
-        writeInt64(value.picos.toInt64());
+        writeUInt64(value.picos);
         }
 
     /**
@@ -333,7 +333,7 @@ interface DataOutput
         else
             {
             writeByte(1);
-            writeInt64(value.picos.toInt64());
+            writeInt64(value.picos);
             }
         }
 

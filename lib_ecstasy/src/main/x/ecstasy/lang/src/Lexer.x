@@ -995,7 +995,7 @@ class Lexer
             }
 
         Int offset = hour * TimeOfDay.PICOS_PER_HOUR + minute * TimeOfDay.PICOS_PER_MINUTE;
-        return LitTimezone, new TimeZone((minus ? -1 : +1) * offset);
+        return LitTimezone, new TimeZone((minus ? -1 : +1) * offset.toInt64());
         }
 
     /**
