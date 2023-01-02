@@ -1,6 +1,8 @@
 package org.xvm.runtime.template.numbers;
 
 
+import java.math.BigInteger;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -16,6 +18,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -64,6 +67,82 @@ public abstract class xIntBase
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    protected int constructFromString(Frame frame, String sText, int iReturn)
+        {
+        BigInteger big;
+        try
+            {
+            big = xIntLiteral.parseBigInteger(sText);
+            }
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            }
+
+        int cBits = big.bitLength();
+        if (cBits > 127)
+            {
+            return frame.raiseException(
+                xException.outOfBounds(frame, "Overflow: " + sText));
+            }
+
+        long lLo = big.longValue();
+        if (cBits < 64)
+            {
+            return frame.assignValue(iReturn, makeLong(lLo));
+            }
+
+        long lHi = big.shiftRight(64).longValue();
+        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+        }
+
+    @Override
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        if (cBytes > 16)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+            }
+
+        return constructFomBytesImpl(frame, ab, cBytes, iReturn);
+        }
+
+    private int constructFomBytesImpl(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        long lLo = xConstrainedInteger.fromByteArray(ab, 0, Math.min(8, cBytes), false);
+        if (cBytes > 8)
+            {
+            long lHi = xConstrainedInteger.fromByteArray(ab, 8, Math.min(8, cBytes -8), false);
+            return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+            }
+        return frame.assignValue(iReturn, makeLong(lLo));
+        }
+
+    @Override
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
+        {
+        if (cBits > 128)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid bit count: " + cBits));
+            }
+
+        int cBytes;
+        if (cBits % 8 == 0)
+            {
+            cBytes = cBits >>>3;
+            }
+        else
+            {
+            // TODO GG: clone and zero-out the tail
+            cBytes = (cBits + 7) >>> 3;
+            }
+        return constructFomBytesImpl(frame, ab, cBytes, iReturn);
         }
 
     @Override

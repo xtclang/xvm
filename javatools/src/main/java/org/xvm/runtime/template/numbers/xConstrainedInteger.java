@@ -3,18 +3,12 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.Lexer;
-import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -28,13 +22,9 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-import org.xvm.runtime.template.collections.xBitArray;
-import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xChar;
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
 
@@ -142,76 +132,48 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+    protected int constructFromString(Frame frame, String sText, int iReturn)
         {
-        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
-        if (sig.getParamCount() == 1)
+        PackedInteger pi;
+        try
             {
-            TypeConstant typeParam = sig.getRawParams()[0];
-            if (typeParam.equals(pool().typeString()))
+            pi = xIntLiteral.parsePackedInteger(sText);
+            }
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            }
+
+        if (f_fChecked)
+            {
+            int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
+            if (cBytes * 8 > f_cNumBits)
                 {
-                StringHandle  hText = (StringHandle) ahVar[0];
-                String        sText = hText.getStringValue();
-                PackedInteger pi;
-                try
-                    {
-                    pi = new PackedInteger(Long.parseLong(sText));
-                    }
-                catch (NumberFormatException e)
-                    {
-                    ErrorList errs   = new ErrorList(5);
-                    Lexer lexer  = new Lexer(new Source(sText), errs);
-                    Token tokLit = lexer.next();
-                    if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
-                        {
-                        return frame.raiseException(
-                            xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
-                        }
-
-                    pi = (PackedInteger) tokLit.getValue();
-                    }
-
-                if (f_fChecked)
-                    {
-                    int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                    if (cBytes * 8 > f_cNumBits)
-                        {
-                        return frame.raiseException(
-                            xException.outOfBounds(frame, "Overflow: " + sText));
-                        }
-                    }
-
-                return convertLong(frame, pi.getLong(), iReturn, f_fChecked);
-                }
-
-            TypeConstant typeElement = typeParam.getParamType(0);
-            if (typeElement.equals(pool().typeByte()))
-                {
-                // construct(Byte[] bytes)
-                byte[] abVal = xByteArray.getBytes((ArrayHandle) ahVar[0]);
-                int   cBytes = abVal.length;
-
-                return cBytes == f_cNumBits / 8
-                    ? convertLong(frame, fromByteArray(abVal, cBytes, f_fSigned), iReturn, f_fChecked)
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
-                }
-
-            if (typeElement.equals(pool().typeBit()))
-                {
-                // construct(Bit[] bits)
-                ArrayHandle hArray = (ArrayHandle) ahVar[0];
-                byte[]      abBits = xBitArray.getBits(hArray);
-                int         cBits  = (int) hArray.m_hDelegate.m_cSize;
-
-                return cBits == f_cNumBits
-                    ? convertLong(frame, fromByteArray(abBits, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid bit count: " + cBits));
+                return frame.raiseException(
+                    xException.outOfBounds(frame, "Overflow: " + sText));
                 }
             }
-        return frame.raiseException(xException.unsupportedOperation(frame));
+
+        return convertLong(frame, pi.getLong(), iReturn, f_fChecked);
+        }
+
+    @Override
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        return cBytes == f_cNumBits / 8
+            ? convertLong(frame, fromByteArray(ab, cBytes, f_fSigned), iReturn, f_fChecked)
+            : frame.raiseException(
+                xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+        }
+
+    @Override
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
+        {
+        return cBits == f_cNumBits
+            ? convertLong(frame, fromByteArray(ab, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
+            : frame.raiseException(
+                xException.illegalArgument(frame, "Invalid bit count: " + cBits));
         }
 
     @Override

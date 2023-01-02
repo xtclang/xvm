@@ -2,10 +2,24 @@ package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
@@ -43,4 +57,57 @@ public abstract class xNumber
 
         markNativeProperty("bits");
         }
+
+    @Override
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+        {
+        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
+        if (sig.getParamCount() == 1)
+            {
+            TypeConstant typeParam = sig.getRawParams()[0];
+            if (typeParam.equals(pool().typeString()))
+                {
+                StringHandle hText = (StringHandle) ahVar[0];
+                return constructFromString(frame, hText.getStringValue(), iReturn);
+                }
+
+            TypeConstant typeElement = typeParam.getParamType(0);
+            if (typeElement.equals(pool().typeByte()))
+                {
+                // construct(Byte[] bytes)
+                ArrayHandle hArray = (ArrayHandle) ahVar[0];
+                byte[]      abVal  = xByteArray.getBytes(hArray);
+                int         cBytes  = (int) hArray.m_hDelegate.m_cSize;
+
+                return constructFromBytes(frame, abVal, cBytes, iReturn);
+                }
+
+            if (typeElement.equals(pool().typeBit()))
+                {
+                // construct(Bit[] bits)
+                ArrayHandle hArray = (ArrayHandle) ahVar[0];
+                byte[]      abBits = xBitArray.getBits(hArray);
+                int         cBits  = (int) hArray.m_hDelegate.m_cSize;
+
+                return constructFromBits(frame, abBits, cBits, iReturn);
+                }
+            }
+        return frame.raiseException(xException.unsupportedOperation(frame));
+        }
+
+    /**
+     * Construct a number from the specified string and place it into the specified register.
+     */
+    abstract protected int constructFromString(Frame frame, String sText, int iReturn);
+
+    /**
+     * Construct a number from the specified byte array and place it into the specified register.
+     */
+    abstract protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn);
+
+    /**
+     * Construct a number from the specified bit array and place it into the specified register.
+     */
+    abstract protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn);
     }

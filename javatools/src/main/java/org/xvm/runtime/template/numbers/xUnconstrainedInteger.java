@@ -16,6 +16,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
@@ -114,6 +115,34 @@ public abstract class xUnconstrainedInteger
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    protected int constructFromString(Frame frame, String sText, int iReturn)
+        {
+        PackedInteger pi;
+        try
+            {
+            pi = xIntLiteral.parsePackedInteger(sText);
+            }
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            }
+        return frame.assignValue(iReturn, makeInt(pi));
+        }
+
+    @Override
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        return frame.raiseException("TODO ");
+        }
+
+    @Override
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
+        {
+        return frame.raiseException("TODO ");
         }
 
     @Override

@@ -120,20 +120,12 @@ public class xIntLiteral
         PackedInteger pi;
         try
             {
-            pi = new PackedInteger(Long.parseLong(sText));
+            pi = parsePackedInteger(sText);
             }
         catch (NumberFormatException e)
             {
-            ErrorList errs   = new ErrorList(5);
-            Lexer     lexer  = new Lexer(new Source(sText), errs);
-            Token     tokLit = lexer.next();
-            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
-                {
-                return frame.raiseException(
-                    xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
-                }
-
-            pi = (PackedInteger) tokLit.getValue();
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
             }
 
         return frame.assignValue(iReturn, makeIntLiteral(pi, hText));
@@ -415,6 +407,58 @@ public class xIntLiteral
         IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().cmp(h2.getValue())));
+        }
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Parse the specified text into a BigInteger value.
+     *
+     * @throws NumberFormatException  if parsing failed
+     */
+    public static BigInteger parseBigInteger(String sText)
+        {
+        try
+            {
+            return new BigInteger(sText, 10);
+            }
+        catch (NumberFormatException e)
+            {
+            ErrorList errs   = new ErrorList(5);
+            Lexer     lexer  = new Lexer(new Source(sText), errs);
+            Token     tokLit = lexer.next();
+            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
+                {
+                throw e;
+                }
+
+            return ((PackedInteger) tokLit.getValue()).getBigInteger();
+            }
+        }
+
+    /**
+     * Parse the specified text into a PackedInteger value.
+     *
+     * @throws NumberFormatException  if parsing failed
+     */
+    public static PackedInteger parsePackedInteger(String sText)
+        {
+        try
+            {
+            return new PackedInteger(Long.parseLong(sText));
+            }
+        catch (NumberFormatException e)
+            {
+            ErrorList errs   = new ErrorList(5);
+            Lexer     lexer  = new Lexer(new Source(sText), errs);
+            Token     tokLit = lexer.next();
+            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
+                {
+                throw e;
+                }
+
+            return (PackedInteger) tokLit.getValue();
+            }
         }
 
     /**

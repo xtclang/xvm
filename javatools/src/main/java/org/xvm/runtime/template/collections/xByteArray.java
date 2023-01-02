@@ -56,7 +56,6 @@ public class xByteArray
         mixin.markNativeMethod("asInt8Array", VOID, null);
         mixin.markNativeMethod("asInt16Array", VOID, null);
         mixin.markNativeMethod("asInt64Array", VOID, null);
-        mixin.markNativeMethod("toInt64", VOID, null);
 
         invalidateTypeInfo();
         }
@@ -139,20 +138,6 @@ public class xByteArray
                                                     hArray.m_hDelegate, mutability, 8);
                 return frame.assignValue(iReturn,
                         new ArrayHandle(getInt64ArrayComposition(), hView, mutability));
-                }
-
-            case "toInt64":
-                {
-                byte[] ab = getBytes((ArrayHandle) hTarget);
-
-                if (ab.length != 8)
-                    {
-                    return frame.raiseException(
-                            xException.illegalArgument(frame, "Invalid array size: " + ab.length));
-                    }
-
-                return frame.assignValue(iReturn,
-                        xInt64.makeHandle(Handy.byteArrayToLong(ab, 0)));
                 }
             }
 

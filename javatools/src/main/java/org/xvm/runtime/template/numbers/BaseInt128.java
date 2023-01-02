@@ -5,17 +5,11 @@ import java.math.BigInteger;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.Lexer;
-import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -27,12 +21,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
-import org.xvm.runtime.template.collections.xBitArray;
-import org.xvm.runtime.template.collections.xByteArray;
-
 import org.xvm.runtime.template.text.xString;
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
 
@@ -101,90 +90,62 @@ public abstract class BaseInt128
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+    protected int constructFromString(Frame frame, String sText, int iReturn)
         {
-        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
-        if (sig.getParamCount() == 1)
+        BigInteger big;
+        try
             {
-            TypeConstant typeParam = sig.getRawParams()[0];
-            if (typeParam.equals(pool().typeString()))
-                {
-                StringHandle hText = (StringHandle) ahVar[0];
-                String       sText = hText.getStringValue();
-                BigInteger   big;
-                try
-                    {
-                    big = new BigInteger(sText, 10);
-                    }
-                catch (NumberFormatException e)
-                    {
-                    ErrorList errs   = new ErrorList(5);
-                    Lexer     lexer  = new Lexer(new Source(sText), errs);
-                    Token     tokLit = lexer.next();
-                    if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
-                        {
-                        return frame.raiseException(
-                            xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
-                        }
-
-                    big = ((PackedInteger) tokLit.getValue()).getBigInteger();
-                    }
-
-                int cBits = big.bitLength();
-                if (cBits > 127)
-                    {
-                    return frame.raiseException(
-                        xException.outOfBounds(frame, "Overflow: " + sText));
-                    }
-
-                long lLo = big.longValue();
-                if (cBits < 64)
-                    {
-                    return convertLong(frame, lLo, iReturn);
-                    }
-
-                long lHi = big.shiftRight(64).longValue();
-                return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
-                }
-
-            TypeConstant typeElement = typeParam.getParamType(0);
-            if (typeElement.equals(pool().typeByte()))
-                {
-                // construct(Byte[] bytes)
-                byte[] abVal = xByteArray.getBytes((ArrayHandle) ahVar[0]);
-                int   cBytes = abVal.length;
-
-                if (cBytes != 16)
-                    {
-                    return frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
-                    }
-
-                long lLo = xConstrainedInteger.fromByteArray(abVal, 0, 8, false);
-                long lHi = xConstrainedInteger.fromByteArray(abVal, 8, 8, false);
-                return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
-                }
-
-            if (typeElement.equals(pool().typeBit()))
-                {
-                // construct(Bit[] bits)
-                ArrayHandle hArray = (ArrayHandle) ahVar[0];
-                byte[]      abBits = xBitArray.getBits(hArray);
-                int         cBits  = (int) hArray.m_hDelegate.m_cSize;
-
-                if (cBits != 128)
-                    {
-                    return frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid byte count: " + cBits));
-                    }
-
-                long lLo = xConstrainedInteger.fromByteArray(abBits, 0, 8, false);
-                long lHi = xConstrainedInteger.fromByteArray(abBits, 8, 8, false);
-                return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
-                }
+            big = xIntLiteral.parseBigInteger(sText);
             }
-        return frame.raiseException(xException.unsupportedOperation(frame));
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            }
+
+        int cBits = big.bitLength();
+        if (cBits > 127)
+            {
+            return frame.raiseException(
+                xException.outOfBounds(frame, "Overflow: " + sText));
+            }
+
+        long lLo = big.longValue();
+        if (cBits < 64)
+            {
+            return convertLong(frame, lLo, iReturn);
+            }
+
+        long lHi = big.shiftRight(64).longValue();
+        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+        }
+
+    @Override
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        if (cBytes != 16)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+            }
+
+        long lLo = xConstrainedInteger.fromByteArray(ab, 0, 8, false);
+        long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, false);
+        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+        }
+
+    @Override
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
+        {
+        if (cBits != 128)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid bit count: " + cBits));
+            }
+
+        long lLo = xConstrainedInteger.fromByteArray(ab, 0, 8, false);
+        long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, false);
+        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
         }
 
     @Override
