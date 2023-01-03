@@ -125,7 +125,7 @@ const Int
     @Override
     UInt magnitude.get()
         {
-        return this.toUInt();
+        return abs().toUInt();
         }
 
 
@@ -478,7 +478,7 @@ const Int
     @Override
     static <CompileType extends Int> Int64 hashCode(CompileType value)
         {
-        return value.bits.hashCode();
+        return value.toInt64();
         }
 
     @Override

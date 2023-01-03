@@ -181,11 +181,9 @@ public abstract class xConstrainedInteger
             {
             case "magnitude":
                 {
-                if (f_fSigned)
-                    {
-                    long l = ((JavaLong) hTarget).getValue();
-                    hTarget = getComplimentaryTemplate().makeJavaLong(l < 0 ? -l : l);
-                    }
+                assert f_fSigned;
+                long l = ((JavaLong) hTarget).getValue();
+                hTarget = getComplimentaryTemplate().makeJavaLong(l < 0 ? -l : l);
                 return frame.assignValue(iReturn, hTarget);
                 }
 

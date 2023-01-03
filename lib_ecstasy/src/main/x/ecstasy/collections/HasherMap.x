@@ -891,7 +891,7 @@ class HasherMap<Key, Value>
     @Override
     conditional Value get(Key key)
         {
-        Int hash = hasher.hashOf(key);
+        Int64 hash = hasher.hashOf(key);
         if (HashBucket<Key, Value> bucket := bucketFor(hash), Value value := bucket.get(hasher, hash, key))
             {
             return True, value;
@@ -903,7 +903,7 @@ class HasherMap<Key, Value>
     @Override
     HasherMap put(Key key, Value value)
         {
-        Int     hash  = hasher.hashOf(key);
+        Int64   hash  = hasher.hashOf(key);
         Int     index = hash % buckets.size;
         Boolean added = False;
         if (HashBucket<Key, Value> oldBucket ?= buckets[index])
@@ -944,7 +944,7 @@ class HasherMap<Key, Value>
     @Override
     HasherMap remove(Key key)
         {
-        Int     hash    = hasher.hashOf(key);
+        Int64   hash    = hasher.hashOf(key);
         Int     index   = hash % buckets.size;
         Boolean removed = False;
         if (HashBucket<Key, Value> oldBucket ?= buckets[index])
