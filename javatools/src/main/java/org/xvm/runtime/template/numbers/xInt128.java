@@ -53,33 +53,36 @@ public class xInt128
 
     @Override
     protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                           LongLong ll, int iReturn)
+                                           LongLong ll, boolean fTruncate, int iReturn)
         {
         long lHigh = ll.getHighValue();
         long lLow  = ll.getLowValue();
 
-        if (lHigh > 0 || lHigh < -1 || (lHigh == -1 && lLow >= 0))
+        if (!fTruncate)
             {
-            return overflow(frame);
-            }
-
-        boolean fNeg = lHigh == -1;
-
-        if (template.f_fSigned && fNeg)
-            {
-            return overflow(frame);
-            }
-
-        if (template instanceof xUInt64)
-            {
-            // UInt64 fits to any lLow content
-            }
-        else
-            {
-            if (lLow < template.f_cMinValue ||
-                lLow > template.f_cMaxValue)
+            if (lHigh > 0 || lHigh < -1 || (lHigh == -1 && lLow >= 0))
                 {
                 return overflow(frame);
+                }
+
+            boolean fNeg = lHigh == -1;
+
+            if (!template.f_fSigned && fNeg)
+                {
+                return overflow(frame);
+                }
+
+            if (template instanceof xUInt64)
+                {
+                // UInt64 fits to any lLow content
+                }
+            else
+                {
+                if (lLow < template.f_cMinValue ||
+                    lLow > template.f_cMaxValue)
+                    {
+                    return overflow(frame);
+                    }
                 }
             }
 

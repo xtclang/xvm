@@ -24,20 +24,22 @@ public class xUInt128
 
     @Override
     protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                           LongLong ll, int iReturn)
+                                           LongLong ll, boolean fTruncate, int iReturn)
         {
-        if (ll.getHighValue() != 0)
-            {
-            return overflow(frame);
-            }
-
         long lVal = ll.getLowValue();
-
-        // UInt64 fits always
-        if (!(template instanceof xUInt64) &&
-                (lVal < 0 || lVal > template.f_cMaxValue))
+        if (!fTruncate)
             {
-            return overflow(frame);
+            if (ll.getHighValue() != 0)
+                {
+                return overflow(frame);
+                }
+
+            // UInt64 fits always
+            if (!(template instanceof xUInt64) &&
+                    (lVal < 0 || lVal > template.f_cMaxValue))
+                {
+                return overflow(frame);
+                }
             }
 
         return frame.assignValue(iReturn, template.makeJavaLong(lVal));

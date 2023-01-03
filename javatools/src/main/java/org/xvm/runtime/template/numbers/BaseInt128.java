@@ -298,7 +298,7 @@ public abstract class BaseInt128
 
                 if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return convertToConstrainedType(frame, templateTo, llValue, iReturn);
+                    return convertToConstrainedType(frame, templateTo, llValue, fTruncate, iReturn);
                     }
 
                 if (template instanceof xIntBase templateTo)
@@ -632,7 +632,7 @@ public abstract class BaseInt128
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
     abstract protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                                    LongLong llValue, int iReturn);
+                                                    LongLong llValue, boolean fTruncate, int iReturn);
 
     public LongLongHandle makeLongLong(LongLong ll)
         {
