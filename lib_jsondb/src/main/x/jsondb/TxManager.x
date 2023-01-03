@@ -765,7 +765,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     UInt generateTxId()
         {
-        return visibleIdCounter.next().toUInt64();
+        return visibleIdCounter.next().toUInt();
         }
 
     /**

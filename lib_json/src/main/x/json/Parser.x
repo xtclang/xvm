@@ -319,7 +319,7 @@ class Parser
         {
         if (token?.id == IntVal)
             {
-            return True, parseDoc().as(IntLiteral).toInt64();
+            return True, parseDoc().as(IntLiteral).toInt();
             }
 
         return False;

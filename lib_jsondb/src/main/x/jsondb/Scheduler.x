@@ -489,7 +489,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                 val gapSize   = (finished - started).picoseconds;
                 val cycleSize = repeatInterval.picoseconds;
-                Int cycles    = (gapSize / cycleSize + 1).toInt64();
+                Int cycles    = gapSize / cycleSize + 1;
 
                 Time revisedPlan = started + repeatInterval * cycles;
                 assert revisedPlan >= finished;
