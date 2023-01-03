@@ -293,7 +293,8 @@ public abstract class BaseInt128
                     return frame.assignValue(iReturn, hTarget);
                     }
 
-                LongLong llValue = ((LongLongHandle) hTarget).getValue();
+                boolean  fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
+                LongLong llValue   = ((LongLongHandle) hTarget).getValue();
 
                 if (template instanceof xConstrainedInteger templateTo)
                     {
@@ -307,16 +308,19 @@ public abstract class BaseInt128
 
                 if (template instanceof BaseInt128 templateTo)
                     {
-                    if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)
+                    if (!fTruncate)
                         {
-                        // cannot assign negative value to the unsigned type
-                        return overflow(frame);
-                        }
+                        if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)
+                            {
+                            // cannot assign negative value to the unsigned type
+                            return overflow(frame);
+                            }
 
-                    if (!f_fSigned && llValue.getHighValue() < 0 && templateTo.f_fSigned)
-                        {
-                        // too large value for signed LongLong
-                        return overflow(frame);
+                        if (!f_fSigned && llValue.getHighValue() < 0 && templateTo.f_fSigned)
+                            {
+                            // too large value for signed LongLong
+                            return overflow(frame);
+                            }
                         }
                     return frame.assignValue(iReturn, templateTo.makeLongLong(llValue));
                     }

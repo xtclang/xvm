@@ -340,6 +340,7 @@ public abstract class xIntBase
                     return frame.assignValue(iReturn, hTarget);
                     }
 
+                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
                 if (template == getComplimentaryTemplate())
                     {
                     if (hTarget instanceof JavaLong hL)
@@ -365,13 +366,13 @@ public abstract class xIntBase
                     else
                         {
                         LongLong ll = ((LongLongHandle) hTarget).getValue();
-                        if (templateTo.f_fChecked && !ll.isSmall(f_fSigned))
+                        if (!fTruncate && !ll.isSmall(f_fSigned))
                             {
                             return overflow(frame);
                             }
                         lValue = ll.getLowValue();
                         }
-                    return templateTo.convertLong(frame, lValue, iReturn, true);
+                    return templateTo.convertLong(frame, lValue, iReturn, !fTruncate);
                     }
 
                 if (template instanceof xUnconstrainedInteger templateTo)
@@ -392,7 +393,7 @@ public abstract class xIntBase
                     else
                         {
                         LongLong ll = ((LongLongHandle) hTarget).getValue();
-                        if (!ll.isSmall(f_fSigned))
+                        if (!fTruncate && !ll.isSmall(f_fSigned))
                             {
                             return overflow(frame);
                             }
@@ -408,7 +409,7 @@ public abstract class xIntBase
                         {
                         long lValue = hL.getValue();
 
-                        if (lValue < 0 && f_fSigned && !templateTo.f_fSigned)
+                        if (!fTruncate && lValue < 0 && f_fSigned && !templateTo.f_fSigned)
                             {
                             // cannot assign negative value to the unsigned type
                             return overflow(frame);
@@ -419,7 +420,7 @@ public abstract class xIntBase
                     else
                         {
                         LongLong ll = ((LongLongHandle) hTarget).getValue();
-                        if (ll.signum() < 0 && !templateTo.f_fSigned)
+                        if (!fTruncate && ll.signum() < 0 && !templateTo.f_fSigned)
                             {
                             // cannot assign negative value to the unsigned type
                             return overflow(frame);
@@ -439,14 +440,14 @@ public abstract class xIntBase
                     else
                         {
                         LongLong ll = ((LongLongHandle) hTarget).getValue();
-                        if (!ll.isSmall(f_fSigned))
+                        if (!fTruncate && !ll.isSmall(f_fSigned))
                             {
                             return overflow(frame);
                             }
                         lValue = ll.getLowValue();
                         }
 
-                    if (lValue < 0 || lValue > 0x10_FFFF)
+                    if (!fTruncate && lValue < 0 || lValue > 0x10_FFFF)
                         {
                         return overflow(frame);
                         }
@@ -1001,19 +1002,22 @@ public abstract class xIntBase
             }
         }
 
-    public JavaLong makeLong(long lValue)
+    /**
+     * Create a handle for the specified LongLong value.
+     */
+    public ObjectHandle makeHandle(LongLong ll)
+        {
+        return ll.isSmall(f_fSigned) ? makeLong(ll.getLowValue()) : makeLongLong(ll);
+        }
+
+    protected JavaLong makeLong(long lValue)
         {
         return new JavaLong(getCanonicalClass(), lValue);
         }
 
-    public LongLongHandle makeLongLong(LongLong ll)
+    protected LongLongHandle makeLongLong(LongLong ll)
         {
         return new LongLongHandle(getCanonicalClass(), ll);
-        }
-
-    public ObjectHandle makeHandle(LongLong ll)
-        {
-        return ll.isSmall(f_fSigned) ? makeLong(ll.getLowValue()) : makeLongLong(ll);
         }
 
     protected final boolean f_fSigned;

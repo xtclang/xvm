@@ -86,7 +86,7 @@ module TestIO
             out.writeInt64(i);
             }
 
-        Int[] others = [MinValue, MaxValue, -12341235, -1234151515, +1324153, +1512358723597];
+        Int[] others = [Int64.MinValue, Int64.MaxValue, -12341235, -1234151515, +1324153, +1512358723597];
         for (Int i : others)
             {
             out.writeInt64(i.toInt64());

@@ -367,10 +367,21 @@ public abstract class xConstrainedInteger
                     return frame.assignValue(iReturn, hTarget);
                     }
 
+                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
+                boolean fChecked  = f_fChecked && !fTruncate;
                 if (template instanceof xIntBase templateTo)
                     {
-                    return frame.assignValue(iReturn,
-                            templateTo.makeLong(((JavaLong) hTarget).getValue()));
+                    long l = ((JavaLong) hTarget).getValue();
+                    if (!f_fSigned && l < 0)
+                        {
+                        // positive value that doesn't fit 64 bits
+                        return frame.assignValue(iReturn,
+                            templateTo.makeLongLong(new LongLong(l, 0L)));
+                        }
+                    else
+                        {
+                        return frame.assignValue(iReturn, templateTo.makeLong(l));
+                        }
                     }
 
                 if (template instanceof xConstrainedInteger templateTo)
@@ -378,12 +389,12 @@ public abstract class xConstrainedInteger
                     long lValue = ((JavaLong) hTarget).getValue();
 
                     // there is one overflow case that needs to be handled here: UInt64 -> Int*
-                    if (f_fChecked && lValue < 0 && this instanceof xUInt64)
+                    if (fChecked && lValue < 0 && this instanceof xUInt64)
                         {
                         return templateTo.overflow(frame);
                         }
 
-                    return templateTo.convertLong(frame, lValue, iReturn, f_fChecked);
+                    return templateTo.convertLong(frame, lValue, iReturn, fChecked);
                     }
 
                 if (template instanceof xUnconstrainedInteger templateTo)
@@ -403,7 +414,7 @@ public abstract class xConstrainedInteger
                     {
                     long lValue = ((JavaLong) hTarget).getValue();
 
-                    if (f_fChecked && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
+                    if (fChecked && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
                         {
                         // cannot assign negative value to the unsigned type
                         return overflow(frame);
@@ -417,7 +428,7 @@ public abstract class xConstrainedInteger
                     long l = ((JavaLong) hTarget).getValue();
                     if (l < 0 || l > 0x10_FFFF)
                         {
-                        if (f_fChecked)
+                        if (fChecked)
                             {
                             return overflow(frame);
                             }

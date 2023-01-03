@@ -311,7 +311,7 @@ public abstract class xUnconstrainedInteger
                         }
 
                     return frame.assignValue(iReturn,
-                        templateTo.makeLongLong(LongLong.fromBigInteger(pi.getBigInteger())));
+                        templateTo.makeHandle(LongLong.fromBigInteger(pi.getBigInteger())));
                     }
                 }
 
