@@ -22,6 +22,9 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
+
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.PackedInteger;
@@ -154,6 +157,13 @@ public abstract class BaseInt128
         {
         switch (sPropName)
             {
+            case "bits":
+                {
+                LongLong ll = ((LongLongHandle) hTarget).getValue();
+                return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
+                    toByteArray(ll), 128, Mutability.Constant));
+                }
+
             case "bitCount":
                 {
                 LongLong ll = ((LongLongHandle) hTarget).getValue();
@@ -615,6 +625,21 @@ public abstract class BaseInt128
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Produce an array of bytes for the specified LongLong value.
+     *
+     * @param ll  the value
+     *
+     * @return the byte array
+     */
+    public static byte[] toByteArray(LongLong ll)
+        {
+        byte[] ab = new byte[16];
+        xConstrainedInteger.copyAsBytes(ll.getHighValue(), ab, 0);
+        xConstrainedInteger.copyAsBytes(ll.getLowValue(), ab, 8);
+        return ab;
+        }
 
     /**
      * Convert a long value into a handle for the type represented by this template.

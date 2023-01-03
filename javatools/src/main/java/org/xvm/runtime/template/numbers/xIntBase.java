@@ -162,18 +162,16 @@ public abstract class xIntBase
                 {
                 if (hTarget instanceof JavaLong hL)
                     {
-                    long l     = hL.getValue();
-                    int  cBits = 64;
+                    long l = hL.getValue();
 
                     return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
-                        xConstrainedInteger.toByteArray(l, cBits >>> 3),
-                            cBits, xArray.Mutability.Constant));
+                        xConstrainedInteger.toByteArray(l, 8), 64, xArray.Mutability.Constant));
                     }
                 else
                     {
-                    LongLongHandle hL2 = (LongLongHandle) hTarget;
-                    // TODO
-                    throw new UnsupportedOperationException("bits");
+                    LongLong ll = ((LongLongHandle) hTarget).getValue();
+                    return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
+                        BaseInt128.toByteArray(ll), 128, xArray.Mutability.Constant));
                     }
                 }
 
@@ -212,25 +210,6 @@ public abstract class xIntBase
                     return frame.assignValue(iReturn, xInt.makeHandle(lLow == 0
                         ? 64 + Long.lowestOneBit(ll.getHighValue())
                         : Long.lowestOneBit(lLow)));
-                    }
-                }
-
-            case "leadingZeroCount":
-                {
-                if (hTarget instanceof JavaLong hL)
-                    {
-                    long l = hL.getValue();
-
-                    return frame.assignValue(iReturn, xInt.makeHandle(Long.numberOfLeadingZeros(l)));
-                    }
-                else
-                    {
-                    LongLong ll = ((LongLongHandle) hTarget).getValue();
-                    long     lH = ll.getHighValue();
-
-                    return frame.assignValue(iReturn, xInt.makeHandle(lH == 0
-                        ? 64 + Long.numberOfLeadingZeros(ll.getLowValue())
-                        : Long.numberOfLeadingZeros(lH)));
                     }
                 }
 

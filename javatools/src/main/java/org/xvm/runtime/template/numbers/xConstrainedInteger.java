@@ -826,6 +826,21 @@ public abstract class xConstrainedInteger
         }
 
     /**
+     * Copy the bytes of the specified long value into the specified array.
+     *
+     * @param l   the long value
+     * @param ab  the byte array to copy into
+     * @param of  the offset to start copying at
+     */
+    static public void copyAsBytes(long l, byte[] ab, int of)
+        {
+        for (int i = 0, cShift = 56; i < 8; i++, cShift-=8)
+            {
+            ab[of+i] = (byte) (l >> cShift);
+            }
+        }
+
+    /**
      * Produce a long value from the specified byte array.
      *
      * @param aBytes   the byte array
