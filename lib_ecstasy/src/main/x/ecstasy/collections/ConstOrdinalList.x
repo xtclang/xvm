@@ -295,7 +295,7 @@ const ConstOrdinalList
      */
     static Byte[] pack(Int[] vals, Int packFirst, Int packCount, Int bitsPerVal)
         {
-        Int128 mask   = 1 << bitsPerVal-1 >> bitsPerVal;
+        Int128 mask   = (1 << bitsPerVal) - 1;
         Int    binLen = (packCount * bitsPerVal + 7) / 8;
         Byte[] binVal = new Byte[binLen];
 
