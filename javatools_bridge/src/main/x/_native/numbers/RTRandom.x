@@ -9,7 +9,6 @@ service RTRandom
     @Override Bit[] fill(Bit[] bits)    {TODO("native");}
     @Override Byte[] fill(Byte[] bytes) {TODO("native");}
     @Override Int int(Int max)          {TODO("native");}
-    @Override UInt uint(UInt max)       {TODO("native");}
     @Override Int8 int8()               {TODO("native");}
     @Override Int16 int16()             {TODO("native");}
     @Override Int32 int32()             {TODO("native");}

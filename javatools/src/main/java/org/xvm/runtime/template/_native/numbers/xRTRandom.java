@@ -27,10 +27,13 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
 
+import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
+import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xDec64;
 import org.xvm.runtime.template.numbers.xFloat32;
 import org.xvm.runtime.template.numbers.xFloat64;
+import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.numbers.xInt8;
 import org.xvm.runtime.template.numbers.xInt16;
 import org.xvm.runtime.template.numbers.xInt32;
@@ -65,9 +68,7 @@ public class xRTRandom
         {
         String[] BIT       = new String[] {"numbers.Bit"};
         String[] BITARRAY  = new String[] {"collections.Array<numbers.Bit>"};
-        String[] BYTE      = new String[] {"numbers.UInt8"};
         String[] BYTEARRAY = new String[] {"collections.Array<numbers.UInt8>"};
-        String[] UINT      = new String[] {"numbers.UInt"};
         String[] INT8      = new String[] {"numbers.Int8"};
         String[] INT16     = new String[] {"numbers.Int16"};
         String[] INT32     = new String[] {"numbers.Int32"};
@@ -84,7 +85,6 @@ public class xRTRandom
         markNativeMethod("fill"   , BITARRAY , BITARRAY );
         markNativeMethod("fill"   , BYTEARRAY, BYTEARRAY);
         markNativeMethod("int"    , INT      , INT      );
-        markNativeMethod("uint"   , UINT     , UINT     );
         markNativeMethod("int8"   , VOID     , INT8     );
         markNativeMethod("int16"  , VOID     , INT16    );
         markNativeMethod("int32"  , VOID     , INT32    );
@@ -137,12 +137,7 @@ public class xRTRandom
                 }
 
             case "int":
-                // TODO hArg is a Int handle
                 return invokeInt(frame, hTarget, hArg, iReturn);
-
-            case "uint":
-                // TODO hArg is a UInt handle
-                return invokeUInt(frame, hTarget, hArg, iReturn);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -220,47 +215,110 @@ public class xRTRandom
         return hRnd;
         }
 
-
-    // ----- methods -------------------------------------------------------------------------------
-
+    /**
+     * Native implementation of "Int&nbsp;int(Int max)".
+     */
     protected int invokeInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        throw new UnsupportedOperationException("int(max)");
-        // TODO GG need an xInt handle
-//        long lMax = hArg.getValue();
-//        if (lMax <= 0)
-//            {
-//            return frame.raiseException(xException.illegalArgument(frame,
-//                    "Illegal exclusive maximum (" + lMax +"); maximum must be >= 0"));
-//            }
-//
-//        Random rnd = rnd(hTarget);
-//        long   lRnd;
-//        if (lMax <= Integer.MAX_VALUE)
-//            {
-//            // it's a 32-bit random, so take a fast path in Java that handles 32-bit values
-//            lRnd = rnd.nextInt((int) lMax);
-//            }
-//        else if ((lMax & lMax-1) == 0)
-//            {
-//            // it's a power of 2, so avoid the 64-bit modulo
-//            lRnd = rnd.nextLong() & lMax-1;
-//            }
-//        else
-//            {
-//            // this works in theory, but has a slightly weaker guarantee on a perfect distribution
-//            // of random values
-//            lRnd = rnd.nextLong() % lMax;
-//            }
-//
-//        return frame.assignValue(iReturn, xInt64.makeHandle(lRnd));
+        boolean  fSmall = false;
+        long     lMax   = 0;
+        LongLong llMax  = null;
+
+        if (hArg instanceof JavaLong hL)
+            {
+            fSmall = true;
+            lMax   = hL.getValue();
+            }
+        else
+            {
+            llMax = ((LongLongHandle) hArg).getValue();
+            if (llMax.isSmall(true))
+                {
+                fSmall = true;
+                lMax   = llMax.getLowValue();
+                }
+            }
+
+        Random rnd = rnd(hTarget);
+
+        if (fSmall)
+            {
+            if (lMax <= 0)
+                {
+                return frame.raiseException(xException.illegalArgument(frame,
+                        "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
+                }
+
+            return frame.assignValue(iReturn, xInt.makeHandle(computeRandom(rnd, lMax)));
+            }
+
+        if (llMax.signum() < 0)
+            {
+            return frame.raiseException(xException.illegalArgument(frame,
+                    "Illegal exclusive maximum (" + llMax +"); maximum must be > 0"));
+            }
+
+        long lLoMax = llMax.getLowValue();
+        long lHiMax = llMax.getHighValue();
+
+        if (lLoMax == 0 && (lHiMax & (lHiMax-1)) == 0)
+            {
+            // it's a power of 2
+            LongLong ll = new LongLong(rnd.nextLong(), rnd.nextLong() & (lHiMax - 1));
+            return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
+            }
+        else if (lHiMax == Long.MAX_VALUE)
+            {
+            while (true)
+                {
+                LongLong ll = new LongLong(rnd.nextLong(), rnd.nextLong() & ~Long.MIN_VALUE);
+                if (ll.compare(llMax) < 0)
+                    {
+                    return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
+                    }
+                }
+            }
+        else
+            {
+            // see the comments in the natural code (Random.x)
+            while (true)
+                {
+                LongLong ll = new LongLong(rnd.nextLong(), computeRandom(rnd, lHiMax + 1));
+                if (ll.compare(llMax) < 0)
+                    {
+                    return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
+                    }
+                }
+            }
         }
 
-    protected int invokeUInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+    /**
+     * @return a random positive long value that is lesser than the specified max
+     */
+    private long computeRandom(Random rnd, long lMax)
         {
-        throw new UnsupportedOperationException("uint(max)");
-        // TODO GG need an xUInt handle
+        assert lMax > 0;
+
+        if (lMax <= Integer.MAX_VALUE)
+            {
+            // it's a 32-bit random, so take a fast path in Java that handles 32-bit values
+            return rnd.nextInt((int) lMax);
+            }
+        else if ((lMax & (lMax-1)) == 0)
+            {
+            // it's a power of 2, so avoid the 64-bit modulo
+            return rnd.nextLong() & (lMax - 1);
+            }
+        else
+            {
+            // this works in theory, but has a slightly weaker guarantee on a perfect distribution
+            // of random values
+            return (rnd.nextLong() % lMax) & ~Long.MIN_VALUE;
+            }
         }
+
+
+    // ----- handle --------------------------------------------------------------------------------
 
     public ServiceHandle createRandomHandle(ServiceContext context,
                                             ClassComposition clz, TypeConstant typeMask, long lSeed)
@@ -290,7 +348,7 @@ public class xRTRandom
     /**
      * @return the Random to use
      */
-    protected Random rnd(ObjectHandle hTarget)
+    private Random rnd(ObjectHandle hTarget)
         {
         Random random = ((RandomHandle) hTarget).f_random;
 
