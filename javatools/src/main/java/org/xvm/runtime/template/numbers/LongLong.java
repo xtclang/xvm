@@ -497,12 +497,11 @@ public class LongLong
 
     public LongLong shl(int n)
         {
-        if (n <= 64)
+        if (n < 64)
             {
-            final long nComp = 64 - n;
-            final long bitDifference = ((long) (-1 >>> nComp) << nComp) & m_lLow;
-
-            return new LongLong(m_lLow << n, (m_lHigh << n) | (bitDifference >> nComp));
+            return n == 0
+                ? this
+                : new LongLong(m_lLow << n, (m_lHigh << n) | (m_lLow >>> (64 - n)));
             }
 
         return new LongLong(0, m_lLow << (n - 64));
@@ -510,25 +509,23 @@ public class LongLong
 
     public LongLong shr(int n)
         {
-        if (n <= 64)
+        if (n < 64)
             {
-            final long nComp = 64 - n;
-            final long bitDifference = (Long.MAX_VALUE >>> nComp) & m_lHigh;
-
-            return new LongLong((m_lLow >>> n) | (bitDifference << nComp), m_lHigh >> n);
+            return n == 0
+                ? this
+                : new LongLong((m_lLow >>> n) | (m_lHigh << (64 - n)), m_lHigh >> n);
             }
 
-        return new LongLong((m_lHigh >>> (n - 64)) & Long.MAX_VALUE, m_lHigh < 0 ? Long.MIN_VALUE : 0);
+        return new LongLong(m_lHigh >> (n - 64), m_lHigh < 0 ? -1 : 0);
         }
 
     public LongLong ushr(int n)
         {
-        if (n <= 64)
+        if (n < 64)
             {
-            final long nComp = 64 - n;
-            final long bitDifference = (-1 >>> nComp) & m_lHigh;
-
-            return new LongLong((m_lLow >>> n) | (bitDifference << nComp), m_lHigh >>> n);
+            return n == 0
+                ? this
+                : new LongLong((m_lLow >>> n) | (m_lHigh << (64 - n)), m_lHigh >>> n);
             }
 
         return new LongLong(m_lHigh >>> (n - 64), 0);
