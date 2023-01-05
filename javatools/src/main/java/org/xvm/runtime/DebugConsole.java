@@ -93,7 +93,17 @@ public class DebugConsole
                 break;
 
             case StepOver:
-                fDebug = frame == m_frame;
+                if (frame == m_frame)
+                    {
+                    if (m_cSteps > 0)
+                        {
+                        --m_cSteps;
+                        }
+                    else
+                        {
+                        fDebug = true;
+                        }
+                    }
                 break;
 
             case StepInto:
@@ -436,14 +446,22 @@ public class DebugConsole
                         writer.println(renderHelp());
                         continue NextCommand;
 
+                    case "N":
                     case "S":
                         m_stepMode = StepMode.StepOver;
+                        int cSteps = cArgs == 0 ? 0 : parseNonNegative(asParts[1]);
+                        if (cSteps > 0)
+                            {
+                            m_cSteps = cSteps;
+                            }
                         break NextCommand;
 
+                    case "I":
                     case "S+":
                         m_stepMode = StepMode.StepInto;
                         break NextCommand;
 
+                    case "O":
                     case "S-":
                         m_stepMode = StepMode.StepOut;
                         break NextCommand;
@@ -2350,6 +2368,11 @@ public class DebugConsole
      * The current frame.
      */
     private Frame m_frame;
+
+    /**
+     * Remaining steps before stopping.
+     */
+    private int m_cSteps;
 
     /**
      * The selected frame (for showing variables).
