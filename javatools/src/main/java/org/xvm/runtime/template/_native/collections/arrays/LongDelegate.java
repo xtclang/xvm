@@ -49,6 +49,51 @@ public abstract class LongDelegate
         }
 
     @Override
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            }
+
+        // TODO GG: range check is missing
+        return frame.assignValue(iReturn,
+                makeElementHandle(hDelegate.m_alValue[(int) lIndex]++));
+        }
+
+    @Override
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            }
+
+        // TODO GG: range check is missing
+        return frame.assignValue(iReturn,
+                makeElementHandle(--hDelegate.m_alValue[(int) lIndex]));
+        }
+
+    @Override
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            }
+
+        // TODO GG: range check is missing
+        return frame.assignValue(iReturn,
+                makeElementHandle(hDelegate.m_alValue[(int) lIndex]--));
+        }
+
+    @Override
     public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {

@@ -604,6 +604,36 @@ public class xArray
         }
 
     @Override
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        return ((xRTDelegate) hDelegate.getTemplate()).
+                invokePostInc(frame, hDelegate, lIndex, iReturn);
+        }
+
+    @Override
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        return ((xRTDelegate) hDelegate.getTemplate()).
+                invokePreDec(frame, hDelegate, lIndex, iReturn);
+        }
+
+    @Override
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        return ((xRTDelegate) hDelegate.getTemplate()).
+                invokePostDec(frame, hDelegate, lIndex, iReturn);
+        }
+
+    @Override
     public ObjectHandle[] toArray(Frame frame, ObjectHandle hTarget)
             throws ExceptionHandle.WrapperException
         {
