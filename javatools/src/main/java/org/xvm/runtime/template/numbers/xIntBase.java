@@ -584,15 +584,7 @@ public abstract class xIntBase
     /**
      * @return true iff the result of the long multiplication overflowed
      */
-    protected boolean checkMulOverflow(long l1, long l2, long lr)
-        {
-        long a1 = Math.abs(l1);
-        long a2 = Math.abs(l2);
-
-        // see Math.multiplyExact()
-        return (a1 | a2) >>> 31 != 0 &&
-            ((l2 != 0) && (lr / l2 != l1) || (l1 == Long.MIN_VALUE && l2 == -1));
-        }
+    abstract protected boolean checkMulOverflow(long l1, long l2, long lr);
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
