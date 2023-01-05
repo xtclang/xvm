@@ -361,7 +361,7 @@ public class xIntLiteral
                     LongLong    llValue = LongLong.fromBigInteger(biValue);
 
                     return templateTo.f_fSigned || llValue.signum() >= 0
-                        ? frame.assignValue(iReturn, templateTo.makeLongLong(llValue))
+                        ? frame.assignValue(iReturn, templateTo.makeHandle(llValue))
                         : templateTo.overflow(frame);
                     }
                 break;

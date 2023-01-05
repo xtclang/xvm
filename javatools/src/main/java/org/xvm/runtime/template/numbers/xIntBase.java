@@ -405,7 +405,7 @@ public abstract class xIntBase
                             return overflow(frame);
                             }
 
-                        return frame.assignValue(iReturn, templateTo.makeLongLong(ll));
+                        return frame.assignValue(iReturn, templateTo.makeHandle(ll));
                         }
                     }
 
@@ -999,5 +999,5 @@ public abstract class xIntBase
         return new LongLongHandle(getCanonicalClass(), ll);
         }
 
-    protected final boolean f_fSigned;
+    public final boolean f_fSigned;
     }

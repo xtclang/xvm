@@ -45,7 +45,7 @@ public class xInt128
                     {
                     ll = new LongLong(ll.getLowValue(), -ll.getHighValue());
                     }
-                return frame.assignValue(iReturn, xUInt128.INSTANCE.makeLongLong(ll));
+                return frame.assignValue(iReturn, xUInt128.INSTANCE.makeHandle(ll));
                 }
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

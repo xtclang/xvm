@@ -163,7 +163,7 @@ public class xLocalClock
         GenericHandle   hTime   = new GenericHandle(clzTime);
 
         LongLong llNow = new LongLong(System.currentTimeMillis()).mul(xNanosTimer.PICOS_PER_MILLI_LL);
-        hTime.setField(frame, "epochPicos", xInt128.INSTANCE.makeLongLong(llNow));
+        hTime.setField(frame, "epochPicos", xInt128.INSTANCE.makeHandle(llNow));
         hTime.setField(frame, "timezone", timezone(frame));
         hTime.makeImmutable();
 

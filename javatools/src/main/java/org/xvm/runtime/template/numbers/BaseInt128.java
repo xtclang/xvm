@@ -86,7 +86,7 @@ public abstract class BaseInt128
             {
             PackedInteger piValue = constInt.getValue();
 
-            return frame.pushStack(makeLongLong(
+            return frame.pushStack(makeHandle(
                 LongLong.fromBigInteger(piValue.getBigInteger())));
             }
 
@@ -121,7 +121,7 @@ public abstract class BaseInt128
             }
 
         long lHi = big.shiftRight(64).longValue();
-        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+        return frame.assignValue(iReturn, makeHandle(new LongLong(lLo, lHi)));
         }
 
     @Override
@@ -135,7 +135,7 @@ public abstract class BaseInt128
 
         long lLo = xConstrainedInteger.fromByteArray(ab, 0, 8, false);
         long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, f_fSigned);
-        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+        return frame.assignValue(iReturn, makeHandle(new LongLong(lLo, lHi)));
         }
 
     @Override
@@ -149,7 +149,7 @@ public abstract class BaseInt128
 
         long lLo = xConstrainedInteger.fromByteArray(ab, 0, 8, false);
         long lHi = xConstrainedInteger.fromByteArray(ab, 8, 8, f_fSigned);
-        return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
+        return frame.assignValue(iReturn, makeHandle(new LongLong(lLo, lHi)));
         }
 
     @Override
@@ -332,7 +332,7 @@ public abstract class BaseInt128
                             return overflow(frame);
                             }
                         }
-                    return frame.assignValue(iReturn, templateTo.makeLongLong(llValue));
+                    return frame.assignValue(iReturn, templateTo.makeHandle(llValue));
                     }
                 break;
                 }
@@ -361,7 +361,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llr));
+        return frame.assignValue(iReturn, makeHandle(llr));
         }
 
     @Override
@@ -380,7 +380,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llr));
+        return frame.assignValue(iReturn, makeHandle(llr));
         }
 
     @Override
@@ -395,7 +395,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llr));
+        return frame.assignValue(iReturn, makeHandle(llr));
         }
 
     @Override
@@ -410,7 +410,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llr));
+        return frame.assignValue(iReturn, makeHandle(llr));
         }
 
     @Override
@@ -425,7 +425,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llr));
+        return frame.assignValue(iReturn, makeHandle(llr));
         }
 
     @Override
@@ -439,7 +439,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llr));
+        return frame.assignValue(iReturn, makeHandle(llr));
         }
 
     @Override
@@ -453,7 +453,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llr));
+        return frame.assignValue(iReturn, makeHandle(llr));
         }
 
     @Override
@@ -471,7 +471,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llDiv));
+        return frame.assignValue(iReturn, makeHandle(llDiv));
         }
 
     @Override
@@ -489,7 +489,7 @@ public abstract class BaseInt128
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(llMod));
+        return frame.assignValue(iReturn, makeHandle(llMod));
         }
 
     @Override
@@ -514,7 +514,7 @@ public abstract class BaseInt128
             {
             return overflow(frame);
             }
-        return frame.assignValues(aiReturn, makeLongLong(llDiv), makeLongLong(llRem));
+        return frame.assignValues(aiReturn, makeHandle(llDiv), makeHandle(llRem));
         }
 
     @Override
@@ -523,7 +523,7 @@ public abstract class BaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         int      c   = (int) ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.shl(c)));
+        return frame.assignValue(iReturn, makeHandle(ll1.shl(c)));
         }
 
     @Override
@@ -532,7 +532,7 @@ public abstract class BaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         int      c   = (int) ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.shr(c)));
+        return frame.assignValue(iReturn, makeHandle(ll1.shr(c)));
         }
 
     @Override
@@ -541,7 +541,7 @@ public abstract class BaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         int      c   = (int) ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.ushr(c)));
+        return frame.assignValue(iReturn, makeHandle(ll1.ushr(c)));
         }
 
     @Override
@@ -550,7 +550,7 @@ public abstract class BaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.and(ll2)));
+        return frame.assignValue(iReturn, makeHandle(ll1.and(ll2)));
         }
 
     @Override
@@ -559,7 +559,7 @@ public abstract class BaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.or(ll2)));
+        return frame.assignValue(iReturn, makeHandle(ll1.or(ll2)));
         }
 
     @Override
@@ -568,7 +568,7 @@ public abstract class BaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.xor(ll2)));
+        return frame.assignValue(iReturn, makeHandle(ll1.xor(ll2)));
         }
 
     @Override
@@ -576,7 +576,7 @@ public abstract class BaseInt128
         {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll.complement()));
+        return frame.assignValue(iReturn, makeHandle(ll.complement()));
         }
 
     @Override
@@ -648,7 +648,7 @@ public abstract class BaseInt128
      */
     protected int convertLong(Frame frame, long lValue, int iReturn)
         {
-        return frame.assignValue(iReturn, makeLongLong(new LongLong(lValue, f_fSigned)));
+        return frame.assignValue(iReturn, makeHandle(new LongLong(lValue, f_fSigned)));
         }
 
     /**
@@ -659,7 +659,10 @@ public abstract class BaseInt128
     abstract protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
                                                     LongLong llValue, boolean fTruncate, int iReturn);
 
-    public LongLongHandle makeLongLong(LongLong ll)
+    /**
+     * Create a handle for the specified LongLong value.
+     */
+    public LongLongHandle makeHandle(LongLong ll)
         {
         return new LongLongHandle(getCanonicalClass(), ll);
         }
