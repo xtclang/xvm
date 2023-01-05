@@ -123,6 +123,11 @@ public abstract class xIntBase
             }
 
         long lHi = xConstrainedInteger.fromByteArray(ab, 8, Math.min(8, cBytes -8), f_fSigned);
+        if (!f_fSigned && lHi < 0)
+            {
+            return frame.raiseException(
+                xException.outOfBounds(frame, "UInt128 only allows 127 bits"));
+            }
         return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi)));
         }
 
@@ -150,6 +155,11 @@ public abstract class xIntBase
             }
 
         long lHi = xConstrainedInteger.fromByteArray(ab, 8, Math.min(8, cBytes -8), f_fSigned);
+        if (!f_fSigned && lHi < 0 && cShift == 0)
+            {
+            return frame.raiseException(
+                xException.outOfBounds(frame, "UInt128 only allows 127 bits"));
+            }
         return frame.assignValue(iReturn, makeLongLong(new LongLong(lLo, lHi >>> cShift)));
         }
 
@@ -287,9 +297,6 @@ public abstract class xIntBase
         {
         switch (method.getName())
             {
-            case "abs":
-                return invokeAbs(frame, hTarget, iReturn);
-
             case "toInt":
             case "toInt8":
             case "toInt16":
@@ -445,11 +452,6 @@ public abstract class xIntBase
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
-
-    /**
-     * Native implementation of "Number abs()".
-     */
-    abstract protected int invokeAbs(Frame frame, ObjectHandle hTarget, int iReturn);
 
     @Override
     abstract public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn);

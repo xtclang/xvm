@@ -53,30 +53,6 @@ public class xInt
         }
 
     @Override
-    protected int invokeAbs(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        if (hTarget instanceof JavaLong hLong)
-            {
-            long l = hLong.getValue();
-            return frame.assignValue(iReturn, l >= 0 ? hTarget : makeLong(-l));
-            }
-        else
-            {
-            LongLong ll = ((LongLongHandle) hTarget).getValue();
-            if (ll.signum() >= 0)
-                {
-                return frame.assignValue(iReturn, hTarget);
-                }
-            ll = ll.negate();
-            if (ll == LongLong.OVERFLOW)
-                {
-                return overflow(frame);
-                }
-            return frame.assignValue(iReturn, makeLongLong(ll));
-            }
-        }
-
-    @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         if (hTarget instanceof JavaLong h1)
@@ -93,6 +69,11 @@ public class xInt
         else
             {
             LongLong ll = ((LongLongHandle) hTarget).getValue();
+            if (ll.equals(LongLong.MIN_VALUE))
+                {
+                // there is no abs() for MinValue
+                return overflow(frame);
+                }
             return frame.assignValue(iReturn, makeLongLong(ll.negate()));
             }
         }

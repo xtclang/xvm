@@ -46,12 +46,6 @@ public class xUInt
         }
 
     @Override
-    protected int invokeAbs(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        return frame.assignValue(iReturn, hTarget);
-        }
-
-    @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.raiseException(xException.unsupportedOperation(frame));
