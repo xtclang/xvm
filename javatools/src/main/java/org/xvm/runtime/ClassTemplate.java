@@ -2383,7 +2383,7 @@ public abstract class ClassTemplate
      *       then we will mark the property as @Unassigned, which will retain the property field,
      *       but will exempt it from the post-construction assignability check.
      */
-    protected void markNativeProperty(String sPropName)
+    public void markNativeProperty(String sPropName)
         {
         PropertyStructure prop = getStructure().findPropertyDeep(sPropName);
         if (prop == null)
