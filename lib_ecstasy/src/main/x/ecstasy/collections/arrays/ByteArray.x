@@ -887,6 +887,72 @@ mixin ByteArray<Element extends Byte>
         return asDec128Array().reify(mutability);
         }
 
+    /**
+     * Format the contents of this byte array as a "hex dump", useful for debugging.
+     *
+     * @param bytesPerLine  the number of bytes to show in each line of the hex dump
+     *
+     * @return a String containing the hex dump
+     */
+    String toHexDump(Int bytesPerLine)
+        {
+        assert bytesPerLine > 0;
+
+        // calculate how many digits it will take to show the address
+        Int addrLen = ((size.leftmostBit.trailingZeroCount) / 8 + 1) * 2;       // 2, 4, 6, ...
+
+        // format is "12F0: 00 12 32 A0 ????\n"
+        // line length is addrLen + 4*bytesPerLine + 3
+        Int    charsPerLine = addrLen + bytesPerLine * 4 + 3;
+        Char[] lineText     = new Char[charsPerLine](' ');
+
+        lineText[addrLen       ] = ':';
+        lineText[charsPerLine-1] = '\n';
+
+        Int lines      = ((size + bytesPerLine - 1) / bytesPerLine).maxOf(1);
+        val buf        = new StringBuffer(lines * charsPerLine);
+        Int byteOffset = 0;
+        Int hexOffset  = addrLen + 2;
+        Int charOffset = hexOffset + bytesPerLine * 3;
+
+        for (Int line : 0 ..< lines)
+            {
+            // format the address
+            Int addr       = byteOffset;
+            Int addrOffset = addrLen - 1;
+            while (addrOffset >= 0)
+                {
+                lineText[addrOffset--] = addr.toHexit();
+                addr >>= 4;
+                }
+
+            for (Int index : 0 ..< bytesPerLine)
+                {
+                if (byteOffset < size)
+                    {
+                    Byte b  = this[byteOffset];
+                    Char ch = b.toChar();
+
+                    lineText[hexOffset + index * 3    ] = (b >>> 4).toHexit();
+                    lineText[hexOffset + index * 3 + 1] = b.toHexit();
+                    lineText[charOffset + index       ] = ch.ascii && !ch.isEscaped() ? ch : '.';
+                    }
+                else
+                    {
+                    lineText[hexOffset + index * 3    ] = ' ';
+                    lineText[hexOffset + index * 3 + 1] = ' ';
+                    lineText[charOffset + index       ] = ' ';
+                    }
+
+                ++byteOffset;
+                }
+
+            buf.addAll(line < lines - 1 ? lineText : lineText[0 ..< charsPerLine]);
+            }
+
+        return buf.toString();
+        }
+
 
     // ----- Stringable methods --------------------------------------------------------------------
 
