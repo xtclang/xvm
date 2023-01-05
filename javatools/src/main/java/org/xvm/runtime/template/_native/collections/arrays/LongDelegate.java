@@ -6,14 +6,10 @@ import java.util.Arrays;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-
-import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.xException;
 
@@ -28,7 +24,7 @@ public abstract class LongDelegate
 
     public LongDelegate(Container container, ClassStructure structure, boolean fSigned)
         {
-        super(container, structure, 64, true);
+        super(container, structure, 64, fSigned);
 
         f_fSigned = fSigned;
         }
@@ -91,19 +87,6 @@ public abstract class LongDelegate
         // TODO GG: range check is missing
         return frame.assignValue(iReturn,
                 makeElementHandle(hDelegate.m_alValue[(int) lIndex]--));
-        }
-
-    @Override
-    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
-                                         ObjectHandle[] ahContent, Mutability mutability)
-        {
-        long[] al = new long[cSize];
-
-        for (int i = 0, c = ahContent.length; i < c; i++)
-            {
-            al[i] = ((JavaLong) ahContent[i]).getValue();
-            }
-        return new LongArrayHandle(getCanonicalClass(), al, cSize, mutability);
         }
 
 
