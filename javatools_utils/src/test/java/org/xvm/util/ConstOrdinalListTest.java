@@ -13,11 +13,21 @@ public class ConstOrdinalListTest
     {
     public static void main(String[] args)
         {
+//        validate(new ConstOrdinalList(ConstOrdinalList.decompress(
+//              Handy.hexStringToByteArray("0x0B0C0AD9245739010101FD0C01CC3336"))), 0, true);
+
         // for test reproducers:
         if (args != null && args.length > 0)
             {
             // e.g. "[4, 27, 27, 27, 27, 13, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 4, 4, 4]"
+            boolean fDump = false;
             String s = args[0];
+            if (args.length > 1 && s.length() > 0 && s.substring(0, 1).equalsIgnoreCase("d"))
+                {
+                fDump = true;
+                s = args[1];
+                }
+
             if (s.startsWith("["))
                 {
                 s = s.substring(1);
@@ -37,7 +47,7 @@ public class ConstOrdinalListTest
                     }
                 }
 
-            validate(list, 0);
+            validate(list, 0, fDump);
             }
         else
             {
@@ -48,7 +58,6 @@ public class ConstOrdinalListTest
                 test(i, nMax, nDft);
                 }
             }
-
         }
 
     static void test(int iTest, int nMax, int nDft)
@@ -58,7 +67,7 @@ public class ConstOrdinalListTest
             {
             try
                 {
-                validate(list, iTest*10+i);
+                validate(list, iTest*10+i, false);
 
 
                 if (s_rnd.nextBoolean())
@@ -92,10 +101,10 @@ public class ConstOrdinalListTest
             }
         }
 
-    static void validate(List<Integer> list, int iTest)
+    static void validate(List<Integer> list, int iTest, boolean fDump)
         {
         ConstOrdinalList col = new ConstOrdinalList(list);
-        validate(list, col, iTest, "");
+        validate(list, col, iTest, "", fDump);
 
         for (int cFast = 5; cFast < 100; cFast *= 2)
             {
@@ -105,11 +114,11 @@ public class ConstOrdinalListTest
                 }
 
             col = new ConstOrdinalList(ConstOrdinalList.compress(col.toIntArray(), cFast));
-            validate(list, col, iTest, "fast=" + cFast);
+            validate(list, col, iTest, "fast=" + cFast, fDump);
             }
         }
 
-    static void validate(List<Integer> list, ConstOrdinalList col, int iTest, String sTest)
+    static void validate(List<Integer> list, ConstOrdinalList col, int iTest, String sTest, boolean fDump)
         {
         byte[] ab = col.getBytes();
         int    cb = ab.length;
@@ -119,6 +128,10 @@ public class ConstOrdinalListTest
             + ", size=" + col.size()
             + ", bytes=" + cb
             + ", compression=" + calcPct(list.size() * 4 + 4, cb));
+        if (fDump)
+            {
+            System.out.println(Handy.byteArrayToHexDump(ab, 80));
+            }
 
         if (list.isEmpty() != col.isEmpty())
             {
