@@ -33,7 +33,7 @@ const Dec
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
-    @Override // TODO GG: this should not compile
+    @Override
     construct(Bit[] bits)
         {
         switch (bits.size)
