@@ -48,7 +48,7 @@ const ConstOrdinalList
             out.writeInt128(defaultVal);
 
             // calculate bits per value
-            Int bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x3F;
+            Int bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x7F;
             assert 0 < bitsPerVal < 128;
             out.writeInt128(bitsPerVal);
 
@@ -627,7 +627,7 @@ const ConstOrdinalList
 
             Int    jumpIndex = node.jumpIndex == 0 ? 0 : node.jumpIndex - node.index;
             Int    valCount  = node.runLenEnc ? -node.length : node.length;
-            Int    nextIndex = nodeNext?.index - node.index : valCount;
+            Int    nextIndex = nodeNext?.index - node.index : valCount;    // REVIEW CP: valCount or 0? 0 fails here; see comment in Java impl
             Int    val       = 0;
             Byte[] packed    = [];
             if (node.runLenEnc)
