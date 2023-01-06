@@ -50,8 +50,8 @@ public abstract class LongLongDelegate
             {
             LongLong ll = ((LongLongHandle) ahContent[iSrc]).getValue();
 
-            al[iDst++] = ll.getLowValue();
             al[iDst++] = ll.getHighValue();
+            al[iDst++] = ll.getLowValue();
             }
         return new LongArrayHandle(getCanonicalClass(), al, cSize, mutability);
         }
@@ -66,13 +66,13 @@ public abstract class LongLongDelegate
 
         long[]   alValue = hDelegate.m_alValue;
         LongLong ll      = ((LongLongHandle) hValue).getValue();
-        long     lL      = ll.getLowValue();
         long     lH      = ll.getHighValue();
+        long     lL      = ll.getLowValue();
 
         for (int iSrc = 0, iDst = 0; iSrc < cSize; iSrc++)
             {
-            alValue[iDst++] = lL;
             alValue[iDst++] = lH;
+            alValue[iDst++] = lL;
             }
         hDelegate.m_cSize = cSize;
         return hDelegate;
@@ -136,7 +136,7 @@ public abstract class LongLongDelegate
         int             nIndex    = (int) lIndex*2;
 
         return frame.assignValue(iReturn,
-                makeElementHandle(new LongLong(alValue[nIndex], alValue[nIndex+1])));
+                makeElementHandle(new LongLong(alValue[nIndex+1], alValue[nIndex])));
         }
 
     @Override
@@ -162,8 +162,8 @@ public abstract class LongLongDelegate
         LongLong ll = ((LongLongHandle) hValue).getValue();
         try
             {
-            alValue[nIndex]   = ll.getLowValue();
-            alValue[nIndex+1] = ll.getHighValue();
+            alValue[nIndex]   = ll.getHighValue();
+            alValue[nIndex+1] = ll.getLowValue();
             return Op.R_NEXT;
             }
         catch (ClassCastException e)
@@ -194,8 +194,8 @@ public abstract class LongLongDelegate
             // insert
             System.arraycopy(alValue, nIndex, alValue, nIndex + 2, 2*cSize - nIndex);
             }
-        alValue[nIndex]   = ll.getLowValue();
-        alValue[nIndex+1] = ll.getHighValue();
+        alValue[nIndex]   = ll.getHighValue();
+        alValue[nIndex+1] = ll.getLowValue();
         }
 
     @Override

@@ -40,15 +40,17 @@ public class xRTViewToBit
             {
             registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTViewToBitFromInt8  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt16 (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt32 (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt64 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt8   (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt16  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt32  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt64  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt128 (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTViewToBitFromUInt8 (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt16(f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt32(f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt64(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt8  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt16 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt32 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt64 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt128(f_container, f_struct, true));
             }
         }
     @Override
@@ -62,15 +64,17 @@ public class xRTViewToBit
 
             mapViews.put(pool.typeNibble(), xRTViewToBitFromNibble.INSTANCE);
 
-            mapViews.put(pool.typeCInt8() , xRTViewToBitFromInt8  .INSTANCE);
-            mapViews.put(pool.typeCInt16(), xRTViewToBitFromInt16 .INSTANCE);
-            mapViews.put(pool.typeCInt32(), xRTViewToBitFromInt32 .INSTANCE);
-            mapViews.put(pool.typeCInt64(), xRTViewToBitFromInt64 .INSTANCE);
+            mapViews.put(pool.typeCInt8()   , xRTViewToBitFromInt8   .INSTANCE);
+            mapViews.put(pool.typeCInt16()  , xRTViewToBitFromInt16  .INSTANCE);
+            mapViews.put(pool.typeCInt32()  , xRTViewToBitFromInt32  .INSTANCE);
+            mapViews.put(pool.typeCInt64()  , xRTViewToBitFromInt64  .INSTANCE);
+            mapViews.put(pool.typeCInt128() , xRTViewToBitFromInt128 .INSTANCE);
 
-            mapViews.put(pool.typeCUInt8() , xRTViewToBitFromUInt8 .INSTANCE);
-            mapViews.put(pool.typeCUInt16(), xRTViewToBitFromUInt16.INSTANCE);
-            mapViews.put(pool.typeCUInt32(), xRTViewToBitFromUInt32.INSTANCE);
-            mapViews.put(pool.typeCUInt64(), xRTViewToBitFromUInt64.INSTANCE);
+            mapViews.put(pool.typeCUInt8()  , xRTViewToBitFromUInt8  .INSTANCE);
+            mapViews.put(pool.typeCUInt16() , xRTViewToBitFromUInt16 .INSTANCE);
+            mapViews.put(pool.typeCUInt32() , xRTViewToBitFromUInt32 .INSTANCE);
+            mapViews.put(pool.typeCUInt64() , xRTViewToBitFromUInt64 .INSTANCE);
+            mapViews.put(pool.typeCUInt128(), xRTViewToBitFromUInt128.INSTANCE);
 
             VIEWS = mapViews;
             }
