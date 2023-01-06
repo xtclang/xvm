@@ -737,11 +737,11 @@ public abstract class xConstrainedInteger
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    public int convertLong(Frame frame, PackedInteger piValue, int iReturn)
+    public int convertLong(Frame frame, PackedInteger piValue, boolean fChecked, int iReturn)
         {
         return piValue.isBig()
             ? overflow(frame)
-            : convertLong(frame, piValue.getLong(), iReturn, f_fChecked);
+            : convertLong(frame, piValue.getLong(), iReturn, fChecked);
         }
 
     /**
@@ -770,6 +770,14 @@ public abstract class xConstrainedInteger
      */
     public JavaLong makeJavaLong(long lValue)
         {
+        if (f_cNumBits < 64)
+            {
+            lValue &= f_lValueMask;
+            if (lValue > f_cMaxValue)
+                {
+                lValue -= (f_lValueMask + 1);
+                }
+            }
         return new JavaLong(getCanonicalClass(), lValue);
         }
 

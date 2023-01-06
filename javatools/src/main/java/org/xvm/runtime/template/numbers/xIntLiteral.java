@@ -342,11 +342,11 @@ public class xIntLiteral
                 ClassTemplate template = f_container.getTemplate(typeRet);
                 PackedInteger piValue  = hLiteral.getValue();
 
-                // REVIEW GG for unchecked use case
+                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
 
                 if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return templateTo.convertLong(frame, piValue, iReturn);
+                    return templateTo.convertLong(frame, piValue, !fTruncate, iReturn);
                     }
 
                 if (template instanceof xIntBase templateTo)
@@ -360,7 +360,7 @@ public class xIntLiteral
                     BigInteger  biValue = piValue.getBigInteger();
                     LongLong    llValue = LongLong.fromBigInteger(biValue);
 
-                    return templateTo.f_fSigned || llValue.signum() >= 0
+                    return !fTruncate && templateTo.f_fSigned || llValue.signum() >= 0
                         ? frame.assignValue(iReturn, templateTo.makeHandle(llValue))
                         : templateTo.overflow(frame);
                     }

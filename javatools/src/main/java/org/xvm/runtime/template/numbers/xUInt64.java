@@ -145,7 +145,7 @@ public class xUInt64
         }
 
     @Override
-    public int convertLong(Frame frame, PackedInteger piValue, int iReturn)
+    public int convertLong(Frame frame, PackedInteger piValue, boolean fChecked, int iReturn)
         {
         if (piValue.isBig())
             {
@@ -163,7 +163,7 @@ public class xUInt64
             }
         else
             {
-            return super.convertLong(frame, piValue, iReturn);
+            return super.convertLong(frame, piValue, fChecked, iReturn);
             }
         }
     }
