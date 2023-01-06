@@ -96,14 +96,7 @@ public class DebugConsole
             case StepOver:
                 if (frame == m_frame)
                     {
-                    if (m_cSteps > 0)
-                        {
-                        --m_cSteps;
-                        }
-                    else
-                        {
-                        fDebug = true;
-                        }
+                    fDebug = m_cSteps == 0 || --m_cSteps == 0;
                     }
                 break;
 
@@ -1284,6 +1277,11 @@ public class DebugConsole
         boolean fFirst = true;
         for (BreakPoint bp : set)
             {
+            if (bp.oneTime)
+                {
+                continue;
+                }
+
             if (fFirst)
                 {
                 fFirst = false;
