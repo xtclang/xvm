@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,7 +52,7 @@ import static org.xvm.util.Handy.NO_ARGS;
 /**
  * Debugger console.
  *
- * TODO Eval and Watch Eval implementations
+ * TODO implementation Watch Eval
  * TODO show which variables changed when stepping
  */
 public class DebugConsole
@@ -115,8 +116,21 @@ public class DebugConsole
                 break;
 
             case None:
-                fDebug = m_setLineBreaks != null &&
-                         m_setLineBreaks.stream().anyMatch(bp -> bp.matches(frame, iPC));
+                if (m_setLineBreaks != null)
+                    {
+                    for (Iterator<BreakPoint> iter = m_setLineBreaks.iterator(); iter.hasNext(); )
+                        {
+                        BreakPoint bp = iter.next();
+                        if (bp.matches(frame, iPC))
+                            {
+                            fDebug = true;
+                            if (bp.oneTime)
+                                {
+                                iter.remove();
+                                }
+                            }
+                        }
+                    }
                 break;
             }
 
@@ -276,13 +290,23 @@ public class DebugConsole
                             case 0:
                                 if (iPC >= 0)
                                     {
-                                    addBP(makeBreakPoint(frame, iPC));
+                                    addBP(makeBreakPoint(frame, iPC, false));
                                     continue NextCommand;
                                     }
                                 break; // the command is not allowed
 
+                            case 1:
+                                int nLine = parseNonNegative(asParts[1]);
+                                if (nLine > 0)
+                                    {
+                                    MethodStructure method = frame.f_function;
+                                    String          sName  = method.getContainingClass().getName();
+                                    addBP(new BreakPoint(sName, nLine, false));
+                                    }
+                                break;  // invalid break point
+
                             case 2:
-                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2]);
+                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
                                 if (bp != null)
                                     {
                                     addBP(bp);
@@ -299,7 +323,7 @@ public class DebugConsole
                                 // "B-" remove the current line from the list of breakpoints
                                 if (iPC >= 0)
                                     {
-                                    removeBP(makeBreakPoint(frame, iPC));
+                                    removeBP(makeBreakPoint(frame, iPC, false));
                                     continue NextCommand;
                                     }
                                 break; // the command is not allowed
@@ -328,7 +352,7 @@ public class DebugConsole
 
                             case 2:
                                 // "B- MyClass 123"  (class name and line number)
-                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2]);
+                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
                                 if (bp != null)
                                     {
                                     removeBP(bp);
@@ -360,7 +384,7 @@ public class DebugConsole
                             case 0:
                                 if (iPC >= 0)
                                     {
-                                    BreakPoint bp       = makeBreakPoint(frame, iPC);
+                                    BreakPoint bp       = makeBreakPoint(frame, iPC, false);
                                     BreakPoint bpExists = findBP(bp);
                                     if (bpExists == null)
                                         {
@@ -419,7 +443,7 @@ public class DebugConsole
 
                             case 2:
                                 {
-                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2]);
+                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
                                 if (bp != null)
                                     {
                                     toggleBP(bp);
@@ -467,7 +491,45 @@ public class DebugConsole
                         break NextCommand;
 
                     case "SL":
-                        m_stepMode = StepMode.StepLine;
+                        switch (cArgs)
+                            {
+                            case 0:
+                                if (iPC >= 0)
+                                    {
+                                    MethodStructure method = frame.f_function;
+                                    int nLine = method.calculateLineNumber(iPC);
+                                    if (nLine > 0)
+                                        {
+                                        String sName  = method.getContainingClass().getName();
+                                        addBP(new BreakPoint(sName, nLine, true));
+                                        m_stepMode = StepMode.None;
+                                        break NextCommand;
+                                        }
+                                    }
+                                break; // the command is not allowed
+
+                            case 1:
+                                int nLine = parseNonNegative(asParts[1]);
+                                if (nLine > 0)
+                                    {
+                                    MethodStructure method = frame.f_function;
+                                    String          sName  = method.getContainingClass().getName();
+                                    addBP(new BreakPoint(sName, nLine, true));
+                                    m_stepMode = StepMode.None;
+                                    break NextCommand;
+                                    }
+                                break;  // invalid break point
+
+                            case 2:
+                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], true);
+                                if (bp != null)
+                                    {
+                                    addBP(bp);
+                                    m_stepMode = StepMode.None;
+                                    break NextCommand;
+                                    }
+                                break;  // invalid break point
+                            }
                         break NextCommand;
 
                     case "R":
@@ -1028,13 +1090,13 @@ public class DebugConsole
                 : getFrameStash() ).ensureExpandMap();
         }
 
-    private BreakPoint makeBreakPoint(Frame frame, int iPC)
+    private BreakPoint makeBreakPoint(Frame frame, int iPC, boolean fOneTime)
         {
         MethodStructure method = frame.f_function;
         String          sName  = method.getContainingClass().getName();
         int             nLine  = method.calculateLineNumber(iPC);
 
-        return new BreakPoint(sName, nLine);
+        return new BreakPoint(sName, nLine, fOneTime);
         }
 
     private void addBP(BreakPoint bp)
@@ -1150,11 +1212,11 @@ public class DebugConsole
         return null;
         }
 
-    private static BreakPoint parseBreakPoint(String sName, String sLine)
+    private static BreakPoint parseBreakPoint(String sName, String sLine, boolean fOneTime)
         {
         int nLine = parseNonNegative(sLine);
 
-        return nLine <= 0 ? null : new BreakPoint(sName, nLine);
+        return nLine <= 0 ? null : new BreakPoint(sName, nLine, fOneTime);
         }
 
     private void loadBreakpoints()
@@ -1903,15 +1965,19 @@ public class DebugConsole
              D <var#>             Display the structure view of the specified variable number
              DS <var#>            Display the "toString()" value of the specified variable number
             
-             S                    Step over
-             S+                   Step in
-             S-                   Step out of frame
+             S  (or N)            Step over ("proceed to next line")
+             S  (or N) <count>    Repeatedlyl step over ("proceed to next line") <count> times
+             S+ (or I)            Step in
+             S- (or O)            Step out of frame
              SL                   Step (run) to current line
+             SL <line>            Step (run) to specified line
+             SL <name> <line>     Step (run) to specified line
              R                    Run to next breakpoint
             
              B+                   Add breakpoint for the current line
              B-                   Remove breakpoint for the current line
              BT                   Toggle breakpoint for the current line
+             B+ <line>            Add specified breakpoint
              B+ <name> <line>     Add specified breakpoint
              B- <name> <line>     Remove specified breakpoint
              BT <name> <line>     Toggle specified breakpoint
@@ -1929,7 +1995,7 @@ public class DebugConsole
              VD                   View Debugger
              VF                   View Services and Fibers
              VS <width> <height>  Set view width and optional height for debugger and console views
-             ?                    Display this help message""";
+             ?  (or HELP)         Display this help message""";
         }
 
 
@@ -1984,6 +2050,13 @@ public class DebugConsole
             {
             className  = sName;
             lineNumber = nLine;
+            }
+
+        public BreakPoint(String sName, int nLine, boolean fOneTime)
+            {
+            className  = sName;
+            lineNumber = nLine;
+            oneTime    = fOneTime;
             }
 
         public BreakPoint(String sException)
@@ -2100,7 +2173,11 @@ public class DebugConsole
                             : "On exception: " + className
                     : "At " + className + ':' + lineNumber;
 
-            if (disabled)
+            if (oneTime)
+                {
+                s += " (one time)";
+                }
+            else if (disabled)
                 {
                 s += " (disabled)";
                 }
@@ -2121,6 +2198,7 @@ public class DebugConsole
 
         public String  className;  // "*" means all exceptions
         public int     lineNumber; // -1 for exceptions
+        public boolean oneTime;
         public boolean disabled;
         }
 
