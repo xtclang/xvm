@@ -32,8 +32,8 @@ public class Handy
     // ----- String formatting ---------------------------------------------------------------------
 
     /**
-     * Take the passed nibble (the low order 4 bits of the int) and return the
-     * corresponding hexit (hexadecimal digit) in the range of '0' - 'F'.
+     * Take the passed nibble (the low order 4 bits of the int) and return the corresponding hexit
+     * (hexadecimal digit) in the range of '0' - 'F'.
      *
      * @param n  the nibble value
      *
@@ -48,8 +48,8 @@ public class Handy
         }
 
     /**
-     * Render the passed byte (the low order 8 bits of the int) into the passed
-     * StringBuilder as 2 hexadecimal digits.
+     * Render the passed byte (the low order 8 bits of the int) into the passed StringBuilder as
+     * two hexadecimal digits.
      *
      * @param sb  the StringBuilder to append to
      * @param n   the byte value
@@ -63,8 +63,7 @@ public class Handy
         }
 
     /**
-     * Format the passed byte (the low order 8 bits of the int) into a String
-     * of the form "0xFF".
+     * Format the passed byte (the low order 8 bits of the int) into a String of the form "0xFF".
      *
      * @param n  the byte value
      *
@@ -76,8 +75,7 @@ public class Handy
         }
 
     /**
-     * Append a portion of a byte array to a StringBuilder as a sequence of hex
-     * digits.
+     * Append a portion of a byte array to a StringBuilder as a sequence of hex digits.
      *
      * @param sb  the StringBuilder to append to
      * @param ab  the byte array
@@ -99,8 +97,7 @@ public class Handy
         }
 
     /**
-     * Append the contents of a byte array to a StringBuilder as a sequence of
-     * hex digits.
+     * Append the contents of a byte array to a StringBuilder as a sequence of hex digits.
      *
      * @param sb  the StringBuilder to append to
      * @param ab  the byte array
@@ -113,8 +110,7 @@ public class Handy
         }
 
     /**
-     * Format a portion of the passed byte array into a String of the form
-     * "0x01234FF".
+     * Format a portion of the passed byte array into a String of the form "0x01234FF".
      *
      * @param ab  the byte array
      * @param of  the offset of the first byte in the byte array to render
@@ -180,8 +176,7 @@ public class Handy
         }
 
     /**
-     * Format bytes from the passed byte array as a "hex dump", useful for
-     * debugging.
+     * Format bytes from the passed byte array as a "hex dump", useful for debugging.
      *
      * @param ab             the byte array
      * @param of             the offset of the first byte to show in the hex
@@ -247,8 +242,7 @@ public class Handy
         }
 
     /**
-     * Format bytes from the passed byte array as a "hex dump", useful for
-     * debugging.
+     * Format bytes from the passed byte array as a "hex dump", useful for debugging.
      *
      * @param ab             the byte array
      * @param cBytesPerLine  the number of bytes to show in each line of the hex
@@ -325,8 +319,8 @@ public class Handy
         }
 
     /**
-     * Determine how many hex digits it will take to render the passed
-     * <tt>int</tt> value as an <b>unsigned</b> hex value.
+     * Determine how many hex digits it will take to render the passed <tt>int</tt> value as an
+     * <b>unsigned</b> hex value.
      *
      * @param n  the int value, which is treated as an unsigned 32-bit value
      *
@@ -338,8 +332,8 @@ public class Handy
         }
 
     /**
-     * Render the passed <tt>int</tt> into the passed StringBuilder as the
-     * specified number of hex digits.
+     * Render the passed <tt>int</tt> into the passed StringBuilder as the specified number of hex
+     * digits.
      *
      * @param sb  the StringBuilder to append to
      * @param n   the int value
@@ -358,8 +352,7 @@ public class Handy
         }
 
     /**
-     * Render the passed <tt>int</tt> into the passed StringBuilder as 8
-     * hexadecimal digits.
+     * Render the passed <tt>int</tt> into the passed StringBuilder as 8 hexadecimal digits.
      *
      * @param sb  the StringBuilder to append to
      * @param n   the int value
@@ -384,8 +377,8 @@ public class Handy
         }
 
     /**
-     * Determine how many hex digits it will take to render the passed
-     * <tt>long</tt> value as an <b>unsigned</b> hex value.
+     * Determine how many hex digits it will take to render the passed <tt>long</tt> value as an
+     * <b>unsigned</b> hex value.
      *
      * @param n  the long value, which is treated as an unsigned 64-bit value
      *
@@ -397,8 +390,8 @@ public class Handy
         }
 
     /**
-     * Render the passed <tt>long</tt> into the passed StringBuilder as the
-     * specified number of hex digits.
+     * Render the passed <tt>long</tt> into the passed StringBuilder as the specified number of hex
+     * digits.
      *
      * @param sb   the StringBuilder to append to
      * @param n    the long value
@@ -417,8 +410,7 @@ public class Handy
         }
 
     /**
-     * Render the passed <tt>long</tt> into the passed StringBuilder as 16
-     * hexadecimal digits.
+     * Render the passed <tt>long</tt> into the passed StringBuilder as 16 hexadecimal digits.
      *
      * @param sb  the StringBuilder to append to
      * @param n   the long value
@@ -444,8 +436,7 @@ public class Handy
         }
 
     /**
-     * Format the specified byte value into the passed char array as two hex
-     * digits.
+     * Format the specified byte value into the passed char array as two hex digits.
      *
      * @param n    the byte value
      * @param ach  the char array to render into
@@ -461,8 +452,8 @@ public class Handy
         }
 
     /**
-     * Format the specified int value into the passed char array as the
-     * specified number of hex digits.
+     * Format the specified int value into the passed char array as the specified number of hex
+     * digits.
      *
      * @param n    the int value
      * @param ach  the char array to render into
@@ -482,8 +473,8 @@ public class Handy
         }
 
     /**
-     * Format the specified long value into the passed char array as the
-     * specified number of hex digits.
+     * Format the specified long value into the passed char array as the specified number of hex
+     * digits.
      *
      * @param n    the long value
      * @param ach  the char array to render into
@@ -561,8 +552,8 @@ public class Handy
         }
 
     /**
-     * Determine if the specified character is an ASCII letter, which is in the
-     * range 'A' to 'Z', or 'a' to 'z'.
+     * Determine if the specified character is an ASCII letter, which is in the range 'A' to 'Z',
+     * or 'a' to 'z'.
      *
      * @param ch  the character to test
      *
@@ -583,8 +574,7 @@ public class Handy
     // ----- String manipulation -------------------------------------------------------------------
 
     /**
-     * Count the number occurrences of the specified character in the passed
-     * String.
+     * Count the number occurrences of the specified character in the passed String.
      *
      * @param s   the String to scan
      * @param ch  the character to scan for
@@ -604,9 +594,8 @@ public class Handy
         }
 
     /**
-     * Using the specified delimiter, parse the passed String into an array of
-     * Strings, each of which occurred in the original String but separated by
-     * the specified delimiter.
+     * Using the specified delimiter, parse the passed String into an array of Strings, each of
+     * which occurred in the original String but separated by the specified delimiter.
      *
      * @param s        the String to parse
      * @param chDelim  the character delimiter
@@ -663,8 +652,7 @@ public class Handy
         }
 
     /**
-     * Indent each line of the passed text by prepending the specified
-     * indentation String.
+     * Indent each line of the passed text by prepending the specified indentation String.
      *
      * @param sText    the text to indent
      * @param sIndent  the indentation to use
@@ -707,8 +695,7 @@ public class Handy
         }
 
     /**
-     * Determine if the specified character needs to be escaped in order to be
-     * displayed.
+     * Determine if the specified character needs to be escaped in order to be displayed.
      *
      * @param ch  the character to evaluate
      *
@@ -729,8 +716,7 @@ public class Handy
         }
 
     /**
-     * Append the specified character to the StringBuilder, escaping if
-     * necessary.
+     * Append the specified character to the StringBuilder, escaping if necessary.
      *
      * @param sb  the StringBuilder to append to
      * @param ch  the character to escape
@@ -756,7 +742,7 @@ public class Handy
                 case '\t':
                     return sb.append("\\t");
                 case '\'':
-                    return sb.append("\\\'");
+                    return sb.append("\\'");
                 case '\"':
                     return sb.append("\\\"");
                 case 0x7F:              // DEL
@@ -784,8 +770,7 @@ public class Handy
         }
 
     /**
-     * Append the specified String to the StringBuilder, escaping if and as
-     * necessary.
+     * Append the specified String to the StringBuilder, escaping if and as necessary.
      *
      * @param sb  the StringBuilder to append to
      * @param s   the String to escape as necessary
@@ -836,8 +821,7 @@ public class Handy
         }
 
     /**
-     * Write a signed 64-bit integer to a stream using variable-length
-     * encoding.
+     * Write a signed 64-bit integer to a stream using variable-length encoding.
      *
      * @param out  the <tt>DataOutput</tt> stream to write to
      * @param n    the <tt>long</tt> value to write
@@ -874,10 +858,9 @@ public class Handy
     /**
      * Read a variable-length encoded 32-bit integer magnitude from a stream.
      * <p>
-     * Note that while the XVM itself is a 64-bit machine, Java does not
-     * support 64-bit (or even unsigned 32-bit) magnitudes. This method is a
-     * convenience method that verifies that the magnitude is within a range
-     * supported by Java.
+     * Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
+     * unsigned 32-bit) magnitudes. This method is a convenience method that verifies that the
+     * magnitude is within a range supported by Java.
      *
      * @param in  a <tt>DataInput</tt> stream to read from
      *
@@ -906,10 +889,9 @@ public class Handy
     /**
      * Read a variable-length encoded 32-bit integer index from a stream.
      * <p>
-     * Note that while the XVM itself is a 64-bit machine, Java does not
-     * support 64-bit (or even unsigned 32-bit) indexes. This method is a
-     * convenience method that verifies that the index is within a range
-     * supported by Java.
+     * Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
+     * unsigned 32-bit) indexes. This method is a convenience method that verifies that the index is
+     * within a range supported by Java.
      *
      * @param in  a <tt>DataInput</tt> stream to read from
      *
@@ -940,8 +922,8 @@ public class Handy
     // ----- unicode -------------------------------------------------------------------------------
 
     /**
-     * Read a single unicode character (code-point) from the passed DataInput,
-     * encoded using the UTF-8 format.
+     * Read a single unicode character (code-point) from the passed DataInput, encoded using the
+     * UTF-8 format.
      *
      * @param in  the DataInput to read from
      *
@@ -1008,8 +990,8 @@ public class Handy
         }
 
     /**
-     * Write a single unicode character (code-point) to the passed DataOutput,
-     * encoding using the UTF-8 format.
+     * Write a single unicode character (code-point) to the passed DataOutput, encoding using the
+     * UTF-8 format.
      *
      * @param out  the DataOutput to write to
      * @param ch   the char to write out as UTF-8
@@ -1095,13 +1077,11 @@ public class Handy
         }
 
     /**
-     * Read a length-encoded string of unicode characters (code-point) from the
-     * passed DataInput, encoded using the UTF-8 format. The format is the
-     * number of bytes in the stream used for the UTF-8 character encoding,
-     * encoded as a packed integer, followed by the difference in the the number
-     * of bytes and the number of characters, the difference being 0 or greater,
-     * encoded as a packed integer, followed by the specified number of
-     * characters, encoded using UTF-8.
+     * Read a length-encoded string of unicode characters (code-point) from the passed DataInput,
+     * encoded using the UTF-8 format. The format is the number of bytes in the stream used for the
+     * UTF-8 character encoding, encoded as a packed integer, followed by the difference in the
+     * number of bytes and the number of characters, the difference being 0 or greater, encoded as
+     * a packed integer, followed by the specified number of characters, encoded using UTF-8.
      *
      * @param in  the DataInput to read from
      *
@@ -1143,12 +1123,11 @@ public class Handy
         }
 
     /**
-     * Write a length-encoded string of unicode characters (code-points) to the
-     * passed DataOutput, encoding using the UTF-8 format. The length encoding
-     * is the number of bytes in the stream used for the UTF-8 character
-     * encoding, encoded as a packed integer, followed by the difference in the
-     * the number of bytes and the number of characters, the difference being 0
-     * or greater, encoded as a packed integer.
+     * Write a length-encoded string of unicode characters (code-points) to the passed DataOutput,
+     * encoding using the UTF-8 format. The length encoding is the number of bytes in the stream
+     * used for the UTF-8 character encoding, encoded as a packed integer, followed by the
+     * difference in the number of bytes and the number of characters, the difference being 0 or
+     * greater, encoded as a packed integer.
      *
      * @param out  the DataOutput to write to
      * @param s    the String to write out as UTF-8
@@ -1175,7 +1154,7 @@ public class Handy
                 if (!Character.isHighSurrogate(ch))
                     {
                     throw new UTFDataFormatException(
-                            "low surragate unexpected: " + intToHexString(ch));
+                            "low surrogate unexpected: " + intToHexString(ch));
                     }
 
                 // next character must be a low surrogate
@@ -1331,17 +1310,19 @@ public class Handy
             }
 
         // read the complete contents of the file
-        final int    cb = (int) lcb;
-        final byte[] ab = new byte[cb];
-        FileInputStream stream = new FileInputStream(file);
-        for (int of = 0; of < cb; )
+        int    cb = (int) lcb;
+        byte[] ab = new byte[cb];
+        try (FileInputStream stream = new FileInputStream(file))
             {
-            int cbChunk = stream.read(ab, of, cb-of);
-            if (cbChunk < 0)
+            for (int of = 0; of < cb; )
                 {
-                throw new EOFException("unexpected end-of-file: " + file);
+                int cbChunk = stream.read(ab, of, cb-of);
+                if (cbChunk < 0)
+                    {
+                    throw new EOFException("unexpected end-of-file: " + file);
+                    }
+                of += cbChunk;
                 }
-            of += cbChunk;
             }
 
         if (file.length() != lcb)
@@ -1353,9 +1334,8 @@ public class Handy
         }
 
     /**
-     * Read the text contents of the specified file. Supported formats are
-     * ASCII, UTF-8, UTF-16, and UTF-32; failure to identify any of those
-     * formats will cause the default encoding to be used.
+     * Read the text contents of the specified file. Supported formats are ASCII, UTF-8, UTF-16, and
+     * UTF-32; failure to identify any of those formats will cause the default encoding to be used.
      *
      * @param file  the file to read
      *
@@ -1371,9 +1351,8 @@ public class Handy
         }
 
     /**
-     * Read the text contents of the specified file using the specified
-     * encoding. If no encoding is specified, then determine the encoding in
-     * the manner specified by {@link #readFileChars(File)}.
+     * Read the text contents of the specified file using the specified encoding. If no encoding is
+     * specified, then determine the encoding in the manner specified by {@link #readFileChars(File)}.
      *
      * @param file       the file to read
      * @param sEncoding  the specific encoding to use, or null to attempt to
@@ -1606,7 +1585,7 @@ public class Handy
         }
 
     /**
-     * Creeate an ArrayList that contains the first {@code c} elements of the array {@code ao}.
+     * Create an ArrayList that contains the first {@code c} elements of the array {@code ao}.
      *
      * @param ao  an array of T
      * @param c   the number of elements of the array to put into the new list
@@ -1635,26 +1614,6 @@ public class Handy
             list.add(ao[of]);
             }
         return list;
-        }
-
-    /**
-     * Find the specified value in the passed array.
-     *
-     * @param ao  the array to search in
-     * @param o   the value to search for
-     *
-     * @return true iff at least one element of the passed array is equal to the passed value
-     */
-    public static <T> boolean anyMatches(T[] ao, T o)
-        {
-        for (T oCur : ao)
-            {
-            if (equals(o, oCur))
-                {
-                return true;
-                }
-            }
-        return false;
         }
 
 
@@ -1712,63 +1671,6 @@ public class Handy
                 : clzComp == short .class ? Arrays.equals(  (short[]) o1,   (short[]) o2)
                                           : Arrays.equals((boolean[]) o1, (boolean[]) o2)
             : Arrays.equals((Object[]) o1, (Object[]) o2);
-        }
-
-    /**
-     * Perform a comparison of two objects for ordering.
-     *
-     * @param o1  any Comparable, or null
-     * @param o2  any Comparable, or null
-     *
-     * @return negative, zero, or positive iff <tt>o1</tt> is less than, equal
-     *         to, or greater than <tt>o2</tt>
-     */
-    public static int compareObjects(final Comparable o1, final Comparable o2)
-        {
-        if (o1 == o2)
-            {
-            return 0;
-            }
-
-        if (o1 == null)
-            {
-            return -1;
-            }
-
-        if (o2 == null)
-            {
-            return 1;
-            }
-
-        return o1.compareTo(o2);
-        }
-
-    /**
-     * Compare two arrays for equality, but treat a null array as if it were a zero-length array.
-     *
-     * @param ao1  the first array
-     * @param ao2  the second array
-     *
-     * @return true iff the arrays are equal, with the caveat that a null array is treated as if it
-     *         were a zero-length array
-     */
-    public static boolean equalArraysNullOk(final Object[] ao1, final Object[] ao2)
-        {
-        if (ao1 == ao2)
-            {
-            return true;
-            }
-
-        if (ao1 == null)
-            {
-            return ao2.length == 0;
-            }
-        if (ao2 == null)
-            {
-            return ao1.length == 0;
-            }
-
-        return Arrays.deepEquals(ao1, ao2);
         }
 
     /**
@@ -1852,11 +1754,6 @@ public class Handy
      * A constant empty array of <tt>char</tt>.
      */
     public final static char[] EMPTY_CHAR_ARRAY = new char[0];
-
-    /**
-     * A constant empty array of <tt>long</tt>.
-     */
-    public final static long[] EMPTY_LONG_ARRAY = new long[0];
 
     /**
      * A constant empty array of <tt>String</tt>.
