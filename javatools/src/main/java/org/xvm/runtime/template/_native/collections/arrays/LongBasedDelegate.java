@@ -19,7 +19,7 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.util.Handy;
 
@@ -85,7 +85,7 @@ public abstract class LongBasedDelegate
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xInt64.makeHandle((long) hDelegate.m_alValue.length * f_nValuesPerLong));
+                xInt.makeHandle((long) hDelegate.m_alValue.length * f_nValuesPerLong));
         }
 
     @Override
@@ -120,7 +120,18 @@ public abstract class LongBasedDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        long[] alValue = Arrays.copyOfRange(hDelegate.m_alValue, (int) ofStart, (int) (ofStart + cSize));
+        int    nStart = valueIndex(ofStart);
+        long[] alValue;
+
+        if (shiftCount(ofStart) == 0)
+            {
+            alValue = Arrays.copyOfRange(hDelegate.m_alValue, nStart, nStart + storage(cSize));
+            }
+        else
+            {
+            throw new UnsupportedOperationException("TODO"); // copy one by one
+            }
+
         if (fReverse)
             {
             alValue = reverse(alValue, (int) cSize);
@@ -303,8 +314,19 @@ public abstract class LongBasedDelegate
         LongArrayHandle h1 = (LongArrayHandle) hValue1;
         LongArrayHandle h2 = (LongArrayHandle) hValue2;
 
-        return frame.assignValue(iReturn,
-                xBoolean.makeHandle(Arrays.equals(h1.m_alValue, h2.m_alValue)));
+        if (h1 == h2)
+            {
+            return frame.assignValue(iReturn, xBoolean.TRUE);
+            }
+        if (h1.m_cSize != h2.m_cSize)
+            {
+            return frame.assignValue(iReturn, xBoolean.FALSE);
+            }
+
+        // this is slightly incorrect; it assumes that we always trim the tail
+        int cStore = storage(h1.m_cSize);
+        return frame.assignValue(iReturn, xBoolean.makeHandle(
+                Arrays.equals(h1.m_alValue, 0, cStore, h2.m_alValue, 0, cStore)));
         }
 
     @Override

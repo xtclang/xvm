@@ -34,7 +34,7 @@ interface DataOutput
      */
     void writeString(String value)
         {
-        writeInt64(value.size);
+        writeUInt64(value.size.toUInt64());
         for (Char ch : value)
             {
             writeChar(ch);
@@ -109,7 +109,7 @@ interface DataOutput
     void writeIntN(IntN value)
         {
         Byte[] bytes = value.toByteArray();
-        writeInt64(bytes.size);
+        writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
         }
 
@@ -171,7 +171,7 @@ interface DataOutput
     void writeUIntN(UIntN value)
         {
         Byte[] bytes = value.toByteArray();
-        writeInt64(bytes.size);
+        writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
         }
 
@@ -213,7 +213,7 @@ interface DataOutput
     void writeDecN(DecN value)
         {
         Byte[] bytes = value.toByteArray();
-        writeInt64(bytes.size);
+        writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
         }
 
@@ -275,7 +275,7 @@ interface DataOutput
     void writeFloatN(FloatN value)
         {
         Byte[] bytes = value.toByteArray();
-        writeInt64(bytes.size);
+        writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
         }
 
@@ -286,7 +286,7 @@ interface DataOutput
      */
     void writeDate(Date value)
         {
-        writeInt64(value.epochDay);
+        writeInt32(value.epochDay);
         }
 
     /**
@@ -296,7 +296,7 @@ interface DataOutput
      */
     void writeTime(TimeOfDay value)
         {
-        writeInt64(value.picos);
+        writeUInt64(value.picos);
         }
 
     /**
@@ -367,7 +367,8 @@ interface DataOutput
             }
 
         // test for Small and Medium
-        Int bitCount = 65 - n.maxOf(~n).leadingZeroCount;
+        Int128 m        = n.toInt128();
+        UInt8  bitCount = 65 - m.maxOf(~m).leadingZeroCount.toUInt8();
         if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
             {
             return bitCount <= 13 ? 2 : 3;
@@ -439,35 +440,37 @@ interface DataOutput
         // test for Tiny
         if (-64 <= n <= 63)
             {
-            out.writeByte((n << 1 | 0x01).toByteArray()[7]);
+            out.writeByte((n << 1 | 0x01).toByte(truncate=True));
             return;
             }
 
         // test for Small and Medium
-        Int bitCount = 65 - n.maxOf(~n).leadingZeroCount;
-        if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
+        Int128 n128     = n.toInt128();
+        Int    bitCount = 129 - n128.maxOf(~n128).leadingZeroCount;
+        if (1 << bitCount & 0x3E3E00 != 0)                // test against bits 9-13 and 17-21
             {
+            Int32 n32 = n128.toInt32();
             if (bitCount <= 13)
                 {
-                n = 0b010_00000000                      // 0x2 marker at 0..2 in byte #1
-                        | (n & 0x1F00 << 3)             // bits 8..12 at 3..7 in byte #1
-                        | (n & 0x00FF);                 // bits 0..7  at 0..7 in byte #2
-                out.writeBytes(n.toByteArray(), 6, 2);
+                n32 = 0b010_00000000                      // 0x2 marker at 0..2 in byte #1
+                        | (n32 & 0x1F00 << 3)             // bits 8..12 at 3..7 in byte #1
+                        | (n32 & 0x00FF);                 // bits 0..7  at 0..7 in byte #2
+                out.writeBytes(n32.toByteArray(), 2, 2);
                 }
             else
                 {
-                n = 0b110_00000000_00000000             // 0x6 marker  at 0..2 in byte #1
-                        | (n & 0x1F0000 << 3)           // bits 16..20 at 3..7 in byte #1
-                        | (n & 0x00FFFF);               // bits 8..15  at 0..7 in byte #2
-                                                        // bits 0..7   at 0..7 in byte #3
-                out.writeBytes(n.toByteArray(), 5, 3);
+                n32 = 0b110_00000000_00000000             // 0x6 marker  at 0..2 in byte #1
+                        | (n32 & 0x1F0000 << 3)           // bits 16..20 at 3..7 in byte #1
+                        | (n32 & 0x00FFFF);               // bits 8..15  at 0..7 in byte #2
+                                                          // bits 0..7   at 0..7 in byte #3
+                out.writeBytes(n32.toByteArray(), 1, 3);
                 }
             return;
             }
 
-        Int byteCount = bitCount + 7 >>> 3;
-        out.writeByte((byteCount - 1 << 2).toByteArray()[7]);
-        out.writeBytes(n.toByteArray(), 8 - byteCount, byteCount);
+        Int byteCount = bitCount + 7 >> 3;
+        out.writeByte((byteCount - 1 << 2).toByte(truncate=True));
+        out.writeBytes(n128.toByteArray(), 16 - byteCount, byteCount);
         }
 
     /**

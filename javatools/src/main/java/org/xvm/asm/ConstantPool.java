@@ -355,6 +355,11 @@ public class ConstantPool
                 return constant;
                 }
 
+            case Dec:
+            case Dec32:
+            case Dec64:
+            case Dec128:
+            case DecN:
             case Float8e4:
             case Float8e5:
             case BFloat16:
@@ -363,10 +368,6 @@ public class ConstantPool
             case Float64:
             case Float128:
             case FloatN:
-            case Dec32:
-            case Dec64:
-            case Dec128:
-            case DecN:
                 {
                 LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(Format.FPLiteral).get(s);
                 if (constant == null)
@@ -375,20 +376,22 @@ public class ConstantPool
                     }
                 return switch (format)
                     {
-                    case Float8e4             -> constant.toFloat8e4Constant();
-                    case Float8e5             -> constant.toFloat8e5Constant();
-                    case BFloat16             -> constant.toBFloat16Constant();
-                    case Float16              -> constant.toFloat16Constant();
-                    case Float32              -> constant.toFloat32Constant();
-                    case Float64              -> constant.toFloat64Constant();
-                    case Float128             -> constant.toFloat128Constant();
-                    case FloatN               -> constant.toFloatNConstant();
-                    case Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
-                    case DecN                 -> constant.toDecNConstant();
-                    default                   -> throw new IllegalStateException();
+                    case Dec, Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
+                    case DecN                      -> constant.toDecNConstant();
+                    case Float8e4                  -> constant.toFloat8e4Constant();
+                    case Float8e5                  -> constant.toFloat8e5Constant();
+                    case BFloat16                  -> constant.toBFloat16Constant();
+                    case Float16                   -> constant.toFloat16Constant();
+                    case Float32                   -> constant.toFloat32Constant();
+                    case Float64                   -> constant.toFloat64Constant();
+                    case Float128                  -> constant.toFloat128Constant();
+                    case FloatN                    -> constant.toFloatNConstant();
+                    default                        -> throw new IllegalStateException();
                     };
                 }
 
+            case Int:
+            case UInt:
             case CInt16:
             case Int16:
             case CInt32:
@@ -479,7 +482,7 @@ public class ConstantPool
      */
     public IntConstant ensureIntConstant(PackedInteger pint)
         {
-        return ensureIntConstant(pint, Format.CInt64);
+        return ensureIntConstant(pint, Format.Int);
         }
 
 
@@ -487,7 +490,8 @@ public class ConstantPool
      * Given the specified PackedInteger value and a format, obtain a IntConstant that represents it.
      *
      * @param pint    the PackedInteger value
-     * @param format  the format of the integer constant, one of {@link Format#CInt16},
+     * @param format  the format of the integer constant, one of
+     *                {@link Format#Int}, {@link Format#UInt}, {@link Format#CInt16},
      *                {@link Format#Int16}, {@link Format#CInt32}, {@link Format#Int32},
      *                {@link Format#CInt64}, {@link Format#Int64}, {@link Format#CInt128},
      *                {@link Format#Int128}, {@link Format#CIntN}, {@link Format#IntN},
@@ -502,6 +506,8 @@ public class ConstantPool
         {
         switch (format)
             {
+            case Int:
+            case UInt:
             case CInt16:
             case Int16:
             case CInt32:
@@ -557,6 +563,23 @@ public class ConstantPool
         if (constant == null)
             {
             constant = (DecimalConstant) register(new DecimalConstant(this, dec));
+            }
+        return constant;
+        }
+
+    /**
+     * Given the decimal value, obtain a DecimalAutoConstant that represents it.
+     *
+     * @param dec   the decimal value
+     *
+     * @return a DecimalAutoConstant for the passed decimal value
+     */
+    public DecimalAutoConstant ensureDecAConstant(Decimal dec)
+        {
+        DecimalAutoConstant constant = (DecimalAutoConstant) ensureLocatorLookup(Format.Dec).get(dec);
+        if (constant == null)
+            {
+            constant = (DecimalAutoConstant) register(new DecimalAutoConstant(this, dec));
             }
         return constant;
         }
@@ -2343,6 +2366,7 @@ public class ConstantPool
     public TypeConstant      typeStringBuffer() {TypeConstant      c = m_typeStringBuffer;if (c == null) {m_typeStringBuffer= c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
     public TypeConstant      typeBit()          {TypeConstant      c = m_typeBit;         if (c == null) {m_typeBit         = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
     public TypeConstant      typeNibble()       {TypeConstant      c = m_typeNibble;      if (c == null) {m_typeNibble      = c = ensureTerminalTypeConstant(clzNibble()                          );} return c;}
+    public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                             );} return c;}
     public TypeConstant      typeCInt8()        {TypeConstant      c = m_typeCInt8;       if (c == null) {m_typeCInt8       = c = ensureTerminalTypeConstant(clzCInt8()                           );} return c;}
     public TypeConstant      typeInt8()         {TypeConstant      c = m_typeInt8;        if (c == null) {m_typeInt8        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt8()   );} return c;}
     public TypeConstant      typeCInt16()       {TypeConstant      c = m_typeCInt16;      if (c == null) {m_typeCInt16      = c = ensureTerminalTypeConstant(clzCInt16()                          );} return c;}
@@ -2355,6 +2379,8 @@ public class ConstantPool
     public TypeConstant      typeInt128()       {TypeConstant      c = m_typeInt128;      if (c == null) {m_typeInt128      = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt128() );} return c;}
     public TypeConstant      typeCIntN()        {TypeConstant      c = m_typeCIntN;       if (c == null) {m_typeCIntN       = c = ensureTerminalTypeConstant(clzCIntN()                           );} return c;}
     public TypeConstant      typeIntN()         {TypeConstant      c = m_typeIntN;        if (c == null) {m_typeIntN        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCIntN()   );} return c;}
+    public TypeConstant      typeUInt()         {TypeConstant      c = m_typeUInt;        if (c == null) {m_typeUInt        = c = ensureTerminalTypeConstant(clzUInt()                            );} return c;}
+    public TypeConstant      typeByte()         { /* Byte is just an alias */ return typeCUInt8();                                                                                                             }
     public TypeConstant      typeCUInt8()       {TypeConstant      c = m_typeCUInt8;      if (c == null) {m_typeCUInt8      = c = ensureTerminalTypeConstant(clzCUInt8()                          );} return c;}
     public TypeConstant      typeUInt8()        {TypeConstant      c = m_typeUInt8;       if (c == null) {m_typeUInt8       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt8()  );} return c;}
     public TypeConstant      typeCUInt16()      {TypeConstant      c = m_typeCUInt16;     if (c == null) {m_typeCUInt16     = c = ensureTerminalTypeConstant(clzCUInt16()                         );} return c;}
@@ -2367,7 +2393,7 @@ public class ConstantPool
     public TypeConstant      typeUInt128()      {TypeConstant      c = m_typeUInt128;     if (c == null) {m_typeUInt128     = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt128());} return c;}
     public TypeConstant      typeCUIntN()       {TypeConstant      c = m_typeCUIntN;      if (c == null) {m_typeCUIntN      = c = ensureTerminalTypeConstant(clzCUIntN()                          );} return c;}
     public TypeConstant      typeUIntN()        {TypeConstant      c = m_typeUIntN;       if (c == null) {m_typeUIntN       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUIntN()  );} return c;}
-    public TypeConstant      typeByte()         { /* Byte is just an alias */ return typeCUInt8();                                                                                                             }
+    public TypeConstant      typeDec()          {TypeConstant      c = m_typeDec;         if (c == null) {m_typeDec         = c = ensureTerminalTypeConstant(clzDec()                             );} return c;}
     public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
     public TypeConstant      typeArray()        {TypeConstant      c = m_typeArray;       if (c == null) {m_typeArray       = c = ensureTerminalTypeConstant(clzArray()                           );} return c;}
     public TypeConstant      typeMatrix()       {TypeConstant      c = m_typeMatrix;      if (c == null) {m_typeMatrix      = c = ensureTerminalTypeConstant(clzMatrix()                          );} return c;}
@@ -2398,7 +2424,6 @@ public class ConstantPool
     public TypeConstant      typeDirectory()    {TypeConstant      c = m_typeDirectory;   if (c == null) {m_typeDirectory   = c = ensureTerminalTypeConstant(clzDirectory()                       );} return c;}
     public TypeConstant      typeFile()         {TypeConstant      c = m_typeFile;        if (c == null) {m_typeFile        = c = ensureTerminalTypeConstant(clzFile()                            );} return c;}
     public TypeConstant      typeFileNode()     {TypeConstant      c = m_typeFileNode;    if (c == null) {m_typeFileNode    = c = ensureTerminalTypeConstant(clzFileNode()                        );} return c;}
-    public TypeConstant      typeFrame()        {TypeConstant      c = m_typeFrame;       if (c == null) {m_typeFrame       = c = ensureTerminalTypeConstant(clzFrame()                           );} return c;}
 
     public TypeConstant      typeBitArray()     {TypeConstant      c = m_typeBitArray;    if (c == null) {m_typeBitArray    = c = ensureClassTypeConstant(clzArray(), null, typeBit()             );} return c;}
     public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte()            );} return c;}
@@ -2444,6 +2469,9 @@ public class ConstantPool
     protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"            );}
     protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                  );}
     protected ClassConstant  clzNibble()       {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"               );}
+    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Int"                  );}
+    protected ClassConstant  clzUInt()         {return (ClassConstant) getImplicitlyImportedIdentity("UInt"                 );}
+    protected ClassConstant  clzDec()          {return (ClassConstant) getImplicitlyImportedIdentity("Dec"                  );}
     protected ClassConstant  clzCInt8()        {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                 );}
     protected ClassConstant  clzCInt16()       {return (ClassConstant) getImplicitlyImportedIdentity("Int16"                );}
     protected ClassConstant  clzCInt32()       {return (ClassConstant) getImplicitlyImportedIdentity("Int32"                );}
@@ -2475,7 +2503,6 @@ public class ConstantPool
     protected ClassConstant  clzFile()         {return (ClassConstant) getImplicitlyImportedIdentity("File"                 );}
     protected ClassConstant  clzFileNode()     {return                 ensureEcstasyClassConstant   ("fs.FileNode"          );}
     protected ClassConstant  clzFileStore()    {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"            );}
-    protected ClassConstant  clzFrame()        {return (ClassConstant) getImplicitlyImportedIdentity("Frame"                );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -2660,6 +2687,8 @@ public class ConstantPool
                     constant = new ByteConstant(this, format, in);
                     break;
 
+                case Int:
+                case UInt:
                 case CInt16:
                 case Int16:
                 case CInt32:
@@ -2681,6 +2710,21 @@ public class ConstantPool
                 case CUIntN:
                 case UIntN:
                     constant = new IntConstant(this, format, in);
+                    break;
+
+                case Dec:
+                    constant = new DecimalAutoConstant(this, format, in);
+                    break;
+
+                case Dec32:
+                case Dec64:
+                case Dec128:
+                    constant = new DecimalConstant(this, format, in);
+                    break;
+
+                case DecN:
+                case FloatN:
+                    constant = new FPNConstant(this, format, in);
                     break;
 
                 case Float8e4:
@@ -2709,17 +2753,6 @@ public class ConstantPool
 
                 case Float128:
                     constant = new Float128Constant(this, format, in);
-                    break;
-
-                case Dec32:
-                case Dec64:
-                case Dec128:
-                    constant = new DecimalConstant(this, format, in);
-                    break;
-
-                case FloatN:
-                case DecN:
-                    constant = new FPNConstant(this, format, in);
                     break;
 
                 case Char:
@@ -3208,6 +3241,7 @@ public class ConstantPool
         m_typeBitArray    = null;
         m_typeByteArray   = null;
         m_typeBinary      = null;
+        m_typeInt         = null;
         m_typeCInt8       = null;
         m_typeInt8        = null;
         m_typeCInt16      = null;
@@ -3220,6 +3254,7 @@ public class ConstantPool
         m_typeInt128      = null;
         m_typeCIntN       = null;
         m_typeIntN        = null;
+        m_typeUInt        = null;
         m_typeCUInt8      = null;
         m_typeUInt8       = null;
         m_typeCUInt16     = null;
@@ -3232,6 +3267,7 @@ public class ConstantPool
         m_typeUInt128     = null;
         m_typeCUIntN      = null;
         m_typeUIntN       = null;
+        m_typeDec         = null;
         m_typeIndexed     = null;
         m_typeArray       = null;
         m_typeMatrix      = null;
@@ -3262,7 +3298,6 @@ public class ConstantPool
         m_typeDirectory   = null;
         m_typeFile        = null;
         m_typeFileNode    = null;
-        m_typeFrame       = null;
         m_val0            = null;
         m_val1            = null;
         m_valFalse        = null;
@@ -4138,6 +4173,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeBitArray;
     private transient TypeConstant      m_typeByteArray;
     private transient TypeConstant      m_typeBinary;
+    private transient TypeConstant      m_typeInt;
     private transient TypeConstant      m_typeCInt8;
     private transient TypeConstant      m_typeInt8;
     private transient TypeConstant      m_typeCInt16;
@@ -4150,6 +4186,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeInt128;
     private transient TypeConstant      m_typeCIntN;
     private transient TypeConstant      m_typeIntN;
+    private transient TypeConstant      m_typeUInt;
     private transient TypeConstant      m_typeCUInt8;
     private transient TypeConstant      m_typeUInt8;
     private transient TypeConstant      m_typeCUInt16;
@@ -4162,6 +4199,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeUInt128;
     private transient TypeConstant      m_typeCUIntN;
     private transient TypeConstant      m_typeUIntN;
+    private transient TypeConstant      m_typeDec;
     private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeMatrix;
@@ -4192,7 +4230,6 @@ public class ConstantPool
     private transient TypeConstant      m_typeDirectory;
     private transient TypeConstant      m_typeFile;
     private transient TypeConstant      m_typeFileNode;
-    private transient TypeConstant      m_typeFrame;
     private transient IntConstant       m_val0;
     private transient IntConstant       m_val1;
     private transient SingletonConstant m_valFalse;

@@ -81,18 +81,18 @@ module TestIO
         console.println("\n*** testPacked()");
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
-        for (Int i : -150 .. +150)
+        for (Int64 i : -150 .. +150)
             {
             out.writeInt64(i);
             }
 
-        Int[] others = [MinValue, MaxValue, -12341235, -1234151515, +1324153, +1512358723597];
+        Int[] others = [Int64.MinValue, Int64.MaxValue, -12341235, -1234151515, +1324153, +1512358723597];
         for (Int i : others)
             {
-            out.writeInt64(i);
+            out.writeInt64(i.toInt64());
             }
 
-        for (Int i = 1; i > 0; i = i << 1)
+        for (Int64 i = 1; i > 0; i = i << 1)
             {
             out.writeInt64(i);
             out.writeInt64(i+1);
@@ -102,9 +102,8 @@ module TestIO
             out.writeInt64(-(i-1));
             }
 
-
         @PackedDataInput ByteArrayInputStream in = new @PackedDataInput ByteArrayInputStream(out.bytes);
-        for (Int i : -150 .. +150)
+        for (Int64 i : -150 .. +150)
             {
             assert in.readInt64() == i;
             }
@@ -113,7 +112,7 @@ module TestIO
             assert in.readInt64() == i;
             }
 
-        for (Int i = 1; i > 0; i = i << 1)
+        for (Int64 i = 1; i > 0; i = i << 1)
             {
             assert in.readInt64() == i;
             assert in.readInt64() == i+1;

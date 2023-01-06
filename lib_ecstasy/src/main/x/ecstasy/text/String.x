@@ -37,10 +37,9 @@ const String
     /**
      * A lazily calculated, cached hash code.
      */
-    private @Lazy Int hash.calc()
+    private @Lazy Int64 hash.calc()
         {
-        @Unchecked Int hash = Int:982_451_653.toUnchecked();      // start with a prime number
-        Int len = chars.size;
+        @Unchecked Int64 hash = Int64:982_451_653.toUnchecked(); // start with a prime number
         for (Char char : chars)
             {
             hash = hash * 31 + char.toInt64();
@@ -1042,7 +1041,7 @@ const String
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends String> Int hashCode(CompileType value)
+    static <CompileType extends String> Int64 hashCode(CompileType value)
         {
         return value.hash;
         }

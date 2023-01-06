@@ -1,8 +1,14 @@
+import numbers.IntConvertible;
+import numbers.FPConvertible;
+
+
 /**
  * Functionality specific to an array of nibbles.
  */
 mixin NibbleArray<Element extends Nibble>
         into Array<Element>
+        implements IntConvertible
+        implements FPConvertible
     {
     // ----- view support --------------------------------------------------------------------------
 
@@ -70,17 +76,17 @@ mixin NibbleArray<Element extends Nibble>
                         Bit get()
                             {
                             assert:bounds index < size;
-                            return (nibbles[index/4].toInt64() & 1 << index%4 != 0).toBit();
+                            return (nibbles[index/4].toInt() & 1 << index%4 != 0).toBit();
                             }
 
                         @Override
                         void set(Bit v)
                             {
                             assert:bounds index < size;
-                            Int    nibbleIndex   = index/4;
-                            Int    oldValue      = nibbles[nibbleIndex];
-                            Int    mask          = 1 << index%4;
-                            Int    newValue      = v == 1 ? oldValue | mask : oldValue & ~mask;
+                            Int nibbleIndex   = index/4;
+                            Int oldValue      = nibbles[nibbleIndex];
+                            Int mask          = 1 << index%4;
+                            Int newValue      = v == 1 ? oldValue | mask : oldValue & ~mask;
                             nibbles[nibbleIndex] = newValue.toNibble();
                             }
                         }
@@ -254,256 +260,166 @@ mixin NibbleArray<Element extends Nibble>
         return asByteArray().reify(mutability);
         }
 
-    /**
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<NibbleArray, <>, <Byte>> toByte = toUInt8;
-
-    /**
-     * Convert the nibble array to a signed 8-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
-     */
-    Int8 toInt8()
+    @Override
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toInt8();
+        return asBitArray().toInt(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a signed 16-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
-     */
-    Int16 toInt16()
+    @Override
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toInt16();
+        return asBitArray().toInt8(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a signed 32-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
-     */
-    Int32 toInt32()
+    @Override
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toInt32();
+        return asBitArray().toInt16(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a signed 64-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
-     */
-    Int64 toInt64()
+    @Override
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toInt64();
+        return asBitArray().toInt32(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a signed 128-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
-     */
-    Int128 toInt128()
+    @Override
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toInt128();
+        return asBitArray().toInt64(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a variable-length signed integer.
-     *
-     * @return a variable-length signed integer value
-     *
-     * @throws OutOfBounds if the nibble array is not a supported size for the resulting numeric
-     *         type
-     */
-    IntN toIntN()
+    @Override
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toIntN();
+        return asBitArray().toInt128(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to an unsigned 8-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
-     */
-    UInt8 toUInt8()
+    @Override
+    IntN toIntN(Rounding direction = TowardZero)
         {
-        return asBitArray().toUInt8();
+        return asBitArray().toIntN(direction);
         }
 
-    /**
-     * Convert the nibble array to an unsigned 16-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
-     */
-    UInt16 toUInt16()
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toUInt16();
+        return asBitArray().toUInt(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to an unsigned 32-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
-     */
-    UInt32 toUInt32()
+    @Override
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toUInt32();
+        return asBitArray().toUInt8(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to an unsigned 64-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
-     */
-    UInt64 toUInt64()
+    @Override
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toUInt64();
+        return asBitArray().toUInt16(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to an unsigned 128-bit integer.
-     *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
-     */
-    UInt128 toUInt128()
+    @Override
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toUInt128();
+        return asBitArray().toUInt32(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a variable-length unsigned integer.
-     *
-     * @return a variable-length unsigned integer value
-     *
-     * @throws OutOfBounds if the nibble array is not a supported size for the resulting numeric type
-     */
-    UIntN toUIntN()
+    @Override
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toUIntN();
+        return asBitArray().toUInt64(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a 16-bit radix-2 (binary) "brain" floating point number.
-     *
-     * @return a 16-bit "brain" floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
-    BFloat16 toBFloat16()
+    @Override
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return asBitArray().toBFloat16();
+        return asBitArray().toUInt128(truncate, direction);
         }
 
-    /**
-     * Convert the nibble array to a 16-bit radix-2 (binary) floating point number.
-     *
-     * @return a 16-bit floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
-    Float16 toFloat16()
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero)
         {
-        return asBitArray().toFloat16();
+        return asBitArray().toUIntN(direction);
         }
 
-    /**
-     * Convert the nibble array to a 32-bit radix-2 (binary) floating point number.
-     *
-     * @return a 32-bit floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
-    Float32 toFloat32()
+    @Override
+    Dec toDec()
         {
-        return asBitArray().toFloat32();
+        return asBitArray().toDec();
         }
 
-    /**
-     * Convert the nibble array to a 64-bit radix-2 (binary) floating point number.
-     *
-     * @return a 64-bit floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
-    Float64 toFloat64()
-        {
-        return asBitArray().toFloat64();
-        }
-
-    /**
-     * Convert the nibble array to a 128-bit radix-2 (binary) floating point number.
-     *
-     * @return a 128-bit floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
-    Float128 toFloat128()
-        {
-        return asBitArray().toFloat128();
-        }
-
-    /**
-     * Convert the nibble array to a variable-length binary radix floating point number.
-     *
-     * @return a variable-length floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not a supported size for the resulting numeric type
-     */
-    FloatN toFloatN()
-        {
-        return asBitArray().toFloatN();
-        }
-
-    /**
-     * Convert the nibble array to a 32-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 32-bit decimal floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
+    @Override
     Dec32 toDec32()
         {
         return asBitArray().toDec32();
         }
 
-    /**
-     * Convert the nibble array to a 64-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 64-bit decimal floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
+    @Override
     Dec64 toDec64()
         {
         return asBitArray().toDec64();
         }
 
-    /**
-     * Convert the nibble array to a 128-bit radix-10 (decimal) floating point number.
-     *
-     * @return a 128-bit decimal floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not exactly the size of the resulting numeric type
-     */
+    @Override
     Dec128 toDec128()
         {
         return asBitArray().toDec128();
         }
 
-    /**
-     * Convert the nibble array to a variable-length decimal radix floating point number.
-     *
-     * @return a variable-length decimal floating point value
-     *
-     * @throws OutOfBounds if the nibble array is not a supported size for the resulting numeric type
-     */
+    @Override
     DecN toDecN()
         {
         return asBitArray().toDecN();
+        }
+
+    @Override
+    Float8e4 toFloat8e4()
+        {
+        return asBitArray().toFloat8e4();
+        }
+
+    @Override
+    Float8e5 toFloat8e5()
+        {
+        return asBitArray().toFloat8e5();
+        }
+
+    @Override
+    BFloat16 toBFloat16()
+        {
+        return asBitArray().toBFloat16();
+        }
+
+    @Override
+    Float16 toFloat16()
+        {
+        return asBitArray().toFloat16();
+        }
+
+    @Override
+    Float32 toFloat32()
+        {
+        return asBitArray().toFloat32();
+        }
+
+    @Override
+    Float64 toFloat64()
+        {
+        return asBitArray().toFloat64();
+        }
+
+    @Override
+    Float128 toFloat128()
+        {
+        return asBitArray().toFloat128();
+        }
+
+    @Override
+    FloatN toFloatN()
+        {
+        return asBitArray().toFloatN();
         }
 
 

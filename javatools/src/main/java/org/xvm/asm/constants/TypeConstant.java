@@ -6623,6 +6623,8 @@ public abstract class TypeConstant
             case "numbers.UInt16":
                 return 0x10000;
 
+            case "numbers.Int":
+            case "numbers.UInt":
             case "numbers.Int32":
             case "numbers.UInt32":
             case "numbers.Int64":
@@ -6681,14 +6683,23 @@ public abstract class TypeConstant
             case "numbers.UInt16":
                 return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt16);
 
-            case "numbers.Int32":
             case "numbers.UInt32":
-            case "numbers.Int64":
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt32);
+
             case "numbers.UInt64":
-            case "numbers.Int128":
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt64);
+
             case "numbers.UInt128":
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt128);
+
+            case "numbers.UInt":
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt);
+
+            case "numbers.Int":
+            case "numbers.Int32":
+            case "numbers.Int64":
+            case "numbers.Int128":
             case "numbers.IntN":
-            case "numbers.UIntN":
                 return null;
 
             default:

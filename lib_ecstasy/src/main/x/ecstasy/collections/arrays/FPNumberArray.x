@@ -681,93 +681,19 @@ mixin FPNumberArray<Element extends FPNumber>
         }
 
     /**
-     * Obtain copy of this array's floating point values, converted to BFloat16 values.
+     * Obtain copy of this array's floating point values, converted to Dec values.
      *
      * @param mutability  the mutability of the resulting array
      *
-     * @return an array of the specified mutability containing BFloat16 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a BFloat16
+     * @return an array of the specified mutability containing Dec values drawn from this array
      */
-    BFloat16[] toBFloat16Array(Mutability mutability = Constant)
+    Dec[] toDecArray(Mutability mutability = Constant)
         {
-        return Element == BFloat16
+        return Element == Dec
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
-                : new BFloat16[size](i -> this[i].toBFloat16()).toArray(mutability, True);
-        }
-
-    /**
-     * Obtain copy of this array's floating point values, converted to Float16 values.
-     *
-     * @param mutability  the mutability of the resulting array
-     *
-     * @return an array of the specified mutability containing Float16 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float16
-     */
-    Float16[] toFloat16Array(Mutability mutability = Constant)
-        {
-        return Element == Float16
-                ? (this.mutability <= Persistent
-                        ? this.toArray(mutability)
-                        : new Array(mutability, this))
-                : new Float16[size](i -> this[i].toFloat16()).toArray(mutability, True);
-        }
-
-    /**
-     * Obtain copy of this array's floating point values, converted to Float32 values.
-     *
-     * @param mutability  the mutability of the resulting array
-     *
-     * @return an array of the specified mutability containing Float32 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float32
-     */
-    Float32[] toFloat32Array(Mutability mutability = Constant)
-        {
-        return Element == Float32
-                ? (this.mutability <= Persistent
-                        ? this.toArray(mutability)
-                        : new Array(mutability, this))
-                : new Float32[size](i -> this[i].toFloat32()).toArray(mutability, True);
-        }
-
-    /**
-     * Obtain copy of this array's floating point values, converted to Float64 values.
-     *
-     * @param mutability  the mutability of the resulting array
-     *
-     * @return an array of the specified mutability containing Float64 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float64
-     */
-    Float64[] toFloat64Array(Mutability mutability = Constant)
-        {
-        return Element == Float64
-                ? (this.mutability <= Persistent
-                        ? this.toArray(mutability)
-                        : new Array(mutability, this))
-                : new Float64[size](i -> this[i].toFloat64()).toArray(mutability, True);
-        }
-
-    /**
-     * Obtain copy of this array's floating point values, converted to Float128 values.
-     *
-     * @param mutability  the mutability of the resulting array
-     *
-     * @return an array of the specified mutability containing Float128 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float128
-     */
-    Float128[] toFloat128Array(Mutability mutability = Constant)
-        {
-        return Element == Float128
-                ? (this.mutability <= Persistent
-                        ? this.toArray(mutability)
-                        : new Array(mutability, this))
-                : new Float128[size](i -> this[i].toFloat128()).toArray(mutability, True);
+                : new Dec[size](i -> this[i].toDec()).toArray(mutability, True);
         }
 
     /**
@@ -776,8 +702,6 @@ mixin FPNumberArray<Element extends FPNumber>
      * @param mutability  the mutability of the resulting array
      *
      * @return an array of the specified mutability containing Dec32 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec32
      */
     Dec32[] toDec32Array(Mutability mutability = Constant)
         {
@@ -794,8 +718,6 @@ mixin FPNumberArray<Element extends FPNumber>
      * @param mutability  the mutability of the resulting array
      *
      * @return an array of the specified mutability containing Dec64 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec64
      */
     Dec64[] toDec64Array(Mutability mutability = Constant)
         {
@@ -812,8 +734,6 @@ mixin FPNumberArray<Element extends FPNumber>
      * @param mutability  the mutability of the resulting array
      *
      * @return an array of the specified mutability containing Dec128 values drawn from this array
-     *
-     * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec128
      */
     Dec128[] toDec128Array(Mutability mutability = Constant)
         {
@@ -822,5 +742,117 @@ mixin FPNumberArray<Element extends FPNumber>
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Dec128[size](i -> this[i].toDec128()).toArray(mutability, True);
+        }
+
+    /**
+     * Obtain copy of this array's floating point values, converted to Float8e4 values.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return an array of the specified mutability containing Float8e4 values drawn from this array
+     */
+    Float8e4[] toFloat8e4Array(Mutability mutability = Constant)
+        {
+        return Element == Float8e4
+                ? (this.mutability <= Persistent
+                        ? this.toArray(mutability)
+                        : new Array(mutability, this))
+                : new Float8e4[size](i -> this[i].toFloat8e4()).toArray(mutability, True);
+        }
+
+    /**
+     * Obtain copy of this array's floating point values, converted to Float8e5 values.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return an array of the specified mutability containing Float8e5 values drawn from this array
+     */
+    Float8e5[] toFloat8e5Array(Mutability mutability = Constant)
+        {
+        return Element == Float8e5
+                ? (this.mutability <= Persistent
+                        ? this.toArray(mutability)
+                        : new Array(mutability, this))
+                : new Float8e5[size](i -> this[i].toFloat8e5()).toArray(mutability, True);
+        }
+
+    /**
+     * Obtain copy of this array's floating point values, converted to BFloat16 values.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return an array of the specified mutability containing BFloat16 values drawn from this array
+     */
+    BFloat16[] toBFloat16Array(Mutability mutability = Constant)
+        {
+        return Element == BFloat16
+                ? (this.mutability <= Persistent
+                        ? this.toArray(mutability)
+                        : new Array(mutability, this))
+                : new BFloat16[size](i -> this[i].toBFloat16()).toArray(mutability, True);
+        }
+
+    /**
+     * Obtain copy of this array's floating point values, converted to Float16 values.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return an array of the specified mutability containing Float16 values drawn from this array
+     */
+    Float16[] toFloat16Array(Mutability mutability = Constant)
+        {
+        return Element == Float16
+                ? (this.mutability <= Persistent
+                        ? this.toArray(mutability)
+                        : new Array(mutability, this))
+                : new Float16[size](i -> this[i].toFloat16()).toArray(mutability, True);
+        }
+
+    /**
+     * Obtain copy of this array's floating point values, converted to Float32 values.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return an array of the specified mutability containing Float32 values drawn from this array
+     */
+    Float32[] toFloat32Array(Mutability mutability = Constant)
+        {
+        return Element == Float32
+                ? (this.mutability <= Persistent
+                        ? this.toArray(mutability)
+                        : new Array(mutability, this))
+                : new Float32[size](i -> this[i].toFloat32()).toArray(mutability, True);
+        }
+
+    /**
+     * Obtain copy of this array's floating point values, converted to Float64 values.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return an array of the specified mutability containing Float64 values drawn from this array
+     */
+    Float64[] toFloat64Array(Mutability mutability = Constant)
+        {
+        return Element == Float64
+                ? (this.mutability <= Persistent
+                        ? this.toArray(mutability)
+                        : new Array(mutability, this))
+                : new Float64[size](i -> this[i].toFloat64()).toArray(mutability, True);
+        }
+
+    /**
+     * Obtain copy of this array's floating point values, converted to Float128 values.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return an array of the specified mutability containing Float128 values drawn from this array
+     */
+    Float128[] toFloat128Array(Mutability mutability = Constant)
+        {
+        return Element == Float128
+                ? (this.mutability <= Persistent
+                        ? this.toArray(mutability)
+                        : new Array(mutability, this))
+                : new Float128[size](i -> this[i].toFloat128()).toArray(mutability, True);
         }
     }

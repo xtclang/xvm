@@ -92,11 +92,8 @@ public class LiteralExpression
 
             case LIT_INT:
                 return pool.typeIntLiteral();
-
-            case LIT_DEC:
-            case LIT_FLOAT:
-                return pool.typeFPLiteral();
-
+            case LIT_INTA:
+                return pool.typeInt();
             case LIT_INT8:
                 return pool.typeCInt8();
             case LIT_INT16:
@@ -109,6 +106,9 @@ public class LiteralExpression
                 return pool.typeCInt128();
             case LIT_INTN:
                 return pool.typeCIntN();
+
+            case LIT_UINTA:
+                return pool.typeUInt();
             case LIT_UINT8:
                 return pool.typeCUInt8();
             case LIT_UINT16:
@@ -122,18 +122,26 @@ public class LiteralExpression
             case LIT_UINTN:
                 return pool.typeCUIntN();
 
+            case LIT_DEC:
+                return pool.typeFPLiteral();
+            case LIT_DECA:
+                return pool.typeDec();
             case LIT_DEC32:
             case LIT_DEC64:
             case LIT_DEC128:
             case LIT_DECN:
+                return pool.ensureEcstasyTypeConstant("numbers." + literal.getId().TEXT);
+
+            case LIT_FLOAT:
+                return pool.typeFPLiteral();
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
+            case LIT_BFLOAT16:
             case LIT_FLOAT16:
             case LIT_FLOAT32:
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
-            case LIT_FLOAT8E4:
-            case LIT_FLOAT8E5:
-            case LIT_BFLOAT16:
                 return pool.ensureEcstasyTypeConstant("numbers." + literal.getId().TEXT);
 
             case LIT_DATE:
@@ -186,12 +194,14 @@ public class LiteralExpression
                 return this;
 
             case LIT_INT:
+            case LIT_INTA:
             case LIT_INT8:
             case LIT_INT16:
             case LIT_INT32:
             case LIT_INT64:
             case LIT_INT128:
             case LIT_INTN:
+            case LIT_UINTA:
             case LIT_UINT8:
             case LIT_UINT16:
             case LIT_UINT32:
@@ -203,6 +213,7 @@ public class LiteralExpression
                 break;
 
             case LIT_DEC:
+            case LIT_DECA:
             case LIT_DEC32:
             case LIT_DEC64:
             case LIT_DEC128:
@@ -212,14 +223,14 @@ public class LiteralExpression
                 break;
 
             case LIT_FLOAT:
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
+            case LIT_BFLOAT16:
             case LIT_FLOAT16:
             case LIT_FLOAT32:
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
-            case LIT_FLOAT8E4:
-            case LIT_FLOAT8E5:
-            case LIT_BFLOAT16:
                 // it's just a string
                 oValue = getSource().toString(tokenPrefix.getStartPosition(), tokNumber.getEndPosition());
                 break;
@@ -294,6 +305,10 @@ public class LiteralExpression
                 format = Format.IntLiteral;
                 break;
 
+            case LIT_INTA:
+                format = Format.Int;
+                break;
+
             case LIT_INT8:
                 format = Format.CInt8;
                 break;
@@ -316,6 +331,10 @@ public class LiteralExpression
 
             case LIT_INTN:
                 format = Format.CIntN;
+                break;
+
+            case LIT_UINTA:
+                format = Format.UInt;
                 break;
 
             case LIT_UINT8:
@@ -347,6 +366,10 @@ public class LiteralExpression
                 format = Format.FPLiteral;
                 break;
 
+            case LIT_DECA:
+                format = Format.Dec;
+                break;
+
             case LIT_DEC32:
                 format = Format.Dec32;
                 break;
@@ -361,6 +384,18 @@ public class LiteralExpression
 
             case LIT_DECN:
                 format = Format.DecN;
+                break;
+
+            case LIT_FLOAT8E4:
+                format = Format.Float8e4;
+                break;
+
+            case LIT_FLOAT8E5:
+                format = Format.Float8e5;
+                break;
+
+            case LIT_BFLOAT16:
+                format = Format.BFloat16;
                 break;
 
             case LIT_FLOAT16:
@@ -381,18 +416,6 @@ public class LiteralExpression
 
             case LIT_FLOATN:
                 format = Format.FloatN;
-                break;
-
-            case LIT_FLOAT8E4:
-                format = Format.Float8e4;
-                break;
-
-            case LIT_FLOAT8E5:
-                format = Format.Float8e5;
-                break;
-
-            case LIT_BFLOAT16:
-                format = Format.BFloat16;
                 break;
 
             case LIT_DATE:
@@ -438,30 +461,33 @@ public class LiteralExpression
 
             case LIT_BIT:
             case LIT_NIBBLE:
+            case LIT_INTA:
             case LIT_INT8:
             case LIT_INT16:
             case LIT_INT32:
             case LIT_INT64:
             case LIT_INT128:
             case LIT_INTN:
+            case LIT_UINTA:
             case LIT_UINT8:
             case LIT_UINT16:
             case LIT_UINT32:
             case LIT_UINT64:
             case LIT_UINT128:
             case LIT_UINTN:
+            case LIT_DECA:
             case LIT_DEC32:
             case LIT_DEC64:
             case LIT_DEC128:
             case LIT_DECN:
+            case LIT_FLOAT8E4:
+            case LIT_FLOAT8E5:
+            case LIT_BFLOAT16:
             case LIT_FLOAT16:
             case LIT_FLOAT32:
             case LIT_FLOAT64:
             case LIT_FLOAT128:
             case LIT_FLOATN:
-            case LIT_FLOAT8E4:
-            case LIT_FLOAT8E5:
-            case LIT_BFLOAT16:
                 return literal.toString();
 
             case LIT_CHAR:

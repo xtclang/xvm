@@ -188,9 +188,9 @@ module TestMaps
         // test very bad hashing
         const Point(Int x)
             {
-            static <CompileType extends Point> Int hashCode(CompileType value)
+            static <CompileType extends Point> Int64 hashCode(CompileType value)
                 {
-                return 100 + value.x % 3;
+                return 100 + value.x.toInt64() % 3;
                 }
             }
 
@@ -400,7 +400,7 @@ module TestMaps
         assert count2 == 8;
         }
 
-    static void testRandomOps(Map<Int, Int> map, UInt seed)
+    static void testRandomOps(Map<Int, Int> map, UInt64 seed)
         {
         Random rnd = new ecstasy.numbers.PseudoRandom(seed);
 

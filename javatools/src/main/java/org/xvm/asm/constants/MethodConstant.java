@@ -131,6 +131,7 @@ public class MethodConstant
         m_constSig    = (SignatureConstant  ) pool.getConstant(m_iSig   );
         }
 
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**

@@ -473,11 +473,11 @@ public class ConstOrdinalList
         }
 
     /**
-     * Decompress a ConstIntList's compressed data in its binary form into a Java BitSet.
+     * Decompress a ConstIntList's compressed data in its binary form into a Java <tt>int[]</tt>.
      *
      * @param ab  the ConstIntList's compressed data in its binary form
      *
-     * @return the corresponding Java BitSet
+     * @return the corresponding Java <tt>int[]</tt>
      */
     public static int[] decompress(byte[] ab)
         {

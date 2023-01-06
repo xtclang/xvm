@@ -54,7 +54,7 @@ class CharArrayReader(immutable Char[] chars)
             extends Reader.AbstractPos;
 
     /**
-     * A Position implementation that packs all the data into a single Int.
+     * A Position implementation that packs all the data into a single Int64.
      */
     private static const TinyPos
             extends Reader.AbstractPos
@@ -66,10 +66,10 @@ class CharArrayReader(immutable Char[] chars)
             assert:arg lineNumber >= 0 && lineNumber <= 0xFFFFF;
             assert:arg lineOffset >= 0 && lineOffset <= 0xFFFFF;
 
-            combo = offset << 20 | lineNumber << 20 | lineOffset;
+            combo = (offset << 20 | lineNumber << 20 | lineOffset).toInt64();
             }
 
-        private Int combo;
+        private Int64 combo;
 
         @Override
         Int offset.get()

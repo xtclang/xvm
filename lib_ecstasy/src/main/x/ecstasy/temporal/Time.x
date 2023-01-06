@@ -131,8 +131,8 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
         {
         Int128 picos = adjustedPicos;
         return new Date(picos >= 0
-                ? (picos / TimeOfDay.PICOS_PER_DAY).toInt64()
-                : -1 - ((picos.abs() - 1) / TimeOfDay.PICOS_PER_DAY).toInt64());
+                ? (picos / TimeOfDay.PICOS_PER_DAY).toInt32()
+                : -1 - ((picos.abs() - 1) / TimeOfDay.PICOS_PER_DAY).toInt32());
         }
 
     /**
@@ -140,7 +140,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
      */
     TimeOfDay timeOfDay.get()
         {
-        return new TimeOfDay((adjustedPicos % TimeOfDay.PICOS_PER_DAY).toInt64());
+        return new TimeOfDay((adjustedPicos % TimeOfDay.PICOS_PER_DAY).toUInt64());
         }
 
     /**

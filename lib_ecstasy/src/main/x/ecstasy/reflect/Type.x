@@ -976,7 +976,7 @@ interface Type<DataType, OuterType>
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 
-    static <CompileType extends Type> Int hashCode(CompileType value)
+    static <CompileType extends Type> Int64 hashCode(CompileType value)
         {
         return value.methods   .hashCode()
              ^ value.properties.hashCode();
@@ -1069,7 +1069,7 @@ interface Type<DataType, OuterType>
                         return True, new Hasher<DataType>()
                             {
                             @Override
-                            Int hashOf(Value value)
+                            Int64 hashOf(Value value)
                                 {
                                 if (&value.actualType.isA(t1))
                                     {
@@ -1119,7 +1119,7 @@ interface Type<DataType, OuterType>
                             return True, new Hasher<DataType>()
                                 {
                                 @Override
-                                Int hashOf(Value value)
+                                Int64 hashOf(Value value)
                                     {
                                     return hasher1.hashOf(value.as(t1.DataType))
                                          + hasher2.hashOf(value.as(t2.DataType));

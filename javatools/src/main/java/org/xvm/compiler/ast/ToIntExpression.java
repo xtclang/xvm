@@ -21,7 +21,7 @@ import org.xvm.util.PackedInteger;
 
 
 /**
- * An expression that converts the result of another expression to an Ecstasy Int64, using the rules
+ * An expression that converts the result of another expression to an Ecstasy Int, using the rules
  * defined by {@link TypeConstant#isIntConvertible()} and {@link Constant#getIntValue()}.
  * <p/>
  * Steps, depending on the type of the underlying expression:
@@ -30,8 +30,7 @@ import org.xvm.util.PackedInteger;
  *     underlying expression, resulting in an Int type, so at this point the resulting type is
  *     IntNumber, regardless of the type of the underlying expression;</li>
  * <li>Offset: The optional offset is applied to the IntNumber;</li>
- * <li>Convert: If the IntNumber is not an Int, then the IntNumber.toInt64() method is
- *     applied.</li>
+ * <li>Convert: If the IntNumber is not an Int, then the IntNumber.toInt() method is applied.</li>
  * </ul>
  */
 public class ToIntExpression
@@ -66,7 +65,7 @@ public class ToIntExpression
             }
 
         m_pintOffset = pintOffset;
-        finishValidation(null, null, expr.pool().typeCInt64(), expr.getTypeFit().addConversion(), val, errs);
+        finishValidation(null, null, expr.pool().typeInt(), expr.getTypeFit().addConversion(), val, errs);
         }
 
 
@@ -80,12 +79,14 @@ public class ToIntExpression
         {
         switch (expr.getType().getEcstasyClassName())
             {
+            case "numbers.Int":
             case "numbers.Int8":
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int64":
             case "numbers.Int128":
             case "numbers.IntN":
+            case "numbers.UInt":
             case "numbers.UInt8":
             case "numbers.UInt16":
             case "numbers.UInt32":
@@ -101,7 +102,7 @@ public class ToIntExpression
                 {
                 // at least one of these does NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
+                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES);
                 assert id != null;
                 return id;
                 }
@@ -139,6 +140,7 @@ public class ToIntExpression
         String       sFormat = expr.getType().getEcstasyClassName(); // REVIEW CP
         return switch (sFormat)
             {
+            case "numbers.Int"     -> pool.ensureIntConstant(pint, Format.Int);
             case "numbers.Int8"    -> pool.ensureByteConstant(Format.CInt8, pint.getInt());
             case "numbers.UInt8"   -> pool.ensureByteConstant(Format.CUInt8, pint.getInt());
             case "numbers.Int16"   -> pool.ensureIntConstant(pint, Format.CInt16);
@@ -146,6 +148,7 @@ public class ToIntExpression
             case "numbers.Int64"   -> pool.ensureIntConstant(pint, Format.CInt64);
             case "numbers.Int128"  -> pool.ensureIntConstant(pint, Format.CInt128);
             case "numbers.IntN"    -> pool.ensureIntConstant(pint, Format.CIntN);
+            case "numbers.UInt"    -> pool.ensureIntConstant(pint, Format.UInt);
             case "numbers.UInt16"  -> pool.ensureIntConstant(pint, Format.CUInt16);
             case "numbers.UInt32"  -> pool.ensureIntConstant(pint, Format.CUInt32);
             case "numbers.UInt64"  -> pool.ensureIntConstant(pint, Format.CUInt64);
@@ -164,11 +167,13 @@ public class ToIntExpression
         {
         switch (expr.getType().getEcstasyClassName())
             {
+            case "numbers.Int":
             case "numbers.Int8":
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int128":
             case "numbers.IntN":
+            case "numbers.UInt":
             case "numbers.UInt8":
             case "numbers.UInt16":
             case "numbers.UInt32":
@@ -177,7 +182,7 @@ public class ToIntExpression
             case "numbers.UIntN":
                 // most of these do NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
+                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES);
                 assert id != null;
                 return id;
 

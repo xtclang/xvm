@@ -30,7 +30,7 @@ interface DataInput
      */
     String readString()
         {
-        Int length = readInt64();
+        UInt64 length = readUInt64();
         if (length == 0)
             {
             return "";
@@ -100,7 +100,7 @@ interface DataInput
      */
     IntN readIntN()
         {
-        return new IntN(readBytes(readInt64()));
+        return new IntN(readBytes(readUInt64()));
         }
 
     /**
@@ -148,7 +148,7 @@ interface DataInput
      */
     UIntN readUIntN()
         {
-        return new UIntN(readBytes(readInt64()));
+        return new UIntN(readBytes(readUInt64()));
         }
 
     /**
@@ -180,7 +180,7 @@ interface DataInput
      */
     DecN readDecN()
         {
-        return new DecN(readBytes(readInt64()));
+        return new DecN(readBytes(readUInt64()));
         }
 
     /**
@@ -228,7 +228,7 @@ interface DataInput
      */
     FloatN readFloatN()
         {
-        return new FloatN(readBytes(readInt64()));
+        return new FloatN(readBytes(readUInt64()));
         }
 
     /**
@@ -236,7 +236,7 @@ interface DataInput
      */
     Date readDate()
         {
-        return new Date(readInt64());
+        return new Date(readInt32());
         }
 
     /**
@@ -244,7 +244,7 @@ interface DataInput
      */
     TimeOfDay readTime()
         {
-        return new TimeOfDay(readInt64());
+        return new TimeOfDay(readUInt64());
         }
 
     /**
@@ -341,7 +341,7 @@ interface DataInput
         // the next byte provides bits 0..7 of the result
         if (b & 0x02 != 0)
             {
-            Int n = (b >> 3).toInt64() << 8 | in.readByte();
+            Int64 n = (b >> 3).toInt64() << 8 | in.readByte();
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             if (b & 0x04 != 0)
@@ -354,9 +354,9 @@ interface DataInput
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         Int size = 1 + (b >>> 2);
-        assert:bounds size <= 8;
+        assert:bounds size <= 16;   // an Int is limited to a 16-byte value
 
-        Int n = in.readInt8();
+        Int128 n = in.readInt8();
         while (--size > 0)
             {
             n = n << 8 | in.readByte();
@@ -391,7 +391,7 @@ interface DataInput
         // the next byte provides bits 0..7 of the result
         if (b & 0x02 != 0)
             {
-            Int n = (b >> 3).toInt64() << 8 | in.readByte();
+            Int64 n = (b >> 3).toInt64() << 8 | in.readByte();
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             if (b & 0x04 != 0)
@@ -404,16 +404,21 @@ interface DataInput
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         Int size = 1 + (b >>> 2);
-        assert:bounds size <= 8;
-
-        if (size <= 8)
+        if (size <= 16)
             {
-            Int n = in.readInt8();                      // use sign extension on the first byte
+            Int128 n = in.readInt8();                   // use sign extension on the first byte
             while (--size > 0)
                 {
                 n = n << 8 | in.readByte();             // additional bytes remain bitwise intact
                 }
             return n;
+            }
+
+        // all 1 bits in positions 2..7 indicates an extended format
+        if (size==65)
+            {
+            size = readPackedInt(in);
+            assert:bounds 64 < size <= 1M;              // arbitrary limit (2^8388608)
             }
 
         Byte[] bytes = new Byte[size];

@@ -1,5 +1,8 @@
 import ecstasy.io;
 
+import ecstasy.numbers.Bitwise;
+
+
 /**
  * Array is **the** fundamental implementation of the List interface; it is an Int-indexed container
  * of elements of a specific type, and it can be assumed to have an `O(1)` element access time, both
@@ -62,7 +65,7 @@ class Array<Element>
         incorporates conditional arrays.ByteArray<Element extends Byte>
         incorporates conditional arrays.NibbleArray<Element extends Nibble>
         incorporates conditional arrays.NumberArray<Element extends Number>
-        incorporates conditional arrays.IntNumberArray<Element extends IntNumber>
+        incorporates conditional arrays.BitwiseArray<Element extends @Bitwise IntNumber>
         incorporates conditional arrays.FPNumberArray<Element extends FPNumber>
         incorporates conditional ArrayOrderer<Element extends Orderable>
         incorporates conditional ArrayHasher<Element extends Hashable>
@@ -1020,9 +1023,9 @@ class Array<Element>
         /**
          * Calculate a hash code for a given array.
          */
-        static <CompileType extends ArrayHasher> Int hashCode(CompileType array)
+        static <CompileType extends ArrayHasher> Int64 hashCode(CompileType array)
             {
-            Int hash = 0;
+            Int64 hash = 0;
             for (CompileType.Element el : array)
                 {
                 hash += CompileType.Element.hashCode(el);

@@ -196,8 +196,9 @@ class SkiplistMap<Key extends Orderable, Value>
             else
                 {
                 // flip a coin to figure out how much "height" the new node will have
+                // 50% -> 1; 25% -> 2; 12% -> 3, ...
                 private Random rnd = new numbers.PseudoRandom();
-                height = nodes.maxHeight.minOf(rnd.int().trailingZeroCount+1);
+                height = nodes.maxHeight.minOf(rnd.int64().trailingZeroCount+1);
 
                 // create the new node
                 if (node := nodes.alloc(height))
@@ -1178,7 +1179,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
         // create the new storage
         Type<IntNumber>     newType   = IndexStore.nextBigger(oldNodes.Index);
-        Int                 capacity  = size + (size >>> 2);                // 25% larger
+        Int                 capacity  = size + (size >> 2);                 // 25% larger
         ElementStore<Key>   newKeys   = createElementStore(newType, Key, capacity);
         ElementStore<Value> newValues = createElementStore(newType, Value, capacity);
         IndexStore          newNodes  = createIndexStore(newType, capacity, newKeys, newValues);
@@ -1946,7 +1947,7 @@ class SkiplistMap<Key extends Orderable, Value>
             extends IndexStore<Int64>(capacity, valueHeight)
         {
         @Override Int   nil.get()      {return Int64.MaxValue;}
-        @Override Int64 toIndex(Int n) {return n;}
+        @Override Int64 toIndex(Int n) {return n.toInt64();}
         }
 
 
@@ -2528,6 +2529,7 @@ class SkiplistMap<Key extends Orderable, Value>
                 case @Unchecked Int64   : a -> a.toInt64()  .toUnchecked().as(Element);
                 case @Unchecked Int128  : a -> a.toInt128() .toUnchecked().as(Element);
 
+                case Int                : a -> a.toInt()                  .as(Element);
                 case Int8               : a -> a.toInt8()                 .as(Element);
                 case Int16              : a -> a.toInt16()                .as(Element);
                 case Int32              : a -> a.toInt32()                .as(Element);
@@ -2540,16 +2542,20 @@ class SkiplistMap<Key extends Orderable, Value>
                 case @Unchecked UInt64  : a -> a.toUInt64() .toUnchecked().as(Element);
                 case @Unchecked UInt128 : a -> a.toUInt128().toUnchecked().as(Element);
 
+                case UInt               : a -> a.toUInt()                 .as(Element);
                 case UInt8              : a -> a.toUInt8()                .as(Element);
                 case UInt16             : a -> a.toUInt16()               .as(Element);
                 case UInt32             : a -> a.toUInt32()               .as(Element);
                 case UInt64             : a -> a.toUInt64()               .as(Element);
                 case UInt128            : a -> a.toUInt128()              .as(Element);
 
+                case Dec                : a -> a.toDec()                  .as(Element);
                 case Dec32              : a -> a.toDec32()                .as(Element);
                 case Dec64              : a -> a.toDec64()                .as(Element);
                 case Dec128             : a -> a.toDec128()               .as(Element);
 
+                case Float8e4           : a -> a.toFloat8e4()             .as(Element);
+                case Float8e5           : a -> a.toFloat8e5()             .as(Element);
                 case BFloat16           : a -> a.toBFloat16()             .as(Element);
                 case Float16            : a -> a.toFloat16()              .as(Element);
                 case Float32            : a -> a.toFloat32()              .as(Element);

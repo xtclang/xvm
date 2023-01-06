@@ -765,7 +765,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     UInt generateTxId()
         {
-        return visibleIdCounter.next().toUInt64();
+        return visibleIdCounter.next().toUInt();
         }
 
     /**
@@ -1330,7 +1330,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected static Int writeTxCounter(Int writeId)
         {
         assert isWriteTx(writeId);
-        return -writeId >>> 2;
+        return -writeId >> 2;
         }
 
     /**

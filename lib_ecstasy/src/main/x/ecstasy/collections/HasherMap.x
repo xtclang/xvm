@@ -891,7 +891,7 @@ class HasherMap<Key, Value>
     @Override
     conditional Value get(Key key)
         {
-        Int hash = hasher.hashOf(key);
+        Int64 hash = hasher.hashOf(key);
         if (HashBucket<Key, Value> bucket := bucketFor(hash), Value value := bucket.get(hasher, hash, key))
             {
             return True, value;
@@ -903,7 +903,7 @@ class HasherMap<Key, Value>
     @Override
     HasherMap put(Key key, Value value)
         {
-        Int     hash  = hasher.hashOf(key);
+        Int64   hash  = hasher.hashOf(key);
         Int     index = hash % buckets.size;
         Boolean added = False;
         if (HashBucket<Key, Value> oldBucket ?= buckets[index])
@@ -944,7 +944,7 @@ class HasherMap<Key, Value>
     @Override
     HasherMap remove(Key key)
         {
-        Int     hash    = hasher.hashOf(key);
+        Int64   hash    = hasher.hashOf(key);
         Int     index   = hash % buckets.size;
         Boolean removed = False;
         if (HashBucket<Key, Value> oldBucket ?= buckets[index])
@@ -1516,9 +1516,9 @@ class HasherMap<Key, Value>
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends HasherMap> Int hashCode(CompileType value)
+    static <CompileType extends HasherMap> Int64 hashCode(CompileType value)
         {
-        Int                     hash   = value.size;
+        Int64                   hash   = value.size.toInt64();
         Hasher<CompileType.Key> hasher = value.hasher;
         for (CompileType.Key key : value)
             {
@@ -1620,16 +1620,16 @@ class HasherMap<Key, Value>
         assert capacity >= 0;
 
         // shoot for 20% empty buckets (i.e. 50% oversize)
-        Int target = capacity + (capacity >>> 1) + 15;
+        Int target = capacity + (capacity >> 1) + 15;
 
-        (_, Int index) = PRIMES.binarySearch(target);
+        (_, Int index) = PRIMES.binarySearch(target.toInt64());
         Int bucketCount = index < PRIMES.size ? PRIMES[index] : target;
 
         // shrink when falls below 20% capacity
-        Int shrinkThreshold = index <= 8 ? -1 : ((bucketCount >>> 2) - (bucketCount >>> 5) - (bucketCount >>> 6));
+        Int shrinkThreshold = index <= 8 ? -1 : ((bucketCount >> 2) - (bucketCount >> 5) - (bucketCount >> 6));
 
         // grow when around 80% capacity
-        Int growThreshold = bucketCount - (bucketCount >>> 2) + (bucketCount >>> 5) + (bucketCount >>> 6);
+        Int growThreshold = bucketCount - (bucketCount >> 2) + (bucketCount >> 5) + (bucketCount >> 6);
 
         return bucketCount, growThreshold, shrinkThreshold;
         }
@@ -1637,7 +1637,7 @@ class HasherMap<Key, Value>
     /**
      * Primes used for bucket array sizes (to ensure a prime modulo).
      */
-    static Int[] PRIMES =
+    static Int64[] PRIMES =
         [
         7, 13, 23, 37, 47, 61, 79, 107, 137, 181, 229, 283, 349, 419, 499, 599, 727, 863, 1013,
         1187, 1399, 1697, 2039, 2503, 3253, 4027, 5113, 6679, 8999, 11987, 16381, 21023, 28351,

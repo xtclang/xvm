@@ -708,6 +708,9 @@ class Lexer
                         IntLiteral value = eatIntLiteral(before, Nibble.MinValue, Nibble.MaxValue, True);
                         return LitNibble, value.toNibble();
 
+                    case "Int":
+                        IntLiteral value = eatIntLiteral(before, Int.MinValue, Int.MaxValue, True);
+                        return LitInt, value.toInt();
                     case "Int8":
                         IntLiteral value = eatIntLiteral(before, Int8.MinValue, Int8.MaxValue, True);
                         return LitInt8, value.toInt8();
@@ -717,7 +720,7 @@ class Lexer
                     case "Int32":
                         IntLiteral value = eatIntLiteral(before, Int32.MinValue, Int32.MaxValue, True);
                         return LitInt32, value.toInt32();
-                    case "Int64", "Int":
+                    case "Int64":
                         IntLiteral value = eatIntLiteral(before, Int64.MinValue, Int64.MaxValue, True);
                         return LitInt64, value.toInt64();
                     case "Int128":
@@ -727,6 +730,9 @@ class Lexer
                         IntLiteral value = eatIntLiteral(before, explicitlyInt=True);
                         return LitIntN, value.toIntN();
 
+                    case "UInt":
+                        IntLiteral value = eatIntLiteral(before, UInt.MinValue, UInt.MaxValue, True);
+                        return LitUInt, value.toUInt();
                     case "UInt8":
                         IntLiteral value = eatIntLiteral(before, UInt8.MinValue, UInt8.MaxValue, True);
                         return LitUInt8, value.toUInt8();
@@ -736,7 +742,7 @@ class Lexer
                     case "UInt32":
                         IntLiteral value = eatIntLiteral(before, UInt32.MinValue, UInt32.MaxValue, True);
                         return LitUInt32, value.toUInt32();
-                    case "UInt64", "UInt":
+                    case "UInt64":
                         IntLiteral value = eatIntLiteral(before, UInt64.MinValue, UInt64.MaxValue, True);
                         return LitUInt64, value.toUInt64();
                     case "UInt128":
@@ -746,10 +752,13 @@ class Lexer
                         IntLiteral value = eatIntLiteral(before, explicitlyInt=True);
                         return LitUIntN, value.toUIntN();
 
+                    case "Dec":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitDec, value.toDec();
                     case "Dec32":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
                         return LitDec32, value.toDec32();
-                    case "Dec64", "Dec":
+                    case "Dec64":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
                         return LitDec64, value.toDec64();
                     case "Dec128":
@@ -759,21 +768,6 @@ class Lexer
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
                         return LitDecN, value.toDecN();
 
-                    case "Float16":
-                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat16, value.toFloat16();
-                    case "Float32":
-                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat32, value.toFloat32();
-                    case "Float64", "Float":
-                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat64, value.toFloat64();
-                    case "Float128":
-                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat128, value.toFloat128();
-                    case "FloatN":
-                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloatN, value.toFloatN();
                     case "Float8e4":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
                         return LitFloat8e4, value.toFloat8e4();
@@ -783,6 +777,21 @@ class Lexer
                     case "BFloat16":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
                         return LitBFloat16, value.toBFloat16();
+                    case "Float16":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat16, value.toFloat16();
+                    case "Float32":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat32, value.toFloat32();
+                    case "Float64":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat64, value.toFloat64();
+                    case "Float128":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat128, value.toFloat128();
+                    case "FloatN":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloatN, value.toFloatN();
 
                     case "Date":
                         return eatDateLiteral(before);
@@ -986,7 +995,7 @@ class Lexer
             }
 
         Int offset = hour * TimeOfDay.PICOS_PER_HOUR + minute * TimeOfDay.PICOS_PER_MINUTE;
-        return LitTimezone, new TimeZone((minus ? -1 : +1) * offset);
+        return LitTimezone, new TimeZone((minus ? -1 : +1) * offset.toInt64());
         }
 
     /**
@@ -1332,7 +1341,7 @@ class Lexer
             if (match('.'))
                 {
                 rewind(2);
-                return LitInt, intVal;
+                return LitIntStr, intVal;
                 }
 
             // could be a mantissa
@@ -1351,7 +1360,7 @@ class Lexer
                 {
                 // it's something else; spit the dot back out and return the int as the value
                 rewind();
-                return LitInt, intVal;
+                return LitIntStr, intVal;
                 }
             }
 
@@ -1382,10 +1391,10 @@ class Lexer
 
         if (fpBuf == Null)
             {
-            return LitInt, intVal;
+            return LitIntStr, intVal;
             }
 
-        return (fpBin ? LitFloat : LitDec), new FPLiteral(fpBuf.toString());
+        return (fpBin ? LitFloatStr : LitDecStr), new FPLiteral(fpBuf.toString());
         }
 
     /**
@@ -1595,7 +1604,7 @@ class Lexer
                 }
             }
 
-        return LitBinstr, nibs.toByteArray();
+        return LitBinStr, nibs.toByteArray();
         }
 
     /**
@@ -2279,13 +2288,13 @@ class Lexer
 
                         maybeHex: if (hexits > 0)
                             {
-                            Int codepoint = 0;
+                            UInt32 codepoint = 0;
                             while (hexits > 0)
                                 {
                                 if (Char chX := reader.next())
                                     {
                                     ++rewind;
-                                    if (Int n := chX.asciiHexit())
+                                    if (UInt8 n := chX.asciiHexit())
                                         {
                                         codepoint = codepoint << 4 | n;
                                         }
@@ -2731,9 +2740,9 @@ class Lexer
             {
             return switch (id)
                 {
-                case LitInt:
-                case LitDec:
-                case LitFloat:
+                case LitIntStr:
+                case LitDecStr:
+                case LitFloatStr:
                 case LitPath:       value.toString();
 
                 case LitChar:       value.as(Char).quoted();
@@ -2741,18 +2750,21 @@ class Lexer
 
                 case LitBit:
                 case LitNibble:
+                case LitInt:
                 case LitInt8:
                 case LitInt16:
                 case LitInt32:
                 case LitInt64:
                 case LitInt128:
                 case LitIntN:
+                case LitUInt:
                 case LitUInt8:
                 case LitUInt16:
                 case LitUInt32:
                 case LitUInt64:
                 case LitUInt128:
                 case LitUIntN:
+                case LitDec:
                 case LitDec32:
                 case LitDec64:
                 case LitDec128:
@@ -2772,7 +2784,7 @@ class Lexer
                 case LitDuration:
                 case LitVersion:    $"{id.name.substring(3)}:{value.toString()}";
 
-                case LitBinstr:
+                case LitBinStr:
                     value.as(Byte[]).appendTo(new StringBuffer(40), pre="#", limit=17).toString();
 
 
@@ -2954,34 +2966,37 @@ class Lexer
         LitNibble    <Nibble    >(Null             ),
         LitChar      <Char      >(Null             ),
         LitString    <String    >(Null             ),
-        LitBinstr    <Byte[]    >(Null             ),
-        LitInt       <IntLiteral>(Null             ),
+        LitBinStr    <Byte[]    >(Null             ),
+        LitIntStr    <IntLiteral>(Null             ),
+        LitInt       <Int       >(Null             ),
         LitInt8      <Int8      >(Null             ),
         LitInt16     <Int16     >(Null             ),
         LitInt32     <Int32     >(Null             ),
         LitInt64     <Int64     >(Null             ),
         LitInt128    <Int128    >(Null             ),
         LitIntN      <IntN      >(Null             ),
+        LitUInt      <UInt      >(Null             ),
         LitUInt8     <UInt8     >(Null             ),
         LitUInt16    <UInt16    >(Null             ),
         LitUInt32    <UInt32    >(Null             ),
         LitUInt64    <UInt64    >(Null             ),
         LitUInt128   <UInt128   >(Null             ),
         LitUIntN     <UIntN     >(Null             ),
-        LitDec       <FPLiteral >(Null             ),
+        LitDecStr    <FPLiteral >(Null             ),
+        LitDec       <Dec       >(Null             ),
         LitDec32     <Dec32     >(Null             ),
         LitDec64     <Dec64     >(Null             ),
         LitDec128    <Dec128    >(Null             ),
         LitDecN      <DecN      >(Null             ),
-        LitFloat     <FPLiteral >(Null             ),
+        LitFloatStr  <FPLiteral >(Null             ),
+        LitFloat8e4  <Float8e4  >(Null             ),
+        LitFloat8e5  <Float8e5  >(Null             ),
+        LitBFloat16  <BFloat16  >(Null             ),
         LitFloat16   <Float16   >(Null             ),
         LitFloat32   <Float32   >(Null             ),
         LitFloat64   <Float64   >(Null             ),
         LitFloat128  <Float128  >(Null             ),
         LitFloatN    <FloatN    >(Null             ),
-        LitFloat8e4  <Float8e4  >(Null             ),
-        LitFloat8e5  <Float8e5  >(Null             ),
-        LitBFloat16  <BFloat16  >(Null             ),
         LitDate      <Date      >(Null             ),
         LitTimeOfDay <TimeOfDay >(Null             ),
         LitTime      <Time      >(Null             ),

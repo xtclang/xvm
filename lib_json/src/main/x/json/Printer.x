@@ -428,7 +428,7 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
             {
             if (ch < ' ' || ch == '"')              // ' '=32=0x20, '"'=34=0x22
                 {
-                return True, ESCAPES[ch.toInt64()];
+                return True, ESCAPES[ch.toInt()];
                 }
             if (ch == '\\')
                 {

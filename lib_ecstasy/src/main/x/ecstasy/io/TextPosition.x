@@ -33,9 +33,9 @@ interface TextPosition
 
     // ----- Orderable & Hashable funky interface implementations ----------------------------------
 
-    static <CompileType extends TextPosition> Int hashCode(CompileType value)
+    static <CompileType extends TextPosition> Int64 hashCode(CompileType value)
         {
-        return value.offset ^ value.lineNumber;
+        return value.offset.toInt64() ^ value.lineNumber.toInt64();
         }
 
     static <CompileType extends TextPosition> Ordered compare(CompileType value1, CompileType value2)

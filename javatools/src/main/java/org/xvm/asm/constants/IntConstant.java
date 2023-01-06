@@ -15,8 +15,8 @@ import org.xvm.util.PackedInteger;
 
 
 /**
- * Represent a 64-bit signed integer constant, and a bunch of lesser-known formats of integer
- * constants as well, but NOT the 8-bit integer constants.
+ * Represent an up to 128-bit signed integer constant, and a bunch of lesser-known formats of
+ * integer constants as well, but NOT the 8-bit integer constants.
  *
  * @see ByteConstant
  */
@@ -80,6 +80,7 @@ public class IntConstant
                 cBytes    = 8;
                 fUnsigned = false;
                 break;
+            case Int:
             case CInt128:
             case Int128:
                 cBytes    = 16;
@@ -107,6 +108,7 @@ public class IntConstant
                 cBytes    = 8;
                 fUnsigned = true;
                 break;
+            case UInt:
             case CUInt128:
             case UInt128:
                 cBytes    = 16;
@@ -129,7 +131,8 @@ public class IntConstant
                 {
                 throw new IllegalStateException("illegal unsigned value: " + pint);
                 }
-            if (pint.getUnsignedByteSize() > cBytes)
+            if (pint.getUnsignedByteSize() > cBytes
+                    || format == Format.UInt && pint.compareTo(PackedInteger.SINT16_MAX) > 0)
                 {
                 throw new IllegalStateException("value exceeds " + cBytes + " bytes: " + pint);
                 }
@@ -163,6 +166,7 @@ public class IntConstant
         {
         switch (m_fmt)
             {
+            case Int:
             case CInt16:
             case Int16:
             case CInt32:
@@ -175,6 +179,7 @@ public class IntConstant
             case IntN:
                 return false;
 
+            case UInt:
             case CUInt16:
             case UInt16:
             case CUInt32:
@@ -211,11 +216,13 @@ public class IntConstant
             case UIntN:
                 return true;
 
+            case Int:
             case CInt16:
             case CInt32:
             case CInt64:
             case CInt128:
             case CIntN:
+            case UInt:
             case CUInt16:
             case CUInt32:
             case CUInt64:
@@ -260,7 +267,7 @@ public class IntConstant
                 return new IntConstant(getConstantPool(), normalize(m_fmt), m_pint);
 
             default:
-                throw new IllegalStateException();
+                throw new UnsupportedOperationException("format=" + m_fmt);
             }
         }
 
@@ -289,6 +296,8 @@ public class IntConstant
             case UInt64:
                 return 8;
 
+            case Int:
+            case UInt:
             case CInt128:
             case Int128:
             case CUInt128:
@@ -329,6 +338,7 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MIN;
 
+            case Int:
             case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MIN;
@@ -338,6 +348,7 @@ public class IntConstant
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.SINT32_MIN;
 
+            case UInt:
             case CUInt16:
             case UInt16:
             case CUInt32:
@@ -384,6 +395,8 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MAX;
 
+            case Int:
+            case UInt:
             case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MAX;
@@ -561,9 +574,10 @@ public class IntConstant
                     ? op.TEXT + normalize(this.getFormat()).name()
                     : normalize(this.getFormat()).name() + op.TEXT + normalize(that.getFormat()).name())
             {
-            // TODO is / .is / instanceof / .instanceof ??
-            // TODO as / .as ??
+            // TODO .is() / .as()
 
+            case "+Int":
+            case "+UInt":
             case "+Int16":
             case "+Int32":
             case "+Int64":
@@ -576,6 +590,8 @@ public class IntConstant
             case "+UIntN":
                 return this;
 
+            case "-Int":
+            case "-UInt":
             case "-Int16":
             case "-Int32":
             case "-Int64":
@@ -599,6 +615,36 @@ public class IntConstant
             case "~UInt128":
             case "~UIntN":
                 return validate(this.getValue().complement());
+
+            case "Int+IntLiteral":
+            case "Int-IntLiteral":
+            case "Int*IntLiteral":
+            case "Int/IntLiteral":
+            case "Int%IntLiteral":
+            case "Int..IntLiteral":
+            case "Int..<IntLiteral":
+            case "Int==IntLiteral":
+            case "Int!=IntLiteral":
+            case "Int<IntLiteral":
+            case "Int<=IntLiteral":
+            case "Int>IntLiteral":
+            case "Int>=IntLiteral":
+            case "Int<=>IntLiteral":
+
+            case "UInt+IntLiteral":
+            case "UInt-IntLiteral":
+            case "UInt*IntLiteral":
+            case "UInt/IntLiteral":
+            case "UInt%IntLiteral":
+            case "UInt..IntLiteral":
+            case "UInt..<IntLiteral":
+            case "UInt==IntLiteral":
+            case "UInt!=IntLiteral":
+            case "UInt<IntLiteral":
+            case "UInt<=IntLiteral":
+            case "UInt>IntLiteral":
+            case "UInt>=IntLiteral":
+            case "UInt<=>IntLiteral":
 
             case "Int16+IntLiteral":
             case "Int16-IntLiteral":
@@ -804,6 +850,8 @@ public class IntConstant
             case "UIntN>>>IntLiteral":
                 return apply(op, ((LiteralConstant) that).toIntConstant(Format.CInt64));
 
+            case "Int+Int":
+            case "UInt+UInt":
             case "Int16+Int16":
             case "Int32+Int32":
             case "Int64+Int64":
@@ -816,6 +864,8 @@ public class IntConstant
             case "UIntN+UIntN":
                 return validate(this.getValue().add(((IntConstant) that).getValue()));
 
+            case "Int-Int":
+            case "UInt-UInt":
             case "Int16-Int16":
             case "Int32-Int32":
             case "Int64-Int64":
@@ -828,6 +878,8 @@ public class IntConstant
             case "UIntN-UIntN":
                 return validate(this.getValue().sub(((IntConstant) that).getValue()));
 
+            case "Int*Int":
+            case "UInt*UInt":
             case "Int16*Int16":
             case "Int32*Int32":
             case "Int64*Int64":
@@ -840,6 +892,8 @@ public class IntConstant
             case "UIntN*UIntN":
                 return validate(this.getValue().mul(((IntConstant) that).getValue()));
 
+            case "Int/Int":
+            case "UInt/UInt":
             case "Int16/Int16":
             case "Int32/Int32":
             case "Int64/Int64":
@@ -852,6 +906,8 @@ public class IntConstant
             case "UIntN/UIntN":
                 return validate(this.getValue().div(((IntConstant) that).getValue()));
 
+            case "Int%Int":
+            case "UInt%UInt":
             case "Int16%Int16":
             case "Int32%Int32":
             case "Int64%Int64":
@@ -900,6 +956,8 @@ public class IntConstant
             case "UIntN^UIntN":
                 return validate(this.getValue().xor(((IntConstant) that).getValue()));
 
+            case "Int..Int":
+            case "UInt..UInt":
             case "Int16..Int16":
             case "Int32..Int32":
             case "Int64..Int64":
@@ -912,6 +970,8 @@ public class IntConstant
             case "UIntN..UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
 
+            case "Int..<Int":
+            case "UInt..<UInt":
             case "Int16..<Int16":
             case "Int32..<Int32":
             case "Int64..<Int64":
@@ -924,6 +984,8 @@ public class IntConstant
             case "UIntN..<UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
 
+            case "Int>..Int":
+            case "UInt>..UInt":
             case "Int16>..Int16":
             case "Int32>..Int32":
             case "Int64>..Int64":
@@ -936,6 +998,8 @@ public class IntConstant
             case "UIntN>..UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
 
+            case "Int>..<Int":
+            case "UInt>..<UInt":
             case "Int16>..<Int16":
             case "Int32>..<Int32":
             case "Int64>..<Int64":
@@ -948,6 +1012,7 @@ public class IntConstant
             case "UIntN>..<UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, true);
 
+            case "Int<<Int":
             case "Int16<<Int64":
             case "Int32<<Int64":
             case "Int64<<Int64":
@@ -958,8 +1023,20 @@ public class IntConstant
             case "UInt64<<Int64":
             case "UInt128<<Int64":
             case "UIntN<<Int64":
+            case "Int16<<Int":
+            case "Int32<<Int":
+            case "Int64<<Int":
+            case "Int128<<Int":
+            case "IntN<<Int":
+            case "UInt<<Int":
+            case "UInt16<<Int":
+            case "UInt32<<Int":
+            case "UInt64<<Int":
+            case "UInt128<<Int":
+            case "UIntN<<Int":
                 return validate(this.getValue().shl(((IntConstant) that).getValue()));
 
+            case "Int>>Int":
             case "Int16>>Int64":
             case "Int32>>Int64":
             case "Int64>>Int64":
@@ -970,6 +1047,17 @@ public class IntConstant
             case "UInt64>>Int64":
             case "UInt128>>Int64":
             case "UIntN>>Int64":
+            case "Int16>>Int":
+            case "Int32>>Int":
+            case "Int64>>Int":
+            case "Int128>>Int":
+            case "IntN>>Int":
+            case "UInt>>Int":
+            case "UInt16>>Int":
+            case "UInt32>>Int":
+            case "UInt64>>Int":
+            case "UInt128>>Int":
+            case "UIntN>>Int":
                 return validate(this.getValue().shr(((IntConstant) that).getValue()));
 
             case "Int16>>>Int64":
@@ -982,8 +1070,20 @@ public class IntConstant
             case "UInt64>>>Int64":
             case "UInt128>>>Int64":
             case "UIntN>>>Int64":
+            case "Int16>>>Int":
+            case "Int32>>>Int":
+            case "Int64>>>Int":
+            case "Int128>>>Int":
+            case "IntN>>>Int":
+            case "UInt16>>>Int":
+            case "UInt32>>>Int":
+            case "UInt64>>>Int":
+            case "UInt128>>>Int":
+            case "UIntN>>>Int":
                 return validate(this.getValue().ushr(((IntConstant) that).getValue()));
 
+            case "Int==Int":
+            case "UInt==UInt":
             case "Int16==Int16":
             case "Int32==Int32":
             case "Int64==Int64":
@@ -994,6 +1094,9 @@ public class IntConstant
             case "UInt64==UInt64":
             case "UInt128==UInt128":
             case "UIntN==UIntN":
+
+            case "Int!=Int":
+            case "UInt!=UInt":
             case "Int16!=Int16":
             case "Int32!=Int32":
             case "Int64!=Int64":
@@ -1004,6 +1107,9 @@ public class IntConstant
             case "UInt64!=UInt64":
             case "UInt128!=UInt128":
             case "UIntN!=UIntN":
+
+            case "Int<Int":
+            case "UInt<UInt":
             case "Int16<Int16":
             case "Int32<Int32":
             case "Int64<Int64":
@@ -1014,6 +1120,9 @@ public class IntConstant
             case "UInt64<UInt64":
             case "UInt128<UInt128":
             case "UIntN<UIntN":
+
+            case "Int<=Int":
+            case "UInt<=UInt":
             case "Int16<=Int16":
             case "Int32<=Int32":
             case "Int64<=Int64":
@@ -1024,6 +1133,9 @@ public class IntConstant
             case "UInt64<=UInt64":
             case "UInt128<=UInt128":
             case "UIntN<=UIntN":
+
+            case "Int>Int":
+            case "UInt>UInt":
             case "Int16>Int16":
             case "Int32>Int32":
             case "Int64>Int64":
@@ -1034,6 +1146,9 @@ public class IntConstant
             case "UInt64>UInt64":
             case "UInt128>UInt128":
             case "UIntN>UIntN":
+
+            case "Int>=Int":
+            case "UInt>=UInt":
             case "Int16>=Int16":
             case "Int32>=Int32":
             case "Int64>=Int64":
@@ -1044,6 +1159,9 @@ public class IntConstant
             case "UInt64>=UInt64":
             case "UInt128>=UInt128":
             case "UIntN>=UIntN":
+
+            case "Int<=>Int":
+            case "UInt<=>UInt":
             case "Int16<=>Int16":
             case "Int32<=>Int32":
             case "Int64<=>Int64":
@@ -1059,6 +1177,145 @@ public class IntConstant
 
         return super.apply(op, that);
         }
+
+    @Override
+    public Constant convertTo(TypeConstant typeOut)
+        {
+        Constant constant = super.convertTo(typeOut);
+        if (constant != null)
+            {
+            return constant;
+            }
+
+        ConstantPool pool = getConstantPool();
+        if (typeOut.equals(pool.typeInt()))
+            {
+            return toIntConstant(Format.Int);
+            }
+        else if (typeOut.equals(pool.typeCInt8()))
+            {
+            return toIntConstant(Format.CInt8);
+            }
+        else if (typeOut.equals(pool.typeInt8()))
+            {
+            return toIntConstant(Format.Int8);
+            }
+        else if (typeOut.equals(pool.typeCInt16()))
+            {
+            return toIntConstant(Format.CInt16);
+            }
+        else if (typeOut.equals(pool.typeInt16()))
+            {
+            return toIntConstant(Format.Int16);
+            }
+        else if (typeOut.equals(pool.typeCInt32()))
+            {
+            return toIntConstant(Format.CInt32);
+            }
+        else if (typeOut.equals(pool.typeInt32()))
+            {
+            return toIntConstant(Format.Int32);
+            }
+        else if (typeOut.equals(pool.typeCInt64()))
+            {
+            return toIntConstant(Format.CInt64);
+            }
+        else if (typeOut.equals(pool.typeInt64()))
+            {
+            return toIntConstant(Format.Int64);
+            }
+        else if (typeOut.equals(pool.typeCInt128()))
+            {
+            return toIntConstant(Format.CInt128);
+            }
+        else if (typeOut.equals(pool.typeInt128()))
+            {
+            return toIntConstant(Format.Int128);
+            }
+        else if (typeOut.equals(pool.typeCIntN()))
+            {
+            return toIntConstant(Format.CIntN);
+            }
+        else if (typeOut.equals(pool.typeIntN()))
+            {
+            return toIntConstant(Format.IntN);
+            }
+        else if (typeOut.equals(pool.typeUInt()))
+            {
+            return toIntConstant(Format.UInt);
+            }
+        else if (typeOut.equals(pool.typeCUInt8()))
+            {
+            return toIntConstant(Format.CUInt8);
+            }
+        else if (typeOut.equals(pool.typeUInt8()))
+            {
+            return toIntConstant(Format.UInt8);
+            }
+        else if (typeOut.equals(pool.typeCUInt16()))
+            {
+            return toIntConstant(Format.CUInt16);
+            }
+        else if (typeOut.equals(pool.typeUInt16()))
+            {
+            return toIntConstant(Format.UInt16);
+            }
+        else if (typeOut.equals(pool.typeCUInt32()))
+            {
+            return toIntConstant(Format.CUInt32);
+            }
+        else if (typeOut.equals(pool.typeUInt32()))
+            {
+            return toIntConstant(Format.UInt32);
+            }
+        else if (typeOut.equals(pool.typeCUInt64()))
+            {
+            return toIntConstant(Format.CUInt64);
+            }
+        else if (typeOut.equals(pool.typeUInt64()))
+            {
+            return toIntConstant(Format.UInt64);
+            }
+        else if (typeOut.equals(pool.typeCUInt128()))
+            {
+            return toIntConstant(Format.CUInt128);
+            }
+        else if (typeOut.equals(pool.typeUInt128()))
+            {
+            return toIntConstant(Format.UInt128);
+            }
+        else if (typeOut.equals(pool.typeCUIntN()))
+            {
+            return toIntConstant(Format.CUIntN);
+            }
+        else if (typeOut.equals(pool.typeUIntN()))
+            {
+            return toIntConstant(Format.UIntN);
+            }
+        return null;
+        }
+
+    /**
+     * Convert this IntConstant to an IntConstant of the specified format.
+     *
+     * @param format  the format of the IntConstant to use
+     *
+     * @return an IntConstant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public IntConstant toIntConstant(Format format)
+        {
+        PackedInteger pi = getValue();
+        if (       pi.compareTo(IntConstant.getMinLimit(format)) < 0
+                || pi.compareTo(IntConstant.getMaxLimit(format)) > 0)
+            {
+            throw new ArithmeticException("out of range: " + pi);
+            }
+
+        return getConstantPool().ensureIntConstant(pi, format);
+        }
+
 
     @Override
     public Object getLocator()

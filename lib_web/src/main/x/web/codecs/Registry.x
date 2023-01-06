@@ -120,12 +120,14 @@ service Registry
         new BasicFormat<IntLiteral>(),
         new BasicFormat<FPLiteral>(),
 
+        new BasicFormat< Int   >(),
         new BasicFormat< Int8  >(),
         new BasicFormat< Int16 >(),
         new BasicFormat< Int32 >(),
         new BasicFormat< Int64 >(),
         new BasicFormat< Int128>(),
         new BasicFormat< IntN  >(),
+        new BasicFormat<UInt   >(),
         new BasicFormat<UInt8  >(),
         new BasicFormat<UInt16 >(),
         new BasicFormat<UInt32 >(),
@@ -146,6 +148,7 @@ service Registry
         new BasicFormat<@Unchecked UInt128>(),
         new BasicFormat<@Unchecked UIntN  >(),
 
+        new BasicFormat<Dec   >(),
         new BasicFormat<Dec32 >(),
         new BasicFormat<Dec64 >(),
         new BasicFormat<Dec128>(),

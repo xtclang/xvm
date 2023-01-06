@@ -11,6 +11,7 @@ package mappings
         new BitMapping(),
         new CharMapping(),
 
+        new IntNumberMapping<           ecstasy.numbers.Int      >(),
         new IntNumberMapping<           ecstasy.numbers.Int8     >(),
         new IntNumberMapping<@Unchecked ecstasy.numbers.Int8     >(),
         new IntNumberMapping<           ecstasy.numbers.Int16    >(),
@@ -21,6 +22,7 @@ package mappings
         new IntNumberMapping<@Unchecked ecstasy.numbers.Int64    >(),
         new IntNumberMapping<           ecstasy.numbers.Int128   >(),
         new IntNumberMapping<@Unchecked ecstasy.numbers.Int128   >(),
+        new IntNumberMapping<           ecstasy.numbers.UInt     >(),
         new IntNumberMapping<           ecstasy.numbers.UInt8    >(),
         new IntNumberMapping<@Unchecked ecstasy.numbers.UInt8    >(),
         new IntNumberMapping<           ecstasy.numbers.UInt16   >(),
@@ -36,6 +38,7 @@ package mappings
         new IntNumberMapping<           ecstasy.numbers.UIntN  >(),
         new IntNumberMapping<@Unchecked ecstasy.numbers.UIntN  >(),
 
+        new FPNumberMapping<ecstasy.numbers.Dec     >(),
         new FPNumberMapping<ecstasy.numbers.Dec32   >(),
         new FPNumberMapping<ecstasy.numbers.Dec64   >(),
         new FPNumberMapping<ecstasy.numbers.Dec128  >(),

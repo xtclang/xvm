@@ -3,7 +3,7 @@
  */
 mixin ByteArray<Element extends Byte>
         into Array<Element>
-        extends IntNumberArray<Element>
+        extends BitwiseArray<Element>
     {
     // ----- UTF-8 operations ----------------------------------------------------------------------
 
@@ -179,7 +179,7 @@ mixin ByteArray<Element extends Byte>
     (Int value, Int newIndex) unpackInt(Int index)
         {
         // use a signed byte to get auto sign-extension when converting to an int
-        Int8 b = new Int8(this[index].toBitArray());
+        Int8 b = this[index].toInt8(truncate=True);
 
         // Tiny format: the first bit of the first byte is used to indicate a single byte format,
         // in which the entire value is contained in the 7 MSBs
@@ -195,7 +195,7 @@ mixin ByteArray<Element extends Byte>
         // the result, and the next byte provides bits 0..7 of the result
         if (b & 0x02 != 0)
             {
-            Int n = (b >> 3).toInt64() << 8 | this[index+1];
+            Int n = (b >> 3).toInt() << 8 | this[index+1];
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             return b & 0x04 != 0
@@ -206,11 +206,11 @@ mixin ByteArray<Element extends Byte>
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         Int byteCount = 1 + (b >>> 2);
-        assert:bounds byteCount <= 8;
+        assert:bounds byteCount <= 16;
 
-        Int  curOffset  = index + 1;
-        Int  nextOffset = curOffset + byteCount;
-        Int  n          = new Int8(this[curOffset++].toBitArray());     // sign-extend
+        Int curOffset  = index + 1;
+        Int nextOffset = curOffset + byteCount;
+        Int n          = this[curOffset++].toInt8(truncate=True);   // Int8 will sign-extend
         while (curOffset < nextOffset)
             {
             n = n << 8 | this[curOffset++];
@@ -627,76 +627,6 @@ mixin ByteArray<Element extends Byte>
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    @Override
-    Int8 toInt8()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toInt8();
-        }
-
-    @Override
-    Int16 toInt16()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toInt16();
-        }
-
-    @Override
-    Int32 toInt32()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toInt32();
-        }
-
-    @Override
-    Int64 toInt64()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toInt64();
-        }
-
-    @Override
-    Int128 toInt128()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toInt128();
-        }
-
-    @Override
-    UInt8 toUInt8()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toUInt8();
-        }
-
-    @Override
-    UInt16 toUInt16()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toUInt16();
-        }
-
-    @Override
-    UInt32 toUInt32()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toUInt32();
-        }
-
-    @Override
-    UInt64 toUInt64()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toUInt64();
-        }
-
-    @Override
-    UInt128 toUInt128()
-        {
-        // note: skips the assertion on the exact integer length that is performed by NumberArray
-        return asBitArray().toUInt128();
-        }
-
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Int8
      * values, each composed of 1 Byte value.
@@ -955,6 +885,72 @@ mixin ByteArray<Element extends Byte>
     Dec128[] toDec128Array(Mutability mutability = Constant)
         {
         return asDec128Array().reify(mutability);
+        }
+
+    /**
+     * Format the contents of this byte array as a "hex dump", useful for debugging.
+     *
+     * @param bytesPerLine  the number of bytes to show in each line of the hex dump
+     *
+     * @return a String containing the hex dump
+     */
+    String toHexDump(Int bytesPerLine)
+        {
+        assert bytesPerLine > 0;
+
+        // calculate how many digits it will take to show the address
+        Int addrLen = ((size.leftmostBit.trailingZeroCount) / 8 + 1) * 2;       // 2, 4, 6, ...
+
+        // format is "12F0: 00 12 32 A0 ????\n"
+        // line length is addrLen + 4*bytesPerLine + 3
+        Int    charsPerLine = addrLen + bytesPerLine * 4 + 3;
+        Char[] lineText     = new Char[charsPerLine](' ');
+
+        lineText[addrLen       ] = ':';
+        lineText[charsPerLine-1] = '\n';
+
+        Int lines      = ((size + bytesPerLine - 1) / bytesPerLine).maxOf(1);
+        val buf        = new StringBuffer(lines * charsPerLine);
+        Int byteOffset = 0;
+        Int hexOffset  = addrLen + 2;
+        Int charOffset = hexOffset + bytesPerLine * 3;
+
+        for (Int line : 0 ..< lines)
+            {
+            // format the address
+            Int addr       = byteOffset;
+            Int addrOffset = addrLen - 1;
+            while (addrOffset >= 0)
+                {
+                lineText[addrOffset--] = addr.toHexit();
+                addr >>= 4;
+                }
+
+            for (Int index : 0 ..< bytesPerLine)
+                {
+                if (byteOffset < size)
+                    {
+                    Byte b  = this[byteOffset];
+                    Char ch = b.toChar();
+
+                    lineText[hexOffset + index * 3    ] = (b >>> 4).toHexit();
+                    lineText[hexOffset + index * 3 + 1] = b.toHexit();
+                    lineText[charOffset + index       ] = ch.ascii && !ch.isEscaped() ? ch : '.';
+                    }
+                else
+                    {
+                    lineText[hexOffset + index * 3    ] = ' ';
+                    lineText[hexOffset + index * 3 + 1] = ' ';
+                    lineText[charOffset + index       ] = ' ';
+                    }
+
+                ++byteOffset;
+                }
+
+            buf.addAll(line < lines - 1 ? lineText : lineText[0 ..< charsPerLine]);
+            }
+
+        return buf.toString();
         }
 
 

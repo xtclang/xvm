@@ -100,7 +100,7 @@ const OSFileNode
 
     // ----- equality support ----------------------------------------------------------------------
 
-    static <CompileType extends OSFileNode> Int hashCode(CompileType value)
+    static <CompileType extends OSFileNode> Int64 hashCode(CompileType value)
         {
         return String.hashCode(value.pathString);
         }

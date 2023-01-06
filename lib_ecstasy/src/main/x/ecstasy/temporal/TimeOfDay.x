@@ -5,7 +5,7 @@
  *
  * The `TimeOfDay` has rudimentary support for representing and dealing with leap seconds.
  */
-const TimeOfDay(Int picos)
+const TimeOfDay(UInt64 picos)
         implements Destringable
     {
     static IntLiteral PICOS_PER_NANO   = 1K;
@@ -23,9 +23,9 @@ const TimeOfDay(Int picos)
      *
      * @param picos  the number of picoseconds elapsed since `00:00:00`
      */
-    construct(Int picos)
+    construct(UInt64 picos)
         {
-        assert 0 <= picos < PICOS_PER_DAY + PICOS_PER_SECOND;  // allow for a leap-second
+        assert picos < PICOS_PER_DAY + PICOS_PER_SECOND;  // allow for a leap-second
         this.picos = picos;
         }
 
@@ -45,7 +45,7 @@ const TimeOfDay(Int picos)
         assert 0 <= second < 60
                 || hour == 23 && minute == 59 && second == 60; // allow for a leap-second
         assert 0 <= picos  < PICOS_PER_SECOND;
-        construct TimeOfDay(((hour * 60 + minute) * 60 + second) * PICOS_PER_SECOND + picos);
+        construct TimeOfDay((((hour * 60 + minute) * 60 + second) * PICOS_PER_SECOND + picos).toUInt64());
         }
 
     /**
@@ -214,13 +214,13 @@ const TimeOfDay(Int picos)
 
     @Op("+") TimeOfDay add(Duration duration)
         {
-        Int period = (duration.picoseconds % PICOS_PER_DAY).toInt64();
+        UInt64 period = (duration.picoseconds % PICOS_PER_DAY).toUInt64();
         if (period == 0)
             {
             return this;
             }
 
-        Int sum = picos + period;
+        UInt64 sum = picos + period;
         if (sum > PICOS_PER_DAY)
             {
             // check if this TimeOfDay is a leap second
@@ -243,8 +243,8 @@ const TimeOfDay(Int picos)
 
     @Op("-") TimeOfDay sub(Duration duration)
         {
-        Int minuend    = this.picos;
-        Int subtrahend = (duration.picoseconds % PICOS_PER_DAY).toInt64();
+        UInt64 minuend    = this.picos;
+        UInt64 subtrahend = (duration.picoseconds % PICOS_PER_DAY).toUInt64();
         if (subtrahend > minuend)
             {
             minuend += PICOS_PER_DAY;
@@ -254,8 +254,8 @@ const TimeOfDay(Int picos)
 
     @Op("-") Duration sub(TimeOfDay timeOfDay)
         {
-        Int picosStop  = this.picos;
-        Int picosStart = timeOfDay.picos;
+        UInt64 picosStop  = this.picos;
+        UInt64 picosStart = timeOfDay.picos;
 
         if (picosStart > picosStop)
             {
@@ -268,7 +268,7 @@ const TimeOfDay(Int picos)
                 picosStop += PICOS_PER_SECOND;
                 }
             }
-        return new Duration((picosStop - picosStart).toUInt128());
+        return new Duration(picosStop - picosStart);
         }
 
 

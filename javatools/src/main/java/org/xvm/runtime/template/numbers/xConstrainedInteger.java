@@ -3,18 +3,12 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.Lexer;
-import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -28,13 +22,9 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-import org.xvm.runtime.template.collections.xBitArray;
-import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xChar;
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
 
@@ -66,41 +56,18 @@ public abstract class xConstrainedInteger
     @Override
     public void initNative()
         {
-        String sName = f_sName;
+        super.initNative();
 
         if (f_fSigned)
             {
             markNativeProperty("magnitude");
+
+            markNativeMethod("abs", VOID, THIS);
             }
-        markNativeProperty("bits");
-        markNativeProperty("bitCount");
-        markNativeProperty("leftmostBit");
-        markNativeProperty("rightmostBit");
+
         markNativeProperty("leadingZeroCount");
-        markNativeProperty("trailingZeroCount");
 
         markNativeMethod("toUnchecked", VOID, null);
-
-        markNativeMethod("toInt8"  , null, sName.equals("numbers.Int8")   ? THIS : new String[]{"numbers.Int8"});
-        markNativeMethod("toInt16" , null, sName.equals("numbers.Int16")  ? THIS : new String[]{"numbers.Int16"});
-        markNativeMethod("toInt32" , null, sName.equals("numbers.Int32")  ? THIS : new String[]{"numbers.Int32"});
-        markNativeMethod("toInt64" , null, sName.equals("numbers.Int64")  ? THIS : new String[]{"numbers.Int64"});
-        markNativeMethod("toUInt8" , null, sName.equals("numbers.UInt8")  ? THIS : new String[]{"numbers.UInt8"});
-        markNativeMethod("toUInt16", null, sName.equals("numbers.UInt16") ? THIS : new String[]{"numbers.UInt16"});
-        markNativeMethod("toUInt32", null, sName.equals("numbers.UInt32") ? THIS : new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt64", null, sName.equals("numbers.UInt64") ? THIS : new String[]{"numbers.UInt64"});
-
-        markNativeMethod("toFloat16"     , null, new String[]{"numbers.Float16"});
-        markNativeMethod("toFloat32"     , null, new String[]{"numbers.Float32"});
-        markNativeMethod("toFloat64"     , null, new String[]{"numbers.Float64"});
-
-        markNativeMethod("toInt128"      , null, new String[]{"numbers.Int128"});
-        markNativeMethod("toUInt128"     , null, new String[]{"numbers.UInt128"});
-        markNativeMethod("toIntN"        , null, new String[]{"numbers.IntN"});
-        markNativeMethod("toUIntN"       , null, new String[]{"numbers.UIntN"});
-        markNativeMethod("toFloatN"      , null, new String[]{"numbers.FloatN"});
-        markNativeMethod("toDecN"        , null, new String[]{"numbers.DecN"});
-        markNativeMethod("toChar"        , null, new String[]{"text.Char"});
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
@@ -111,7 +78,6 @@ public abstract class xConstrainedInteger
         markNativeMethod("stepsTo"      , THIS, INT );
 
         // @Op methods
-        markNativeMethod("abs"          , VOID, THIS);
         markNativeMethod("add"          , THIS, THIS);
         markNativeMethod("sub"          , THIS, THIS);
         markNativeMethod("mul"          , THIS, THIS);
@@ -122,8 +88,6 @@ public abstract class xConstrainedInteger
         markNativeMethod("or"           , THIS, THIS);
         markNativeMethod("xor"          , THIS, THIS);
         markNativeMethod("not"          , VOID, THIS);
-        markNativeMethod("shiftLeft"    , INT, THIS);
-        markNativeMethod("shiftRight"   , INT, THIS);
         markNativeMethod("shiftAllRight", INT, THIS);
 
         invalidateTypeInfo();
@@ -166,76 +130,48 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+    protected int constructFromString(Frame frame, String sText, int iReturn)
         {
-        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
-        if (sig.getParamCount() == 1)
+        PackedInteger pi;
+        try
             {
-            TypeConstant typeParam = sig.getRawParams()[0];
-            if (typeParam.equals(pool().typeString()))
+            pi = xIntLiteral.parsePackedInteger(sText);
+            }
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            }
+
+        if (f_fChecked)
+            {
+            int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
+            if (cBytes * 8 > f_cNumBits)
                 {
-                StringHandle  hText = (StringHandle) ahVar[0];
-                String        sText = hText.getStringValue();
-                PackedInteger pi;
-                try
-                    {
-                    pi = new PackedInteger(Long.parseLong(sText));
-                    }
-                catch (NumberFormatException e)
-                    {
-                    ErrorList errs   = new ErrorList(5);
-                    Lexer lexer  = new Lexer(new Source(sText), errs);
-                    Token tokLit = lexer.next();
-                    if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
-                        {
-                        return frame.raiseException(
-                            xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
-                        }
-
-                    pi = (PackedInteger) tokLit.getValue();
-                    }
-
-                if (f_fChecked)
-                    {
-                    int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                    if (cBytes * 8 > f_cNumBits)
-                        {
-                        return frame.raiseException(
-                            xException.outOfBounds(frame, "Overflow: " + sText));
-                        }
-                    }
-
-                return convertLong(frame, pi.getLong(), iReturn, f_fChecked);
-                }
-
-            TypeConstant typeElement = typeParam.getParamType(0);
-            if (typeElement.equals(pool().typeByte()))
-                {
-                // construct(Byte[] bytes)
-                byte[] abVal = xByteArray.getBytes((ArrayHandle) ahVar[0]);
-                int   cBytes = abVal.length;
-
-                return cBytes == f_cNumBits / 8
-                    ? convertLong(frame, fromByteArray(abVal, cBytes, f_fSigned), iReturn, f_fChecked)
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
-                }
-
-            if (typeElement.equals(pool().typeBit()))
-                {
-                // construct(Bit[] bits)
-                ArrayHandle hArray = (ArrayHandle) ahVar[0];
-                byte[]      abBits = xBitArray.getBits(hArray);
-                int         cBits  = (int) hArray.m_hDelegate.m_cSize;
-
-                return cBits == f_cNumBits
-                    ? convertLong(frame, fromByteArray(abBits, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid bit count: " + cBits));
+                return frame.raiseException(
+                    xException.outOfBounds(frame, "Overflow: " + sText));
                 }
             }
-        return frame.raiseException(xException.unsupportedOperation(frame));
+
+        return convertLong(frame, pi.getLong(), iReturn, f_fChecked);
+        }
+
+    @Override
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        return cBytes == f_cNumBits / 8
+            ? convertLong(frame, fromByteArray(ab, cBytes, f_fSigned), iReturn, f_fChecked)
+            : frame.raiseException(
+                xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+        }
+
+    @Override
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
+        {
+        return cBits == f_cNumBits
+            ? convertLong(frame, fromByteArray(ab, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
+            : frame.raiseException(
+                xException.illegalArgument(frame, "Invalid bit count: " + cBits));
         }
 
     @Override
@@ -245,11 +181,9 @@ public abstract class xConstrainedInteger
             {
             case "magnitude":
                 {
-                if (f_fSigned)
-                    {
-                    long l = ((JavaLong) hTarget).getValue();
-                    hTarget = getComplimentaryTemplate().makeJavaLong(l < 0 ? -l : l);
-                    }
+                assert f_fSigned;
+                long l = ((JavaLong) hTarget).getValue();
+                hTarget = getComplimentaryTemplate().makeJavaLong(l < 0 ? -l : l);
                 return frame.assignValue(iReturn, hTarget);
                 }
 
@@ -276,7 +210,7 @@ public abstract class xConstrainedInteger
                         }
                     }
 
-                return frame.assignValue(iReturn, xInt64.makeHandle(cDigits));
+                return frame.assignValue(iReturn, xInt.makeHandle(cDigits));
                 }
 
             case "bits":
@@ -290,8 +224,11 @@ public abstract class xConstrainedInteger
             case "bitCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt64.makeHandle(Long.bitCount(l)));
+                return frame.assignValue(iReturn, xInt.makeHandle(Long.bitCount(l)));
                 }
+
+            case "bitLength":
+                return frame.assignValue(iReturn, xInt.makeHandle(f_cNumBits));
 
             case "leftmostBit":
                 {
@@ -308,13 +245,13 @@ public abstract class xConstrainedInteger
             case "leadingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfLeadingZeros(l))));
+                return frame.assignValue(iReturn, xInt.makeHandle((Long.numberOfLeadingZeros(l))));
                 }
 
             case "trailingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfTrailingZeros(l))));
+                return frame.assignValue(iReturn, xInt.makeHandle((Long.numberOfTrailingZeros(l))));
                 }
             }
 
@@ -399,11 +336,13 @@ public abstract class xConstrainedInteger
                 return frame.assignValue(iReturn, getUncheckedTemplate().makeJavaLong(l));
                 }
 
+            case "toInt":
             case "toInt8":
             case "toInt16":
             case "toInt32":
             case "toInt64":
             case "toInt128":
+            case "toUInt":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":
@@ -426,17 +365,34 @@ public abstract class xConstrainedInteger
                     return frame.assignValue(iReturn, hTarget);
                     }
 
+                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
+                boolean fChecked  = f_fChecked && !fTruncate;
+                if (template instanceof xIntBase templateTo)
+                    {
+                    long l = ((JavaLong) hTarget).getValue();
+                    if (!f_fSigned && l < 0)
+                        {
+                        // positive value that doesn't fit 64 bits
+                        return frame.assignValue(iReturn,
+                            templateTo.makeLongLong(new LongLong(l, 0L)));
+                        }
+                    else
+                        {
+                        return frame.assignValue(iReturn, templateTo.makeLong(l));
+                        }
+                    }
+
                 if (template instanceof xConstrainedInteger templateTo)
                     {
                     long lValue = ((JavaLong) hTarget).getValue();
 
                     // there is one overflow case that needs to be handled here: UInt64 -> Int*
-                    if (f_fChecked && lValue < 0 && this instanceof xUInt64)
+                    if (fChecked && lValue < 0 && this instanceof xUInt64)
                         {
                         return templateTo.overflow(frame);
                         }
 
-                    return templateTo.convertLong(frame, lValue, iReturn, f_fChecked);
+                    return templateTo.convertLong(frame, lValue, iReturn, fChecked);
                     }
 
                 if (template instanceof xUnconstrainedInteger templateTo)
@@ -456,7 +412,7 @@ public abstract class xConstrainedInteger
                     {
                     long lValue = ((JavaLong) hTarget).getValue();
 
-                    if (f_fChecked && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
+                    if (fChecked && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
                         {
                         // cannot assign negative value to the unsigned type
                         return overflow(frame);
@@ -468,8 +424,12 @@ public abstract class xConstrainedInteger
                 if (template instanceof xChar)
                     {
                     long l = ((JavaLong) hTarget).getValue();
-                    if (l > 0x10_FFFF)
+                    if (l < 0 || l > 0x10_FFFF)
                         {
+                        if (fChecked)
+                            {
+                            return overflow(frame);
+                            }
                         l &= 0x0F_FFFF;
                         }
                     return frame.assignValue(iReturn, xChar.makeHandle(l));
@@ -777,11 +737,11 @@ public abstract class xConstrainedInteger
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    public int convertLong(Frame frame, PackedInteger piValue, int iReturn)
+    public int convertLong(Frame frame, PackedInteger piValue, boolean fChecked, int iReturn)
         {
         return piValue.isBig()
             ? overflow(frame)
-            : convertLong(frame, piValue.getLong(), iReturn, f_fChecked);
+            : convertLong(frame, piValue.getLong(), iReturn, fChecked);
         }
 
     /**
@@ -810,6 +770,14 @@ public abstract class xConstrainedInteger
      */
     public JavaLong makeJavaLong(long lValue)
         {
+        if (f_cNumBits < 64)
+            {
+            lValue &= f_lValueMask;
+            if (lValue > f_cMaxValue)
+                {
+                lValue -= (f_lValueMask + 1);
+                }
+            }
         return new JavaLong(getCanonicalClass(), lValue);
         }
 
@@ -861,6 +829,21 @@ public abstract class xConstrainedInteger
 
             default -> throw new IllegalStateException();
             };
+        }
+
+    /**
+     * Copy the bytes of the specified long value into the specified array.
+     *
+     * @param l   the long value
+     * @param ab  the byte array to copy into
+     * @param of  the offset to start copying at
+     */
+    static public void copyAsBytes(long l, byte[] ab, int of)
+        {
+        for (int i = 0, cShift = 56; i < 8; i++, cShift-=8)
+            {
+            ab[of+i] = (byte) (l >> cShift);
+            }
         }
 
     /**

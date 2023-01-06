@@ -717,6 +717,11 @@ public class AssignmentStatement
 
                 BiExpression exprFakeRValue    = createBiExpression(exprLeftCopy, op, exprRight);
                 Expression   exprFakeRValueNew = exprFakeRValue.validate(ctxRValue, typeLeft, errs);
+
+                if (exprFakeRValueNew instanceof ConvertExpression exprConv)
+                    {
+                    exprFakeRValueNew = exprConv.getUnderlyingExpression();
+                    }
                 if (exprFakeRValueNew instanceof BiExpression exprBi)
                     {
                     exprRightNew = exprBi.getExpression2();

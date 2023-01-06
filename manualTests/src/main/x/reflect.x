@@ -552,9 +552,9 @@ module TestReflection
                 "TestReflection:",             // just explicit module name
                 "ecstasy:",
                 "ecstasy.xtclang.org:",
-                "@Unchecked Int",
-                "HashMap<String?, @Unchecked Int>",
-                "HashMap<String?, @Unchecked Int>.Entry",
+                "@Unchecked Int64",
+                "HashMap<String?, @Unchecked Int64>",
+                "HashMap<String?, @Unchecked Int64>.Entry",
                 ];
 
         for (String name : names)

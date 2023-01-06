@@ -8,13 +8,20 @@ interface IntConvertible
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * Convert the value to an `IntLiteral` that represents the same value.
+     * Convert the value to a signed integer.
      *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
      * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
      *
-     * @return an integer literal
+     * @return a signed integer
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed integer range
+     *                      and `truncate` is not `True`
      */
-    IntLiteral toIntLiteral(Rounding direction = TowardZero);
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toIntN(direction).toInt(truncate);
+        }
 
     /**
      * Convert the value to a signed 8-bit integer.
@@ -29,7 +36,7 @@ interface IntConvertible
      */
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt8(truncate);
+        return toInt(truncate, direction).toInt8(truncate);
         }
 
     /**
@@ -45,7 +52,7 @@ interface IntConvertible
      */
     Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt16(truncate);
+        return toInt(truncate, direction).toInt16(truncate);
         }
 
     /**
@@ -61,7 +68,7 @@ interface IntConvertible
      */
     Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt32(truncate);
+        return toInt(truncate, direction).toInt32(truncate);
         }
 
     /**
@@ -77,7 +84,7 @@ interface IntConvertible
      */
     Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt64(truncate);
+        return toInt(truncate, direction).toInt64(truncate);
         }
 
     /**
@@ -93,7 +100,7 @@ interface IntConvertible
      */
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toInt128(truncate);
+        return toInt(truncate, direction).toInt128(truncate);
         }
 
     /**
@@ -112,6 +119,22 @@ interface IntConvertible
     IntN toIntN(Rounding direction = TowardZero);
 
     /**
+     * Convert the value to an unsigned integer.
+     *
+     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
+     * @return an unsigned integer
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned integer range
+     *                      and `truncate` is not `True`
+     */
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toInt(truncate, direction).toUInt(truncate);
+        }
+
+    /**
      * Convert the value to an unsigned 8-bit integer.
      *
      * @param truncate   pass `True` to silently truncate the integer value if necessary
@@ -124,7 +147,7 @@ interface IntConvertible
      */
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt8(truncate);
+        return toUInt(truncate, direction).toUInt8(truncate);
         }
 
     /**
@@ -148,7 +171,7 @@ interface IntConvertible
      */
     UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt16(truncate);
+        return toUInt(truncate, direction).toUInt16(truncate);
         }
 
     /**
@@ -164,7 +187,7 @@ interface IntConvertible
      */
     UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt32(truncate);
+        return toUInt(truncate, direction).toUInt32(truncate);
         }
 
     /**
@@ -180,7 +203,7 @@ interface IntConvertible
      */
     UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
         {
-        return toIntN(direction).toUInt64(truncate);
+        return toUInt(truncate, direction).toUInt64(truncate);
         }
 
     /**
@@ -196,6 +219,7 @@ interface IntConvertible
      */
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
         {
+        // this cannot use toUInt(), because UInt is only127 bits
         return toIntN(direction).toUInt128(truncate);
         }
 
@@ -212,5 +236,17 @@ interface IntConvertible
     UIntN toUIntN(Rounding direction = TowardZero)
         {
         return toIntN(direction).toUIntN();
+        }
+
+    /**
+     * Convert the value to an `IntLiteral` that represents the same value.
+     *
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     *
+     * @return an integer literal
+     */
+    IntLiteral toIntLiteral(Rounding direction = TowardZero)
+        {
+        return toIntN().toIntLiteral();
         }
     }

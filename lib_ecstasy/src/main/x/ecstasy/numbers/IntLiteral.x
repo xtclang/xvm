@@ -313,7 +313,7 @@ const IntLiteral(String text)
             return 8;
             }
 
-        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8).toInt64();
+        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8);
         }
 
     /**
@@ -398,24 +398,6 @@ const IntLiteral(String text)
     IntLiteral shiftAllRight(Int count)
         {
         return this >>> count;
-        }
-
-    /**
-     * Obtain a range beginning with this number and proceeding to the specified number.
-     * REVIEW GG CP this seems wrong
-     */
-    @Op("..") Range<Int> to(Int n)
-        {
-        return new Range<Int>(this.toInt64(), n);
-        }
-
-    /**
-     * Obtain a range beginning with this number and proceeding to the specified number.
-     * REVIEW GG CP this seems wrong
-     */
-    @Op("..<") Range<Int> toExcluding(Int n)
-        {
-        return new Range<Int>(this.toInt64(), n, lastExclusive=True);
         }
 
 
@@ -553,6 +535,10 @@ const IntLiteral(String text)
 
     @Auto
     @Override
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Auto
@@ -580,6 +566,10 @@ const IntLiteral(String text)
 
     @Auto
     @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Auto
+    @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Auto
@@ -604,9 +594,37 @@ const IntLiteral(String text)
 
     @Auto
     @Override
-    FPLiteral toFPLiteral()
+    Dec toDec()
         {
-        return new FPLiteral(text);
+        return toFPLiteral().toDec();
+        }
+
+    @Auto
+    @Override
+    Dec32 toDec32()
+        {
+        return toFPLiteral().toDec32();
+        }
+
+    @Auto
+    @Override
+    Dec64 toDec64()
+        {
+        return toFPLiteral().toDec64();
+        }
+
+    @Auto
+    @Override
+    Dec128 toDec128()
+        {
+        return toFPLiteral().toDec128();
+        }
+
+    @Auto
+    @Override
+    DecN toDecN()
+        {
+        return toFPLiteral().toDecN();
         }
 
     @Auto
@@ -667,30 +685,9 @@ const IntLiteral(String text)
 
     @Auto
     @Override
-    Dec32 toDec32()
+    FPLiteral toFPLiteral()
         {
-        return toFPLiteral().toDec32();
-        }
-
-    @Auto
-    @Override
-    Dec64 toDec64()
-        {
-        return toFPLiteral().toDec64();
-        }
-
-    @Auto
-    @Override
-    Dec128 toDec128()
-        {
-        return toFPLiteral().toDec128();
-        }
-
-    @Auto
-    @Override
-    DecN toDecN()
-        {
-        return toFPLiteral().toDecN();
+        return new FPLiteral(text);
         }
 
     @Override

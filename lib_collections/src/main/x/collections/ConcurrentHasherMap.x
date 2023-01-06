@@ -61,10 +61,10 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             }
         else
             {
-            for (Int p : Partition.PRIMES)
+            for (Int64 p : Partition.PRIMES)
                 {
                 partCount = p;
-                if (partCount >= parallelism && p != buckets)
+                if (p >= parallelism && p != buckets)
                     {
                     break;
                     }

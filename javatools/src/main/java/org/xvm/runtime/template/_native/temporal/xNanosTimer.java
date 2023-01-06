@@ -308,7 +308,7 @@ public class xNanosTimer
             GenericHandle hDuration = new GenericHandle(s_clzDuration);
             LongLong      llPicos   = new LongLong(elapsed()).mul(PICOS_PER_NANO_LL);
 
-            hDuration.setField(null, "picoseconds", xUInt128.INSTANCE.makeLongLong(llPicos));
+            hDuration.setField(null, "picoseconds", xUInt128.INSTANCE.makeHandle(llPicos));
             hDuration.makeImmutable();
 
             return hDuration;

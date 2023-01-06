@@ -1,3 +1,5 @@
+import ecstasy.numbers.Bitwise;
+
 /**
  * The UncheckedInt mixin is used with integer types to alter the default behavior for exceptional conditions such as
  * integer overflow. Specifically, the mixin is used to ignore the exceptions caused by the result exceeding the size
@@ -5,14 +7,14 @@
  * truncated to the size of the original operands.
  */
 mixin UncheckedInt
-        into IntNumber
+        into @Bitwise IntNumber
     {
     @Override
     @Op IntNumber nextValue()
         {
         try
             {
-            return super().toUnchecked();
+            return super();
             }
         catch (OutOfBounds e)
             {
@@ -25,7 +27,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super().toUnchecked();
+            return super();
             }
         catch (OutOfBounds e)
             {
@@ -38,7 +40,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n).toUnchecked();
+            return super(n);
             }
         catch (OutOfBounds e)
             {
@@ -51,7 +53,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n).toUnchecked();
+            return super(n);
             }
         catch (OutOfBounds e)
             {
@@ -64,7 +66,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n).toUnchecked();
+            return super(n);
             }
         catch (OutOfBounds e)
             {
@@ -77,7 +79,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n).toUnchecked();
+            return super(n);
             }
         catch (OutOfBounds e)
             {
@@ -90,7 +92,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super().toUnchecked();
+            return super();
             }
         catch (OutOfBounds e)
             {
@@ -103,7 +105,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super().toUnchecked();
+            return super();
             }
         catch (OutOfBounds e)
             {

@@ -1,5 +1,6 @@
 const Int64
         extends IntNumber
+        incorporates Bitwise
         default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
@@ -101,18 +102,6 @@ const Int64
         return toInt128().abs().toUInt64();
         }
 
-    @Override
-    Int64 leftmostBit.get()
-        {
-        TODO
-        }
-
-    @Override
-    Int64 rightmostBit.get()
-        {
-        TODO
-        }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -156,111 +145,6 @@ const Int64
     Int64 mod(Int64! n)
         {
         return this % n;
-        }
-
-    @Override
-    @Op("&")
-    Int64 and(Int64! n)
-        {
-        return new Int64(this.bits & n.bits);
-        }
-
-    @Override
-    @Op("|")
-    Int64 or(Int64! n)
-        {
-        return new Int64(this.bits | n.bits);
-        }
-
-    @Override
-    @Op("^")
-    Int64 xor(Int64! n)
-        {
-        return new Int64(this.bits ^ n.bits);
-        }
-
-    @Override
-    @Op("~")
-    Int64 not()
-        {
-        return new Int64(~bits);
-        }
-
-    @Override
-    @Op("<<")
-    Int64 shiftLeft(Int count)
-        {
-        return new Int64(bits << count);
-        }
-
-    @Override
-    @Op(">>")
-    Int64 shiftRight(Int count)
-        {
-        return new Int64(bits >> count);
-        }
-
-    @Override
-    @Op(">>>")
-    Int64 shiftAllRight(Int count)
-        {
-        return new Int64(bits >>> count);
-        }
-
-    @Override
-    Int64 rotateLeft(Int count)
-        {
-        return new Int64(bits.rotateLeft(count));
-        }
-
-    @Override
-    Int64 rotateRight(Int count)
-        {
-        return new Int64(bits.rotateRight(count));
-        }
-
-    @Override
-    Int64 retainLSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new Int64(bits.fill(0, 0 ..< bitLength-count));
-        }
-
-    @Override
-    Int64 retainMSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new Int64(bits.fill(0, count ..< bitLength));
-        }
-
-    @Override
-    Int64 reverseBits()
-        {
-        return new Int64(bits.reversed());
-        }
-
-    @Override
-    Int64 reverseBytes()
-        {
-        return new Int64(toByteArray().reversed());
         }
 
     @Override
@@ -321,6 +205,13 @@ const Int64
         {
         return this.is(Unchecked) ? this : new @Unchecked Int64(bits);
         }
+
+    @Auto
+    @Override
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
+
+    @Override
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
     Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
@@ -455,7 +346,7 @@ const Int64
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Int64> Int hashCode(CompileType value)
+    static <CompileType extends Int64> Int64 hashCode(CompileType value)
         {
         return value;
         }

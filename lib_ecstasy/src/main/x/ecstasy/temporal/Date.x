@@ -7,7 +7,7 @@
  * Dates before 1582-10-15 do exist, but they cannot be converted by the Date class into
  * year/month/day values.
  */
-const Date(Int epochDay)
+const Date(Int32 epochDay)
         implements Sequential
         implements Destringable
     {
@@ -151,12 +151,12 @@ const Date(Int epochDay)
 
     @Op("+") Date add(Duration duration)
         {
-        return new Date(this.epochDay + duration.days);
+        return new Date(this.epochDay + duration.days.toInt32());
         }
 
     @Op("-") Date sub(Duration duration)
         {
-        return new Date(this.epochDay - duration.days);
+        return new Date(this.epochDay - duration.days.toInt32());
         }
 
     @Op("-") Duration sub(Date date)
@@ -188,7 +188,8 @@ const Date(Int epochDay)
     @Override
     Date skip(Int steps)
         {
-        return new Date(epochDay + steps);
+        assert:bounds -1G < steps < 1G;
+        return new Date(epochDay + steps.toInt32());
         }
 
 
@@ -305,7 +306,7 @@ const Date(Int epochDay)
      * @return the days offset of the specified year from the beginning of the epoch, 00:00:00 UTC,
      *         1 January 1970
      */
-    static Int calcEpochOffset(Int year)
+    static Int32 calcEpochOffset(Int year)
         {
         assert year >= 1582;
 
@@ -317,10 +318,11 @@ const Date(Int epochDay)
         Int qennialYear  = centuryYear + qennialNum * 4;
         Int ennialNum    = year - qennialYear;
 
-        return QCENTURY_OFFSET + qcenturyNum * DAYS_PER_QCENTURY
-                               + centuryNum  * DAYS_PER_CENTURY
-                               + qennialNum  * DAYS_PER_QYEAR
-                               + ennialNum   * DAYS_PER_YEAR;
+        return (QCENTURY_OFFSET + qcenturyNum * DAYS_PER_QCENTURY
+                                + centuryNum  * DAYS_PER_CENTURY
+                                + qennialNum  * DAYS_PER_QYEAR
+                                + ennialNum   * DAYS_PER_YEAR
+               ).toInt32();
         }
 
     /**
@@ -334,10 +336,10 @@ const Date(Int epochDay)
      *
      * @return the day offset from the beginning of the epoch, 00:00:00 UTC, 1 January 1970
      */
-    static Int calcEpochOffset(Int year, Int month, Int day)
+    static Int32 calcEpochOffset(Int year, Int month, Int day)
         {
         assert isGregorian(year, month, day);
-        return calcEpochOffset(year) + daysInYearBefore(year, month) + day - 1;
+        return calcEpochOffset(year) + daysInYearBefore(year, month) + day.toInt32() - 1;
         }
 
     /**
@@ -348,31 +350,31 @@ const Date(Int epochDay)
      *
      * @return a tuple of year, month, day, and day-of-year
      */
-    static (Int year, Int month, Int day, Int dayOfYear) calcDate(Int epochDay)
+    static (Int32 year, Int32 month, Int32 day, Int32 dayOfYear) calcDate(Int epochDay)
         {
-        assert epochDay >= GREGORIAN_OFFSET;
+        assert GREGORIAN_OFFSET <= epochDay < 1G;
 
-        Int daysLeft     = epochDay - QCENTURY_OFFSET;
+        Int32 daysLeft     = epochDay.toInt32() - QCENTURY_OFFSET;
 
-        Int qcenturyNum  = daysLeft / DAYS_PER_QCENTURY;
-        daysLeft        -= qcenturyNum * DAYS_PER_QCENTURY;
+        Int32 qcenturyNum  = daysLeft / DAYS_PER_QCENTURY;
+        daysLeft          -= qcenturyNum * DAYS_PER_QCENTURY;
 
-        Int centuryNum   = daysLeft / DAYS_PER_CENTURY;
-        daysLeft        -= centuryNum * DAYS_PER_CENTURY;
+        Int32 centuryNum   = daysLeft / DAYS_PER_CENTURY;
+        daysLeft          -= centuryNum * DAYS_PER_CENTURY;
 
-        Int qennialNum   = daysLeft / DAYS_PER_QYEAR;
-        daysLeft        -= qennialNum * DAYS_PER_QYEAR;
+        Int32 qennialNum   = daysLeft / DAYS_PER_QYEAR;
+        daysLeft          -= qennialNum * DAYS_PER_QYEAR;
 
-        Int ennialNum    = daysLeft / DAYS_PER_YEAR;
-        daysLeft        -= ennialNum * DAYS_PER_YEAR;
+        Int32 ennialNum    = daysLeft / DAYS_PER_YEAR;
+        daysLeft          -= ennialNum * DAYS_PER_YEAR;
 
-        Int year         = QCENTURY_YEAR + qcenturyNum * 400
-                                         + centuryNum  * 100
-                                         + qennialNum  * 4
-                                         + ennialNum;
+        Int32 year         = QCENTURY_YEAR + qcenturyNum * 400
+                                           + centuryNum  * 100
+                                           + qennialNum  * 4
+                                           + ennialNum;
 
-        Int dayOfYear = daysLeft + 1;
-        (Int month, Int day) = calcDate(year, dayOfYear);
+        Int32 dayOfYear = daysLeft + 1;
+        (Int32 month, Int32 day) = calcDate(year, dayOfYear);
         return year, month, day, dayOfYear;
         }
 
@@ -385,7 +387,7 @@ const Date(Int epochDay)
      *
      * @return a tuple of month and day
      */
-    static (Int month, Int day) calcDate(Int year, Int dayOfYear)
+    static (Int32 month, Int32 day) calcDate(Int year, Int dayOfYear)
         {
         assert 1 <= dayOfYear <= daysInYear(year);
 
@@ -395,7 +397,7 @@ const Date(Int epochDay)
             ++month;
             }
 
-        return month, dayOfYear - daysInYearBefore(year, month);
+        return month.toInt32(), dayOfYear.toInt32() - daysInYearBefore(year, month);
         }
 
     /**
@@ -408,10 +410,10 @@ const Date(Int epochDay)
      *
      * @return the "n-th day of the year" (starting with 1) for the specified year, month, and day
      */
-    static Int calcDayOfYear(Int year, Int month, Int day)
+    static Int32 calcDayOfYear(Int year, Int month, Int day)
         {
         assert isGregorian(year, month, day);
-        return daysInYearBefore(year, month) + day;
+        return daysInYearBefore(year, month) + day.toInt32();
         }
 
     /**
@@ -436,7 +438,7 @@ const Date(Int epochDay)
      *
      * @return 365 for normal years; 366 for leap years
      */
-    static Int daysInYear(Int year)
+    static Int32 daysInYear(Int year)
         {
         return isLeapYear(year) ? 366 : 365;
         }
@@ -456,7 +458,7 @@ const Date(Int epochDay)
      *
      * @return the number of days in the specified month
      */
-    static Int daysInMonth(Int year, Int month)
+    static Int32 daysInMonth(Int year, Int month)
         {
         assert 1 <= month <= 12;
         return (isLeapYear(year) ? MONTH_DAYS_LEAP : MONTH_DAYS) [month-1];
@@ -471,7 +473,7 @@ const Date(Int epochDay)
      * @return the number of days that have passed in the specified year before the first day of the
      *         specified month
      */
-    static Int daysInYearBefore(Int year, Int month)
+    static Int32 daysInYearBefore(Int year, Int month)
         {
         assert 1 <= month <= 12;
         return (isLeapYear(year) ? SUM_DAYS_LEAP : SUM_DAYS) [month-1];
@@ -487,7 +489,7 @@ const Date(Int epochDay)
      * @return the number of days that have passed in the specified year after the last day of the
      *         specified month
      */
-    static Int daysInYearAtEndOf(Int year, Int month)
+    static Int32 daysInYearAtEndOf(Int year, Int month)
         {
         assert 1 <= month <= 12;
         return (isLeapYear(year) ? SUM_DAYS_LEAP : SUM_DAYS) [month];
@@ -496,22 +498,22 @@ const Date(Int epochDay)
     /**
      * The number of days in each month (January is month 0) of the year for normal years.
      */
-    static Int[] MONTH_DAYS      = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    static Int32[] MONTH_DAYS      = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
     /**
      * The number of days in each month (January is month 0) of the year for leap years.
      */
-    static Int[] MONTH_DAYS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    static Int32[] MONTH_DAYS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
     /**
      * The number of days that have elapsed in a normal year at the beginning of a month (January is
      * month 0) and at the end of a month (January is month 1).
      */
-    static Int[] SUM_DAYS        = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+    static Int32[] SUM_DAYS        = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
 
     /**
      * The number of days that have elapsed in a leap year at the beginning of a month (January is
      * month 0) and at the end of a month (January is month 1).
      */
-    static Int[] SUM_DAYS_LEAP   = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
+    static Int32[] SUM_DAYS_LEAP   = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
     }

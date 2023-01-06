@@ -26,7 +26,7 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -113,7 +113,7 @@ public class xCPFileStore
                 ahValue[1] = xString.makeHandle(constNode.getName());
                 ahValue[2] = frame.getConstHandle(constNode.getCreatedConstant());
                 ahValue[3] = frame.getConstHandle(constNode.getModifiedConstant());
-                ahValue[4] = xInt64.makeHandle(calcSize(constNode));
+                ahValue[4] = xInt.makeHandle(calcSize(constNode));
                 return new Utils.AssignValues(aiReturn, ahValue).proceed(frame);
                 }
 

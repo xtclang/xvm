@@ -8,6 +8,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -15,6 +16,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
@@ -42,12 +44,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public void initNative()
         {
-        markNativeProperty("bitCount");
         markNativeProperty("bitLength");
-        markNativeProperty("leftmostBit");
-        markNativeProperty("rightmostBit");
         markNativeProperty("leadingZeroCount");
-        markNativeProperty("trailingZeroCount");
 
 // TODO markNativeMethod("toUnchecked", VOID, null);
 
@@ -120,6 +118,34 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
+    protected int constructFromString(Frame frame, String sText, int iReturn)
+        {
+        PackedInteger pi;
+        try
+            {
+            pi = xIntLiteral.parsePackedInteger(sText);
+            }
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            }
+        return frame.assignValue(iReturn, makeInt(pi));
+        }
+
+    @Override
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        return frame.raiseException("TODO ");
+        }
+
+    @Override
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
+        {
+        return frame.raiseException("TODO ");
+        }
+
+    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         switch (sPropName)
@@ -128,14 +154,14 @@ public abstract class xUnconstrainedInteger
                 {
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 int cBits = pi.isBig() ? pi.getBigInteger().bitCount() : Long.bitCount(pi.getLong());
-                return frame.assignValue(iReturn, xInt64.makeHandle(cBits));
+                return frame.assignValue(iReturn, xInt.makeHandle(cBits));
                 }
 
             case "bitLength":
                 {
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                return frame.assignValue(iReturn, xInt64.makeHandle(cBytes * 8L));
+                return frame.assignValue(iReturn, xInt.makeHandle(cBytes * 8L));
                 }
 
             case "leftmostBit":
@@ -239,32 +265,54 @@ public abstract class xUnconstrainedInteger
             case "neg":
                 return invokeNeg(frame, hTarget, iReturn);
 
+            case "toInt":
             case "toInt8":
             case "toInt16":
             case "toInt32":
             case "toInt64":
             case "toInt128":
+            case "toUInt":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":
             case "toUInt64":
             case "toUInt128":
                 {
-                TypeConstant        typeRet  = method.getReturn(0).getType();
-                xConstrainedInteger template = (xConstrainedInteger) f_container.getTemplate(typeRet);
-                PackedInteger       pi       = ((IntNHandle) hTarget).getValue();
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                PackedInteger pi       = ((IntNHandle) hTarget).getValue();
+                ClassTemplate template = f_container.getTemplate(typeRet);
 
-                // check for overflow
-                if (f_fChecked)
+                if (template instanceof xConstrainedInteger templateTo)
                     {
-                    int cBytes = template.f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                    if (cBytes * 8 > template.f_cNumBits)
+                    // check for overflow
+                    if (f_fChecked)
+                        {
+                        int cBytes = templateTo.f_fSigned
+                            ? pi.getSignedByteSize()
+                            : pi.getUnsignedByteSize();
+                        if (cBytes * 8 > templateTo.f_cNumBits)
+                            {
+                            return template.overflow(frame);
+                            }
+                        }
+
+                    return templateTo.convertLong(frame, pi.getLong(), iReturn, f_fChecked);
+                    }
+                else
+                    {
+                    xIntBase templateTo = (xIntBase) template;
+
+                    int cBytes = templateTo.f_fSigned
+                        ? pi.getSignedByteSize()
+                        : pi.getUnsignedByteSize();
+                    if (f_fChecked && cBytes > 16)
                         {
                         return template.overflow(frame);
                         }
-                    }
 
-                return template.convertLong(frame, pi.getLong(), iReturn, f_fChecked);
+                    return frame.assignValue(iReturn,
+                        templateTo.makeHandle(LongLong.fromBigInteger(pi.getBigInteger())));
+                    }
                 }
 
             case "toIntN":

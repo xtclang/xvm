@@ -23,7 +23,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 
 /**
@@ -75,7 +75,7 @@ public class xOSFileChannel
                 {
                 try
                     {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.size()));
+                    return frame.assignValue(iReturn, xInt.makeHandle(hChannel.f_channel.size()));
                     }
                 catch (IOException e)
                     {
@@ -87,7 +87,7 @@ public class xOSFileChannel
                 {
                 try
                     {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.position()));
+                    return frame.assignValue(iReturn, xInt.makeHandle(hChannel.f_channel.position()));
                     }
                 catch (IOException e)
                     {

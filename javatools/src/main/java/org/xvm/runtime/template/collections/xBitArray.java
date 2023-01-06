@@ -14,6 +14,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xUInt8;
 
 import org.xvm.runtime.template._native.collections.arrays.BitView;
@@ -48,11 +49,14 @@ public class xBitArray
         {
         ClassTemplate mixin = f_container.getTemplate("collections.arrays.BitArray");
 
+        mixin.markNativeProperty("Zero");
+        mixin.markNativeProperty("One");
+
         mixin.markNativeMethod("asBooleanArray", VOID, null);
-        mixin.markNativeMethod("asByteArray", VOID, null);
-        mixin.markNativeMethod("asNibbleArray", VOID, null);
-        mixin.markNativeMethod("toUInt8", VOID, null);
-        mixin.markNativeMethod("toByteArray", null, null);
+        mixin.markNativeMethod("asByteArray"   , VOID, null);
+        mixin.markNativeMethod("asNibbleArray" , VOID, null);
+        mixin.markNativeMethod("toUInt8"       , null, null);
+        mixin.markNativeMethod("toByteArray"   , null, null);
 
         invalidateTypeInfo();
         }
@@ -61,6 +65,21 @@ public class xBitArray
     public TypeConstant getCanonicalType()
         {
         return pool().typeBitArray();
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "Zero":
+                return frame.assignValue(iReturn, xBit.ZERO);
+
+            case "One":
+                return frame.assignValue(iReturn, xBit.ONE);
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

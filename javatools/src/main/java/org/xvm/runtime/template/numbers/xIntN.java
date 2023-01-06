@@ -2,10 +2,13 @@ package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
 import org.xvm.util.PackedInteger;
 
@@ -31,27 +34,24 @@ public class xIntN
     @Override
     public void initNative()
         {
-        markNativeProperty("magnitude");
-
         markNativeMethod("abs", VOID, THIS);
 
         super.initNative();
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
-        switch (sPropName)
+        switch (method.getName())
             {
-            case "magnitude":
+            case "abs":
                 {
-                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
-                return frame.assignValue(iReturn, pi.isNegative()
-                        ? makeInt(pi.negate())
-                        : hTarget);
+                PackedInteger pi = ((IntNHandle) hTarget).getValue();
+                return frame.assignValue(iReturn, pi.isNegative() ? makeInt(pi.negate()) : hTarget);
                 }
             }
 
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
     }

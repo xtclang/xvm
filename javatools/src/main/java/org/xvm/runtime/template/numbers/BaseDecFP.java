@@ -5,6 +5,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.DecimalAutoConstant;
 import org.xvm.asm.constants.DecimalConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -42,6 +43,12 @@ abstract public class BaseDecFP
         {
         if (constant instanceof DecimalConstant constDec)
             {
+            return frame.pushStack(makeHandle(constDec.getValue()));
+            }
+
+        if (constant instanceof DecimalAutoConstant constDec)
+            {
+            // TODO GG: this is not right
             return frame.pushStack(makeHandle(constDec.getValue()));
             }
 
@@ -243,7 +250,7 @@ abstract public class BaseDecFP
                 int     iExp      = 0;
                 long    lMantissa = 0;
                 return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
-                        xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
+                        xInt.makeHandle(lMantissa), xInt.makeHandle(iExp));
                 }
             }
 
@@ -353,7 +360,7 @@ abstract public class BaseDecFP
         {
         Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(dec.toString().length()));
+        return frame.assignValue(iReturn, xInt.makeHandle(dec.toString().length()));
         }
 
     @Override

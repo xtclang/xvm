@@ -20,8 +20,6 @@ public abstract class xUncheckedSignedInt
                                long cMinValue, long cMaxValue, int cNumBits)
         {
         super(container, structure, cMinValue, cMaxValue, cNumBits, false, false);
-
-        f_nSign = cMaxValue + 1; // used only for signed
         }
 
     @Override
@@ -96,20 +94,4 @@ public abstract class xUncheckedSignedInt
         {
         return frame.assignValue(iReturn, makeJavaLong(lValue));
         }
-
-    @Override
-    public JavaLong makeJavaLong(long lValue)
-        {
-        if (f_cNumBits < 64)
-            {
-            lValue &= f_lValueMask;
-            if ((lValue & f_nSign) != 0 && f_fSigned)
-                {
-                lValue = -lValue;
-                }
-            }
-        return super.makeJavaLong(lValue);
-        }
-
-    private final long f_nSign;
     }

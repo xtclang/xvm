@@ -29,6 +29,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
+import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
@@ -77,8 +78,8 @@ public class xString
 
         markNativeMethod("construct", new String[]{"collections.Array<text.Char>"}, VOID);
         markNativeMethod("construct", STRING, VOID);
-        markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
-                                    new String[]{"Boolean", "numbers.Int64"});
+        markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int"},
+                                    new String[]{"Boolean", "numbers.Int"});
         markNativeMethod("substring", INT, STRING);
         markNativeMethod("hashCode", null, null);
         markNativeMethod("equals", null, null);
@@ -148,7 +149,7 @@ public class xString
         switch (sPropName)
             {
             case "size":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_achValue.length));
+                return frame.assignValue(iReturn, xInt.makeHandle(hThis.m_achValue.length));
 
             case "chars":
                 return frame.assignValue(iReturn,
@@ -216,7 +217,7 @@ public class xString
                         int  ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
                         return ofResult < 0
                                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
+                                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt.makeHandle(ofResult));
                         }
                     }
                 break;

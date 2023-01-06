@@ -73,7 +73,7 @@ class UTF8Reader
             extends AbstractPos;
 
     /**
-     * A Position implementation that packs all the data into a single Int.
+     * A Position implementation that packs all the data into a single Int64.
      */
     private static const TinyPos
             extends AbstractPos
@@ -90,10 +90,10 @@ class UTF8Reader
             assert:arg lineOffset >= 0 && lineOffset <= 0xFFFF;
             assert:arg rawOffset  >= 0 && rawOffset  <= 0xFFF;
 
-            combo = offset << 16 | lineNumber << 16 | lineOffset << 12 | rawOffset;
+            combo = (offset << 16 | lineNumber << 16 | lineOffset << 12 | rawOffset).toInt64();
             }
 
-        private Int combo;
+        private Int64 combo;
 
         @Override
         Int offset.get()

@@ -58,9 +58,9 @@ interface Enum
     /**
      * Calculate a hash code for the specified Enum value.
      */
-    static <CompileType extends Enum> Int hashCode(CompileType value)
+    static <CompileType extends Enum> Int64 hashCode(CompileType value)
         {
-        return value.enumeration.hashCode() + value.ordinal;
+        return value.enumeration.hashCode() + value.ordinal.toInt64();
         }
 
     /**

@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -15,6 +16,7 @@ import org.xvm.type.Decimal;
 import org.xvm.type.Decimal128;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
+
 import org.xvm.util.Hash;
 
 
@@ -182,7 +184,7 @@ public class DecimalConstant
                 return getConstantPool().ensureDecConstant(
                     this.getValue().mod(((DecimalConstant) that).getValue()));
 
-            case "Dec32^Dec32":
+            case "Dec32^Dec32":     // REVIEW GG CP WTF?!? pow()??? 😮
             case "Dec64^Dec64":
             case "Dec128^Dec128":
                 return getConstantPool().ensureDecConstant(

@@ -24,7 +24,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -73,13 +73,13 @@ public class xOSFileStore
         switch (sPropName)
             {
             case "capacity":
-                return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getTotalSpace()));
+                return frame.assignValue(iReturn, xInt.makeHandle(ROOT.getTotalSpace()));
 
             case "bytesFree":
-                return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getFreeSpace()));
+                return frame.assignValue(iReturn, xInt.makeHandle(ROOT.getFreeSpace()));
 
             case "bytesUsed":
-                return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getTotalSpace() - ROOT.getFreeSpace()));
+                return frame.assignValue(iReturn, xInt.makeHandle(ROOT.getTotalSpace() - ROOT.getFreeSpace()));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

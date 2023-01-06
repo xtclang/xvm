@@ -269,7 +269,7 @@ public class ForEachStatement
             TypeConstant type = switch (sName)
                 {
                 case "first", "last" -> pool.typeBoolean();
-                case "count"         -> pool.typeCInt64();
+                case "count"         -> pool.typeInt();
                 case "entry"         -> getEntryType();
                 case "Key"           -> getKeyType().getType();
                 case "Value"         -> getValueType().getType();
@@ -839,12 +839,14 @@ public class ForEachStatement
                 case "numbers.Bit":
                 case "numbers.Nibble":
                 case "text.Char":
+                case "numbers.Int":
                 case "numbers.Int8":
                 case "numbers.Int16":
                 case "numbers.Int32":
                 case "numbers.Int64":
                 case "numbers.Int128":
                 case "numbers.IntN":
+                case "numbers.UInt":
                 case "numbers.UInt8":
                 case "numbers.UInt16":
                 case "numbers.UInt32":
@@ -978,11 +980,11 @@ public class ForEachStatement
         Register regCount = m_regCount;
         if (regCount == null)
             {
-            code.add(new Var_I(pool.typeCInt64(), pool.val0()));
+            code.add(new Var_I(pool.typeInt(), pool.val0()));
             regCount = code.lastRegister();
             }
 
-        code.add((new Var(pool.typeCInt64())));
+        code.add((new Var(pool.typeInt())));
         Register regEnd = code.lastRegister();
 
         code.add(new Var(typeSeq));
@@ -990,7 +992,7 @@ public class ForEachStatement
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
 
         code.add(new P_Get(idSize, regSeq, regEnd));
-        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeCInt64()));
+        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeInt()));
         code.add(new IP_Dec(regEnd));
 
         Assignable   lvalVal  = null;
@@ -1025,7 +1027,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regCount, regEnd, regLast, pool.typeCInt64()));
+        code.add(new IsEq(regCount, regEnd, regLast, pool.typeInt()));
 
         MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
         if (idConv == null)

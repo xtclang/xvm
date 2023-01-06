@@ -163,7 +163,7 @@ interface FileNode
     // ----- equality ------------------------------------------------------------------------------
 
     @Override
-    static <CompileType extends FileNode> Int hashCode(CompileType node)
+    static <CompileType extends FileNode> Int64 hashCode(CompileType node)
         {
         return node.path.hashCode();
         }

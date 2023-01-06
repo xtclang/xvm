@@ -27,13 +27,22 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
 
+import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
+import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xDec64;
+import org.xvm.runtime.template.numbers.xFloat32;
 import org.xvm.runtime.template.numbers.xFloat64;
+import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt8;
+import org.xvm.runtime.template.numbers.xInt16;
+import org.xvm.runtime.template.numbers.xInt32;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
-import org.xvm.runtime.template.numbers.xUInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
+import org.xvm.runtime.template.numbers.xUInt16;
+import org.xvm.runtime.template.numbers.xUInt32;
+import org.xvm.runtime.template.numbers.xUInt64;
 
 
 /**
@@ -59,21 +68,34 @@ public class xRTRandom
         {
         String[] BIT       = new String[] {"numbers.Bit"};
         String[] BITARRAY  = new String[] {"collections.Array<numbers.Bit>"};
-        String[] BYTE      = new String[] {"numbers.UInt8"};
         String[] BYTEARRAY = new String[] {"collections.Array<numbers.UInt8>"};
-        String[] UINT      = new String[] {"numbers.UInt64"};
-        String[] DEC       = new String[] {"numbers.Dec64"};
-        String[] FLOAT     = new String[] {"numbers.Float64"};
+        String[] INT8      = new String[] {"numbers.Int8"};
+        String[] INT16     = new String[] {"numbers.Int16"};
+        String[] INT32     = new String[] {"numbers.Int32"};
+        String[] INT64     = new String[] {"numbers.Int64"};
+        String[] UINT8     = new String[] {"numbers.UInt8"};
+        String[] UINT16    = new String[] {"numbers.UInt16"};
+        String[] UINT32    = new String[] {"numbers.UInt32"};
+        String[] UINT64    = new String[] {"numbers.UInt64"};
+        String[] DEC64     = new String[] {"numbers.Dec64"};
+        String[] FLOAT32   = new String[] {"numbers.Float32"};
+        String[] FLOAT64   = new String[] {"numbers.Float64"};
 
-        markNativeMethod("bit"  , VOID     , BIT  );
-        markNativeMethod("fill" , BITARRAY , VOID );
-        markNativeMethod("byte" , VOID     , BYTE );
-        markNativeMethod("fill" , BYTEARRAY, VOID );
-        markNativeMethod("int"  , VOID     , INT  );
-        markNativeMethod("int"  , INT      , INT  );
-        markNativeMethod("uint" , VOID     , UINT );
-        markNativeMethod("dec"  , VOID     , DEC  );
-        markNativeMethod("float", VOID     , FLOAT);
+        markNativeMethod("bit"    , VOID     , BIT      );
+        markNativeMethod("fill"   , BITARRAY , BITARRAY );
+        markNativeMethod("fill"   , BYTEARRAY, BYTEARRAY);
+        markNativeMethod("int"    , INT      , INT      );
+        markNativeMethod("int8"   , VOID     , INT8     );
+        markNativeMethod("int16"  , VOID     , INT16    );
+        markNativeMethod("int32"  , VOID     , INT32    );
+        markNativeMethod("int64"  , VOID     , INT64    );
+        markNativeMethod("uint8"  , VOID     , UINT8    );
+        markNativeMethod("uint16" , VOID     , UINT16   );
+        markNativeMethod("uint32" , VOID     , UINT32   );
+        markNativeMethod("uint64" , VOID     , UINT64   );
+        markNativeMethod("dec64"  , VOID     , DEC64    );
+        markNativeMethod("float32", VOID     , FLOAT32  );
+        markNativeMethod("float64", VOID     , FLOAT64  );
 
         invalidateTypeInfo();
         }
@@ -101,7 +123,7 @@ public class xRTRandom
                 long cSize = hArray.m_hDelegate.m_cSize;
                 if (hArray.getTemplate() instanceof xBitArray)
                     {
-                    byte[] ab = new byte[(int) (cSize / 8) + 1];
+                    byte[] ab = new byte[(int) (cSize + 7) / 8];
                     rnd(hTarget).nextBytes(ab);
                     xBitArray.setBits(hArray, ab, cSize);
                     }
@@ -115,7 +137,7 @@ public class xRTRandom
                 }
 
             case "int":
-                return invokeInt(frame, hTarget, (JavaLong) hArg, iReturn);
+                return invokeInt(frame, hTarget, hArg, iReturn);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -127,22 +149,42 @@ public class xRTRandom
         switch (method.getName())
             {
             case "bit":
-                return invokeBit(frame, hTarget, iReturn);
+                return frame.assignValue(iReturn, xBit.makeHandle(rnd(hTarget).nextBoolean()));
 
-            case "byte":
-                return invokeByte(frame, hTarget, iReturn);
+            case "int8":
+                return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "int":
-                return invokeInt(frame, hTarget, iReturn);
+            case "int16":
+                return frame.assignValue(iReturn, xInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "uint":
-                return invokeUInt(frame, hTarget, iReturn);
+            case "int32":
+                return frame.assignValue(iReturn, xInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "dec":
-                return invokeDec(frame, hTarget, iReturn);
+            case "int64":
+                return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
 
-            case "float":
-                return invokeFloat(frame, hTarget, iReturn);
+            case "uint8":
+                return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+
+            case "uint16":
+                return frame.assignValue(iReturn, xUInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+
+            case "uint32":
+                return frame.assignValue(iReturn, xUInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+
+            case "uint64":
+                return frame.assignValue(iReturn, xUInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
+
+            case "dec64":
+                // Float64 has more precision than Dec64, so this should work fine, although there
+                // won't be as solid of a guarantee on a perfect distribution of random values
+                return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
+
+            case "float32":
+                return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(rnd(hTarget).nextFloat()));
+
+            case "float64":
+                return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -173,71 +215,110 @@ public class xRTRandom
         return hRnd;
         }
 
-
-    // ----- methods -------------------------------------------------------------------------------
-
-    protected int invokeBit(Frame frame, ObjectHandle hTarget, int iReturn)
+    /**
+     * Native implementation of "Int&nbsp;int(Int max)".
+     */
+    protected int invokeInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return frame.assignValue(iReturn, xBit.makeHandle(rnd(hTarget).nextBoolean()));
-        }
+        boolean  fSmall = false;
+        long     lMax   = 0;
+        LongLong llMax  = null;
 
-    protected int invokeByte(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        return frame.assignValue(iReturn, xUInt8.makeHandle(rnd(hTarget).nextInt(256)));
-        }
-
-    protected int invokeInt(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        return frame.assignValue(iReturn, xInt64.makeHandle(rnd(hTarget).nextLong()));
-        }
-
-    protected int invokeInt(Frame frame, ObjectHandle hTarget, JavaLong hArg, int iReturn)
-        {
-        long lMax = hArg.getValue();
-        if (lMax <= 0)
+        if (hArg instanceof JavaLong hL)
             {
-            return frame.raiseException(xException.illegalArgument(frame,
-                    "Illegal exclusive maximum (" + lMax +"); maximum must be >= 0"));
+            fSmall = true;
+            lMax   = hL.getValue();
+            }
+        else
+            {
+            llMax = ((LongLongHandle) hArg).getValue();
+            if (llMax.isSmall(true))
+                {
+                fSmall = true;
+                lMax   = llMax.getLowValue();
+                }
             }
 
         Random rnd = rnd(hTarget);
-        long   lRnd;
+
+        if (fSmall)
+            {
+            if (lMax <= 0)
+                {
+                return frame.raiseException(xException.illegalArgument(frame,
+                        "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
+                }
+
+            return frame.assignValue(iReturn, xInt.makeHandle(computeRandom(rnd, lMax)));
+            }
+
+        if (llMax.signum() < 0)
+            {
+            return frame.raiseException(xException.illegalArgument(frame,
+                    "Illegal exclusive maximum (" + llMax +"); maximum must be > 0"));
+            }
+
+        long lLoMax = llMax.getLowValue();
+        long lHiMax = llMax.getHighValue();
+
+        if (lLoMax == 0 && (lHiMax & (lHiMax-1)) == 0)
+            {
+            // it's a power of 2
+            LongLong ll = new LongLong(rnd.nextLong(), rnd.nextLong() & (lHiMax - 1));
+            return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
+            }
+        else if (lHiMax == Long.MAX_VALUE)
+            {
+            while (true)
+                {
+                LongLong ll = new LongLong(rnd.nextLong(), rnd.nextLong() & ~Long.MIN_VALUE);
+                if (ll.compare(llMax) < 0)
+                    {
+                    return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
+                    }
+                }
+            }
+        else
+            {
+            // see the comments in the natural code (Random.x)
+            while (true)
+                {
+                LongLong ll = new LongLong(rnd.nextLong(), computeRandom(rnd, lHiMax + 1));
+                if (ll.compare(llMax) < 0)
+                    {
+                    return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
+                    }
+                }
+            }
+        }
+
+    /**
+     * @return a random positive long value that is lesser than the specified max
+     */
+    private long computeRandom(Random rnd, long lMax)
+        {
+        assert lMax > 0;
+
         if (lMax <= Integer.MAX_VALUE)
             {
             // it's a 32-bit random, so take a fast path in Java that handles 32-bit values
-            lRnd = rnd.nextInt((int) lMax);
+            return rnd.nextInt((int) lMax);
             }
-        else if ((lMax & lMax-1) == 0)
+        else if ((lMax & (lMax-1)) == 0)
             {
             // it's a power of 2, so avoid the 64-bit modulo
-            lRnd = rnd.nextLong() & lMax-1;
+            return rnd.nextLong() & (lMax - 1);
             }
         else
             {
             // this works in theory, but has a slightly weaker guarantee on a perfect distribution
             // of random values
-            lRnd = rnd.nextLong() % lMax;
+            return (rnd.nextLong() % lMax) & ~Long.MIN_VALUE;
             }
-
-        return frame.assignValue(iReturn, xInt64.makeHandle(lRnd));
         }
 
-    protected int invokeUInt(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        return frame.assignValue(iReturn, xUInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
-        }
 
-    protected int invokeDec(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        // Float64 has more precision than Dec64, so this should work fine, although there won't
-        // be as solid of a guarantee on a perfect distribution of random values
-        return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
-        }
-
-    protected int invokeFloat(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
-        }
+    // ----- handle --------------------------------------------------------------------------------
 
     public ServiceHandle createRandomHandle(ServiceContext context,
                                             ClassComposition clz, TypeConstant typeMask, long lSeed)
@@ -267,7 +348,7 @@ public class xRTRandom
     /**
      * @return the Random to use
      */
-    protected Random rnd(ObjectHandle hTarget)
+    private Random rnd(ObjectHandle hTarget)
         {
         Random random = ((RandomHandle) hTarget).f_random;
 

@@ -22,11 +22,29 @@ public class LongLong
         }
 
     /**
-     * Construct a LongLong object based on the low long value.
+     * Construct a signed LongLong object based on the low long value.
      */
     public LongLong(long lValue)
         {
-        this(lValue, lValue >= 0 ? 0 : -1L);
+        this(lValue, lValue >= 0 ? 0L : -1L);
+        }
+
+    /**
+     * Construct a LongLong object based on the low long value.
+     */
+    public LongLong(long lValue, boolean fSigned)
+        {
+        this(lValue, lValue >= 0 || !fSigned ? 0L : -1L);
+        }
+
+    /**
+     * @return true iff the value is small enough to fit into a <tt>long</tt>
+     */
+    public boolean isSmall(boolean fSigned)
+        {
+        return fSigned
+                ? m_lLow >= 0 ? m_lHigh == 0L : m_lHigh == -1L
+                : m_lHigh == 0L;
         }
 
     public LongLong add(LongLong ll)
@@ -479,12 +497,11 @@ public class LongLong
 
     public LongLong shl(int n)
         {
-        if (n <= 64)
+        if (n < 64)
             {
-            final long nComp = 64 - n;
-            final long bitDifference = ((long) (-1 >>> nComp) << nComp) & m_lLow;
-
-            return new LongLong(m_lLow << n, (m_lHigh << n) | (bitDifference >> nComp));
+            return n == 0
+                ? this
+                : new LongLong(m_lLow << n, (m_lHigh << n) | (m_lLow >>> (64 - n)));
             }
 
         return new LongLong(0, m_lLow << (n - 64));
@@ -492,25 +509,23 @@ public class LongLong
 
     public LongLong shr(int n)
         {
-        if (n <= 64)
+        if (n < 64)
             {
-            final long nComp = 64 - n;
-            final long bitDifference = (Long.MAX_VALUE >>> nComp) & m_lHigh;
-
-            return new LongLong((m_lLow >>> n) | (bitDifference << nComp), m_lHigh >> n);
+            return n == 0
+                ? this
+                : new LongLong((m_lLow >>> n) | (m_lHigh << (64 - n)), m_lHigh >> n);
             }
 
-        return new LongLong((m_lHigh >>> (n - 64)) & Long.MAX_VALUE, m_lHigh < 0 ? Long.MIN_VALUE : 0);
+        return new LongLong(m_lHigh >> (n - 64), m_lHigh < 0 ? -1 : 0);
         }
 
     public LongLong ushr(int n)
         {
-        if (n <= 64)
+        if (n < 64)
             {
-            final long nComp = 64 - n;
-            final long bitDifference = (-1 >>> nComp) & m_lHigh;
-
-            return new LongLong((m_lLow >>> n) | (bitDifference << nComp), m_lHigh >>> n);
+            return n == 0
+                ? this
+                : new LongLong((m_lLow >>> n) | (m_lHigh << (64 - n)), m_lHigh >>> n);
             }
 
         return new LongLong(m_lHigh >>> (n - 64), 0);
@@ -659,14 +674,11 @@ public class LongLong
         return toBigInteger().toString();
         }
 
-    public static final LongLong ZERO = new LongLong(0, 0);
-    public static final LongLong[] ZEROx2 = new LongLong[] {ZERO, ZERO};
-    public static final LongLong ONE = new LongLong(1, 0);
-    public static final LongLong NEG_ONE = new LongLong(-1, -1);
-    public static final LongLong MAX_VALUE = new LongLong(-1, Long.MAX_VALUE);
-    public static final LongLong MIN_VALUE = new LongLong(0, Long.MIN_VALUE);
-    public static final LongLong MAX_VALUE_UNSIGNED = new LongLong(-1, -1);
-    public static final LongLong OVERFLOW = new Overflow();
+    public static final LongLong   OVERFLOW   = new Overflow();
+    public static final LongLong   ZERO       = new LongLong(0, 0);
+    public static final LongLong   MAX_VALUE  = new LongLong(-1, Long.MAX_VALUE);
+    public static final LongLong   MIN_VALUE  = new LongLong(0, Long.MIN_VALUE);
+    public static final LongLong[] ZEROx2     = new LongLong[] {ZERO, ZERO};
     public static final LongLong[] OVERFLOWx2 = new LongLong[] {OVERFLOW, OVERFLOW};
 
     protected static final BigInteger BIG_MASK64 = new BigInteger("FFFFFFFFFFFFFFFF", 16);

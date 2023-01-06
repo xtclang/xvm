@@ -28,7 +28,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.numbers.xInt128;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -163,7 +163,7 @@ public class xLocalClock
         GenericHandle   hTime   = new GenericHandle(clzTime);
 
         LongLong llNow = new LongLong(System.currentTimeMillis()).mul(xNanosTimer.PICOS_PER_MILLI_LL);
-        hTime.setField(frame, "epochPicos", xInt128.INSTANCE.makeLongLong(llNow));
+        hTime.setField(frame, "epochPicos", xInt128.INSTANCE.makeHandle(llNow));
         hTime.setField(frame, "timezone", timezone(frame));
         hTime.makeImmutable();
 
@@ -187,8 +187,8 @@ public class xLocalClock
 
             m_hTimeZone = hTimeZone = new GenericHandle(clzTimeZone);
 
-            long lOffset = 0; // TODO
-            hTimeZone.setField(frame, "picos", xInt64.makeHandle(lOffset));
+            long lOffset = 0; // TODO CP
+            hTimeZone.setField(frame, "picos", xInt.makeHandle(lOffset));
             hTimeZone.setField(frame, "name",  xNullable.NULL);
             hTimeZone.setField(frame, "rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
             hTimeZone.makeImmutable();

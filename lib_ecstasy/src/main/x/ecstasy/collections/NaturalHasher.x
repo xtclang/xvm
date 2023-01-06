@@ -10,7 +10,7 @@ const NaturalHasher<Value extends Hashable>
         implements Hasher<Value>
     {
     @Override
-    Int hashOf(Value value)
+    Int64 hashOf(Value value)
         {
         return Value.hashCode(value);
         }

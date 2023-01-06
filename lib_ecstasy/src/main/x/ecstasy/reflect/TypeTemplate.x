@@ -416,7 +416,7 @@ interface TypeTemplate
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 
-    static <CompileType extends TypeTemplate> Int hashCode(CompileType value)
+    static <CompileType extends TypeTemplate> Int64 hashCode(CompileType value)
         {
         TODO
         }

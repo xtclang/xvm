@@ -680,12 +680,12 @@ const Version
 
     // ----- Hashable and Comparable ---------------------------------------------------------------
 
-    static <CompileType extends Version> Int hashCode(CompileType version)
+    static <CompileType extends Version> Int64 hashCode(CompileType version)
         {
         Version? parent = version.parent;
         return parent == Null
-                ? version.number
-                : Version.hashCode(parent.as(Version)).rotateLeft(1) ^ version.number;
+                ? version.number.toInt64()
+                : Version.hashCode(parent.as(Version)).rotateLeft(1) ^ version.number.toInt64();
         }
 
     /**

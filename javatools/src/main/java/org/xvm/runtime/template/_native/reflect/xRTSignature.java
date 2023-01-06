@@ -26,7 +26,7 @@ import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -554,7 +554,7 @@ public class xRTSignature
                         ? ensureRTReturn(frameCaller, type)
                         : ensureRTParameter(frameCaller, type, param.getAnnotations());
 
-                ahParams[0] = xInt64.makeHandle(index);
+                ahParams[0] = xInt.makeHandle(index);
                 ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
                 if (!fRetVals)
                     {

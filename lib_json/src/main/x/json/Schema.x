@@ -450,7 +450,7 @@ const Schema
         Int length = pointer.size;
         for (Char ch : pointer)
             {
-            Int n = ch.toInt64();
+            Int n = ch.toInt();
             if (n <= 0x7F)
                 {
                 if (!FRAGMENT_ALLOW[n])
@@ -481,7 +481,7 @@ const Schema
         {
         for (Char ch : pointer)
             {
-            Int n = ch.toInt64();
+            UInt32 n = ch.codepoint;
             if (n <= 0x7F)
                 {
                 if (FRAGMENT_ALLOW[n])
@@ -490,7 +490,7 @@ const Schema
                     }
                 else
                     {
-                    buf.add('%').add((n >>> 4).toHexit()).add(n.toHexit());
+                    buf.add('%').add((n >> 4).toHexit()).add(n.toHexit());
                     }
                 }
             else

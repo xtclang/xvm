@@ -869,25 +869,25 @@ FPLiteral:
     FPBinaryLiteral
 
 IntTypeName:
+    "Int"
     "Int8"
     "Int16"
     "Int32"
-    "Int"
     "Int64"
     "Int128"
     "IntN"
     "Byte"
+    "UInt"
     "UInt8"
     "UInt16"
     "UInt32"
-    "UInt"
     "UInt64"
     "UInt128"
     "UIntN"
 
 FPTypeName:
-    "Dec32"
     "Dec"
+    "Dec32"
     "Dec64"
     "Dec128"
     "DecN"
@@ -896,7 +896,6 @@ FPTypeName:
     "BFloat16"
     "Float16"
     "Float32"
-    "Float"
     "Float64"
     "Float128"
     "FloatN"

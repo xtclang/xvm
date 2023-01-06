@@ -357,7 +357,7 @@ public class Decimal128
     private void convertBigDecToLongs()
         {
         // get the sign
-        BigDecimal dec = m_dec;
+        BigDecimal dec = m_dec.round(MathContext.DECIMAL128);
         boolean    fNeg;
         switch (dec.signum())
             {

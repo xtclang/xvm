@@ -36,7 +36,7 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -80,10 +80,10 @@ public class xTuple
         markNativeMethod("ensureMutability", null, null);
         markNativeMethod("freeze", BOOLEAN, null);
         markNativeMethod("getElement", INT, null);
-        markNativeMethod("remove", new String[] {"numbers.Int64"}, null);
-        markNativeMethod("removeAll", new String[] {"Range<numbers.Int64>"}, null);
+        markNativeMethod("remove", INT, null);
+        markNativeMethod("removeAll", new String[] {"Range<numbers.Int>"}, null);
         markNativeMethod("setElement", null, VOID);
-        markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, null);
+        markNativeMethod("slice", new String[] {"Range<numbers.Int>"}, null);
 
         invalidateTypeInfo();
         }
@@ -184,7 +184,7 @@ public class xTuple
                     MUTABILITY.getEnumByOrdinal(hTuple.m_mutability.ordinal()), iReturn);
 
             case "size":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hTuple.m_ahValue.length));
+                return frame.assignValue(iReturn, xInt.makeHandle(hTuple.m_ahValue.length));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

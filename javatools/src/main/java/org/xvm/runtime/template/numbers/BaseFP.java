@@ -4,32 +4,20 @@ package org.xvm.runtime.template.numbers;
 import java.math.RoundingMode;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-
-import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
-
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
-import org.xvm.runtime.template.collections.xBitArray;
-import org.xvm.runtime.template.collections.xByteArray;
-
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
  * Base class for native FPNumber (Float* and Dec*) support.
  */
 abstract public class BaseFP
-        extends xConst
+        extends xNumber
     {
     public BaseFP(Container container, ClassStructure structure, int cBits)
         {
@@ -41,8 +29,9 @@ abstract public class BaseFP
     @Override
     public void initNative()
         {
+        super.initNative();
+
         // properties
-        markNativeProperty("bits");
         markNativeProperty("infinity");
         markNativeProperty("NaN");
 
@@ -86,15 +75,6 @@ abstract public class BaseFP
         markNativeMethod("nextUp"     , VOID, THIS);
         markNativeMethod("nextDown"   , VOID, THIS);
 
-        // conversions
-        markNativeMethod("toInt64"    , null, INT);
-        markNativeMethod("toDec64"    , null, DEC64);
-        markNativeMethod("toFloat64"  , null, FLOAT64);
-        markNativeMethod("toIntN"     , null, VAR_INT);
-        markNativeMethod("toUIntN"    , null, VAR_UINT);
-        markNativeMethod("toFloatN"   , null, VAR_FLOAT);
-        markNativeMethod("toDecN"     , null, VAR_DEC);
-
         invalidateTypeInfo();
         }
 
@@ -105,61 +85,39 @@ abstract public class BaseFP
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+    protected int constructFromString(Frame frame, String sText, int iReturn)
         {
-        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
-        if (sig.getParamCount() == 1)
+        try
             {
-            TypeConstant typeArg = sig.getRawParams()[0];
-            if (typeArg.equals(pool().typeString()))
-                {
-                // construct(String text)
-                String sText = ((StringHandle) ahVar[0]).getStringValue();
-                try
-                    {
-                    return frame.assignValue(Op.A_STACK, makeHandle(Double.valueOf(sText)));
-                    }
-                catch (NumberFormatException e)
-                    {
-                    return frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
-                    }
-                }
-
-            // the rest are arrays
-            typeArg = typeArg.getParamType(0);
-
-            if (typeArg.equals(pool().typeByte()))
-                {
-                // construct(Byte[] bytes)
-                byte[] abVal  = xByteArray.getBytes((ArrayHandle) ahVar[0]);
-                int    cBytes = abVal.length;
-
-                return cBytes == f_cBits / 8
-                    ? frame.assignValue(iReturn, makeHandle(abVal, cBytes))
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
-                }
-
-            if (typeArg.equals(pool().typeBit()))
-                {
-                // construct(Bit[] bytes)
-                ArrayHandle hArray = (ArrayHandle) ahVar[0];
-                byte[]      abBits = xBitArray.getBits(hArray);
-                int         cBits  = (int) hArray.m_hDelegate.m_cSize;
-
-                return cBits == f_cBits
-                    ? frame.assignValue(iReturn, makeHandle(abBits, cBits >>> 3))
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid bit count: " + cBits));
-                }
+            return frame.assignValue(Op.A_STACK, makeHandle(Double.valueOf(sText)));
             }
-        return frame.raiseException(xException.unsupportedOperation(frame));
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            }
+        }
+
+    @Override
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
+        {
+        return cBytes == f_cBits / 8
+            ? frame.assignValue(iReturn, makeHandle(ab, cBytes))
+            : frame.raiseException(
+                xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+        }
+
+    @Override
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
+        {
+        return cBits == f_cBits
+            ? frame.assignValue(iReturn, makeHandle(ab, cBits >>> 3))
+            : frame.raiseException(
+                xException.illegalArgument(frame, "Invalid bit count: " + cBits));
         }
 
 
-    // ----- handles -------------------------------------------------------------------------------
+    // ----- helpers -------------------------------------------------------------------------------
 
     /**
      * @return an ObjectHandle based on the specified byte array
@@ -202,16 +160,6 @@ abstract public class BaseFP
      * The log2(10) value.
      */
     public static final double LOG2_10 = 1.0/Math.log10(2);
-
-    /**
-     * Useful type signatures.
-     */
-    public static String[] DEC64     = new String[]{"numbers.Dec64"};
-    public static String[] FLOAT64   = new String[]{"numbers.Float64"};
-    public static String[] VAR_INT   = new String[]{"numbers.IntN"};
-    public static String[] VAR_UINT  = new String[]{"numbers.UIntN"};
-    public static String[] VAR_FLOAT = new String[]{"numbers.FloatN"};
-    public static String[] VAR_DEC   = new String[]{"numbers.DecN"};
 
     /**
      * The number of bits for this Float type.

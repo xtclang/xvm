@@ -4,7 +4,7 @@ module TestNumbers
 
     void run()
         {
-        testUInt();
+        testUInt64();
         testByte();
         testInt128();
         testUInt128();
@@ -17,27 +17,27 @@ module TestNumbers
         testAggregator();
         }
 
-    void testUInt()
+    void testUInt64()
         {
         console.println("\n** testUInt()");
 
-        UInt n1 = 42;
+        UInt64 n1 = 42;
         console.println("n1=" + n1);
 
-        Bit[] bits = n1.toBitArray();
-        UInt  n11  = new UInt(bits);
+        Bit[] bits = n1.toUInt64().toBitArray();
+        UInt64 n11  = new UInt64(bits);
         assert n11 == n1;
 
         Byte[] bytes = n1.toByteArray();
-        UInt   n12   = new UInt(bytes);
+        UInt64 n12   = new UInt64(bytes);
         assert n12 == n1;
 
-        UInt n2 = 0xFFFF_FFFF_FFFF_FFFF;
+        UInt64 n2 = 0xFFFF_FFFF_FFFF_FFFF;
         console.println("n2=" + n2);
         console.println("-1=" + (--n2));
         console.println("+1=" + (++n2));
 
-        UInt d3 = n2 / 1000;
+        UInt64 d3 = n2 / 1000;
         console.println("d3=" + d3);
         console.println("n3=" + (d3*1000 + n2 % 1000));
 
@@ -50,17 +50,17 @@ module TestNumbers
             {
             }
 
-        Int un1 = Int.MaxValue.toInt64().toUnchecked();
-        Int un2 = un1 + 1;
+        Int64 un1 = Int64.MaxValue.toInt64().toUnchecked();
+        Int64 un2 = un1 + 1;
 
-        assert un2 == Int.MinValue; // wraps around w/out exception
-        assert un2.is(@Unchecked Int);
+        assert un2 == Int64.MinValue; // wraps around w/out exception
+        assert un2.is(@Unchecked Int64);
 
-        UInt un3 = UInt.MaxValue.toUInt64().toUnchecked();
-        UInt un4 = ++un3;
+        UInt64 un3 = UInt64.MaxValue.toUInt64().toUnchecked();
+        UInt64 un4 = ++un3;
         assert un4 == 0;
 
-        assert un4.is(@Unchecked UInt);
+        assert un4.is(@Unchecked UInt64);
         }
 
     void testByte()
@@ -246,36 +246,36 @@ module TestNumbers
         {
         console.println("\n** testDec64()");
 
-        Dec n1 = 4.2;
+        Dec64 n1 = 4.2;
         console.println("n1=" + n1);
 
         Byte[] bytes = n1.toByteArray();
-        Dec  n11   = new Dec(bytes);
-        assert n11 == n1;
+        Dec64  n11   = new Dec64(bytes);
+        assert n11 == n1.toDec64();
 
         Bit[]  bits = n1.toBitArray();
-        Dec  n12  = new Dec(bits);
+        Dec64  n12  = new Dec64(bits);
         assert n12 == n1;
 
-        Dec n2 = n1 + 1;
+        Dec64 n2 = n1 + 1;
         console.println("-1=" + n2);
         console.println("+1=" + (n2 - 1));
 
-        Dec n3 = n1*10;
+        Dec64 n3 = n1*10;
         console.println("*10=" + n3);
         console.println("/10=" + (n3 / 10));
 
         console.println("PI=" + FPNumber.PI);
-        Dec pi64 = FPNumber.PI;
+        Dec64 pi64 = FPNumber.PI;
         console.println("pi64=" + pi64);
 
         // see http://www.cplusplus.com/reference/cmath/round/
-        Dec[] numbers = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
+        Dec64[] numbers = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
 
         console.println();
         console.println("value\tround\tfloor\tceil\ttoZero");
         console.println("-----\t-----\t-----\t----\t-----");
-        for (Dec d : numbers)
+        for (Dec64 d : numbers)
             {
             console.println($"{d},\t{d.round()},\t{d.floor()},\t{d.ceil()},\t{d.round(TowardZero)}");
             }
@@ -286,7 +286,7 @@ module TestNumbers
         console.println("\n** testInfinity()");
 
         Float64 f = -123456789.987654321;
-        Dec     d = f.toDec64();
+        Dec64   d = f.toDec64();
         while (True)
             {
             console.println($"f={f} d={d}");
@@ -323,16 +323,16 @@ module TestNumbers
         function Float64(Int) convert2 = Number.converterFor(Int, Float64);
         console.println($"using converter: int={n}, float64={convert2(n)}");
 
-        Int[]  ints  = [1, 2, 3];
-        Bit[]  bits  = ints.asBitArray();
-        Byte[] bytes = ints.asByteArray();
+        Int64[] ints  = [1, 2, 3];
+        Bit[]   bits  = ints.asBitArray();
+        Byte[]  bytes = ints.asByteArray();
 
         assert bits.toByteArray().toInt64Array() == ints;
         assert bits.reify(Mutable).toByteArray().toInt64Array() == ints;
         assert bytes.toInt64Array() == ints;
         assert bytes.reify(Fixed).toInt64Array() == ints;
 
-        Int[] slice = ints[1..2];
+        Int64[] slice = ints[1..2];
         assert slice.asByteArray().asInt64Array() == slice;
         assert slice.asByteArray().reify().asInt64Array() == slice;
 

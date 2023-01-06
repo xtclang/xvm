@@ -233,6 +233,16 @@ const Nibble(Bit[] bits)
         }
 
     /**
+     * @return the Int value corresponding to the magnitude of the nibble, in the range `[0..F]`
+     */
+    @Auto
+    @Override
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toUInt8().toInt();
+        }
+
+    /**
      * @return the Int8 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
@@ -359,7 +369,7 @@ const Nibble(Bit[] bits)
     /**
      * Calculate a hash code for the specified Enum value.
      */
-    static <CompileType extends Nibble> Int hashCode(CompileType value)
+    static <CompileType extends Nibble> Int64 hashCode(CompileType value)
         {
         return value.toInt64();
         }

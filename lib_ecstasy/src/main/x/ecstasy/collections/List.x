@@ -63,7 +63,7 @@ interface List<Element>
             Int hi = size - 1;
             while (lo <= hi)
                 {
-                Int     mid = (lo + hi) >>> 1;
+                Int     mid = (lo + hi) >> 1;
                 Element cur = this[mid];
                 switch (orderer(value, cur))
                     {
@@ -489,7 +489,7 @@ interface List<Element>
                 Int last  = size - 1;
                 do
                     {
-                    Int midpoint = (first + last) >>> 1;
+                    Int midpoint = (first + last) >> 1;
                     switch (order(this[midpoint]))
                         {
                         case Lesser:
@@ -713,7 +713,7 @@ interface List<Element>
             if (inPlace && this.inPlace)
                 {
                 // swap the elements in-place to reverse the list
-                for (Int i = 0, Int swap = size / 2; i < swap; ++i)
+                for (Int i = 0, Int swap = size >> 1; i < swap; ++i)
                     {
                     Element e1 = this[i];
                     Element e2 = this[size - i - 1];

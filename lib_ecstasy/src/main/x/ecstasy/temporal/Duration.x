@@ -6,12 +6,12 @@ const Duration(UInt128 picoseconds)
         default(NONE)
     {
     static IntLiteral PICOS_PER_NANO   = 1000;
-    static IntLiteral PICOS_PER_MICRO  = 1000 * PICOS_PER_NANO;
-    static IntLiteral PICOS_PER_MILLI  = 1000 * PICOS_PER_MICRO;
-    static IntLiteral PICOS_PER_SECOND = 1000 * PICOS_PER_MILLI;
-    static IntLiteral PICOS_PER_MINUTE = 60   * PICOS_PER_SECOND;
-    static IntLiteral PICOS_PER_HOUR   = 60   * PICOS_PER_MINUTE;
-    static IntLiteral PICOS_PER_DAY    = 24   * PICOS_PER_HOUR;
+    static IntLiteral PICOS_PER_MICRO  = 1000 * PICOS_PER_NANO;     // assume <=59 bits for micros
+    static IntLiteral PICOS_PER_MILLI  = 1000 * PICOS_PER_MICRO;    // assume <=49 bits for millis
+    static IntLiteral PICOS_PER_SECOND = 1000 * PICOS_PER_MILLI;    // assume <=39 bits for seconds
+    static IntLiteral PICOS_PER_MINUTE = 60   * PICOS_PER_SECOND;   // assume <=33 bits for minutes
+    static IntLiteral PICOS_PER_HOUR   = 60   * PICOS_PER_MINUTE;   // assume <=27 bits for hours
+    static IntLiteral PICOS_PER_DAY    = 24   * PICOS_PER_HOUR;     // assume <=22 bits for days
 
     static Duration NONE     = new Duration(0);
     static Duration PICOSEC  = new Duration(1);
@@ -305,9 +305,9 @@ const Duration(UInt128 picoseconds)
      *
      *   hours / 24.
      */
-    Int days.get()
+    UInt32 days.get()
         {
-        return (picoseconds / PICOS_PER_DAY).toInt64();
+        return (picoseconds / PICOS_PER_DAY).toUInt32();
         }
 
     /**
@@ -315,9 +315,9 @@ const Duration(UInt128 picoseconds)
      *
      *   minutes / 60.
      */
-    Int hours.get()
+    UInt32 hours.get()
         {
-        return (picoseconds / PICOS_PER_HOUR).toInt64();
+        return (picoseconds / PICOS_PER_HOUR).toUInt32();
         }
 
     /**
@@ -325,9 +325,9 @@ const Duration(UInt128 picoseconds)
      *
      *   seconds / 60
      */
-    Int minutes.get()
+    UInt64 minutes.get()
         {
-        return (picoseconds / PICOS_PER_MINUTE).toInt64();
+        return (picoseconds / PICOS_PER_MINUTE).toUInt64();
         }
 
     /**
@@ -339,9 +339,9 @@ const Duration(UInt128 picoseconds)
      *
      *   picoseconds / 1000000000000
      */
-    Int seconds.get()
+    UInt64 seconds.get()
         {
-        return (picoseconds / PICOS_PER_SECOND).toInt64();
+        return (picoseconds / PICOS_PER_SECOND).toUInt64();
         }
 
     /**
@@ -349,9 +349,9 @@ const Duration(UInt128 picoseconds)
      *
      *   microseconds / 1000
      */
-    Int milliseconds.get()
+    UInt64 milliseconds.get()
         {
-        return (picoseconds / PICOS_PER_MILLI).toInt64();
+        return (picoseconds / PICOS_PER_MILLI).toUInt64();
         }
 
     /**
@@ -359,9 +359,9 @@ const Duration(UInt128 picoseconds)
      *
      *   nanoseconds / 1000
      */
-    Int microseconds.get()
+    UInt64 microseconds.get()
         {
-        return (picoseconds / PICOS_PER_MICRO).toInt64();
+        return (picoseconds / PICOS_PER_MICRO).toUInt64();
         }
 
     /**
@@ -369,9 +369,9 @@ const Duration(UInt128 picoseconds)
      *
      *   picoseconds / 1000
      */
-    Int nanoseconds.get()
+    UInt nanoseconds.get()
         {
-        return (picoseconds / PICOS_PER_NANO).toInt64();
+        return (picoseconds / PICOS_PER_NANO).toUInt();
         }
 
     /**
@@ -388,9 +388,9 @@ const Duration(UInt128 picoseconds)
      *
      *   hours - (days * 24)
      */
-    Int hoursPart.get()
+    UInt8 hoursPart.get()
         {
-        return hours % 24;
+        return (hours % 24).toUInt8();
         }
 
     /**
@@ -399,9 +399,9 @@ const Duration(UInt128 picoseconds)
      *
      *   minutes - (hours * 60)
      */
-    Int minutesPart.get()
+    UInt8 minutesPart.get()
         {
-        return minutes % 60;
+        return (minutes % 60).toUInt8();
         }
 
     /**
@@ -410,9 +410,9 @@ const Duration(UInt128 picoseconds)
      *
      *   seconds - (minutes * 60)
      */
-    Int secondsPart.get()
+    UInt8 secondsPart.get()
         {
-        return seconds % 60;
+        return (seconds % 60).toUInt8();
         }
 
     /**
@@ -425,9 +425,9 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    Int millisecondsPart.get()
+    UInt16 millisecondsPart.get()
         {
-        return picosecondsPart / PICOS_PER_MILLI;
+        return (picosecondsPart / PICOS_PER_MILLI).toUInt16();
         }
 
     /**
@@ -440,9 +440,9 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    Int microsecondsPart.get()
+    UInt32 microsecondsPart.get()
         {
-        return picosecondsPart / PICOS_PER_MICRO;
+        return (picosecondsPart / PICOS_PER_MICRO).toUInt32();
         }
 
     /**
@@ -455,9 +455,9 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    Int nanosecondsPart.get()
+    UInt32 nanosecondsPart.get()
         {
-        return picosecondsPart / PICOS_PER_NANO;
+        return (picosecondsPart / PICOS_PER_NANO).toUInt32();
         }
 
     /**
@@ -466,9 +466,9 @@ const Duration(UInt128 picoseconds)
      *
      *   picoseconds - (seconds * 1000000000000)
      */
-    Int picosecondsPart.get()
+    UInt64 picosecondsPart.get()
         {
-        return (picoseconds % PICOS_PER_SECOND).toInt64();
+        return (picoseconds % PICOS_PER_SECOND).toUInt64();
         }
 
     /**
@@ -500,7 +500,7 @@ const Duration(UInt128 picoseconds)
      */
     @Op("*") Duration mul(Dec factor)
         {
-        return new Duration((this.picoseconds.toDecN() * factor.toDecN()).toUInt128());
+        return new Duration((this.picoseconds.toDec128() * factor.toDec128()).toUInt128());
         }
 
     /**
@@ -508,6 +508,7 @@ const Duration(UInt128 picoseconds)
      */
     @Op("/") Duration div(Int divisor)
         {
+        assert:bounds divisor >= 1;
         return new Duration(this.picoseconds / divisor.toUInt128());
         }
 

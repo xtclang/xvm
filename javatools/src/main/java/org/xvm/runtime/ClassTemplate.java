@@ -350,7 +350,7 @@ public abstract class ClassTemplate
      */
     public int createConstHandle(Frame frame, Constant constant)
         {
-        return frame.raiseException("Unknown constant:" + constant);
+        return frame.raiseException("Unknown constant: " + constant);
         }
 
     /**
@@ -2383,7 +2383,7 @@ public abstract class ClassTemplate
      *       then we will mark the property as @Unassigned, which will retain the property field,
      *       but will exempt it from the post-construction assignability check.
      */
-    protected void markNativeProperty(String sPropName)
+    public void markNativeProperty(String sPropName)
         {
         PropertyStructure prop = getStructure().findPropertyDeep(sPropName);
         if (prop == null)
@@ -2684,7 +2684,7 @@ public abstract class ClassTemplate
     public static String[] VOID    = new String[0];
     public static String[] THIS    = new String[] {"this"};
     public static String[] OBJECT  = new String[] {"Object"};
-    public static String[] INT     = new String[] {"numbers.Int64"};
+    public static String[] INT     = new String[] {"numbers.Int"};
     public static String[] STRING  = new String[] {"text.String"};
     public static String[] BOOLEAN = new String[] {"Boolean"};
 

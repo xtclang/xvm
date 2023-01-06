@@ -56,6 +56,16 @@ const Bit(IntLiteral literal)
         }
 
     /**
+     * @return the [Int] value of either 0 or 1 that corresponds to this bit's value
+     */
+    @Auto
+    @Override
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
+        {
+        return toBoolean() ? 1 : 0;
+        }
+
+    /**
      * @return the [Int8] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto

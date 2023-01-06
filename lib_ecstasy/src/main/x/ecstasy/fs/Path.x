@@ -660,7 +660,7 @@ const Path
         }
 
     @Override
-    static <CompileType extends Path> Int hashCode(CompileType value)
+    static <CompileType extends Path> Int64 hashCode(CompileType value)
         {
         return switch (value.form)
             {

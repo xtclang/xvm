@@ -617,6 +617,7 @@ public class Token
         LIT_STRING   (null             ),
         LIT_BINSTR   (null             ),
         LIT_INT      (null             ),               // integer literal
+        LIT_INTA     ("Int"            , true, true),   // automatically sized integer
         LIT_INT8     ("Int8"           , true, true),
         LIT_INT16    ("Int16"          , true, true),
         LIT_INT32    ("Int32"          , true, true),
@@ -624,25 +625,27 @@ public class Token
         LIT_INT128   ("Int128"         , true, true),
         LIT_INTN     ("IntN"           , true, true),
         LIT_UINT8    ("UInt8"          , true, true),
+        LIT_UINTA    ("UInt"           , true, true),   // automatically sized unsigned integer
         LIT_UINT16   ("UInt16"         , true, true),
         LIT_UINT32   ("UInt32"         , true, true),
         LIT_UINT64   ("UInt64"         , true, true),
         LIT_UINT128  ("UInt128"        , true, true),
         LIT_UINTN    ("UIntN"          , true, true),
         LIT_DEC      (null             ),               // decimal floating point literal
+        LIT_DECA     ("Dec"            , true, true),   // automatically sized decimal
         LIT_DEC32    ("Dec32"          , true, true),
         LIT_DEC64    ("Dec64"          , true, true),
         LIT_DEC128   ("Dec128"         , true, true),
         LIT_DECN     ("DecN"           , true, true),
         LIT_FLOAT    (null             ),               // binary floating point literal
+        LIT_FLOAT8E4 ("Float8e4"       , true, true),
+        LIT_FLOAT8E5 ("Float8e5"       , true, true),
+        LIT_BFLOAT16 ("BFloat16"       , true, true),
         LIT_FLOAT16  ("Float16"        , true, true),
         LIT_FLOAT32  ("Float32"        , true, true),
         LIT_FLOAT64  ("Float64"        , true, true),
         LIT_FLOAT128 ("Float128"       , true, true),
         LIT_FLOATN   ("FloatN"         , true, true),
-        LIT_FLOAT8E4 ("Float8e4"       , true, true),
-        LIT_FLOAT8E5 ("Float8e5"       , true, true),
-        LIT_BFLOAT16 ("BFloat16"       , true, true),
         LIT_DATE     (null             ),
         LIT_TIMEOFDAY(null             ),
         LIT_TIME     (null             ),

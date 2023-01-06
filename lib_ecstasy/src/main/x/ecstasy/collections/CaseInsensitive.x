@@ -5,9 +5,9 @@ static const CaseInsensitive
         implements Hasher<String>
     {
     @Override
-    Int hashOf(String value)
+    Int64 hashOf(String value)
         {
-        @Unchecked Int hash = Int:982_451_653.toUnchecked();      // start with a prime number
+        @Unchecked Int64 hash = Int64:982_451_653.toUnchecked(); // start with a prime number
         for (Char char : value)
             {
             hash = hash * 31 + char.lowercase.toInt64();

@@ -7,7 +7,7 @@ import reflect.InvalidType;
 /**
  * Represents an annotated type, for example:
  *
- *     @Unchecked Int
+ *     @Unchecked Int64
  */
 const AnnotatedTypeExpression(AnnotationExpression annotation,
                               TypeExpression       type)

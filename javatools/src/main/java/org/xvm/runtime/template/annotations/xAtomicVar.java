@@ -20,25 +20,10 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.numbers.xUncheckedInt16;
-import org.xvm.runtime.template.numbers.xUncheckedInt32;
-import org.xvm.runtime.template.numbers.xUncheckedInt64;
-import org.xvm.runtime.template.numbers.xUncheckedInt8;
-import org.xvm.runtime.template.numbers.xUncheckedUInt16;
-import org.xvm.runtime.template.numbers.xUncheckedUInt32;
-import org.xvm.runtime.template.numbers.xUncheckedUInt64;
-import org.xvm.runtime.template.numbers.xUncheckedUInt8;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.numbers.xInt16;
-import org.xvm.runtime.template.numbers.xInt32;
-import org.xvm.runtime.template.numbers.xInt64;
-import org.xvm.runtime.template.numbers.xInt8;
-import org.xvm.runtime.template.numbers.xUInt16;
-import org.xvm.runtime.template.numbers.xUInt32;
-import org.xvm.runtime.template.numbers.xUInt64;
-import org.xvm.runtime.template.numbers.xUInt8;
+import org.xvm.runtime.template.numbers.*;
 
 import org.xvm.runtime.template.reflect.xVar;
 
@@ -65,11 +50,18 @@ public class xAtomicVar
     public void initNative()
         {
         markNativeMethod("exchange", null, null);
-        markNativeMethod("replace", null, BOOLEAN);
         markNativeMethod("replaceFailed", null, null);
 
-        ConstantPool                        pool         = f_container.getConstantPool();
-        Map<TypeConstant, xAtomicIntNumber> mapTemplates = new HashMap<>();
+        ConstantPool                  pool         = f_container.getConstantPool();
+        Map<TypeConstant, xAtomicVar> mapTemplates = new HashMap<>();
+
+        // Int, UInt
+        mapTemplates.put(pool.typeInt(),     new xAtomicInt(xInt .INSTANCE));
+        mapTemplates.put(pool.typeUInt(),    new xAtomicInt(xUInt.INSTANCE));
+
+        // Int128, UInt128
+        mapTemplates.put(pool.typeCInt128(),  new xAtomicInt128(xInt128.INSTANCE));
+        mapTemplates.put(pool.typeCUInt128(), new xAtomicInt128(xUInt128.INSTANCE));
 
         // checked
         mapTemplates.put(pool.typeCInt8(),   new xAtomicIntNumber(xInt8 .INSTANCE));
@@ -101,7 +93,7 @@ public class xAtomicVar
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        xAtomicIntNumber templateAtomicInt = NUMBER_TEMPLATES.get(type.getParamType(0));
+        ClassTemplate templateAtomicInt = NUMBER_TEMPLATES.get(type.getParamType(0));
         return templateAtomicInt == null ? this : templateAtomicInt;
         }
 
@@ -123,53 +115,6 @@ public class xAtomicVar
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "replace":
-                {
-                AtomicHandle hThis = (AtomicHandle) hTarget;
-
-                ObjectHandle hExpect = ahArg[0];
-                ObjectHandle hNew = ahArg[1];
-                AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
-
-                // conceptually, the logic looks like:
-                //
-                //    if (atomic.compareAndSet(hExpect, hNew))
-                //       {
-                //       return true;
-                //       }
-                //    TypeConstant type = hThis.f_clazz.getActualType("Referent");
-                //
-                //    ObjectHandle hCurrent;
-                //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
-                //       {
-                //       if (atomic.compareAndSet(hCurrent, hNew))
-                //           {
-                //           return true;
-                //           }
-                //       nExpect = hCurrent;
-                //       }
-                //    return false;
-
-                if (atomic.compareAndSet(hExpect, hNew))
-                    {
-                    return frame.assignValue(iReturn, xBoolean.TRUE);
-                    }
-
-                TypeConstant type = hThis.getType().resolveGenericType("Referent");
-
-                return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
-                }
-            }
-
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
-
-    @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
@@ -180,6 +125,7 @@ public class xAtomicVar
                 AtomicHandle hThis   = (AtomicHandle) hTarget;
                 ObjectHandle hExpect = ahArg[0];
                 ObjectHandle hNew    = ahArg[1];
+
                 AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
 
                 // conceptually, the logic looks like:
@@ -226,10 +172,10 @@ public class xAtomicVar
     protected int getReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, int iReturn)
         {
         AtomicHandle hAtomic = (AtomicHandle) hTarget;
-        ObjectHandle hValue = hAtomic.f_atomic.get();
+        ObjectHandle hValue  = hAtomic.f_atomic.get();
         return hValue == null
-            ? frame.raiseException(xException.unassignedReference(frame))
-            : frame.assignValue(iReturn, hValue);
+                ? frame.raiseException(xException.unassignedReference(frame))
+                : frame.assignValue(iReturn, hValue);
         }
 
     @Override
@@ -269,80 +215,6 @@ public class xAtomicVar
         public String toString()
             {
             return m_clazz + " -> " + f_atomic.get();
-            }
-        }
-
-    /**
-     * Helper class for replace() implementation.
-     */
-    protected static class Replace
-            implements Frame.Continuation
-        {
-        private final TypeConstant type;
-        private final        AtomicReference<ObjectHandle> atomic;
-        private ObjectHandle hExpect;
-        private final ObjectHandle hNew;
-        private final int iReturn;
-
-        public Replace(TypeConstant type, AtomicReference<ObjectHandle> atomic,
-                       ObjectHandle hExpect, ObjectHandle hNew, int iReturn)
-            {
-            this.type    = type;
-            this.atomic  = atomic;
-            this.hExpect = hExpect;
-            this.hNew    = hNew;
-            this.iReturn = iReturn;
-            }
-
-        protected int doNext(Frame frameCaller)
-            {
-            while (true)
-                {
-                ObjectHandle hCurrent = atomic.get();
-
-                switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        if (frameCaller.popStack() == xBoolean.FALSE)
-                            {
-                            return frameCaller.assignValue(iReturn, xBoolean.FALSE);
-                            }
-
-                        if (atomic.compareAndSet(hCurrent, hNew))
-                            {
-                            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
-                            }
-                        hExpect = hCurrent;
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        hExpect = hCurrent;
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            if (frameCaller.popStack() == xBoolean.FALSE)
-                {
-                return frameCaller.assignValue(iReturn, xBoolean.FALSE);
-                }
-
-            if (atomic.compareAndSet(hExpect, hNew))
-                {
-                return frameCaller.assignValue(iReturn, xBoolean.TRUE);
-                }
-
-            return doNext(frameCaller);
             }
         }
 
@@ -423,5 +295,5 @@ public class xAtomicVar
 
     // ----- data fields ---------------------------------------------------------------------------
 
-    protected static Map<TypeConstant, xAtomicIntNumber> NUMBER_TEMPLATES;
+    protected static Map<TypeConstant, xAtomicVar> NUMBER_TEMPLATES;
     }
