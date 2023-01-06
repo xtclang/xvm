@@ -180,8 +180,26 @@ public abstract class xIntBase
                 else
                     {
                     LongLong ll = ((LongLongHandle) hTarget).getValue();
+
                     return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
                         BaseInt128.toByteArray(ll), 128, xArray.Mutability.Constant));
+                    }
+                }
+
+            case "bitCount":
+                {
+                if (hTarget instanceof JavaLong hL)
+                    {
+                    long l = hL.getValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(Long.bitCount(l)));
+                    }
+                else
+                    {
+                    LongLong ll = ((LongLongHandle) hTarget).getValue();
+
+                    return frame.assignValue(iReturn, xInt.makeHandle(
+                        Long.bitCount(ll.getLowValue()) + Long.bitCount(ll.getHighValue())));
                     }
                 }
 

@@ -225,7 +225,7 @@ const Int
      *
      * For an integer with `bitCount==1`, this provides the log2 value of the integer.
      */
-    Int trailingZeroCount.get()
+    Int! trailingZeroCount.get()
         {
         return toInt128().trailingZeroCount;
         }
@@ -234,7 +234,7 @@ const Int
      * The number of bits that are set (non-zero) in the integer. This is also referred to as a
      * _population count_, or `POPCNT`.
      */
-    Int bitCount.get()
+    Int! bitCount.get()
         {
         // warning: for negative values, this will almost always return a value larger than the
         // number of bits used to the Int value itself, as the result of sign extension
