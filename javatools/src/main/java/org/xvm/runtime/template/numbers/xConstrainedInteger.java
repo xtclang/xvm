@@ -61,8 +61,6 @@ public abstract class xConstrainedInteger
         if (f_fSigned)
             {
             markNativeProperty("magnitude");
-
-            markNativeMethod("abs", VOID, THIS);
             }
 
         markNativeProperty("leadingZeroCount");
@@ -320,16 +318,6 @@ public abstract class xConstrainedInteger
         {
         switch (method.getName())
             {
-            case "abs":
-                {
-                if (f_fSigned)
-                    {
-                    long l = ((JavaLong) hTarget).getValue();
-                    return frame.assignValue(iReturn, l >= 0 ? hTarget : makeJavaLong(-l));
-                    }
-                return frame.assignValue(iReturn, hTarget);
-                }
-
             case "toUnchecked":
                 {
                 long l = ((JavaLong) hTarget).getValue();
