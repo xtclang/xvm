@@ -471,19 +471,4 @@ const Int
         {
         return toIntLiteral().toDecN();
         }
-
-
-    // ----- Hashable functions --------------------------------------------------------------------
-
-    @Override
-    static <CompileType extends Int> Int64 hashCode(CompileType value)
-        {
-        return value.toInt64();
-        }
-
-    @Override
-    static <CompileType extends Int> Boolean equals(CompileType value1, CompileType value2)
-        {
-        return value1.bits == value2.bits;
-        }
     }

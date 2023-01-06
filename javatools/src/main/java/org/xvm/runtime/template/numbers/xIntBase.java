@@ -898,6 +898,19 @@ public abstract class xIntBase
     @Override
     abstract public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn);
 
+    @Override
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        if (hTarget instanceof JavaLong hL)
+            {
+            return frame.assignValue(iReturn, xInt64.makeHandle(hL.getValue()));
+            }
+
+        LongLong ll = ((LongLongHandle) hTarget).getValue();
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(ll.hashCode()));
+        }
+
 
     // ----- comparison support --------------------------------------------------------------------
 
@@ -914,7 +927,7 @@ public abstract class xIntBase
                 }
             else
                 {
-                LongLong ll2 = ((LongLongHandle) hValue1).getValue();
+                LongLong ll2 = ((LongLongHandle) hValue2).getValue();
                 return frame.assignValue(iReturn, ll2.isSmall(f_fSigned)
                         ? xBoolean.makeHandle(h1.getValue() == ll2.getLowValue())
                         : xBoolean.FALSE);
@@ -931,7 +944,7 @@ public abstract class xIntBase
                 }
             else
                 {
-                LongLong ll2 = ((LongLongHandle) hValue1).getValue();
+                LongLong ll2 = ((LongLongHandle) hValue2).getValue();
                 return frame.assignValue(iReturn, xBoolean.makeHandle(ll1.equals(ll2)));
                 }
             }

@@ -587,7 +587,8 @@ public abstract class BaseInt128
         return frame.assignValue(iReturn, xInt64.makeHandle(ll.hashCode()));
         }
 
-    // ----- comparison support -----
+
+    // ----- comparison support --------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
