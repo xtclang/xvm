@@ -8,11 +8,14 @@ module ConstOrdinalListTest
 
     @Inject Console console;
 
-    void run(String[] args=["dump", "[30159670, 30159670, 182002775, 182002775, 182002775]"])
+    void run(String[] args=[])
+//    void run(String[] args=["dump", "[30159670, 30159670, 182002775, 182002775, 182002775]"])
+//    void run(String[] args=["dump", "[30159670, 30159670, 182002775, 182002775, 182002775, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733]"])
+//    void run(String[] args=["dump", "[30159670, 30159670, 182002775, 182002775, 182002775, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 30159670, 30159670]"])
         {
         if (args.empty)
             {
-            for (UInt64 i : 0 ..< 1000)
+            for (UInt64 i : 1 ..< 1000)             // TODO CP revert to "0 ..< 1000"
                 {
                 Random rnd = new PseudoRandom(i+1);
 
@@ -63,7 +66,11 @@ module ConstOrdinalListTest
 
                 if (rnd.boolean())
                     {
-                    for (Int add : 0 .. rnd.int(1+rnd.int(12)))
+assert:debug; // Gene - this will return a random value > 12 (i.e. 11710299936521772053) and sit in this loop forever (?)
+//                    for (Int add : 0 .. rnd.int(1+rnd.int(12)))
+                    Int n1 = rnd.int(12);
+                    Int n2 = rnd.int(1+n1);
+                    for (Int add : 0 .. n2)
                         {
                         list.add(dft);
                         }
@@ -94,6 +101,8 @@ module ConstOrdinalListTest
 
     void validate(Int[] list, Int testNum, Boolean dump)
         {
+        console.println($"Test #{testNum}: {list}");
+
         ConstOrdinalList col = new ConstOrdinalList(list);
         validate(list, col, testNum, "", dump);
 
