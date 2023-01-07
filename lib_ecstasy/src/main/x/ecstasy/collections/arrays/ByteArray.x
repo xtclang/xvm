@@ -894,7 +894,7 @@ mixin ByteArray<Element extends Byte>
      *
      * @return a String containing the hex dump
      */
-    String toHexDump(Int bytesPerLine)
+    String toHexDump(Int bytesPerLine = 32)
         {
         assert bytesPerLine > 0;
 
@@ -935,7 +935,7 @@ mixin ByteArray<Element extends Byte>
 
                     lineText[hexOffset + index * 3    ] = (b >>> 4).toHexit();
                     lineText[hexOffset + index * 3 + 1] = b.toHexit();
-                    lineText[charOffset + index       ] = ch.ascii && !ch.isEscaped() ? ch : '.';
+                    lineText[charOffset + index       ] = ch.isEscaped() ? '.' : ch;
                     }
                 else
                     {
