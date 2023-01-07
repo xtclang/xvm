@@ -73,7 +73,7 @@ interface Random
         if (max & max-1 == 0)
             {
             // max is a power of 2, so we're done
-            return rndbits.toInt();
+            return rndbits.toUInt().toInt();
             }
 
         // depending on the maximum value's proximity to the next lower power of two, up to (almost)
@@ -81,7 +81,7 @@ interface Random
         // random bits from scratch, we'll skew the distribution of results from this method
         while (True)
             {
-            Int n = rndbits.toInt();
+            Int n = rndbits.toUInt().toInt();
             if (n < max)
                 {
                 return n;
