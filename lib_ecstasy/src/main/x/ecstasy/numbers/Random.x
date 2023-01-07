@@ -68,8 +68,13 @@ interface Random
     Int int(Int max)
         {
         assert max > 0;
-        Int    fillCount = (max-1).leftmostBit.trailingZeroCount + 1;
-        Bit[]  rndbits   = fill(new Bit[fillCount]);
+        if (max == 1)
+            {
+            return 0;
+            }
+
+        Int   fillCount = (max-1).leftmostBit.trailingZeroCount + 1;
+        Bit[] rndbits   = fill(new Bit[fillCount]);
         if (max & max-1 == 0)
             {
             // max is a power of 2, so we're done

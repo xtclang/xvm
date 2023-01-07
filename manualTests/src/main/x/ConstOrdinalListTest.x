@@ -66,11 +66,7 @@ module ConstOrdinalListTest
 
                 if (rnd.boolean())
                     {
-assert:debug; // Gene - this will return a random value > 12 (i.e. 11710299936521772053) and sit in this loop forever (?)
-//                    for (Int add : 0 .. rnd.int(1+rnd.int(12)))
-                    Int n1 = rnd.int(12);
-                    Int n2 = rnd.int(1+n1);
-                    for (Int add : 0 .. n2)
+                    for (Int add : 0 .. rnd.int(1+rnd.int(12)))
                         {
                         list.add(dft);
                         }
