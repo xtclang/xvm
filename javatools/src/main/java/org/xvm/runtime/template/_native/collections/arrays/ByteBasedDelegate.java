@@ -193,7 +193,7 @@ public abstract class ByteBasedDelegate
             {
             System.arraycopy(abValue, nIndex + 1, abValue, nIndex, cSize - nIndex - nDelete);
             }
-        Arrays.fill(abValue, cSize - nDelete, nDelete, (byte) 0);
+        Arrays.fill(abValue, cSize - nDelete, cSize, (byte) 0);
         hDelegate.m_cSize -= cDelete;
         }
 

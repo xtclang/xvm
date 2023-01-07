@@ -751,7 +751,7 @@ public class xRTDelegate
             {
             System.arraycopy(ahValue, nIndex + nDelete, ahValue, nIndex, cSize - nIndex - nDelete);
             }
-        Arrays.fill(ahValue, cSize - nDelete, nDelete, null);
+        Arrays.fill(ahValue, cSize - nDelete, cSize, null);
         hDelegate.m_cSize -= cDelete;
         }
 
