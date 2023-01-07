@@ -64,12 +64,14 @@ public class xRTDelegate
             registerNativeTemplate(new xRTBitDelegate     (f_container, f_struct, true));
             registerNativeTemplate(new xRTCharDelegate    (f_container, f_struct, true));
 
+            registerNativeTemplate(new xRTIntDelegate     (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt8Delegate    (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt16Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt32Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt64Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt128Delegate  (f_container, f_struct, true));
 
+            registerNativeTemplate(new xRTUIntDelegate    (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt8Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt16Delegate  (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt32Delegate  (f_container, f_struct, true));
@@ -95,12 +97,14 @@ public class xRTDelegate
             mapDelegates.put(pool.typeBit(),      xRTBitDelegate    .INSTANCE);
             mapDelegates.put(pool.typeChar(),     xRTCharDelegate   .INSTANCE);
 
+            mapDelegates.put(pool.typeInt(),      xRTIntDelegate    .INSTANCE);
             mapDelegates.put(pool.typeCInt8(),    xRTInt8Delegate   .INSTANCE);
             mapDelegates.put(pool.typeCInt16(),   xRTInt16Delegate  .INSTANCE);
             mapDelegates.put(pool.typeCInt32(),   xRTInt32Delegate  .INSTANCE);
             mapDelegates.put(pool.typeCInt64(),   xRTInt64Delegate  .INSTANCE);
             mapDelegates.put(pool.typeCInt128(),  xRTInt128Delegate .INSTANCE);
 
+            mapDelegates.put(pool.typeUInt(),     xRTUIntDelegate   .INSTANCE);
             mapDelegates.put(pool.typeCUInt8(),   xRTUInt8Delegate  .INSTANCE);
             mapDelegates.put(pool.typeCUInt16(),  xRTUInt16Delegate .INSTANCE);
             mapDelegates.put(pool.typeCUInt32(),  xRTUInt32Delegate .INSTANCE);
@@ -406,15 +410,7 @@ public class xRTDelegate
                 break;
             }
 
-        try
-            {
-            insertElementImpl(hDelegate, hValue, (int) hIndex.getValue());
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.typeMismatch(frame, hValue.getType().getValueString()));
-            }
+        insertElementImpl(hDelegate, hValue, (int) hIndex.getValue());
 
         if (mutability != null)
             {

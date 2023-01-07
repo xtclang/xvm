@@ -316,17 +316,21 @@ public class xRTCharDelegate
             {
             if (isMutable())
                 {
-                // purge the unused space
-                char[] ach = m_achValue;
-                int    c   = (int) m_cSize;
-                if (ach.length != c)
-                    {
-                    char[] achNew = new char[c];
-                    System.arraycopy(ach, 0, achNew, 0, c);
-                    m_achValue = achNew;
-                    }
+                purgeUnusedSpace();
                 }
             return super.makeImmutable();
+            }
+
+        protected void purgeUnusedSpace()
+            {
+            char[] ach = m_achValue;
+            int    c   = (int) m_cSize;
+            if (ach.length != c)
+                {
+                char[] achNew = new char[c];
+                System.arraycopy(ach, 0, achNew, 0, c);
+                m_achValue = achNew;
+                }
             }
 
         @Override

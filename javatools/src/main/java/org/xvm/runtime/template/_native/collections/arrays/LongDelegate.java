@@ -131,16 +131,8 @@ public abstract class LongDelegate
             hDelegate.m_cSize = nIndex + 1;
             }
 
-        try
-            {
-            alValue[nIndex] = ((JavaLong) hValue).getValue();
-            return Op.R_NEXT;
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.typeMismatch(frame, hValue.getType().getValueString()));
-            }
+        alValue[nIndex] = ((JavaLong) hValue).getValue();
+        return Op.R_NEXT;
         }
 
     @Override
@@ -206,6 +198,11 @@ public abstract class LongDelegate
 
     @Override
     public long[] reverse(long[] alValue, int cSize)
+        {
+        return reverseLongs(alValue, cSize);
+        }
+
+    static public long[] reverseLongs(long[] alValue, int cSize)
         {
         long[] alValueR = new long[cSize];
         for (int i = 0; i < cSize; i++)

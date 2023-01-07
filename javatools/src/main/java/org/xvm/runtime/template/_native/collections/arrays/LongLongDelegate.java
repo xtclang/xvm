@@ -11,9 +11,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.template.numbers.xInt;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
@@ -21,6 +20,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
+import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.LongArrayHandle;
 
@@ -44,16 +44,16 @@ public abstract class LongLongDelegate
     public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
-        long[] al = new long[2*cSize];
+        long[] alValue = new long[2*cSize];
 
         for (int iSrc = 0, iDst = 0, c = ahContent.length; iSrc < c; iSrc++)
             {
             LongLong ll = ((LongLongHandle) ahContent[iSrc]).getValue();
 
-            al[iDst++] = ll.getHighValue();
-            al[iDst++] = ll.getLowValue();
+            alValue[iDst++] = ll.getHighValue();
+            alValue[iDst++] = ll.getLowValue();
             }
-        return new LongArrayHandle(getCanonicalClass(), al, cSize, mutability);
+        return new LongArrayHandle(getCanonicalClass(), alValue, cSize, mutability);
         }
 
 
@@ -123,7 +123,7 @@ public abstract class LongLongDelegate
                             (int) ofStart*2, (int) (ofStart*2 + cSize*2));
         if (fReverse)
             {
-            alValue = reverse(alValue, (int) cSize);
+            alValue = reverseLong2(alValue, (int) cSize);
             }
         return new LongArrayHandle(hDelegate.getComposition(), alValue, cSize, mutability);
         }
@@ -153,24 +153,16 @@ public abstract class LongLongDelegate
             {
             if (nIndex >= alValue.length)
                 {
-                alValue = hDelegate.m_alValue = grow(alValue, cSize + 1);
+                alValue = hDelegate.m_alValue = LongBasedDelegate.grow(alValue, nIndex + 2);
                 }
 
             hDelegate.m_cSize = lIndex + 1;
             }
 
         LongLong ll = ((LongLongHandle) hValue).getValue();
-        try
-            {
-            alValue[nIndex]   = ll.getHighValue();
-            alValue[nIndex+1] = ll.getLowValue();
-            return Op.R_NEXT;
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.typeMismatch(frame, hValue.getType().getValueString()));
-            }
+        alValue[nIndex]   = ll.getHighValue();
+        alValue[nIndex+1] = ll.getLowValue();
+        return Op.R_NEXT;
         }
 
     @Override
@@ -184,7 +176,8 @@ public abstract class LongLongDelegate
 
         if (2*cSize == alValue.length)
             {
-            alValue = hDelegate.m_alValue = grow(hDelegate.m_alValue, cSize + 1);
+            alValue = hDelegate.m_alValue =
+                    LongBasedDelegate.grow(hDelegate.m_alValue, 2*cSize + 2);
             }
         hDelegate.m_cSize++;
 
@@ -280,16 +273,7 @@ public abstract class LongLongDelegate
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static long[] grow(long[] alValue, int cSize)
-        {
-        int cCapacity = alValue.length + cSize*2;
-
-        long[] alNew = new long[cCapacity];
-        System.arraycopy(alValue, 0, alNew, 0, alValue.length);
-        return alNew;
-        }
-
-    protected long[] reverse(long[] alValue, int cSize)
+    public static long[] reverseLong2(long[] alValue, int cSize)
         {
         long[] alValueR = new long[2*cSize];
         for (int i = 0; i < cSize; i++)

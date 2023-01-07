@@ -99,7 +99,7 @@ public class xUInt
             long l = h1.getValue();
             return l == -1
                     ? frame.assignValue(iReturn, makeLongLong(MAX64_VALUE_NEXT))
-                    : frame.assignValue(iReturn, makeLong(l-1));
+                    : frame.assignValue(iReturn, makeLong(l+1));
             }
         else
             {
@@ -109,6 +109,11 @@ public class xUInt
                     ? overflow(frame)
                     : frame.assignValue(iReturn, makeHandle(lr));
             }
+        }
+
+    public static JavaLong makeHandle(long lValue)
+        {
+        return INSTANCE.makeLong(lValue);
         }
 
     public static final LongLong MAX64_VALUE_NEXT = new LongLong(0, 1);

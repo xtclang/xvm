@@ -55,7 +55,7 @@ public abstract class LongBasedDelegate
             {
             setValue(alValue, i, ((JavaLong) ahContent[i]).getValue());
             }
-        return new LongArrayHandle(getCanonicalClass(), alValue, cSize, mutability);
+        return makeHandle(alValue, cSize, mutability);
         }
 
 
@@ -165,16 +165,8 @@ public abstract class LongBasedDelegate
             hDelegate.m_cSize = lIndex + 1;
             }
 
-        try
-            {
-            setValue(alValue, lIndex, ((JavaLong) hValue).getValue());
-            return Op.R_NEXT;
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.typeMismatch(frame, hValue.getType().getValueString()));
-            }
+        setValue(alValue, lIndex, ((JavaLong) hValue).getValue());
+        return Op.R_NEXT;
         }
 
     @Override
@@ -364,9 +356,9 @@ public abstract class LongBasedDelegate
         return alValueR;
         }
 
-    protected static long[] grow(long[] alValue, int cBytes)
+    public static long[] grow(long[] alValue, int cNew)
         {
-        int cCapacity = calculateCapacity(alValue.length, cBytes);
+        int cCapacity = calculateCapacity(alValue.length, cNew);
 
         long[] alNew = new long[cCapacity];
         System.arraycopy(alValue, 0, alNew, 0, alValue.length);
@@ -603,17 +595,21 @@ public abstract class LongBasedDelegate
             {
             if (isMutable())
                 {
-                // purge the unused space
-                long[] ab = m_alValue;
-                int    c  = ((LongBasedDelegate) getTemplate()).storage(m_cSize);
-                if (ab.length != c)
-                    {
-                    long[] abNew = new long[c];
-                    System.arraycopy(ab, 0, abNew, 0, c);
-                    m_alValue = abNew;
-                    }
+                purgeUnusedSpace();
                 }
             return super.makeImmutable();
+            }
+
+        protected void purgeUnusedSpace()
+            {
+            long[] ab = m_alValue;
+            int    c  = ((LongBasedDelegate) getTemplate()).storage(m_cSize);
+            if (ab.length != c)
+                {
+                long[] abNew = new long[c];
+                System.arraycopy(ab, 0, abNew, 0, c);
+                m_alValue = abNew;
+                }
             }
 
         @Override

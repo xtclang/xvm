@@ -44,10 +44,11 @@ public abstract class LongBasedBitView
         if (hSource instanceof SliceHandle hSlice)
             {
             // ints.slice().asBitArray() -> ints.asBitArray().slice()
-            LongArrayHandle hLong  = (LongArrayHandle) hSlice.f_hSource;
-            ViewHandle      hView  = new ViewHandle(clzView,
-                                            hLong, hLong.m_cSize*f_nBitsPerValue, mutability);
-            return slice(hView, hSlice.f_ofStart*f_nBitsPerValue, hSlice.m_cSize*f_nBitsPerValue, false);
+            LongArrayHandle hLong = (LongArrayHandle) hSlice.f_hSource;
+            int             cBits = getBitsPerValue(hLong);
+            ViewHandle      hView = new ViewHandle(clzView,
+                                        hLong, hLong.m_cSize*cBits, mutability);
+            return slice(hView, hSlice.f_ofStart*cBits, hSlice.m_cSize*cBits, false);
             }
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView)
@@ -55,7 +56,9 @@ public abstract class LongBasedBitView
             return new ViewHandle(clzView, (LongArrayHandle) hView.f_hSource, hSource.m_cSize, mutability);
             }
 
-        return new ViewHandle(clzView, (LongArrayHandle) hSource, hSource.m_cSize*f_nBitsPerValue, mutability);
+        LongArrayHandle hLong = (LongArrayHandle) hSource;
+        int             cBits = getBitsPerValue(hLong);
+        return new ViewHandle(clzView, hLong, hSource.m_cSize*cBits, mutability);
         }
 
 
@@ -148,6 +151,14 @@ public abstract class LongBasedBitView
         LongBasedDelegate.setByte(hView.f_hSource.m_alValue, of, bValue);
         }
 
+    /**
+     * @return the number of bits per value if the specified array
+     */
+    protected int getBitsPerValue(LongArrayHandle hArray)
+        {
+        return f_nBitsPerValue;
+        }
+
 
     // ----- handle --------------------------------------------------------------------------------
 
@@ -178,5 +189,5 @@ public abstract class LongBasedBitView
 
     // ----- constants -----------------------------------------------------------------------------
 
-    final int f_nBitsPerValue;
+    final protected int f_nBitsPerValue;
     }
