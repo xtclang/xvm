@@ -128,6 +128,7 @@ const ConstOrdinalList
             }
 
         Int offsetCurrent = firstOffset;
+        Int contentLength = contents.size;
         while (True)
             {
             (Int indexSkip, offsetCurrent) = contents.unpackInt(offsetCurrent);
@@ -166,7 +167,7 @@ const ConstOrdinalList
                 offsetCurrent += (nodeLen * bitsPerVal + 7) / 8;
                 }
 
-            if (indexNext != 0 && index >= indexCurrent + indexNext)
+            if (indexNext != 0 && index >= indexCurrent + indexNext && offsetCurrent < contentLength)
                 {
                 indexCurrent += indexNext;
                 }
@@ -227,25 +228,26 @@ const ConstOrdinalList
             private Boolean loadNextNode()
                 {
                 // check if the iterator is exhausted
-                if (curIndex >= this.ConstOrdinalList.size)
+                Int listSize = this.ConstOrdinalList.size;
+                if (curIndex >= listSize)
                     {
                     return False;
                     }
 
-                if (nextNodeIndex == 0 && firstIndex > 0)
+                Boolean firstNode = nextNodeIndex == 0;
+                // advance to the next node
+                curNodeIndex = nextNodeIndex;
+                if (firstNode && firstIndex > 0 || nextNodeOffset >= contents.size)
                     {
-                    // the compressed list has a "hole" at the beginning; pretend that it is
-                    // represented as an RLE node
+                    // the compressed list has a "hole" at the beginning (or the end); pretend that
+                    // it is represented as an RLE node
                     runLenEnc     = True;
                     repeatingVal  = defaultVal;
-                    curNodeSize   = firstIndex;
-                    nextNodeIndex = firstIndex;
+                    curNodeSize   = firstNode ? firstIndex : listSize - curIndex;
+                    nextNodeIndex = firstNode ? firstIndex : listSize;
                     }
                 else
                     {
-                    // advance to the next node
-                    curNodeIndex = nextNodeIndex;
-
                     // skip the jump-forward info
                     (Int jumpIndex, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                     if (jumpIndex != 0)
@@ -599,7 +601,7 @@ const ConstOrdinalList
             }
 
         Int firstIndex = indexes.effectiveLowerBound;
-        Int lastIndex  = indexes.effectiveLowerBound;
+        Int lastIndex  = indexes.effectiveUpperBound;
 
         Node node = nodes[firstIndex];
         assert node.jumpIndex == 0;
@@ -617,7 +619,7 @@ const ConstOrdinalList
     private static Byte[][] toBytes(Node[] nodes, Int[] values, Int bitsPerVal)
         {
         // turn the nodes into bytes
-        Byte[][] nodesBytes = new Byte[][];
+        Byte[][] nodesBytes = new Byte[][nodes.size]([]);
 
         Node? nodeNext = Null;
         for (Int i : nodes.size >.. 0)
@@ -627,7 +629,7 @@ const ConstOrdinalList
 
             Int    jumpIndex = node.jumpIndex == 0 ? 0 : node.jumpIndex - node.index;
             Int    valCount  = node.runLenEnc ? -node.length : node.length;
-            Int    nextIndex = nodeNext?.index - node.index : valCount;    // REVIEW CP: valCount or 0? 0 fails here; see comment in Java impl
+            Int    nextIndex = nodeNext?.index - node.index : node.length;
             Int    val       = 0;
             Byte[] packed    = [];
             if (node.runLenEnc)
