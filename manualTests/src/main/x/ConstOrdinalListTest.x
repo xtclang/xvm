@@ -15,7 +15,7 @@ module ConstOrdinalListTest
         {
         if (args.empty)
             {
-            for (UInt64 i : 1 ..< 1000)             // TODO CP revert to "0 ..< 1000"
+            for (UInt64 i : 0 ..< 1000)
                 {
                 Random rnd = new PseudoRandom(i+1);
 
@@ -45,10 +45,9 @@ module ConstOrdinalListTest
                 s = s[0 ..< s.size-1];
                 }
 
-            // TODO GG: Int[] list = s.split(',').map(s -> new IntLiteral(s.trim()), new Int[]);
             Int[] list = s.trim() == ""
                     ? []
-                    : s.split(',').map((String s) -> new IntLiteral(s.trim()).toInt(), new Int[]).as(Int[]);
+                    : s.split(',').map(s -> new Int(s.trim()), new Int[]).as(Int[]);
 
             assert:debug;
             validate(list, 0, dump);
