@@ -368,7 +368,7 @@ interface DataOutput
 
         // test for Small and Medium
         Int128 m        = n.toInt128();
-        UInt8  bitCount = 65 - m.maxOf(~m).leadingZeroCount.toUInt8();
+        UInt16 bitCount = 129 - m.maxOf(~m).leadingZeroCount.toUInt16();
         if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
             {
             return bitCount <= 13 ? 2 : 3;
