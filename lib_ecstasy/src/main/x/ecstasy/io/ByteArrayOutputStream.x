@@ -112,7 +112,7 @@
         if (remaining > 0)
             {
             // determine how many bytes to copy into existing elements of the underlying array
-            Int replace = count.minOf(remaining);
+            Int replace = Int.minOf(count, remaining);
 
             // replace those bytes in the underlying array
             this.bytes.replaceAll(this.offset, bytes[offset ..< offset+replace]);

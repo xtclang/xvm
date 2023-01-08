@@ -547,7 +547,7 @@ const String
              }
 
          // can't start before the start of the string (at zero)
-         startAt = startAt.maxOf(0);
+         startAt = startAt.notLessThan(0);
 
          // break out the special conditions (for small search strings)
          if (thatLen <= 1)
@@ -605,7 +605,7 @@ const String
              }
 
          // can't start beyond the end of the string
-         startAt = startAt.minOf(thisLen);
+         startAt = startAt.notGreaterThan(thisLen);
 
          // break out the special conditions (for small search strings)
          if (thatLen <= 1)

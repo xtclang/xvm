@@ -157,7 +157,7 @@ class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null)
      */
     ErrorList branch(Int branchMax = MaxValue)
         {
-        branchMax = branchMax.minOf(maxSize - seriousCount).maxOf(maxSize == 0 ? 0 : 1);
+        branchMax = branchMax.notLessThan(maxSize == 0 ? 0 : 1).notGreaterThan(maxSize - seriousCount);
         return new ErrorList(branchMax, this);
         }
 

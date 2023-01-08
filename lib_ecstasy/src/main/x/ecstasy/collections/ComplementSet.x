@@ -33,8 +33,8 @@ class ComplementSet<Element>(Set<Element> complementSet, immutable Set<Element> 
         {
         return switch ()
             {
-            case size < complementSet.size.maxOf(0x100) : new ListSet(this);
-            case complementSet.is(immutable Set)        : this;
+            case size < complementSet.size.notLessThan(0x100): new ListSet(this);
+            case complementSet.is(immutable Set)             : this;
             default: new ListSet(this); // TODO CP ??? new ComplementSet(complementSet.freeze(), universalSet);
             };
         }

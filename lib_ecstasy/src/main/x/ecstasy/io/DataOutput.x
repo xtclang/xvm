@@ -368,7 +368,7 @@ interface DataOutput
 
         // test for Small and Medium
         Int128 m        = n.toInt128();
-        UInt16 bitCount = 129 - m.maxOf(~m).leadingZeroCount.toUInt16();
+        UInt16 bitCount = 129 - UInt16.maxOf(m, ~m).leadingZeroCount.toUInt16();
         if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
             {
             return bitCount <= 13 ? 2 : 3;
@@ -446,7 +446,7 @@ interface DataOutput
 
         // test for Small and Medium
         Int128 n128     = n.toInt128();
-        Int    bitCount = 129 - n128.maxOf(~n128).leadingZeroCount;
+        Int    bitCount = 129 - Int128.maxOf(n128, ~n128).leadingZeroCount;
         if (1 << bitCount & 0x3E3E00 != 0)                // test against bits 9-13 and 17-21
             {
             Int32 n32 = n128.toInt32();

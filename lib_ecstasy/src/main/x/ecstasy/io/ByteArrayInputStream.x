@@ -108,7 +108,7 @@ class ByteArrayInputStream
         {
         if (out.is(ByteArrayOutputStream))
             {
-            Int copy = count.minOf(remaining);
+            Int copy = Int.minOf(count, remaining);
             out.writeBytes(bytes, offset, copy);
             offset += copy;
             if (copy < count)

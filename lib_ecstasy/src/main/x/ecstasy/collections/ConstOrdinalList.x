@@ -363,7 +363,7 @@ const ConstOrdinalList
         while (remainingBits > 0)
             {
             Int  partOffset = bitOffset & 0x7;
-            Int  partLength = (8 - partOffset).minOf(remainingBits);
+            Int  partLength = (8 - partOffset).notGreaterThan(remainingBits);
             Byte bytePart   = contents[packedOffset + bitOffset / 8] >>> partOffset;
 
             val |= bytePart & (1 << partLength) - 1 << bitsPerVal - remainingBits;

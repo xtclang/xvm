@@ -2488,7 +2488,7 @@ class Lexer
         assert count > 0;
         if (pastEOF > 0)
             {
-            Int adjust = count.minOf(pastEOF);
+            Int adjust = count.notGreaterThan(pastEOF);
             count   -= adjust;
             pastEOF -= adjust;
             if (count == 0)

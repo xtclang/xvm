@@ -157,7 +157,7 @@ const Base64Format(Boolean pad=False, Int? lineLength=Null)
             }
         if (lineLength != Null)
             {
-            charLen += ((charLen + lineLength - 1) / lineLength - 1).maxOf(0) * 2;
+            charLen += ((charLen + lineLength - 1) / lineLength - 1).notLessThan(0) * 2;
             }
 
         StringBuffer charBuf = new StringBuffer(charLen);

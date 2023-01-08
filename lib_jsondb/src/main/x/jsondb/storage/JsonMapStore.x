@@ -1158,7 +1158,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
 
             // combine the two measure into the model to actually use
-            model = quantity.maxOf(weight);
+            model = StorageModel.maxOf(quantity, weight);
             }
 
         return True;

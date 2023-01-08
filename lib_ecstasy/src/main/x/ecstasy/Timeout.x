@@ -83,7 +83,7 @@ const Timeout
             {
             // because the timeout is not independent, it must respect the current outgoing timeout
             // that it is replacing
-            duration = duration.minOf(previousTimeout.remainingTime);
+            duration = duration.notGreaterThan(previousTimeout.remainingTime);
             }
         this.independent = independent;
         }
@@ -120,7 +120,7 @@ const Timeout
      */
     Duration remainingTime.get()
         {
-        return (duration - timer.elapsed).maxOf(Duration.NONE);
+        return (duration - timer.elapsed).notLessThan(Duration.NONE);
         }
 
     /**

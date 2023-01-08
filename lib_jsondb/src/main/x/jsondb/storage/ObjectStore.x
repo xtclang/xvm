@@ -391,7 +391,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                 // this cannot be assumed to be correct, since the filing system could run on
                 // a different clock, so make sure that the timestamp is not moving backwards
                 @Inject Clock clock;
-                lastModified = lastModified?.maxOf(clock.now) : clock.now;
+                lastModified = lastModified?.notLessThan(clock.now) : clock.now;
                 break;
 
             case Running:
@@ -734,8 +734,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                 {
                 ++filesUsed;
                 bytesUsed   += file.size;
-                lastAccessed = lastAccessed?.maxOf(file.accessed) : file.accessed;
-                lastModified = lastModified?.maxOf(file.modified) : file.modified;
+                lastAccessed = lastAccessed?.notLessThan(file.accessed) : file.accessed;
+                lastModified = lastModified?.notLessThan(file.modified) : file.modified;
                 }
 
             // knowledge of model categorization is owned by the ObjectStore sub-classes; this is

@@ -25,9 +25,9 @@ service JsonLogStoreBase<Element extends immutable Const>
 
         this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;
-        this.expiry         = expiry.maxOf(MINUTE);
-        this.truncateSize   = truncateSize > 0 ? truncateSize.maxOf(2K) : MaxValue;
-        this.maxFileSize    = maxFileSize.minOf(this.truncateSize/2);
+        this.expiry         = expiry.notLessThan(MINUTE);
+        this.truncateSize   = truncateSize > 0 ? truncateSize.notLessThan(2K) : MaxValue;
+        this.maxFileSize    = maxFileSize.notGreaterThan(this.truncateSize/2);
         }
 
 

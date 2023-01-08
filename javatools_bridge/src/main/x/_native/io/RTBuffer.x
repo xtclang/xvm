@@ -80,7 +80,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
         assert:bounds 0 <= count;
         assert:bounds offset + count <= thatSize;
 
-        Int copy = count.minOf(thisSize - thisOffset);
+        Int copy = count.notGreaterThan(thisSize - thisOffset);
         for (Int i = 0; i < copy; ++i)
             {
             bytes[offset+i] = rawBytes[thisOffset+i];
@@ -112,7 +112,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
         if (buf != Null)
             {
             Int space = buf.capacity - buf.offset;
-            Int copy  = count.minOf(space).minOf(remaining);
+            Int copy  = count.notGreaterThan(space).notGreaterThan(remaining);
             if (copy > 0)
                 {
                 buf.writeBytes(rawBytes, rawOffset, copy);
@@ -177,7 +177,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
         assert:bounds 0 <= count;
         assert:bounds offset + count <= thatSize;
 
-        Int copy = count.minOf(capacity - thisOffset);
+        Int copy = count.notGreaterThan(capacity - thisOffset);
         for (Int i = 0; i < copy; ++i)
             {
             rawBytes[thisOffset+i] = bytes[offset+i];

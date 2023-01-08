@@ -169,7 +169,7 @@ mixin BitArray<Element extends Bit>
                         }
                     }
 
-                fill(Zero, (size-count).maxOf(0) ..< size);
+                fill(Zero, Int.maxOf(0, size-count) ..< size);
                 }
 
             return this;
@@ -212,7 +212,7 @@ mixin BitArray<Element extends Bit>
                         }
                     }
 
-                fill(this[0], 1 .. count.minOf(size-1));
+                fill(this[0], 1 .. Int.minOf(count, size-1));
                 }
 
             return this;
@@ -255,7 +255,7 @@ mixin BitArray<Element extends Bit>
                         }
                     }
 
-                fill(Zero, 0 .. count.minOf(size-1));
+                fill(Zero, 0 .. Int.minOf(count, size-1));
                 }
 
             return this;

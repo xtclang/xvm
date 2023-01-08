@@ -2889,7 +2889,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                 |]
                                 .utf8();
 
-            safepoint = safepoint.maxOf(0);
+            safepoint = safepoint.notLessThan(0);
             LogFileInfo info = new LogFileInfo(logFile.name, lastTx+1 ..< lastTx+1,
                                         safepoint, logFile.size, logFile.modified);
             if (logInfos[logInfos.size-1].name == logFile.name)

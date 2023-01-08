@@ -86,7 +86,7 @@ interface Reader
         {
         assert:arg count >= 0;
 
-        Int target = (offset - count).maxOf(0);
+        Int target = (offset - count).notLessThan(0);
         return reset().skip(target);
         }
 

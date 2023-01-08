@@ -28,7 +28,7 @@ interface InputStream
      */
     @RO Int remaining.get()
         {
-        return (size - offset).maxOf(0);
+        return (size - offset).notLessThan(0);
         }
 
     /**

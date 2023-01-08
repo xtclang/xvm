@@ -480,7 +480,7 @@ service Dispatcher(Catalog          catalog,
                             case (Newer,   Correct):
                             case (Correct, Newer  ):
                                 assert cookiePln != Null && cookieTls != Null;
-                                session.incrementVersion_(cookiePln.version.maxOf(cookieTls.version)+1);
+                                session.incrementVersion_(Int.maxOf(cookiePln.version, cookieTls.version)+1);
                                 break;
 
                             default:

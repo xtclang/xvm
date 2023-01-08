@@ -913,7 +913,7 @@ mixin ByteArray<Element extends Byte>
         lineText[addrLen       ] = ':';
         lineText[charsPerLine-1] = '\n';
 
-        Int lines      = ((size + bytesPerLine - 1) / bytesPerLine).maxOf(1);
+        Int lines      = Int.maxOf(1, ((size + bytesPerLine - 1) / bytesPerLine));
         val buf        = new StringBuffer(lines * charsPerLine);
         Int byteOffset = 0;
         Int hexOffset  = addrLen + 2;

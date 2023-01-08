@@ -413,7 +413,7 @@ class Array<Element>
             }
         else
             {
-            Int   size   = this.size.maxOf(interval.effectiveUpperBound + 1);
+            Int   size   = this.size.notLessThan(interval.effectiveUpperBound + 1);
             Array result = new Element[size](i -> (interval.contains(i) ? value : this[i]));
             return mutability == Constant
                     ? result.freeze(True)

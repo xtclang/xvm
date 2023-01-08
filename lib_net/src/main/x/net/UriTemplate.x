@@ -544,7 +544,7 @@ const UriTemplate
                     return False;
 
                 case Equal:
-                    toOffset = to.offset.minOf(sectionLength);
+                    toOffset = to.offset.notGreaterThan(sectionLength);
                     if (fromOffset > toOffset)
                         {
                         return False;

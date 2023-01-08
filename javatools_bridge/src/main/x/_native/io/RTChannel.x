@@ -140,7 +140,7 @@ service RTChannel(RawChannel rawChannel)
                 do
                     {
                     Int max  = in.remaining;
-                    Int copy = space.minOf(max);
+                    Int copy = space.notGreaterThan(max);
                     in.pipeTo(buffer, copy);                // REVIEW: this API doesn't "feel right"
                     copied += copy;
                     space  -= copy;
@@ -190,7 +190,7 @@ service RTChannel(RawChannel rawChannel)
                 Int space = buffer.capacity - buffer.offset;
                 if (space > 0)
                     {
-                    Int request = minBytes.minOf(space);
+                    Int request = minBytes.notGreaterThan(space);
                     Int actual  = read(buffer, request, Delegated);
                     if (actual >= space)
                         {
@@ -307,7 +307,7 @@ service RTChannel(RawChannel rawChannel)
                 // when its reference count drops to zero), so that malicious code cannot hold on to
                 // the Byte[] and peek at the data flowing through it over time
                 Byte[]  bytes = result;
-                Int     copy  = remain.minOf(bytes.size);
+                Int     copy  = remain.notGreaterThan(bytes.size);
                 Boolean last  = copy == remain;
                 buffer.readBytes(bytes, 0, copy);
 

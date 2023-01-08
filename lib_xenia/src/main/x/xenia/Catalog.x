@@ -172,7 +172,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                         ? serviceTrust
                         : methodTrust == None
                             ? None // method is explicitly specified as "optional"
-                            : serviceTrust.maxOf(methodTrust);
+                            : TrustLevel.maxOf(serviceTrust, methodTrust);
                 }
 
             this.produces = method.is(Produces)

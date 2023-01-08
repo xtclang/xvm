@@ -603,7 +603,7 @@ class HasherMap<Key, Value>
         construct(TreeNode that)
             {
             // deep clone the sub nodes
-            this.nodes.map(node -> node.duplicate(), new HashBucket<Key, Value>[](that.nodes.size.maxOf(4)));
+            this.nodes.map(node -> node.duplicate(), new HashBucket<Key, Value>[](that.nodes.size.notLessThan(4)));
             }
 
         /**

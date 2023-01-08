@@ -500,7 +500,7 @@ const Uri
             Int partLength = part.size;
             if (section == to?.section)
                 {
-                partLength = partLength.minOf(to.offset - literalLength);
+                partLength = partLength.notGreaterThan(to.offset - literalLength);
                 }
 
             // scan for the first character of the literal
@@ -1983,7 +1983,7 @@ const Uri
         Int nextOffset = offset + 3;
         if (error != Null || nextOffset > length)
             {
-            return '?', nextOffset.minOf(length), error ?: $"The escape sequence is truncated: {text.quoted()}";
+            return '?', nextOffset.notGreaterThan(length), error ?: $"The escape sequence is truncated: {text.quoted()}";
             }
 
         Int codepoint = 0;

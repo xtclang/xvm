@@ -469,7 +469,7 @@ interface Session
     TrustLevel tlsChanged()
         {
         // trust on a single-user device only degrades to the normal level
-        return trustLevel.minOf(exclusiveAgent ? Normal : None);
+        return trustLevel.notGreaterThan(exclusiveAgent ? Normal : None);
         }
 
     /**
@@ -488,7 +488,7 @@ interface Session
     TrustLevel ipAddressChanged(IPAddress oldAddress, IPAddress newAddress)
         {
         // trust on a single-user device only degrades to the normal level
-        return trustLevel.minOf(exclusiveAgent ? Normal : None);
+        return trustLevel.notGreaterThan(exclusiveAgent ? Normal : None);
         }
 
     /**
@@ -511,7 +511,7 @@ interface Session
                 return None;
                 }
 
-            return trustLevel.minOf(Normal);
+            return trustLevel.notGreaterThan(Normal);
             }
         else
             {
@@ -543,7 +543,7 @@ interface Session
     TrustLevel fingerprintChanged()
         {
         // trust on a single-user device only degrades to the normal level
-        return trustLevel.minOf(exclusiveAgent ? Normal : None);
+        return trustLevel.notGreaterThan(exclusiveAgent ? Normal : None);
         }
 
     /**

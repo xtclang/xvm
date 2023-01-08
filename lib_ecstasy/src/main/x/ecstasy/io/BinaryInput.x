@@ -85,11 +85,11 @@ interface BinaryInput
         {
         if (count > 0)
             {
-            Int    bufSize  = count.minOf(8192);
+            Int    bufSize  = count.notGreaterThan(8192);
             Byte[] buf      = new Byte[bufSize];
             while (count > 0)
                 {
-                Int copySize = bufSize.minOf(count);
+                Int copySize = bufSize.notGreaterThan(count);
                 readBytes(buf, 0, copySize);
                 out.writeBytes(buf, 0, copySize);
                 count -= copySize;

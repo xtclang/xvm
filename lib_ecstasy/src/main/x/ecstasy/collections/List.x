@@ -274,7 +274,7 @@ interface List<Element>
 
         if (indexed, Int size := knownSize())
             {
-            for (Int i = startAt.maxOf(0); i < size; ++i)
+            for (Int i = startAt.notLessThan(0); i < size; ++i)
                 {
                 if (this[i] == value)
                     {
@@ -307,7 +307,7 @@ interface List<Element>
     conditional Int indexOf(List! that, Int startAt = 0)
         {
         Int length = that.size;
-        startAt = startAt.maxOf(0);
+        startAt = startAt.notLessThan(0);
         if (length == 0)
             {
             return startAt > size ? False : (True, startAt);
@@ -347,7 +347,7 @@ interface List<Element>
             {
             if (Int index := binarySearch(value, orderer))
                 {
-                Int stop = startAt.minOf(size-1);
+                Int stop = startAt.notGreaterThan(size-1);
                 while (index < stop && this[index+1] == value)
                     {
                     ++index;
@@ -360,7 +360,7 @@ interface List<Element>
 
         if (indexed)
             {
-            for (Int i = startAt.minOf(size-1); i >= 0; --i)
+            for (Int i = startAt.notGreaterThan(size-1); i >= 0; --i)
                 {
                 if (this[i] == value)
                     {
@@ -400,7 +400,7 @@ interface List<Element>
     conditional Int lastIndexOf(List! that, Int startAt = MaxValue)
         {
         Int length = that.size;
-        startAt = startAt.minOf(this.size-length);
+        startAt = startAt.notGreaterThan(this.size-length);
         if (length == 0)
             {
             return startAt < 0 ? False : (True, startAt);
@@ -623,7 +623,7 @@ interface List<Element>
         Result[] results = new Result[];
         for (Int i = 0, Int thisSize = this.size; i < thisSize; i += size)
             {
-            results.add(process(this[i ..< (i+size).minOf(thisSize)]));
+            results.add(process(this[i ..< (i+size).notGreaterThan(thisSize)]));
             }
         return results;
         }
@@ -651,7 +651,7 @@ interface List<Element>
         Int      stop     = thisSize - (partial ? 1 : size);
         for (Int i = 0; i <= stop; i += step)
             {
-            results.add(process(this[i ..< (i+size).minOf(thisSize)]));
+            results.add(process(this[i ..< (i+size).notGreaterThan(thisSize)]));
             }
         return results;
         }
@@ -1197,7 +1197,7 @@ interface List<Element>
             @Override
             Int get()
                 {
-                return super().minOf(size);
+                return super().notGreaterThan(size);
                 }
 
             @Override
@@ -1221,7 +1221,7 @@ interface List<Element>
         Boolean advance()
             {
             Int next = index + 1;
-            index = next.minOf(size);
+            index = next.notGreaterThan(size);
             return next < size;
             }
 

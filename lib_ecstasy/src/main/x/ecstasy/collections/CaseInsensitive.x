@@ -43,7 +43,7 @@ static const CaseInsensitive
         {
         Int len1 = value1.size;
         Int len2 = value2.size;
-        for (Int offset = 0, Int len = len1.minOf(len2); offset < len; ++offset)
+        for (Int offset = 0, Int len = Int.minOf(len1, len2); offset < len; ++offset)
             {
             Char char1 = value1[offset];
             Char char2 = value2[offset];
