@@ -894,9 +894,13 @@ mixin ByteArray<Element extends Byte>
      *
      * @return a String containing the hex dump
      */
-    String toHexDump(Int bytesPerLine = 32)
+    String toHexDump(Int bytesPerLine = 0)
         {
-        assert bytesPerLine > 0;
+        assert:arg bytesPerLine >= 0;
+        if (bytesPerLine == 0)
+            {
+            bytesPerLine = size.notLessThan(4).notGreaterThan(32);
+            }
 
         // calculate how many digits it will take to show the address
         Int addrLen = ((size.leftmostBit.trailingZeroCount) / 8 + 1) * 2;       // 2, 4, 6, ...
