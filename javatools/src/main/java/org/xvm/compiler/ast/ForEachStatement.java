@@ -45,11 +45,11 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.Var;
-import org.xvm.asm.op.Var_I;
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -914,13 +914,15 @@ public class ForEachStatement
         // Exit:
 
         Assignable LVal = m_exprLValue.generateAssignable(ctx, code, errs);
-        code.add(new Var_I(typeSeq, range.getEffectiveFirst()));
+        code.add(new Var_IN(typeSeq,
+                pool.ensureStringConstant(getLoopPrefix() + "current"), range.getEffectiveFirst()));
         Register regVal = code.lastRegister();
 
         Register regLast = m_regLast;
         if (regLast == null)
             {
-            code.add(new Var(pool.typeBoolean()));
+            code.add(new Var_N(pool.typeBoolean(),
+                    pool.ensureStringConstant(getLoopPrefix() + "last")));
             regLast = code.lastRegister();
             }
 
@@ -980,7 +982,8 @@ public class ForEachStatement
         Register regCount = m_regCount;
         if (regCount == null)
             {
-            code.add(new Var_I(pool.typeInt(), pool.val0()));
+            code.add(new Var_IN(pool.typeInt(),
+                    pool.ensureStringConstant(getLoopPrefix() + "count"), pool.val0()));
             regCount = code.lastRegister();
             }
 
@@ -1021,7 +1024,8 @@ public class ForEachStatement
         Register regLast = m_regLast;
         if (regLast == null)
             {
-            code.add(new Var(pool.typeBoolean()));
+            code.add(new Var_N(pool.typeBoolean(),
+                    pool.ensureStringConstant(getLoopPrefix() + "last")));
             regLast = code.lastRegister();
             }
 
@@ -1161,7 +1165,7 @@ public class ForEachStatement
             if (regEntry == null)
                 {
                 // the "entry" label is not used; create a temp var
-                code.add(new Var(typeEntry));
+                code.add(new Var_N(typeEntry, pool.ensureStringConstant(getLoopPrefix() + "entry")));
                 regEntry = code.lastRegister();
                 }
 
@@ -1336,6 +1340,13 @@ public class ForEachStatement
                 : chooseBest(setId, info.getType(), errs);
         }
 
+    /**
+     * @return a prefix to use for auto-generated loop variables
+     */
+    private String getLoopPrefix()
+        {
+        return "loop#" + Source.calculateLine(getStartPosition()) + '.';
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
