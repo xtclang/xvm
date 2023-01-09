@@ -50,7 +50,6 @@ public abstract class BaseInt128
         {
         super.initNative();
 
-        markNativeProperty("bitLength");
         markNativeProperty("leadingZeroCount");
 
         markNativeMethod("toUnchecked", VOID, null);

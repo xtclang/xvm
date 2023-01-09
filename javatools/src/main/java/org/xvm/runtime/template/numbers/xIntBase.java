@@ -186,6 +186,9 @@ public abstract class xIntBase
                     }
                 }
 
+            case "bitLength":
+                return frame.assignValue(iReturn, xInt.makeHandle(128));
+
             case "bitCount":
                 {
                 if (hTarget instanceof JavaLong hL)
@@ -247,7 +250,9 @@ public abstract class xIntBase
                     {
                     long l = hL.getValue();
 
-                    return frame.assignValue(iReturn, xInt.makeHandle(Long.numberOfTrailingZeros(l)));
+                    return frame.assignValue(iReturn, l == 0
+                            ? xInt.makeHandle(128)
+                            : xInt.makeHandle(Long.numberOfTrailingZeros(l)));
                     }
                 else
                     {

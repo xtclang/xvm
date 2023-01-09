@@ -23,6 +23,7 @@ public abstract class xIntNumber
         markNativeMethod("toChar", null, new String[]{"text.Char"});
 
         markNativeProperty("bitCount");
+        markNativeProperty("bitLength");
         markNativeProperty("leftmostBit");
         markNativeProperty("rightmostBit");
         markNativeProperty("trailingZeroCount");
