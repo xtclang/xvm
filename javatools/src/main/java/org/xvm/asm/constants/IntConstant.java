@@ -604,11 +604,13 @@ public class IntConstant
             case "-UIntN":
                 return validate(this.getValue().negate());
 
+            case "~Int":
             case "~Int16":
             case "~Int32":
             case "~Int64":
             case "~Int128":
             case "~IntN":
+            case "~UInt":
             case "~UInt16":
             case "~UInt32":
             case "~UInt64":

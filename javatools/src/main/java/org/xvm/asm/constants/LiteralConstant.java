@@ -839,8 +839,16 @@ public class LiteralConstant
     public Constant apply(Token.Id op, Constant that)
         {
         ConstantPool pool = getConstantPool();
-        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+        switch (that == null
+                    ? op.TEXT + this.getFormat().name()
+                    : this.getFormat().name() + op.TEXT + that.getFormat().name())
             {
+            case "-IntLiteral":
+                {
+                PackedInteger piThis = this.getPackedInteger();
+                return pool.ensureLiteralConstant(Format.IntLiteral, piThis.negate().toString());
+                }
+
             case "IntLiteral+IntLiteral":
             case "IntLiteral-IntLiteral":
             case "IntLiteral*IntLiteral":

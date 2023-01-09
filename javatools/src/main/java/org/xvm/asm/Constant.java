@@ -232,12 +232,16 @@ public abstract class Constant
                 return pool.ensureByteConstant(Format.CUInt8, 0);
 
             case "numbers.Int":
+                return pool.ensureIntConstant(PackedInteger.ZERO, Format.Int);
+
+            case "numbers.UInt":
+                return pool.ensureIntConstant(PackedInteger.ZERO, Format.UInt);
+
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int64":
             case "numbers.Int128":
             case "numbers.IntN":
-            case "numbers.UInt":
             case "numbers.UInt16":
             case "numbers.UInt32":
             case "numbers.UInt64":

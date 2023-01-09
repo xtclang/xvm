@@ -404,6 +404,16 @@ const IntLiteral(String text)
     // ----- Number API ----------------------------------------------------------------------------
 
     /**
+     * Calculate the negative of this number.
+     *
+     * @return the negative of this number, generally equal to `0-this`
+     */
+    @Op("-#") IntLiteral neg()
+        {
+        return -this;
+        }
+
+    /**
      * Addition: Add another number to this number, and return the result.
      */
     @Op("+")
