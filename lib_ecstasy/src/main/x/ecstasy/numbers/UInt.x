@@ -45,6 +45,7 @@ const UInt
      */
     static IntLiteral MaxValue = Int.MaxValue;
 
+
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override

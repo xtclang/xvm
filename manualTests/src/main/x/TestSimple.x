@@ -4,20 +4,20 @@ module TestSimple
 
     void run()
         {
-        Int64 i64 = MinValue;
-        try
-            {
-            console.println(i64.abs()); // should blow; used to produce an incorrect result
-            assert;
-            }
-        catch (OutOfBounds e) {}
+        Int[] ints = [
+                     Int.MinValue, Int.MinValue+1, Int.MinValue+2,
+                     -1, 0, 1,
+                     Int.MaxValue, Int.MaxValue-1, Int.MaxValue-2
+                     ];
 
-        Int32 i32 = MinValue;
-        try
+        for (Int i : ints)
             {
-            console.println(i32.abs());
-            assert;
+            Int bitLength=i.bitLength;
+            console.println($|{i}, \
+                             |bitLength={i.bitLength}, \
+                             |bitCount={i.bitCount}, \
+                             |trailingZeroCount={i.trailingZeroCount}
+                             );
             }
-        catch (OutOfBounds e) {}
         }
     }

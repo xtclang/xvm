@@ -1,5 +1,8 @@
 /**
- * `Int` is an automatically-sized integer, and supports the [Int128] range of values.
+ * `Int` is an automatically-sized integer, and supports the [Int128] range of values, except for
+ * the value [Int128.MinValue], in hexadecimal, an `8` followed by 31 zeros. The exclusion of this
+ * one value allows all `UInt` values to be legal `Int` values, and allows the magnitude of every
+ * legal `Int` value to be a legal `UInt` value.
  *
  * When integer bitwise operations are not required, use the `Int` type by default for all integer
  * properties, variables, parameters, and return values whose runtime range is _unknown_, and thus
@@ -34,7 +37,7 @@ const Int
     /**
      * The minimum value for an Int.
      */
-    static IntLiteral MinValue = Int128.MinValue;
+    static IntLiteral MinValue = -MaxValue;
 
     /**
      * The maximum value for an Int.
@@ -125,7 +128,10 @@ const Int
     @Override
     UInt magnitude.get()
         {
-        return abs().toUInt();
+        // there is no "abs()" for MinValue
+        return this == MinValue
+                ? UInt.MaxValue
+                : abs().toUInt();
         }
 
 
