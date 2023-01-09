@@ -339,7 +339,7 @@ public class LiteralConstant
                             lValue = lValue * radix + hexitValue(ch);
                             if (lValue > 0x00FFFFFFFFFFFFFFL)
                                 {
-                                bigint = BigInteger.valueOf(fNeg ? -lValue : lValue);
+                                bigint = BigInteger.valueOf(lValue);
                                 }
                             }
                         else
@@ -366,7 +366,9 @@ public class LiteralConstant
                     break EatDigits;
                     }
                 }
-            pint = bigint == null ? new PackedInteger(fNeg ? -lValue : lValue) : new PackedInteger(bigint);
+            pint = bigint == null
+                    ? new PackedInteger(fNeg ? -lValue : lValue)
+                    : new PackedInteger(fNeg ? bigint.negate() : bigint);
 
             PossibleSuffix: if (radix == 10)
                 {
