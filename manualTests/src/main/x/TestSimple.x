@@ -5,9 +5,9 @@ module TestSimple
     void run()
         {
         Int[] ints = [
-                     Int.MinValue, Int.MinValue+1, Int.MinValue+2,
+                     MinValue, MinValue+1, MinValue+2,
                      -1, 0, 1,
-                     Int.MaxValue, Int.MaxValue-1, Int.MaxValue-2
+                     MaxValue, MaxValue-1, MaxValue-2
                      ];
 
         for (Int i : ints)
@@ -16,6 +16,8 @@ module TestSimple
             console.println($|{i}, \
                              |bitLength={i.bitLength}, \
                              |bitCount={i.bitCount}, \
+                             |leftmostBit={i >=0 ? i.leftmostBit : -1}, \
+                             |rightmostBit={i.rightmostBit}, \
                              |trailingZeroCount={i.trailingZeroCount}
                              );
             }

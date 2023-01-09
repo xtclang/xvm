@@ -202,13 +202,13 @@ const Int
     // ----- Bitwise operations (but only a subset) ------------------------------------------------
 
     /**
-     * If any bits are set in this integer, then return an integer with only the most significant
-     * (left-most) of those bits set, otherwise return zero.
+     * If any bits are set in this non-negative integer, then return an integer with only the most
+     * significant (left-most) of those bits set, otherwise return zero.
+     *
+     * @throws OutOfBounds if this integer value is negative
      */
     @RO Int leftmostBit.get()
         {
-        // this will exhibit potentially unexpected behavior for negative values, since -1 can be
-        // stored in a small number of bits but 0x800000000000000000000000000000000 cannot be
         return this == 0
                 ? this
                 : toInt128().leftmostBit.toInt();

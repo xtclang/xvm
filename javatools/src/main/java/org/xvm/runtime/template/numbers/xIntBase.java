@@ -211,6 +211,10 @@ public abstract class xIntBase
                 if (hTarget instanceof JavaLong hL)
                     {
                     long l = hL.getValue();
+                    if (f_fSigned && l < 0)
+                        {
+                        return frame.raiseException(xException.outOfBounds(frame, "Negative value"));
+                        }
 
                     return frame.assignValue(iReturn, xInt.makeHandle(Long.highestOneBit(l)));
                     }
@@ -219,9 +223,13 @@ public abstract class xIntBase
                     LongLong ll = ((LongLongHandle) hTarget).getValue();
                     long     lH = ll.getHighValue();
 
-                    return frame.assignValue(iReturn, xInt.makeHandle(lH == 0
-                        ? Long.highestOneBit(ll.getLowValue())
-                        : Long.highestOneBit(lH) + 64));
+                    if (lH < 0)
+                        {
+                        return frame.raiseException(xException.outOfBounds(frame, "Negative value"));
+                        }
+
+                    return frame.assignValue(iReturn,
+                            xInt.INSTANCE.makeHandle(new LongLong(0, Long.highestOneBit(lH))));
                     }
                 }
 
@@ -238,9 +246,9 @@ public abstract class xIntBase
                     LongLong ll   = ((LongLongHandle) hTarget).getValue();
                     long     lLow = ll.getLowValue();
 
-                    return frame.assignValue(iReturn, xInt.makeHandle(lLow == 0
-                        ? 64 + Long.lowestOneBit(ll.getHighValue())
-                        : Long.lowestOneBit(lLow)));
+                    return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(lLow == 0
+                            ? new LongLong(0, Long.lowestOneBit(ll.getHighValue()))
+                            : new LongLong(Long.lowestOneBit(lLow), 0)));
                     }
                 }
 
