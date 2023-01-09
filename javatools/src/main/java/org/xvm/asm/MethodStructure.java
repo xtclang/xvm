@@ -1517,6 +1517,30 @@ public class MethodStructure
         }
 
     @Override
+    public void addAnnotation(Annotation annotation)
+        {
+        TypeConstant typeMixin = annotation.getAnnotationType();
+        if (typeMixin.getExplicitClassFormat() != Format.MIXIN ||
+                !typeMixin.getExplicitClassInto().isIntoMethodType())
+            {
+            throw new IllegalArgumentException("only into Method annotations are allowed");
+            }
+
+        int cAnno = m_aAnnotations.length;
+        if (cAnno == 0)
+            {
+            m_aAnnotations = new Annotation[]{annotation};
+            }
+        else
+            {
+            Annotation[] aAnno = new Annotation[cAnno + 1];
+            System.arraycopy(m_aAnnotations, 0, aAnno, 0, cAnno);
+            aAnno[cAnno] = annotation;
+            m_aAnnotations = aAnno;
+            }
+        }
+
+    @Override
     protected Component getEldestSibling()
         {
         MultiMethodStructure parent = (MultiMethodStructure) getParent();

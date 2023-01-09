@@ -20,6 +20,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
@@ -2440,6 +2441,19 @@ public abstract class ClassTemplate
                     propOver.addAnnotation(pool.clzOverride());
                     propOver.setSynthetic(true);
                     propOver.markNative();
+
+                    if (prop.getGetter() != null)
+                        {
+                        Parameter[] aParams  = Parameter.NO_PARAMS;
+                        Parameter[] aReturns = new Parameter[] {new Parameter(pool, prop.getType(),
+                                                    null, null, true, 0, false)};
+
+                        MethodStructure methodGet = propOver.createMethod(false, accessRef, null,
+                                                        aReturns, "get", aParams, false, false);
+                        methodGet.addAnnotation(pool.clzOverride());
+                        methodGet.setSynthetic(true);
+                        methodGet.markNative();
+                        }
                     }
                 }
             }
