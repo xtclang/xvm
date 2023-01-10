@@ -659,6 +659,27 @@ public abstract class xConstrainedInteger
         return frame.assignValue(iReturn, makeJavaLong(~l));
         }
 
+
+    // ----- comparison support --------------------------------------------------------------------
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn, xOrdered.makeHandle(f_fSigned
+                ? Long.compare(h1.getValue(), h2.getValue())
+                : Long.compareUnsigned(h1.getValue(), h2.getValue())));
+        }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
+        }
+
     @Override
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
@@ -690,31 +711,6 @@ public abstract class xConstrainedInteger
         long lTail = l >>> c;
 
         return frame.assignValue(iReturn, makeJavaLong(lHead | lTail));
-        }
-
-
-    // ----- comparison support --------------------------------------------------------------------
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return frame.assignValue(iReturn,
-            xBoolean.makeHandle(h1.getValue() == h2.getValue()));
-        }
-
-    @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return frame.assignValue(iReturn,
-            xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
         }
 
     /**

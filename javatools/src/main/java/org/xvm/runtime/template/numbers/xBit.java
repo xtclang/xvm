@@ -150,28 +150,6 @@ public class xBit
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return frame.assignValue(iReturn,
-            xBoolean.makeHandle(h1.getValue() == h2.getValue()));
-        }
-
-    @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return frame.assignValue(iReturn,
-            xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
-        }
-
-    @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         return frame.assignValue(iReturn,
@@ -198,6 +176,24 @@ public class xBit
         long l = ((JavaLong) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeHandle(l == 0));
+        }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn,
+            xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
         }
 
     @Override

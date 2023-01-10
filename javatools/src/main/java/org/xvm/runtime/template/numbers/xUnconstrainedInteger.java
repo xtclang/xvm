@@ -12,7 +12,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -478,25 +477,15 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
-    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        long l = ((JavaLong) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(l));
+        return frame.assignValue(iReturn, xString.makeHandle(pi.toString()));
         }
 
 
     // ----- comparison support --------------------------------------------------------------------
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        IntNHandle h1 = (IntNHandle) hValue1;
-        IntNHandle h2 = (IntNHandle) hValue2;
-
-        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
-        }
 
     @Override
     public int callCompare(Frame frame, TypeComposition clazz,
@@ -508,16 +497,22 @@ public abstract class xUnconstrainedInteger
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
         }
 
-
-    // ----- Object methods ------------------------------------------------------------------------
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((IntNHandle) hValue1).getValue().equals(((IntNHandle) hValue2).getValue());
+        }
 
     @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(pi.toString()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(pi.hashCode()));
         }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
 
     /**
      * NOTE: we are using the IntNHandle for objects of UnconstrainedInteger types.

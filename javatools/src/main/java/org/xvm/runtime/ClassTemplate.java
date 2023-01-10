@@ -50,6 +50,7 @@ import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
@@ -1667,6 +1668,20 @@ public abstract class ClassTemplate
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        TypeConstant  type;
+        ClassTemplate template;
+        if (!hValue1.isMutable() && !hValue2.isMutable() &&
+            (type = hValue1.getType()).equals(hValue2.getType()) &&
+                (template = hValue1.getTemplate()) == hValue2.getTemplate() &&
+                 template instanceof xConst)
+            {
+            // we are in Object.equals() method for two constants; according to the doc:
+            //   "comparing any two objects will only result in equality if they are the
+            //    same object, or if they are two constant objects with identical values"
+            clazz = template.ensureClass(frame.f_context.f_container, type);
+
+            return template.callEquals(frame, clazz, hValue1, hValue2, iReturn);
+            }
         return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 

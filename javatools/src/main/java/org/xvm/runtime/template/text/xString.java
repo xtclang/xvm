@@ -264,10 +264,7 @@ public class xString
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        StringHandle h1 = (StringHandle) hValue1;
-        StringHandle h2 = (StringHandle) hValue2;
-
-        return frame.assignValue(iReturn, xBoolean.makeHandle(compare(h1, h2) == 0));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
         }
 
     @Override
@@ -277,7 +274,17 @@ public class xString
         StringHandle h1 = (StringHandle) hValue1;
         StringHandle h2 = (StringHandle) hValue2;
 
-        return frame.assignValue(iReturn, xOrdered.makeHandle(compare(h1, h2)));
+        return frame.assignValue(iReturn,
+                xOrdered.makeHandle(Arrays.compare(h1.m_achValue, h2.m_achValue)));
+        }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return Arrays.equals(h1.m_achValue, h2.m_achValue);
         }
 
     @Override
@@ -420,26 +427,6 @@ public class xString
         return -1;
         }
 
-    private static int compare(StringHandle h1, StringHandle h2)
-        {
-        char[] ach1 = h1.m_achValue;
-        char[] ash2 = h2.m_achValue;
-        int    c1   = ach1.length;
-        int    c2   = ash2.length;
-        int    c    = Math.min(c1, c2);
-
-        for (int i = 0; i < c; i++)
-            {
-            char ch1 = ach1[i];
-            char ch2 = ash2[i];
-            if (ch1 != ch2)
-                {
-                return ch1 - ch2;
-                }
-            }
-        return c1 - c2;
-        }
-
     /**
      * Call String.appendTo(Appender<Char> appender)
      *
@@ -529,9 +516,9 @@ public class xString
         @Override
         public boolean equals(Object obj)
             {
-            if (obj instanceof StringHandle hString)
+            if (obj instanceof StringHandle that)
                 {
-                return Arrays.equals(m_achValue, hString.m_achValue);
+                return Arrays.equals(this.m_achValue, that.m_achValue);
                 }
             return false;
             }

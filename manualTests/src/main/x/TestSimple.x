@@ -4,22 +4,22 @@ module TestSimple
 
     void run()
         {
-        Int[] ints = [
-                     MinValue, MinValue+1, MinValue+2,
-                     -1, 0, 1,
-                     MaxValue, MaxValue-1, MaxValue-2
-                     ];
+        String s0 = "ab";
+        String s1 = "abc";
+        String s2 = s0 + "c";
 
-        for (Int i : ints)
-            {
-            Int bitLength=i.bitLength;
-            console.println($|{i}, \
-                             |bitLength={i.bitLength}, \
-                             |bitCount={i.bitCount}, \
-                             |leftmostBit={i >=0 ? i.leftmostBit : -1}, \
-                             |rightmostBit={i.rightmostBit}, \
-                             |trailingZeroCount={i.trailingZeroCount}
-                             );
-            }
+        assert test(s1, s2);
+        assert &s1 == &s2;
+
+        Int64 i1 = s1.hashCode();
+        Int64 i2 = s2.hashCode();
+
+        assert test(i1, i2);
+        assert &i1 == &i2;
+        }
+
+    Boolean test(Object o1, Object o2)
+        {
+        return o1 == o2;
         }
     }

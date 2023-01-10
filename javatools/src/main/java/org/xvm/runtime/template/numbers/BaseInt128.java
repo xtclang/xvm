@@ -578,26 +578,7 @@ public abstract class BaseInt128
         return frame.assignValue(iReturn, makeHandle(ll.complement()));
         }
 
-    @Override
-    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, xInt64.makeHandle(ll.hashCode()));
-        }
-
-
     // ----- comparison support --------------------------------------------------------------------
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        LongLongHandle h1 = (LongLongHandle) hValue1;
-        LongLongHandle h2 = (LongLongHandle) hValue2;
-
-        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
-        }
 
     @Override
     public int callCompare(Frame frame, TypeComposition clazz,
@@ -610,6 +591,20 @@ public abstract class BaseInt128
             f_fSigned
                 ? h1.getValue().compare(h2.getValue())
                 : h1.getValue().compareUnsigned(h2.getValue())));
+        }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((LongLongHandle) hValue1).getValue().equals(((LongLongHandle) hValue2).getValue());
+        }
+
+    @Override
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        LongLong ll = ((LongLongHandle) hTarget).getValue();
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(ll.hashCode()));
         }
 
     @Override

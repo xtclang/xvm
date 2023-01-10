@@ -315,17 +315,6 @@ abstract public class BaseBinaryFP
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        FloatHandle h1 = (FloatHandle) hValue1;
-        FloatHandle h2 = (FloatHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-            xBoolean.makeHandle(h1.getValue() == h2.getValue()));
-        }
-
-    @Override
     public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -333,39 +322,22 @@ abstract public class BaseBinaryFP
         FloatHandle h2 = (FloatHandle) hValue2;
 
         return frame.assignValue(iReturn,
-            xOrdered.makeHandle(Double.compare(h1.getValue(), h2.getValue())));
+                xOrdered.makeHandle(Double.compare(h1.getValue(), h2.getValue())));
         }
 
-    /**
-     * Convert a long value into a handle for the type represented by this template.
-     *
-     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
-     */
-    public int convertLong(Frame frame, long lValue, int iReturn)
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        return frame.assignValue(iReturn, makeHandle((double) lValue));
+        return ((FloatHandle) hValue1).getValue() == ((FloatHandle) hValue2).getValue();
         }
 
+    @Override
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        double d = ((FloatHandle) hTarget).getValue();
 
-    // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * @return a bit array for the specified double value
-     */
-    abstract protected byte[] getBits(double d);
-
-    /**
-     * @return a double value for the specified long value
-     */
-    abstract protected double fromLong(long l);
-
-    /**
-     * Note: while we could simply say "Sting.valueOf(d)", it may produce a higher precision
-     * (and less human readable) value.
-     *
-     * @return a String value of the specified double
-     */
-    abstract protected String toString(double d);
+        return frame.assignValue(iReturn, xInt64.makeHandle(Double.hashCode(d)));
+        }
 
     @Override
     protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
@@ -384,20 +356,43 @@ abstract public class BaseBinaryFP
         }
 
     @Override
-    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
-        double d = ((FloatHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, xInt64.makeHandle(Double.hashCode(d)));
-        }
-
-    @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         double d = ((FloatHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, xString.makeHandle(toString(d)));
         }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Convert a long value into a handle for the type represented by this template.
+     *
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     */
+    public int convertLong(Frame frame, long lValue, int iReturn)
+        {
+        return frame.assignValue(iReturn, makeHandle((double) lValue));
+        }
+
+    /**
+     * @return a bit array for the specified double value
+     */
+    abstract protected byte[] getBits(double d);
+
+    /**
+     * @return a double value for the specified long value
+     */
+    abstract protected double fromLong(long l);
+
+    /**
+     * Note: while we could simply say "Sting.valueOf(d)", it may produce a higher precision
+     * (and less human readable) value.
+     *
+     * @return a String value of the specified double
+     */
+    abstract protected String toString(double d);
 
 
     // ----- handle --------------------------------------------------------------------------------

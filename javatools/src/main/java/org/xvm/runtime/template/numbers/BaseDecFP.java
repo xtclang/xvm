@@ -326,17 +326,6 @@ abstract public class BaseDecFP
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        DecimalHandle h1 = (DecimalHandle) hValue1;
-        DecimalHandle h2 = (DecimalHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-            xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
-        }
-
-    @Override
     public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -347,13 +336,19 @@ abstract public class BaseDecFP
             xOrdered.makeHandle(h1.getValue().compareForObjectOrder(h2.getValue())));
         }
 
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((DecimalHandle) hValue1).getValue().equals(((DecimalHandle) hValue2).getValue());
+        }
 
-    // ----- helpers -------------------------------------------------------------------------------
+    @Override
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-    /**
-     * @return a decimal value for the specified double
-     */
-    abstract protected Decimal fromDouble(double d);
+        return frame.assignValue(iReturn, xInt64.makeHandle(dec.hashCode()));
+        }
 
     @Override
     protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
@@ -372,20 +367,20 @@ abstract public class BaseDecFP
         }
 
     @Override
-    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
-        Decimal dec = ((DecimalHandle) hTarget).getValue();
-
-        return frame.assignValue(iReturn, xInt64.makeHandle(dec.hashCode()));
-        }
-
-    @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         Decimal dec = ((DecimalHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, xString.makeHandle(dec.toString()));
         }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * @return a decimal value for the specified double
+     */
+    abstract protected Decimal fromDouble(double d);
 
 
     // ----- handle --------------------------------------------------------------------------------

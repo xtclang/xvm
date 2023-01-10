@@ -12,6 +12,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 
@@ -110,4 +111,16 @@ public abstract class xNumber
      * Construct a number from the specified bit array and place it into the specified register.
      */
     abstract protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn);
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        // all numbers are consts with identity being the value
+        return frame.assignValue(iReturn,
+                xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
+        }
+
+    @Override
+    public abstract boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2);
     }

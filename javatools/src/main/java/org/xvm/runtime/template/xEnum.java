@@ -190,9 +190,7 @@ public class xEnum
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        EnumHandle hEnum1 = (EnumHandle) hValue1;
-        EnumHandle hEnum2 = (EnumHandle) hValue2;
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hEnum1.getOrdinal() == hEnum2.getOrdinal()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
         }
 
     @Override

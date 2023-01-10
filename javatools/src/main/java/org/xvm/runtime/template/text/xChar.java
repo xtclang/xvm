@@ -181,11 +181,7 @@ public class xChar
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return frame.assignValue(iReturn,
-            xBoolean.makeHandle(h1.getValue() == h2.getValue()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
         }
 
     @Override
@@ -205,7 +201,7 @@ public class xChar
         return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
         }
 
-    // ----- helpers -----
+    // ----- helpers -------------------------------------------------------------------------------
 
     public static JavaLong makeHandle(long chValue)
         {
