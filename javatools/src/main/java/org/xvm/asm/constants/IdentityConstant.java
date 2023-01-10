@@ -656,7 +656,7 @@ public abstract class IdentityConstant
                 getType();
 
             case Class ->
-                ((ClassStructure) getComponent()).getFormalType();
+                ((ClassStructure) getComponent()).getCanonicalType();
 
             case Typedef ->
                 ((TypedefStructure) getComponent()).getType();
