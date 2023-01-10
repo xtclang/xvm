@@ -796,7 +796,7 @@ public class MethodStructure
                         {
                         continue NextParameter;
                         }
-                    if (checkConflict(typeResolved, sName, mapTypeParams))
+                    if (checkConflict(typeResolved, sName, true, mapTypeParams))
                         {
                         continue NextParameter;
                         }
@@ -815,7 +815,7 @@ public class MethodStructure
                         {
                         continue NextParameter;
                         }
-                    if (checkConflict(typeResolved, sName, mapTypeParams))
+                    if (checkConflict(typeResolved, sName, false, mapTypeParams))
                         {
                         continue NextParameter;
                         }
@@ -858,7 +858,7 @@ public class MethodStructure
      * @return true iff there is a conflict, in which case the mapping is removed
      */
     private static boolean checkConflict(TypeConstant typeResult, String sFormalName,
-                                         Map<String, TypeConstant> mapTypeParams)
+                                         boolean fParam, Map<String, TypeConstant> mapTypeParams)
         {
         if (typeResult != null)
             {
@@ -872,15 +872,15 @@ public class MethodStructure
             TypeConstant typePrev = mapTypeParams.get(sFormalName);
             if (typePrev != null)
                 {
-                if (typePrev.isA(typeResult))
+                if (fParam ? typeResult.isA(typePrev) : typePrev.isA(typeResult))
                     {
-                    // the old type is more precise; keep it
+                    // the old parameter type is wider or the old return type is narrower; keep it
                     return false;
                     }
 
-                if (typeResult.isA(typePrev))
+                if (fParam ? typePrev.isA(typeResult) : typeResult.isA(typePrev))
                     {
-                    // the new type is more precise; use it instead
+                    // the new parameter type is wider or the old return type is narrower; use it instead
                     }
                 else
                     {

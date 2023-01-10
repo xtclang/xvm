@@ -14,9 +14,6 @@
 
 - implement timeout for IO operations (interrupt IO executor threads)
 
-- implement BitArray's leftmostBit(), rightmostBit(), leadingZeroCount(),
-    trailingZeroCount(), bitCount.get() natively
-
 - enum should validate that none of the declared properties step on the existing Enum properties
   for example, the following should not compile
 
@@ -24,6 +21,8 @@
         {
         PlainText("xplaintext", False),
         }
+
+- change TxManager.NO_TX to Int64.MinValue
 
 - MapMapping doesn't work for properties that declared as Map classes, e.g.
     const Test(Map<Int, String> map)     - json serialization works
@@ -70,8 +69,6 @@
     return write^(buffer).thenDo(() -> written(buffer));
 
 - discuss recursive lambda calls (use this:function?)
-
-- implement boundary checks for atomic integers
 
 - rewrite removeAccess() and removeImmutable(); it blows on virtual children now
 
