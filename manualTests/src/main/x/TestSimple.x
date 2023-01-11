@@ -2,14 +2,26 @@ module TestSimple
     {
     @Inject Console console;
 
+    void run()
+        {
+        C a = new C(0);
+        C b = new C(1);
+        C c = new C(2);
+
+        assert a == b || a == c;
+        }
+
     const C(Int v)
         {
         @Override
         String toString()
             {
-            return v == 0
-                ? v.toString()
-                : throw new OutOfBounds();
+            return switch(v)
+                {
+                case 0: v.toString();
+                case 1: "abcdef"*1000;
+                default: throw new OutOfBounds("wrong value");
+                };
             }
 
         @Override
@@ -17,13 +29,5 @@ module TestSimple
             {
             return value1.v == value2.v;
             }
-        }
-
-    void run()
-        {
-        C a = new C(0);
-        C b = new C(1);
-
-        assert a == b;
         }
     }

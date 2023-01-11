@@ -61,6 +61,22 @@ class ConstHelper
         }
 
     /**
+     * Helper function to produce a safe "toString()" value used by the AssertV op.
+     */
+    static String valueOf(Object o)
+        {
+        try
+            {
+            return o.toString();
+            }
+        catch (Exception e)
+            {
+            String msg = e.message;
+            return $"? ({&e.actualClass.name}{msg.size == 0 ? "" : $": {msg}"})";
+            }
+        }
+
+    /**
      * Helper function to "freeze" all the Freezable fields for a Const class.
      */
     static void freeze(Object[] fields)

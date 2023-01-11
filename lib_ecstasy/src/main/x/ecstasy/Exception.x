@@ -11,18 +11,15 @@ const Exception
     {
     construct(String? text = Null, Exception? cause = Null)
         {
-        // @Inject Iterable<StackFrame> stack;
-
-        this.text = text;
+        this.text  = text;
         this.cause = cause;
-        // this.stackTrace = stack;
         }
 
     String? text;
     Exception!? cause;
     Iterable<StackFrame> stackTrace;
 
-    String getMessage()
+    @RO String message.get()
         {
         return text ?: "";
         }
@@ -30,7 +27,8 @@ const Exception
     @Override
     String toString()
         {
-        (String name, String stackTrace) = formatStackTrace();
+        String name       = &this.actualClass.name;
+        String stackTrace = formatStackTrace();
         return formatExceptionString(name, stackTrace);
         }
 
@@ -40,7 +38,7 @@ const Exception
 
         buf.append(exceptionName)
            .append(": ")
-           .append(getMessage())
+           .append(message)
            .append(stackTrace);
 
         if (cause != Null)
@@ -52,48 +50,9 @@ const Exception
         return buf.toString();
         }
 
-    (String name, String stack) formatStackTrace()
+    String formatStackTrace()
         {
         TODO
-        }
-
-    (String, StackFrame /* firstFrame */) formatStackTrace(StackFrame? lastFrame)
-        {
-        // stack trace
-        StackFrame? firstFrame = Null;
-
-        Iterator<StackFrame> frames = stackTrace.iterator();
-        for (StackFrame frame : frames)
-            {
-            if (firstFrame == Null)
-                {
-                firstFrame = frame;
-                }
-
-            // TODO "  at "
-
-            if (frame.opaque || frame.containingCode == Null)
-                {
-                TODO("(unknown)");
-                // continue;
-                }
-
-            // TODO path-to-code
-
-            Int? lineNumber = frame.lineNumber;
-            if (lineNumber != Null)
-                {
-                TODO("[" + lineNumber + "]");
-                }
-
-            if (frame == lastFrame)
-                {
-                break;
-                }
-            }
-
-        assert firstFrame != Null;
-        return TODO, firstFrame;
         }
 
     static const StackFrame

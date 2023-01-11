@@ -83,7 +83,9 @@ public abstract class Utils
         RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
         LIST_MAP_CONSTRUCT            = container.getClassStructure("collections.ListMap").findMethod("construct", 2);
         ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
-        ARGUMENT_ARRAY_TYPE           =  pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
+        ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
+        STRING_VALUE_OF               = container.getClassStructure("_native.ConstHelper").findMethod("valueOf", 1);
+
         }
 
     /**
@@ -127,10 +129,10 @@ public abstract class Utils
 
     /**
      * Helper method for the "toString()" method invocation that pushes the result onto the frame's
-     * stack.
+     * stack. Any exception thrown by "toString()" will be re-thrown to the caller.
      *
      * @param frame   the current frame
-     * @param hValue  the value to get a property for
+     * @param hValue  the value to get a string value for
      *
      * @return one of R_EXCEPTION, R_NEXT or R_CALL values
      */
@@ -141,6 +143,24 @@ public abstract class Utils
         return chain.isNative()
             ? hValue.getTemplate().buildStringValue(frame, hValue, Op.A_STACK)
             : chain.invoke(frame, hValue, OBJECTS_NONE, Op.A_STACK);
+        }
+
+    /**
+     * Helper method for the "toString()" method invocation that pushes the result onto the frame's
+     * stack. This method never throws a natural exception; instead it creates a resulting string
+     * with some basic exception information.
+     *
+     * @param frame   the current frame
+     * @param hValue  the value to get a string value for
+     *
+     * @return R_CALL value
+     */
+    public static int callValueOf(Frame frame, ObjectHandle hValue)
+        {
+        ObjectHandle[] ahVar = new ObjectHandle[STRING_VALUE_OF.getMaxVars()];
+        ahVar[0] = hValue;
+        frame.call1(STRING_VALUE_OF, null, ahVar, Op.A_STACK);
+        return Op.R_CALL;
         }
 
     /**
@@ -469,124 +489,6 @@ public abstract class Utils
         return hResult != xOrdered.EQUAL
             ? frame.assignValue(iReturn, hResult)
             : type2.callCompare(frame, hValue1, hValue2, iReturn);
-        }
-
-
-    // ----- toString support ----------------------------------------------------------------------
-
-    /**
-     * This is no longer used by Tuple, only by AssertV.
-     */
-    public static class TupleToString
-            implements Frame.Continuation
-        {
-        public TupleToString(StringBuilder sb, ObjectHandle[] ahValue,
-                             String[] asLabel, Frame.Continuation nextStep)
-            {
-            this.sb       = sb;
-            this.ahValue  = ahValue;
-            this.asLabel  = asLabel;
-            this.nextStep = nextStep;
-            }
-
-        public int doNext(Frame frameCaller)
-            {
-            loop: while (++index < ahValue.length)
-                {
-                switch (callToString(frameCaller, ahValue[index]))
-                    {
-                    case Op.R_NEXT:
-                        if (updateResult(frameCaller))
-                            {
-                            continue; // loop;
-                            }
-                        else
-                            {
-                            break loop;
-                            }
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        // TODO GG turn this into "? (OutOfBounds)"
-                        // ExceptionHandle hException = whicheverFrame.clearException(); // ??
-                        // format the simple name of the expression
-                        // return Op.R_NEXT;
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-
-            finishResult();
-            return nextStep.proceed(frameCaller);
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            if (updateResult(frameCaller))
-                {
-                return doNext(frameCaller);
-                }
-
-            // too much text; enough for an output...
-            return nextStep.proceed(frameCaller);
-            }
-
-        // return false if the buffer is full
-        protected boolean updateResult(Frame frameCaller)
-            {
-            StringHandle hString = (StringHandle) frameCaller.popStack();
-            String sLabel = asLabel == null ? null : asLabel[index];
-
-            if (sLabel != null)
-                {
-                sb.append(sLabel).append('=');
-                }
-
-            char[] ach = hString.getValue();
-            if (ach.length > MAX_VAL)
-                {
-                sb.append(ach, 0, MAX_VAL)
-                  .append("...");
-                }
-            else
-                {
-                sb.append(ach);
-                }
-
-            if (sb.length() < MAX_LEN)
-                {
-                sb.append(", ");
-                return true;
-                }
-
-            sb.append(", ...");
-            return false;
-            }
-
-        protected void finishResult()
-            {
-            if (sb.length() >= 2 && sb.charAt(sb.length() - 2) == ',')
-                {
-                sb.setLength(sb.length() - 2); // remove the trailing ", "
-                sb.append(')');
-                }
-            }
-
-        protected static final int MAX_VAL = 2*1024;
-        protected static final int MAX_LEN = 16*1024;
-
-        protected final StringBuilder      sb;
-        protected final ObjectHandle[]     ahValue;
-        protected final String[]           asLabel;
-        protected final Frame.Continuation nextStep;
-
-        protected int index = -1;
         }
 
 
@@ -1711,6 +1613,7 @@ public abstract class Utils
     private static ClassTemplate   RT_PARAMETER_TEMPLATE;
     private static MethodStructure RT_PARAMETER_CONSTRUCT;
     private static MethodStructure LIST_MAP_CONSTRUCT;
+    private static MethodStructure STRING_VALUE_OF;
     private static TypeConstant    ANNOTATION_ARRAY_TYPE;
     private static TypeConstant    ARGUMENT_ARRAY_TYPE;
     }

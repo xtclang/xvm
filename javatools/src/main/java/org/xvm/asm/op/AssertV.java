@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -131,8 +132,11 @@ public class AssertV
         return new MessageToString(sb, ahArg, m_asParts, doComplete).doNext(frame);
         }
 
+    /**
+     * Helper class to create a string message.
+     */
     private static class MessageToString
-            extends Utils.TupleToString
+            implements Frame.Continuation
         {
         public MessageToString(
                 StringBuilder      sb,
@@ -140,29 +144,89 @@ public class AssertV
                 String[]           asLabel,
                 Frame.Continuation nextStep)
             {
-            super(sb, ahValue, asLabel, nextStep);
+            this.sb       = sb;
+            this.ahValue  = ahValue;
+            this.asLabel  = asLabel;
+            this.nextStep = nextStep;
+            }
+
+        protected int doNext(Frame frameCaller)
+            {
+            loop: while (++index < ahValue.length)
+                {
+                switch (Utils.callValueOf(frameCaller, ahValue[index]))
+                    {
+                    case Op.R_NEXT:
+                        if (updateResult(frameCaller))
+                            {
+                            continue; // loop;
+                            }
+                        else
+                            {
+                            break loop;
+                            }
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(this);
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            return nextStep.proceed(frameCaller);
             }
 
         @Override
+        public int proceed(Frame frameCaller)
+            {
+            if (updateResult(frameCaller))
+                {
+                return doNext(frameCaller);
+                }
+
+            // too much text; enough for an output...
+            return nextStep.proceed(frameCaller);
+            }
+
+        /**
+         * @return false iff the output is too long
+         */
         protected boolean updateResult(Frame frameCaller)
             {
-            char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
-            if (sb.length() + ach.length > MAX_LEN)
+            StringHandle hMsg = (StringHandle) frameCaller.popStack();
+            char[]       ach  = hMsg.getValue();
+
+            if (ach.length > MAX_VAL)
                 {
-                sb.append(ach, 0, Math.min(ach.length, Math.max(20, MAX_LEN - sb.length())))
+                sb.append(ach, 0, MAX_VAL)
                   .append("...");
+                }
+            else
+                {
+                sb.append(ach);
+                }
+
+            if (sb.length() > MAX_LEN)
+                {
+                sb.append("...");
                 return false;
                 }
 
-            sb.append(ach)
-              .append(asLabel[index+1]);
+            sb.append(asLabel[index+1]);
             return true;
             }
 
-        @Override
-        protected void finishResult()
-            {
-            }
+        protected static final int MAX_VAL = 2*1024;
+        protected static final int MAX_LEN = 16*1024;
+
+        protected final StringBuilder      sb;
+        protected final ObjectHandle[]     ahValue;
+        protected final String[]           asLabel;
+        protected final Frame.Continuation nextStep;
+
+        protected int index = -1;
         }
 
     @Override
