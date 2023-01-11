@@ -390,15 +390,20 @@ public class AssertStatement
                 cond.selectTraceableExpressions(mapTrace);
                 if (!mapTrace.isEmpty())
                     {
-                    StringBuilder sb = new StringBuilder(sCond);
+                    StringBuilder sb = new StringBuilder()
+                            .append('"')
+                            .append(sCond)
+                            .append('"');
+                    boolean fFirst = true;
                     for (Map.Entry<String, Expression> entry : mapTrace.entrySet())
                         {
                         Expression expr = entry.getValue();
                         expr.requireTrace();
 
-                        sb.append(", ")
-                            .append(entry.getKey())
-                            .append('=');
+                        sb.append(fFirst ? ": " : ", ")
+                          .append(entry.getKey())
+                          .append('=');
+                        fFirst = false;
 
                         TypeConstant[] aTypes = expr.getTypes();
                         int cTypes = aTypes.length;
@@ -415,8 +420,8 @@ public class AssertStatement
                                 }
 
                             sb.append('{')
-                                .append(cTrace++)
-                                .append('}');
+                              .append(cTrace++)
+                              .append('}');
                             }
 
                         if (cTypes != 1)

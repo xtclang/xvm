@@ -2,24 +2,28 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    const C(Int v)
         {
-        String s0 = "ab";
-        String s1 = "abc";
-        String s2 = s0 + "c";
+        @Override
+        String toString()
+            {
+            return v == 0
+                ? v.toString()
+                : throw new OutOfBounds();
+            }
 
-        assert test(s1, s2);
-        assert &s1 == &s2;
-
-        Int64 i1 = s1.hashCode();
-        Int64 i2 = s2.hashCode();
-
-        assert test(i1, i2);
-        assert &i1 == &i2;
+        @Override
+        static <CompileType extends C> Boolean equals(CompileType value1, CompileType value2)
+            {
+            return value1.v == value2.v;
+            }
         }
 
-    Boolean test(Object o1, Object o2)
+    void run()
         {
-        return o1 == o2;
+        C a = new C(0);
+        C b = new C(1);
+
+        assert a == b;
         }
     }

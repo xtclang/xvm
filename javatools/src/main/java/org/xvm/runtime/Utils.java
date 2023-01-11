@@ -510,6 +510,10 @@ public abstract class Utils
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
+                        // TODO GG turn this into "? (OutOfBounds)"
+                        // ExceptionHandle hException = whicheverFrame.clearException(); // ??
+                        // format the simple name of the expression
+                        // return Op.R_NEXT;
                         return Op.R_EXCEPTION;
 
                     default:
@@ -543,7 +547,17 @@ public abstract class Utils
                 {
                 sb.append(sLabel).append('=');
                 }
-            sb.append(hString.getValue());
+
+            char[] ach = hString.getValue();
+            if (ach.length > MAX_VAL)
+                {
+                sb.append(ach, 0, MAX_VAL)
+                  .append("...");
+                }
+            else
+                {
+                sb.append(ach);
+                }
 
             if (sb.length() < MAX_LEN)
                 {
@@ -551,7 +565,7 @@ public abstract class Utils
                 return true;
                 }
 
-            sb.append("...");
+            sb.append(", ...");
             return false;
             }
 
@@ -564,6 +578,7 @@ public abstract class Utils
                 }
             }
 
+        protected static final int MAX_VAL = 2*1024;
         protected static final int MAX_LEN = 16*1024;
 
         protected final StringBuilder      sb;
