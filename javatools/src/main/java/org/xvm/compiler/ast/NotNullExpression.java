@@ -208,8 +208,18 @@ public class NotNullExpression
             return;
             }
 
-        expr.generateAssignment(ctx, code, LVal, errs);
-        code.add(new JumpNull(LVal.getLocalArgument(), m_labelShort));
+        if (LVal.isStack())
+            {
+            // cannot use the stack twice; generate a temporary argument
+            Argument arg = expr.generateArgument(ctx, code, true, false, errs);
+            code.add(new JumpNull(arg, m_labelShort));
+            LVal.assign(arg, code, errs);
+            }
+        else
+            {
+            expr.generateAssignment(ctx, code, LVal, errs);
+            code.add(new JumpNull(LVal.getLocalArgument(), m_labelShort));
+            }
         }
 
 

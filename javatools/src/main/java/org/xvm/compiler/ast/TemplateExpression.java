@@ -84,6 +84,12 @@ public class TemplateExpression
         }
 
     @Override
+    protected boolean allowsShortCircuit(AstNode nodeChild)
+        {
+        return false;
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
@@ -200,9 +206,9 @@ public class TemplateExpression
         // unfortunately, the evaluation (including appending) order must be strictly
         // left-to-right, because side effects of the expressions are unknown
         //
-        // pseudo-code:
-        //   Int minlen = sum of StringConstant lengths
-        //   StringBuffer $ = new StringBuffer(minlen);
+        // pseudocode:
+        //   Int length = sum of StringConstant lengths
+        //   StringBuffer $ = new StringBuffer(length);
         //   $.append("...");
         //   expr1.appendTo($);             // for a Stringable
         //   $.append("...");
