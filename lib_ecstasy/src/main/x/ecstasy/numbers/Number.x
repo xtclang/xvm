@@ -367,7 +367,7 @@
      *
      * @return a function that converts from the `from` type and to the `to` type
      */
-    static <From extends Number, To extends Number> function To(From) converterFor(Type<From> from, Type<To> to)
+    static <From extends Number!, To extends Number!> function To(From) converterFor(Type<From> from, Type<To> to)
         {
         return From.converterTo(to);
         }
@@ -410,14 +410,14 @@
          *
          * @return the zero value
          */
-        static Number zero();
+        static Numeric zero();
 
         /**
          * Determine the "one" value (the unit value) for the numeric type.
          *
          * @return the unit value
          */
-        static Number one();
+        static Numeric one();
 
         /**
          * Determine the range of finite values.
@@ -426,7 +426,7 @@
          * @return (conditional) the range from the lowest value (likely to be either zero or a
          *         negative value) to the highest value
          */
-        static conditional Range<Number> range();
+        static conditional Range<Numeric> range();
 
         /**
          * Obtain a function that converts from this type to the specified numeric type.
@@ -435,7 +435,7 @@
          *
          * @return a function that converts from this type to the specified numeric type
          */
-        static <To extends Number> function To (Number) converterTo(Type<To> to);
+        static <To extends Number!> function To (Numeric) converterTo(Type<To> to);
 
         /**
          * Determine if the numeric type is a fixed length floating point format.
@@ -481,7 +481,7 @@
         }
 
     @Override
-    static <To extends Number> function To (Number!) converterTo(Type<To> to)
+    static <To extends Number!> function To (Number) converterTo(Type<To> to)
         {
         return switch (to)
             {
