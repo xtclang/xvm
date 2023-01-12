@@ -983,7 +983,7 @@ mixin BitArray<Element extends Bit>
             }
 
         // verify that the rest of the bit array is zeros
-        assert:bounds truncate || !this[0 ..< size-128].contains(Bit:1.as(Element)); // TODO GG: .contains(1);
+        assert:bounds truncate || !this[0 ..< size-128].contains(One);
         return new UInt(this[size-128 ..< size]);
         }
 
