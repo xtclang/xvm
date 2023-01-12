@@ -1195,8 +1195,8 @@ public abstract class TypeConstant
         }
 
     /**
-     * Given this (formal) type A<B<C>, <D<R>> that may contain a type parameter "R" and an actual
-     * type A<X<Y>, w<Z>>, find out what is the actual type of the type parameter "R".
+     * Given this (formal) type A<B<C>, D<R>> that may contain a type parameter "R" and an actual
+     * type A<X<Y>, W<Z>>, find out what is the actual type of the type parameter "R".
      *
      * @return the resolved actual type or null if there is no matching type parameter or
      *         tha actual type topology is not the same as this type and doesn't provide enough

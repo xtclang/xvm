@@ -11,9 +11,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
 import org.xvm.util.Handy;
@@ -641,38 +639,6 @@ public abstract class IdentityConstant
     public boolean extendsClass(ClassConstant clzSuper)
         {
         return this.isClass() && ((ClassStructure) this.getComponent()).extendsClass(clzSuper);
-        }
-
-    /**
-     * @return the TypeInfo for the type implied by this identity, which must be a class identity
-     *         (including module and package), or a property identity (to obtain a nested TypeInfo
-     *         for the property, as if the property were a class itself)
-     */
-    public TypeInfo ensureTypeInfo(Access access, ErrorListener errs)
-        {
-        TypeConstant type = switch (getFormat())
-            {
-            case Package, Module, DecoratedClass ->
-                getType();
-
-            case Class ->
-                ((ClassStructure) getComponent()).getCanonicalType();
-
-            case Typedef ->
-                ((TypedefStructure) getComponent()).getType();
-
-            case Property ->
-                throw new UnsupportedOperationException("TODO: TypeInfo for property");
-
-            default ->
-                throw new IllegalStateException("unsupported type: " + this);
-            };
-
-        if (access != null && access != Access.PUBLIC)
-            {
-            type = type.getConstantPool().ensureAccessTypeConstant(type, access);
-            }
-        return type.ensureTypeInfo(errs);
         }
 
     /**

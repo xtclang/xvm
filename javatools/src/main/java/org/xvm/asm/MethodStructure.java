@@ -746,25 +746,21 @@ public class MethodStructure
      * Given arrays of actual argument types and return types, return a ListMap with the actual
      * (resolved) type parameters types.
      * <p/>
-     * For example: given a method:
-     *      <T, U> T foo(U u, T t)
-     * actual argument types:
-     *      String, Int
-     * and actual return type:
-     *      Number
-     * this method would return a map {"T":Number, "U":String}
+     * For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
+     * actual return type: Number this method would return a map {"T":Number, "U":String}
      *
-     * @param atypeArgs     the actual argument types
-     * @param atypeReturns  (optional) the actual return types
-     * @param fAllowFormal  if false, all type parameters must be fully resolved; otherwise place
-     *                      a corresponding {@link PendingTypeConstant} to the resolution map
-     *
-     * @return a ListMap of the resolved types in the natural order, keyed by the names;
-     *         conflicting types will be not in the map
+     * @param typeTarget   (optional) the target type; if specified must be used to validate and
+     *                     resolve all formal type parameters for a function called with an explicit
+     *                     left-hand-side type
+     * @param atypeArgs    the actual argument types
+     * @param atypeReturns (optional) the actual return types
+     * @param fAllowFormal if false, all type parameters must be fully resolved; otherwise place a
+     *                     corresponding {@link PendingTypeConstant} to the resolution map
+     * @return a ListMap of the resolved types in the natural order, keyed by the names; conflicting
+     *         types will be not in the map
      */
-    public ListMap<String, TypeConstant> resolveTypeParameters(TypeConstant[] atypeArgs,
-                                                               TypeConstant[] atypeReturns,
-                                                               boolean        fAllowFormal)
+    public ListMap<String, TypeConstant> resolveTypeParameters(TypeConstant typeTarget,
+                TypeConstant[] atypeArgs, TypeConstant[] atypeReturns, boolean fAllowFormal)
         {
         int                           cTypeParams   = getTypeParamCount();
         ListMap<String, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
@@ -784,6 +780,13 @@ public class MethodStructure
             Parameter param = getParam(iT);
             String    sName = param.getName(); // type parameter name (formal)
 
+            TypeConstant typeRequired = null;
+            if (typeTarget != null && this.isFunction())
+                {
+                typeRequired = param.getType().getParamType(0).
+                        resolveAutoNarrowing(getConstantPool(), false, typeTarget, null);
+                }
+
             for (int iA = 0; iA < cArgs; iA++)
                 {
                 TypeConstant typeFormal = atypeMethodParams[cTypeParams + iA];
@@ -792,13 +795,39 @@ public class MethodStructure
                 if (typeActual != null)
                     {
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                    if (!fAllowFormal && typeResolved != null && typeResolved.containsUnresolved())
+                    if (typeResolved != null)
                         {
-                        continue NextParameter;
-                        }
-                    if (checkConflict(typeResolved, sName, true, mapTypeParams))
-                        {
-                        continue NextParameter;
+                        if (typeResolved.containsUnresolved())
+                            {
+                            if (fAllowFormal)
+                                {
+                                continue;
+                                }
+                            else
+                                {
+                                continue NextParameter;
+                                }
+                            }
+
+                        if (typeRequired == null)
+                            {
+                            if (checkConflict(typeResolved, sName, true, mapTypeParams))
+                                {
+                                continue NextParameter;
+                                }
+                            }
+                        else
+                            {
+                            if (typeResolved.isA(typeRequired))
+                                {
+                                mapTypeParams.put(sName, typeRequired);
+                                }
+                            else
+                                {
+                                mapTypeParams.remove(sName);
+                                continue NextParameter;
+                                }
+                            }
                         }
                     }
                 }
@@ -811,13 +840,39 @@ public class MethodStructure
                 if (typeActual != null)
                     {
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                    if (!fAllowFormal && typeResolved != null && typeResolved.containsUnresolved())
+                    if (typeResolved != null)
                         {
-                        continue NextParameter;
-                        }
-                    if (checkConflict(typeResolved, sName, false, mapTypeParams))
-                        {
-                        continue NextParameter;
+                        if (typeResolved.containsUnresolved())
+                            {
+                            if (fAllowFormal)
+                                {
+                                continue;
+                                }
+                            else
+                                {
+                                continue NextParameter;
+                                }
+                            }
+
+                        if (typeRequired == null)
+                            {
+                            if (checkConflict(typeResolved, sName, false, mapTypeParams))
+                                {
+                                continue NextParameter;
+                                }
+                            }
+                        else
+                            {
+                            if (typeResolved.isA(typeRequired))
+                                {
+                                mapTypeParams.put(sName, typeRequired);
+                                }
+                            else
+                                {
+                                mapTypeParams.remove(sName);
+                                continue NextParameter;
+                                }
+                            }
                         }
                     }
                 }

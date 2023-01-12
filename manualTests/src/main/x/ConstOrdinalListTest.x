@@ -127,8 +127,7 @@ module ConstOrdinalListTest
 
         assert list.empty == col.empty;
         assert list.size == col.size;
-        // TODO GG: assert List<Int>.equals(list, col);
-        assert list.as(List<Int>) == col.as(List<Int>);
+        assert List<Int>.equals(list, col);
 
         for (Int i : 0 ..< list.size)
             {

@@ -47,6 +47,7 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -417,10 +418,10 @@ public class InvocationExpression
                 if (cTypeParams > 0)
                     {
                     // resolve the type parameters against all the arg types we know by now
-                    resolver = makeTypeParameterResolver(ctx, method,
-                            m_fCall || cReturns == 0
-                                ? atypeReturn
-                                : pool.extractFunctionReturns(atypeReturn[0]));
+                    TypeConstant[] atype = m_fCall || cReturns == 0
+                            ? atypeReturn
+                            : pool.extractFunctionReturns(atypeReturn[0]);
+                    resolver = makeTypeParameterResolver(ctx, method, atype, ErrorListener.BLACKHOLE);
                     }
 
                 if (m_fCall)
@@ -852,7 +853,7 @@ public class InvocationExpression
                 if (cTypeParams > 0)
                     {
                     // purge the type parameters and resolve the method signature
-                    // against all the types we know by now
+                    // against all the types we know by now (marking unresolved as "pending")
                     if (cParams > 0)
                         {
                         TypeConstant[] atype = new TypeConstant[cParams];
@@ -862,7 +863,11 @@ public class InvocationExpression
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
                                 fCall || cReturns == 0
                                     ? atypeReturn
-                                    : pool.extractFunctionReturns(atypeReturn[0]));
+                                    : pool.extractFunctionReturns(atypeReturn[0]), errs);
+                        if (resolver == null)
+                            {
+                            return null;
+                            }
                         atypeParams = resolveTypes(resolver, atype);
                         }
                     else
@@ -888,11 +893,11 @@ public class InvocationExpression
                 if (cTypeParams > 0)
                     {
                     // re-resolve against the validated types
-                    mapTypeParams = method.resolveTypeParameters(atypeArgs,
-                            fCall || cReturns == 0
-                                ? atypeReturn
-                                : pool.extractFunctionReturns(atypeReturn[0]),
-                            false);
+                    mapTypeParams = resolveTypeParameters(method,
+                        atypeArgs,
+                        fCall || cReturns == 0
+                            ? atypeReturn
+                            : pool.extractFunctionReturns(atypeReturn[0]), false);
                     if (mapTypeParams.size() < cTypeParams)
                         {
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
@@ -2425,12 +2430,29 @@ public class InvocationExpression
                     else
                         {
                         // this is either:
-                        // - a function call (e.g. Duration.ofSeconds(1)) or
+                        // - a function call (e.g. Duration.ofSeconds(1)), or
+                        // - a function call with an explicit formal target type (e.g.
+                        //   List<Int>.equals(l1, l2)), or
                         // - a call on the Class itself (Point.instantiate(struct)), in which
                         //   case the first "findCallable" will fail and therefore typeLeft must
                         //   not be changed
                         // - a method call for a singleton (e.g. TestReflection.report(...))
-                        infoLeft = idLeft.ensureTypeInfo(access, errs);
+                        TypeConstant typeTarget = idLeft.getType();
+                        if (access != Access.PUBLIC)
+                            {
+                            typeTarget = typeTarget.ensureAccess(access);
+                            }
+                        infoLeft = typeTarget.ensureTypeInfo(errs);
+
+                        if (typeTarget.isParamsSpecified())
+                            {
+                            if (infoLeft.isSingleton() || typeTarget.isA(pool.typeClass()))
+                                {
+                                exprLeft.log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                                return null;
+                                }
+                            m_typeTarget = typeTarget;
+                            }
                         }
                     }
                 fSingleton = infoLeft.isSingleton();
@@ -3040,12 +3062,20 @@ public class InvocationExpression
         return new TypeConstant[] {typeFn};
         }
 
+    @Override
+    protected ListMap<String, TypeConstant> resolveTypeParameters(MethodStructure method,
+            TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAllowFormal)
+        {
+        return method.resolveTypeParameters(m_typeTarget, atypeArgs, atypeReturn, fAllowFormal);
+        }
+
     /**
-     * @return a type parameter resolver for a given method and array of return types
-     *         or null if the type parameters could not be resolved
+     * @return a type parameter resolver for a given method and array of return types or null if the
+     *         type parameters could not be resolved, reporting the unresolved type parameters to
+     *         the error list
      */
     private GenericTypeResolver makeTypeParameterResolver(
-            Context ctx, MethodStructure method, TypeConstant[] atypeReturn)
+            Context ctx, MethodStructure method, TypeConstant[] atypeReturn, ErrorListener errs)
         {
         int            cArgs     = args.size();
         TypeConstant[] atypeArgs = new TypeConstant[cArgs];
@@ -3055,11 +3085,16 @@ public class InvocationExpression
             }
 
         Map<String, TypeConstant> mapTypeParams =
-                method.resolveTypeParameters(atypeArgs, atypeReturn, true);
+                resolveTypeParameters(method, atypeArgs, atypeReturn, true);
 
-        return mapTypeParams.size() == method.getTypeParamCount()
-                ? mapTypeParams::get
-                : null;
+        if (mapTypeParams.size() == method.getTypeParamCount())
+            {
+            return mapTypeParams::get;
+            }
+
+        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
+                method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+        return null;
         }
 
     /**
@@ -3213,7 +3248,11 @@ public class InvocationExpression
     private transient TypeConstant    m_typeTarget;      // if m_argMethod is a PropertyConstant,
                                                          // referring to a function and the target
                                                          // is not "this context", it holds the
-                                                         // target type
+                                                         // target type;
+                                                         // if m_argMethod is a MethodConstant for
+                                                         // a function, then it holds an explicitly
+                                                         // specified target type to be used by
+                                                         // formal type parameters resolution
     private transient boolean         m_fCondResult;     // indicates that the invocation expression
                                                          // produces a conditional result
     private transient boolean         m_fBjarne;         // indicates that the invocation expression

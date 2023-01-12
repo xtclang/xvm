@@ -1280,7 +1280,7 @@ public abstract class AstNode
             if (cTypeParams > 0)
                 {
                 ListMap<String, TypeConstant> mapTypeParams =
-                        method.resolveTypeParameters(atypeArgs, atypeReturn, true);
+                        resolveTypeParameters(method, atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1364,7 +1364,7 @@ public abstract class AstNode
                 {
                 // re-resolve the type parameters since we could have narrowed some
                 ListMap<String, TypeConstant> mapTypeParams =
-                        method.resolveTypeParameters(atypeArgs, atypeReturn, true);
+                        resolveTypeParameters(method, atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1414,6 +1414,16 @@ public abstract class AstNode
             {
             errsKeep.merge();
             }
+        }
+
+    /**
+     * A trivial wrapper around {@link MethodStructure#resolveTypeParameters} call that allows
+     * subclasses to override it.
+     */
+    protected ListMap<String, TypeConstant> resolveTypeParameters(MethodStructure method,
+            TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAlowFormal)
+        {
+        return method.resolveTypeParameters(null, atypeArgs, atypeReturn, fAlowFormal);
         }
 
     /**
