@@ -518,11 +518,11 @@ public class LambdaExpression
             }
 
         boolean fValid      = true;
-        int     cReqParams  = atypeReqParams  == null ? 0 : atypeReqParams.length;
-        int     cReqReturns = atypeReqReturns == null ? 0 : atypeReqReturns.length;
+        int     cReqParams  = atypeReqParams  == null ? -1 : atypeReqParams.length;
+        int     cReqReturns = atypeReqReturns == null ? -1 : atypeReqReturns.length;
         int     cParams     = getParamCount();
 
-        if (atypeReqParams != null && cParams != cReqParams)
+        if (cReqParams != -1 && cParams != cReqParams)
             {
             errs.log(Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
                     new Object[]{cReqParams, cParams},
@@ -606,13 +606,13 @@ public class LambdaExpression
 
             if (atypeRets == null)
                 {
-                atypeRets = cReqReturns == 0 ? TypeConstant.NO_TYPES : atypeReqReturns;
-                fit       = TypeFit.NoFit;
+                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                fit = TypeFit.NoFit;
                 }
             else
                 {
                 int cReturns = atypeRets.length;
-                if (cReturns > cReqReturns)
+                if (cReqReturns != -1 && cReturns > cReqReturns)
                     {
                     // the lambda has more return values that the caller needs; adjust it
                     atypeRets = Arrays.copyOfRange(atypeRets, 0, cReqReturns);
