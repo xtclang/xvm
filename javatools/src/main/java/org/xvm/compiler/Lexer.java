@@ -2509,7 +2509,7 @@ public class Lexer
             ver = new Version(parts, sBuild);
             }
 
-        return new Token(lInitPos, getPosition(), Id.LIT_VERSION, ver);
+        return new Token(lInitPos, source.getPosition(), Id.LIT_VERSION, ver);
         }
 
     /**
