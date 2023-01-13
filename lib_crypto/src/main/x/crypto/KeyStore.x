@@ -3,5 +3,13 @@
  */
 interface KeyStore
     {
-    // TODO
+    /**
+     * The keys in the `KeyStore`.
+     */
+    @RO Collection<CryptoKey> keys;
+
+    /**
+     * The certificates in the `KeyStore`.
+     */
+    @RO Collection<Certificate> certificates;
     }

@@ -149,9 +149,9 @@ const Algorithms
         String name = specifier.is(String) ? specifier : specifier.name;
         if (Algorithm algorithm := byName.get(name), algorithm.category == category)
             {
-            if ((Algorithm.KeyType keyType, Int size, Int publicSize) := algorithm.keyRequired())
+            if ((KeyForm keyType, Int size) := algorithm.keyRequired())
                 {
-                return key != Null && (key.size == size || !privateRequired && key.size == publicSize)
+                return key != Null && key.size == size
                         ? (True, algorithm)
                         : False;
                 }

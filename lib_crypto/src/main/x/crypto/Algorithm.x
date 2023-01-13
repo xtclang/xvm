@@ -41,19 +41,19 @@ interface Algorithm
      *     the classical example is a Cyclical Redundancy Check (CRC) algorithm, such as "CRC32".
      *     As a result, these algorithms do not require any key(s).
      *
-     * * * a [Signer] uses either a `Symmetric` key or a public/private key `Pair` to produce a
+     * * * a [Signer] uses either a `Secret` key or a public/private key `Pair` to produce a
      *     signature based on the information in the input. A `Signer` is also naturally able to
      *     act as a `Verifier`.
      *
-     * * * a [Verifier] uses a key (of any `KeyType`) to verify a signature based on the information
+     * * * a [Verifier] uses a key (of any `KeyForm`) to verify a signature based on the information
      *     in the input.
      *
      * * `Encryption` algorithms support the transformation of an input message to an encrypted
      *   form, and the decryption of that encrypted form back to the original message content.
      *
-     * * * an [Encryptor] uses a key (of any `KeyType`) to encrypt the information in the input.
+     * * * an [Encryptor] uses a key (of any `KeyForm`) to encrypt the information in the input.
      *
-     * * * an [Decryptor] uses either a `Symmetric` key or a public/private key `Pair` to decrypt
+     * * * an [Decryptor] uses either a `Secret` key or a public/private key `Pair` to decrypt
      *     the information in the input.
      */
     enum Category {Signing, Encryption}
@@ -65,7 +65,7 @@ interface Algorithm
 
     /**
      * The size of a block of data that the algorithm operates on; if the algorithm is not block-
-     * oriented, then the `blockSize` will be `1` (i.e. byte-at-a-time).
+     * oriented, for example a _stream cipher_, then the `blockSize` will be `1` (byte-at-a-time).
      */
     @RO Int blockSize;
 
@@ -76,36 +76,13 @@ interface Algorithm
     @RO Int signatureSize;
 
     /**
-     * Describes the type of key that an algorithm requires:
-     *
-     * * `Symmetric` - a shared key, which needs to be protected like a "private key";
-     * * `Public` - a public key only, with the private key portion of the "public/private key pair"
-     *   unavailable within the current context;
-     * * `Pair` - both the public key and the corresponding private key.
-     */
-    enum KeyType {Symmetric, Public, Pair}
-
-    /**
      * Determine if a key is required by the algorithm, and what the details of that key are.
      *
-     * The returned `publicSize` and `privateSize` values will always add up to the returned `size`
-     * value:
-     *
-     * * A `Symmetric` key will have `publicSize == 0` and `privateSize > 0`
-     *
-     * * A `Pair` key will have `publicSize > 0` and `privateSize > 0`
-     *
-     * Note: A `Public` key _would_ have `publicSize > 0` and `privateSize == 0`, but this method
-     * will return `Pair` if the algorithm uses a public/private key pair, and will never return
-     * `Public`.
-     *
      * @return True iff the algorithm requires a key
-     * @return (conditional) the [KeyType] of the key for this algorithm
+     * @return (conditional) the [KeyForm] of the key for this algorithm
      * @return (conditional) the number of bytes in the key for this algorithm
-     * @return (conditional) the size of the public key portion of the key
-     * @return (conditional) the size of the private key portion of the key
      */
-    conditional (KeyType keyType, Int size, Int publicSize, Int privateSize) keyRequired();
+    conditional (KeyForm keyType, Int size) keyRequired();
 
     /**
      * Factory method: Produce a configured engine that implements this algorithm for the specified

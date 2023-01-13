@@ -3,11 +3,6 @@
  */
 module crypto.xtclang.org
     {
-    /**
-     * A cryptographic key is represented as a sequence of bytes.
-     */
-    typedef Byte[] as Key;
-
     import ecstasy.reflect.Annotation;
 
     /**
@@ -16,4 +11,20 @@ module crypto.xtclang.org
      * by passing a single annotation, or an array of annotations.
      */
     typedef Annotation[] | Annotation as Annotations;
+
+    /**
+     * Describes the type of key that an algorithm requires:
+     *
+     * * `Secret` - a "symmetric" key or a private key, which must be carefully protected;
+     * * `Public` - a public key only, with the private key portion of the "public/private key pair"
+     *   unavailable within the current context;
+     * * `Pair` - both the public key and the corresponding private key, which must be carefully
+     *   protected.
+     */
+    enum KeyForm {Secret, Public, Pair}
+
+    /**
+     * A cryptographic key is represented as a sequence of bytes.
+     */
+    typedef CryptoKey | Byte[] as Key;
     }

@@ -1,12 +1,12 @@
 /**
  * Represents the result of a cryptographic signing process.
  */
-const Signature
+const Signature(String algorithm, Byte[] bytes)
     {
     /**
-     * The algorithm used to produce the signature.
+     * The name of the algorithm used to produce the signature.
      */
-    Algorithm algorithm;
+    String algorithm;
 
     /**
      * The raw bytes of the signature.
