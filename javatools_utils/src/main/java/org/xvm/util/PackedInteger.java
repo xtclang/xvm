@@ -9,12 +9,13 @@ import java.math.BigInteger;
 
 
 /**
- * A PackedInteger represents a signed, 2's-complement integer of 1-512 bits (1-64 bytes) in size.
+ * A PackedInteger represents a signed, 2's-complement integer of 1-8192 bits (1-1024 bytes) in
+ * size. (The size limit is arbitrary, and temporary.)
  * <p/>
  * Values up to 8 bytes can be accessed as a <tt>long</tt> value, while values of any size can be
  * accessed as a BigInteger.
  * <p/>
- * The storage format is compressed as much as possible. There are four storage formats:
+ * The storage format is compressed as much as possible. There are five storage formats:
  * <ul><li>
  * <b>Tiny</b>: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
  * The least significant 7 bits of the value are shifted left by 1 bit, and the 0x1 bit is set to 1.
@@ -29,11 +30,15 @@ import java.math.BigInteger;
  * bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the integer; the
  * third byte contains bits 0-7 of the integer.
  * </li><li>
- * <b>Large</b>: For a value in the range -(2^511)..2^511-1 (512 bits), a value with `{@code s}`
+ * <b>Large</b>: For a value in the range -(2^503)..2^503-1 (63 bytes), a value with `{@code s}`
  * significant bits can be encoded in no less than {@code 1+max(1,(s+7)/8)} bytes; let `{@code b}`
  * be the selected encoding length, in bytes. The first byte contains the value 0x0 (00) in the
  * least significant 2 bits, and the least 6 significant bits of {@code (b-2)} in bits 2-7. The
  * following {@code (b-1)} bytes contain the least significant {@code (b-1)*8} bits of the integer.
+ * </li><li>
+ * <b>Huge</b>: For any larger value (arbitrarily limited to the range -(2^8191)..2^8191-1 (1KB)),
+ * the first byte is 0b111111_00, followed by an embedded packed integer specifying the number of
+ * significant bytes of the enclosing packed integer, followed by that number of bytes of data.
  * </li></ul>
  * <p/>
  * To maximize density and minimize pipeline stalls, the algorithms in this file use the smallest
@@ -50,6 +55,7 @@ import java.math.BigInteger;
  *          14-16        Large     3
  *          17-21        Medium    3
  *          >= 22        Large     4 or more
+ *          >= 512       Huge      *
  * </code></pre>
  * <p/>
  * Similarly, by examining the least significant 3 bits of the first byte of an encoded value, the
@@ -61,6 +67,7 @@ import java.math.BigInteger;
  *      ?????010   Small     2
  *      ?????110   Medium    3
  *      ??????00   Large     2-65
+ *      11111100   Huge      *
  * </code></pre>
  */
 public class PackedInteger
@@ -152,7 +159,7 @@ public class PackedInteger
                 ? calculateSignedByteCount(m_bigint)
                 : Math.max(1, (((64 - Long.numberOfLeadingZeros(Math.max(m_lValue, ~m_lValue))) & 0x3F) + 7) / 8);
 
-        assert nBytes >= 1 && nBytes <= 32; // arbitrary limit of 32 for the prototype
+        assert nBytes >= 1 && nBytes <= 1024; // arbitrary limit
         return nBytes;
         }
 
@@ -618,17 +625,33 @@ public class PackedInteger
         verifyUninitialized();
 
         final int b = in.readByte();
+        // check for large or huge format with more than 8 trailing bytes (needs BigInteger)
         if ((b & 0b11) == 0b00 && (b & 0b111000_00) != 0)
             {
-            // "big" values are large format values with more than 8 trailing bytes (use BigInteger)
-            final int    cBytes = 1 + ((b & 0xFF) >> 2);
-            final byte[] ab     = new byte[cBytes];
+            final int cBytes;
+            if ((b & 0xFF) == 0b111111_00)
+                {
+                // huge format
+                long len = readLong(in);
+                if (len > 1024)
+                    {
+                    throw new IOException("integer size of " + len + " bytes; maximum is 1024");
+                    }
+                cBytes = (int) len;
+                }
+            else
+                {
+                // large format
+                cBytes = 1 + ((b & 0xFC) >>> 2);
+                }
+
+            final byte[] ab = new byte[cBytes];
             in.readFully(ab);
             setBigInteger(new BigInteger(ab));
             }
         else
             {
-            // tiny, small, medium, and large (up to 8 trailing bytes) format values values fit into
+            // tiny, small, medium, and large (up to 8 trailing bytes) format values fit into
             // a Java long
             setLong(readLong(in, b));
             }
@@ -653,7 +676,6 @@ public class PackedInteger
             byte[] ab = m_bigint.toByteArray();
             int    cb = ab.length;
             int    of = 0;
-            assert cb > 8 && cb <= 64;
 
             // truncate any redundant bytes
             boolean fNeg  = (ab[0] & 0x80) != 0;
@@ -663,10 +685,19 @@ public class PackedInteger
                 ++of;
                 }
             cb -= of;
-            assert cb > 0 && cb <= 64;
+            assert cb > 8 && cb <= 1024;
 
-            // write out using large format
-            out.writeByte((cb-1) << 2);
+            if (cb < 64)
+                {
+                // large format: length encoded in 6 MSBs of first byte, then the bytes of the int
+                out.writeByte((cb-1) << 2);
+                }
+            else
+                {
+                // huge format: first byte is 0, then the length as a packed int, then the bytes
+                out.writeByte(0b111111_00);
+                writeLong(out, cb);
+                }
             out.write(ab, of, cb);
             }
         else
@@ -871,6 +902,13 @@ public class PackedInteger
             return ((b & 0x04) == 0) ? 2 : 3;
             }
 
+        if ((b & 0xFF) == 0b111111_00)
+            {
+            // Huge format
+            long lVals = unpackInt(ab, of+1);
+            return 1 + (int) (lVals >>> 32) + (int) lVals;
+            }
+
         // Large format
         return 2 + ((b & 0xFC) >>> 2);
         }
@@ -948,24 +986,39 @@ public class PackedInteger
             {
             // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
             // first byte are the trailing number of bytes minus 1
-            int cBytes = 1 + ((b & 0xFC) >>> 2);
+            // Huge format: the first byte is 0b111111_00, so it is followed by a packed integer
+            // that specifies the length of this packed integer
+            final int cBytes;
+            if ((b & 0xFF) == 0b111111_00)
+                {
+                // Huge format
+                long lVals = unpackInt(ab, of+1);
+                int  cbcb  = (int) (lVals >>> 32);
+                cBytes = (int) lVals;
+                cb     = 1 + cbcb + cBytes;
+                of    += 1 + cbcb;
+                }
+            else
+                {
+                // Large format
+                cBytes = 1 + ((b & 0xFC) >>> 2);
+                cb     = 1 + cBytes;
+                ++of;
+                }
+
             switch (cBytes)
                 {
                 case 1:
-                    n  = ab[of+1];
-                    cb = 2;
+                    n  = ab[of];
                     break;
                 case 2:
-                    n  = ab[of+1] << 8 | ab[of+2] & 0xFF;
-                    cb = 3;
+                    n  = ab[of] << 8 | ab[of+1] & 0xFF;
                     break;
                 case 3:
-                    n  = ab[of+1] << 16 | (ab[of+2] & 0xFF) << 8 | ab[of+3] & 0xFF;
-                    cb = 4;
+                    n  = ab[of] << 16 | (ab[of+1] & 0xFF) << 8 | ab[of+2] & 0xFF;
                     break;
                 case 4:
-                    n  = ab[of+1] << 24 | (ab[of+2] & 0xFF) << 16 | (ab[of+3] & 0xFF) << 8 | ab[of+4] & 0xFF;
-                    cb = 5;
+                    n  = ab[of] << 24 | (ab[of+1] & 0xFF) << 16 | (ab[of+2] & 0xFF) << 8 | ab[of+3] & 0xFF;
                     break;
                 default:
                     throw new IllegalStateException("# trailing bytes=" + cBytes);
@@ -1008,7 +1061,9 @@ public class PackedInteger
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
-        int cBytes = 1 + ((b & 0xFC) >>> 2);
+        // Huge format: the first byte is 0, so it is followed by a packed integer that
+        // specifies the length of this packed integer
+        int cBytes = (b & 0xFF) == 0b111111_00 ? (int) readLong(in) : 1 + ((b & 0xFC) >>> 2);
         switch (cBytes)
             {
             case 1:
@@ -1145,11 +1200,11 @@ public class PackedInteger
     /**
      * Smallest 16-byte (128-bit) signed integer value.
      */
-    public static final PackedInteger SINT16_MIN = new PackedInteger(new BigInteger("-80000000000000000000000000000000", 16));
+    public static final PackedInteger SINT16_MIN = new PackedInteger(new BigInteger("-8" + "0".repeat(31), 16));
     /**
-     * Smallest 32-byte (256-bit) signed integer value.
+     * Smallest N-byte signed integer value (arbitrary 1KB limit).
      */
-    public static final PackedInteger SINT32_MIN = new PackedInteger(new BigInteger("-8000000000000000000000000000000000000000000000000000000000000000", 16));
+    public static final PackedInteger SINTN_MIN = new PackedInteger(new BigInteger("-8" + "0".repeat(2047), 16));
     /**
      * Largest 1-byte (8-bit) signed integer value.
      */
@@ -1169,11 +1224,11 @@ public class PackedInteger
     /**
      * Largest 16-byte (128-bit) signed integer value.
      */
-    public static final PackedInteger SINT16_MAX = new PackedInteger(new BigInteger("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+    public static final PackedInteger SINT16_MAX = new PackedInteger(new BigInteger("7" + "F".repeat(31), 16));
     /**
-     * Largest 32-byte (256-bit) signed integer value.
+     * Largest N-byte signed integer value (arbitrary 1KB limit).
      */
-    public static final PackedInteger SINT32_MAX = new PackedInteger(new BigInteger("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+    public static final PackedInteger SINTN_MAX = new PackedInteger(new BigInteger("7" + "F".repeat(2047), 16));
     /**
      * Largest 1-byte (8-bit) unsigned integer value.
      */
@@ -1189,15 +1244,15 @@ public class PackedInteger
     /**
      * Largest 8-byte (64-bit) unsigned integer value.
      */
-    public static final PackedInteger UINT8_MAX  = new PackedInteger(new BigInteger("FFFFFFFFFFFFFFFF", 16));
+    public static final PackedInteger UINT8_MAX  = new PackedInteger(new BigInteger("F".repeat(16), 16));
     /**
      * Largest 16-byte (128-bit) unsigned integer value.
      */
-    public static final PackedInteger UINT16_MAX = new PackedInteger(new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+    public static final PackedInteger UINT16_MAX = new PackedInteger(new BigInteger("F".repeat(32), 16));
     /**
-     * Largest 32-byte (256-bit) unsigned integer value.
+     * Largest N-byte unsigned integer value (arbitrary 1KB limit).
      */
-    public static final PackedInteger UINT32_MAX = new PackedInteger(new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+    public static final PackedInteger UINTN_MAX = SINTN_MAX;
 
     /**
      * Decimal "Kilo".

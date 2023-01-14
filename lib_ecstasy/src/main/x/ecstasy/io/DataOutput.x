@@ -491,10 +491,17 @@ interface DataOutput
 
         Byte[] bytes     = n.toByteArray();
         Int    byteCount = bytes.size;
-        assert:bounds 8 < byteCount <= 64;
-
-        // write out using large format
-        out.writeByte((byteCount-1).toByte() << 2);
+        if (byteCount >= 64)
+            {
+            // huge format
+            out.writeByte(0b111111_00);
+            writePackedInt(out, byteCount);
+            }
+        else
+            {
+            // large format
+            out.writeByte((byteCount-1).toByte() << 2);
+            }
         out.writeBytes(bytes);
         }
 

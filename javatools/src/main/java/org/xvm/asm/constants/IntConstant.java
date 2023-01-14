@@ -89,7 +89,7 @@ public class IntConstant
             case CIntN:
             case IntN:
                 // some arbitrary limit that only exists in the Java implementation
-                cBytes    = 32;
+                cBytes    = 1024;
                 fUnsigned = false;
                 break;
 
@@ -117,7 +117,7 @@ public class IntConstant
             case CUIntN:
             case UIntN:
                 // some arbitrary limit that only exists in the Java implementation
-                cBytes    = 32;
+                cBytes    = 1024;
                 fUnsigned = true;
                 break;
 
@@ -346,7 +346,7 @@ public class IntConstant
             case CIntN:
             case IntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
-                return PackedInteger.SINT32_MIN;
+                return PackedInteger.SINTN_MIN;
 
             case UInt:
             case CUInt16:
@@ -404,7 +404,7 @@ public class IntConstant
             case CIntN:
             case IntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
-                return PackedInteger.SINT32_MAX;
+                return PackedInteger.SINTN_MAX;
 
             case CUInt16:
             case UInt16:
@@ -425,7 +425,7 @@ public class IntConstant
             case CUIntN:
             case UIntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
-                return PackedInteger.UINT32_MAX;
+                return PackedInteger.UINTN_MAX;
 
             default:
                 throw new IllegalStateException();

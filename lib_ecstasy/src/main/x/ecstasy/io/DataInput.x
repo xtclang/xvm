@@ -291,10 +291,12 @@ interface DataInput
 
     // ----- helper functions ----------------------------------------------------------------------
 
+    static Int8 Huge = Byte:0b111111_00.toInt8(truncate=True);
+
     /**
      * Read an integer from the passed stream, which is encoded in the packed integer format.
      *
-     * The packed integer format represents a signed, 2's-complement integer of 1-512 bits (1-64
+     * The packed integer format represents a signed, 2's-complement integer of 1-8192 bits (1-1024
      * bytes) in size. There are four storage formats:
      *
      * * **Tiny**: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
@@ -310,11 +312,16 @@ interface DataInput
      *   bits, and bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the
      *   integer; the third byte contains bits 0-7 of the integer.
      *
-     * * **Large**: For a value in the range -(2^511)..2^511-1 (up to 512 bits), a value with `s`
+     * * **Large**: For a value in the range -(2^503)..2^503-1 (up to 63 bytes), a value with `s`
      *   significant bits can be encoded in no less than `1+max(1,(s+7)/8)` bytes; let `b` be
      *   the selected encoding length, in bytes. The first byte contains the value 0x0 in the least
      *   significant 2 bits (00), and the least 6 significant bits of `(b-2)` in bits 2-7. The
      *   following `(b-1)` bytes contain the least significant `(b-1)*8` bits of the integer.
+     *
+     * * **Huge**: For any larger value (arbitrarily limited to the range -(2^8191)..2^8191-1
+     *   (1KB)), the first byte is 0b111111_00, followed by an embedded packed integer specifying
+     *   the number of significant bytes of the enclosing packed integer, followed by that number of
+     *   bytes of data.
      *
      * @param in  the stream to read from
      *
@@ -353,7 +360,7 @@ interface DataInput
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
-        Int size = 1 + (b >>> 2);
+        Int size = b == Huge ? readPackedInt(in) : 1 + (b >>> 2);
         assert:bounds size <= 16;   // an Int is limited to a 16-byte value
 
         Int128 n = in.readInt8();
@@ -403,7 +410,9 @@ interface DataInput
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
-        Int size = 1 + (b >>> 2);
+        // Huge format: the first byte is 0, and is followed by a packed integer that specifes the
+        // size of the packed integer that we are already in the process of reading
+        Int size = b == Huge ? readPackedInt(in) : 1 + (b >>> 2);
         if (size <= 16)
             {
             Int128 n = in.readInt8();                   // use sign extension on the first byte
@@ -414,13 +423,7 @@ interface DataInput
             return n;
             }
 
-        // all 1 bits in positions 2..7 indicates an extended format
-        if (size==65)
-            {
-            size = readPackedInt(in);
-            assert:bounds 64 < size <= 1M;              // arbitrary limit (2^8388608)
-            }
-
+        assert:bounds size <= 1K;                       // arbitrary limit
         Byte[] bytes = new Byte[size];
         in.readBytes(bytes, 0, size);
         return new IntN(bytes);
