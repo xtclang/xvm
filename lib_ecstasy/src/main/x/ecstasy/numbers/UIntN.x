@@ -351,6 +351,6 @@ const UIntN
         static UIntN chunkVal = 10_000_000_000_000_000_000;
         (UIntN dividend, UIntN remainder) = this /% chunkVal;
         dividend.appendTo(buf);
-        return remainder.toUInt64().appendTo(buf);
+        return remainder.appendTo(buf);
         }
     }

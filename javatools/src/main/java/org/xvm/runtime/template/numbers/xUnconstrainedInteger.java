@@ -43,6 +43,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public void initNative()
         {
+        super.initNative();
+
         markNativeProperty("leadingZeroCount");
 
 // TODO markNativeMethod("toUnchecked", VOID, null);
@@ -220,6 +222,37 @@ public abstract class xUnconstrainedInteger
 
             case "mod":
                 return invokeMod(frame, hTarget, hArg, iReturn);
+
+            case "toIntN":
+                {
+                ObjectHandle hResult = hTarget;
+                if (!f_fSigned)
+                    {
+                    TypeConstant          typeRet  = method.getReturn(0).getType();
+                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
+                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
+                    hResult = template.makeInt(pi);
+                    }
+                return frame.assignValue(iReturn, hResult);
+                }
+
+            case "toUIntN":
+                {
+                ObjectHandle hResult = hTarget;
+                if (f_fSigned)
+                    {
+                    TypeConstant          typeRet  = method.getReturn(0).getType();
+                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
+                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
+                    if (f_fChecked && pi.isNegative())
+                        {
+                        return template.overflow(frame);
+                        }
+
+                    hResult = template.makeInt(pi);
+                    }
+                return frame.assignValue(iReturn, hResult);
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -289,37 +322,6 @@ public abstract class xUnconstrainedInteger
                     return frame.assignValue(iReturn,
                         templateTo.makeHandle(LongLong.fromBigInteger(pi.getBigInteger())));
                     }
-                }
-
-            case "toIntN":
-                {
-                ObjectHandle hResult = hTarget;
-                if (!f_fSigned)
-                    {
-                    TypeConstant          typeRet  = method.getReturn(0).getType();
-                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
-                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
-                    hResult = template.makeInt(pi);
-                    }
-                return frame.assignValue(iReturn, hResult);
-                }
-
-            case "toUIntN":
-                {
-                ObjectHandle hResult = hTarget;
-                if (f_fSigned)
-                    {
-                    TypeConstant          typeRet  = method.getReturn(0).getType();
-                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
-                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
-                    if (f_fChecked && pi.isNegative())
-                        {
-                        return template.overflow(frame);
-                        }
-
-                    hResult = template.makeInt(pi);
-                    }
-                return frame.assignValue(iReturn, hResult);
                 }
             }
 

@@ -255,7 +255,7 @@ public class PackedInteger
     public long getLong()
         {
         verifyInitialized();
-        if (m_fBig)
+        if (m_fBig && m_lValue == 0)
             {
             throw new IllegalStateException("too big!");
             }
@@ -312,9 +312,22 @@ public class PackedInteger
 
         // determine if the number of bytes allows the BigInteger value to be
         // stored in a long value
-        if (!(m_fBig = (calculateSignedByteCount(bigint) > 8)))
+        if (!(m_fBig = calculateSignedByteCount(bigint) > 8))
             {
             m_lValue = bigint.longValue();
+            }
+        else
+            {
+            if (calculateUnsignedByteCount(bigint) <= 8)
+                {
+                // the unsigned value still fits the long
+                m_lValue = bigint.longValue();
+                assert m_lValue < 0;
+                }
+            else
+                {
+                m_lValue = 0;
+                }
             }
 
         m_bigint       = bigint;
@@ -1130,12 +1143,13 @@ public class PackedInteger
     private boolean m_fInitialized;
 
     /**
-     * Set to true if the value is too large to fit into a <tt>long</tt>.
+     * Set to true if the value is too large to fit into a <tt>long</tt> (for signed values).
      */
     private boolean m_fBig;
 
     /**
-     * The <tt>long</tt> value (if the value fits into a <tt>long</tt>.
+     * The <tt>long</tt> value if the value fits into a <tt>long</tt>. Note, the value could be "big",
+     * as a signed one but still fit the long as unsigned.
      */
     private long m_lValue;
 

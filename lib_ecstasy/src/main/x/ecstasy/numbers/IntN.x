@@ -66,14 +66,12 @@ const IntN
     @Override
     Signum sign.get()
         {
-        // twos-complement number will have the MSB set if negative
-        if (bits[bits.size-1] == 1)
+        return switch (this <=> 0)
             {
-            return Negative;
-            }
-
-        // any other bits set to 1 means positive
-        return this == 0 ? Zero : Positive;
+            case Lesser : Negative;
+            case Equal  : Zero;
+            case Greater: Positive;
+            };
         }
 
     @Override
