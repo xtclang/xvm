@@ -204,7 +204,7 @@ interface Iterator<Element>
      * @return True iff the iterator is not empty and the range of values was determined
      * @return (conditional) the range of elements from this iterator
      */
-    conditional Range<Element> range(Orderer? order = Null)
+    conditional Range<Element> range(Orderer? order = Null)  // REVIEW CP
         {
         assert Element.is(Type<Orderable>);
 
@@ -215,14 +215,13 @@ interface Iterator<Element>
                 {
                 while (Element el := next())
                     {
-                    switch (el <=> maxValue)
+                    if (el < minValue)
                         {
-                        case Lesser:
-                            minValue = el;
-                            break;
-                        case Greater:
-                            maxValue = el;
-                            break;
+                        minValue = el;
+                        }
+                    else if (el > maxValue)
+                        {
+                        maxValue = el;
                         }
                     }
                 }
@@ -230,14 +229,13 @@ interface Iterator<Element>
                 {
                 while (Element el := next())
                     {
-                    switch (order(el, maxValue))
+                    if (order(el, minValue) == Lesser)
                         {
-                        case Lesser:
-                            minValue = el;
-                            break;
-                        case Greater:
-                            maxValue = el;
-                            break;
+                        minValue = el;
+                        }
+                    else if (order(el, maxValue) == Greater)
+                        {
+                        maxValue = el;
                         }
                     }
                 }

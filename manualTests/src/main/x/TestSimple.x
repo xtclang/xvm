@@ -2,18 +2,11 @@ module TestSimple
     {
     @Inject Console console;
 
-    package crypto import crypto.xtclang.org;
-
-    void run(String[] args = ["password"])
+    void run(String[] args = [])
         {
-        import crypto.KeyStore;
-        import crypto.KeyStore.Info;
+        Int[] vals = [7, 31, 1, 3, 99];
+        assert val range := vals.iterator().range();
 
-        @Inject Directory curDir;
-        File store = curDir.fileFor("data/hello/https.p12");
-
-        @Inject(opts=new Info(store.contents, args[0])) KeyStore keystore;
-
-        console.println(keystore.certificates);
+        console.println(range); // used to show 3..99
         }
     }
