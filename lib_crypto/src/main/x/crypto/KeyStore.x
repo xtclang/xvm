@@ -12,4 +12,9 @@ interface KeyStore
      * The certificates in the `KeyStore`.
      */
     @RO Collection<Certificate> certificates;
+
+    /**
+     * The KeyStore resource information.
+     */
+    static const Info(Byte[] content, String password);
     }

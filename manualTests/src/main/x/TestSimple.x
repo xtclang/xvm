@@ -2,29 +2,18 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
-        {
-        show(v:1);
-        show(v:1.0);
-        show(v:1.1);
-        show(v:1.1beta);
-        show(v:1.1.beta);
-        show(v:1.1-beta);
-        show(v:1.1beta-2);
-        show(v:1.1-beta-2);
-        show(v:1.1.beta-2);
-        show(v:1.1.rc-3+b17);
-        show(v:beta);
-        show(v:beta2);
-//        show(v:1.1.rc-3+b17€);
-//        show(v:1.o);
+    package crypto import crypto.xtclang.org;
 
-        String s = v:1.2.3.4.alpha-5.toString();
-        console.println($"s={s}");
-        }
-
-    void show(Version v)
+    void run(String[] args = ["password"])
         {
-        console.println($"version={v}");
+        import crypto.KeyStore;
+        import crypto.KeyStore.Info;
+
+        @Inject Directory curDir;
+        File store = curDir.fileFor("data/hello/https.p12");
+
+        @Inject(opts=new Info(store.contents, args[0])) KeyStore keystore;
+
+        console.println(keystore.certificates);
         }
     }

@@ -57,6 +57,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
+import org.xvm.runtime.template._native.crypto.xRTKeyStore;
+
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
 
 import org.xvm.runtime.template._native.mgmt.xContainerLinker;
@@ -350,6 +352,11 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("network"        , typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("insecureNetwork", typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("secureNetwork"  , typeNetwork), this::ensureSecureNetwork);
+
+        // +++ KeyStore
+        xRTKeyStore  templateKeyStore = xRTKeyStore.INSTANCE;
+        TypeConstant typeKeyStore     = templateKeyStore.getCanonicalType();
+        addResourceSupplier(new InjectionKey("keystore", typeKeyStore), templateKeyStore::ensureKeyStore);
 
         // +++ WebServer
         xRTServer templateServer = xRTServer.INSTANCE;
