@@ -2131,6 +2131,7 @@ public abstract class ClassTemplate
             {
             case Op.R_NEXT:
                 hRef = (RefHandle) frame.peekStack();
+                hRef.setField(frame, GenericHandle.OUTER, hOuter);
                 hOuter.setField(frame, idProp, hRef);
                 return continuation.proceed(frame);
 
@@ -2138,6 +2139,7 @@ public abstract class ClassTemplate
                 frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     RefHandle hRefPublic = (RefHandle) frameCaller.peekStack();
+                    hRefPublic.setField(frame, GenericHandle.OUTER, hOuter);
                     hOuter.setField(frameCaller, idProp, hRefPublic);
                     return continuation.proceed(frameCaller);
                     });
