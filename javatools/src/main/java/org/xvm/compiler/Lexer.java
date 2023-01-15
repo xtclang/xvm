@@ -2326,8 +2326,9 @@ public class Lexer
         ArrayList<Integer> listParts = new ArrayList<>();
 
         // eat the VersionNumbers
-        boolean fNeed = true;
+        boolean fSep  = true;
         boolean fErr  = false;
+        long    lPrev = 0;          // a point that can be backed up to if lexing went too far
         while (isNextCharDigit(10))
             {
             long lNum = eatUnsignedLong();
@@ -2335,7 +2336,7 @@ public class Lexer
                 {
                 if (!fErr)
                     {
-                    log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
+                    log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, source.getPosition());
                     fErr = true;
                     }
                 lNum = 0;
@@ -2343,121 +2344,127 @@ public class Lexer
 
             listParts.add((int) lNum);
 
+            // this position is where we would fall back to if the next part doesn't end up being
+            // part of the version
+            lPrev = getPosition();
+
             if (match('.'))
                 {
-                fNeed = true;
+                fSep = true;
                 continue;
                 }
 
             if (match('-'))
                 {
-                fNeed = true;
+                fSep = true;
                 break;
                 }
 
-            fNeed = false;
+            fSep = false;
             }
 
-        boolean fNonGA = true;
-        char    ch     = nextChar();
-        source.rewind();
-        switch (ch)
+        int nNonGA = 0;
+        switch (peekChar())
             {
             case 'A':
             case 'a':
-                listParts.add(-3);
-                fErr = !expectCaseInsens("alpha");
+                if (matchCaseInsens("alpha"))
+                    {
+                    nNonGA = -3;
+                    }
                 break;
 
             case 'B':
             case 'b':
-                listParts.add(-2);
-                fErr = !expectCaseInsens("beta");
+                if (matchCaseInsens("beta"))
+                    {
+                    nNonGA = -2;
+                    }
                 break;
 
             case 'C':
             case 'c':
-                listParts.add(-6);
-                fErr = !expectCaseInsens("ci");
+                if (matchCaseInsens("ci"))
+                    {
+                    nNonGA = -6;
+                    }
                 break;
 
             case 'D':
             case 'd':
-                listParts.add(-5);
-                fErr = !expectCaseInsens("dev");
+                if (matchCaseInsens("dev"))
+                    {
+                    nNonGA = -5;
+                    }
                 break;
 
             case 'Q':
             case 'q':
-                listParts.add(-4);
-                fErr = !expectCaseInsens("qa");
+                if (matchCaseInsens("qa"))
+                    {
+                    nNonGA = -4;
+                    }
                 break;
 
             case 'R':
             case 'r':
-                listParts.add(-1);
-                fErr = !expectCaseInsens("rc");
-                break;
-
-            default:
-                fNonGA = false;
-                if (fNeed)
+                if (matchCaseInsens("rc"))
                     {
-                    log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
-                    fErr = true;
+                    nNonGA = -1;
                     }
                 break;
             }
 
-        if (!fErr && fNonGA)
+        if (nNonGA == 0)
             {
-            fNeed = match('.') || match('-');
+            if (lPrev != 0)
+                {
+                setPosition(lPrev);
+                }
+
+            // it's an error if there is no version info, or if a version number is followed
+            // immediately by an identifier character
+            if (!fErr && (listParts.isEmpty() || !fSep && isIdentifierPart(peekChar())))
+                {
+                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, source.getPosition());
+                fErr = true;
+                }
+            }
+        else
+            {
+            listParts.add(nNonGA);
+            lPrev = getPosition();
+
+            fSep = match('.') || match('-');
             if (isNextCharDigit(10))
                 {
                 long lNum = eatUnsignedLong();
-                if (lNum < 0 || lNum > Integer.MAX_VALUE)
+                if (lNum < 0 || lNum > Integer.MAX_VALUE || isIdentifierPart(peekChar()))
                     {
-                    fErr = true;
+                    if (!fErr)
+                        {
+                        log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, source.getPosition());
+                        fErr = true;
+                        }
                     lNum = 0;
                     }
                 listParts.add((int) lNum);
                 }
             else
                 {
-                fErr = fNeed;
-                }
-            if (fErr)
-                {
-                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
+                setPosition(lPrev);
                 }
             }
 
         String sBuild = null;
-        if (fErr)
+        lPrev = getPosition();
+        if (match('+'))
             {
-            // expurgate the remainder of the version string, whatever it is
-            while (source.hasNext())
-                {
-                ch = nextChar();
-                if (!(     ch >= 'A' && ch <= 'Z'
-                        || ch >= 'a' && ch <= 'z'
-                        || ch >= '0' && ch <= '9'
-                        || ch == '+'
-                        || ch == '-'
-                        || ch == '.'))
-                    {
-                    source.rewind();
-                    break;
-                    }
-                }
-            }
-        else if (match('+'))
-            {
-            long lPosBuild = source.getPosition();
+            long lBuildPos = source.getPosition();
             // skip over the build metadata
             while (source.hasNext())
                 {
-                ch = nextChar();
+                char ch = nextChar();
                 if (!(     ch >= 'A' && ch <= 'Z'
                         || ch >= 'a' && ch <= 'z'
                         || ch >= '0' && ch <= '9'
@@ -2468,29 +2475,21 @@ public class Lexer
                     break;
                     }
                 }
-            long lPosEnd = source.getPosition();
-            if (lPosBuild == lPosEnd)
+            long lBuildEnd = source.getPosition();
+            if (lBuildPos == lBuildEnd || isIdentifierPart(peekChar()))
                 {
-                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, lPosEnd);
+                // it must not have been a build string
+                setPosition(lPrev);
                 }
             else
                 {
-                sBuild = source.toString(lPosBuild, lPosEnd);
+                sBuild = source.toString(lBuildPos, lBuildEnd);
                 }
             }
-        else
+        else if (isIdentifierPart(peekChar()))
             {
-            ch = nextChar();
-            source.rewind();
-            if (       ch >= 'A' && ch <= 'Z'
-                    || ch >= 'a' && ch <= 'z'
-                    || ch >= '0' && ch <= '9'
-                    || ch == '-'
-                    || ch == '.')
-                {
-                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
-                fErr = true;
-                }
+            log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, source.getPosition());
+            fErr = true;
             }
 
         Version ver;
@@ -2740,7 +2739,7 @@ public class Lexer
         return true;
         }
 
-    protected boolean expectCaseInsens(String s)
+    protected boolean matchCaseInsens(String s)
         {
         for (int i = 0, c = s.length(); i < c; ++i)
             {
@@ -2749,22 +2748,11 @@ public class Lexer
                 {
                 continue;
                 }
-
-            // this will cause an error to be logged
-            expect(ch);
             return false;
             }
 
-        long lNext = getPosition();
-        char ch    = nextChar();
-        if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z')
-            {
-            log(Severity.ERROR, UNEXPECTED_CHAR, new Object[]{ch}, lNext, getPosition());
-            return false;
-            }
-
-        m_source.rewind();
-        return true;
+        char ch = peekChar();
+        return !(isIdentifierPart(ch) && !isDigit(ch));
         }
 
     /**

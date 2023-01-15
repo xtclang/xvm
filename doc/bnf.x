@@ -954,17 +954,38 @@ VersionLiteral
 
 VersionString
     NonGASuffix
-    VersionNumbers VersionFinish-opt
+    VersionNumbers NoWhitespace VersionFinish-opt NoWhitespace Build-opt
 
 VersionNumbers
     DigitsNoUnderscores
-    VersionNumbers "." DigitsNoUnderscores
+    VersionNumbers NoWhitespace "." NoWhitespace DigitsNoUnderscores
 
 VersionFinish:
-     "." NonGASuffix
+     "-" NoWhitespace NonGASuffix
+     "." NoWhitespace NonGASuffix
+     NonGASuffix
 
 NonGASuffix
-      NonGAPrefix DigitsNoUnderscores-opt
+      NonGAPrefix NoWhitespace NonGAVersion-opt
+
+NonGAVersion
+    "-" NoWhitespace DigitsNoUnderscores
+    "." NoWhitespace DigitsNoUnderscores
+    DigitsNoUnderscores
+
+Build
+    "+" NoWhitespace BuildChars
+
+BuildChars
+    BuildChar
+    BuildChars BuildChar
+
+BuildChar
+    "0".."9"
+    "A".."Z"
+    "a".."z"
+    "-"
+    "."
 
 NonGAPrefix:        # note: not (!!!) case sensitive
     "dev"           # developer build (default compiler stamp)
