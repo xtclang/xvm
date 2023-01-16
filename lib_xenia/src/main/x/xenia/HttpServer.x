@@ -32,13 +32,11 @@ interface HttpServer
      * Configure the server.
      *
      * @param hostName   the host name (e.g. "www.xqiz.it")
-     * @param keyStore   the content of the keystore to use for tls certificates and encryption
-     * @param password   the keystore password
+     * @param keystore   the KeyStore to use for tls certificates and encryption
      * @param httpPort   the port for plain text (insecure) communications
      * @param httpsPort  the port for encrypted (tls) communications
      */
-    void configure(String hostName, Byte[] keyStore, String password,
-                   UInt16 httpPort = 80, UInt16 httpsPort = 443);
+    void configure(String hostName, KeyStore keystore, UInt16 httpPort = 80, UInt16 httpsPort = 443);
 
     /**
      * Start the server, routing all incoming requests to the specified handler.

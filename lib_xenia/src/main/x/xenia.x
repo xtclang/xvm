@@ -6,9 +6,12 @@ module xenia.xtclang.org
     // external module dependencies
     package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
+    package crypto      import crypto.xtclang.org;
     package net         import net.xtclang.org;
     package json        import json.xtclang.org;
     package web         import web.xtclang.org;
+
+    import crypto.KeyStore;
 
     import net.HostPort;
     import net.IPAddress;
@@ -82,21 +85,18 @@ module xenia.xtclang.org
      *
      * @param webApp     the WebApp to dispatch the HTTP requests to
      * @param hostName   the server host name (e.g. "localhost")
-     * @param keyStore   the keystore to use for tls certificates and encryption
-     * @param password   the keystore password
+     * @param keystore   the keystore to use for tls certificates and encryption
      * @param httpPort   the port for plain text (insecure) communications
      * @param httpsPort  the port for encrypted (tls) communications
      *
      * @return a function that allows to shutdown the server
      */
-    function void () createServer(WebApp webApp, String hostName,
-                                  File|Byte[] keyStore, String password,
+    function void () createServer(WebApp webApp, String hostName, KeyStore keystore,
                                   UInt16 httpPort = 80, UInt16 httpsPort = 443)
         {
         @Inject HttpServer server;
 
-        Byte[] keys = keyStore.is(File) ? keyStore.contents : keyStore;
-        server.configure(hostName, keys, password, httpPort, httpsPort);
+        server.configure(hostName, keystore, httpPort, httpsPort);
 
         HttpHandler handler = new HttpHandler(server, webApp);
 

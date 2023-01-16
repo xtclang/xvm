@@ -271,7 +271,7 @@ public class xRTKeyStore
     /**
      * Native handle holding the KeyStore data.
      */
-    protected static class KeyStoreHandle
+    public static class KeyStoreHandle
                 extends ServiceHandle
         {
         public KeyStoreHandle(TypeComposition clz, ServiceContext ctx,

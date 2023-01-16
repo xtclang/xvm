@@ -1,8 +1,12 @@
 @WebApp
 module Hello
     {
-    package web   import web.xtclang.org;
-    package xenia import xenia.xtclang.org;
+    package crypto import crypto.xtclang.org;
+    package web    import web.xtclang.org;
+    package xenia  import xenia.xtclang.org;
+
+    import crypto.KeyStore;
+    import crypto.KeyStore.Info;
 
     import web.*;
 
@@ -22,6 +26,7 @@ module Hello
         @Inject Console console;
         @Inject Directory curDir;
 
+        File   store = curDir.fileFor("data/hello/https.p12");
         String password;
         if (args.size == 0)
             {
@@ -33,11 +38,12 @@ module Hello
             password = args[0];
             }
 
-        File   keyStore  = curDir.fileFor("data/hello/https.p12");
+        @Inject(opts=new Info(store.contents, password)) KeyStore keystore;
+
         String hostName  = "localhost";
         UInt16 httpPort  = 8080;
         UInt16 httpsPort = 8090;
-        xenia.createServer(this, hostName, keyStore, password, httpPort, httpsPort);
+        xenia.createServer(this, hostName, keystore, httpPort, httpsPort);
 
         console.println($|Use the curl command to test, for example:
                          |

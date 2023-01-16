@@ -9,14 +9,10 @@ import com.sun.net.httpserver.HttpsExchange;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
-
-import java.security.KeyStore;
 
 import java.util.List;
 
@@ -55,13 +51,14 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
-import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt16;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.StringArrayHandle;
+
+import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -227,7 +224,7 @@ public class xRTServer
 
 
     /**
-     * Implementation of "configure(String hostName, Byte[] keystore, String password,
+     * Implementation of "configure(String hostName, KeyStore keystore,
      *                              UInt16 httpPort = 80, UInt16 httpsPort = 443)" method.
      */
     private int invokeConfigure(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
@@ -237,17 +234,16 @@ public class xRTServer
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
             }
 
-        String  sHost       = ((StringHandle) ahArg[0]).getStringValue();
-        byte[]  abKeyStore  = xByteArray.getBytes((ArrayHandle) ahArg[1]);
-        char[]  achPassword = ((StringHandle) ahArg[2]).getValue();
-        int     nHttpPort   = ahArg[3] instanceof JavaLong hPort ? (int) hPort.getValue() : 80;
-        int     nHttpsPort  = ahArg[4] instanceof JavaLong hPort ? (int) hPort.getValue() : 443;
+        String        sHost       = ((StringHandle) ahArg[0]).getStringValue();
+        KeyStoreHandle hKeystore  = (KeyStoreHandle) ahArg[1];
+        int            nHttpPort  = ahArg[2] instanceof JavaLong hPort ? (int) hPort.getValue() : 80;
+        int            nHttpsPort = ahArg[3] instanceof JavaLong hPort ? (int) hPort.getValue() : 443;
 
         try
             {
             HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sHost, nHttpPort));
             HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sHost, nHttpsPort),
-                                                            abKeyStore, achPassword);
+                                                            hKeystore);
             hServer.configure(httpServer, httpsServer);
             return Op.R_NEXT;
             }
@@ -263,22 +259,14 @@ public class xRTServer
         return HttpServer.create(addr, 0);
         }
 
-    private HttpsServer createHttpsServer(InetSocketAddress addr, byte[] abKeyStore, char[] achPwd)
+    private HttpsServer createHttpsServer(InetSocketAddress addr, KeyStoreHandle hKeystore)
             throws Exception
         {
-        KeyStore    keyStore = KeyStore.getInstance("PKCS12");
-        InputStream in       = new ByteArrayInputStream(abKeyStore);
-
-        keyStore.load(in, achPwd);
-
-        KeyManagerFactory keyManager = KeyManagerFactory.getInstance("SunX509");
-        keyManager.init(keyStore, achPwd);
-
-        TrustManagerFactory trustFactory = TrustManagerFactory.getInstance("SunX509");
-        trustFactory.init(keyStore);
+        KeyManagerFactory   keyManager   = hKeystore.f_keyManager;
+        TrustManagerFactory trustManager = hKeystore.f_trustManager;
 
         SSLContext ctxSSL = SSLContext.getInstance("TLS");
-        ctxSSL.init(keyManager.getKeyManagers(), trustFactory.getTrustManagers(), null);
+        ctxSSL.init(keyManager.getKeyManagers(), trustManager.getTrustManagers(), null);
 
         HttpsServer httpsServer = HttpsServer.create(addr, 0);
         httpsServer.setHttpsConfigurator(new HttpsConfigurator(ctxSSL)
