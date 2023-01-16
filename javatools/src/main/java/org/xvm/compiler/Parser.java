@@ -5990,7 +5990,7 @@ public class Parser
     protected Mark mark()
         {
         Mark mark = new Mark();
-        mark.pos       = m_lexer.getPosition();
+        mark.pos       = m_lexer.mark();
         mark.token     = m_token        == null ? null : m_token       .clone();
         mark.putBack   = m_tokenPutBack == null ? null : m_tokenPutBack.clone();
         mark.lastMatch = m_tokenPrev    == null ? null : m_tokenPrev   .clone();
@@ -6001,7 +6001,7 @@ public class Parser
 
     protected void restore(Mark mark)
         {
-        m_lexer.setPosition(mark.pos);
+        m_lexer.restore(mark.pos);
         m_token          = mark.token;
         m_tokenPutBack   = mark.putBack;
         m_tokenPrev      = mark.lastMatch;
