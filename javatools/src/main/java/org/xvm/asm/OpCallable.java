@@ -498,13 +498,14 @@ public abstract class OpCallable extends Op
                                  ObjectHandle hParent, ObjectHandle[] ahVar)
         {
         ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
+        TypeConstant    typeParent  = hParent.getComposition().getInceptionType().removeAccess();
         TypeConstant    typeChild   =
               structChild.isVirtualChild()
                 ? frame.poolContext().ensureThisVirtualChildTypeConstant(
-                        hParent.getType(), structChild.getName())
+                        typeParent, structChild.getName())
             : structChild.isInnerChild()
                 ? frame.poolContext().ensureInnerChildTypeConstant(
-                        hParent.getType(), (ClassConstant) structChild.getIdentityConstant())
+                        typeParent, (ClassConstant) structChild.getIdentityConstant())
             : structChild.getCanonicalType();
         TypeComposition clzTarget   = typeChild.ensureClass(frame);
 

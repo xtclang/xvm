@@ -160,6 +160,12 @@ public class ClassComposition
         }
 
     @Override
+    public TypeConstant getInceptionType()
+        {
+        return f_typeInception;
+        }
+
+    @Override
     public TypeConstant getBaseType()
         {
         return getType().removeAccess();
@@ -547,14 +553,6 @@ public class ClassComposition
     /**
      * @return the inception type (private access)
      */
-    protected TypeConstant getInceptionType()
-        {
-        return f_typeInception;
-        }
-
-    /**
-     * @return the inception type (private access)
-     */
     protected TypeConstant getStructType()
         {
         return f_typeStructure;
@@ -733,14 +731,14 @@ public class ClassComposition
     /**
      * @return the compile-time type for a given property name or identity (never nested identity)
      */
-    public TypeConstant getFieldType(Object enid)
+    public TypeConstant getFieldType(Object nid)
         {
-        TypeConstant typeParent = getInceptionType();
-        TypeInfo     infoType   = typeParent.ensureTypeInfo();
-        PropertyInfo info       = enid instanceof PropertyConstant idProp
+        TypeConstant type     = getInceptionType();
+        TypeInfo     infoType = type.ensureTypeInfo();
+        PropertyInfo infoProp = nid instanceof PropertyConstant idProp
                 ? infoType.findProperty(idProp)
-                : infoType.findProperty((String) enid);
-        return info == null ? null : info.inferImmutable(typeParent);
+                : infoType.findProperty((String) nid);
+        return infoProp == null ? null : infoProp.inferImmutable(type);
         }
 
     /**

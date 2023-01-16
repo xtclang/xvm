@@ -60,6 +60,12 @@ public class ProxyComposition
         }
 
     @Override
+    public TypeConstant getInceptionType()
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
     public TypeConstant getBaseType()
         {
         return f_typeProxy;

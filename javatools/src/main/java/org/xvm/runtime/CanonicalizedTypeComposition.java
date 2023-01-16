@@ -50,6 +50,12 @@ public class CanonicalizedTypeComposition
         }
 
     @Override
+    public TypeConstant getInceptionType()
+        {
+        return f_typeActual;
+        }
+
+    @Override
     public TypeConstant getBaseType()
         {
         return f_typeActual;

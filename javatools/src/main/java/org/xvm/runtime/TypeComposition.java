@@ -43,6 +43,12 @@ public interface TypeComposition
     TypeConstant getType();
 
     /**
+     * @return the inception type of this TypeComposition (not applicable to Property or Proxy
+     *         compositions)
+     */
+    TypeConstant getInceptionType();
+
+    /**
      * @return the underlying type of this TypeComposition; for ClassComposition the base type does
      *         not include the access aspect; for PropertyComposition - it is a BaseRef type
      */
