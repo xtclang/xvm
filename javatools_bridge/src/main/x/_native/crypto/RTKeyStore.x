@@ -25,10 +25,21 @@ service RTKeyStore
                 {
                 dateNotBefore = new Date(year, month, day);
                 }
+            else
+                {
+                // not a valid date
+                continue;
+                }
+
             Date? dateNotAfter = Null;
             if ((Int year, Int month, Int day) := getNotAfter(name))
                 {
                 dateNotAfter = new Date(year, month, day);
+                }
+            else
+                {
+                // not a valid date
+                continue;
                 }
 
             Certificate cert = new X509Certificate(
@@ -63,7 +74,7 @@ service RTKeyStore
     static const X509Certificate
             implements Certificate
         {
-        construct(String issuer, Date? notBefore, Date? notAfter, Byte[] tbsCert)
+        construct(String issuer, Date notBefore, Date notAfter, Byte[] tbsCert)
             {
             this.issuer   = issuer;
             this.keyUsage = [DigitalSignature];
@@ -75,7 +86,7 @@ service RTKeyStore
         String standard = "X.509";
 
         @Override
-        Version version = v:1;
+        Version version = v:1; // TODO GG
 
         @Override
         String issuer;
@@ -84,7 +95,7 @@ service RTKeyStore
         Set<KeyUsage> keyUsage;
 
         @Override
-        Range<Date?> lifetime;
+        Range<Date> lifetime;
 
         Byte[] tbsCert;
 

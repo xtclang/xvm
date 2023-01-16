@@ -62,9 +62,10 @@ interface Certificate
     @RO Set<KeyUsage> keyUsage;
 
     /**
-     * The range of dates that the certificate is valid for.
+     * The range of dates that the certificate is valid for. It's required that each certificate
+     * has a defined lifetime.
      */
-    Range<Date?> lifetime;
+    Range<Date> lifetime;
 
     /**
      * @return the certificate in the DER format.
