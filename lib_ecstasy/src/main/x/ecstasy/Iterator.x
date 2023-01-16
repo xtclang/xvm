@@ -204,7 +204,7 @@ interface Iterator<Element>
      * @return True iff the iterator is not empty and the range of values was determined
      * @return (conditional) the range of elements from this iterator
      */
-    conditional Range<Element> range(Orderer? order = Null)  // REVIEW CP
+    conditional Range<Element> range(Orderer? order = Null)
         {
         assert Element.is(Type<Orderable>);
 
