@@ -205,6 +205,8 @@ public class xRTKeyStore
      *                Int       notAfterMonth,
      *                Int       notAfterDay,
      *                Boolean[] usageFlags,
+     *                String    signatureAlgorithm,
+     *                Byte[]    signatureBytes,
      *                String    publicKeyAlgorithm,
      *                Int       publicKeySize,
      *                Byte[]    publicKeyBytes,
@@ -258,7 +260,7 @@ public class xRTKeyStore
             byte[]    abPublic   = publicKey.getEncoded();
 
             // DER bytes
-            byte[]    abDer = cert509.getTBSCertificate();
+            byte[] abDer = cert509.getTBSCertificate();
 
             // create the arguments
             List<ObjectHandle> list = new ArrayList<>(9);
