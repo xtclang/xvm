@@ -19,7 +19,7 @@
 module ecstasy.xtclang.org
     {
     /**
-     * The `Nullable` type is the only type that can contain the value Null.
+     * The `Nullable` type is the only type that can contain the value [Null].
      *
      * `Nullable` is an [Enumeration] whose only value is the singleton [Enum] value `Null`.
      */
@@ -28,15 +28,19 @@ module ecstasy.xtclang.org
         Null;
 
         /**
-         * Helper function that turns a Null check into a conditional return.
+         * Given some `NotNullable` type, and a value that is either of that type or is `Null`,
+         * convert that value into a conditional return of type `NotNullable`.
+         *
+         * @param value  either a `NotNullable` value, or the `Null` value
+         *
+         * @return `True` iff the value is not the `Null` value
+         * @return (conditional) the `NotNullable` value
          */
-        static <NotNullable> conditional NotNullable notNull(NotNullable? o)
+        static <NotNullable> conditional NotNullable notNull(NotNullable? value)
             {
-            if (o == Null)
-                {
-                return False;
-                }
-            return True, o;
+            return value == Null
+                    ? False
+                    : (True, value);
             }
         }
 
