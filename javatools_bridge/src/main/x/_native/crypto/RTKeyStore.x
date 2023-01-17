@@ -1,6 +1,9 @@
 import libcrypto.Certificate;
+import libcrypto.Certificate.KeyUsage;
 import libcrypto.CryptoKey;
+import libcrypto.KeyForm;
 import libcrypto.KeyStore;
+import libcrypto.PublicKey;
 
 /**
  * The native KeyStore service implementation.
@@ -20,31 +23,40 @@ service RTKeyStore
         Certificate[] certs = new Certificate[];
         for (String name : aliases)
             {
-            Date? dateNotBefore = Null;
-            if ((Int year, Int month, Int day) := getNotBefore(name))
+            if ((String    issuer,
+                 Int       version,
+                 Int       notBeforeYear,
+                 Int       notBeforeMonth,
+                 Int       notBeforeDay,
+                 Int       notAfterYear,
+                 Int       notAfterMonth,
+                 Int       notAfterDay,
+                 Boolean[] usageFlags,
+                 String    publicKeyAlgorithm,
+                 Int       publicKeySize,
+                 Byte[]    publicKeyBytes,
+                 Byte[]    derValue) := getCertificateInfo(name))
                 {
-                dateNotBefore = new Date(year, month, day);
-                }
-            else
-                {
-                // not a valid date
-                continue;
-                }
+                Date notBefore = new Date(notBeforeYear, notBeforeMonth, notBeforeDay);
+                Date notAfter  = new Date(notAfterYear,  notAfterMonth,  notAfterDay );
 
-            Date? dateNotAfter = Null;
-            if ((Int year, Int month, Int day) := getNotAfter(name))
-                {
-                dateNotAfter = new Date(year, month, day);
-                }
-            else
-                {
-                // not a valid date
-                continue;
-                }
+                Set<KeyUsage> keyUsage = new HashSet();
+                for (Int i : 0 ..< usageFlags.size)
+                    {
+                    if (usageFlags[i])
+                        {
+                        keyUsage.add(KeyUsage.values[i]);
+                        }
+                    }
 
-            Certificate cert = new X509Certificate(
-                        getIssuer(name), dateNotBefore, dateNotAfter, getTbsCert(name));
-            certs += &cert.maskAs(Certificate);
+                CryptoKey? key = publicKeyBytes.size > 0
+                        ? new PublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes)
+                        : Null;
+                Certificate cert = new X509Certificate(
+                        issuer, new Version(version.toString()), notBefore, notAfter,
+                        keyUsage, derValue, key);
+                certs += &cert.maskAs(Certificate);
+                }
             }
         return certs.freeze(True);
         }
@@ -61,9 +73,21 @@ service RTKeyStore
     private String[] aliases.get()                                {TODO("Native");}
 
     private String getIssuer                        (String name) {TODO("Native");}
-    private conditional (Int, Int, Int) getNotBefore(String name) {TODO("Native");}
-    private conditional (Int, Int, Int) getNotAfter (String name) {TODO("Native");}
-    private Byte[] getTbsCert                       (String name) {TODO("Native");}
+    private conditional (String    issuer,
+                         Int       version,
+                         Int       notBeforeYear,
+                         Int       notBeforeMonth,
+                         Int       notBeforeDay,
+                         Int       notAfterYear,
+                         Int       notAfterMonth,
+                         Int       notAfterDay,
+                         Boolean[] usageFlags,
+                         String    publicKeyAlgorithm,
+                         Int       publicKeySize,
+                         Byte[]    publicKeyBytes,
+                         Byte[]    derValue
+                         )
+        getCertificateInfo(String name) {TODO("Native");}
 
 
     // ----- natural helper classes  ---------------------------------------------------------------
@@ -74,19 +98,27 @@ service RTKeyStore
     static const X509Certificate
             implements Certificate
         {
-        construct(String issuer, Date notBefore, Date notAfter, Byte[] tbsCert)
+        construct(String        issuer,
+                  Version       version,
+                  Date          notBefore,
+                  Date          notAfter,
+                  Set<KeyUsage> keyUsage,
+                  Byte[]        derValue,
+                  CryptoKey?    key)
             {
             this.issuer   = issuer;
-            this.keyUsage = [DigitalSignature];
+            this.version  = version;
+            this.keyUsage = keyUsage;
             this.lifetime = notBefore .. notAfter;
-            this.tbsCert  = tbsCert;
+            this.derValue = derValue;
+            this.key      = key;
             }
 
         @Override
         String standard = "X.509";
 
         @Override
-        Version version = v:1; // TODO GG
+        Version version;
 
         @Override
         String issuer;
@@ -97,24 +129,33 @@ service RTKeyStore
         @Override
         Range<Date> lifetime;
 
-        Byte[] tbsCert;
+        Byte[] derValue;
+
+        CryptoKey? key;
 
         @Override
         Byte[] toDerBytes()
             {
-            return tbsCert;
+            return derValue;
             }
 
         @Override
         conditional CryptoKey containsKey()
             {
-            return False;
+            return Nullable.notNull(key);
             }
 
         @Override
         String toString()
             {
-            return $"{standard}: Issuer={issuer}; Valid={lifetime}";
+            return $|
+                    |Standard: {standard}
+                    |Version: {version}
+                    |Issuer: {issuer}
+                    |Validity: [{lifetime}]
+                    |Extensions: {keyUsage}
+                    |
+                    ;
             }
         }
     }

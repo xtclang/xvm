@@ -30,6 +30,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -892,6 +893,15 @@ public class xArray
         {
         DelegateHandle hDelegate = xRTBitDelegate.INSTANCE.makeHandle(abValue, cBits, mutability);
         return new ArrayHandle(BIT_ARRAY_CLZ, hDelegate, mutability);
+        }
+
+    /**
+     * @return a Boolean array handle
+     */
+    public static ArrayHandle makeBooleanArrayHandle(byte[] abValue, int cBits, Mutability mutability)
+        {
+        DelegateHandle hDelegate = xRTBooleanDelegate.INSTANCE.makeHandle(abValue, cBits, mutability);
+        return new ArrayHandle(BOOLEAN_ARRAY_CLZ, hDelegate, mutability);
         }
 
     /**

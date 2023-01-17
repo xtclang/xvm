@@ -6,12 +6,12 @@ const KeyPair(String name, CryptoKey publicKey, CryptoKey privateKey)
     {
     assert()
         {
-        assert:arg publicKey .keyType == Public;
-        assert:arg privateKey.keyType == Secret;
+        assert:arg publicKey .form == Public;
+        assert:arg privateKey.form == Secret;
         }
 
     @Override
-    @RO KeyForm keyType.get()
+    @RO KeyForm form.get()
         {
         return Pair;
         }

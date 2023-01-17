@@ -5,16 +5,27 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.PublicKey;
 
 import java.security.cert.Certificate;
+
 import java.security.cert.X509Certificate;
+
+import java.security.interfaces.DSAParams;
+import java.security.interfaces.DSAPublicKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
+
+import java.security.spec.ECParameterSpec;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.List;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -48,6 +59,8 @@ import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
+
 
 /**
  * Native implementation of the xRTKeyStore.x service.
@@ -72,10 +85,7 @@ public class xRTKeyStore
         {
         markNativeProperty("aliases");
 
-        markNativeMethod("getIssuer"   , STRING, STRING);
-        markNativeMethod("getNotBefore", STRING, null);
-        markNativeMethod("getNotAfter" , STRING, null);
-        markNativeMethod("getTbsCert"  , STRING, null);
+        markNativeMethod("getCertificateInfo", STRING, null);
         }
 
     @Override
@@ -163,46 +173,6 @@ public class xRTKeyStore
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        switch (method.getName())
-            {
-            case "getIssuer":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle)   hArg;
-                try
-                    {
-                    Certificate cert = hStore.f_keyStore.getCertificate(hName.getStringValue());
-                    return cert instanceof X509Certificate cert509
-                            ? frame.assignValue(iReturn,
-                                    xString.makeHandle(cert509.getIssuerX500Principal().getName()))
-                            : frame.raiseException(xException.makeHandle(frame,
-                                    "Unsupported standard: " + cert.getType()));
-                    }
-                catch (KeyStoreException e)
-                    {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-                    }
-                }
-
-            case "getTbsCert":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle)   hArg;
-                try
-                    {
-                    Certificate cert = hStore.f_keyStore.getCertificate(hName.getStringValue());
-                    return cert instanceof X509Certificate cert509
-                            ? frame.assignValue(iReturn,
-                                    xByteArray.makeByteArrayHandle(cert509.getTBSCertificate(), Mutability.Constant))
-                            : frame.raiseException(xException.makeHandle(frame,
-                                    "Unsupported standard: " + cert.getType()));
-                    }
-                catch (GeneralSecurityException e)
-                    {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-                    }
-                }
-            }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
@@ -212,60 +182,133 @@ public class xRTKeyStore
         {
         switch (method.getName())
             {
-            case "getNotBefore":
+            case "getCertificateInfo":
                 {
                 KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
                 StringHandle   hName  = (StringHandle) ahArg[0];
-                try
-                    {
-                    Certificate cert = hStore.f_keyStore.getCertificate(hName.getStringValue());
-                    return cert instanceof X509Certificate cert509
-                            ? computeDate(frame, cert509.getNotBefore(), aiReturn)
-                            : frame.raiseException(xException.makeHandle(frame,
-                                    "Unsupported standard: " + cert.getType()));
-                    }
-                catch (KeyStoreException e)
-                    {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-                    }
-                }
 
-            case "getNotAfter":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle) ahArg[0];
-                try
-                    {
-                    Certificate cert = hStore.f_keyStore.getCertificate(hName.getStringValue());
-                    return cert instanceof X509Certificate cert509
-                            ? computeDate(frame, cert509.getNotAfter(), aiReturn)
-                            : frame.raiseException(xException.makeHandle(frame,
-                                    "Unsupported standard: " + cert.getType()));
-                    }
-                catch (KeyStoreException e)
-                    {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-                    }
+                return invokeGetCertificateInfo(frame, hStore, hName, aiReturn);
                 }
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    protected int computeDate(Frame frame, Date date, int[] aiReturn)
+    /**
+     * Native implementation of
+     *   "conditional (String   issuer,
+     *                Int       version,
+     *                Int       notBeforeYear,
+     *                Int       notBeforeMonth,
+     *                Int       notBeforeDay,
+     *                Int       notAfterYear,
+     *                Int       notAfterMonth,
+     *                Int       notAfterDay,
+     *                Boolean[] usageFlags,
+     *                String    publicKeyAlgorithm,
+     *                Int       publicKeySize,
+     *                Byte[]    publicKeyBytes,
+     *                Byte[]    derValue
+     *                )
+     *      getCertificateInfo(String name)"
+     */
+    private int invokeGetCertificateInfo(Frame frame, KeyStoreHandle hStore, StringHandle hName,
+                                         int[] aiReturn)
         {
-        if (date == null)
+        try
             {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            Certificate cert = hStore.f_keyStore.getCertificate(hName.getStringValue());
+            if (!(cert instanceof X509Certificate cert509))
+                {
+                return frame.raiseException(xException.makeHandle(frame,
+                    "Unsupported standard: " + cert.getType()));
+                }
+
+            Date dateNotBefore = cert509.getNotBefore();
+            Date dateNotAfter  = cert509.getNotAfter();
+            if (dateNotBefore == null || dateNotAfter == null)
+                {
+                // invalid certificate
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                }
+
+            // issuer
+            String sIssuer = cert509.getIssuerX500Principal().toString();
+
+            // version
+            int nVersion = cert509.getVersion();
+
+            // keyUsage
+            boolean[] afUsage = cert509.getKeyUsage();
+            if (afUsage == null)
+                {
+                afUsage = new boolean[0];
+                }
+            int    cUsage  = afUsage.length;
+            byte[] abUsage = xRTBooleanDelegate.toBytes(afUsage);
+
+            // public key
+            PublicKey publicKey  = cert509.getPublicKey();
+            String    sAlgorithm = publicKey.getAlgorithm();
+            int       cPukBits   = getKeyLength(publicKey);
+            byte[]    abPublic   = publicKey.getEncoded();
+
+            // DER bytes
+            byte[]    abDer = cert509.getTBSCertificate();
+
+            List<ObjectHandle> list = new ArrayList<>(9);
+            list.add(xBoolean.TRUE);
+            list.add(xString.makeHandle(sIssuer));
+            list.add(xInt.makeHandle(nVersion));
+            addDate(dateNotBefore, list);
+            addDate(dateNotAfter, list);
+            list.add(xArray.makeBooleanArrayHandle(abUsage, cUsage, Mutability.Constant));
+            list.add(xString.makeHandle(sAlgorithm));
+            list.add(xInt.makeHandle(cPukBits /8));
+            list.add(xByteArray.makeByteArrayHandle(abPublic, Mutability.Constant));
+            list.add(xByteArray.makeByteArrayHandle(abDer, Mutability.Constant));
+
+            return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
             }
+        catch (GeneralSecurityException e)
+            {
+            return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+            }
+        }
+
+    private static void addDate(Date date, List<ObjectHandle> list)
+        {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
 
-        int iYear  = cal.get(Calendar.YEAR);
-        int iMonth = cal.get(Calendar.MONTH);
-        int iDay   = cal.get(Calendar.DAY_OF_WEEK);
-        return frame.assignValues(aiReturn, xBoolean.TRUE,
-                    xInt.makeHandle(iYear), xInt.makeHandle(iMonth), xInt.makeHandle(iDay));
+        list.add(xInt.makeHandle(cal.get(Calendar.YEAR)));
+        list.add(xInt.makeHandle(cal.get(Calendar.MONTH)));
+        list.add(xInt.makeHandle(cal.get(Calendar.DAY_OF_WEEK)));
+        }
+
+    private static int getKeyLength(PublicKey puk)
+            throws InvalidKeyException
+        {
+        if (puk instanceof RSAPublicKey rsaKey)
+            {
+            return rsaKey.getModulus().bitLength();
+            }
+
+        if (puk instanceof DSAPublicKey dsaKey)
+            {
+            DSAParams params = dsaKey.getParams();
+            return params == null
+                ? dsaKey.getY().bitLength()
+                : params.getP().bitLength();
+            }
+
+        if (puk instanceof ECPublicKey ecKey)
+            {
+            ECParameterSpec spec = ecKey.getParams();
+            return spec == null ? 0 :spec.getOrder().bitLength();
+            }
+
+        throw new InvalidKeyException("Unsupported key: " + puk);
         }
 
     /**

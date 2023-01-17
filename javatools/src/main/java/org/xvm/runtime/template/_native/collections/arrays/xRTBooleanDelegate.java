@@ -64,4 +64,19 @@ public class xRTBooleanDelegate
         {
         return new BitArrayHandle(getCanonicalClass(), ab, cSize, mutability);
         }
+
+    /**
+     * Create a byte array representing a native boolean array.
+     */
+    public static byte[] toBytes(boolean[] af)
+        {
+        int    cBits = af.length;
+        byte[] ab    = new byte[(cBits + 7) >>> 3];
+        for (int i = 0; i < cBits; i++)
+            {
+            setBit(ab, i, af[i]);
+            }
+        return ab;
+        }
+
     }

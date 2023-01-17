@@ -2,24 +2,24 @@
  * A `PrivateKey` holds a symmetric (shared private) key, or the private portion of a public/private
  * key.
  */
-const PrivateKey(String name, Byte[] bytes)
+const PrivateKey(String name, String algorithm, Int size, Byte[] bytes)
         implements CryptoKey
     {
     @Override
-    @RO KeyForm keyType.get()
+    @RO KeyForm form.get()
         {
         return Secret;
-        }
-
-    @Override
-    @RO Int size.get()
-        {
-        return bytes.size;
         }
 
     @Override
     conditional Byte[] isVisible()
         {
         return True, bytes;
+        }
+
+    @Override
+    String toString()
+        {
+        return $"{algorithm} private key, {size*8} bits";
         }
     }

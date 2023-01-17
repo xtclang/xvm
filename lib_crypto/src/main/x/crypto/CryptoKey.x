@@ -18,10 +18,16 @@ interface CryptoKey
     /**
      * The [KeyForm] of the `CryptoKey`.
      */
-    @RO KeyForm keyType;
+    @RO KeyForm form;
 
     /**
-     * The number of bytes in the key.
+     * The name of the algorithm used to produce the key.
+     */
+    String algorithm;
+
+    /**
+     * The number of bytes in the key, as defined by the algorithm. For example, for the `RSA-2048`
+     * algorithms, the key size would be 256.
      */
     @RO Int size;
 

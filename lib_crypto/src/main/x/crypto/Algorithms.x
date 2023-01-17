@@ -149,7 +149,7 @@ const Algorithms
         String name = specifier.is(String) ? specifier : specifier.name;
         if (Algorithm algorithm := byName.get(name), algorithm.category == category)
             {
-            if ((KeyForm keyType, Int size) := algorithm.keyRequired())
+            if ((KeyForm form, Int size) := algorithm.keyRequired())
                 {
                 return key != Null && key.size == size
                         ? (True, algorithm)
