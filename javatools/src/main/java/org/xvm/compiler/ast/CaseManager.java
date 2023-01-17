@@ -387,10 +387,7 @@ public class CaseManager<CookieType>
         m_listCond = listCond;
         if (m_atypeCond.length == 1)
             {
-            TypeConstant typeCond = m_atypeCond[0];
-            m_typeCase = typeCond.isImmutable()
-                    ? typeCond
-                    : pool.ensureImmutableTypeConstant(typeCond);
+            m_typeCase = m_atypeCond[0].freeze();
             }
         else
             {

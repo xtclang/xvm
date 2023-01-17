@@ -659,7 +659,7 @@ public class PropertyInfo
             if (typeParent.getAccess() != Access.STRUCT && typeParent.isImmutable()
                     && !typeProp.isImmutable() && !typeProp.isA(pool.typeService()))
                 {
-                typeProp = pool.ensureImmutableTypeConstant(typeProp);
+                typeProp = typeProp.freeze();
                 }
             }
         return typeProp;
