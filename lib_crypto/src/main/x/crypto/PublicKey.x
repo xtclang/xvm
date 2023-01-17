@@ -19,6 +19,6 @@ const PublicKey(String name, String algorithm, Int size, Byte[] bytes)
     @Override
     String toString()
         {
-        return $"{algorithm} public key, {size*8} bits";
+        return $"{name.quoted()}, {algorithm} public key, {size*8} bits";
         }
     }
