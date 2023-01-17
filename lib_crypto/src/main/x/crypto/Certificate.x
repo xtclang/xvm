@@ -68,6 +68,11 @@ interface Certificate
     Range<Date> lifetime;
 
     /**
+     * The signature for this certificate.
+     */
+    Signature signature;
+
+    /**
      * @return the certificate in the DER format.
      */
     Byte[] toDerBytes();

@@ -4,6 +4,7 @@ import libcrypto.CryptoKey;
 import libcrypto.KeyForm;
 import libcrypto.KeyStore;
 import libcrypto.PublicKey;
+import libcrypto.Signature;
 
 /**
  * The native KeyStore service implementation.
@@ -32,6 +33,8 @@ service RTKeyStore
                  Int       notAfterMonth,
                  Int       notAfterDay,
                  Boolean[] usageFlags,
+                 String    signatureAlgorithm,
+                 Byte[]    signatureBytes,
                  String    publicKeyAlgorithm,
                  Int       publicKeySize,
                  Byte[]    publicKeyBytes,
@@ -48,13 +51,13 @@ service RTKeyStore
                         keyUsage.add(KeyUsage.values[i]);
                         }
                     }
-
+                Signature  sig = new Signature(signatureAlgorithm, signatureBytes);
                 CryptoKey? key = publicKeyBytes.size > 0
                         ? new PublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes)
                         : Null;
                 Certificate cert = new X509Certificate(
                         issuer, new Version(version.toString()), notBefore, notAfter,
-                        keyUsage, derValue, key);
+                        keyUsage, sig, derValue, key);
                 certs += &cert.maskAs(Certificate);
                 }
             }
@@ -70,9 +73,10 @@ service RTKeyStore
 
     // ----- native methods ------------------------------------------------------------------------
 
-    private String[] aliases.get()                                {TODO("Native");}
+    private String[] aliases.get()                      {TODO("Native");}
 
-    private String getIssuer                        (String name) {TODO("Native");}
+    private String getIssuer (String name)              {TODO("Native");}
+
     private conditional (String    issuer,
                          Int       version,
                          Int       notBeforeYear,
@@ -82,12 +86,14 @@ service RTKeyStore
                          Int       notAfterMonth,
                          Int       notAfterDay,
                          Boolean[] usageFlags,
+                         String    signatureAlgorithm,
+                         Byte[]    signatureBytes,
                          String    publicKeyAlgorithm,
                          Int       publicKeySize,
                          Byte[]    publicKeyBytes,
                          Byte[]    derValue
                          )
-        getCertificateInfo(String name) {TODO("Native");}
+        getCertificateInfo(String name)                 {TODO("Native");}
 
 
     // ----- natural helper classes  ---------------------------------------------------------------
@@ -103,15 +109,17 @@ service RTKeyStore
                   Date          notBefore,
                   Date          notAfter,
                   Set<KeyUsage> keyUsage,
+                  Signature     signature,
                   Byte[]        derValue,
                   CryptoKey?    key)
             {
-            this.issuer   = issuer;
-            this.version  = version;
-            this.keyUsage = keyUsage;
-            this.lifetime = notBefore .. notAfter;
-            this.derValue = derValue;
-            this.key      = key;
+            this.issuer    = issuer;
+            this.version   = version;
+            this.lifetime  = notBefore .. notAfter;
+            this.keyUsage  = keyUsage;
+            this.signature = signature;
+            this.derValue  = derValue;
+            this.key       = key;
             }
 
         @Override
@@ -128,6 +136,9 @@ service RTKeyStore
 
         @Override
         Range<Date> lifetime;
+
+        @Override
+        Signature signature;
 
         Byte[] derValue;
 
@@ -148,12 +159,12 @@ service RTKeyStore
         @Override
         String toString()
             {
-            return $|
-                    |Standard: {standard}
+            return $|Standard: {standard}
                     |Version: {version}
                     |Issuer: {issuer}
                     |Validity: [{lifetime}]
-                    |Extensions: {keyUsage}
+                    |KeyUsage: {keyUsage}
+                    |Signature: {signature}
                     |
                     ;
             }

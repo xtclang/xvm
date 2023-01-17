@@ -247,6 +247,10 @@ public class xRTKeyStore
             int    cUsage  = afUsage.length;
             byte[] abUsage = xRTBooleanDelegate.toBytes(afUsage);
 
+            // signature
+            String sSigAlgName = cert509.getSigAlgName();
+            byte[] abSignature = cert509.getSignature();
+
             // public key
             PublicKey publicKey  = cert509.getPublicKey();
             String    sAlgorithm = publicKey.getAlgorithm();
@@ -256,6 +260,7 @@ public class xRTKeyStore
             // DER bytes
             byte[]    abDer = cert509.getTBSCertificate();
 
+            // create the arguments
             List<ObjectHandle> list = new ArrayList<>(9);
             list.add(xBoolean.TRUE);
             list.add(xString.makeHandle(sIssuer));
@@ -263,6 +268,8 @@ public class xRTKeyStore
             addDate(dateNotBefore, list);
             addDate(dateNotAfter, list);
             list.add(xArray.makeBooleanArrayHandle(abUsage, cUsage, Mutability.Constant));
+            list.add(xString.makeHandle(sSigAlgName));
+            list.add(xByteArray.makeByteArrayHandle(abSignature, Mutability.Constant));
             list.add(xString.makeHandle(sAlgorithm));
             list.add(xInt.makeHandle(cPukBits /8));
             list.add(xByteArray.makeByteArrayHandle(abPublic, Mutability.Constant));
