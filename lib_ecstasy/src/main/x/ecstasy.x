@@ -23,7 +23,22 @@ module ecstasy.xtclang.org
      *
      * `Nullable` is an [Enumeration] whose only value is the singleton [Enum] value `Null`.
      */
-    enum Nullable { Null }
+    enum Nullable
+        {
+        Null;
+
+        /**
+         * Helper function that turns a Null check into a conditional return.
+         */
+        static <NotNullable> conditional NotNullable notNull(NotNullable? o)
+            {
+            if (o == Null)
+                {
+                return False;
+                }
+            return True, o;
+            }
+        }
 
     /**
      * The `Ordered` enumeration describes the result of comparing two items for the purpose of
