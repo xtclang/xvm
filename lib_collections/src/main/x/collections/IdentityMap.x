@@ -58,8 +58,7 @@ class IdentityMap<Key, Value>
 
     // ----- properties ----------------------------------------------------------------------------
 
-    // TODO GG: should not be forced to be protected; private should also work with mixins
-    protected Replicable + Duplicable + Map<Identity, Tuple<Key, Value>> storage;
+    private Replicable + Duplicable + Map<Identity, Tuple<Key, Value>> storage;
 
 
     // ----- Map interface -------------------------------------------------------------------------

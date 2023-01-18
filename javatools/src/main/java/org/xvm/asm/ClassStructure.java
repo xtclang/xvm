@@ -398,6 +398,16 @@ public class ClassStructure
         }
 
     /**
+     * @return true iff this class is the specified parent class itself, or a child of that class or
+     *         any of its children (recursively)
+     */
+    public boolean isDescendant(IdentityConstant idParent)
+        {
+        return getIdentityConstant().equals(idParent) ||
+            getParent() instanceof ClassStructure parent && parent.isDescendant(idParent);
+        }
+
+    /**
      * Ensure that all generic types referred to by the specified type are accessible in the context
      * of this class.
      *

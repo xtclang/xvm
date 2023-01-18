@@ -2155,7 +2155,8 @@ public abstract class TypeConstant
                             {
                             PropertyInfo prop = entry.getValue();
 
-                            if (prop.hasField() && prop.getRefAccess() == Access.PRIVATE)
+                            if (prop.hasField() && prop.getRefAccess() == Access.PRIVATE &&
+                                    prop.getHead().getImplementation() != Implementation.Implicit)
                                 {
                                 mapProps.putIfAbsent(entry.getKey(), prop);
                                 }
@@ -2585,9 +2586,14 @@ public abstract class TypeConstant
             }
         if (typeInto != null)
             {
-            if (!typeInto.isAccessSpecified() && typeInto.isSingleDefiningConstant())
+            if (!typeInto.equals(pool.typeObject()) && !typeInto.isAccessSpecified() &&
+                    typeInto.isSingleUnderlyingClass(true))
                 {
-                typeInto = pool.ensureAccessTypeConstant(typeInto, Access.PROTECTED);
+                // mixin located inside the "into" class should have private access to it
+                Access access = struct.isDescendant(typeInto.getSingleUnderlyingClass(true))
+                        ? Access.PRIVATE
+                        : Access.PROTECTED;
+                typeInto = pool.ensureAccessTypeConstant(typeInto, access);
                 }
             listProcess.add(new Contribution(Composition.Into, typeInto));
             }
@@ -2912,8 +2918,8 @@ public abstract class TypeConstant
                 case Delegates:
                 case Extends:
                 case RebasesOnto:
-                // "into" contains only implicit methods, so it is not part of a call chain;
-                // however, it may contribute type parameters
+                // while "into" contains only implicit virtual methods, it may contribute type
+                // parameters or private properties and methods (if private visibility applies)
                 case Into:
                     {
                     // append to the call chain
@@ -2934,10 +2940,7 @@ public abstract class TypeConstant
                             }
                         }
 
-                    if (composition != Composition.Into)
-                        {
-                        infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, composition);
-                        }
+                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, composition);
 
                     layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
                     break;
