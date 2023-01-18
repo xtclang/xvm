@@ -1,6 +1,8 @@
 package org.xvm.runtime.template.numbers;
 
 
+import java.math.BigInteger;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -17,6 +19,7 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -151,6 +154,41 @@ abstract public class BaseDecFP
                 return dec.isFinite()
                     ? frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(dec.toBigDecimal().doubleValue()))
                     : overflow(frame);
+
+            case "toInt":
+                {
+                ObjectHandle hTrunc = ahArg[0];
+                ObjectHandle hRound = ahArg[1];
+
+                int iMode = hRound == ObjectHandle.DEFAULT
+                    ? 3
+                    : ((EnumHandle) hRound).getOrdinal();
+                dec = dec.round(Rounding.values()[iMode].getMode());
+
+                BigInteger n  = dec.toBigDecimal().unscaledValue();
+                int        cb = (n.bitLength() + 7) / 8;
+                if (cb <= 8)
+                    {
+                    return frame.assignValue(iReturn, xInt.makeHandle(n.longValue()));
+                    }
+
+                if (cb > 16)
+                    {
+                    if (hTrunc == xBoolean.TRUE)
+                        {
+                        // TODO GG keep only 128 bit value
+                        }
+                    else
+                        {
+                        return frame.raiseException(xException.outOfBounds(frame,
+                                "Decimal value out of Int range: " + dec));
+                        }
+                    }
+
+                // TODO gg
+                // return frame.assignValue(iReturn, xInt.makeHandle(n));
+                throw new UnsupportedOperationException();
+                }
 
             case "toIntN":
             case "toUIntN":
