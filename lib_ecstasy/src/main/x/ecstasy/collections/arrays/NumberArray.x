@@ -4,6 +4,15 @@ import numbers.FPConvertible;
 
 /**
  * Functionality specific to arrays of numbers.
+ *
+ * TODO conditional Element min()
+ * TODO conditional Element max()
+ * TODO conditional Range<Element> range()
+ * TODO conditional Element sum()
+ * TODO conditional Element average() or mean()
+ * TODO Element[] mode()
+ * TODO <? extends FPNumber> variance()
+ * TODO <? extends FPNumber> standardDeviation()
  */
 mixin NumberArray<Element extends Number>
         into Array<Element>
