@@ -347,16 +347,13 @@ class ModuleGenerator(String implName, String moduleName)
                             {
                             case 0 : "void";
                             case 1 : displayName(returns[0].type, appName);
-                            default: $"({{for (val r : returns) {$.addAll(displayName(r.type, appName)); $.add(',');} }})";
-
-// TODO CP: the equivalent multi-line doesn't parse
-//                                default: $|({{for (val r : returns)
-//                                          |    {
-//                                          |    $.addAll(displayName(r.type, appName));
-//                                          |    $.add(',');
-//                                          |    }
-//                                          |}})
-//                                          ;
+                            default: $|({{for (val r : returns)
+                                      |    {
+                                      |    $.addAll(displayName(r.type, appName));
+                                      |    $.add(',');
+                                      |    }
+                                      |}})
+                                     ;
                             };
 
                     String argDecl     = "";

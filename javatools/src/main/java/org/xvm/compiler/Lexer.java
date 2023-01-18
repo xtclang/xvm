@@ -1281,7 +1281,7 @@ public class Lexer
                                 }
 
                             // eat from the opening { to the closing } (inclusive of both)
-                            list.add(eatTemplateExpression());
+                            list.add(eatTemplateExpression(fMultiline));
 
                             // start eating a new string portion of the template from this point
                             lPosStart = source.getPosition();
@@ -1343,16 +1343,38 @@ public class Lexer
      * Eat an inline template expression that begins with a '{' and ends with a '}'. The contents
      * <b>between</b> the opening and closing curlies are returned as an array of tokens.
      *
+     * @param fMultiline  true iff this is a multi-line format
+     *
      * @return the tokens found between the opening and closing curly braces
      */
-    protected Token[] eatTemplateExpression()
+    protected Token[] eatTemplateExpression(boolean fMultiline)
         {
+        int              nPrevLine = m_source.getLine();
+        long             lInitPos  = m_source.getPosition();
         expect('{');
-        int              cDepth = 1;
-        ArrayList<Token> tokens = new ArrayList<>();
+        long             lPrevPos  = mark();
+        int              cDepth    = 1;
+        ArrayList<Token> tokens    = new ArrayList<>();
         while (true)
             {
             Token token = next();
+            int   nLine = Source.calculateLine(token.getEndPosition());
+            if (nLine != nPrevLine)
+                {
+                if (!fMultiline || token.getId() != Id.BIT_OR
+                        || Source.calculateLine(token.getStartPosition()) != nLine)
+                    {
+                    // either it's not a multi-line literal, or the new line doesn't start with '|',
+                    // or a token crosses a line boundary; log error: newline in string
+                    restore(lPrevPos);
+                    log(Severity.ERROR, STRING_NO_TERM, null, lInitPos);
+                    return tokens.toArray(new Token[0]);
+                    }
+
+                nPrevLine = nLine;
+                continue; // skip this '|' token
+                }
+
             switch (token.getId())
                 {
                 case L_CURLY:
@@ -1372,7 +1394,9 @@ public class Lexer
                         }
                     break;
                 }
+
             tokens.add(token);
+            lPrevPos = mark();
             }
         }
 
