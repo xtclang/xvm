@@ -22,9 +22,4 @@ module crypto.xtclang.org
      *   protected.
      */
     enum KeyForm {Secret, Public, Pair}
-
-    /**
-     * A cryptographic key is represented as a sequence of bytes.
-     */
-    typedef CryptoKey | Byte[] as Key;
     }

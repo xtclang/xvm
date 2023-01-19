@@ -54,7 +54,7 @@ const Algorithms
      *         is acceptable
      * @return (conditional) the signature [Verifier] for the specified algorithm
      */
-    conditional Verifier verifierFor(Specifier specifier, Key key)
+    conditional Verifier verifierFor(Specifier specifier, CryptoKey key)
         {
         if (Algorithm algorithm := findAlgorithm(specifier, Signing, key, False))
             {
@@ -74,7 +74,7 @@ const Algorithms
      *         is acceptable
      * @return (conditional) the [Verifier] and [Signer] for the specified algorithm
      */
-    conditional Signer signerFor(Specifier specifier, Key key)
+    conditional Signer signerFor(Specifier specifier, CryptoKey key)
         {
         if (Algorithm algorithm := findAlgorithm(specifier, Signing, key, True))
             {
@@ -94,7 +94,7 @@ const Algorithms
      *         is acceptable
      * @return (conditional) the [Verifier] and [Signer] for the specified algorithm
      */
-    conditional Encryptor encryptorFor(Specifier specifier, Key key)
+    conditional Encryptor encryptorFor(Specifier specifier, CryptoKey key)
         {
         if (Algorithm algorithm := findAlgorithm(specifier, Encryption, key, False))
             {
@@ -115,7 +115,7 @@ const Algorithms
      *         is acceptable
      * @return (conditional) the [Verifier] and [Signer] for the specified algorithm
      */
-    conditional Decryptor decryptorFor(Specifier specifier, Key key)
+    conditional Decryptor decryptorFor(Specifier specifier, CryptoKey key)
         {
         if (Algorithm algorithm := findAlgorithm(specifier, Encryption, key, True))
             {
@@ -143,7 +143,7 @@ const Algorithms
      */
     protected conditional Algorithm findAlgorithm(Specifier          specifier,
                                                   Algorithm.Category category,
-                                                  Key?               key,
+                                                  CryptoKey?         key,
                                                   Boolean            privateRequired)
         {
         String name = specifier.is(String) ? specifier : specifier.name;

@@ -13,7 +13,7 @@ interface Encryptor
      * The public key used by the `Encryptor` algorithm, if the `Encryptor` has a public key. A
      * `Null` indicates that the `Encryptor` uses a symmetric private key.
      */
-    @RO Key? publicKey;
+    @RO CryptoKey? publicKey;
 
     /**
      * Encrypt the provided data. The resulting data may not be the same size as the provided data,

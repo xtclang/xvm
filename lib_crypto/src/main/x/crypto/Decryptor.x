@@ -10,7 +10,7 @@ interface Decryptor
      *
      * A `Null` indicates either that the `Decryptor` is not permitted to expose the private key.
      */
-    @RO Key? privateKey;
+    @RO CryptoKey? privateKey;
 
     /**
      * Decrypt the provided data. The resulting data may not be the same size as the provided data,

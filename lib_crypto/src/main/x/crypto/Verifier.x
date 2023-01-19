@@ -14,7 +14,7 @@ interface Verifier
      * indicates either that the `Verifier` has no key (it is a keyless hash algorithm), or that it
      * only uses a symmetric private key.
      */
-    @RO Key? publicKey;
+    @RO CryptoKey? publicKey;
 
     /**
      * A previously generated "message digest" can be passed to a `Verifier` as either a `Signature`
@@ -39,12 +39,15 @@ interface Verifier
      * Verify that the provided signature is valid for the contents of the passed `Byte` array.
      * To verify a signature for the contents of only a sub-section of an array, pass a slice.
      *
-     * @param signature  the previously generated [Signature] (or `Byte[]`) to verify
-     * @param bytes      an array of `Byte`
+     * @param signature  the previously generated [Signature] (or `Byte[]`) that can be used to
+     *                   verify that the passed data hasn't changed since the signature was
+     *                   generated, and/or to verify that the signature was created from that data
+     *                   using the associated key
+     * @param data       an array of bytes that was supposedly used to create the signature
      *
      * @return True iff the signature is valid for the contents of the `Byte` array
      */
-    Boolean verify(Digest signature, Byte[] bytes);
+    Boolean verify(Digest signature, Byte[] data);
 
     /**
      * Create an output stream that will verify a signature using all of the data written to (or

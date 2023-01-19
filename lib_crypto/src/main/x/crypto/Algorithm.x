@@ -82,7 +82,7 @@ interface Algorithm
      * @return (conditional) the [KeyForm] of the key for this algorithm
      * @return (conditional) the number of bytes in the key for this algorithm
      */
-    conditional (KeyForm keyType, Int size) keyRequired();
+    conditional (KeyForm form, Int size) keyRequired();
 
     /**
      * Factory method: Produce a configured engine that implements this algorithm for the specified
@@ -100,5 +100,5 @@ interface Algorithm
      *         a `Verifier`, or a `Signer`, as indicated by a combination of the [category] and
      *         [keyRequired] of the `Algorithm`, and the contents of the passed key
      */
-    conditional Encryptor|Decryptor|Verifier|Signer allocate(Key? key);
+    Encryptor|Decryptor|Verifier|Signer allocate(CryptoKey? key);
     }
