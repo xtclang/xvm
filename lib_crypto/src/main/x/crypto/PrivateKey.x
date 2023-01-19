@@ -14,7 +14,7 @@ const PrivateKey(String name, String algorithm, Int size, Byte[] bytes)
     @Override
     conditional Byte[] isVisible()
         {
-        return True, bytes;
+        return bytes.size == 0 ? False : (True, bytes);
         }
 
     @Override

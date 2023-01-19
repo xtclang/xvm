@@ -19,7 +19,7 @@ const KeyPair(String name, CryptoKey publicKey, CryptoKey privateKey)
     @Override
     @RO Int size.get()
         {
-        // REVIEW
+        // REVIEW CP
         return privateKey.size + publicKey.size;
         }
 

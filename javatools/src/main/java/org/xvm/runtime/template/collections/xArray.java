@@ -30,7 +30,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -41,9 +40,11 @@ import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
@@ -51,6 +52,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateH
 import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.util.Handy;
 
 
 /**
@@ -883,7 +886,9 @@ public class xArray
      */
     public static ArrayHandle makeStringArrayHandle(StringHandle[] ahValue)
         {
-        return makeArrayHandle(STRING_ARRAY_CLZ, ahValue.length, ahValue, Mutability.Constant);
+        return ahValue.length == 0
+                ? xString.ensureEmptyArray()
+                : makeArrayHandle(STRING_ARRAY_CLZ, ahValue.length, ahValue, Mutability.Constant);
         }
 
     /**
@@ -909,8 +914,26 @@ public class xArray
      */
     public static ArrayHandle makeByteArrayHandle(byte[] abValue, Mutability mutability)
         {
+        if (abValue.length == 0 && mutability == Mutability.Constant)
+            {
+            return ensureEmptyByteArray();
+            }
         DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(abValue, abValue.length, mutability);
         return new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, mutability);
+        }
+
+    /**
+     * @return the handle for an empty immutable array of Bytes.
+     */
+    public static ArrayHandle ensureEmptyByteArray()
+        {
+        if (EMPTY_BYTE_ARRAY == null)
+            {
+            DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(
+                    Handy.EMPTY_BYTE_ARRAY, 0, Mutability.Constant);
+            EMPTY_BYTE_ARRAY = new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, Mutability.Constant);
+            }
+        return EMPTY_BYTE_ARRAY;
         }
 
     /**
@@ -1032,4 +1055,6 @@ public class xArray
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 
     private static MethodStructure CREATE_LIST_SET;
+
+    private static ArrayHandle EMPTY_BYTE_ARRAY;
     }

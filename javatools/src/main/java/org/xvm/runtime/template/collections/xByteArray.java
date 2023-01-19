@@ -16,8 +16,6 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.numbers.xInt64;
-
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
@@ -25,8 +23,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt8;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt16;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt64;
-
-import org.xvm.util.Handy;
 
 
 /**

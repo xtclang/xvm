@@ -4,6 +4,7 @@ import libcrypto.CryptoKey;
 import libcrypto.KeyForm;
 import libcrypto.KeyStore;
 import libcrypto.PublicKey;
+import libcrypto.PrivateKey;
 import libcrypto.Signature;
 
 /**
@@ -12,10 +13,55 @@ import libcrypto.Signature;
 service RTKeyStore
         implements KeyStore
     {
-    @Override
-    Collection<CryptoKey> keys.get()
+    private construct()
         {
-        TODO
+        certCache = new HashMap();
+        keyCache  = new HashMap();
+        }
+
+    @Override
+    @Lazy String[] keyNames.calc()
+        {
+        String[] names = new String[];
+        for (String name : aliases)
+            {
+            if (isKey(name))
+                {
+                names += name;
+                }
+            }
+        return names.freeze(True);
+        }
+
+    @Override
+    conditional CryptoKey getKey(String name)
+        {
+        if (CryptoKey key := keyCache.get(name))
+            {
+            return True, key;
+            }
+
+        if ((String  algorithm,
+             Int     size,
+             Byte[]  bytes,
+             Object  secret) := getKeyInfo(name))
+            {
+            CryptoKey key;
+            if (bytes.size > 0)
+                {
+                key = new RTPublicKey(name, algorithm, size, bytes, secret);
+                key = &key.maskAs(PublicKey);
+                }
+            else
+                {
+                key = new RTPrivateKey(name, algorithm, size, secret);
+                key = &key.maskAs(PrivateKey);
+                }
+            keyCache.put(name, key);
+            return True, key;
+            }
+
+        return False;
         }
 
     @Override
@@ -24,44 +70,60 @@ service RTKeyStore
         Certificate[] certs = new Certificate[];
         for (String name : aliases)
             {
-            if ((String    issuer,
-                 Int       version,
-                 Int       notBeforeYear,
-                 Int       notBeforeMonth,
-                 Int       notBeforeDay,
-                 Int       notAfterYear,
-                 Int       notAfterMonth,
-                 Int       notAfterDay,
-                 Boolean[] usageFlags,
-                 String    signatureAlgorithm,
-                 Byte[]    signatureBytes,
-                 String    publicKeyAlgorithm,
-                 Int       publicKeySize,
-                 Byte[]    publicKeyBytes,
-                 Byte[]    derValue) := getCertificateInfo(name))
+            if (Certificate cert := getCertificate(name))
                 {
-                Date notBefore = new Date(notBeforeYear, notBeforeMonth, notBeforeDay);
-                Date notAfter  = new Date(notAfterYear,  notAfterMonth,  notAfterDay );
-
-                Set<KeyUsage> keyUsage = new HashSet();
-                for (Int i : 0 ..< usageFlags.size)
-                    {
-                    if (usageFlags[i])
-                        {
-                        keyUsage.add(KeyUsage.values[i]);
-                        }
-                    }
-                Signature  sig = new Signature(signatureAlgorithm, signatureBytes);
-                CryptoKey? key = publicKeyBytes.size > 0
-                        ? new PublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes)
-                        : Null;
-                Certificate cert = new X509Certificate(
-                        issuer, new Version(version.toString()), notBefore, notAfter,
-                        keyUsage, sig, derValue, key);
-                certs += &cert.maskAs(Certificate);
+                certs += cert;
                 }
             }
         return certs.freeze(True);
+        }
+
+    @Override
+    conditional Certificate getCertificate(String name)
+        {
+        if (Certificate cert := certCache.get(name))
+            {
+            return True, &cert.maskAs(Certificate);
+            }
+
+        if ((String    issuer,
+             Int       version,
+             Int       notBeforeYear,
+             Int       notBeforeMonth,
+             Int       notBeforeDay,
+             Int       notAfterYear,
+             Int       notAfterMonth,
+             Int       notAfterDay,
+             Boolean[] usageFlags,
+             String    signatureAlgorithm,
+             Byte[]    signatureBytes,
+             String    publicKeyAlgorithm,
+             Int       publicKeySize,
+             Byte[]    publicKeyBytes,
+             Byte[]    derValue) := getCertificateInfo(name))
+            {
+            Date notBefore = new Date(notBeforeYear, notBeforeMonth, notBeforeDay);
+            Date notAfter  = new Date(notAfterYear,  notAfterMonth,  notAfterDay );
+
+            Set<KeyUsage> keyUsage = new HashSet();
+            for (Int i : 0 ..< usageFlags.size)
+                {
+                if (usageFlags[i])
+                    {
+                    keyUsage.add(KeyUsage.values[i]);
+                    }
+                }
+            Signature  sig = new Signature(signatureAlgorithm, signatureBytes);
+            CryptoKey? key = publicKeyBytes.size > 0
+                    ? new PublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes)
+                    : Null;
+            Certificate cert = new X509Certificate(
+                                issuer, new Version(version.toString()), notBefore, notAfter,
+                                keyUsage, sig, derValue, key);
+            certCache.put(name, cert);
+            return True, &cert.maskAs(Certificate);
+            }
+        return False;
         }
 
     @Override
@@ -70,12 +132,20 @@ service RTKeyStore
         return "KeyStore";
         }
 
+    /**
+     * The local cache of certificates (not masked).
+     */
+    private Map<String, Certificate> certCache;
+
+    /**
+     * The local cache of CryptoKeys (masked).
+     */
+    private Map<String, CryptoKey> keyCache;
+
 
     // ----- native methods ------------------------------------------------------------------------
 
-    private String[] aliases.get()                      {TODO("Native");}
-
-    private String getIssuer (String name)              {TODO("Native");}
+    private String[] aliases.get() {TODO("Native");}
 
     private conditional (String    issuer,
                          Int       version,
@@ -93,7 +163,21 @@ service RTKeyStore
                          Byte[]    publicKeyBytes,
                          Byte[]    derValue
                          )
-        getCertificateInfo(String name)                 {TODO("Native");}
+        getCertificateInfo(String name) {TODO("Native");}
+
+
+    /**
+     * @return True iff the name represents a key
+     * #return (conditional) an ordinal of the corresponding KeyForm (0=Public, 1=Secret, 2=Pair)
+     */
+    private conditional Int isKey(String name) {TODO("Native");}
+
+    private conditional (String  algorithm,
+                         Int     size,
+                         Byte[]  bytes, // only for public key
+                         Object  secret
+                         )
+        getKeyInfo(String name) {TODO("Native");}
 
 
     // ----- natural helper classes  ---------------------------------------------------------------
@@ -168,5 +252,37 @@ service RTKeyStore
                     |
                     ;
             }
+        }
+
+    static const RTPublicKey
+            extends PublicKey
+        {
+        construct(String name, String algorithm, Int size, Byte[] bytes, Object secret)
+            {
+            construct PublicKey(name, algorithm, size, bytes);
+
+            this.secret = secret;
+            }
+
+        /**
+         * The crypto material.
+         */
+        private Object secret;
+        }
+
+    static const RTPrivateKey
+            extends PrivateKey
+        {
+        construct(String name, String algorithm, Int size, Object secret)
+            {
+            construct PrivateKey(name, algorithm, size, []);
+
+            this.secret = secret;
+            }
+
+        /**
+         * The crypto material.
+         */
+        private Object secret;
         }
     }

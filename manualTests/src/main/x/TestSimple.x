@@ -22,6 +22,7 @@ module TestSimple
         {
         @Inject(opts=new Info(store.contents, password)) KeyStore keystore;
 
+        console.print("**** Certificates ****");
         for (Certificate cert : keystore.certificates)
             {
             console.print($"certificate={cert}");
@@ -29,6 +30,13 @@ module TestSimple
                 {
                 console.print($"key={key}\n");
                 }
+            }
+
+        console.print("**** Keys ****");
+        for (String name : keystore.keyNames)
+            {
+            assert CryptoKey key := keystore.getKey(name);
+            console.print($"key={key}\n");
             }
         }
     }
