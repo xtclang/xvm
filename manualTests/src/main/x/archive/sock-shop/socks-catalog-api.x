@@ -133,12 +133,12 @@ module SockShopCatalogApi
                 {
                 ByteArrayInputStream in = new ByteArrayInputStream(config.contents);
                 app = Schema.DEFAULT.createObjectInput(new UTF8Reader(in)).read<Application>();
-                console.println($"Loaded Sock Shop Catalog configuration from {config}\n{app}");
+                console.print($"Loaded Sock Shop Catalog configuration from {config}\n{app}");
                 }
             else
                 {
                 app = new Application();
-                console.println($"Using Sock Shop Catalog configuration\n{app}");
+                console.print($"Using Sock Shop Catalog configuration\n{app}");
                 }
             return app;
             }
@@ -150,7 +150,7 @@ module SockShopCatalogApi
         @Inject Directory  curDir;
         @Inject Connection dbc;
 
-        console.println("Starting Sock Shop Catalog");
+        console.print("Starting Sock Shop Catalog");
 
         // Get the locations of the data files and application configuration file
         Directory        rootDir  =  curDir.dirFor("src")
@@ -163,7 +163,7 @@ module SockShopCatalogApi
         assert File      data     := rootDir.findFile("data.json");
 
         // Load the DB from a json file
-        console.println("Loading Sock Shop DB");
+        console.print("Loading Sock Shop DB");
         if (dbc.products.size == 0)
             {
             dbc.loadSocks(data);
@@ -181,7 +181,7 @@ module SockShopCatalogApi
                                     .addRoutes(tags, "/tags")
                                     .start();
 
-        console.println($"Serving Catalog API at http://localhost:{server.port}");
+        console.print($"Serving Catalog API at http://localhost:{server.port}");
 
         wait(server, Duration.ofSeconds(600));
         }
@@ -198,7 +198,7 @@ module SockShopCatalogApi
             if (!&result.assigned)
                 {
                 @Inject Console console;
-                console.println("Shutting down");
+                console.print("Shutting down");
                 result=Tuple:();
                 }
             });
@@ -214,7 +214,7 @@ module SockShopCatalogApi
             if (!result.assigned)
                 {
                 @Inject Console console;
-                console.println("Webserver has stopped");
+                console.print("Webserver has stopped");
                 result.set(Tuple:());
                 }
             }

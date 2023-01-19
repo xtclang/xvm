@@ -22,7 +22,7 @@ module TestDefAsn
 
     void testDefAssignment()
         {
-        console.println("\n** testDefAssignment()");
+        console.print("\n** testDefAssignment()");
 
         static (String, Int) name()
             {
@@ -53,12 +53,12 @@ module TestDefAsn
             }
         while (f2);
 
-        console.println("i=" + i);
+        console.print("i=" + i);
         }
 
     void testShort()
         {
-        console.println("\n** testShort()");
+        console.print("\n** testShort()");
 
         Int i;
         Boolean f1 = gimmeTrue();
@@ -74,7 +74,7 @@ module TestDefAsn
             i = 4;
             }
 
-        console.println("i=" + i);
+        console.print("i=" + i);
         }
 
     String name = "top-level property";

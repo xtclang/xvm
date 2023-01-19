@@ -4,7 +4,7 @@ module TestTry
 
     void run()
         {
-        console.println("Exception tests:");
+        console.print("Exception tests:");
 
         try
             {
@@ -12,7 +12,7 @@ module TestTry
             }
         catch (Exception e)
             {
-            console.println("UNEXPECTED THROW in testBasic(): " + e);
+            console.print("UNEXPECTED THROW in testBasic(): " + e);
             }
 
         try
@@ -21,57 +21,57 @@ module TestTry
             }
         catch (Exception e)
             {
-            console.println("UNEXPECTED THROW in testUsing(): " + e);
+            console.print("UNEXPECTED THROW in testUsing(): " + e);
             }
 
         try
             {
             testFinally();
-            console.println("TEST ERROR!!!");
+            console.print("TEST ERROR!!!");
             }
         catch (Exception e)
             {
-            console.println("expected throw in testFinally(): " + e);
+            console.print("expected throw in testFinally(): " + e);
             }
 
         try
             {
             testAssert(-1);
-            console.println("TEST ERROR!!!");
+            console.print("TEST ERROR!!!");
             }
         catch (Exception e)
             {
-            console.println("expected throw in testAssert(): " + e);
+            console.print("expected throw in testAssert(): " + e);
             }
 
         try
             {
             testAssert(17);
-            console.println("TEST ERROR!!!");
+            console.print("TEST ERROR!!!");
             }
         catch (Exception e)
             {
-            console.println("expected throw in testAssert(): " + e);
+            console.print("expected throw in testAssert(): " + e);
             }
 
         try
             {
             testAssert(3);
-            console.println("(expected non-throw in testAssert())");
+            console.print("(expected non-throw in testAssert())");
             }
         catch (Exception e)
             {
-            console.println("TEST ERROR!!!  Unexpected throw in testAssert(): " + e);
+            console.print("TEST ERROR!!!  Unexpected throw in testAssert(): " + e);
             }
 
         try
             {
             testAssert2();
-            console.println("TEST ERROR!!!");
+            console.print("TEST ERROR!!!");
             }
         catch (Exception e)
             {
-            console.println("expected throw in testAssert2(): " + e);
+            console.print("expected throw in testAssert2(): " + e);
             }
 
         testAssertOnce(True);
@@ -82,59 +82,59 @@ module TestTry
         testSwitch(0);
         testSwitch(1);
 
-        console.println("\nException tests: finished!");
+        console.print("\nException tests: finished!");
         }
 
     void testThrow()
         {
-        console.println("in testThrow()");
+        console.print("in testThrow()");
         throw new IllegalState("test");
         }
 
     void testBasic()
         {
-        console.println("\n** testBasic()");
+        console.print("\n** testBasic()");
 
         try
             {
             testThrow();
-            console.println("DIDN'T THROW!");
+            console.print("DIDN'T THROW!");
             }
         catch (Exception e)
             {
-            console.println("caught: " + e);
+            console.print("caught: " + e);
             }
 
-        console.println("done testBasic()");
+        console.print("done testBasic()");
         }
 
     void testUsing()
         {
-        console.println("\n** testUsing()");
+        console.print("\n** testUsing()");
 
         try
             {
             using (ByeBye bye = new ByeBye())
                 {
                 testThrow();
-                console.println("DIDN'T THROW!");
+                console.print("DIDN'T THROW!");
                 }
             }
         catch (Exception e)
             {
-            console.println("ok");
+            console.print("ok");
             }
 
          try (ByeBye bye = new ByeBye())
             {
-            console.println(bye);
+            console.print(bye);
             }
         finally
             {
-            console.println("in finally: " + bye);
+            console.print("in finally: " + bye);
             }
 
-        console.println("done");
+        console.print("done");
         }
 
     class ByeBye
@@ -142,43 +142,43 @@ module TestTry
         {
         construct()
             {
-            console.println("hello!");
+            console.print("hello!");
             }
 
         @Override
         void close(Exception? cause = Null)
             {
-            console.println("bye-bye!");
+            console.print("bye-bye!");
             }
         }
 
     void testFinally()
         {
-        console.println("\n** testFinally()");
+        console.print("\n** testFinally()");
 
         FOR: for (Int i : 1..2)
             {
-            console.println("iteration " + i);
+            console.print("iteration " + i);
             TRY: try
                 {
                 if (FOR.last)
                     {
-                    console.println("throwing exception inside try");
+                    console.print("throwing exception inside try");
                     testThrow();
                     }
                 else
                     {
-                    console.println("not throwing exception inside try");
+                    console.print("not throwing exception inside try");
                     continue;
                     }
                 }
             finally
                 {
-                console.println("exception in finally: " + TRY.exception);
+                console.print("exception in finally: " + TRY.exception);
                 }
             }
 
-        console.println("done testFinally() - which shouldn't happen!");
+        console.print("done testFinally() - which shouldn't happen!");
         }
 
     /**
@@ -193,7 +193,7 @@ module TestTry
      */
     void testAssert(Int i)
         {
-        console.println($"\n** testAssert({i})");
+        console.print($"\n** testAssert({i})");
 
         assert:bounds i >= 0 && i < size();
         }
@@ -205,7 +205,7 @@ module TestTry
 
     void testAssert2()
         {
-        console.println("\n** testAssert2()");
+        console.print("\n** testAssert2()");
 
         Int x = 4;
         assert ++x <= 4;
@@ -213,7 +213,7 @@ module TestTry
 
     void testAssertOnce(Boolean firstTime)
         {
-        console.println($"\n** testAssertOnce({firstTime})");
+        console.print($"\n** testAssertOnce({firstTime})");
 
         Int x = 42;
         try
@@ -221,18 +221,18 @@ module TestTry
             assert:once x < size();
 
             // the assertion passed, which it shouldn't do, unless this is the second time through
-            console.println(firstTime ? "[1st] ERR: should have asserted" : "[2nd] OK: skipped");
+            console.print(firstTime ? "[1st] ERR: should have asserted" : "[2nd] OK: skipped");
             }
         catch (Exception e)
             {
-            console.println(firstTime ? "[1st] OK: assert" : "[2nd] ERR: should have skipped");
-            console.println(e.text);
+            console.print(firstTime ? "[1st] OK: assert" : "[2nd] ERR: should have skipped");
+            console.print(e.text);
             }
         }
 
     void testAssertSample()
         {
-        console.println("\n** testAssertSample()");
+        console.print("\n** testAssertSample()");
 
         Int x   = 99;
         Int ok  = 0;
@@ -258,12 +258,12 @@ module TestTry
                 }
             }
 
-        console.println($"results: ok={ok}, errs={err} (should be ~10)");
+        console.print($"results: ok={ok}, errs={err} (should be ~10)");
         }
 
     void testSwitch(Int n)
         {
-        console.println($"\n** testSwitch({n})");
+        console.print($"\n** testSwitch({n})");
 
         try
             {
@@ -281,19 +281,19 @@ module TestTry
                         }
                      catch (Exception e)
                          {
-                         console.println($"exception {e}");
+                         console.print($"exception {e}");
                          throw e;
                          }
                     finally
                         {
-                        console.println("inner finally");
+                        console.print("inner finally");
                         }
                     }
                 }
             }
         finally
             {
-            console.println("outer finally");
+            console.print("outer finally");
             if (n == 0)
                 {
                 // eat the exception

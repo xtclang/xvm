@@ -88,7 +88,7 @@ module ConstOrdinalListTest
                 }
             catch (Exception e)
                 {
-                console.println($"Exception with list: {list}");
+                console.print($"Exception with list: {list}");
                 throw e;
                 }
             }
@@ -96,7 +96,7 @@ module ConstOrdinalListTest
 
     void validate(Int[] list, Int testNum, Boolean dump)
         {
-        console.println($"Test #{testNum}: {list}");
+        console.print($"Test #{testNum}: {list}");
 
         ConstOrdinalList col = new ConstOrdinalList(list);
         validate(list, col, testNum, "", dump);
@@ -117,12 +117,12 @@ module ConstOrdinalListTest
         {
         Int len = col.contents.size;
 
-        console.println($|Test #{testNum}{desc == "" ? desc : $" ({desc})"}, size={col.size}, \
+        console.print($|Test #{testNum}{desc == "" ? desc : $" ({desc})"}, size={col.size}, \
                          |bytes={len}, compression={calcPct(list.size * 4 + 4, len)}
                        );
         if (dump)
             {
-            console.println(col.contents.toHexDump(40));
+            console.print(col.contents.toHexDump(40));
             }
 
         assert list.empty == col.empty;

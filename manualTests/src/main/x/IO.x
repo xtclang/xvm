@@ -54,7 +54,7 @@ module TestIO
 
     void testInputStream()
         {
-        console.println("\n*** testInputStream()");
+        console.print("\n*** testInputStream()");
 
         File    file   = ./IO.x;
         Byte[]  raw    = file.contents;
@@ -65,20 +65,20 @@ module TestIO
             Byte b = in.readByte();
             if (loop.count <= 12 || in.remaining <= 2)
                 {
-                console.println($"[{loop.count}] '{b.toChar()}' ({b})");
+                console.print($"[{loop.count}] '{b.toChar()}' ({b})");
                 }
             else if (!dotdot)
                 {
-                console.println("...");
+                console.print("...");
                 dotdot = True;
                 }
             }
-        console.println("(eof)");
+        console.print("(eof)");
         }
 
     void testPacked()
         {
-        console.println("\n*** testPacked()");
+        console.print("\n*** testPacked()");
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
         for (Int64 i : -150 .. +150)
@@ -125,15 +125,15 @@ module TestIO
 
     void testJavaUTF()
         {
-        console.println("\n*** testJavaUTF()");
+        console.print("\n*** testJavaUTF()");
 
         JavaDataInput in = new @JavaDataInput ByteArrayInputStream([0x00, 0x03, 0x43, 0x61, 0x6D]);
-        console.println($"string={in.readString()}");
+        console.print($"string={in.readString()}");
         }
 
     void testUTF8Reader()
         {
-        console.println("\n*** testUTF8Reader()");
+        console.print("\n*** testUTF8Reader()");
 
         InputStream  inRaw  = new ByteArrayInputStream(#./IO.x);
         UTF8Reader   in     = new UTF8Reader(inRaw);
@@ -143,17 +143,17 @@ module TestIO
             {
             if (loop.count <= 20 || inRaw.remaining <= 10)
                 {
-                console.println($"[{loop.count}] '{ch}' {pos}");
+                console.print($"[{loop.count}] '{ch}' {pos}");
                 }
             else if (!dotdot)
                 {
-                console.println("...");
+                console.print("...");
                 dotdot = True;
                 }
             pos = in.position;
             }
 
-        console.println($"(eof) position={pos} line={in.lineNumber}");
+        console.print($"(eof) position={pos} line={in.lineNumber}");
         }
 
     static String ExampleJSON =
@@ -176,59 +176,59 @@ module TestIO
 
     void testJSONLex()
         {
-        console.println("\n*** testJSONLex()");
+        console.print("\n*** testJSONLex()");
 
         Reader reader = new CharArrayReader(ExampleJSON);
 
         Lexer lexer = new Lexer(reader);
         while (Token tok := lexer.next())
             {
-            console.println($"token={tok.toDebugString()}");
+            console.print($"token={tok.toDebugString()}");
             }
 
-        console.println($"(eof) position={reader.position}");
+        console.print($"(eof) position={reader.position}");
         }
 
     void testJSONParse()
         {
-        console.println("\n*** testJSONParse()");
+        console.print("\n*** testJSONParse()");
 
-        console.println("no dups:");
+        console.print("no dups:");
         Reader reader = new CharArrayReader(ExampleJSON);
         Parser parser = new Parser(reader);
         while (Doc doc := parser.next())
             {
-            console.println($"doc={doc}");
+            console.print($"doc={doc}");
             }
 
-        console.println("collate dups:");
+        console.print("collate dups:");
         reader = new CharArrayReader(ExampleJSON);
         parser = new Parser(reader);
         parser.collateDups = True;
         while (Doc doc := parser.next())
             {
-            console.println($"doc={doc}");
+            console.print($"doc={doc}");
             }
         }
 
     void testJSONPrint()
         {
-        console.println("\n*** testJSONPrint()");
+        console.print("\n*** testJSONPrint()");
 
         Reader reader = new CharArrayReader(ExampleJSON);
         Parser parser = new Parser(reader);
-        console.println($"raw doc=\n{ExampleJSON}");
+        console.print($"raw doc=\n{ExampleJSON}");
         assert Doc doc := parser.next();
-        console.println($"doc as structures={doc}");
+        console.print($"doc as structures={doc}");
 
-        console.println($"printing compact={Printer.DEFAULT.render(doc)}");
-        console.println($"printing pretty={Printer.PRETTY.render(doc)}");
-        console.println($"printing debug={Printer.DEBUG.render(doc)}");
+        console.print($"printing compact={Printer.DEFAULT.render(doc)}");
+        console.print($"printing pretty={Printer.PRETTY.render(doc)}");
+        console.print($"printing debug={Printer.DEBUG.render(doc)}");
         }
 
     void testJSONBuild()
         {
-        console.println("\n*** testJSONBuild()");
+        console.print("\n*** testJSONBuild()");
 
         Schema schema = Schema.DEFAULT;
         StringBuffer writer = new StringBuffer();
@@ -237,30 +237,30 @@ module TestIO
         build(e_out);
 
         String s = writer.toString();
-        console.println($"result={s}");
+        console.print($"result={s}");
 
         Reader reader = new CharArrayReader(s);
         ObjectInputStream o_in = new ObjectInputStream(schema, reader);
-//        console.println("BufferedPrinter:");
+//        console.print("BufferedPrinter:");
 //        BufferedPrinter p = new BufferedPrinter();
 //        build(p);
-//        console.println($"doc={p.doc}");
-//        console.println($"print ugly={p.toString()}");
-//        console.println($"print pretty=\n{p.toString(pretty=True)}");
+//        console.print($"doc={p.doc}");
+//        console.print($"print ugly={p.toString()}");
+//        console.print($"print pretty=\n{p.toString(pretty=True)}");
 //
-//        console.println("DirectPrinter:");
+//        console.print("DirectPrinter:");
 //        Appender<Char> toConsole = new Appender<Char>()
 //            {
 //            @Override
 //            Appender<Char> add(Char ch)
 //                {
-//                console.print(ch);
+//                console.print(ch, suppressNewline=True);
 //                return this;
 //                }
 //            };
 //        DirectPrinter p2 = new DirectPrinter(toConsole);
 //        build(p2);
-//        console.println("\n(done)");
+//        console.print("\n(done)");
         }
 
     private void build(ElementOutput builder)
@@ -302,11 +302,11 @@ module TestIO
             using (FieldInput fields = in.openObject())
                 {
                 return new Point(fields.readInt("x"), fields.readInt("y"));
-//console.println($"reading point");
+//console.print($"reading point");
 //Int x = fields.readInt("x");
-//console.println($"x={x}");
+//console.print($"x={x}");
 //Int y = fields.readInt("y");
-//console.println($"y={y}");
+//console.print($"y={y}");
 //return new Point(x, y);
                 }
 //                Doc doc = in.readDoc();
@@ -344,11 +344,11 @@ module TestIO
             using (FieldInput fields = in.openObject())
                 {
                 return new Segment(fields.readObject<Point>("p1"), fields.readObject<Point>("p2"));
-//console.println($"reading segment");
+//console.print($"reading segment");
 //Point p1 = fields.read<Point>("p1");
-//console.println($"p1={p1}");
+//console.print($"p1={p1}");
 //Point p2 = fields.read<Point>("p2");
-//console.println($"p2={p2}");
+//console.print($"p2={p2}");
 //return new Segment(p1, p2);
                 }
             }
@@ -370,15 +370,15 @@ module TestIO
         schema.createObjectOutput(buf).write(val);
 
         String s = buf.toString();
-        console.println($"JSON {name} written out={s}");
+        console.print($"JSON {name} written out={s}");
 
         Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
-        console.println($"read {name} back in={val2}");
+        console.print($"read {name} back in={val2}");
         }
 
     void testPoint()
         {
-        console.println("\n*** testPoint()");
+        console.print("\n*** testPoint()");
 
         static String ExamplePoint =
                 \|  {
@@ -394,14 +394,14 @@ module TestIO
                  |  }
                 ;
 
-        console.println($"json={ExamplePoint}");
+        console.print($"json={ExamplePoint}");
         Schema             schema = Schema.DEFAULT;
         Reader             reader = new CharArrayReader(ExamplePoint);
         ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
         ElementInputStream e_in   = o_in.ensureElementInput();
         PointMapper        mapper = new PointMapper();
         Point              point  = mapper.read(e_in);
-        console.println($"point={point}");
+        console.print($"point={point}");
 
         Schema schemaSA = new Schema([new PointMapper(), new SegmentMapper()]);
         testSer(schemaSA, "point", point);
@@ -410,7 +410,7 @@ module TestIO
         // test ReflectionMapping
         testSer(schema, "point", point);
 
-        console.println("\n(random access tests)");
+        console.print("\n(random access tests)");
         Schema schemaRA = new Schema([new PointMapper()], randomAccess = True);
         testSer(schemaRA, "point", point);
         testDeser("seq-seq", schemaSA, ExamplePoint , False);
@@ -423,21 +423,21 @@ module TestIO
             try
                 {
                 Point point = schema.createObjectInput(new CharArrayReader(json)).read<Point>();
-                console.println($"read: {point}");
+                console.print($"read: {point}");
                 if (failureExpected)
                     {
-                    console.println($"Test \"{test}\" finished, BUT IT SHOULD HAVE FAILED!!!");
+                    console.print($"Test \"{test}\" finished, BUT IT SHOULD HAVE FAILED!!!");
                     }
                 }
             catch (Exception e)
                 {
                 if (failureExpected)
                     {
-                    console.println($"Test \"{test}\" correctly failed as expected.");
+                    console.print($"Test \"{test}\" correctly failed as expected.");
                     }
                 else
                     {
-                    console.println($"Test \"{test}\" failed with \"{e}\", BUT IT SHOULD NOT HAVE FAILED!!!");
+                    console.print($"Test \"{test}\" failed with \"{e}\", BUT IT SHOULD NOT HAVE FAILED!!!");
                     }
                 }
             }
@@ -445,7 +445,7 @@ module TestIO
 
     void testMap()
         {
-        console.println("\n*** testMap()");
+        console.print("\n*** testMap()");
 
         Schema schema = Schema.DEFAULT;
 
@@ -463,7 +463,7 @@ module TestIO
 
     void testMetadata()
         {
-        console.println("\n*** testMetadata()");
+        console.print("\n*** testMetadata()");
 
         Schema schema00 = new Schema(randomAccess = False, enableMetadata = False);
         Schema schemaR0 = new Schema(randomAccess = True , enableMetadata = False);
@@ -510,7 +510,7 @@ module TestIO
 
     void testPointers()
         {
-        console.println("\n*** testPointers()");
+        console.print("\n*** testPointers()");
 
         Mapping[] mappings = new Mapping[]; mappings.add(new PointMapper()); mappings.add(new SegmentMapper());
         Schema schema = new Schema(mappings, enablePointers = True);
@@ -540,11 +540,11 @@ module TestIO
 
         private void testSegment(Schema schema, String json)
             {
-            console.println($"json={json}");
+            console.print($"json={json}");
             Reader             reader = new CharArrayReader(json);
             ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
             Segment            segment = o_in.read<Segment>();
-            console.println($"segment={segment}");
+            console.print($"segment={segment}");
             }
         }
 

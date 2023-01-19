@@ -15,42 +15,42 @@ module TestAnnotations
     function void (Int) logger = (Int v) ->
         {
         @Inject ecstasy.io.Console console;
-        console.print($"->{v}");
+        console.print($"->{v}", True);
         };
 
     void testWatch()
         {
-        console.println("\n** testWatch");
+        console.print("\n** testWatch");
 
         // property-based
         for (@Watch(logger) Int i = 3; i > 0; --i)
             {
             }
-        console.println();
+        console.print();
 
         // var-based
         function void (Int) log = (Int v) ->
             {
-            console.print($"{v}->");
+            console.print($"{v}->", True);
             };
 
         @Watch(log) Int i;
         for (i = 3; i > 0; --i)
             {
             }
-        console.println();
+        console.print();
 
         // lambda-based
-        @Watch((Int v) -> {console.print($"{v}, ");}) Int k;
+        @Watch((Int v) -> {console.print($"{v}, ", True);}) Int k;
         for (k = 3; k > 0; --k)
             {
             }
-        console.println();
+        console.print();
         }
 
     void testMixin()
         {
-        console.println("\n** testMixin");
+        console.print("\n** testMixin");
 
         Int age = 26;
         val p1  = new Named("Jane");
@@ -64,7 +64,7 @@ module TestAnnotations
             }
         catch (IllegalState e)
             {
-            console.println($"expected assert: {e.text}");
+            console.print($"expected assert: {e.text}");
             }
         try
             {
@@ -73,7 +73,7 @@ module TestAnnotations
             }
         catch (IllegalState e)
             {
-            console.println($"expected assert: {e.text}");
+            console.print($"expected assert: {e.text}");
             }
         }
 
@@ -81,18 +81,18 @@ module TestAnnotations
         {
         construct(String name)
             {
-            console.println($"construct (name) {this}");
+            console.print($"construct (name) {this}");
             this.name = name;
             }
         finally
             {
-            console.println($"finally (name) {this}");
+            console.print($"finally (name) {this}");
             }
 
         assert()
             {
             assert name.size > 0;
-            console.println($"assert (name) {name}");
+            console.print($"assert (name) {name}");
             }
         String name;
         }
@@ -101,18 +101,18 @@ module TestAnnotations
         {
         construct(Int age)
             {
-            console.println($"construct (aged) {this}");
+            console.print($"construct (aged) {this}");
             this.age = age;
             }
         finally
             {
-            console.println($"finally (aged) {this}");
+            console.print($"finally (aged) {this}");
             }
 
         assert()
             {
             assert age >= 0;
-            console.println($"assert (aged) {age}");
+            console.print($"assert (aged) {age}");
             }
         Int age;
         }
@@ -121,18 +121,18 @@ module TestAnnotations
         {
         construct(String skill)
             {
-            console.println($"construct (skill) {this}");
+            console.print($"construct (skill) {this}");
             this.skill = skill;
             }
         finally
             {
-            console.println($"finally (skill) {this}");
+            console.print($"finally (skill) {this}");
             }
 
         assert()
             {
             assert skill.size > 0;
-            console.println($"assert (skill) {skill}");
+            console.print($"assert (skill) {skill}");
             }
         String skill;
         }
@@ -151,7 +151,7 @@ module TestAnnotations
                 @Override
                 void test()
                     {
-                    console.println($"in test at Mixin {descr}");
+                    console.print($"in test at Mixin {descr}");
                     super();
                     }
                 }
@@ -166,7 +166,7 @@ module TestAnnotations
                 {
                 void test()
                     {
-                    console.println("in test at Child");
+                    console.print("in test at Child");
                     }
                 }
             }
@@ -176,7 +176,7 @@ module TestAnnotations
     void testMethodMixin(@Tagged(weight=2) (@Unchecked Int64)? i = Null)
         {
         Method m = testMethodMixin;
-        console.println(m);
+        console.print(m);
 
         assert m.is(Tagged);
         assert m.tag == "method" && m.weight == 1;

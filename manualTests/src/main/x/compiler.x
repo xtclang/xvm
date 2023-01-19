@@ -23,7 +23,7 @@ module TestCompiler
 
     void compile(File sourceModule, Directory buildDir)
         {
-        console.println($|
+        console.print($|
                          |compile module : {sourceModule.path}
                          |build directory: {buildDir}
                        );
@@ -32,10 +32,10 @@ module TestCompiler
 
         (Boolean success, String[] errors) = compiler.compile([sourceModule]);
 
-        console.println(success ? "Compiled successfully" : "Compilation failed:");
+        console.print(success ? "Compiled successfully" : "Compilation failed:");
         for (String error : errors)
             {
-            console.println(error);
+            console.print(error);
             }
         }
     }

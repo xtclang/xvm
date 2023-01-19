@@ -30,8 +30,8 @@ module Hello
         String password;
         if (args.size == 0)
             {
-            console.print("Enter password:");
-            password = console.readLine(echo=False);
+            console.print("Enter password:", suppressNewline=True);
+            password = console.readLine(suppressEcho=True);
             }
         else
             {
@@ -45,7 +45,7 @@ module Hello
         UInt16 httpsPort = 8090;
         xenia.createServer(this, hostName, keystore, httpPort, httpsPort);
 
-        console.println($|Use the curl command to test, for example:
+        console.print($|Use the curl command to test, for example:
                          |
                          |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/
                          |

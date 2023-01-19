@@ -41,7 +41,7 @@ module TestInnerOuter
                 Outer o2 = this.Outer;
                 assert &o1 == &o2;
                 assert &o2 == &outer;
-                console.println($"this=\"{this}\"; outer=\"{o1}\", type=\"{&o1.Referent}\"");
+                console.print($"this=\"{this}\"; outer=\"{o1}\", type=\"{&o1.Referent}\"");
                 }
             }
 
@@ -56,7 +56,7 @@ module TestInnerOuter
             @Override
             void fnInner()
                 {
-                console.println(" -> fnInner");
+                console.print(" -> fnInner");
                 }
             }
 
@@ -69,7 +69,7 @@ module TestInnerOuter
 
     void testSimple()
         {
-        console.println("\n** testSimple()");
+        console.print("\n** testSimple()");
 
         Base b1 = new Base("Hello");
         Base b2 = new Base("World");
@@ -78,9 +78,9 @@ module TestInnerOuter
         for (Base base : bases)
             {
             Base.Child_V child = base.new Child_V();
-            console.println($"Obtaining text from \"{base}\" child:");
-            console.println(" -> by-outer=" + child.textByOuter);
-            console.println(" -> by-name=" + child.textByName);
+            console.print($"Obtaining text from \"{base}\" child:");
+            console.print(" -> by-outer=" + child.textByOuter);
+            console.print(" -> by-name=" + child.textByName);
             }
 
         b1.new Child_V().testOuter();
@@ -88,16 +88,16 @@ module TestInnerOuter
 
     void testStaticIface()
         {
-        console.println("\n** testStaticIface()");
+        console.print("\n** testStaticIface()");
 
         IfaceOuter.IfaceInner childNV = new Base.Child_NV("NonVirtual");
-        console.println($"childNV={childNV}");
+        console.print($"childNV={childNV}");
         childNV.fnInner();
         }
 
     void testAnonInner()
         {
-        console.println("\n** testAnonInner()");
+        console.print("\n** testAnonInner()");
 
         class Inner
             {
@@ -111,7 +111,7 @@ module TestInnerOuter
             {
             void run()
                 {
-                console.println($"in run (i={i})");
+                console.print($"in run (i={i})");
                 ++i;
                 // foo();
                 }
@@ -119,7 +119,7 @@ module TestInnerOuter
 
         o.run();
 
-        console.println($"done (i={i})");
+        console.print($"done (i={i})");
         }
 
     interface FunkyOuter<Element extends Orderable>
@@ -136,13 +136,13 @@ module TestInnerOuter
                 {
                 @Inject Console console;
 
-                console.println($"CompileType={CompileType}");
-                console.println($"CompileType.OuterType={CompileType.OuterType}");
-                console.println($"CompileType.OuterType.Element={CompileType.OuterType.Element}");
-                console.println($"value1={value1}");
-                console.println($"value1.outer={value1.outer}");
-                console.println($"value1.outer.name={value1.outer.name}");
-                console.println($"value1.&outer.actualType={value1.&outer.actualType}");
+                console.print($"CompileType={CompileType}");
+                console.print($"CompileType.OuterType={CompileType.OuterType}");
+                console.print($"CompileType.OuterType.Element={CompileType.OuterType.Element}");
+                console.print($"value1={value1}");
+                console.print($"value1.outer={value1.outer}");
+                console.print($"value1.outer.name={value1.outer.name}");
+                console.print($"value1.&outer.actualType={value1.&outer.actualType}");
 
                 // TODO GG: deferred; see explanation in NameExpression.planCodeGen()
                 //  return (value1.e <=> value2.e).reversed;

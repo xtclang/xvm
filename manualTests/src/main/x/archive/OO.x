@@ -9,12 +9,12 @@ module OO
         {
         void speak()
             {
-            console.println($"{color} frog says \"Ribbit!\"");
+            console.print($"{color} frog says \"Ribbit!\"");
             }
         void jump(Int cm)
             {
             assert:arg cm > 0 && cm < 1000;
-            console.println($"{color} frog jumps {cm} centimeteres!");
+            console.print($"{color} frog jumps {cm} centimeteres!");
             }
         @Override
         void close(Exception? cause = Null)

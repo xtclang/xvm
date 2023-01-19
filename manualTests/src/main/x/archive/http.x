@@ -11,7 +11,7 @@ module TestHttp
 
     void run()
         {
-        console.println("Starting test");
+        console.print("Starting test");
 
         Handler handler = new Handler();
         Server  server  = new Server(8080, handler);
@@ -19,23 +19,23 @@ module TestHttp
 
         String uri = $"http://localhost:{server.port}";
 
-        console.println($"Web server is running {uri}");
+        console.print($"Web server is running {uri}");
 
-        console.println("Creating HTTP clients");
+        console.print("Creating HTTP clients");
         HttpClient client1 = new HttpClient();
         HttpClient client2 = new HttpClient();
 
-        console.println("Executing request 1");
+        console.print("Executing request 1");
         Int status1 = client1.send^(uri);
-        console.println("Executing request 2");
+        console.print("Executing request 2");
         Int status2 = client2.send^(uri);
 
-        console.println("Asserting responses");
+        console.print("Asserting responses");
         assert:test status1 == 200;
         assert:test status2 == 200;
 
         server.stop();
-        console.println("Test complete");
+        console.print("Test complete");
         }
 
     @Concurrent service HttpClient
@@ -50,14 +50,14 @@ module TestHttp
         Int send(String uri)
             {
             @Inject Console console;
-            console.println($"Sending request to {uri}");
+            console.print($"Sending request to {uri}");
             (Int status, String[] headerNames, String[][] headerValues, Byte[] body) = client.send(uri);
 
             assert:test status == 200;
-            console.println($"Received response {status}");
-            console.println($"Received response {headerNames}");
-            console.println($"Received response {headerValues}");
-            console.println($"Received response {body}");
+            console.print($"Received response {status}");
+            console.print($"Received response {headerNames}");
+            console.print($"Received response {headerValues}");
+            console.print($"Received response {body}");
             return status;
             }
         }
@@ -88,12 +88,12 @@ module TestHttp
                     String[][] headerValues, Byte[] body, Response response)
             {
             @Inject Console console;
-            console.println($"Entered RequestHandler uri={uri} method={method}");
+            console.print($"Entered RequestHandler uri={uri} method={method}");
 
             String[]   respHeaderNames  = ["Foo", "Bar"];
             String[][] respHeaderValues = [["One"], ["Two", "Three"]];
             Int        status           = 200;
-            console.println($"Leaving RequestHandler status={status}");
+            console.print($"Leaving RequestHandler status={status}");
             response.send^(status, respHeaderNames, respHeaderValues, [0, 1, 2, 3]);
             }
         }

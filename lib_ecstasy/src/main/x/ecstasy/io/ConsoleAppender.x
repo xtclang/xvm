@@ -45,7 +45,7 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
         {
         if (flushAlways)
             {
-            console.print(v);
+            console.print(v, suppressNewline=True);
             }
         else
             {
@@ -53,7 +53,7 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
 
             if (v.isLineTerminator())
                 {
-                console.print(new String(buf.freeze(True)));
+                console.print(new String(buf.freeze(True)), suppressNewline=True);
                 buf = new Char[];
                 }
             }
@@ -66,7 +66,7 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
         {
         if (flushAlways)
             {
-            console.print(toStr(chars));
+            console.print(toStr(chars), suppressNewline=True);
             return this;
             }
 
@@ -89,26 +89,26 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
                         case (False, False):
                             // buffer and part of the array to print; part of the array to retain
                             buf += chars[0 ..< i];
-                            console.print(new String(buf));
+                            console.print(new String(buf), suppressNewline=True);
                             buf.clear().addAll(chars[i+1..chars.size-1]);
                             break;
 
                         case (False, True):
                             // buffer and all of the array to print; nothing to retain
                             buf += chars;
-                            console.print(new String(buf));
+                            console.print(new String(buf), suppressNewline=True);
                             buf.clear();
                             break;
 
                         case (True, False):
                             // no buffer; part of the array to print; part of the array to retain
-                            console.print(toStr(chars[0 ..< i]));
+                            console.print(toStr(chars[0 ..< i]), suppressNewline=True);
                             buf.addAll(chars[i+1..chars.size-1]);
                             break;
 
                         case (True, True):
                             // no buffer to print; print the whole array; nothing to clear
-                            console.print(toStr(chars));
+                            console.print(toStr(chars), suppressNewline=True);
                             break;
                         }
 

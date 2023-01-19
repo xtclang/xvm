@@ -411,7 +411,7 @@ service Catalog<Schema extends RootSchema>
         {
         // TODO
         @Inject Console console;
-        console.println($"*** {msg}");
+        console.print($"*** {msg}");
         }
 
     /**

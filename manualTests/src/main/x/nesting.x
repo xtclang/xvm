@@ -10,7 +10,7 @@ module TestNesting
 
     void testSimple()
         {
-        console.println("\n** testSimple()");
+        console.print("\n** testSimple()");
         new BOuter().bar();
         new DOuter().bar();
         new BOuter().new InnerC().foo();
@@ -27,7 +27,7 @@ module TestNesting
             {
             void foo()
                 {
-                console.println("inner foo of B; this=" + this);
+                console.print("inner foo of B; this=" + this);
                 }
             }
         }
@@ -41,14 +41,14 @@ module TestNesting
             @Override
             void foo()
                 {
-                console.println("inner foo of D; this=" + this);
+                console.print("inner foo of D; this=" + this);
                 }
             }
         }
 
     void testInsane()
         {
-        console.println("\n** testInsane()");
+        console.print("\n** testInsane()");
         new PB().new C().foo();
         new DC().new P().new C().foo();
         }
@@ -59,7 +59,7 @@ module TestNesting
             {
             void foo()
                 {
-                console.println("PB.A.foo() this=" + this);
+                console.print("PB.A.foo() this=" + this);
                 }
             }
 
@@ -67,7 +67,7 @@ module TestNesting
             {
             void foo()
                 {
-                console.println("PB.I.foo() this=" + this);
+                console.print("PB.I.foo() this=" + this);
                 }
             }
 
@@ -75,7 +75,7 @@ module TestNesting
             {
             void foo()
                 {
-                console.println("PB.M.foo() this=" + this);
+                console.print("PB.M.foo() this=" + this);
                 }
             }
 
@@ -85,7 +85,7 @@ module TestNesting
             @Override
             void foo()
                 {
-                console.println("PB.C.foo() this=" + this);
+                console.print("PB.C.foo() this=" + this);
                 super();
                 }
             }
@@ -100,7 +100,7 @@ module TestNesting
                 @Override
                 void foo()
                     {
-                    console.println("BI.P.A.foo() this=" + this);
+                    console.print("BI.P.A.foo() this=" + this);
                     }
                 }
 
@@ -181,7 +181,7 @@ module TestNesting
                 @Override
                 void foo()
                     {
-                    console.println("DC.P.A.foo() this=" + this);
+                    console.print("DC.P.A.foo() this=" + this);
                     super();
                     }
                 }
@@ -191,7 +191,7 @@ module TestNesting
                 @Override
                 void foo()
                     {
-                    console.println("DC.P.C.foo() this=" + this);
+                    console.print("DC.P.C.foo() this=" + this);
                     super();
                     }
                 }

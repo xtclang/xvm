@@ -5,7 +5,7 @@ module FizzBuzz
         @Inject Console console;
         for (Int x : 1..100)
             {
-            console.println(switch (x % 3, x % 5)
+            console.print(switch (x % 3, x % 5)
                 {
                 case (0, 0): "FizzBuzz";
                 case (0, _): "Fizz";

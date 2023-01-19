@@ -10,7 +10,7 @@ module Test
                          ".00001234500", "1234000"])
             {
             Dec28 dec = new Dec28(s);
-            console.println($"s={s}, dec={dec}");
+            console.print($"s={s}, dec={dec}");
             }
         }
 

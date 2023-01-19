@@ -18,66 +18,66 @@ module TestFiles
 
     void testPaths()
         {
-        console.println("\n** testPaths()");
-        console.println($"root={Path.ROOT}");
-        console.println($"parent={Path.PARENT}");
-        console.println($"current={Path.CURRENT}");
+        console.print("\n** testPaths()");
+        console.print($"root={Path.ROOT}");
+        console.print($"parent={Path.PARENT}");
+        console.print($"current={Path.CURRENT}");
 
         Path path = new Path(Null, "test");
-        console.println($"path={path}");
+        console.print($"path={path}");
 
         path = new Path(path, "sub");
-        console.println($"path={path}");
+        console.print($"path={path}");
 
         path = new Path(path, "more");
-        console.println($"path={path}");
+        console.print($"path={path}");
 
         for (Int i : 0..2)
             {
-            console.println($"path[{i}]={path[i]}");
+            console.print($"path[{i}]={path[i]}");
             }
 
         Loop: for (Path each : path)
             {
-            console.println($"iterating path[{Loop.count}]={each}");
+            console.print($"iterating path[{Loop.count}]={each}");
             }
-        console.println($"path[]={path.toArray()}");
+        console.print($"path[]={path.toArray()}");
 
-        console.println($"path[1..2]={path[1..2]}");
-        console.println($"path[0..1]={path[0..1]}");
-        console.println($"path[2..0]={path[2..0]}");
+        console.print($"path[1..2]={path[1..2]}");
+        console.print($"path[0..1]={path[0..1]}");
+        console.print($"path[2..0]={path[2..0]}");
 
         path = ROOT + path;
-        console.println("path=" + path);
+        console.print("path=" + path);
 
-        console.println($"relativize root={Path.ROOT.relativize(Path.ROOT)}");
-        console.println($"relativize parent={Path.PARENT.relativize(Path.PARENT)}");
-        console.println($"relativize current={Path.CURRENT.relativize(Path.CURRENT)}");
-        console.println($"relativize path to root = {Path.ROOT.relativize(path)}");
-        console.println($"relativize root to path = {path.relativize(Path.ROOT)}");
-        console.println($"relativize /a/b/c to /a/p/d/q = {new Path("/a/p/d/q").relativize(new Path("/a/b/c"))}");
-        console.println($"relativize /a/p/d/q to /a/b/c = {new Path("/a/b/c").relativize(new Path("/a/p/d/q"))}");
+        console.print($"relativize root={Path.ROOT.relativize(Path.ROOT)}");
+        console.print($"relativize parent={Path.PARENT.relativize(Path.PARENT)}");
+        console.print($"relativize current={Path.CURRENT.relativize(Path.CURRENT)}");
+        console.print($"relativize path to root = {Path.ROOT.relativize(path)}");
+        console.print($"relativize root to path = {path.relativize(Path.ROOT)}");
+        console.print($"relativize /a/b/c to /a/p/d/q = {new Path("/a/p/d/q").relativize(new Path("/a/b/c"))}");
+        console.print($"relativize /a/p/d/q to /a/b/c = {new Path("/a/b/c").relativize(new Path("/a/p/d/q"))}");
         }
 
     void testInject()
         {
-        console.println("\n** testInject()");
+        console.print("\n** testInject()");
 
-        console.println($"readOnly={store.readOnly}");
-        console.println($"capacity={store.capacity}");
+        console.print($"readOnly={store.readOnly}");
+        console.print($"capacity={store.capacity}");
         assert store.bytesFree <= store.capacity;
         assert store.bytesUsed <= store.capacity;
 
         @Inject("rootDir") Directory root;
-        console.println($"root={root} created {root.created}");
+        console.print($"root={root} created {root.created}");
 
         @Inject("homeDir") Directory home;
-        console.println($"home={home}");
+        console.print($"home={home}");
 
         @Inject Directory curDir;
-        console.println($"curDir={curDir}");
+        console.print($"curDir={curDir}");
 
-        console.println($"{curDir.name} content:");
+        console.print($"{curDir.name} content:");
         for (String name : curDir.names())
             {
             if (File|Directory node := curDir.find(name))
@@ -86,12 +86,12 @@ module TestFiles
                     {
                     if (!name.indexOf('.'))
                         {
-                        console.println($"\tf {name} {node.size} bytes");
+                        console.print($"\tf {name} {node.size} bytes");
                         }
                     }
                 else
                     {
-                    console.println($"\td {name}");
+                    console.print($"\td {name}");
                     }
                 }
             }
@@ -99,7 +99,7 @@ module TestFiles
 
     void testModify()
         {
-        console.println("\n** testModify()");
+        console.print("\n** testModify()");
 
         @Inject Directory tmpDir;
         @Inject Timer timer;
@@ -109,7 +109,7 @@ module TestFiles
             @Override
             Boolean onEvent(Event event, Directory dir)
                 {
-                console.println($|[{this:service}]: Directory event: \"{event}\" {dir.name}\
+                console.print($|[{this:service}]: Directory event: \"{event}\" {dir.name}\
                                  | after {timer.elapsed.seconds} sec
                                 );
                 return False;
@@ -118,7 +118,7 @@ module TestFiles
             @Override
             Boolean onEvent(Event event, File file)
                 {
-                console.println($|[{this:service}]: File event: \"{event}\" {file.name}\
+                console.print($|[{this:service}]: File event: \"{event}\" {file.name}\
                                  | after {timer.elapsed.seconds} sec
                                 );
                 return False;
@@ -129,7 +129,7 @@ module TestFiles
 
         function void () cancel = file.watch(watcher);
 
-        console.println($"[{this:service}]: Creating {file.name}");
+        console.print($"[{this:service}]: Creating {file.name}");
         file.create();
         assert file.exists;
 
@@ -138,7 +138,7 @@ module TestFiles
         Int wait = 1;
         timer.schedule(Duration.ofSeconds(wait), () ->
             {
-            console.println($|[{this:service}]: deleting {file.name}\
+            console.print($|[{this:service}]: deleting {file.name}\
                              | after {timer.elapsed.seconds} sec
                             );
 
@@ -150,7 +150,7 @@ module TestFiles
                 @Inject Clock clock;
                 assert tmpDir.modified.date == clock.now.date;
 
-                console.println($"[{this:service}]: tmpDir={tmpDir}");
+                console.print($"[{this:service}]: tmpDir={tmpDir}");
                 cancel();
                 });
             });

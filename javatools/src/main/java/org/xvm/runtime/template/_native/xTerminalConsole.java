@@ -18,6 +18,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
@@ -49,9 +50,8 @@ public class xTerminalConsole
     @Override
     public void initNative()
         {
-        markNativeMethod("print"   , OBJECT , VOID   );
-        markNativeMethod("println" , OBJECT , VOID   );
-        markNativeMethod("readLine", BOOLEAN, STRING );
+        markNativeMethod("print"   , null, VOID  );
+        markNativeMethod("readLine", null, STRING);
 
         invalidateTypeInfo();
         }
@@ -68,57 +68,9 @@ public class xTerminalConsole
         {
         switch (method.getName())
             {
-            case "print": // Object o
+            case "readLine": // Boolean suppressEcho = False
                 {
-                if (hArg == ObjectHandle.DEFAULT)
-                    {
-                    CONSOLE_OUT.flush();
-                    return Op.R_NEXT;
-                    }
-
-                int iResult = Utils.callToString(frame, hArg);
-                switch (iResult)
-                    {
-                    case Op.R_NEXT:
-                        return PRINT.proceed(frame);
-
-                    case Op.R_CALL:
-                        frame.m_frameNext.addContinuation(PRINT);
-                        // fall through
-                    case Op.R_EXCEPTION:
-                        return iResult;
-                    }
-                }
-
-            case "println": // Object o = ""
-                {
-                if (hArg == ObjectHandle.DEFAULT)
-                    {
-                    CONSOLE_OUT.println();
-                    return Op.R_NEXT;
-                    }
-
-                int iResult = Utils.callToString(frame, hArg);
-                switch (iResult)
-                    {
-                    case Op.R_NEXT:
-                        return PRINTLN.proceed(frame);
-
-                    case Op.R_CALL:
-                        frame.m_frameNext.addContinuation(PRINTLN);
-                        // fall through
-                    case Op.R_EXCEPTION:
-                        return iResult;
-                    }
-                }
-
-            case "readLine": // Boolean echo = True
-                {
-                boolean fEcho = true;
-                if (hArg != ObjectHandle.DEFAULT)
-                    {
-                    fEcho = ((BooleanHandle) hArg).get();
-                    }
+                boolean fEcho = hArg != xBoolean.TRUE;
 
                 try
                     {
@@ -148,6 +100,46 @@ public class xTerminalConsole
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "print": // Object o = "", Boolean suppressNewline = False
+                {
+                boolean fNewline = ahArg[1] != xBoolean.TRUE;
+
+                ObjectHandle hVal = ahArg[0];
+                if (hVal == ObjectHandle.DEFAULT)
+                    {
+                    if (fNewline)
+                        {
+                        CONSOLE_OUT.println();
+                        }
+                    return Op.R_NEXT;
+                    }
+
+                int iResult = Utils.callToString(frame, hVal);
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        return fNewline
+                                ? PRINTLN.proceed(frame)
+                                : PRINT.proceed(frame);
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(fNewline ? PRINTLN : PRINT);
+                        // fall through
+                    case Op.R_EXCEPTION:
+                        return iResult;
+                    }
+                }
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
     /**
      * Injection support.
      */
@@ -156,9 +148,8 @@ public class xTerminalConsole
         ObjectHandle hConsole = m_hConsole;
         if (hConsole == null)
             {
-            hConsole = m_hConsole = createServiceHandle(
-                    f_container.createServiceContext("Console"),
-                        getCanonicalClass(), getCanonicalType());
+            hConsole = m_hConsole = createServiceHandle(f_container.createServiceContext("Console"),
+                    getCanonicalClass(), getCanonicalType());
             }
         return hConsole;
         }

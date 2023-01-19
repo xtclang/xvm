@@ -160,12 +160,12 @@ module SockShopCartApi
                 {
                 ByteArrayInputStream in = new ByteArrayInputStream(config.contents);
                 app = Schema.DEFAULT.createObjectInput(new UTF8Reader(in)).read<Application>();
-                console.println($"Loaded Sock Shop Cart configuration from {config}\n{app}");
+                console.print($"Loaded Sock Shop Cart configuration from {config}\n{app}");
                 }
             else
                 {
                 app = new Application();
-                console.println($"Using Sock Shop Cart configuration\n{app}");
+                console.print($"Using Sock Shop Cart configuration\n{app}");
                 }
             return app;
             }
@@ -176,7 +176,7 @@ module SockShopCartApi
         @Inject Console   console;
         @Inject Directory curDir;
 
-        console.println("Starting Sock Shop Cart");
+        console.print("Starting Sock Shop Cart");
 
         Directory rootDir  =  curDir.dirFor("src")
                                     .dirFor("main")
@@ -190,7 +190,7 @@ module SockShopCartApi
                                     .addRoutes(new CartsApi(), "/carts")
                                     .start();
 
-        console.println($"Serving Cart API at http://localhost:{server.port}");
+        console.print($"Serving Cart API at http://localhost:{server.port}");
 
         wait(server, Duration.ofSeconds(600));
         }
@@ -207,7 +207,7 @@ module SockShopCartApi
             if (!&result.assigned)
                 {
                 @Inject Console console;
-                console.println("Shutting down");
+                console.print("Shutting down");
                 result=Tuple:();
                 }
             });
@@ -223,7 +223,7 @@ module SockShopCartApi
             if (!result.assigned)
                 {
                 @Inject Console console;
-                console.println("Webserver has stopped");
+                console.print("Webserver has stopped");
                 result.set(Tuple:());
                 }
             }

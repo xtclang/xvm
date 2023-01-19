@@ -25,7 +25,7 @@ class ConsoleLog(Console console)
     @Override
     ConsoleLog add(String v)
         {
-        console.println(v);
+        console.print(v);
         return this;
         }
     }

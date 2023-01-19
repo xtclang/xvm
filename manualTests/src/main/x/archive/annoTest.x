@@ -32,7 +32,7 @@ module annoTest
 
     void report(Session session)
         {
-        console.println($"id={session.id} name={session.getName()}");
+        console.print($"id={session.id} name={session.getName()}");
         }
 
     interface Session<Element>

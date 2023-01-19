@@ -7,7 +7,7 @@ module TestOverwhelm
 
     void run()
         {
-        console.println("Starting test");
+        console.print("Starting test");
 
         Test one = new Test();
         Test two = new Test();
@@ -15,7 +15,7 @@ module TestOverwhelm
         one.test();
         two.test();
 
-        console.println("done");
+        console.print("done");
         }
 
     service Test
@@ -26,7 +26,7 @@ module TestOverwhelm
                 {
                 if (i % 1000 == 0)
                     {
-                    console.println($"-->{i}");
+                    console.print($"-->{i}");
                     }
                 TestStatic.increment(this);
                 }
@@ -46,7 +46,7 @@ module TestOverwhelm
             i++;
             if (i % 1000 == 0)
                 {
-                console.println($"{i}<--");
+                console.print($"{i}<--");
                 }
             test.incremented(i);
             }

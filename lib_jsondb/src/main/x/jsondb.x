@@ -225,7 +225,7 @@ module jsondb.xtclang.org
             default: o.toString();
             };
 
-        console.println($"{desc}={s}");
+        console.print($"{desc}={s}");
         }
 
     /**

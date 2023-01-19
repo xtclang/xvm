@@ -558,12 +558,12 @@ class Parser
      *         {
      *         using (arrayParser)
      *             {
-     *             console.println("Array contents:");
+     *             console.print("Array contents:");
      *             while (!arrayParser.eof)
      *                 {
      *                 Int index = arrayParser.index;
      *                 Doc doc   = arrayParser.parseDoc();
-     *                 console.println($"[{index}] = {doc}");
+     *                 console.print($"[{index}] = {doc}");
      *                 }
      *             }
      *         }
@@ -589,12 +589,12 @@ class Parser
      *
      *     using (ArrayParser arrayParser = parser.expectArray())
      *         {
-     *         console.println("Array contents:");
+     *         console.print("Array contents:");
      *         while (!arrayParser.eof)
      *             {
      *             Int index = arrayParser.index;
      *             Doc doc   = arrayParser.parseDoc();
-     *             console.println($"[{index}] = {doc}");
+     *             console.print($"[{index}] = {doc}");
      *             }
      *         }
      *

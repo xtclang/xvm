@@ -287,7 +287,7 @@ service Dispatcher(Catalog          catalog,
                 if (r == Null)
                     {
                     @Inject Console console;
-                    console.println("Unhandled exception: " + e);
+                    console.print("Unhandled exception: " + e);
 
                     httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
                     }

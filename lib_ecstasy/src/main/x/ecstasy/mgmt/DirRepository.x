@@ -114,7 +114,7 @@ service DirRepository
             catch (Exception e)
                 {
                 @Inject Console console;
-                console.println($"Failure to load a module from {file}; {e.text}");
+                console.print($"Failure to load a module from {file}; {e.text}");
                 continue;
                 }
             newModules.put(info.template.qualifiedName, info);

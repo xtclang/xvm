@@ -4,23 +4,23 @@ module TestServices
 
     void run()
         {
-        console.println("*** service tests ***\n");
+        console.print("*** service tests ***\n");
 
-        console.println($"{tag()} creating service");
+        console.print($"{tag()} creating service");
         TestService svc = new TestService();
 
         TestService[] svcs = new TestService[4](_ -> new TestService());
 
-        console.println($|{tag()} calling service async/wait-style\
+        console.print($|{tag()} calling service async/wait-style\
                          | {svc.serviceName} {svc.serviceControl.statusIndicator}
                          );
         Int n = svc.calcSomethingBig(new Duration(0));
-        console.println($"{tag()} async/wait-style result={n}");
+        console.print($"{tag()} async/wait-style result={n}");
 
         Int n0 = svc.terminateExceptionally^("n0");
         &n0.handle(e ->
             {
-            console.println($"{tag()} 4. expected exception={e.text}");
+            console.print($"{tag()} 4. expected exception={e.text}");
             return -1;
             });
 
@@ -31,7 +31,7 @@ module TestServices
             }
         catch (Exception e)
             {
-            console.println($"{tag()} 1. expected exception={e.text}");
+            console.print($"{tag()} 1. expected exception={e.text}");
             }
 
         Int n2 = svc.terminateExceptionally^("n2");
@@ -42,13 +42,13 @@ module TestServices
             }
         catch (Exception e)
             {
-            console.println($"{tag()} 2. expected exception={e.text}");
+            console.print($"{tag()} 2. expected exception={e.text}");
             }
 
         assert &n2.assigned;
         &n2.handle(e ->
             {
-            console.println($"{tag()} 3. expected exception={e.text}");
+            console.print($"{tag()} 3. expected exception={e.text}");
             return -1;
             });
 
@@ -63,8 +63,8 @@ module TestServices
                 val i = Loop.count;
                 each.spin^(10_000).passTo(n ->
                     {
-                    // TODO CP console.println($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
-                    console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
+                    // TODO CP console.print($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
+                    console.print($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
                     });
                 }
             }
@@ -88,11 +88,11 @@ module TestServices
         Int count     = 5;
         for (Int i : 0 ..< count)
             {
-            console.println($"{tag()} calling service future-style: {i}");
+            console.print($"{tag()} calling service future-style: {i}");
             @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));
             &result.whenComplete((n, e) ->
                 {
-                console.println($"{tag()} result={(n ?: e ?: "???")}");
+                console.print($"{tag()} result={(n ?: e ?: "???")}");
                 // when the last result comes back - shut down
                 if (++responded == count)
                     {
@@ -102,7 +102,7 @@ module TestServices
             }
 
         Boolean done = svc.waitForCompletion();
-        console.println($"{tag()} done={done}; shutting down");
+        console.print($"{tag()} done={done}; shutting down");
 
         // without the left side an exception would be reported by the default handler
         Int ignoreException = svc.calcSomethingBig^(Duration.ofMinutes(10));
@@ -115,7 +115,7 @@ module TestServices
             }
         catch (Exception e)
             {
-            console.println($"expected: {e}");
+            console.print($"expected: {e}");
             }
         }
 
@@ -125,16 +125,16 @@ module TestServices
             {
             @Inject Console console;
 
-            console.println($"{tag()} calculating for: {delay}");
+            console.print($"{tag()} calculating for: {delay}");
             @Inject Timer timer;
             @Future Int   result;
             timer.schedule(delay, () ->
                 {
-                console.println($"{tag()} setting result {delay.seconds}");
+                console.print($"{tag()} setting result {delay.seconds}");
                 result=delay.seconds;
                 });
 
-            console.println($"{tag()} returning result");
+            console.print($"{tag()} returning result");
             return result;
             }
 

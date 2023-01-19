@@ -32,6 +32,6 @@ module Permutations
     void run()
         {
         @Inject Console console;
-        console.println($"permut(3) = {permut(3)}");
+        console.print($"permut(3) = {permut(3)}");
         }
     }

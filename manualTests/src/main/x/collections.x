@@ -4,7 +4,7 @@ module TestCollections
 
     void run()
         {
-        console.println("Collection tests");
+        console.print("Collection tests");
 
         testLinkedList();
         }
@@ -66,7 +66,7 @@ module TestCollections
 
     void testLinkedList()
         {
-        console.println("LinkedList scenario 1");
+        console.print("LinkedList scenario 1");
 
         Phone       first  = new Phone("home", "555-1212");
         List<Phone> phones = first.list;
@@ -76,7 +76,7 @@ module TestCollections
 
         Loop: for (Phone p : phones)
             {
-            console.println($"[{Loop.count}] {p}");
+            console.print($"[{Loop.count}] {p}");
             }
 
         Person george1 = new Person("George I", 48);
@@ -96,32 +96,32 @@ module TestCollections
         george1.phoneNumbers.add(new Phone("work", "555-3456"));
         george1.phoneNumbers.add(new Phone("cell", "555-9876"));
 
-        console.println("LinkedList scenario 2");
+        console.print("LinkedList scenario 2");
 
         Loop: for (Person p : albert3.ancestors)
             {
-            console.println($"[{Loop.count}] {p}");
+            console.print($"[{Loop.count}] {p}");
             }
 
-        console.println("LinkedList scenario 3");
+        console.print("LinkedList scenario 3");
 
         Loop: for (Person p : albert3.siblings)
             {
-            console.println($"[{Loop.count}] {p}");
+            console.print($"[{Loop.count}] {p}");
             }
 
-        console.println("LinkedList scenario 4");
+        console.print("LinkedList scenario 4");
 
         Loop: for (Person p : george2.children)
             {
-            console.println($"[{Loop.count}] {p}");
+            console.print($"[{Loop.count}] {p}");
             }
 
-        console.println("LinkedList scenario 5");
+        console.print("LinkedList scenario 5");
 
         Loop: for (Phone p : george1.phoneNumbers)
             {
-            console.println($"[{Loop.count}] {p}");
+            console.print($"[{Loop.count}] {p}");
             }
         }
     }

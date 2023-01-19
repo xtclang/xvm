@@ -8,9 +8,9 @@
  *       {
  *       if (!eachPerson.first)
  *           {
- *           console.print(", ");
+ *           console.print(", ", suppressNewline=True);
  *           }
- *       console.print($"{eachPerson.count}={person.name}");
+ *       console.print($"{eachPerson.count}={person.name}", suppressNewline=True);
  *       }
  *
  * Produces the output:

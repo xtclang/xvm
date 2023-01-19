@@ -59,9 +59,9 @@ module TestMaps
 //        Int iterations = 1000_000;
 //        for (Int i : 0..3)
 //            {
-//            console.println("Concurrent load test of HashMap...");
+//            console.print("Concurrent load test of HashMap...");
 //            testConcurrentLoad(new SafeHashMap(), concurrency, iterations, keys);
-//            console.println("Concurrent load test of ConcurrentHashMap...");
+//            console.print("Concurrent load test of ConcurrentHashMap...");
 //            testConcurrentLoad(new ConcurrentHashMap(), concurrency, iterations, keys);
 //            }
 
@@ -74,7 +74,7 @@ module TestMaps
 
     void testBasic(Map<Int, String> map)
         {
-        console.println("\n** testBasic()");
+        console.print("\n** testBasic()");
 
         String one = "Hello from Map";
         String two = "Goodbye from Map";
@@ -103,7 +103,7 @@ module TestMaps
             }
         catch (IllegalState e)
             {
-            console.println($"expected: {e.text}");
+            console.print($"expected: {e.text}");
             }
 
         try
@@ -113,7 +113,7 @@ module TestMaps
             }
         catch (IllegalState e)
             {
-            console.println($"expected: {e.text}");
+            console.print($"expected: {e.text}");
             }
 
         Map<Int|String, String> map = new HashMap();
@@ -143,46 +143,46 @@ module TestMaps
             run();
             }
         Duration time = timer.elapsed;
-        console.println($"Elapsed {time.milliseconds} ms");
-        console.println($"Latency {(time / iterations).milliseconds} ms");
+        console.print($"Elapsed {time.milliseconds} ms");
+        console.print($"Latency {(time / iterations).milliseconds} ms");
         }
 
     void testListMap()
         {
-        console.println("\n** testListMap()");
+        console.print("\n** testListMap()");
 
         Map<String, String> map = new ListMap();
-        console.println($"empty map={map}");
+        console.print($"empty map={map}");
 
-        console.println("adding entries...");
+        console.print("adding entries...");
         map["k1"] = "v1";
         map["k2"] = "v2";
 
-        console.println($"map.size={map.size}, map.empty={map.empty}");
-        console.println($"keys.size={map.keys.size}");
-        console.println($"entries.size={map.entries.size}");
-        console.println($"values.size={map.values.size}");
-        console.println($"map={map}");
+        console.print($"map.size={map.size}, map.empty={map.empty}");
+        console.print($"keys.size={map.keys.size}");
+        console.print($"entries.size={map.entries.size}");
+        console.print($"values.size={map.values.size}");
+        console.print($"map={map}");
 
-        console.println("keys/values:");
+        console.print("keys/values:");
         loop: for (String key : map.keys)
             {
-            console.println($"[{loop.count}]:{key}={map[key]}");
+            console.print($"[{loop.count}]:{key}={map[key]}");
             }
 
         // same thing, but using "$" syntax
-        console.println($"keys:{{L: for (val v : map.keys) {$.addAll($"\n[{L.count}]={v}");}}}");
+        console.print($"keys:{{L: for (val v : map.keys) {$.addAll($"\n[{L.count}]={v}");}}}");
 
-        console.println("values:");
+        console.print("values:");
         loop: for (String value : map.values)
             {
-            console.println($"[{loop.count}]:{value}");
+            console.print($"[{loop.count}]:{value}");
             }
 
-        console.println("entries:");
+        console.print("entries:");
         loop: for (Map<String,String>.Entry entry : map.entries)
             {
-            console.println($"[{loop.count}]:{entry.key}={entry.value}");
+            console.print($"[{loop.count}]:{entry.key}={entry.value}");
             }
 
         // test very bad hashing
@@ -221,27 +221,27 @@ module TestMaps
 
     void testMapIteration(Map<String, Int> map)
         {
-        console.println($"\n** testMapIteration({&map.actualType.underlyingTypes[0]})");
+        console.print($"\n** testMapIteration({&map.actualType.underlyingTypes[0]})");
 
         map.put("hello", 1);
         map.put("goodbye", 2);
 
-        console.println("keys:");
+        console.print("keys:");
         for (String key : map)
             {
-            console.println($"{key}");
+            console.print($"{key}");
             }
 
-        console.println("keys and values:");
+        console.print("keys and values:");
         for ((String s, Int i) : map)
             {
-            console.println($"{s} = {i}");
+            console.print($"{s} = {i}");
             }
 
-        console.println("values:");
+        console.print("values:");
         for (Int i : map.values)
             {
-            console.println($"? = {i}");
+            console.print($"? = {i}");
             }
         }
 
@@ -295,7 +295,7 @@ module TestMaps
 
     void testFreezable()
         {
-        console.println("\n** testFreezable()");
+        console.print("\n** testFreezable()");
 
         Container c = new Container();
 
@@ -325,9 +325,9 @@ module TestMaps
         modifyAttempt(c.mapH);
         modifyAttempt(c.mapS);
 
-        console.println($"{c.mapL} {c.mapL.keys} {c.mapL.values}");
-        console.println($"{c.mapH} {c.mapH.keys} {c.mapH.values}");
-        console.println($"{c.mapS} {c.mapS.keys} {c.mapS.values}");
+        console.print($"{c.mapL} {c.mapL.keys} {c.mapL.values}");
+        console.print($"{c.mapH} {c.mapH.keys} {c.mapH.values}");
+        console.print($"{c.mapS} {c.mapS.keys} {c.mapS.values}");
 
         try
             {
@@ -335,7 +335,7 @@ module TestMaps
             }
         catch (Exception e)
             {
-            console.println($"Expected not freezable: {e.text}");
+            console.print($"Expected not freezable: {e.text}");
             }
 
         const Container()
@@ -518,7 +518,7 @@ module TestMaps
 
     void testConcurrentProcess(Map<Int, Int> map)
         {
-        console.println($"\n** testConcurrentProcess({&map.actualClass.name})");
+        console.print($"\n** testConcurrentProcess({&map.actualClass.name})");
         map.put(0, 0);
 
         Int count = 0;
@@ -534,24 +534,24 @@ module TestMaps
                 });
 
             Int r = result; // blocking
-            console.println($"{++count}) process(0) {r}");
+            console.print($"{++count}) process(0) {r}");
             e.value++;
             return result;
             });
 
         // write to an alternate key; should not block with CHM even on the same partition
         map.put(17, 1);
-        console.println($"{++count}) put(17)");
+        console.print($"{++count}) put(17)");
 
         // read of the same key as long write; CHM should not block
         map.get(0);
-        console.println($"{++count}) get(0)");
+        console.print($"{++count}) get(0)");
 
         try
             {
             Int ex = map.process(0, e ->
                 {
-                console.println($"{++count}) deferred process(0) throw");
+                console.print($"{++count}) deferred process(0) throw");
                 if (e.exists)
                     {
                     TODO;
@@ -569,12 +569,12 @@ module TestMaps
 
         // write to the same key; CHM should block until original write completes
         map.put(0, 1);
-        console.println($"{++count}) put(0)");
+        console.print($"{++count}) put(0)");
 
         // processor based write to the same key; CHM should also block
         Int n = map.process(0, e ->
             {
-            console.println($"{++count}) process(0)");
+            console.print($"{++count}) process(0)");
             return ++e.value;
             });
 
@@ -600,8 +600,8 @@ module TestMaps
             }
 
         Duration time = timer.elapsed;
-        console.println($"Elapsed {time.milliseconds} ms");
-        //console.println(map);
+        console.print($"Elapsed {time.milliseconds} ms");
+        //console.print(map);
         }
 
     service LoadGenerator

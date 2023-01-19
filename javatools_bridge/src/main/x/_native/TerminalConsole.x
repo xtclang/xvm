@@ -5,13 +5,10 @@ service TerminalConsole
         implements Console
     {
     @Override
-    void print(Object o);
+    void print(Object object= "", Boolean suppressNewline = False);
 
     @Override
-    void println(Object o = "");
-
-    @Override
-    String readLine(Boolean echo = True);
+    String readLine(Boolean suppressEcho = False);
 
     @Override
     String toString()

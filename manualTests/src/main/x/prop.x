@@ -40,12 +40,12 @@ module TestProps
             s.x += i; // 10
             }
         Duration time = timer.elapsed;
-        console.println($"get/set property latency {((time - timeBase) / (iterations * 10)).nanoseconds} ns");
+        console.print($"get/set property latency {((time - timeBase) / (iterations * 10)).nanoseconds} ns");
         }
 
     void testMethodProperty()
         {
-        console.println("\n** testMethodProperty()");
+        console.print("\n** testMethodProperty()");
 
         TestProperty test = new TestProperty();
         for (Int i : 1..3)
@@ -68,7 +68,7 @@ module TestProps
             // compiles as a private static property, which should be initialized just once
             // (before the method is called the very first time)
 
-            console.println($" - in showMethodProperty(), ++x={++x}, y={y}");
+            console.print($" - in showMethodProperty(), ++x={++x}, y={y}");
             }
         }
 
@@ -76,32 +76,32 @@ module TestProps
         {
         @Inject ecstasy.io.Console console;
 
-        console.println(" - in calcStaticProperty()");
+        console.print(" - in calcStaticProperty()");
         return 3;
         }
 
     void testLazyProperty()
         {
-        console.println("\n** testLazyProperty()");
+        console.print("\n** testLazyProperty()");
 
-        console.println("lazy=" + lazy);
+        console.print("lazy=" + lazy);
         }
 
     static void testModuleProperty()
         {
-        TestProps.console.println("\n** testModuleProperty()");
-        TestProps.console.println("now=" + this:module.clock.now);
+        TestProps.console.print("\n** testModuleProperty()");
+        TestProps.console.print("now=" + this:module.clock.now);
         }
 
     @Lazy Int lazy.calc()
         {
-        console.println(" - in lazy.calc() " + toString());
+        console.print(" - in lazy.calc() " + toString());
         return 42;
         }
 
     void testDelegation()
         {
-        console.println("\n** testDelegation()");
+        console.print("\n** testDelegation()");
 
         class NamedNumber(String name, Int number)
                 delegates Stringable(name)
@@ -114,12 +114,12 @@ module TestProps
             }
 
         NamedNumber nn = new NamedNumber("answer", 42);
-        console.println($"nn.estimateStringLength()={nn.estimateStringLength()}");
-        console.println($"nn.toString()={nn.toString()}");
+        console.print($"nn.estimateStringLength()={nn.estimateStringLength()}");
+        console.print($"nn.toString()={nn.toString()}");
 
         NamedNumber2 nn2 = new NamedNumber2("answer", 42);
-        console.println($"nn2.estimateStringLength()={nn2.estimateStringLength()}");
-        console.println($"nn2.toString()={nn2.toString()}");
+        console.print($"nn2.estimateStringLength()={nn2.estimateStringLength()}");
+        console.print($"nn2.toString()={nn2.toString()}");
         }
 
     void testAccess()
@@ -158,7 +158,7 @@ module TestProps
 
                 void report()
                     {
-                    console.println($"Property p4 was called {count} times!");
+                    console.print($"Property p4 was called {count} times!");
                     }
 
                 private Int count;
@@ -166,7 +166,7 @@ module TestProps
 
             void report()
                 {
-                console.println($"Base   : p1={p1},    p2()={p2()}, p3()={p3()}");
+                console.print($"Base   : p1={p1},    p2()={p2()}, p3()={p3()}");
                 }
             }
 
@@ -192,7 +192,7 @@ module TestProps
                 void report()
                     {
                     super();
-                    console.println($"Method report() was called {++count} times");
+                    console.print($"Method report() was called {++count} times");
                     }
 
                 private Int count;
@@ -203,7 +203,7 @@ module TestProps
                 {
                 super();
 
-                console.println($"Derived: p1()={p1()}, p2={p2},  p3()={p3()}");
+                console.print($"Derived: p1()={p1()}, p2={p2},  p3()={p3()}");
                 }
             }
         }

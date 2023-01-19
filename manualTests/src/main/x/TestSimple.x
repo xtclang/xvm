@@ -24,10 +24,10 @@ module TestSimple
 
         for (Certificate cert : keystore.certificates)
             {
-            console.println($"certificate={cert}");
+            console.print($"certificate={cert}");
             if (CryptoKey key := cert.containsKey())
                 {
-                console.println($"key={key}\n");
+                console.print($"key={key}\n");
                 }
             }
         }

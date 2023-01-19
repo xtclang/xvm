@@ -28,7 +28,7 @@ module CounterTest
         Connection connection =
                 jsondb.createConnection("CounterDB", dataDir, buildDir).as(Connection);
 
-        console.println(dump(connection));
+        console.print(dump(connection));
 
         StringBuffer msg = new StringBuffer().append($"cranking up schedules: ");
         for (Int i : 1..3)
@@ -40,7 +40,7 @@ module CounterTest
 
             msg.append(name).append(", ");
             }
-        console.println(msg.truncate(-2).toString());
+        console.print(msg.truncate(-2).toString());
 
         wait(connection, Duration:1s);
         }
@@ -53,7 +53,7 @@ module CounterTest
         @Future Tuple<> result;
         timer.schedule(duration, () ->
             {
-            console.println(dump(connection));
+            console.print(dump(connection));
             try
                 {
                 connection.close();

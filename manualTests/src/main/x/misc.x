@@ -4,7 +4,7 @@ module TestMisc
 
     void run()
         {
-        console.println("hello world!");
+        console.print("hello world!");
 
         testBools();
         testChars();
@@ -45,58 +45,58 @@ module TestMisc
 
     void testInts()
         {
-        console.println("\n** testInts()");
+        console.print("\n** testInts()");
 
         Int a0 = -1217;
         Int a = -a0;
         Int b = 3;
-        console.println("a=" + a);
-        console.println("b=" + b);
+        console.print("a=" + a);
+        console.print("b=" + b);
 
-        console.println("a + b = "   + (a + b));
-        console.println("a - b = "   + (a - b));
-        console.println("a * b = "   + (a * b));
-        console.println("a / b = "   + (a / b));
-        console.println("a % b = "   + (a % b));
-        console.println("a & b = "   + (a & b));
-        console.println("a | b = "   + (a | b));
-        console.println("a ^ b = "   + (a ^ b));
-        console.println("a << b = "  + (a << b));
-        console.println("a >> b = "  + (a >> b));
-        console.println("a >>> b = " + (a.toInt64() >>> b));
+        console.print("a + b = "   + (a + b));
+        console.print("a - b = "   + (a - b));
+        console.print("a * b = "   + (a * b));
+        console.print("a / b = "   + (a / b));
+        console.print("a % b = "   + (a % b));
+        console.print("a & b = "   + (a & b));
+        console.print("a | b = "   + (a | b));
+        console.print("a ^ b = "   + (a ^ b));
+        console.print("a << b = "  + (a << b));
+        console.print("a >> b = "  + (a >> b));
+        console.print("a >>> b = " + (a.toInt64() >>> b));
 
-        console.println("\n** pre/post inc/dec");
-        console.println("a   = " + a);
-        console.println("a++ = " + a++);
-        console.println("a   = " + a);
-        console.println("++a = " + ++a);
-        console.println("a   = " + a);
-        console.println("a-- = " + a--);
-        console.println("a   = " + a);
-        console.println("--a = " + --a);
-        console.println("a   = " + a);
+        console.print("\n** pre/post inc/dec");
+        console.print("a   = " + a);
+        console.print("a++ = " + a++);
+        console.print("a   = " + a);
+        console.print("++a = " + ++a);
+        console.print("a   = " + a);
+        console.print("a-- = " + a--);
+        console.print("a   = " + a);
+        console.print("--a = " + --a);
+        console.print("a   = " + a);
         }
 
     void testBools()
         {
-        console.println("\n** testBools()");
+        console.print("\n** testBools()");
 
-        console.println("!True=" + !True);
-        console.println("!False=" + !False);
+        console.print("!True=" + !True);
+        console.print("!False=" + !False);
 
         Boolean a = True;
         Boolean b = False;
-        console.println("a=" + a);
-        console.println("b=" + b);
-        console.println("!a=" + !a);
-        console.println("!b=" + !b);
-        console.println("~a=" + ~a);
-        console.println("~b=" + ~b);
+        console.print("a=" + a);
+        console.print("b=" + b);
+        console.print("!a=" + !a);
+        console.print("!b=" + !b);
+        console.print("~a=" + ~a);
+        console.print("~b=" + ~b);
         }
 
     void testChars()
         {
-        console.println("\n** testChars()");
+        console.print("\n** testChars()");
 
         Char[] chars = "1aA!\n$£€".toCharArray();
         for (Char ch : chars)
@@ -107,7 +107,7 @@ module TestMisc
                 dec = $"\'{value}\'";
                 }
 
-            console.println($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
+            console.print($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
                              | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
                              | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
                              );
@@ -120,99 +120,99 @@ module TestMisc
 
     void testIsA()
         {
-        console.println("\n** testIsA()");
+        console.print("\n** testIsA()");
 
-        console.println("\n(testing a string in a variable of type object)");
+        console.print("\n(testing a string in a variable of type object)");
         Object o = "hello";
-        console.println("o           =" + o);
-        console.println("o.is(Object)=" + o.is(Object));
-        console.println("o.is(String)=" + o.is(String));
-        console.println("o.is(Int)   =" + o.is(Int));
+        console.print("o           =" + o);
+        console.print("o.is(Object)=" + o.is(Object));
+        console.print("o.is(String)=" + o.is(String));
+        console.print("o.is(Int)   =" + o.is(Int));
 
-        console.println("\n(testing an int in a variable of type int)");
+        console.print("\n(testing an int in a variable of type int)");
         Int i = 5;
         if (i.is(Object))
             {
-            console.println("i.is(Object) True (good)");
+            console.print("i.is(Object) True (good)");
             }
         else
             {
-            console.println("i.is(Object) False (bad)");
+            console.print("i.is(Object) False (bad)");
             }
 
         if (i.is(Int))
             {
-            console.println("i.is(Int) True (good)");
+            console.print("i.is(Int) True (good)");
             }
         else
             {
-            console.println("i.is(Int) False (bad)");
+            console.print("i.is(Int) False (bad)");
             }
 
         if (i.is(String))
             {
-            console.println("i.is(String) True (bad)");
+            console.print("i.is(String) True (bad)");
             }
         else
             {
-            console.println("i.is(String) False (good)");
+            console.print("i.is(String) False (good)");
             }
         }
 
     void testCast()
         {
-        console.println("\n** testCast()");
+        console.print("\n** testCast()");
 
         Int    i = 42;
         Object o = i;
-        console.println("o=" + o);
+        console.print("o=" + o);
         Int    n = o.as(Int);
-        console.println("n=" + n);
+        console.print("n=" + n);
 
         Object o2 = Int:4;
-        console.println("o2=" + o2);
+        console.print("o2=" + o2);
 
         try
             {
-            console.println("i.as(String) should throw " + i.as(String));
+            console.print("i.as(String) should throw " + i.as(String));
             }
         catch (Exception e)
             {
-            console.println("i.as(String) failed correctly: \"" + e.text + '"');
+            console.print("i.as(String) failed correctly: \"" + e.text + '"');
             }
         }
 
     void testTernary()
         {
-        console.println("\n** testTernary()");
+        console.print("\n** testTernary()");
 
         Int i = 42;
-        console.println("i=" + i);
-        console.println("i%2=" + (i % 2));
+        console.print("i=" + i);
+        console.print("i%2=" + (i % 2));
 
-        console.println("i>40?greater:not -> " + (i > 40 ? "greater" : "not greater"));
-        console.println("i%2==0?even:odd  -> " + (i % 2 == 0 ? "even" : "odd"));
+        console.print("i>40?greater:not -> " + (i > 40 ? "greater" : "not greater"));
+        console.print("i%2==0?even:odd  -> " + (i % 2 == 0 ? "even" : "odd"));
         }
 
     void testSpaceship()
         {
-        console.println("\n** testSpaceship()");
+        console.print("\n** testSpaceship()");
 
         Int a = 42;
         Int b = 45;
-        console.println("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
+        console.print("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
         }
 
     void testElvis()
         {
-        console.println("\n** testElvis()");
+        console.print("\n** testElvis()");
 
         Int a = 42;
         Int b = 45;
-        // this is an error: console.println("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
+        // this is an error: console.print("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
 
         Int? c = a;
-        console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
+        console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
 
         static Int? trustMeItMightNotBeNull()
             {
@@ -220,16 +220,16 @@ module TestMisc
             }
 
         c = trustMeItMightNotBeNull();
-        console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
+        console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
         }
 
     void testElseExpr()
         {
-        console.println("\n** testElseExpr()");
+        console.print("\n** testElseExpr()");
 
         IntLiteral? a = Null;
         Int b = 7;
-        console.println("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
+        console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
         // [11] VAR #-238, ecstasy:Int64 #2                             // create temp var "#2" to hold the result of the else expression (ok!)
         // [12] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #3     // create temp var #3 to hold ... um ... wrong! (wasted)     TODO?
         // [13] MOV #0, #3                                              // ... and here's proof: it's just a one-time-use, read-only copy
@@ -244,7 +244,7 @@ module TestMisc
             {
             a = 4;
             }
-        console.println("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
+        console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
         // [28] VAR #-238, ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
         // [29] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)
         // [30] MOV #0, #6                                              // ... and here's proof: it's just a one-time-use, read-only copy
@@ -261,29 +261,29 @@ module TestMisc
 
     void testLoop()
         {
-        console.println("\n** testLoop()");
+        console.print("\n** testLoop()");
 
         Int i = 10;
         while (i > 0)
             {
-            console.println(i--);
+            console.print(i--);
             }
-        console.println("We Have Lift-Off!!!");
+        console.print("We Have Lift-Off!!!");
         }
 
     Int FOUR = 4;
     void testSwitchStmt()
         {
-        console.println("\n** testSwitchStmt()");
+        console.print("\n** testSwitchStmt()");
 
         switch (FOUR)
             {
             case 2, 3:
-                console.println("2 or 3");
+                console.print("2 or 3");
                 break;
 
             case 4..5:
-                console.println("4");
+                console.print("4");
                 if (FOUR == 4)
                     {
                     continue;
@@ -291,23 +291,23 @@ module TestMisc
                 break;
 
             case 7:
-                console.println("7");
+                console.print("7");
                 break;
 
             default:
-                console.println("other");
+                console.print("other");
                 break;
             }
         }
 
     void testSwitchExpr()
         {
-        console.println("\n** testSwitchExpr()");
+        console.print("\n** testSwitchExpr()");
 
         Int i = 0;
         while (i++ < 10)
             {
-            console.println("result for " + i + "=" + switch (i)
+            console.print("result for " + i + "=" + switch (i)
                 {
                 // default: "other";
                 case 2, 3:
@@ -323,12 +323,12 @@ module TestMisc
 
     void testSwitchExpr2()
         {
-        console.println("\n** testSwitchExpr2()");
+        console.print("\n** testSwitchExpr2()");
 
         Int i = 0;
         while (i++ < 10)
             {
-            console.println("result for " + i + "=" + switch ()
+            console.print("result for " + i + "=" + switch ()
                 {
                 case i >= 2 && i <= 4: "between 2 and 4";
 
@@ -341,12 +341,12 @@ module TestMisc
 
     void testSwitchExpr3()
         {
-        console.println("\n** testSwitchExpr3()");
+        console.print("\n** testSwitchExpr3()");
 
         Int i = 0;
         while (++i < 6)
             {
-            console.println("result for (" + i + "<=>3)=" + switch (i <=> 3)
+            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3)
                 {
                 case Lesser:  "less";
                 case Equal:   "same";
@@ -357,12 +357,12 @@ module TestMisc
 
     void testSwitchExpr4()
         {
-        console.println("\n** testSwitchExpr4()");
+        console.print("\n** testSwitchExpr4()");
 
         Int i = 0;
         while (++i < 8)
             {
-            console.println("result for (" + i + "<=>3)=" + switch (i <=> 3, i)
+            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3, i)
                 {
                 case (Lesser, 2):       "less #2";
                 case (Lesser, _):       "less";
@@ -378,7 +378,7 @@ module TestMisc
 
     void testSwitchNatural()
         {
-        console.println("\n** testSwitchNatural()");
+        console.print("\n** testSwitchNatural()");
 
         assert test(new Point(0, 0)) == "min";
         assert test(new Point(2, 2)) == "between";
@@ -401,98 +401,98 @@ module TestMisc
 
     void testStmtExpr()
         {
-        console.println("\n** testStmtExpr()");
-        console.println("5+3=" + {return Int:5 + 3;});
+        console.print("\n** testStmtExpr()");
+        console.print("5+3=" + {return Int:5 + 3;});
         }
 
     void testAssertTrue()
         {
-        console.println("\n** testAssertTrue()");
+        console.print("\n** testAssertTrue()");
         assert True;
-        console.println("(done)");
+        console.print("(done)");
         }
 
     void testAssertTrueExpr()
         {
-        console.println("\n** testAssertTrueExpr()");
+        console.print("\n** testAssertTrueExpr()");
         assert True != False;
-        console.println("(done)");
+        console.print("(done)");
         }
 
     void testAssertFalseExpr()
         {
-        console.println("\n** testAssertFalseExpr()");
+        console.print("\n** testAssertFalseExpr()");
         try
             {
             assert True == False;
             }
         catch (IllegalState e)
             {
-            console.println("(done)");
+            console.print("(done)");
             }
         }
 
     void testAssertDecl()
         {
-        console.println("\n** testAssertDecl()");
+        console.print("\n** testAssertDecl()");
         Int[] array = [1];
         Iterator<Int> iter = array.iterator();
         assert Int i := iter.next();
-        console.println("i=" + i);
+        console.print("i=" + i);
         }
 
     void testInterval()
         {
-        console.println("\n** testInterval()");
+        console.print("\n** testInterval()");
 
         Int a = 2;
         Int b = 5;
         Object c = a..b;
-        console.println("interval=" + c);
+        console.print("interval=" + c);
 
         Interval<Int> r = a+1..b+1;
-        console.println("interval=" + r);
+        console.print("interval=" + r);
         }
 
     void testException()
         {
-        console.println("\n** testException()");
+        console.print("\n** testException()");
 
         Exception e = new Exception("test");
-        console.println("e=" + e);
+        console.print("e=" + e);
 
         e = new IllegalArgument("test");
-        console.println("e=" + e);
+        console.print("e=" + e);
         }
 
     void testConditional()
         {
-        console.println("\n** testConditional()");
+        console.print("\n** testConditional()");
         if (String s := checkPositive(17))
             {
-            console.println($"should be positive: {s}");
+            console.print($"should be positive: {s}");
             }
 
         if (String s := checkPositive(-17))
             {
-            console.println($"should be negative: {s} (but this cannot happen)");
+            console.print($"should be negative: {s} (but this cannot happen)");
             assert;
             }
 
         String s = "negative";
         s := checkPositive(-99);
-        console.println($"-99 => {s}");
+        console.print($"-99 => {s}");
         s := checkPositive(99);
-        console.println($"99 => {s}");
+        console.print($"99 => {s}");
 
         String? s2 = s;
         if (String s3 ?= s2)
             {
-            console.println($"value is not Null: {s3}");
+            console.print($"value is not Null: {s3}");
             }
         else
             {
-            console.println($"value is Null: {s2}");
+            console.print($"value is Null: {s2}");
             assert;
             }
 
@@ -504,7 +504,7 @@ module TestMisc
         s2 = foolCompiler(s2); // reintroduce possibility that s2 is Null
 
         s ?= s2;
-        console.println($"s={s}");
+        console.print($"s={s}");
 
         // this will assert (unless s2 is Null)
         // assert s2?.size>=0, False;
@@ -520,46 +520,46 @@ module TestMisc
 
     void testAssignOps()
         {
-        console.println("\n** testAssignOps()");
+        console.print("\n** testAssignOps()");
 
         Int? n = Null;
         n ?:= 4;
-        console.println("n=" + n + " (should be 4)");
+        console.print("n=" + n + " (should be 4)");
 
         private Int? pretendNullable(Int n) { return n; }
         n = pretendNullable(n);
 
         n ?:= 7;
-        console.println("n=" + n + " (should be 4)");
+        console.print("n=" + n + " (should be 4)");
 
         Boolean f1 = False;
         f1 &&= True;
-        console.println("f1=" + f1 + " (should be False)");
+        console.print("f1=" + f1 + " (should be False)");
 
         Boolean f2 = False;
         f2 ||= True;
-        console.println("f2=" + f2 + " (should be True)");
+        console.print("f2=" + f2 + " (should be True)");
 
         Boolean f3 = True;
         f3 &&= False;
-        console.println("f3=" + f3 + " (should be False)");
+        console.print("f3=" + f3 + " (should be False)");
 
         Boolean f4 = True;
         f4 ||= False;
-        console.println("f4=" + f4 + " (should be True)");
+        console.print("f4=" + f4 + " (should be True)");
 
         Boolean f5 = True;
         f5 &&= True;
-        console.println("f5=" + f5 + " (should be True)");
+        console.print("f5=" + f5 + " (should be True)");
 
         Boolean f6 = False;
         f6 ||= False;
-        console.println("f6=" + f6 + " (should be False)");
+        console.print("f6=" + f6 + " (should be False)");
         }
 
     void testBind()
         {
-        console.println("\n** testBind()");
+        console.print("\n** testBind()");
 
         foo(y="a", x=3);
 
@@ -582,12 +582,12 @@ module TestMisc
 
         private void foo(Int x = 0, String y = "")
             {
-            console.println($"foo: x={x}, y={y}");
+            console.print($"foo: x={x}, y={y}");
             }
 
         private void bar(Int x, Int y, Int z = 1)
             {
-            console.println($"bar: x={x}, y={y}, z={z}");
+            console.print($"bar: x={x}, y={y}, z={z}");
             }
         }
 
@@ -596,16 +596,16 @@ module TestMisc
         import ecstasy.collections.Hasher;
         import ecstasy.collections.NaturalHasher;
 
-        console.println("\n** testConstants()");
+        console.print("\n** testConstants()");
 
         IntLiteral lit = 42;
-        console.println("lit=" + lit);
+        console.print("lit=" + lit);
 
         Point point1 = new Point(0, 2);
-        console.println($"point1={point1} hypo={point1.hypo}");
+        console.print($"point1={point1} hypo={point1.hypo}");
 
         NamedPoint point2 = new NamedPoint("top-left", 1, 0);
-        console.println($"point2={point2} hypo={point2.hypo}");
+        console.print($"point2={point2} hypo={point2.hypo}");
 
         Hasher<Point>      hasherP = new NaturalHasher<Point>();
         Hasher<NamedPoint> hasherN = new NaturalHasher<NamedPoint>();
@@ -668,16 +668,16 @@ module TestMisc
 
     void testImport()
         {
-        console.println("\n** testImport()");
+        console.print("\n** testImport()");
 
         import Int as Q;
         Q x = 42;
-        console.println("x=" + x);
+        console.print("x=" + x);
         }
 
     void testRecursiveType()
         {
-        console.println("\n** testRecursiveType()");
+        console.print("\n** testRecursiveType()");
 
         typedef (Nullable | Int | List<Manifold>) as Manifold;
 
@@ -685,11 +685,11 @@ module TestMisc
         Manifold m2 = [m1];
         Manifold m3 = [m2];
 
-        console.println(m1);
-        console.println(m2);
-        console.println(m3);
+        console.print(m1);
+        console.print(m2);
+        console.print(m3);
 
-        console.println(report(m3));
+        console.print(report(m3));
 
         static String report(Manifold m)
             {
@@ -707,17 +707,17 @@ module TestMisc
 
     void testChild()
         {
-        console.println("\n** testChild()");
+        console.print("\n** testChild()");
 
         Order order = new Order("Order-17");
-        console.println("order=" + order);
+        console.print("order=" + order);
 
         Order.OrderLine line = order.addLine("item-5");
-        console.println("line=" + line);
+        console.print("line=" + line);
 
         order = new EnhancedOrder("Order-18");
         line = order.addLine("item-6");
-        console.println("line=" + line);
+        console.print("line=" + line);
         }
 
     class Order(String id)
@@ -762,7 +762,7 @@ module TestMisc
 
     void testSideEffects()
         {
-        console.println("** testSideEffects()");
+        console.print("** testSideEffects()");
 
         // tuple
             {
@@ -852,11 +852,11 @@ module TestMisc
 
     void countdown()
         {
-        console.println("Countdown!");
+        console.print("Countdown!");
         for (Int i : 10..1)
             {
-            console.println($"{i} ...");
+            console.print($"{i} ...");
             }
-        console.println("We have lift-off!");
+        console.print("We have lift-off!");
         }
     }

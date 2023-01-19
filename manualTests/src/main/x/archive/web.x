@@ -129,7 +129,7 @@ module TestWebApp
     void run()
         {
         @Inject Console console;
-        console.println("Testing Web App");
+        console.print("Testing Web App");
 
         // Create the web server, add the endpoints, and start.
         @Inject("server", opts=8080) web.HttpServer httpServer;
@@ -137,6 +137,6 @@ module TestWebApp
         server.addWebService(new UsersApi());
         server.start();
 
-        console.println("Started WebServer http://localhost:8080");
+        console.print("Started WebServer http://localhost:8080");
         }
     }

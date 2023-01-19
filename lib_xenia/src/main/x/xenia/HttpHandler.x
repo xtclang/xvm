@@ -98,7 +98,7 @@ service HttpHandler
 
                 // temporary
                 @Inject Console console;
-                console.println(e);
+                console.print(e);
                 }
             busy[index] = False;
             });

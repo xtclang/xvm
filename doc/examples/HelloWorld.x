@@ -3,6 +3,6 @@ module HelloWorld
     void run()
         {
         @Inject Console console;
-        console.println("Hello World!");
+        console.print("Hello World!");
         }
     }

@@ -39,13 +39,13 @@ module LogTest
         {
         @Inject Console console;
 
-        console.println(prefix);
+        console.print(prefix);
         Int size = 0;
         for (File file : dataDir.dirFor("logger").files())
             {
-            console.println($"\t-{file.size} {file.name}");
+            console.print($"\t-{file.size} {file.name}");
             size += file.size;
             }
-        console.println($"total size {size} bytes");
+        console.print($"total size {size} bytes");
         }
     }

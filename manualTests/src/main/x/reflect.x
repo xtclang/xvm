@@ -33,7 +33,7 @@ module TestReflection
 
     void testFuncType()
         {
-        console.println("\n** testFuncType");
+        console.print("\n** testFuncType");
 
         static Int bar(Int n, String s) {return 0;}
 
@@ -47,13 +47,13 @@ module TestReflection
 
     void testTypeStrings()
         {
-        console.println("\n** testTypeStrings");
+        console.print("\n** testTypeStrings");
 
         String[] names = [    "String",     "String?",     "String|Int",     "Ref",     "Ref<Int>",      "Var<Int?>",     "Int+Ref",     "Var-Ref"];
         Type[]   types = [Type<String>, Type<String?>, Type<String|Int>, Type<Ref>, Type<Ref<Int> >, Type<Var<Int?>>, Type<Int+Ref>, Type<Var-Ref>];
         Each: for (Type type : types)
             {
-            console.println($"{names[Each.count]}={type.DataType}");
+            console.print($"{names[Each.count]}={type.DataType}");
             }
         }
 
@@ -63,7 +63,7 @@ module TestReflection
         {
         import ecstasy.collections.HashMap;
 
-        console.println("\n** testInstanceOf");
+        console.print("\n** testInstanceOf");
 
         Object o = new HashMap<Int, String>();
         assert &o.instanceOf(Map<Int, String>);
@@ -74,7 +74,7 @@ module TestReflection
         {
         import ecstasy.fs.Directory;
 
-        console.println("\n** testMaskReveal");
+        console.print("\n** testMaskReveal");
 
         @Inject Directory tmpDir;
 
@@ -82,7 +82,7 @@ module TestReflection
         // but they must not be able to use that fact when in a different container;
         // since the tests for now run "in-container", the revealAs() would work
 
-        console.println("tmpDir=" + tmpDir.toString());
+        console.print("tmpDir=" + tmpDir.toString());
 
         assert !tmpDir.is(Stringable);
         assert !&tmpDir.instanceOf(Stringable);
@@ -94,14 +94,14 @@ module TestReflection
             }
         catch (Exception e)
             {
-            console.println($"expected - {e.text}");
+            console.print($"expected - {e.text}");
             }
 
         if (Stringable str := &tmpDir.revealAs(Stringable))
             {
             assert;
             }
-        console.println($"cannot be revealed: {&tmpDir.actualType}");
+        console.print($"cannot be revealed: {&tmpDir.actualType}");
 
         Point      p   = new Point(1, 1);
         Stringable str = &p.maskAs<Stringable>(Stringable);
@@ -114,29 +114,29 @@ module TestReflection
             }
         catch (Exception e)
             {
-            console.println($"expected - {e.text}");
+            console.print($"expected - {e.text}");
             }
 
         assert p := &str.revealAs(Point);
-        console.println($"p={p}");
+        console.print($"p={p}");
 
         assert (struct Point) p2 := &str.revealAs((struct Point));
-        console.println($"p2={p2}");
+        console.print($"p2={p2}");
         }
 
     void testForm()
         {
-        console.println("\n** testForm");
+        console.print("\n** testForm");
         Type[] types = [String, Object, Char, Clock, Const, Date, Appender];
         for (Type t : types)
             {
-            console.println($"t={t}, form={t.form}");
+            console.print($"t={t}, form={t.form}");
             }
         }
 
     void testProps()
         {
-        console.println("\n** testProps");
+        console.print("\n** testProps");
         const Point(Int x, Int y)
             {
             static Int    ONE = 1;
@@ -150,46 +150,46 @@ module TestReflection
             }
 
         Point point = new Point(123, 456);
-        console.println($"Point point={point}");
+        console.print($"Point point={point}");
 
         Type<Point> t = Point;
-        console.println($"Point type={t}");
+        console.print($"Point type={t}");
         for (Property<Point> prop : t.properties)
             {
-            console.println($"prop={prop} prop.get(point)={prop.get(point)}");
+            console.print($"prop={prop} prop.get(point)={prop.get(point)}");
 
             Ref impl = prop.of(point);
-            console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
+            console.print($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
 
             Type typeImpl = &impl.actualType;
             assert Property prop2 := typeImpl.fromProperty();
-            console.println($"impl.fromProp={prop2}");
+            console.print($"impl.fromProp={prop2}");
             }
 
         Ref impl = point.&x;
-        console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
+        console.print($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
 
         Type typeImpl = &impl.actualType;
         assert Property propX := typeImpl.fromProperty();
-        console.println($"impl.fromProp={propX} val={propX.get(point)}");
+        console.print($"impl.fromProp={propX} val={propX.get(point)}");
 
         for (Property prop : t.constants)
             {
-            console.println($"constant={prop}");
+            console.print($"constant={prop}");
             if (Object o := prop.isConstant())
                 {
-                console.println($"value={o}");
+                console.print($"value={o}");
                 }
             else
                 {
-                console.println("error!");
+                console.print("error!");
                 }
             }
         }
 
     void testMethods()
         {
-        console.println("\n** testMethods");
+        console.print("\n** testMethods");
 
         report(Inner.foo);
         report(Outer.foo);
@@ -218,31 +218,31 @@ module TestReflection
 
     void report(Method m)
         {
-        console.println($"method={m}; target={m.Target}");
+        console.print($"method={m}; target={m.Target}");
         }
 
     void testInvoke()
         {
-        console.println("\n** testInvoke");
+        console.print("\n** testInvoke");
 
         val fnSelf = testInvoke;
-        console.println($"func name={fnSelf.name}");
-        console.println($"func type={&fnSelf.actualType}");
+        console.print($"func name={fnSelf.name}");
+        console.print($"func type={&fnSelf.actualType}");
 
         void foo(Int x, String s)
             {
-            console.println($" -> in foo() x={x}, s={s}");
+            console.print($" -> in foo() x={x}, s={s}");
             }
 
-        val f2  = &foo(1, "hello");  console.println($"f2  = {f2 } -> {f2 ()}");
-        val f3  =  foo;              console.println($"f3  = {f3 } -> {f3 (1, "hello")}");
-        val f3b = &foo;              console.println($"f3b = {f3b} -> {f3b(1, "hello")}");
-        val f4  =  foo(_, _);        console.println($"f4  = {f4 } -> {f4 (1, "hello")}");
-        val f4b = &foo(_, _);        console.println($"f4b = {f4b} -> {f4b(1, "hello")}");
-        val f5  =  foo(1, _);        console.println($"f5  = {f5 } -> {f5 ("hello")}");
-        val f5b = &foo(1, _);        console.println($"f5b = {f5b} -> {f5b("hello")}");
-        val f6  =  foo(_, "hello");  console.println($"f6  = {f6 } -> {f6 (1)}");
-        val f6b = &foo(_, "hello");  console.println($"f6b = {f6b} -> {f6b(1)}");
+        val f2  = &foo(1, "hello");  console.print($"f2  = {f2 } -> {f2 ()}");
+        val f3  =  foo;              console.print($"f3  = {f3 } -> {f3 (1, "hello")}");
+        val f3b = &foo;              console.print($"f3b = {f3b} -> {f3b(1, "hello")}");
+        val f4  =  foo(_, _);        console.print($"f4  = {f4 } -> {f4 (1, "hello")}");
+        val f4b = &foo(_, _);        console.print($"f4b = {f4b} -> {f4b(1, "hello")}");
+        val f5  =  foo(1, _);        console.print($"f5  = {f5 } -> {f5 ("hello")}");
+        val f5b = &foo(1, _);        console.print($"f5b = {f5b} -> {f5b("hello")}");
+        val f6  =  foo(_, "hello");  console.print($"f6  = {f6 } -> {f6 (1)}");
+        val f6b = &foo(_, "hello");  console.print($"f6b = {f6b} -> {f6b(1)}");
 
         f2.invoke(Tuple:());
         f4.invoke((42, "goodbye"));
@@ -250,14 +250,14 @@ module TestReflection
 
     void testInvoke2()
         {
-        console.println("\n** testInvoke2");
+        console.print("\n** testInvoke2");
 
         const Point<Num extends Number>(Num x, Num y)
             {
             construct(Num x, Num y, String s)
                 {
                 construct Point(x, y);
-                console.println("hello: " + s);
+                console.print("hello: " + s);
                 }
 
             Num sum.get()
@@ -277,31 +277,31 @@ module TestReflection
             }
 
         Point<Int> p = new Point(3, 4, "world");
-        console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
+        console.print($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
         val t = &p.actualType.as(Type<Point<Int>>);
-        console.println($"Type={t}, foo={p.&foo()}");
-        console.println($"Type={t}");
+        console.print($"Type={t}, foo={p.&foo()}");
+        console.print($"Type={t}");
 
         Function[] funcs = t.functions;
-        console.println($"{funcs.size} functions:");
+        console.print($"{funcs.size} functions:");
         for (Function f : funcs)
             {
-            console.println($"func={f}");
+            console.print($"func={f}");
             }
 
-        console.println($"methods={t.methods}, properties={t.properties}");
-        console.println($"constructors={t.constructors}");
-        console.println($"multimethods={t.multimethods}");
+        console.print($"methods={t.methods}, properties={t.properties}");
+        console.print($"constructors={t.constructors}");
+        console.print($"multimethods={t.multimethods}");
 
         // TODO CP figure out how to make this work: val method = Point.foo;
         for (val method : t.methods)
             {
             if (method.name == "foo")
                 {
-                console.println($"method={method}");
+                console.print($"method={method}");
                 // TODO CP - splitting the multi-line before the "invoke" breaks the parser
-                console.println($|method.invoke()=\
+                console.print($|method.invoke()=\
                                  |{method.as(Method<Point<Int>, Tuple<>, Tuple<Int>>).invoke(p, Tuple:())[0]}
                                 );
                 }
@@ -317,17 +317,17 @@ module TestReflection
                     structure.x = Int:1;
                     structure.y = Int:2;
                     Tuple<Point<Int>> p2 = constructor.invoke(Tuple:(structure));
-                    console.println($"construct(structure)={p2[0]}");
+                    console.print($"construct(structure)={p2[0]}");
                     break;
 
                 case 2:
                     Tuple<Point<Int>> p2 = constructor.invoke((Int:1, Int:2));
-                    console.println($"construct(1,2)={p2[0]}");
+                    console.print($"construct(1,2)={p2[0]}");
                     break;
 
                 case 3:
                     Tuple<Point<Int>> p3 = constructor.invoke((Int:1, Int:2, "there"));
-                    console.println($"construct(1,2,\"there\")={p3[0]}");
+                    console.print($"construct(1,2,\"there\")={p3[0]}");
                     break;
                 }
             }
@@ -335,27 +335,27 @@ module TestReflection
 
     void testInvokeAsync()
         {
-        console.println("\n** testInvokeAsync");
+        console.print("\n** testInvokeAsync");
 
         DelayService svc = new DelayService();
 
         function Int (Duration) calc = svc.calcSomethingBig;
 
-        console.println("calling sync");
+        console.print("calling sync");
         Tuple resultS = calc.invoke(Tuple:(Duration.ofMillis(10)));
-        console.println(resultS[0]);
+        console.print(resultS[0]);
 
-        console.println("calling sync &Future.get()");
+        console.print("calling sync &Future.get()");
         @Future Tuple resultS2 = calc.invoke(Tuple:(Duration.ofMillis(10)));
-        console.println(&resultS2.get());
+        console.print(&resultS2.get());
 
-        console.println("calling async");
+        console.print("calling async");
         @Future Tuple resultA = calc.invoke(Tuple:(Duration.ofMillis(20)));
         &resultA.whenComplete((t, e) ->
             {
-            console.println($"complete {t?[0] : assert}");
+            console.print($"complete {t?[0] : assert}");
             });
-        console.println($"assigned={&resultA.assigned}, result={resultA[0]}, assigned={&resultA.assigned}");
+        console.print($"assigned={&resultA.assigned}, result={resultA[0]}, assigned={&resultA.assigned}");
 
         service DelayService
             {
@@ -364,7 +364,7 @@ module TestReflection
                 @Inject Clock clock;
                 @Future Int   result;
 
-                console.println($"delay {delay}");
+                console.print($"delay {delay}");
                 clock.schedule(delay, () -> {result=delay.milliseconds;});
                 return result;
                 }
@@ -376,10 +376,10 @@ module TestReflection
         import ecstasy.collections.ListMap;
         import ecstasy.reflect.Parameter;
 
-        console.println("\n** testBind");
+        console.print("\n** testBind");
 
         function void (Int, String) log =
-            (i, v) -> console.println($"[{i}] {v}");
+            (i, v) -> console.print($"[{i}] {v}");
 
         Parameter<Int>    param0 = log.params[0].as(Parameter<Int>);
         Parameter<String> param1 = log.params[1].as(Parameter<String>);
@@ -399,36 +399,36 @@ module TestReflection
 
     void testChildTypes()
         {
-        console.println("\n** testChildTypes");
+        console.print("\n** testChildTypes");
 
         Type[] types = [Nullable, Map, ecstasy.collections.HashMap, Type, Class];
         for (Type type : types)
             {
-            console.println($"{type} children: {type.childTypes}");
+            console.print($"{type} children: {type.childTypes}");
             }
         }
 
     void testTypeTemplate()
         {
-        console.println("\n** testTypeTemplate");
+        console.print("\n** testTypeTemplate");
 
         Type t = String;
         TypeTemplate tt = t.template;
-        console.println($"type={t}; template={tt}");
+        console.print($"type={t}; template={tt}");
         }
 
     void testEnum()
         {
-        console.println("\n** testEnum");
+        console.print("\n** testEnum");
 
-        console.println($"Boolean.count={Boolean.count}");
-        console.println($"Boolean.values={Boolean.values}");
-        console.println($"Boolean.names={Boolean.names}");
+        console.print($"Boolean.count={Boolean.count}");
+        console.print($"Boolean.values={Boolean.values}");
+        console.print($"Boolean.names={Boolean.names}");
         }
 
     void testStruct()
         {
-        console.println("\n** testStruct");
+        console.print("\n** testStruct");
 
         Point p = new Point(3,4);
         analyzeStructure(p);
@@ -446,7 +446,7 @@ module TestReflection
 
     void testClass()
         {
-        console.println("\n** testClass");
+        console.print("\n** testClass");
 
         Class c1 = Map;
         analyzeClass(c1);
@@ -473,29 +473,29 @@ module TestReflection
 
     void analyzeClass(Class clz)
         {
-        console.println($"Analyzing: {clz}");
+        console.print($"Analyzing: {clz}");
         }
 
 
     void analyzeStructure(Object o)
         {
-        console.println($"Analyzing: {o}");
+        console.print($"Analyzing: {o}");
 
         Type t = &o.actualType;
-        console.println($"Type={t}");
+        console.print($"Type={t}");
 
         if (Class c := t.fromClass())
             {
-            console.println($"Class={c}");
-            console.println($"PublicType={c.PublicType}");
-            console.println($"StructType={c.StructType}");
-            console.println($"formalTypes={c.formalTypes}");
+            console.print($"Class={c}");
+            console.print($"PublicType={c.PublicType}");
+            console.print($"StructType={c.StructType}");
+            console.print($"formalTypes={c.formalTypes}");
 
             Type ts = c.StructType;
             for (val prop : ts.properties)
                 {
                 // property must have a field, must not be injected, not constant/formal
-                console.println($|prop={prop.name}, constant={prop.isConstant()}, readOnly={prop.readOnly}
+                console.print($|prop={prop.name}, constant={prop.isConstant()}, readOnly={prop.readOnly}
                                  |     hasUnreachableSetter={prop.hasUnreachableSetter}, formal={prop.formal}
                                  |     hasField={prop.hasField}, injected={prop.injected}, lazy={prop.lazy}
                                  |     atomic={prop.atomic}, abstract={prop.abstract},
@@ -505,7 +505,7 @@ module TestReflection
                 // - must be assigned
                 // - actual type cannot be Service
                 val ref = prop.of(o);
-                console.println($|     assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
+                console.print($|     assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
                                  |     isService={ref.isService}, isConst={ref.isConst}
                                  |     isImmutable={ref.isImmutable}, hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
                                );
@@ -514,23 +514,23 @@ module TestReflection
             if (val s := &o.revealAs(Struct))
                 {
                 Object clone = c.instantiate(s);
-                console.println($"clone={clone}");
+                console.print($"clone={clone}");
                 }
             }
         }
 
     void testTypeSystem()
         {
-        console.println("\n** testTypeSystem");
+        console.print("\n** testTypeSystem");
 
         TypeSystem ts = this:service.typeSystem;
-        console.println($"current TypeSystem={ts}");
-        console.println($"modules              : {ts.modules              }");
-        console.println($"sharedModules        : {ts.sharedModules        }");
-        console.println($"moduleBySimpleName   : {ts.moduleBySimpleName   }");
-        console.println($"moduleByQualifiedName: {ts.moduleByQualifiedName}");
+        console.print($"current TypeSystem={ts}");
+        console.print($"modules              : {ts.modules              }");
+        console.print($"sharedModules        : {ts.sharedModules        }");
+        console.print($"moduleBySimpleName   : {ts.moduleBySimpleName   }");
+        console.print($"moduleByQualifiedName: {ts.moduleByQualifiedName}");
 
-        console.println("modules:");
+        console.print("modules:");
         for (Module _module : ts.modules)
             {
             displayModule(_module);
@@ -563,34 +563,34 @@ module TestReflection
                 {
                 if (Class clz := ts.classForName(name))
                     {
-                    console.println($"class for \"{name}\"={clz}");
+                    console.print($"class for \"{name}\"={clz}");
                     }
                 else
                     {
-                    console.println($"no such class: \"{name}\"");
+                    console.print($"no such class: \"{name}\"");
                     }
                 }
             catch (Exception e)
                 {
-                console.println($"exception occurred lookup up class \"{name}\"; exception={e}");
+                console.print($"exception occurred lookup up class \"{name}\"; exception={e}");
                 }
             }
         }
 
     void displayModule(Module _module)
         {
-        console.println($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\")");
+        console.print($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\")");
         val deps = _module.modulesByPath;
         if (!deps.empty)
             {
-            console.println($" - dependencies:");
+            console.print($" - dependencies:");
             for ((String path, Module dep) : deps)
                 {
-                console.println($"    - \"{path}\" => \"{dep.qualifiedName}\"");
+                console.print($"    - \"{path}\" => \"{dep.qualifiedName}\"");
                 }
             }
 
-        console.println(" - contents:");
+        console.print(" - contents:");
         displayPackage(_module, "   ");
         }
 
@@ -599,7 +599,7 @@ module TestReflection
         prefix += " |-";
         for (Class child : pkg.classes)
             {
-            console.println($"{prefix} {child.name}");
+            console.print($"{prefix} {child.name}");
             if (child.implements(Package), Object instance := child.isSingleton())
                 {
                 displayPackage(instance.as(Package), prefix);
@@ -616,13 +616,13 @@ module TestReflection
 
     void testTypes()
         {
-        console.println("\n** testTypes");
+        console.print("\n** testTypes");
 
         {
         Type t1 = Map;
         Type t2 = Int;
         Type t3 = t1.parameterize([t2]);
-        console.println($"{t1} < {t2} > = {t3}");
+        console.print($"{t1} < {t2} > = {t3}");
         assert t3 == Map<Int>;
         }
 
@@ -631,7 +631,7 @@ module TestReflection
         Type t2 = String;
         Type t3 = Int;
         Type t4 = t1.parameterize([t2, t3]);
-        console.println($"{t1} < {t2}, {t3} > = {t4}");
+        console.print($"{t1} < {t2}, {t3} > = {t4}");
         assert t4 == Map<String, Int>;
         }
 
@@ -639,7 +639,7 @@ module TestReflection
         Type t1 = Map;
         Type t2 = Hashable;
         Type t3 = t1 + t2;
-        console.println($"{t1} + {t2} = {t3}");
+        console.print($"{t1} + {t2} = {t3}");
         assert t3 == Map + Hashable;
         }
 
@@ -647,7 +647,7 @@ module TestReflection
         Type t1 = Map;
         Type t2 = Set;
         Type t3 = t1 | t2;
-        console.println($"{t1} | {t2} = {t3}");
+        console.print($"{t1} | {t2} = {t3}");
         assert t3 == Map | Set;
         }
 
@@ -655,14 +655,14 @@ module TestReflection
         Type t1 = HashMap;
         Type t2 = Map;
         Type t3 = t1 - t2;
-        console.println($"{t1} - {t2} = {t3}");
+        console.print($"{t1} - {t2} = {t3}");
         assert t3 == HashMap - Map;
         }
 
         {
         val container = new Container<String,Int,Char>();
         val containee = container.new Containee<Char,String,Map<Int, String>>();
-        console.println($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.actualType}");
+        console.print($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.actualType}");
         }
         }
     }

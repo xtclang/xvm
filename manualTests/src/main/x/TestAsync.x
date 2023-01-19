@@ -17,7 +17,7 @@ module TestAsync
             {
             for (Int i : 1 .. count)
                 {
-                console.println($"Async:{id} #{i}");
+                console.print($"Async:{id} #{i}");
                 }
             }
         }

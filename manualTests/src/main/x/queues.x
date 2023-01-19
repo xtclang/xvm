@@ -14,14 +14,14 @@ module TestQueues
 
     void testSimple()
         {
-        console.println("\n** testSimple()");
+        console.print("\n** testSimple()");
 
         ArrayDeque<String> deque = new ArrayDeque();
         deque.add("hello");
         deque.add("world");
         while (String s := deque.next())
             {
-            console.println("next()=" + s);
+            console.print("next()=" + s);
             }
         }
     }

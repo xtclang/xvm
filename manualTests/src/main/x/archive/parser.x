@@ -5,7 +5,7 @@ module TestParser
 
     void run()
         {
-        console.println("\n*** TestParser ***\n");
+        console.print("\n*** TestParser ***\n");
         testLexer();
         testParser();
         testTypeSystem();
@@ -13,7 +13,7 @@ module TestParser
 
     void testLexer()
         {
-        console.println("\n** Lexer:");
+        console.print("\n** Lexer:");
         import ecstasy.lang.src.Lexer;
         import ecstasy.lang.src.Lexer.Token;
         String s = \|Date:2020-12-21 /* date */
@@ -26,14 +26,14 @@ module TestParser
         Lexer lexer = new Lexer(s);
         Loop: for (Token t : lexer)
             {
-            console.println($"[{Loop.count}] token={t.toDebugString()}");
+            console.print($"[{Loop.count}] token={t.toDebugString()}");
             }
         }
 
     void testParser()
         {
         import ecstasy.lang.src.Parser;
-        console.println("\n** Type parser:");
+        console.print("\n** Type parser:");
         String[] tests =
             [
             "immutable a.b!<c.d>",
@@ -68,12 +68,12 @@ module TestParser
                 String parsed = type.toString();
                 if (test != parsed)
                     {
-                    console.println($"serious errs: {parser.errs.seriousCount}, severity={parser.errs.severity}, eof={parser.eof}, {test.quoted()}={parsed}");
+                    console.print($"serious errs: {parser.errs.seriousCount}, severity={parser.errs.severity}, eof={parser.eof}, {test.quoted()}={parsed}");
                     }
                 }
             catch (Exception e)
                 {
-                console.println($"Exception: {e} for {test.quoted()}");
+                console.print($"Exception: {e} for {test.quoted()}");
                 }
             }
         }
@@ -86,10 +86,10 @@ module TestParser
 
     void testTypeSystem()
         {
-        console.println("\n** TypeSystem:");
+        console.print("\n** TypeSystem:");
 
         TypeSystem typeSystem = this:service.typeSystem;
-        console.println($"TypeSystem={typeSystem}");
+        console.print($"TypeSystem={typeSystem}");
 
         String[] tests =
             [
@@ -109,12 +109,12 @@ module TestParser
                 {
                 if (test != clz.toString())
                     {
-                    console.println($"class for {test.quoted()}={clz}");
+                    console.print($"class for {test.quoted()}={clz}");
                     }
                 }
             else
                 {
-                console.println($"no class for {test.quoted()}");
+                console.print($"no class for {test.quoted()}");
                 }
             }
         }

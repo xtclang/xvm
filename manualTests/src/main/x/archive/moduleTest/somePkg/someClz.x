@@ -3,7 +3,7 @@ const someClz<SomeType>
     construct()
         {
         @Inject Console console;
-        console.println($"in {this:class}");
+        console.print($"in {this:class}");
         }
     finally
         {

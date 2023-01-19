@@ -4,7 +4,7 @@ module TestLambda
 
     void run()
         {
-        console.println("Lambda tests:");
+        console.print("Lambda tests:");
 
         testVoid();
         testBasic();
@@ -17,36 +17,36 @@ module TestLambda
 
     void testVoid()
         {
-        console.println("\n** testVoid()");
+        console.print("\n** testVoid()");
 
-        function void() f = () -> { console.println("in the lambda!"); };
+        function void() f = () -> { console.print("in the lambda!"); };
 
         f();
         }
 
     void testBasic()
         {
-        console.println("\n** testBasic()");
+        console.print("\n** testBasic()");
 
         function Int() f = () -> 4;
-        console.println($"f={f};\nf()={f()}");
+        console.print($"f={f};\nf()={f()}");
         }
 
     void testEffectivelyFinalCapture()
         {
-        console.println("\n** testEffectivelyFinalCapture()");
+        console.print("\n** testEffectivelyFinalCapture()");
 
         Int i = 4;
         function Int() f = () -> i;
-        console.println("result=" + f());
+        console.print("result=" + f());
         }
 
     void testThisCapture()
         {
-        console.println("\n** testThisCapture()");
+        console.print("\n** testThisCapture()");
 
         function String() f = () -> foo();
-        console.println("result=" + f());
+        console.print("result=" + f());
         }
     String foo()
         {
@@ -55,47 +55,47 @@ module TestLambda
 
     void testRefCapture()
         {
-        console.println("\n** testRefCapture()");
+        console.print("\n** testRefCapture()");
 
         Int i = 0;
         do
             {
             function Int() f = () -> i;
-            console.println("result=" + f());
+            console.print("result=" + f());
             }
         while (i++ < 5);
         }
 
     void testVarCapture()
         {
-        console.println("\n** testVarCapture()");
+        console.print("\n** testVarCapture()");
 
         Int i = 0;
         while (i < 5)
             {
             function Int() f = () -> ++i;
-            console.println("result=" + f());
-            // console.println("i=" + i + ", result=" + f() + ", i=" + i);
+            console.print("result=" + f());
+            // console.print("i=" + i + ", result=" + f() + ", i=" + i);
             }
 
         // test for the capture of an unassigned variable
         Int j;
         function void() f2 = () -> {j = ++i;};
         f2();
-        console.println("j=" + &j.get());
+        console.print("j=" + &j.get());
         }
 
     void testComplexCapture()
         {
-        console.println("\n** testComplexCapture()");
+        console.print("\n** testComplexCapture()");
 
         Int i = 0;
         while (i < 5)
             {
             function Int() f1 = () -> i;
-            console.println("result=" + f1());    // initially would appear to be "Int", but must be "Ref<Int>"
+            console.print("result=" + f1());    // initially would appear to be "Int", but must be "Ref<Int>"
             function Int() f2 = () -> ++i;
-            console.println("result=" + f2());
+            console.print("result=" + f2());
             }
         }
     }

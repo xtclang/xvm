@@ -59,12 +59,12 @@ module AddressBookApp
 
         using (val tx = dbc.createTransaction())
             {
-            console.println(dbc.title.get());
+            console.print(dbc.title.get());
             for (Contact contact : contacts.values)
                 {
-                console.println(contact);
+                console.print(contact);
                 }
-            console.println($"Count: {dbc.requestCount.get()}");
+            console.print($"Count: {dbc.requestCount.get()}");
             }
         }
     }

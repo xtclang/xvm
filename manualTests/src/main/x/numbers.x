@@ -19,10 +19,10 @@ module TestNumbers
 
     void testUInt64()
         {
-        console.println("\n** testUInt()");
+        console.print("\n** testUInt()");
 
         UInt64 n1 = 42;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         Bit[] bits = n1.toUInt64().toBitArray();
         UInt64 n11  = new UInt64(bits);
@@ -33,13 +33,13 @@ module TestNumbers
         assert n12 == n1;
 
         UInt64 n2 = 0xFFFF_FFFF_FFFF_FFFF;
-        console.println("n2=" + n2);
-        console.println("-1=" + (--n2));
-        console.println("+1=" + (++n2));
+        console.print("n2=" + n2);
+        console.print("-1=" + (--n2));
+        console.print("+1=" + (++n2));
 
         UInt64 d3 = n2 / 1000;
-        console.println("d3=" + d3);
-        console.println("n3=" + (d3*1000 + n2 % 1000));
+        console.print("d3=" + d3);
+        console.print("n3=" + (d3*1000 + n2 % 1000));
 
         try
             {
@@ -65,19 +65,19 @@ module TestNumbers
 
     void testByte()
         {
-        console.println("\n** testByte()");
+        console.print("\n** testByte()");
 
         Byte n1 = 42;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         Byte n2 = 0xFF;
-        console.println("n2=" + n2);
-        console.println("-1=" + (--n2));
-        console.println("+1=" + (++n2));
+        console.print("n2=" + n2);
+        console.print("-1=" + (--n2));
+        console.print("+1=" + (++n2));
 
         Byte d3 = n2 / 10;
-        console.println("d3=" + d3);
-        console.println("n3=" + (d3*10 + n2 % 10));
+        console.print("d3=" + d3);
+        console.print("n3=" + (d3*10 + n2 % 10));
 
         try
             {
@@ -104,30 +104,30 @@ module TestNumbers
 
     void testInt128()
         {
-        console.println("\n** testInt128()");
+        console.print("\n** testInt128()");
 
         Int128 n1 = 42;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         Int128 n2 = 0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
-        console.println("n2=" + n2);
-        console.println("-1=" + (--n2));
-        console.println("+1=" + (++n2));
+        console.print("n2=" + n2);
+        console.print("-1=" + (--n2));
+        console.print("+1=" + (++n2));
 
         Int128 d3 = n2 / 1000;
-        console.println("d3=" + d3);
-        console.println("n3=" + (d3*1000 + n2 % 1000));
+        console.print("d3=" + d3);
+        console.print("n3=" + (d3*1000 + n2 % 1000));
 
-        console.println("-------");
+        console.print("-------");
 
         Int128 n4 = -n2 - 1;
-        console.println("n4=" + n4);
-        console.println("+1=" + (++n4));
-        console.println("-1=" + (--n4));
+        console.print("n4=" + n4);
+        console.print("+1=" + (++n4));
+        console.print("-1=" + (--n4));
 
         Int128 d4 = n4 / 1000;
-        console.println("d4=" + d4);
-        console.println("n4=" + (d4*1000 + n4 % 1000));
+        console.print("d4=" + d4);
+        console.print("n4=" + (d4*1000 + n4 % 1000));
 
         try
             {
@@ -141,19 +141,19 @@ module TestNumbers
 
     void testUInt128()
         {
-        console.println("\n** testUInt128()");
+        console.print("\n** testUInt128()");
 
         UInt128 n1 = 42;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         UInt128 n2 = 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
-        console.println("n2=" + n2);
-        console.println("-1=" + (--n2));
-        console.println("+1=" + (++n2));
+        console.print("n2=" + n2);
+        console.print("-1=" + (--n2));
+        console.print("+1=" + (++n2));
 
         UInt128 d3 = n2 / 1000;
-        console.println("d3=" + d3);
-        console.println("n3=" + (d3*1000 + n2 % 1000));
+        console.print("d3=" + d3);
+        console.print("n3=" + (d3*1000 + n2 % 1000));
 
         try
             {
@@ -167,10 +167,10 @@ module TestNumbers
 
     void testFloat64()
         {
-        console.println("\n** testFloat64()");
+        console.print("\n** testFloat64()");
 
         Float64 n1 = 4.2;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         Byte[]  bytes = n1.toByteArray();
         Float64 n11   = new Float64(bytes);
@@ -181,35 +181,35 @@ module TestNumbers
         assert n12 == n1;
 
         Float64 n2 = n1 + 1;
-        console.println("-1=" + n2);
-        console.println("+1=" + (n2 - 1));
+        console.print("-1=" + n2);
+        console.print("+1=" + (n2 - 1));
 
         Float64 n3 = n1*10;
-        console.println("*10=" + n3);
-        console.println("/10=" + (n3 / 10));
+        console.print("*10=" + n3);
+        console.print("/10=" + (n3 / 10));
 
-        console.println("PI=" + FPNumber.PI);
+        console.print("PI=" + FPNumber.PI);
         Float64 pi64 = FPNumber.PI;
-        console.println("pi64=" + pi64);
+        console.print("pi64=" + pi64);
 
         // see http://www.cplusplus.com/reference/cmath/round/
         Float64[] floats = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
 
-        console.println();
-        console.println("value\tround\tfloor\tceil\ttoZero");
-        console.println("-----\t-----\t-----\t----\t-----");
+        console.print();
+        console.print("value\tround\tfloor\tceil\ttoZero");
+        console.print("-----\t-----\t-----\t----\t-----");
         for (Float64 f : floats)
             {
-            console.println($"{f},\t{f.round()},\t{f.floor()},\t{f.ceil()},\t{f.round(TowardZero)}");
+            console.print($"{f},\t{f.round()},\t{f.floor()},\t{f.ceil()},\t{f.round(TowardZero)}");
             }
         }
 
     void testFloat32()
         {
-        console.println("\n** testFloat32()");
+        console.print("\n** testFloat32()");
 
         Float32 n1 = 4.2;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         Byte[]  bytes = n1.toByteArray();
         Float32 n11   = new Float32(bytes);
@@ -220,15 +220,15 @@ module TestNumbers
         assert n12 == n1;
 
         Float32 pi32 = FPNumber.PI;
-        console.println("pi32=" + pi32);
+        console.print("pi32=" + pi32);
         }
 
     void testFloat16()
         {
-        console.println("\n** testFloat16()");
+        console.print("\n** testFloat16()");
 
         Float16 n1 = 4.2;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         Byte[]  bytes = n1.toByteArray();
         Float16 n11   = new Float16(bytes);
@@ -239,15 +239,15 @@ module TestNumbers
         assert n12 == n1;
 
         Float16 pi16 = FPNumber.PI;
-        console.println("pi16=" + pi16);
+        console.print("pi16=" + pi16);
         }
 
     void testDec64()
         {
-        console.println("\n** testDec64()");
+        console.print("\n** testDec64()");
 
         Dec64 n1 = 4.2;
-        console.println("n1=" + n1);
+        console.print("n1=" + n1);
 
         Byte[] bytes = n1.toByteArray();
         Dec64  n11   = new Dec64(bytes);
@@ -258,49 +258,49 @@ module TestNumbers
         assert n12 == n1;
 
         Dec64 n2 = n1 + 1;
-        console.println("-1=" + n2);
-        console.println("+1=" + (n2 - 1));
+        console.print("-1=" + n2);
+        console.print("+1=" + (n2 - 1));
 
         Dec64 n3 = n1*10;
-        console.println("*10=" + n3);
-        console.println("/10=" + (n3 / 10));
+        console.print("*10=" + n3);
+        console.print("/10=" + (n3 / 10));
 
-        console.println("PI=" + FPNumber.PI);
+        console.print("PI=" + FPNumber.PI);
         Dec64 pi64 = FPNumber.PI;
-        console.println("pi64=" + pi64);
+        console.print("pi64=" + pi64);
 
         // see http://www.cplusplus.com/reference/cmath/round/
         Dec64[] numbers = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
 
-        console.println();
-        console.println("value\tround\tfloor\tceil\ttoZero");
-        console.println("-----\t-----\t-----\t----\t-----");
+        console.print();
+        console.print("value\tround\tfloor\tceil\ttoZero");
+        console.print("-----\t-----\t-----\t----\t-----");
         for (Dec64 d : numbers)
             {
-            console.println($"{d},\t{d.round()},\t{d.floor()},\t{d.ceil()},\t{d.round(TowardZero)}");
+            console.print($"{d},\t{d.round()},\t{d.floor()},\t{d.ceil()},\t{d.round(TowardZero)}");
             }
         }
 
     void testInfinity()
         {
-        console.println("\n** testInfinity()");
+        console.print("\n** testInfinity()");
 
         Float64 f = -123456789.987654321;
         Dec64   d = f.toDec64();
         while (True)
             {
-            console.println($"f={f} d={d}");
+            console.print($"f={f} d={d}");
             if (f.infinity)
                 {
-                console.println($"++: {f + f)}\t{d + d}");
-                console.println($"--: {f - f)}\t{d - d}");
-                console.println($"**: {f * f)}\t{d * d}");
-                console.println($"//: {f / f)}\t{d / d}");
-                console.println($"+1: {f + 1)}\t{d + 1}");
-                console.println($"-1: {f - 1)}\t{d - 1}");
-                console.println($"1/: {1 / f)}\t{1 / d}");
+                console.print($"++: {f + f)}\t{d + d}");
+                console.print($"--: {f - f)}\t{d - d}");
+                console.print($"**: {f * f)}\t{d * d}");
+                console.print($"//: {f / f)}\t{d / d}");
+                console.print($"+1: {f + 1)}\t{d + 1}");
+                console.print($"-1: {f - 1)}\t{d - 1}");
+                console.print($"1/: {1 / f)}\t{1 / d}");
 
-                console.println($"ln: {f.log()}\t{d.log()}");
+                console.print($"ln: {f.log()}\t{d.log()}");
                 break;
                 }
 
@@ -319,9 +319,9 @@ module TestNumbers
 
         Int     n = 42;
         Float64 f = n.toFloat64();
-        console.println($"int={n}, float64={f}");
+        console.print($"int={n}, float64={f}");
         function Float64(Int) convert2 = Number.converterFor(Int, Float64);
-        console.println($"using converter: int={n}, float64={convert2(n)}");
+        console.print($"using converter: int={n}, float64={convert2(n)}");
 
         Int64[] ints  = [1, 2, 3];
         Bit[]   bits  = ints.asBitArray();
@@ -354,7 +354,7 @@ module TestNumbers
         {
         import agg.*;
 
-        console.println("\n** testAggregator()");
+        console.print("\n** testAggregator()");
 
         Sum<Int>             sum = new Sum();
         Average<Int, Double> avg = new Average();
@@ -390,7 +390,7 @@ module TestNumbers
 
             &pendingSum.handle(e ->
                     {
-                    console.println($"exception during partition {partition.id} processing: {e}");
+                    console.print($"exception during partition {partition.id} processing: {e}");
                     return 0;
                     })
                 .passTo(partial ->
@@ -398,13 +398,13 @@ module TestNumbers
                     finishSum.add(partial);
                     if (--remainSum <= 0)
                         {
-                        console.println($"sum result={sum.finalAggregator.reduce(finishSum)}");
+                        console.print($"sum result={sum.finalAggregator.reduce(finishSum)}");
                         }
                     });
 
             &pendingAvg.handle(e ->
                     {
-                    console.println($"exception during partition {partition.id} processing: {e}");
+                    console.print($"exception during partition {partition.id} processing: {e}");
                     return avg.elementAggregator.reduce(avg.elementAggregator.init());
                     })
                 .passTo(partial ->
@@ -412,13 +412,13 @@ module TestNumbers
                     finishAvg.add(partial);
                     if (--remainAvg <= 0)
                         {
-                        console.println($"avg result={avg.finalAggregator.reduce(finishAvg)}");
+                        console.print($"avg result={avg.finalAggregator.reduce(finishAvg)}");
                         }
                     });
 
             &pendingMin.handle(e ->
                     {
-                    console.println($"exception during partition {partition.id} processing: {e}");
+                    console.print($"exception during partition {partition.id} processing: {e}");
                     return min.elementAggregator.reduce(min.elementAggregator.init());
                     })
                 .passTo(partial ->
@@ -426,13 +426,13 @@ module TestNumbers
                     finishMin.add(partial);
                     if (--remainMin <= 0)
                         {
-                        console.println($"min result={min.finalAggregator.reduce(finishMin)}");
+                        console.print($"min result={min.finalAggregator.reduce(finishMin)}");
                         }
                     });
 
             &pendingMax.handle(e ->
                     {
-                    console.println($"exception during partition {partition.id} processing: {e}");
+                    console.print($"exception during partition {partition.id} processing: {e}");
                     return max.elementAggregator.reduce(max.elementAggregator.init());
                     })
                 .passTo(partial ->
@@ -440,13 +440,13 @@ module TestNumbers
                     finishMax.add(partial);
                     if (--remainMax <= 0)
                         {
-                        console.println($"max result={max.finalAggregator.reduce(finishMax)}");
+                        console.print($"max result={max.finalAggregator.reduce(finishMax)}");
                         }
                     });
 
             &pendingMMx.handle(e ->
                     {
-                    console.println($"exception during partition {partition.id} processing: {e}");
+                    console.print($"exception during partition {partition.id} processing: {e}");
                     return mmx.elementAggregator.reduce(mmx.elementAggregator.init());
                     })
                 .passTo(partial ->
@@ -454,7 +454,7 @@ module TestNumbers
                     finishMMx.add(partial);
                     if (--remainMMx <= 0)
                         {
-                        console.println($"min/max result={mmx.finalAggregator.reduce(finishMMx)}");
+                        console.print($"min/max result={mmx.finalAggregator.reduce(finishMMx)}");
                         }
                     });
             }

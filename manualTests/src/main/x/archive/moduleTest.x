@@ -3,7 +3,7 @@ module moduleTest
     @Inject Console console;
     void run()
         {
-        console.println($"in {this:module}");
+        console.print($"in {this:module}");
         new somePkg.someClz<Int>();
         }
     }

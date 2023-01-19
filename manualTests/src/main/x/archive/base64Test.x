@@ -9,13 +9,13 @@ module base64Test
         {
             {
             Base64Format fmt = new Base64Format();
-            console.println($"format={fmt.name}");
+            console.print($"format={fmt.name}");
             Byte[] orig  = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
-            console.println($"orig={orig}");
+            console.print($"orig={orig}");
             String text  = fmt.encode(orig);
-            console.println($"text={text}");
+            console.print($"text={text}");
             Byte[] bytes = fmt.decode(text);
-            console.println($"bytes={bytes}");
+            console.print($"bytes={bytes}");
             }
 
         @Inject Random rnd;
@@ -36,7 +36,7 @@ module base64Test
                 }
             catch (Exception e)
                 {
-                console.println($"failed: encode({orig}, {fill}, {linelen})");
+                console.print($"failed: encode({orig}, {fill}, {linelen})");
                 throw e;
                 }
 
@@ -47,8 +47,8 @@ module base64Test
                 }
             catch (Exception e)
                 {
-                console.println($"failed: decode({text})");
-                console.println($"(original: {orig})");
+                console.print($"failed: decode({text})");
+                console.print($"(original: {orig})");
                 throw e;
                 }
 
