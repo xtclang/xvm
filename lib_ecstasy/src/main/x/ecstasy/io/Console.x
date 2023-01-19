@@ -15,7 +15,8 @@ interface Console
     /**
      * Read a line of user input from the console.
      *
-     * @param echo  (optional) flag indicating whether the input should be shown by the console
+     * @param suppressEcho  (optional) pass True to prevent the automatic display of typed input to
+     *                      the console as it is typed
      *
      * @return the input string
      */
