@@ -339,7 +339,7 @@ public class FileExpression
 
             case "File" ->
                 pool.ensureFileConstant(file.getName(),
-                    createdTime(pool, file), modifiedTime(pool, file), new byte[0]);
+                    createdTime(pool, file), modifiedTime(pool, file), Handy.EMPTY_BYTE_ARRAY);
 
             case "Path" ->
                 pool.ensureLiteralConstant(Constant.Format.Path, "/");
