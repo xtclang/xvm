@@ -30,8 +30,12 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509KeyManager;
+import javax.net.ssl.X509TrustManager;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -129,21 +133,54 @@ public class xRTKeyStore
 
             keyStore.load(in, achPwd);
 
-            KeyManagerFactory keyManager = KeyManagerFactory.getInstance("SunX509");
-            keyManager.init(keyStore, achPwd);
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
+            keyManagerFactory.init(keyStore, achPwd);
 
-            TrustManagerFactory trustManager = TrustManagerFactory.getInstance("SunX509");
-            trustManager.init(keyStore);
+            X509KeyManager keyManager = null;
+            for (KeyManager mgr : keyManagerFactory.getKeyManagers())
+                {
+                if (mgr instanceof X509KeyManager m)
+                    {
+                    keyManager = m;
+                    break;
+                    }
+                }
+            if (keyManager == null)
+                {
+                return new DeferredCallHandle(
+                        xException.makeHandle(frame, "No X509KeyManager available"));
+                }
+
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("SunX509");
+            trustManagerFactory.init(keyStore);
+
+            X509TrustManager trustManager = null;
+            for (TrustManager mgr : trustManagerFactory.getTrustManagers())
+                {
+                if (mgr instanceof X509TrustManager m)
+                    {
+                    trustManager = m;
+                    break;
+                    }
+                }
+            if (trustManager == null)
+                {
+                return new DeferredCallHandle(
+                        xException.makeHandle(frame, "No X509TrustManager available"));
+                }
+
 
             ServiceContext  context  = f_container.createServiceContext("KeyStore");
             TypeComposition clzStore = getCanonicalClass(f_container);
-            ServiceHandle   hService = new KeyStoreHandle(clzStore, context, keyStore, achPwd,
+            ServiceHandle   hService = new KeyStoreHandle(clzStore, context, keyStore,
                                             keyManager, trustManager);
             context.setService(hService);
 
             MethodStructure ctor = f_struct.findConstructor(); // default constructor
             assert ctor != null;
 
+            // this is a bit of a hack; since the injected service ic constructed natively, we're
+            // calling the default constructor as a regular method, skipping initializers/finalizers
             CallChain chain = clzStore.getMethodCallChain(ctor.getIdentityConstant().getSignature());
             switch (invoke1(frame, chain, hService, Utils.OBJECTS_NONE, Op.A_IGNORE))
                 {
@@ -410,7 +447,7 @@ public class xRTKeyStore
             {
             if (keyStore.isKeyEntry(sName))
                 {
-                Key key = keyStore.getKey(hName.getStringValue(), hStore.f_achPwd);
+                Key key = hStore.f_keyManager.getPrivateKey(hName.getStringValue());
                 if (!(key instanceof RSAKey rsaKey && key instanceof PrivateKey privateKey))
                     {
                     return frame.raiseException(xException.makeHandle(frame,
@@ -431,7 +468,7 @@ public class xRTKeyStore
 
             if (keyStore.isCertificateEntry(sName))
                 {
-                Certificate cert = hStore.f_keyStore.getCertificate(hName.getStringValue());
+                Certificate cert = keyStore.getCertificate(hName.getStringValue());
 
                 PublicKey publicKey  = cert.getPublicKey();
                 String    sAlgorithm = publicKey.getAlgorithm();
@@ -465,13 +502,11 @@ public class xRTKeyStore
                 extends ServiceHandle
         {
         public KeyStoreHandle(TypeComposition clz, ServiceContext ctx, KeyStore keyStore,
-                              char[] achPwd, KeyManagerFactory keyManager,
-                              TrustManagerFactory trustManager)
+                              X509KeyManager keyManager, X509TrustManager trustManager)
             {
             super(clz, ctx);
 
             f_keyStore     = keyStore;
-            f_achPwd       = achPwd;
             f_keyManager   = keyManager;
             f_trustManager = trustManager;
             }
@@ -482,19 +517,14 @@ public class xRTKeyStore
         public final KeyStore f_keyStore;
 
         /**
-         * The underlying {@link KeyManagerFactory}.
+         * The underlying {@link KeyManager}.
          */
-        public final KeyManagerFactory f_keyManager;
+        public final X509KeyManager f_keyManager;
 
         /**
-         * The underlying {@link KeyManagerFactory}.
+         * The underlying {@link TrustManager}.
          */
-        public final TrustManagerFactory f_trustManager;
-
-        /**
-         * The keystore password.
-         */
-        private final char[] f_achPwd;
+        public final X509TrustManager f_trustManager;
         }
 
     /**

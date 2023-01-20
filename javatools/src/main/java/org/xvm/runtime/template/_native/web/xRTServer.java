@@ -13,6 +13,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
+import java.net.Socket;
+
+import java.security.GeneralSecurityException;
+import java.security.Principal;
+import java.security.PrivateKey;
+
+import java.security.cert.X509Certificate;
 
 import java.util.List;
 
@@ -21,10 +28,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509KeyManager;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -238,16 +247,16 @@ public class xRTServer
         KeyStoreHandle hKeystore  = (KeyStoreHandle) ahArg[1];
         int            nHttpPort  = ahArg[2] instanceof JavaLong hPort ? (int) hPort.getValue() : 80;
         int            nHttpsPort = ahArg[3] instanceof JavaLong hPort ? (int) hPort.getValue() : 443;
-
+        String         sAlias     = null; // TODO add to the configure API
         try
             {
             HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sHost, nHttpPort));
             HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sHost, nHttpsPort),
-                                                            hKeystore);
+                                                            hKeystore, sAlias);
             hServer.configure(httpServer, httpsServer);
             return Op.R_NEXT;
             }
-        catch (Exception e)
+        catch (IOException | GeneralSecurityException e)
             {
             return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
@@ -259,14 +268,28 @@ public class xRTServer
         return HttpServer.create(addr, 0);
         }
 
-    private HttpsServer createHttpsServer(InetSocketAddress addr, KeyStoreHandle hKeystore)
-            throws Exception
+    private HttpsServer createHttpsServer(InetSocketAddress addr, KeyStoreHandle hKeystore, String sAlias)
+            throws IOException, GeneralSecurityException
         {
-        KeyManagerFactory   keyManager   = hKeystore.f_keyManager;
-        TrustManagerFactory trustManager = hKeystore.f_trustManager;
+        KeyManager[] aKeyManagers;
+        if (sAlias == null)
+            {
+            aKeyManagers = new KeyManager[] {hKeystore.f_keyManager};
+            }
+        else
+            {
+            if (!hKeystore.f_keyStore.isKeyEntry(sAlias))
+                {
+                throw new IllegalArgumentException("Invalid alias: " + sAlias);
+                }
+
+            aKeyManagers = new KeyManager[] {new SimpleKeyManager(hKeystore.f_keyManager, sAlias, sAlias)};
+            }
+
+        TrustManager[] aTrustManagers = new TrustManager[] {hKeystore.f_trustManager};
 
         SSLContext ctxSSL = SSLContext.getInstance("TLS");
-        ctxSSL.init(keyManager.getKeyManagers(), trustManager.getTrustManagers(), null);
+        ctxSSL.init(aKeyManagers, aTrustManagers, null);
 
         HttpsServer httpsServer = HttpsServer.create(addr, 0);
         httpsServer.setHttpsConfigurator(new HttpsConfigurator(ctxSSL)
@@ -638,6 +661,85 @@ public class xRTServer
 
         private final ServiceContext f_context;
         private final FunctionHandle f_hFunction;
+        }
+
+    /**
+     * X509ExtendedKeyManager based on a single key/certificate.
+     */
+    protected static class SimpleKeyManager
+            extends X509ExtendedKeyManager
+        {
+        public SimpleKeyManager(X509KeyManager keyManager, String sClient, String sServer)
+            {
+            f_keyManager   = keyManager;
+            f_sClientAlias = sClient;
+            f_sServerAlias = sServer;
+            }
+
+        @Override
+        public String[] getClientAliases(String keyType, Principal[] issuers)
+            {
+            return new String[] {f_sClientAlias};
+            }
+
+        @Override
+        public String chooseEngineClientAlias(String[] asKeyType, Principal[] issuers, SSLEngine engine)
+            {
+            return f_sClientAlias;
+            }
+
+        @Override
+        public String chooseClientAlias(String[] asKeyType, Principal[] issuers, Socket socket)
+            {
+            return f_sClientAlias;
+            }
+
+        @Override
+        public String[] getServerAliases(String keyType, Principal[] issuers)
+            {
+            return new String[] {f_sServerAlias};
+            }
+
+        @Override
+        public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine)
+            {
+            return f_sServerAlias;
+            }
+
+        @Override
+        public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket)
+            {
+            return f_sServerAlias;
+            }
+
+        @Override
+        public X509Certificate[] getCertificateChain(String sAlias)
+            {
+            return f_keyManager.getCertificateChain(sAlias);
+            }
+
+        @Override
+        public PrivateKey getPrivateKey(String sAlias)
+            {
+            return f_keyManager.getPrivateKey(sAlias);
+            }
+
+        // ----- data fields -----------------------------------------------------------------------
+
+        /**
+         * The underlying manager.
+         */
+        private final X509KeyManager f_keyManager;
+
+        /**
+         * The alias to use for client calls.
+         */
+        private final String f_sClientAlias;
+
+        /**
+         * The alias to use for server calls.
+         */
+        private final String f_sServerAlias;
         }
 
 
