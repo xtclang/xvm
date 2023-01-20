@@ -886,9 +886,7 @@ public class xArray
      */
     public static ArrayHandle makeStringArrayHandle(StringHandle[] ahValue)
         {
-        return ahValue.length == 0
-                ? xString.ensureEmptyArray()
-                : makeArrayHandle(STRING_ARRAY_CLZ, ahValue.length, ahValue, Mutability.Constant);
+        return makeArrayHandle(STRING_ARRAY_CLZ, ahValue.length, ahValue, Mutability.Constant);
         }
 
     /**

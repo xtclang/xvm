@@ -36,7 +36,7 @@ module TestSimple
         for (String name : keystore.keyNames)
             {
             assert CryptoKey key := keystore.getKey(name);
-            console.print($"key={key}\n");
+            console.print($"key={key} {&key.actualClass}\n");
             }
         }
     }
