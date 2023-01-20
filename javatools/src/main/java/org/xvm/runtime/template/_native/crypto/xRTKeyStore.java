@@ -9,7 +9,6 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import java.security.cert.Certificate;
@@ -19,7 +18,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.DSAParams;
 import java.security.interfaces.DSAPublicKey;
 import java.security.interfaces.ECPublicKey;
-import java.security.interfaces.RSAKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 
 import java.security.spec.ECParameterSpec;
@@ -448,14 +447,14 @@ public class xRTKeyStore
             if (keyStore.isKeyEntry(sName))
                 {
                 Key key = hStore.f_keyManager.getPrivateKey(hName.getStringValue());
-                if (!(key instanceof RSAKey rsaKey && key instanceof PrivateKey privateKey))
+                if (!(key instanceof RSAPrivateKey privateKey))
                     {
                     return frame.raiseException(xException.makeHandle(frame,
                         "Unsupported private key type: " + key.getFormat()));
                     }
 
                 String sAlgorithm = privateKey.getAlgorithm();
-                int    cKeyBits   = rsaKey.getModulus().bitLength();
+                int    cKeyBits   = privateKey.getModulus().bitLength();
 
                 List<ObjectHandle> list = new ArrayList<>(9);
                 list.add(xBoolean.TRUE);
