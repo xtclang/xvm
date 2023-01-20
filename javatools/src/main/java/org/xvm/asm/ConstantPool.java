@@ -838,7 +838,6 @@ public class ConstantPool
         return new MapConstant(this, constType, constKey, constVal);
         }
 
-
     /**
      * Create a Map constant.
      *
@@ -1672,6 +1671,19 @@ public class ConstantPool
     public TypeConstant ensureRangeType(TypeConstant typeElement)
         {
         return ensureParameterizedTypeConstant(typeRange(), typeElement);
+        }
+
+    /**
+     * Create a TypeConstant for a Map.
+     *
+     * @param typeKey    the type of the key
+     * @param typeValue  the type of the value
+     *
+     * @return the Map type
+     */
+    public TypeConstant ensureMapType(TypeConstant typeKey, TypeConstant typeValue)
+        {
+        return ensureParameterizedTypeConstant(typeMap(), typeKey, typeValue);
         }
 
     /**

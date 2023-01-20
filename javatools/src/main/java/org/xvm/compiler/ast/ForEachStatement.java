@@ -186,7 +186,7 @@ public class ForEachStatement
     private TypeConstant getEntryType()
         {
         ConstantPool pool    = pool();
-        TypeConstant typeMap = pool.ensureParameterizedTypeConstant(pool.typeMap(), getKeyType(), getValueType());
+        TypeConstant typeMap = pool.ensureMapType(getKeyType(), getValueType());
         return pool.ensureVirtualChildTypeConstant(typeMap, "Entry");
         }
 
@@ -1096,7 +1096,7 @@ public class ForEachStatement
         ConstantPool pool      = pool();
         TypeConstant typeKey   = getKeyType();
         TypeConstant typeValue = getValueType();
-        TypeConstant typeMap   = pool.ensureParameterizedTypeConstant(pool.typeMap(), typeKey, typeValue);
+        TypeConstant typeMap   = pool.ensureMapType(typeKey, typeValue);
         TypeConstant typeEntry = pool.ensureVirtualChildTypeConstant(typeMap, "Entry");
         TypeInfo     infoMap   = typeMap.ensureTypeInfo(errs);
 

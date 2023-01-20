@@ -542,8 +542,7 @@ public class xRTType
             mapResult.put(poolCtx.ensureStringConstant(sName), typeChild.getType());
             }
         TypeConstant typeResult  = poolCtx.ensureImmutableTypeConstant(
-                poolCtx.ensureParameterizedTypeConstant(poolCtx.typeMap(),
-                        poolCtx.typeString(), poolCtx.typeType()));
+                poolCtx.ensureMapType(poolCtx.typeString(), poolCtx.typeType()));
         MapConstant  constResult = poolCtx.ensureMapConstant(typeResult, mapResult);
 
         return frame.assignDeferredValue(iReturn, frame.getConstHandle(constResult));

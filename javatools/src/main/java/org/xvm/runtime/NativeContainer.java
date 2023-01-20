@@ -379,7 +379,7 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("compiler", typeCompiler), templateCompiler::ensureCompiler);
 
         // +++ xvmProperties
-        TypeConstant typeProps = pool.ensureParameterizedTypeConstant(pool.typeMap(), pool.typeString(), pool.typeString());
+        TypeConstant typeProps = pool.ensureMapType(pool.typeString(), pool.typeString());
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
         }
 
@@ -555,8 +555,7 @@ public class NativeContainer
             ObjectHandle haValues = xArray.makeStringArrayHandle(listVals.toArray(Utils.STRINGS_NONE));
 
             ConstantPool pool       = getConstantPool();
-            TypeConstant typeReveal = pool.ensureParameterizedTypeConstant(pool.typeMap(),
-                                        pool.typeString(), pool.typeString());
+            TypeConstant typeReveal = pool.ensureMapType(pool.typeString(), pool.typeString());
             TypeConstant typeActual = pool.ensureParameterizedTypeConstant(
                                         pool.ensureEcstasyTypeConstant("collections.ListMap"),
                                         pool.typeString(), pool.typeString());
