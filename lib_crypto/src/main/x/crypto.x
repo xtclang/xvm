@@ -6,6 +6,12 @@ module crypto.xtclang.org
     import ecstasy.reflect.Annotation;
 
     /**
+     * A password can be just simple text, or can be the potentially-opaque representation provided
+     * by injection or a [KeyStore].
+     */
+    typedef String | CryptoPassword as Password;
+
+    /**
      * There are cases in which annotations are permitted to be added to a returned stream, by
      * various methods creating and returning a stream. The annotations to be added can be specified
      * by passing a single annotation, or an array of annotations.

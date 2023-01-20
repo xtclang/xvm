@@ -9,9 +9,29 @@ interface KeyStore
     @RO String[] keyNames;
 
     /**
-     * @param name  the name this key is known by the KeyStore
+     * Obtain a key by its name.
+     *
+     * @param name  the name the key is known by the KeyStore
+     *
+     * @return True iff the specified kay name is known by the KeyStore
+     * @return (conditional) the [CryptoKey]
      */
     conditional CryptoKey getKey(String name);
+
+    /**
+     * The password names in this KeyStore.
+     */
+    @RO String[] passwordNames;
+
+    /**
+     * Obtain a password by its name.
+     *
+     * @param name  the name the password is known by the KeyStore
+     *
+     * @return True iff the specified password name is known by the KeyStore
+     * @return (conditional) the [CryptoPassword]
+     */
+    conditional CryptoPassword getPassword(String name);
 
     /**
      * The certificates in the `KeyStore`.
@@ -26,5 +46,5 @@ interface KeyStore
     /**
      * The KeyStore resource information.
      */
-    static const Info(Byte[] content, String password);
+    static const Info(Byte[] content, Password password);
     }
