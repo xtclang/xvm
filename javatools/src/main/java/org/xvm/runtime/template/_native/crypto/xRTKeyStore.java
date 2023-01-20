@@ -97,6 +97,8 @@ public class xRTKeyStore
         markNativeMethod("isKey"             , STRING, null);
         markNativeMethod("getKeyInfo"        , STRING, null);
         markNativeMethod("getCertificateInfo", STRING, null);
+
+        invalidateTypeInfo();
         }
 
     @Override
@@ -532,8 +534,7 @@ public class xRTKeyStore
             {
             super(xObject.INSTANCE.getCanonicalClass());
 
-            f_key      = key;
-            m_fMutable = false;
+            f_key = key;
             }
 
         /**

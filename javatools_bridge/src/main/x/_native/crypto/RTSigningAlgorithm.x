@@ -1,3 +1,4 @@
+import libcrypto.Algorithms;
 import libcrypto.Algorithm;
 import libcrypto.CryptoKey;
 import libcrypto.KeyForm;
@@ -11,14 +12,13 @@ import libcrypto.Verifier;
 const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
         implements Algorithm
     {
-    construct(String name, Int blockSize, Int signatureSize, Int formId, Int keySize, Object cypher)
+    construct(String name, Int blockSize, KeyForm? form, Int|Int[] keySize, Object cipher)
         {
-        this.name          = name;
-        this.blockSize     = blockSize;
-        this.signatureSize = signatureSize;
-        this.keyForm       = formId < 0 ? Null : KeyForm.values[formId];
-        this.keySize       = keySize;
-        this.cypher        = cypher;
+        this.name      = name;
+        this.blockSize = blockSize;
+        this.keyForm   = form;
+        this.keySize   = keySize;
+        this.cipher    = cipher;
         }
 
     /**
@@ -27,14 +27,14 @@ const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
     private KeyForm? keyForm;
 
     /**
-     * The number of bytes in the key for this algorithm, zero if the key is not required.
+     * The supported key size(s) for this algorithm.
      */
-    private Int keySize;
+    private Int|Int[] keySize;
 
     /**
      * The native cipher or signature.
      */
-    private Object cypher;
+    private Object cipher;
 
 
     // ----- Algorithm API -------------------------------------------------------------------------
@@ -46,7 +46,7 @@ const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
         }
 
     @Override
-    conditional (KeyForm form, Int size) keyRequired()
+    conditional (KeyForm form, Int|Int[] keySize) keyRequired()
         {
         if (KeyForm form ?= keyForm)
             {
@@ -58,24 +58,24 @@ const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
     @Override
     Verifier|Signer allocate(CryptoKey? key)
         {
-        if ((KeyForm form, Int size) := keyRequired())
+        if ((KeyForm form, Int|Int[] keySize) := keyRequired())
             {
             if (key == Null)
                 {
                 throw new IllegalArgument("Key is required");
                 }
 
-            assert key.form == form && key.size == size
+            assert key.form == form && Algorithms.validSize(keySize, key.size)
                     as $"Invalid key for {this}";
 
            switch (form)
                 {
                 case Public:
-                    return new RTVerifier(this, key, cypher);
+                    return new RTVerifier(this, key, cipher);
 
                 case Pair:
                     assert key.is(KeyPair);
-                    return new RTSigner(this, key.publicKey, key.privateKey, cypher);
+                    return new RTSigner(this, key.publicKey, key.privateKey, cipher);
 
                 case Secret:
                     assert as "a key pair is required";
@@ -87,9 +87,9 @@ const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
     @Override
     String toString()
         {
-        if ((KeyForm form, Int size) := keyRequired())
+        if ((KeyForm form, Int|Int[] keySize) := keyRequired())
             {
-            return $"{name} with {form} of {size} bytes";
+            return $"{name} with {form} of {keySize} bytes";
             }
         return $"{name}";
         }

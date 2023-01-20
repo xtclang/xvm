@@ -14,6 +14,12 @@ interface Signer
     @RO CryptoKey? privateKey;
 
     /**
+     * For a `Signing` algorithm, this is the size in bytes of the resulting signature. (A signature
+     * is also called a "_hash_" or a "_message digest_".)
+     */
+    @RO Int signatureSize;
+
+    /**
      * Produce a signature for the contents of the passed stream.
      *
      * @param in  an [InputStream]

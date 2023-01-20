@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 
 import java.lang.reflect.Modifier;
+
 import java.net.URLDecoder;
 
 import java.nio.charset.StandardCharsets;
@@ -312,30 +313,30 @@ public class NativeContainer
 
     private void initResources(ConstantPool pool)
         {
-        // +++ LocalClock
+        // +++ temporal.LocalClock
         xLocalClock  templateClock = xLocalClock.INSTANCE;
         TypeConstant typeClock     = templateClock.getCanonicalType();
         addResourceSupplier(new InjectionKey("clock"     , typeClock), templateClock::ensureDefaultClock);
         addResourceSupplier(new InjectionKey("localClock", typeClock), templateClock::ensureLocalClock);
         addResourceSupplier(new InjectionKey("utcClock"  , typeClock), templateClock::ensureUTCClock);
 
-        // +++ NanosTimer
+        // +++ temporal.NanosTimer
         xNanosTimer  templateTimer = xNanosTimer.INSTANCE;
         TypeConstant typeTimer     = templateTimer.getCanonicalType();
         addResourceSupplier(new InjectionKey("timer", typeTimer), templateTimer::ensureTimer);
 
-        // +++ Console
+        // +++ io.Console
         xTerminalConsole templateConsole = xTerminalConsole.INSTANCE;
         TypeConstant     typeConsole     = templateConsole.getCanonicalType();
         addResourceSupplier(new InjectionKey("console", typeConsole), templateConsole::ensureConsole);
 
-        // +++ Random
+        // +++ numbers.Random
         xRTRandom    templateRandom = xRTRandom.INSTANCE;
         TypeConstant typeRandom     = templateRandom.getCanonicalType();
         addResourceSupplier(new InjectionKey("rnd"   , typeRandom), templateRandom::ensureDefaultRandom);
         addResourceSupplier(new InjectionKey("random", typeRandom), templateRandom::ensureDefaultRandom);
 
-        // +++ OSFileStore etc.
+        // +++ fs.OSFileStore etc.
         TypeConstant typeFileStore = pool.ensureEcstasyTypeConstant("fs.FileStore");
         TypeConstant typeDirectory = pool.ensureEcstasyTypeConstant("fs.Directory");
         addResourceSupplier(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
@@ -344,34 +345,40 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
         addResourceSupplier(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
 
-        // +++ Network
+        // +++ net:Network
         xRTNetwork   templateNetwork = xRTNetwork.INSTANCE;
         TypeConstant typeNetwork     = templateNetwork.getCanonicalType();
         addResourceSupplier(new InjectionKey("network"        , typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("insecureNetwork", typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("secureNetwork"  , typeNetwork), this::ensureSecureNetwork);
 
-        // +++ KeyStore
+        // +++ crypto:KeyStore
         xRTKeyStore  templateKeyStore = xRTKeyStore.INSTANCE;
         TypeConstant typeKeyStore     = templateKeyStore.getCanonicalType();
         addResourceSupplier(new InjectionKey("keystore", typeKeyStore), templateKeyStore::ensureKeyStore);
 
-        // +++ WebServer
+        // +++ crypto:Algorithms
+
+        TypeConstant typeAlgorithms = pool.ensureTerminalTypeConstant(
+                pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "Algorithms"));
+        addResourceSupplier(new InjectionKey("algorithms"  , typeAlgorithms), this::ensureAlgorithms);
+
+        // +++ web:WebServer
         xRTServer templateServer = xRTServer.INSTANCE;
         TypeConstant typeServer  = templateServer.getCanonicalType();
         addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
 
-        // +++ Linker
+        // +++ mgmt.Linker
         xContainerLinker templateLinker = xContainerLinker.INSTANCE;
         TypeConstant     typeLinker     = templateLinker.getCanonicalType();
         addResourceSupplier(new InjectionKey("linker", typeLinker), templateLinker::ensureLinker);
 
-        // +++ ModuleRepository
+        // +++ mgmt.ModuleRepository
         xCoreRepository templateRepo = xCoreRepository.INSTANCE;
         TypeConstant    typeRepo     = templateRepo.getCanonicalType();
         addResourceSupplier(new InjectionKey("repository", typeRepo), templateRepo::ensureModuleRepository);
 
-        // +++ Compiler
+        // +++ lang.src.Compiler
         xRTCompiler  templateCompiler = xRTCompiler.INSTANCE;
         TypeConstant typeCompiler     = templateCompiler.getCanonicalType();
         addResourceSupplier(new InjectionKey("compiler", typeCompiler), templateCompiler::ensureCompiler);
@@ -723,6 +730,50 @@ public class NativeContainer
         return hNetwork;
         }
 
+    /**
+     * Injection support method.
+     */
+    public ObjectHandle ensureAlgorithms(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hAlgorithms = m_hAlgorithms;
+        if (hAlgorithms == null)
+            {
+            m_hAlgorithms = hAlgorithms = instantiateAlgorithms(frame, hOpts);
+            }
+
+        return hAlgorithms;
+        }
+
+    protected ObjectHandle instantiateAlgorithms(Frame frame, ObjectHandle hOpts)
+        {
+        ClassStructure  clz = getClassStructure("_native.crypto.RTAlgorithms");
+        MethodStructure fn  = clz.findMethod("createAlgorithms", 1);
+
+        String[] asNames = new String[]
+            {
+            "AES/CBC/NoPadding",
+            "RSA/ECB/PKCS1Padding"
+            };
+
+        ObjectHandle[] ahArg = new ObjectHandle[fn.getMaxVars()];
+        ahArg[0] = xString.makeArrayHandle(asNames);
+
+        switch (frame.call1(fn, null, ahArg, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return frame.popStack();
+
+            case Op.R_CALL:
+                return new DeferredCallHandle(frame.m_frameNext);
+
+            case Op.R_EXCEPTION:
+                return new DeferredCallHandle(frame.m_hException);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
 
     // ----- Container methods ---------------------------------------------------------------------
 
@@ -945,6 +996,7 @@ public class NativeContainer
 
     private ObjectHandle m_hSecureNetwork;
     private ObjectHandle m_hInsecureNetwork;
+    private ObjectHandle m_hAlgorithms;
 
     private final ModuleRepository f_repository;
     private       ModuleStructure  m_moduleSystem;

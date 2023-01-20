@@ -11,9 +11,9 @@ service RTSigner
         extends RTVerifier
         implements Signer
     {
-    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Object cypher)
+    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Object cipher)
         {
-        construct RTVerifier(algorithm, publicKey, cypher);
+        construct RTVerifier(algorithm, publicKey, cipher);
 
         assert privateKey.form == Secret;
 
@@ -27,9 +27,12 @@ service RTSigner
     public/private CryptoKey privateKey;
 
     @Override
+    public/private Int signatureSize;
+
+    @Override
     Signature sign(Byte[] data)
         {
-        return new Signature(algorithm.name, sign(cypher, privateKey, data));
+        return new Signature(algorithm.name, sign(cipher, privateKey, data));
         }
 
     @Override
@@ -42,5 +45,5 @@ service RTSigner
 
     // ----- native helpers ------------------------------------------------------------------------
 
-    private Byte[] sign(Object cypher, CryptoKey privateKey, Byte[] data) {TODO("Native");}
+    private Byte[] sign(Object cipher, CryptoKey privateKey, Byte[] data) {TODO("Native");}
     }

@@ -12,7 +12,7 @@ const Algorithms
                     as $"Duplicate Algorithm: {algorithm.name.quoted()}";
             }
 
-        this.byName = byName;
+        this.byName = byName.makeImmutable();
         }
 
     /**
@@ -125,6 +125,21 @@ const Algorithms
         return False;
         }
 
+    /**
+     * Helper function that checks whether or not the actual size matched the supported size(s).
+     *
+     * @param  supportedSize  the supported size(s)
+     * @param  actualSize     the actual size
+     *
+     * @return true if the actual size matches one of the supported sizes
+     */
+    static Boolean validSize(Int|Int[] supportedSize, Int actualSize)
+        {
+        return supportedSize.is(Int)
+                ? actualSize == supportedSize
+                : supportedSize.contains(actualSize);
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -149,9 +164,9 @@ const Algorithms
         String name = specifier.is(String) ? specifier : specifier.name;
         if (Algorithm algorithm := byName.get(name), algorithm.category == category)
             {
-            if ((KeyForm form, Int size) := algorithm.keyRequired())
+            if ((KeyForm form, Int|Int[] keySize) := algorithm.keyRequired())
                 {
-                return key != Null && key.size == size
+                return key != Null && validSize(keySize, key.size)
                         ? (True, algorithm)
                         : False;
                 }
