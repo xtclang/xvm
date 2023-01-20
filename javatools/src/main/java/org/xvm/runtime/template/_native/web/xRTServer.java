@@ -48,6 +48,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -456,15 +457,8 @@ public class xRTServer
         {
         Headers headers = hCtx.f_exchange.getRequestHeaders();
 
-        int            cValues = headers.size();
-        StringHandle[] ahValue = new StringHandle[cValues];
-        int            ix      = 0;
-        for (String sName : headers.keySet())
-            {
-            ahValue[ix++] = xString.makeHandle(sName);
-            }
-
-        return frame.assignValue(iResult, xArray.makeStringArrayHandle(ahValue));
+        return frame.assignValue(iResult,
+                xString.makeArrayHandle(headers.keySet().toArray(Utils.NO_NAMES)));
         }
 
     /**
@@ -482,14 +476,8 @@ public class xRTServer
             return frame.assignValue(aiResult[0], xBoolean.FALSE);
             }
 
-        int            cValues = listValues.size();
-        StringHandle[] ahValue = new StringHandle[cValues];
-        for (int i = 0; i < cValues; i++)
-            {
-            ahValue[i] = xString.makeHandle(listValues.get(i));
-            }
-
-        return frame.assignValues(aiResult, xBoolean.TRUE, xArray.makeStringArrayHandle(ahValue));
+        return frame.assignValues(aiResult, xBoolean.TRUE,
+                xString.makeArrayHandle(listValues.toArray(Utils.NO_NAMES)));
         }
 
     /**

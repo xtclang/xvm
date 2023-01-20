@@ -548,6 +548,20 @@ public class xString
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
+     * @return an immutable array of Strings
+     */
+    public static ArrayHandle makeArrayHandle(String[] asValue)
+        {
+        int            cValues = asValue.length;
+        StringHandle[] ahValue = new StringHandle[cValues];
+        for (int i = 0; i < cValues; i++)
+            {
+            ahValue[i] = makeHandle(asValue[i]);
+            }
+        return xArray.makeStringArrayHandle(ahValue);
+        }
+
+    /**
      * @return the handle for an empty Array of String
      */
     public static ArrayHandle ensureEmptyArray()

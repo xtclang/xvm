@@ -25,8 +25,8 @@ import java.security.spec.ECParameterSpec;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.List;
 
 import javax.net.ssl.KeyManager;
@@ -215,15 +215,11 @@ public class xRTKeyStore
                 {
                 KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
 
-                ArrayList<StringHandle> listNames = new ArrayList<>();
                 try
                     {
-                    for (Enumeration<String> en = hStore.f_keyStore.aliases(); en.hasMoreElements();)
-                        {
-                        listNames.add(xString.makeHandle(en.nextElement()));
-                        }
+                    ArrayList<String> listNames = Collections.list(hStore.f_keyStore.aliases());
                     return frame.assignValue(iReturn,
-                        xArray.makeStringArrayHandle(listNames.toArray(Utils.STRINGS_NONE)));
+                            xString.makeArrayHandle(listNames.toArray(Utils.NO_NAMES)));
                     }
                 catch (KeyStoreException e)
                     {

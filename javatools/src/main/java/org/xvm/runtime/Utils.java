@@ -84,7 +84,8 @@ public abstract class Utils
         LIST_MAP_CONSTRUCT            = container.getClassStructure("collections.ListMap").findMethod("construct", 2);
         ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
         ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
-        STRING_VALUE_OF               = container.getClassStructure("_native.ConstHelper").findMethod("valueOf", 1);
+        CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
+        STRING_VALUE_OF               = CONST_HELPER.findMethod("valueOf", 1);
 
         }
 
@@ -1602,6 +1603,8 @@ public abstract class Utils
 
     public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
     public final static Predicate          ANY  = t -> true;
+
+    public static ClassStructure  CONST_HELPER;
 
     // assigned by initNative()
     private static ClassTemplate   ANNOTATION_TEMPLATE;

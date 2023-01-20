@@ -96,15 +96,12 @@ public class xConst
             invalidateTypeInfo();
 
             // Stringable support
-            ClassStructure clzHelper = f_container.getClassStructure("_native.ConstHelper");
-
-            FN_ESTIMATE_LENGTH = clzHelper.findMethod("estimateStringLength", 2);
-            FN_APPEND_TO       = clzHelper.findMethod("appendTo", 3);
-            FN_FREEZE          = clzHelper.findMethod("freeze", 1);
+            FN_ESTIMATE_LENGTH = Utils.CONST_HELPER.findMethod("estimateStringLength", 2);
+            FN_APPEND_TO       = Utils.CONST_HELPER.findMethod("appendTo", 3);
+            FN_FREEZE          = Utils.CONST_HELPER.findMethod("freeze", 1);
 
             // Range support
-            RANGE_CONSTRUCT = f_container.getClassStructure("Range").
-                findMethod("construct", 4);
+            RANGE_CONSTRUCT = f_container.getClassStructure("Range").findMethod("construct", 4);
 
             // Nibble support
             ConstantPool pool         = pool();

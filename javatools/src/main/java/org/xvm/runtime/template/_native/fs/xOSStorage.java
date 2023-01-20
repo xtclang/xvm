@@ -27,20 +27,18 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
-
-import org.xvm.runtime.template._native.reflect.xRTFunction;
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 /**
  * Native OSStorage implementation.
@@ -138,18 +136,9 @@ public class xOSStorage
                 String[] asName = path.toFile().list();
                 int      cNames = asName == null ? 0 : asName.length;
 
-                if (cNames == 0)
-                    {
-                    return frame.assignValue(iReturn, xString.ensureEmptyArray());
-                    }
-
-                StringHandle[] ahName = new StringHandle[cNames];
-                int i = 0;
-                for (String sName : asName)
-                    {
-                    ahName[i++] = xString.makeHandle(sName);
-                    }
-                return frame.assignValue(iReturn, xArray.makeStringArrayHandle(ahName));
+                return cNames == 0
+                         ? frame.assignValue(iReturn, xString.ensureEmptyArray())
+                         : frame.assignValue(iReturn, xString.makeArrayHandle(asName));
                 }
 
             case "createFile":  // (pathString)

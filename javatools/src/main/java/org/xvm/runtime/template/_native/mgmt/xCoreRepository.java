@@ -15,6 +15,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 
@@ -74,15 +75,8 @@ public class xCoreRepository
                 {
                 ModuleRepository repo     = f_container.getModuleRepository();
                 Set<String>      setNames = repo.getModuleNames();
-                StringHandle[]   ahName   = new StringHandle[setNames.size()];
 
-                int i = 0;
-                for (String sName : setNames)
-                    {
-                    ahName[i++] = xString.makeHandle(sName);
-                    }
-
-                ArrayHandle hArray = xArray.makeStringArrayHandle(ahName);
+                ArrayHandle hArray = xString.makeArrayHandle(setNames.toArray(Utils.NO_NAMES));
                 return xArray.createListSet(frame, hArray, iReturn);
                 }
             }

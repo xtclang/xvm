@@ -18,10 +18,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xArray;
-
 import org.xvm.runtime.template.text.xString;
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
@@ -198,13 +195,7 @@ public class Runner
                 {
                 try (var ignore = ConstantPool.withPool(connector.getConstantPool()))
                     {
-                    int            cArgs  = asArg.length;
-                    StringHandle[] ahName = new StringHandle[cArgs];
-                    for (int i = 0; i < cArgs; i++)
-                        {
-                        ahName[i] = xString.makeHandle(asArg[i]);
-                        }
-                    ahArg = new ObjectHandle[]{xArray.makeStringArrayHandle(ahName)};
+                    ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
                     }
                 }
             connector.invoke0(sMethod, ahArg);

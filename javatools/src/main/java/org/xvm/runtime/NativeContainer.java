@@ -215,18 +215,16 @@ public class NativeContainer
 
     private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class> mapTemplateClasses)
         {
-        JarFile jf;
-        try
+        try (JarFile jf = new JarFile(sJarFile))
             {
-            jf = new JarFile(sJarFile);
+            jf.stream().filter(entry  -> isNativeClass(sPackage, entry.getName()))
+                       .forEach(entry -> mapTemplateClasses.put(componentName(entry.getName()),
+                                                                classForName(entry.getName())));
             }
         catch (IOException e)
             {
             throw new RuntimeException(e);
             }
-
-        jf.stream().filter(e -> isNativeClass(sPackage, e.getName()))
-                   .forEach(e -> mapTemplateClasses.put(componentName(e.getName()), classForName(e.getName())));
         }
 
     private static boolean isNativeClass(String sPackage, String sFile)

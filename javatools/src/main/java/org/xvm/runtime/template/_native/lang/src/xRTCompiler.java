@@ -34,16 +34,15 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.fs.xOSFileNode.NodeHandle;
 
@@ -297,19 +296,11 @@ public class xRTCompiler
 
         assert fSuccess || !listErrors.isEmpty(); // a compilation failure must report reasons
 
-        ArrayHandle hErrors = xString.ensureEmptyArray();
-        if (!listErrors.isEmpty())
-            {
-            int            cErrors  = listErrors.size();
-            StringHandle[] ahErrors = new StringHandle[cErrors];
-            for (int i = 0; i < cErrors; i++)
-                {
-                ahErrors[i] = xString.makeHandle(listErrors.get(i));
-                }
-            hErrors = xArray.makeStringArrayHandle(ahErrors);
-            }
+        ArrayHandle haErrors = listErrors.isEmpty()
+                ? xString.ensureEmptyArray()
+                : xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));
         compiler.reset();
-        return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), hErrors);
+        return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), haErrors);
         }
 
     private List<String> addError(Exception exception, List<String> listErrors)

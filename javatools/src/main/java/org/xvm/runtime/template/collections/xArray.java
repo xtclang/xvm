@@ -139,8 +139,7 @@ public class xArray
         MUTABILITY = (xEnum) f_container.getTemplate("collections.Array.Mutability");
 
         // cache "ConstHelper.createListSet" method
-        ClassStructure clzHelper = f_container.getClassStructure("_native.ConstHelper");
-        CREATE_LIST_SET = clzHelper.findMethod("createListSet", 2);
+        CREATE_LIST_SET   = Utils.CONST_HELPER.findMethod("createListSet", 2);
 
         OBJECT_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeObject()));
         STRING_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeString()));
@@ -153,12 +152,12 @@ public class xArray
         markNativeProperty("delegate");
         markNativeProperty("mutability");
 
-        markNativeMethod("clear", VOID, THIS);
-        markNativeMethod("getElement", INT, ELEMENT_TYPE);
+        markNativeMethod("clear",      VOID, THIS);
+        markNativeMethod("getElement", INT,  ELEMENT_TYPE);
         markNativeMethod("setElement", null, VOID);
-        markNativeMethod("elementAt", INT, null);
-        markNativeMethod("slice", null, THIS);
-        markNativeMethod("deleteAll", null, THIS);
+        markNativeMethod("elementAt",  INT,  null);
+        markNativeMethod("slice",      null, THIS);
+        markNativeMethod("deleteAll",  null, THIS);
 
         ClassTemplate mixinNumber = f_container.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
