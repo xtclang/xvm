@@ -10,7 +10,7 @@ mixin UncheckedInt
         into @Bitwise IntNumber
     {
     @Override
-    @Op IntNumber nextValue()
+    @Op UncheckedInt nextValue()
         {
         try
             {
@@ -23,7 +23,7 @@ mixin UncheckedInt
         }
 
     @Override
-    @Op IntNumber prevValue()
+    @Op UncheckedInt prevValue()
         {
         try
             {
