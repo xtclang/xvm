@@ -19,11 +19,11 @@ interface Encryptor
      * Encrypt the provided data. The resulting data may not be the same size as the provided data,
      * if block padding is used by the cryptographic algorithm.
      *
-     * @param bytes  the data to encrypt
+     * @param data  the data to encrypt
      *
      * @return the encrypted data
      */
-    Byte[] encrypt(Byte[] bytes);
+    Byte[] encrypt(Byte[] data);
 
     /**
      * Encrypt the data from the provided source stream into the provided destination stream.

@@ -2718,6 +2718,7 @@ public abstract class ClassTemplate
     public static String[] INT     = new String[] {"numbers.Int"};
     public static String[] STRING  = new String[] {"text.String"};
     public static String[] BOOLEAN = new String[] {"Boolean"};
+    public static String[] BYTES   = new String[] {"collections.Array<numbers.UInt8>"};
 
     /**
      * The container.

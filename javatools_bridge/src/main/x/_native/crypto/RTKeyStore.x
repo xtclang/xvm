@@ -267,7 +267,7 @@ service RTKeyStore
         /**
          * The crypto material.
          */
-        private Object secret;
+        Object secret;
         }
 
     static const RTPrivateKey
@@ -283,6 +283,6 @@ service RTKeyStore
         /**
          * The crypto material.
          */
-        private Object secret;
+        Object secret;
         }
     }

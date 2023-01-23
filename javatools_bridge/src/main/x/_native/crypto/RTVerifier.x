@@ -10,19 +10,19 @@ import libcrypto.Verifier;
 service RTVerifier
         implements Verifier
     {
-    construct(Algorithm algorithm, CryptoKey publicKey, Object cipher)
+    construct(Algorithm algorithm, CryptoKey publicKey, Object signer)
         {
         assert publicKey.form == Public;
 
         this.algorithm = algorithm;
         this.publicKey = publicKey;
-        this.cipher    = cipher;
+        this.signer    = signer;
         }
 
     /**
-     * The native cipher or signature.
+     * The native signature.
      */
-    protected Object cipher;
+    protected Object signer;
 
 
     // ----- Verifier API --------------------------------------------------------------------------
@@ -46,7 +46,7 @@ service RTVerifier
             {
             signatureBytes = signature;
             }
-        return verify(cipher, publicKey, signatureBytes, data);
+        return verify(signer, publicKey, signatureBytes, data);
         }
 
     @Override
@@ -72,5 +72,5 @@ service RTVerifier
 
     // ----- native helpers ------------------------------------------------------------------------
 
-    private Boolean verify(Object cipher, CryptoKey publicKey, Byte[] signature, Byte[] data) {TODO("Native");}
+    private Boolean verify(Object signer, CryptoKey publicKey, Byte[] signature, Byte[] data) {TODO("Native");}
     }

@@ -29,8 +29,6 @@ public abstract class ByteBasedDelegate
         extends xRTDelegate
         implements ByteView
     {
-    public static ByteBasedDelegate INSTANCE;
-
     public ByteBasedDelegate(Container container, ClassStructure structure)
         {
         super(container, structure, false);

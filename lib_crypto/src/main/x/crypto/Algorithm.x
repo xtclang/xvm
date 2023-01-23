@@ -73,11 +73,10 @@ interface Algorithm
      * Determine if a key is required by the algorithm, and what the details of that key are.
      *
      * @return True iff the algorithm requires a key
-     * @return (conditional) the [KeyForm] of the key for this algorithm
      * @return (conditional) the size of the key in bytes for this algorithm or an array of
      *                       supported sizes
      */
-    conditional (KeyForm form, Int|Int[] size) keyRequired();
+    conditional Int|Int[] keyRequired();
 
     /**
      * Factory method: Produce a configured engine that implements this algorithm for the specified

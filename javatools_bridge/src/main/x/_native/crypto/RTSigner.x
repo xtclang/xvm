@@ -11,13 +11,14 @@ service RTSigner
         extends RTVerifier
         implements Signer
     {
-    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Object cipher)
+    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Int signatureSize, Object signer)
         {
-        construct RTVerifier(algorithm, publicKey, cipher);
+        construct RTVerifier(algorithm, publicKey, signer);
 
         assert privateKey.form == Secret;
 
-        this.privateKey = privateKey;
+        this.privateKey    = privateKey;
+        this.signatureSize = signatureSize;
         }
 
 
@@ -32,7 +33,22 @@ service RTSigner
     @Override
     Signature sign(Byte[] data)
         {
-        return new Signature(algorithm.name, sign(cipher, privateKey, data));
+        CryptoKey privateKey = this.privateKey;
+        Object    secret;
+
+        if (privateKey.is(RTKeyStore.RTPrivateKey))
+            {
+            secret = privateKey.secret;
+            }
+        else if (Byte[] bytes := privateKey.isVisible())
+            {
+            secret = bytes;
+            }
+        else
+            {
+            throw new IllegalState($"Unsupported key {privateKey}");
+            }
+        return new Signature(algorithm.name, sign(signer, secret, data));
         }
 
     @Override
@@ -42,8 +58,14 @@ service RTSigner
         TODO
         }
 
+    @Override
+    String toString()
+        {
+        return $"{algorithm.name.quoted()} signer";
+        }
+
 
     // ----- native helpers ------------------------------------------------------------------------
 
-    private Byte[] sign(Object cipher, CryptoKey privateKey, Byte[] data) {TODO("Native");}
+    private Byte[] sign(Object signer, Object privateKey, Byte[] data) {TODO("Native");}
     }

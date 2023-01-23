@@ -8,6 +8,13 @@ const KeyPair(String name, CryptoKey publicKey, CryptoKey privateKey)
         {
         assert:arg publicKey .form == Public;
         assert:arg privateKey.form == Secret;
+        assert:arg publicKey.algorithm == privateKey.algorithm;
+        }
+
+    @Override
+    String algorithm.get()
+        {
+        return publicKey.algorithm;
         }
 
     @Override
@@ -33,5 +40,11 @@ const KeyPair(String name, CryptoKey publicKey, CryptoKey privateKey)
             }
 
         return False;
+        }
+
+    @Override
+    String toString()
+        {
+        return $"{name.quoted()}, {algorithm} public/private key pair, {size*8} bits";
         }
     }

@@ -1,5 +1,6 @@
 import libcrypto.Algorithms;
 import libcrypto.Algorithm;
+import libcrypto.Algorithm.Category;
 import libcrypto.CryptoKey;
 import libcrypto.KeyForm;
 import libcrypto.KeyPair;
@@ -7,24 +8,24 @@ import libcrypto.Signer;
 import libcrypto.Verifier;
 
 /**
- * The native "Signing" [Algorithm] implementation.
+ * The native [Signing] [Algorithm] implementation that requires a key.
  */
 const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
         implements Algorithm
     {
-    construct(String name, Int blockSize, KeyForm? form, Int|Int[] keySize, Object cipher)
+    construct(String name, Int blockSize, Int|Int[] keySize, Int signatureSize, Object signer)
         {
-        this.name      = name;
-        this.blockSize = blockSize;
-        this.keyForm   = form;
-        this.keySize   = keySize;
-        this.cipher    = cipher;
+        this.name          = name;
+        this.blockSize     = blockSize;
+        this.keySize       = keySize;
+        this.signatureSize = signatureSize;
+        this.signer        = signer;
         }
 
     /**
-     * The KeyForm; Null if the key is not required by this Algorithm.
+     * The KeyForm.
      */
-    private KeyForm? keyForm;
+    private KeyForm keyForm;
 
     /**
      * The supported key size(s) for this algorithm.
@@ -32,65 +33,58 @@ const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
     private Int|Int[] keySize;
 
     /**
-     * The native cipher or signature.
+     * The native signature.
      */
-    private Object cipher;
+    private Object signer;
 
 
     // ----- Algorithm API -------------------------------------------------------------------------
 
     @Override
-    @RO Category category.get()
+    Category category.get()
         {
         return Signing;
         }
 
     @Override
-    conditional (KeyForm form, Int|Int[] keySize) keyRequired()
+    conditional Int|Int[] keyRequired()
         {
-        if (KeyForm form ?= keyForm)
-            {
-            return True, form, keySize;
-            }
-        return False;
+        return True, keySize;
         }
 
     @Override
     Verifier|Signer allocate(CryptoKey? key)
         {
-        if ((KeyForm form, Int|Int[] keySize) := keyRequired())
+        if (key == Null)
             {
-            if (key == Null)
-                {
-                throw new IllegalArgument("Key is required");
-                }
-
-            assert key.form == form && Algorithms.validSize(keySize, key.size)
-                    as $"Invalid key for {this}";
-
-           switch (form)
-                {
-                case Public:
-                    return new RTVerifier(this, key, cipher);
-
-                case Pair:
-                    assert key.is(KeyPair);
-                    return new RTSigner(this, key.publicKey, key.privateKey, cipher);
-
-                case Secret:
-                    assert as "a key pair is required";
-                }
+            throw new IllegalArgument("Key is required");
             }
-        TODO transformer, no key is necessary
+
+        switch (key.form)
+            {
+            case Public:
+                // verifier
+                assert Algorithms.validSize(keySize, key.size) as $"Invalid key size for {this}";
+                Verifier verifier = new RTVerifier(this, key, signer);
+                return &verifier.maskAs(Verifier);
+
+            case Pair:
+                assert key.is(KeyPair) as "Key must be a KeyPair";
+                assert Algorithms.validSize(keySize, key.privateKey.size) as $"Invalid key size for {this}";
+
+                Signer signer = new RTSigner(this, key.publicKey, key.privateKey, signatureSize, signer);
+                return &signer.maskAs(Signer);
+
+            case Secret:
+                throw new IllegalArgument("a KeyPair is required");
+            }
         }
 
     @Override
     String toString()
         {
-        if ((KeyForm form, Int|Int[] keySize) := keyRequired())
-            {
-            return $"{name} with {form} of {keySize} bytes";
-            }
-        return $"{name}";
+        return $|{name.quoted()} signing algorithm with {keySize} bytes key and \
+                |{signatureSize} bytes signature
+                ;
         }
     }

@@ -459,7 +459,7 @@ public class xRTKeyStore
                 list.add(xString.makeHandle(sAlgorithm));
                 list.add(xInt.makeHandle(cKeyBits >>> 3));
                 list.add(xArray.ensureEmptyByteArray());
-                list.add(new Secret(privateKey));
+                list.add(new SecretHandle(privateKey));
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
                 }
 
@@ -477,7 +477,7 @@ public class xRTKeyStore
                 list.add(xString.makeHandle(sAlgorithm));
                 list.add(xInt.makeHandle(cKeyBits >>> 3));
                 list.add(xArray.makeByteArrayHandle(abPublic, Mutability.Constant));
-                list.add(new Secret(publicKey));
+                list.add(new SecretHandle(publicKey));
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
                 }
 
@@ -527,10 +527,10 @@ public class xRTKeyStore
     /**
      * Native handle holding a key.
      */
-    public static class Secret
+    public static class SecretHandle
             extends ObjectHandle
         {
-        protected Secret(Key key)
+        protected SecretHandle(Key key)
             {
             super(xObject.INSTANCE.getCanonicalClass());
 

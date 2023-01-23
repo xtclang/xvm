@@ -50,4 +50,12 @@ public class xRTUInt8Delegate
         {
         return xUInt8.INSTANCE.makeJavaLong(lValue);
         }
+
+    /**
+     * Obtain an array of bytes from the specified ByteArrayHandle.
+     */
+    public static byte[] getBytes(ByteArrayHandle hDelegate)
+        {
+        return INSTANCE.getBytes(hDelegate, 0, hDelegate.m_cSize, false);
+        }
     }
