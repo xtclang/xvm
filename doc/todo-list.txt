@@ -1,3 +1,7 @@
+- BinaryInput:
+    - readBytes() methods need to return thee number of bytes read
+    - would be nice to have an "eof" indicator
+
 - what to do about passing a const/service argument from a child container into the parent's one?
 
 - entering the debugger should stop time
