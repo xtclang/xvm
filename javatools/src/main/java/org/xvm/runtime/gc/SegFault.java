@@ -5,5 +5,6 @@ package org.xvm.runtime.gc;
  *
  * @author mf
  */
-public class SegFault extends Error {
-}
+public class SegFault extends Error
+    {
+    }

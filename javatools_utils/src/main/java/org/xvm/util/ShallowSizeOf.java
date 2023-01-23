@@ -15,7 +15,7 @@ public class ShallowSizeOf {
     /**
      * {@code true} if this JVM uses compressed references and object headers
      */
-    static final boolean COMPRESSED = Runtime.getRuntime().maxMemory() < 30 * 1024 * 1024;
+    static final boolean COMPRESSED = Runtime.getRuntime().maxMemory() < 30L * 1024 * 1024 * 1024;
 
     /**
      * The size of an object header.
