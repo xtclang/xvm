@@ -10,7 +10,7 @@ import libcrypto.Verifier;
  * The native [Encryption] [Algorithm] implementation that doesn't require a key (also known as
  * a "hasher).
  */
-const RTHasherAlgorithm(String name, Int size)
+service RTHasherAlgorithm(String name, Int size)
         implements Algorithm, Signer
     {
     construct(String name, Int size, Object hasher)

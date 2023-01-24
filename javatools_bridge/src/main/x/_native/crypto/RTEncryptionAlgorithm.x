@@ -10,7 +10,7 @@ import libcrypto.KeyPair;
 /**
  * The native [Encryption] [Algorithm] implementation that requires a key.
  */
-const RTEncryptionAlgorithm(String name, Int blockSize, KeyForm keyForm)
+service RTEncryptionAlgorithm(String name, Int blockSize, KeyForm keyForm)
         implements Algorithm
     {
     construct(String name, Int blockSize, Int|Int[] keySize, KeyForm keyForm, Object cipher)

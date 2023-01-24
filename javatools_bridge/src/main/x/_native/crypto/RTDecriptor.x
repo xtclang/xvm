@@ -3,6 +3,9 @@ import libcrypto.Annotations;
 import libcrypto.CryptoKey;
 import libcrypto.Decryptor;
 
+import RTKeyStore.RTPrivateKey;
+
+
 /**
  * The native [Encryptor] implementation.
  */
@@ -21,9 +24,9 @@ service RTDecryptor
         assert CryptoKey privateKey ?= this.privateKey;
 
         Object secret;
-        if (privateKey.is(RTKeyStore.RTPrivateKey))
+        if (privateKey := &privateKey.revealAs(RTPrivateKey))
             {
-            secret = privateKey.secret;
+            secret = privateKey.as(RTPrivateKey).secret;
             }
         else if (Byte[] rawKey := privateKey.isVisible())
             {
@@ -64,5 +67,5 @@ service RTDecryptor
 
     // ----- native helpers ------------------------------------------------------------------------
 
-    private Byte[] decrypt(Object cipher, Object secret, Byte[] bytes) {TODO("Native");}
+    protected Byte[] decrypt(Object cipher, Object secret, Byte[] bytes) {TODO("Native");}
     }

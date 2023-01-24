@@ -58,6 +58,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms;
 import org.xvm.runtime.template._native.crypto.xRTKeyStore;
 
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
@@ -358,10 +359,10 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("keystore", typeKeyStore), templateKeyStore::ensureKeyStore);
 
         // +++ crypto:Algorithms
-
+        xRTAlgorithms templateAlgorithms = xRTAlgorithms.INSTANCE;
         TypeConstant typeAlgorithms = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "Algorithms"));
-        addResourceSupplier(new InjectionKey("algorithms"  , typeAlgorithms), this::ensureAlgorithms);
+        addResourceSupplier(new InjectionKey("algorithms", typeAlgorithms), templateAlgorithms::ensureAlgorithms);
 
         // +++ web:WebServer
         xRTServer templateServer = xRTServer.INSTANCE;
@@ -730,50 +731,6 @@ public class NativeContainer
         return hNetwork;
         }
 
-    /**
-     * Injection support method.
-     */
-    public ObjectHandle ensureAlgorithms(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hAlgorithms = m_hAlgorithms;
-        if (hAlgorithms == null)
-            {
-            m_hAlgorithms = hAlgorithms = instantiateAlgorithms(frame, hOpts);
-            }
-
-        return hAlgorithms;
-        }
-
-    protected ObjectHandle instantiateAlgorithms(Frame frame, ObjectHandle hOpts)
-        {
-        ClassStructure  clz = getClassStructure("_native.crypto.RTAlgorithms");
-        MethodStructure fn  = clz.findMethod("createAlgorithms", 1);
-
-        String[] asNames = new String[]
-            {
-            "AES/CBC/NoPadding",
-            "RSA/ECB/PKCS1Padding"
-            };
-
-        ObjectHandle[] ahArg = new ObjectHandle[fn.getMaxVars()];
-        ahArg[0] = xString.makeArrayHandle(asNames);
-
-        switch (frame.call1(fn, null, ahArg, Op.A_STACK))
-            {
-            case Op.R_NEXT:
-                return frame.popStack();
-
-            case Op.R_CALL:
-                return new DeferredCallHandle(frame.m_frameNext);
-
-            case Op.R_EXCEPTION:
-                return new DeferredCallHandle(frame.m_hException);
-
-            default:
-                throw new IllegalStateException();
-            }
-        }
-
 
     // ----- Container methods ---------------------------------------------------------------------
 
@@ -996,7 +953,6 @@ public class NativeContainer
 
     private ObjectHandle m_hSecureNetwork;
     private ObjectHandle m_hInsecureNetwork;
-    private ObjectHandle m_hAlgorithms;
 
     private final ModuleRepository f_repository;
     private       ModuleStructure  m_moduleSystem;

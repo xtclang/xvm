@@ -3,6 +3,10 @@ import libcrypto.Annotations;
 import libcrypto.CryptoKey;
 import libcrypto.Encryptor;
 
+import RTKeyStore.RTPrivateKey;
+import RTKeyStore.RTPublicKey;
+
+
 /**
  * The native [Encryptor] implementation.
  */
@@ -37,9 +41,9 @@ service RTEncryptor(Algorithm algorithm, Int blockSize)
         Object secret;
         if (CryptoKey publicKey ?= this.publicKey)
             {
-            if (publicKey.is(RTKeyStore.RTPublicKey))
+            if (publicKey := &publicKey.revealAs(RTPublicKey))
                 {
-                secret = publicKey.secret;
+                secret = publicKey.as(RTPublicKey).secret;
                 }
             else if (Byte[] rawKey := publicKey.isVisible())
                 {
@@ -54,9 +58,9 @@ service RTEncryptor(Algorithm algorithm, Int blockSize)
             {
             assert CryptoKey privateKey ?= this.privateKey;
 
-            if (privateKey.is(RTKeyStore.RTPrivateKey))
+            if (privateKey := &privateKey.revealAs(RTPrivateKey))
                 {
-                secret = privateKey.secret;
+                secret = privateKey.as(RTPrivateKey).secret;
                 }
             else if (Byte[] rawKey := privateKey.isVisible())
                 {
@@ -98,5 +102,5 @@ service RTEncryptor(Algorithm algorithm, Int blockSize)
 
     // ----- native helpers ------------------------------------------------------------------------
 
-    private Byte[] encrypt(Object cipher, Object secret, Byte[] data) {TODO("Native");}
+    protected Byte[] encrypt(Object cipher, Object secret, Byte[] data) {TODO("Native");}
     }

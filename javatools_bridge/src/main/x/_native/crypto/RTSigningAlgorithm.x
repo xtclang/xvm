@@ -10,7 +10,7 @@ import libcrypto.Verifier;
 /**
  * The native [Signing] [Algorithm] implementation that requires a key.
  */
-const RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
+service RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
         implements Algorithm
     {
     construct(String name, Int blockSize, Int|Int[] keySize, Int signatureSize, Object signer)

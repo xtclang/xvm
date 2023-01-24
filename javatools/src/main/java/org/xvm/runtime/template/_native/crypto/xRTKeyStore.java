@@ -283,6 +283,7 @@ public class xRTKeyStore
      *                String    publicKeyAlgorithm,
      *                Int       publicKeySize,
      *                Byte[]    publicKeyBytes,
+     *                Object    publicSecret,
      *                Byte[]    derValue
      *                )
      *      getCertificateInfo(String name)"
@@ -350,6 +351,7 @@ public class xRTKeyStore
             list.add(xString.makeHandle(sAlgorithm));
             list.add(xInt.makeHandle(cKeyBits >>> 3));
             list.add(xByteArray.makeByteArrayHandle(abPublic, Mutability.Constant));
+            list.add(new SecretHandle(publicKey));
             list.add(xByteArray.makeByteArrayHandle(abDer, Mutability.Constant));
 
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));

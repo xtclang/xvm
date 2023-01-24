@@ -8,15 +8,17 @@ import libcrypto.KeyForm;
  */
 service RTAlgorithms
     {
-    static Algorithms createAlgorithms(String[] names)
+    /**
+     * Compute the Algorithms object.
+     */
+    Algorithms createAlgorithms()
         {
-        RTAlgorithms instance   = new RTAlgorithms();
-        Algorithm[]  algorithms = new Array<Algorithm>(names.size);
-        for (String name : names)
+        Algorithm[] algorithms = new Array<Algorithm>(algorithmNames.size);
+        for (String name : algorithmNames)
             {
             (AlgorithmMethod method, Int|Int[] keySize, Int sigSize) = computeMethod(name);
 
-            (Int blockSize, Object implementation) = instance.getAlgorithmInfo(name, method);
+            (Int blockSize, Object implementation) = getAlgorithmInfo(name, method);
 
             Algorithm alg;
             switch (method)
@@ -43,6 +45,15 @@ service RTAlgorithms
 
         return new Algorithms(algorithms.freeze(True));
         }
+
+    /**
+     * Supported algorithm names.
+     */
+    static String[] algorithmNames =
+            [
+            "AES/CBC/NoPadding",
+            "RSA/ECB/PKCS1Padding"
+            ];
 
     enum AlgorithmMethod {Hasher, SymmetricCipher, AsymmetricCipher, Signature}
 

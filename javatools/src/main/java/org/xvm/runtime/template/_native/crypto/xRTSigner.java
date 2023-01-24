@@ -29,7 +29,7 @@ import org.xvm.runtime.template._native.crypto.xRTKeyStore.SecretHandle;
 
 
 /**
- * Native implementation of the xRTAlgorithms.x service.
+ * Native implementation of the xRTSigner.x service.
  */
 public class xRTSigner
         extends xService

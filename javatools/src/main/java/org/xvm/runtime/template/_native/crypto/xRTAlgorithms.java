@@ -12,10 +12,15 @@ import javax.crypto.Cipher;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -51,6 +56,73 @@ public class xRTAlgorithms
         markNativeMethod("getAlgorithmInfo", null, null);
 
         invalidateTypeInfo();
+        }
+
+    /**
+     * Injection support method.
+     */
+    public ObjectHandle ensureAlgorithms(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hAlgorithms = m_hAlgorithms;
+        if (hAlgorithms == null)
+            {
+            m_hAlgorithms = hAlgorithms = instantiateAlgorithms(frame, hOpts);
+            }
+
+        return hAlgorithms;
+        }
+
+    protected ObjectHandle instantiateAlgorithms(Frame frame, ObjectHandle hOpts)
+        {
+        TypeComposition clz     = getCanonicalClass();
+        MethodStructure ctor    = getStructure().findConstructor();
+        ServiceContext  context = f_container.createServiceContext(f_sName);
+
+        switch (context.sendConstructRequest(frame, clz, ctor, null,
+                    new ObjectHandle[ctor.getMaxVars()], Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return invokeCreateAlgorithms(frame);
+
+            case Op.R_CALL:
+                {
+                Frame frameNext = frame.m_frameNext;
+                frameNext.addContinuation(frameCaller ->
+                    {
+                    frameCaller.pushStack(invokeCreateAlgorithms(frameCaller));
+                    return Op.R_NEXT;
+                    });
+                return new DeferredCallHandle(frameNext);
+                }
+
+            case Op.R_EXCEPTION:
+                return new DeferredCallHandle(frame.m_hException);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    private ObjectHandle invokeCreateAlgorithms(Frame frame)
+        {
+        TypeComposition clz     = getCanonicalClass();
+        MethodStructure method = getStructure().findMethod("createAlgorithms", 0);
+        CallChain       chain  = clz.getMethodCallChain(method.getIdentityConstant().getSignature());
+
+        switch (chain.invoke(frame, frame.popStack(), Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return frame.popStack();
+
+            case Op.R_CALL:
+                return new DeferredCallHandle(frame.m_frameNext);
+
+            case Op.R_EXCEPTION:
+                return new DeferredCallHandle(frame.m_hException);
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override
@@ -181,4 +253,9 @@ public class xRTAlgorithms
          */
         public final Signature f_signature;
         }
+
+    /**
+     * Cached Algorithms handle.
+     */
+    private ObjectHandle m_hAlgorithms;
     }

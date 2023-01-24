@@ -100,6 +100,7 @@ service RTKeyStore
              String    publicKeyAlgorithm,
              Int       publicKeySize,
              Byte[]    publicKeyBytes,
+             Object    publicSecret,
              Byte[]    derValue) := getCertificateInfo(name))
             {
             Date notBefore = new Date(notBeforeYear, notBeforeMonth, notBeforeDay);
@@ -115,7 +116,7 @@ service RTKeyStore
                 }
             Signature  sig = new Signature(signatureAlgorithm, signatureBytes);
             CryptoKey? key = publicKeyBytes.size > 0
-                    ? new PublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes)
+                    ? new RTPublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes, publicSecret)
                     : Null;
             Certificate cert = new X509Certificate(
                                 issuer, new Version(version.toString()), notBefore, notAfter,
@@ -161,6 +162,7 @@ service RTKeyStore
                          String    publicKeyAlgorithm,
                          Int       publicKeySize,
                          Byte[]    publicKeyBytes,
+                         Object    publicSecret,
                          Byte[]    derValue
                          )
         getCertificateInfo(String name) {TODO("Native");}
