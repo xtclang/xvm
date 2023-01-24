@@ -187,7 +187,7 @@ public class MarkAndSweepGcSpace<V>
             if (o != null && !f_accessor.getMarker(o) == fReachableMarker)
                 {
                 aVS[i] = null;
-                anFreeSlots[m_nTopFree++] = i;
+                anFreeSlots[++m_nTopFree] = i;
                 m_cBytes -= ShallowSizeOf.object(o);
                 }
             }
@@ -220,25 +220,29 @@ public class MarkAndSweepGcSpace<V>
     private void grow()
             throws OutOfMemoryError
         {
-        int[] freeSlots = m_anFreeSlots;
-        V[] vs = m_aObjects;
+        int[] anFreeSlots = m_anFreeSlots;
+        V[] aObjects = m_aObjects;
 
-        int newCapacity = freeSlots.length * 2;
-        if (newCapacity == 0)
+        int capOld = anFreeSlots.length;
+        int capNew = capOld * 2;
+        if (capNew == 0)
             {
-            newCapacity = Integer.MAX_VALUE;
+            capNew = Integer.MAX_VALUE;
             }
-        int[] newFreeSlots = new int[newCapacity];
+        int[] anFreeSlotsNew = new int[capNew];
 
         @SuppressWarnings("unchecked")
-        V[] newVS = (V[]) new Object[newCapacity];
+        V[] aObjectsNew = (V[]) new Object[capNew];
 
-        int nTopFree = m_nTopFree;
-        System.arraycopy(freeSlots, 0, newFreeSlots, 0, nTopFree);
-        System.arraycopy(vs, 0, newVS, 0, nTopFree);
+        System.arraycopy(aObjects, 0, aObjectsNew, 0, aObjects.length);
+        for (int i = 0, c = capNew - capOld; i < c; ++i)
+            {
+            anFreeSlotsNew[i] = capOld + i;
+            }
 
-        this.m_anFreeSlots = newFreeSlots;
-        this.m_aObjects = newVS;
+        this.m_nTopFree = capNew - capOld;
+        this.m_anFreeSlots = anFreeSlotsNew;
+        this.m_aObjects = aObjectsNew;
         }
 
 

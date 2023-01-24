@@ -50,7 +50,7 @@ public class ShallowSizeOf {
      * @return the size in bytes
      */
     public static int arrayOf(Class<?> clzComp, int slots) {
-        return align(HEADER + fieldOf(int.class) + (fieldOf(clzComp) * slots));
+        return align(HEADER + 4 + (fieldOf(clzComp) * slots));
     }
 
     /**
