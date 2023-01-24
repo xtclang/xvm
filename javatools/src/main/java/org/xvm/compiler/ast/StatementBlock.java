@@ -1232,9 +1232,15 @@ public class StatementBlock
                         {
                         type = pool.ensureAccessTypeConstant(typeThis, Access.STRUCT);
                         nReg = Op.A_STRUCT;
-                        break;
                         }
-                    // fall through
+                    else
+                        {
+                        type   = typeThis;
+                        nReg   = Op.A_THIS;
+                        cSteps = getMethod().getThisSteps();
+                        }
+                    break;
+
                 case "this:target":
                     type   = typeThis;
                     nReg   = Op.A_TARGET;
