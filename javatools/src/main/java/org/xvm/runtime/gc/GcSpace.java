@@ -31,7 +31,7 @@ public interface GcSpace<V>
      *
      * <p>
      * If the object is indicated to a "weak" reference, then {@link #get field 0} must be the field which stores
-     * the weak referant.
+     * the weak referent, and {@link #get field 1} if it exists is used to store the notifier (if any).
      *
      * @param constructor the function to run to construct the object
      * @param fWeak {@code true} if the object represents a "weak" reference

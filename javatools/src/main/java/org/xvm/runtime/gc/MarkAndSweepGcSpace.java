@@ -153,23 +153,20 @@ public class MarkAndSweepGcSpace<V>
             V o = aObjects[i];
             if (o != null)
                 {
-                if (getHeaderBit(o, MARKER_MASK) != fReachableMarker)
+                long header = f_accessor.getHeader(o);
+                if (((header & MARKER_MASK) == MARKER_MASK) != fReachableMarker)
                     {
-                    // free the space
+                    // "unmarked" object; free the space
                     aObjects[i] = null;
                     anFreeSlots[++m_nTopFree] = i;
                     m_cBytes -= f_accessor.getByteSize(o);
                     }
-                else if (getHeaderBit(o, WEAK_MASK))
+                else if ((header & WEAK_MASK) == WEAK_MASK)
                     {
                     int[] anNotifyNew = handleWeakSweep(o, i, anNotify, nNotifyTop, fReachableMarker);
-                    if (anNotifyNew != anNotify)
+                    if (anNotifyNew != null && nNotifyTop < anNotifyNew.length && anNotifyNew[nNotifyTop] != 0)
                         {
                         anNotify = anNotifyNew;
-                        ++nNotifyTop;
-                        }
-                    else if (anNotify != null && nNotifyTop < anNotify.length && anNotify[nNotifyTop] != 0)
-                        {
                         ++nNotifyTop;
                         }
                     }
@@ -214,13 +211,14 @@ public class MarkAndSweepGcSpace<V>
     private int[] handleWeakSweep(V weak, int nWeak, int[] anNotify, int nNotifyTop, boolean fReachableMarker)
         {
         // clear weak refs as necessary
-        long pReferant = f_accessor.getField(weak, 0);
-        if (isLocal(pReferant))
+        long preferent = f_accessor.getField(weak, 0);
+        if (isLocal(preferent))
             {
-            V referant = m_aObjects[slot(pReferant)];
-            if (referant == null || getHeaderBit(referant, MARKER_MASK) != fReachableMarker)
+            V referent = m_aObjects[slot(preferent)];
+            if (referent == null || getHeaderBit(referent, MARKER_MASK) != fReachableMarker)
                 {
-                f_accessor.setField(weak, 0, NULL); // clear referant
+                f_accessor.setField(weak, 0, NULL); // clear referent
+                getAndSetHeaderBit(weak, WEAK_MASK, false); // once cleared it can be treated as a "normal" object
                 if (f_accessor.getFieldCount(weak) > 1 && f_accessor.getField(weak, 1) != NULL)
                     {
                     // enqueue the weak-ref
