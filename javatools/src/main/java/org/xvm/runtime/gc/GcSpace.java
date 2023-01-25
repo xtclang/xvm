@@ -34,10 +34,10 @@ public interface GcSpace<V>
      * the weak referant.
      *
      * @param constructor the function to run to construct the object
-     * @param weak {@code true} if the object represents a "weak" reference
+     * @param fWeak {@code true} if the object represents a "weak" reference
      * @return the address of the allocated resource
      */
-    long allocate(Supplier<? extends V> constructor, boolean weak)
+    long allocate(Supplier<? extends V> constructor, boolean fWeak)
             throws OutOfMemoryError;
 
     /**

@@ -187,7 +187,7 @@ public class MarkAndSweepGcSpaceTests
     public void shouldClearWeakRefsToUnreachables()
         {
         LongArrayStorage storage = LongArrayStorage.INSTANCE;
-        List<long[]> cleared = new ArrayList<>();
+        List<Long> cleared = new ArrayList<>();
         GcSpace<long[]> space = new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, cleared::add);
         RootSet root = new RootSet();
         space.add(root);
@@ -224,6 +224,6 @@ public class MarkAndSweepGcSpaceTests
             }
 
         // verify that cleared was notified
-        assertTrue(cleared.remove(space.get(wp1)));
+        assertTrue(cleared.remove(wp1));
         }
     }

@@ -19,9 +19,9 @@ public class MarkAndSweepGcSpace<V>
      * Construct a {@link MarkAndSweepGcSpace}.
      *
      * @param accessor the accessor of accessing the contents of an object
-     * @param clearedListener a function to invoke when a "weak" ref has been cleared
+     * @param clearedListener a function to invoke with a pointer to a weak-ref once it's been cleared
      */
-    public MarkAndSweepGcSpace(ObjectStorage<V> accessor, Consumer<V> clearedListener) {
+    public MarkAndSweepGcSpace(ObjectStorage<V> accessor, LongConsumer clearedListener) {
         this (accessor, clearedListener, Long.MAX_VALUE, Long.MAX_VALUE);
     }
 
@@ -29,12 +29,12 @@ public class MarkAndSweepGcSpace<V>
     * Construct a {@link MarkAndSweepGcSpace} with limits.
     *
     * @param accessor the accessor of accessing the contents of an object
-    * @param clearedListener a function to invoke when a "weak" ref which have been cleared
+    * @param clearedListener a function to invoke with a pointer to a weak-ref once it's been cleared
     * @param cbLimitSoft the byte size to try to stay within
     * @param cbLimitHard the maximum allowable byte size
     */
     public MarkAndSweepGcSpace(ObjectStorage<V> accessor,
-                               Consumer<V> clearedListener,
+                               LongConsumer clearedListener,
                                long cbLimitSoft,
                                long cbLimitHard)
         {
@@ -51,7 +51,7 @@ public class MarkAndSweepGcSpace<V>
         }
 
     @Override
-    public long allocate(Supplier<? extends V> constructor, boolean weak)
+    public long allocate(Supplier<? extends V> constructor, boolean fWeak)
             throws OutOfMemoryError
         {
         if (m_nTopFree < 0 || m_cBytes > f_cbLimitSoft)
@@ -69,7 +69,7 @@ public class MarkAndSweepGcSpace<V>
 
         V resource = constructor.get();
         getAndSetHeaderBit(resource, MARKER_MASK, fAllocationMarker);
-        if (weak)
+        if (fWeak)
             {
             getAndSetHeaderBit(resource, WEAK_MASK, true);
             }
@@ -129,14 +129,14 @@ public class MarkAndSweepGcSpace<V>
     @Override
     public void gc()
         {
-        Map<Long, Collection<V>> weaks = null;
+        Map<Long, long[]> weaks = null;
         boolean fReachableMarker = !fAllocationMarker;
         fAllocationMarker = fReachableMarker;
         for (Root root : f_setRoots)
             {
             for (var liter = root.collectables(); liter.hasNext(); )
                 {
-                weaks = walkAndMark(get(liter.next()), fReachableMarker, weaks);
+                weaks = walkAndMark(liter.next(), fReachableMarker, weaks);
                 }
             }
 
@@ -152,7 +152,7 @@ public class MarkAndSweepGcSpace<V>
                 m_cBytes -= f_accessor.getByteSize(o);
                 if (weaks != null && getHeaderBit(o, WEAK_MASK))
                     {
-                    handleWeakSweep(o, weaks);
+                    handleWeakSweep(address(i), weaks);
                     }
                 }
             }
@@ -166,21 +166,22 @@ public class MarkAndSweepGcSpace<V>
     /**
      * Walk and mark the graph of objects reachable from a given object.
      *
-     * @param o                the source object
+     * @param po               the source object address
      * @param fReachableMarker the value to mark the objects with
      * @param weaks            the mapping of referants to their weak-refs, or {@code null}
      *
      * @return the weaks mapping, or {@code null}
      */
-    private Map<Long, Collection<V>> walkAndMark(V o, boolean fReachableMarker, Map<Long, Collection<V>> weaks)
+    private Map<Long, long[]> walkAndMark(long po, boolean fReachableMarker, Map<Long, long[]> weaks)
         {
+        V o = get(po);
         // TODO: dynamically switch from recursive to non-recursive based on depth
         if (o != null && getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
             {
             boolean fWeak = getHeaderBit(o, WEAK_MASK);
             if (fWeak)
                 {
-                weaks = handleWeakMark(o, weaks);
+                weaks = handleWeakMark(po, weaks);
                 }
 
             for (int i = fWeak ? 1 : 0, c = f_accessor.getFieldCount(o); i < c; ++i)
@@ -188,7 +189,7 @@ public class MarkAndSweepGcSpace<V>
                 long address = f_accessor.getField(o, i);
                 if (isLocal(address))
                     {
-                    weaks = walkAndMark(get(address), fReachableMarker, weaks);
+                    weaks = walkAndMark(address, fReachableMarker, weaks);
                     }
                 }
             }
@@ -199,13 +200,13 @@ public class MarkAndSweepGcSpace<V>
     /**
      * Handle the tracking of weak-refs during the marking phase.
      *
-     * @param o the weak ref
+     * @param wp the address of the weak-ref
      * @param weaks the map of weak referants to their weak refs, or {@code null}
      * @return the weaks map, or {@code null}
      */
-    private Map<Long, Collection<V>> handleWeakMark(V o, Map<Long, Collection<V>> weaks)
+    private Map<Long, long[]> handleWeakMark(long wp, Map<Long, long[]> weaks)
         {
-        long referant = f_accessor.getField(o, 0);
+        long referant = f_accessor.getField(m_aObjects[slot(wp)], 0);
         if (referant != NULL)
             {
             if (weaks == null)
@@ -216,11 +217,15 @@ public class MarkAndSweepGcSpace<V>
             weaks.compute(referant, (k, v) -> {
             if (v == null)
                 {
-                v = new ArrayList<>(1);
+                return new long[] {wp};
                 }
-
-            v.add(o);
-            return v;
+            else
+                {
+                long[] newV = new long[v.length + 1];
+                System.arraycopy(v, 0, newV, 0, v.length);
+                newV[v.length] = wp;
+                return newV;
+                }
             });
             }
 
@@ -229,37 +234,50 @@ public class MarkAndSweepGcSpace<V>
     /**
      * Handle the post-sweeping of weak-refs.
      *
-     * @param weaks the mapping of address to the weak refs which refer to them
+     * @param weaks the mapping of address twp the address of the weak-refs which refer to them
      */
-    private void handleWeakSweep(V o, Map<Long, Collection<V>> weaks)
+    private void handleWeakSweep(long wp, Map<Long, long[]> weaks)
         {
-        long referant = f_accessor.getField(o, 0);
+        long referant = f_accessor.getField(m_aObjects[slot(wp)], 0);
         if (referant != NULL)
             {
             // a weak-ref itself is being collected, if its referant is also being collected we need to be
             // sure we don't perform the weak-ref notification on the now dead ref
-            weaks.computeIfPresent(referant, (k, v) -> v.remove(o) && v.isEmpty() ? null : v);
+            weaks.computeIfPresent(referant, (k, v) -> {
+                for (int i = 0, c = v.length; i < c; ++i)
+                    {
+                    if (v[i] == wp)
+                        {
+                        v[i] = NULL;
+                        return c == 1 ? null : v;
+                        }
+                    }
+            return v;
+            });
             }
         }
 
     /**
      * Handle the post-sweeping for weak-refs.
      *
-     * @param weaks the mapping of address to the weak refs which refer to them
+     * @param weaks the mapping of address twp the address of the weak-refs which refer to them
      */
-    private void handleWeakPostSweep(Map<Long, Collection<V>> weaks)
+    private void handleWeakPostSweep(Map<Long, long[]> weaks)
         {
         Object[] aObjects = m_aObjects;
         // first pass over weaks, clear and retain only those which reference the dead
         for (var iter = weaks.entrySet().iterator(); iter.hasNext(); )
             {
-            Map.Entry<Long, Collection<V>> entry = iter.next();
+            Map.Entry<Long, long[]> entry = iter.next();
             if (m_aObjects[slot(entry.getKey())] == null)
                 {
-                for (V weak : entry.getValue())
+                // the referant is dead, clear the referants
+                for (long wp : entry.getValue())
                     {
-                    // clear the ref
-                    f_accessor.setField(weak, 0, 0);
+                    if (wp != NULL)
+                        {
+                        f_accessor.setField(get(wp), 0, 0);
+                        }
                     }
                 }
             else
@@ -269,11 +287,11 @@ public class MarkAndSweepGcSpace<V>
             }
 
         // second pass over weaks, it is now safe for callback, notify listener
-        for (Collection<V> weakRefs : weaks.values())
+        for (long[] weakRefs : weaks.values())
             {
-            for (V weak : weakRefs)
+            for (long wp : weakRefs)
                 {
-                f_clearedListener.accept(weak);
+                f_clearedListener.accept(wp);
                 }
             }
         }
@@ -398,7 +416,7 @@ public class MarkAndSweepGcSpace<V>
     /**
      * The listener to notify when weak-refs become clearable
      */
-    final Consumer<V> f_clearedListener;
+    final LongConsumer f_clearedListener;
 
     /**
      * The size in bytes we will try to stay below.
