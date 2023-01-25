@@ -14,41 +14,51 @@ module TestSimple
 
         @Inject(opts=new Info(store.contents, args[0])) KeyStore keystore;
 
-        assert CryptoKey privateKey := keystore.getKey("hello");
-        console.print($"privateKey={privateKey}");
-
-        assert Certificate cert := keystore.getCertificate("hello");
-        assert CryptoKey publicKey := cert.containsKey();
+        assert CryptoKey   privateKey := keystore.getKey("hello");
+        assert Certificate cert       := keystore.getCertificate("hello");
+        assert CryptoKey   publicKey  := cert.containsKey();
 
         @Inject Algorithms algorithms;
 
-        testDecryptor(algorithms, "RSA/ECB/PKCS1Padding", new KeyPair("hello", publicKey, privateKey));
+        KeyPair keyPair = new KeyPair("hello", publicKey, privateKey);
+        testDecryptor(algorithms, "RSA/ECB/PKCS1Padding", keyPair, SMALL_TEXT);
+
+        assert KeyGenerator desKeyGen := algorithms.keyGeneratorFor("DES");
+        CryptoKey desKey = desKeyGen.generateSecretKey("hello");
+        testDecryptor(algorithms, "DES/ECB/PKCS5Padding", desKey, BIG_TEXT);
         }
 
-    void testDecryptor(Algorithms algorithms, String name, CryptoKey key)
+    void testDecryptor(Algorithms algorithms, String name, CryptoKey key, String text)
         {
-        assert Decryptor decryptor := algorithms.decryptorFor(name, key);
-        console.print($"*** decryptor={decryptor}");
+        if (Decryptor decryptor := algorithms.decryptorFor(name, key))
+            {
+            console.print($"*** decryptor={decryptor} for {key}");
 
-        String text = \|The RSA encryption is meant to be used only for small data chunks; \
-                       |primary use - a symmetric key (less than 256 bytes)
-                       ;
+            Byte[] bytes = decryptor.encrypt(text.utf8());
+            console.print($"{bytes.size} bytes: {bytes.slice(0..<16).toHexDump(16)}");
 
-        Byte[] bytes = decryptor.encrypt(text.utf8());
-        console.print(bytes.toHexDump());
-
-        Byte[] data = decryptor.decrypt(bytes);
-        assert data.unpackUtf8() == text;
-        console.print(text);
+            Byte[] data = decryptor.decrypt(bytes);
+            assert data.unpackUtf8() == text;
+            }
+        else
+            {
+            console.print($"Cannot find decryptor for {name.quoted()} with {key}");
+            }
         }
 
-    void testSigner(Algorithms algorithms, String name, CryptoKey key)
+    void testSigner(Algorithms algorithms, String name, CryptoKey key, String text)
         {
         assert Signer signer := algorithms.signerFor(name, key);
-        console.print($"*** signerr={signer}");
+        console.print($"*** signer={signer}");
 
-        String text = $./TestSimple.x;
         Signature sig = signer.sign(text.utf8());
         console.print(sig.bytes.toHexDump());
         }
+
+    static String SMALL_TEXT =
+            \|The RSA encryption is meant to be used only for small data chunks; \
+             |primary use - a symmetric key (less than 256 bytes)
+             ;
+
+    static String BIG_TEXT = $./TestSimple.x;
     }

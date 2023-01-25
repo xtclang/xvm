@@ -24,7 +24,7 @@ service RTAlgorithms
             switch (method)
                 {
                 case Hasher:
-                    alg = new RTHasherAlgorithm(name, sigSize, implementation);
+                    alg = new RTHasher(name, sigSize, implementation);
                     break;
 
                 case SymmetricCipher:
@@ -39,6 +39,10 @@ service RTAlgorithms
                     alg = new RTSigningAlgorithm(name, blockSize, keySize, sigSize, implementation);
                     break;
 
+                case KeyGen:
+                    alg = new RTKeyGenerator(name, sigSize, implementation);
+                    break;
+
                 }
             algorithms.add(&alg.maskAs(Algorithm));
             }
@@ -51,11 +55,27 @@ service RTAlgorithms
      */
     static String[] algorithmNames =
             [
+            // symmetrical key ciphers require a symmetrical secret key (not private)
+            // "NoPadding" means that the data size must be a multiple of 8
             "AES/CBC/NoPadding",
-            "RSA/ECB/PKCS1Padding"
+            "AES/CBC/PKCS5Padding",
+            "AES/ECB/NoPadding",
+            "AES/ECB/PKCS5Padding",
+
+            "DES/CBC/NoPadding",
+            "DES/CBC/PKCS5Padding",
+            "DES/ECB/NoPadding",
+            "DES/ECB/PKCS5Padding",
+
+            // asymmetrical key ciphers require a key pair
+            "RSA/ECB/PKCS1Padding", // used only for small chunks of data, such as shared secret key
+
+            // key generators
+            "DES",
+            "DESede",
             ];
 
-    enum AlgorithmMethod {Hasher, SymmetricCipher, AsymmetricCipher, Signature}
+    enum AlgorithmMethod {Hasher, SymmetricCipher, AsymmetricCipher, Signature, KeyGen}
 
     /**
      * @see [Java Security Standard Algorithm Names](https://docs.oracle.com/javase/9/docs/specs/security/standard-names.html)
@@ -64,10 +84,16 @@ service RTAlgorithms
         {
         String[] parts = name.split('/');
 
-        if (parts.size == 0)
+        if (parts.size == 1)
             {
             switch (name)
                 {
+                case "DES":
+                    return KeyGen, 0, 8;
+
+                case "DESede":
+                    return KeyGen, 0, 24;
+
                 case "MD5":
                     return Hasher, 0, 128 >> 3;
 
@@ -109,14 +135,18 @@ service RTAlgorithms
                 {
                 case "DES":
                     // The Digital Encryption Standard.
-                    return SymmetricCipher, 56 >> 3, 0;
+                    // Despite the doc claim of the key size of 56 bits, the Java implementation
+                    // requires 64 (DESKeySpec.DES_KEY_LEN = 8)
+                    return SymmetricCipher, 8, 0;
 
                 case "DESede":
-                    // Triple DES Encryption
-                    return SymmetricCipher, 168 >> 3, 0;
+                    // Triple DES Encryption.
+                    // Despite the doc claim of the key size of 168 bits, the Java implementation
+                    // requires 192 (DESedeKeySpec.DES_EDE_KEY_LEN = 24)
+                    return SymmetricCipher, 24, 0;
 
                 case "RSA":
-                    // The RSA encryption algorithm
+                    // The RSA encryption algorithm.
                     return AsymmetricCipher, RSA_SIZES, 0;
                 }
             }
@@ -125,10 +155,13 @@ service RTAlgorithms
         }
 
 
-    static Int[] RSA_SIZES = [1024 >> 3, 2048 >> 3, 4096 >> 3];
-
     // ----- native methods ------------------------------------------------------------------------
 
-    (Int blockSize, Int formId, Int keySize, Object cipher)
+    (Int blockSize, Int formId, Int keySize, Object implementation)
         getAlgorithmInfo(String name, AlgorithmMethod method) {TODO("Native");}
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    private static Int[] RSA_SIZES = [1024 >> 3, 2048 >> 3, 4096 >> 3];
     }

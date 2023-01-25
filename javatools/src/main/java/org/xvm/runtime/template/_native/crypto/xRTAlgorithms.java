@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.crypto;
 
 
 import java.security.GeneralSecurityException;
+import java.security.Key;
 import java.security.MessageDigest;
 import java.security.Signature;
 
@@ -9,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -176,8 +178,17 @@ public class xRTAlgorithms
                     {
                     Signature sig = Signature.getInstance(sName);
 
-                    nBlockSize = 1024; // how to compute this?
+                    nBlockSize = 0;
                     hImpl      = new SignatureHandle(sig);
+                    break;
+                    }
+
+                case 4: // KeyGenerator
+                    {
+                    SecretKeyFactory factory = SecretKeyFactory.getInstance(sName);
+
+                    nBlockSize = 0;
+                    hImpl      = new KeyGenHandle(factory);
                     break;
                     }
 
@@ -252,6 +263,44 @@ public class xRTAlgorithms
          * The wrapped {@link Signature}.
          */
         public final Signature f_signature;
+        }
+
+    /**
+     * Native handle holding a key.
+     */
+    public static class SecretHandle
+            extends ObjectHandle
+        {
+        protected SecretHandle(Key key)
+            {
+            super(xObject.INSTANCE.getCanonicalClass());
+
+            f_key = key;
+            }
+
+        /**
+         * The wrapped {@link Key}.
+         */
+        public final Key f_key;
+        }
+
+    /**
+     * Native handle holding a KeyGenerator.
+     */
+    public static class KeyGenHandle
+            extends ObjectHandle
+        {
+        protected KeyGenHandle(SecretKeyFactory factory)
+            {
+            super(xObject.INSTANCE.getCanonicalClass());
+
+            f_factory = factory;
+            }
+
+        /**
+         * The wrapped {@link SecretKeyFactory}.
+         */
+        public final SecretKeyFactory f_factory;
         }
 
     /**

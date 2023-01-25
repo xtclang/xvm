@@ -55,7 +55,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -67,6 +66,8 @@ import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
 
@@ -524,25 +525,6 @@ public class xRTKeyStore
          * The underlying {@link TrustManager}.
          */
         public final X509TrustManager f_trustManager;
-        }
-
-    /**
-     * Native handle holding a key.
-     */
-    public static class SecretHandle
-            extends ObjectHandle
-        {
-        protected SecretHandle(Key key)
-            {
-            super(xObject.INSTANCE.getCanonicalClass());
-
-            f_key = key;
-            }
-
-        /**
-         * The wrapped {@link Key}.
-         */
-        public final Key f_key;
         }
 
 

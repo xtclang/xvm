@@ -55,8 +55,12 @@ interface Algorithm
      *
      * * * an [Decryptor] uses either a `Secret` key or a public/private key `Pair` to decrypt
      *     the information in the input.
+     *
+     * * `KeyGeneration` algorithms create `Secret` keys that could be used for symmetrical
+     *    encryption and decryption.
+     *
      */
-    enum Category {Signing, Encryption}
+    enum Category {Signing, Encryption, KeyGeneration}
 
     /**
      * The category of the cryptographic algorithm.
@@ -65,7 +69,7 @@ interface Algorithm
 
     /**
      * The size of a block of data that the algorithm operates on; if the algorithm is not block-
-     * oriented, for example a _stream cipher_, then the `blockSize` will be `1` (byte-at-a-time).
+     * oriented, then the `blockSize` will be `0`.
      */
     @RO Int blockSize;
 
@@ -91,8 +95,8 @@ interface Algorithm
      *
      * @return True if the key is valid and an engine was successfully allocated
      * @return (conditional) the configured crypto engine, which is an `Encryptor`, a `Decryptor`,
-     *         a `Verifier`, or a `Signer`, as indicated by a combination of the [category] and
-     *         [keyRequired] of the `Algorithm`, and the contents of the passed key
+     *         a `Verifier`, a `Signer`, or a `KeyGenerator` as indicated by a combination of the
+     *         [category] and [keyRequired] of the `Algorithm`, and the contents of the passed key
      */
-    Encryptor|Decryptor|Verifier|Signer allocate(CryptoKey? key);
+    Encryptor|Decryptor|Verifier|Signer|KeyGenerator allocate(CryptoKey? key);
     }

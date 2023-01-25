@@ -255,36 +255,4 @@ service RTKeyStore
                     ;
             }
         }
-
-    static const RTPublicKey
-            extends PublicKey
-        {
-        construct(String name, String algorithm, Int size, Byte[] bytes, Object secret)
-            {
-            construct PublicKey(name, algorithm, size, bytes);
-
-            this.secret = secret;
-            }
-
-        /**
-         * The crypto material.
-         */
-        Object secret;
-        }
-
-    static const RTPrivateKey
-            extends PrivateKey
-        {
-        construct(String name, String algorithm, Int size, Object secret)
-            {
-            construct PrivateKey(name, algorithm, size, []);
-
-            this.secret = secret;
-            }
-
-        /**
-         * The crypto material.
-         */
-        Object secret;
-        }
     }

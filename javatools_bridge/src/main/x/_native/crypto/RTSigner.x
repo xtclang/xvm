@@ -36,7 +36,7 @@ service RTSigner
         CryptoKey privateKey = this.privateKey;
         Object    secret;
 
-        if (privateKey.is(RTKeyStore.RTPrivateKey))
+        if (privateKey.is(RTPrivateKey))
             {
             secret = privateKey.secret;
             }

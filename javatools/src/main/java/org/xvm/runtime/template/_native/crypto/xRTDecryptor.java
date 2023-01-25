@@ -23,7 +23,7 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.CipherHandle;
-import org.xvm.runtime.template._native.crypto.xRTKeyStore.SecretHandle;
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
 
 
 /**
@@ -85,10 +85,10 @@ public class xRTDecryptor
         try
             {
             cipher.init(Cipher.ENCRYPT_MODE, key);
-            byte[] abSig = cipher.doFinal(abData);
+            byte[] abEncoded = cipher.doFinal(abData);
 
             return frame.assignValue(iReturn,
-                    xArray.makeByteArrayHandle(abSig, Mutability.Constant));
+                    xArray.makeByteArrayHandle(abEncoded, Mutability.Constant));
             }
         catch (GeneralSecurityException e)
             {

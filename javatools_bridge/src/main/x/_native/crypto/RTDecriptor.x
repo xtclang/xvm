@@ -3,8 +3,6 @@ import libcrypto.Annotations;
 import libcrypto.CryptoKey;
 import libcrypto.Decryptor;
 
-import RTKeyStore.RTPrivateKey;
-
 
 /**
  * The native [Encryptor] implementation.

@@ -127,6 +127,25 @@ const Algorithms
         }
 
     /**
+     * Obtain a [KeyGenerator] for the key generation algorithm of the specified name.
+     *
+     * @param specifier  the algorithm name, or the [Algorithm] object itself
+     *
+     * @return True iff the `Algorithms` is configured with the specified algorithm, and the key
+     *         is acceptable
+     * @return (conditional) the [KeyGenerator] for the specified algorithm
+     */
+    conditional KeyGenerator keyGeneratorFor(Specifier specifier)
+        {
+        if (Algorithm algorithm := findAlgorithm(specifier, KeyGeneration, Null, True))
+            {
+            return True, algorithm.allocate(Null).as(KeyGenerator);
+            }
+
+        return False;
+        }
+
+    /**
      * Helper function that checks whether or not the actual size matched the supported size(s).
      *
      * @param  supportedSize  the supported size(s)

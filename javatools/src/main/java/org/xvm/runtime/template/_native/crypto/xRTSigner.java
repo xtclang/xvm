@@ -25,7 +25,7 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.CipherHandle;
-import org.xvm.runtime.template._native.crypto.xRTKeyStore.SecretHandle;
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
 
 
 /**
