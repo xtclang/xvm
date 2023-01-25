@@ -193,8 +193,9 @@ public class MarkAndSweepGcSpaceTests
         space.add(root);
         long p1 = space.allocate(() -> storage.allocate(0));
         long p2 = space.allocate(() -> storage.allocate(1));
-        long wp1 = space.allocate(() -> storage.allocate(1), true);
+        long wp1 = space.allocate(() -> storage.allocate(2), true);
         storage.setField(space.get(wp1), 0, p1);
+        storage.setField(space.get(wp1), 1, space.allocate(() -> storage.allocate(0))); // notifier
         storage.setField(space.get(p2), 0, p1);
         root.collectables.add(wp1);
         root.collectables.add(p2);

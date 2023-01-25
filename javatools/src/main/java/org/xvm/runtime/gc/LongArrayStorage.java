@@ -30,7 +30,7 @@ public class LongArrayStorage
     @Override
     public long getByteSize(long[] o)
         {
-        return ShallowSizeOf.arrayOf(long[].class, o.length);
+        return ShallowSizeOf.arrayOf(long.class, o.length);
         }
 
     @Override

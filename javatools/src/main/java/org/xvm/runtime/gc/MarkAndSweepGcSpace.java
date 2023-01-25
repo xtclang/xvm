@@ -1,8 +1,10 @@
 package org.xvm.runtime.gc;
 
 
-import java.util.*;
-import java.util.function.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.LongConsumer;
+import java.util.function.Supplier;
 
 /**
  * A simple {@code mark-and-sweep} style collector.
@@ -18,21 +20,22 @@ public class MarkAndSweepGcSpace<V>
     /**
      * Construct a {@link MarkAndSweepGcSpace}.
      *
-     * @param accessor the accessor of accessing the contents of an object
+     * @param accessor        the accessor of accessing the contents of an object
      * @param clearedListener a function to invoke with a pointer to a weak-ref once it's been cleared
      */
-    public MarkAndSweepGcSpace(ObjectStorage<V> accessor, LongConsumer clearedListener) {
-        this (accessor, clearedListener, Long.MAX_VALUE, Long.MAX_VALUE);
-    }
+    public MarkAndSweepGcSpace(ObjectStorage<V> accessor, LongConsumer clearedListener)
+        {
+        this(accessor, clearedListener, Long.MAX_VALUE, Long.MAX_VALUE);
+        }
 
-   /**
-    * Construct a {@link MarkAndSweepGcSpace} with limits.
-    *
-    * @param accessor the accessor of accessing the contents of an object
-    * @param clearedListener a function to invoke with a pointer to a weak-ref once it's been cleared
-    * @param cbLimitSoft the byte size to try to stay within
-    * @param cbLimitHard the maximum allowable byte size
-    */
+    /**
+     * Construct a {@link MarkAndSweepGcSpace} with limits.
+     *
+     * @param accessor        the accessor of accessing the contents of an object
+     * @param clearedListener a function to invoke with a pointer to a weak-ref once it's been cleared
+     * @param cbLimitSoft     the byte size to try to stay within
+     * @param cbLimitHard     the maximum allowable byte size
+     */
     public MarkAndSweepGcSpace(ObjectStorage<V> accessor,
                                LongConsumer clearedListener,
                                long cbLimitSoft,
@@ -68,7 +71,7 @@ public class MarkAndSweepGcSpace<V>
             }
 
         V resource = constructor.get();
-        getAndSetHeaderBit(resource, MARKER_MASK, fAllocationMarker);
+        getAndSetHeaderBit(resource, MARKER_MASK, m_fAllocationMarker);
         if (fWeak)
             {
             getAndSetHeaderBit(resource, WEAK_MASK, true);
@@ -129,37 +132,56 @@ public class MarkAndSweepGcSpace<V>
     @Override
     public void gc()
         {
-        Map<Long, long[]> weaks = null;
-        boolean fReachableMarker = !fAllocationMarker;
-        fAllocationMarker = fReachableMarker;
+        // mark
+        boolean fReachableMarker = !m_fAllocationMarker;
+        m_fAllocationMarker = fReachableMarker;
         for (Root root : f_setRoots)
             {
             for (var liter = root.collectables(); liter.hasNext(); )
                 {
-                weaks = walkAndMark(liter.next(), fReachableMarker, weaks);
+                walkAndMark(liter.next(), fReachableMarker);
                 }
             }
 
+        // sweep
         V[] aObjects = m_aObjects;
         int[] anFreeSlots = m_anFreeSlots;
+        int[] anNotify = null;
+        int nNotifyTop = 0;
         for (int i = 0; i < aObjects.length; ++i)
             {
             V o = aObjects[i];
-            if (o != null && !getHeaderBit(o, MARKER_MASK) == fReachableMarker)
+            if (o != null)
                 {
-                aObjects[i] = null;
-                anFreeSlots[++m_nTopFree] = i;
-                m_cBytes -= f_accessor.getByteSize(o);
-                if (weaks != null && getHeaderBit(o, WEAK_MASK))
+                if (getHeaderBit(o, MARKER_MASK) != fReachableMarker)
                     {
-                    handleWeakSweep(address(i), weaks);
+                    // free the space
+                    aObjects[i] = null;
+                    anFreeSlots[++m_nTopFree] = i;
+                    m_cBytes -= f_accessor.getByteSize(o);
+                    }
+                else if (getHeaderBit(o, WEAK_MASK))
+                    {
+                    int[] anNotifyNew = handleWeakSweep(o, i, anNotify, nNotifyTop, fReachableMarker);
+                    if (anNotifyNew != anNotify)
+                        {
+                        anNotify = anNotifyNew;
+                        ++nNotifyTop;
+                        }
+                    else if (anNotify != null && anNotify[nNotifyTop] != 0)
+                        {
+                        ++nNotifyTop;
+                        }
                     }
                 }
             }
 
-        if (weaks != null)
+        if (anNotify != null)
             {
-            handleWeakPostSweep(weaks);
+            for (int i = 0; i < nNotifyTop; ++i)
+                {
+                f_clearedListener.accept(address(anNotify[i]));
+                }
             }
         }
 
@@ -168,132 +190,56 @@ public class MarkAndSweepGcSpace<V>
      *
      * @param po               the source object address
      * @param fReachableMarker the value to mark the objects with
-     * @param weaks            the mapping of referants to their weak-refs, or {@code null}
-     *
      * @return the weaks mapping, or {@code null}
      */
-    private Map<Long, long[]> walkAndMark(long po, boolean fReachableMarker, Map<Long, long[]> weaks)
+    private void walkAndMark(long po, boolean fReachableMarker)
         {
         V o = get(po);
         // TODO: dynamically switch from recursive to non-recursive based on depth
         if (o != null && getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
             {
             boolean fWeak = getHeaderBit(o, WEAK_MASK);
-            if (fWeak)
-                {
-                weaks = handleWeakMark(po, weaks);
-                }
-
             for (int i = fWeak ? 1 : 0, c = f_accessor.getFieldCount(o); i < c; ++i)
                 {
                 long address = f_accessor.getField(o, i);
                 if (isLocal(address))
                     {
-                    weaks = walkAndMark(address, fReachableMarker, weaks);
+                    walkAndMark(address, fReachableMarker);
                     }
                 }
             }
-
-        return weaks;
         }
 
-    /**
-     * Handle the tracking of weak-refs during the marking phase.
-     *
-     * @param wp the address of the weak-ref
-     * @param weaks the map of weak referants to their weak refs, or {@code null}
-     * @return the weaks map, or {@code null}
-     */
-    private Map<Long, long[]> handleWeakMark(long wp, Map<Long, long[]> weaks)
-        {
-        long referant = f_accessor.getField(m_aObjects[slot(wp)], 0);
-        if (referant != NULL)
-            {
-            if (weaks == null)
-                {
-                weaks = new HashMap<>();
-                }
 
-            weaks.compute(referant, (k, v) -> {
-            if (v == null)
-                {
-                return new long[] {wp};
-                }
-            else
-                {
-                long[] newV = new long[v.length + 1];
-                System.arraycopy(v, 0, newV, 0, v.length);
-                newV[v.length] = wp;
-                return newV;
-                }
-            });
-            }
-
-        return weaks;
-        }
-    /**
-     * Handle the post-sweeping of weak-refs.
-     *
-     * @param weaks the mapping of address twp the address of the weak-refs which refer to them
-     */
-    private void handleWeakSweep(long wp, Map<Long, long[]> weaks)
+    private int[] handleWeakSweep(V weak, int nWeak, int[] anNotify, int nNotifyTop, boolean fReachableMarker)
         {
-        long referant = f_accessor.getField(m_aObjects[slot(wp)], 0);
-        if (referant != NULL)
+        // clear weak refs as necessary
+        long pReferant = f_accessor.getField(weak, 0);
+        if (isLocal(pReferant))
             {
-            // a weak-ref itself is being collected, if its referant is also being collected we need to be
-            // sure we don't perform the weak-ref notification on the now dead ref
-            weaks.computeIfPresent(referant, (k, v) -> {
-                for (int i = 0, c = v.length; i < c; ++i)
+            V referant = m_aObjects[slot(pReferant)];
+            if (referant == null || getHeaderBit(referant, MARKER_MASK) != fReachableMarker)
+                {
+                f_accessor.setField(weak, 0, NULL); // clear referant
+                if (f_accessor.getFieldCount(weak) > 1 && f_accessor.getField(weak, 1) != NULL)
                     {
-                    if (v[i] == wp)
+                    // enqueue the weak-ref
+                    if (anNotify == null)
                         {
-                        v[i] = NULL;
-                        return c == 1 ? null : v;
+                        anNotify = new int[8];
                         }
-                    }
-            return v;
-            });
-            }
-        }
-
-    /**
-     * Handle the post-sweeping for weak-refs.
-     *
-     * @param weaks the mapping of address twp the address of the weak-refs which refer to them
-     */
-    private void handleWeakPostSweep(Map<Long, long[]> weaks)
-        {
-        Object[] aObjects = m_aObjects;
-        // first pass over weaks, clear and retain only those which reference the dead
-        for (var iter = weaks.entrySet().iterator(); iter.hasNext(); )
-            {
-            Map.Entry<Long, long[]> entry = iter.next();
-            if (m_aObjects[slot(entry.getKey())] == null)
-                {
-                // the referant is dead, clear the referants
-                for (long wp : entry.getValue())
-                    {
-                    if (wp != NULL)
+                    else if (nNotifyTop > anNotify.length)
                         {
-                        f_accessor.setField(get(wp), 0, 0);
+                        int[] anWeaksNew = new int[anNotify.length * 2];
+                        System.arraycopy(anWeaksNew, 0, anWeaksNew, 0, anNotify.length);
+                        anNotify = anWeaksNew;
                         }
+                    anNotify[nNotifyTop] = nWeak;
                     }
-                }
-            else
-                {
-                iter.remove();
                 }
             }
 
-        // second pass over weaks, it is now safe for callback, notify listener
-        for (long[] weakRefs : weaks.values())
-            {
-            for (long wp : weakRefs)
-                {
-                f_clearedListener.accept(wp);
-                }
-            }
+        return anNotify;
         }
 
     /**
@@ -364,7 +310,7 @@ public class MarkAndSweepGcSpace<V>
     /**
      * Get a single bit from the header.
      *
-     * @param o the object to query
+     * @param o    the object to query
      * @param mask the header mask to check against
      * @return the marker
      */
@@ -376,8 +322,8 @@ public class MarkAndSweepGcSpace<V>
     /**
      * Get and set the header bit for the given mask.
      *
-     * @param o the object
-     * @param mask the header mask
+     * @param o     the object
+     * @param mask  the header mask
      * @param value the updated bit value
      * @return the old bit value
      */
@@ -457,5 +403,5 @@ public class MarkAndSweepGcSpace<V>
     /**
      * The marker to set on newly allocated objects
      */
-    boolean fAllocationMarker;
+    boolean m_fAllocationMarker;
     }
