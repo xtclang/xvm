@@ -20,7 +20,24 @@ public interface GcSpace<V>
      * @param constructor the function to run to construct the object
      * @return the address of the allocated resource
      */
-    long allocate(Supplier<? extends V> constructor)
+    default long allocate(Supplier<? extends V> constructor)
+        throws OutOfMemoryError
+        {
+        return allocate(constructor, false);
+        }
+
+    /**
+     * Allocate an object using the specified "constructor".
+     *
+     * <p>
+     * If the object is indicated to a "weak" reference, then {@link #get field 0} must be the field which stores
+     * the weak referant.
+     *
+     * @param constructor the function to run to construct the object
+     * @param weak {@code true} if the object represents a "weak" reference
+     * @return the address of the allocated resource
+     */
+    long allocate(Supplier<? extends V> constructor, boolean weak)
             throws OutOfMemoryError;
 
     /**
@@ -69,4 +86,9 @@ public interface GcSpace<V>
          */
         PrimitiveIterator.OfLong collectables();
         }
+
+    /**
+     * The {@code null} pointer value.
+     */
+    long NULL = 0;
     }

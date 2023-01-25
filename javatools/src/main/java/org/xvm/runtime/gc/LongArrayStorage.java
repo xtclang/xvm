@@ -1,5 +1,7 @@
 package org.xvm.runtime.gc;
 
+import org.xvm.util.ShallowSizeOf;
+
 /**
  * An {@link ObjectStorage} implementation which stores objects in {@code long[]}.
  *
@@ -26,17 +28,21 @@ public class LongArrayStorage
         }
 
     @Override
-    public boolean getAndSetMarker(long[] o, boolean marker)
+    public long getByteSize(long[] o)
         {
-        long header = o[0];
-        o[0] = marker ? header | 1 : header & ~1;
-        return (header & 1) == 1;
+        return ShallowSizeOf.arrayOf(long[].class, o.length);
         }
 
     @Override
-    public boolean getMarker(long[] o)
+    public long getHeader(long[] o)
         {
-        return (o[0] & 1) == 1;
+        return o[0];
+        }
+
+    @Override
+    public void setHeader(long[] o, long header)
+        {
+        o[0] = header;
         }
 
     @Override

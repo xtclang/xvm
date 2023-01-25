@@ -1,5 +1,7 @@
 package org.xvm.runtime.gc;
 
+import org.xvm.util.ShallowSizeOf;
+
 /**
  * Provides a means by which to modify the raw storage of an object.
  *
@@ -9,24 +11,29 @@ package org.xvm.runtime.gc;
 public interface ObjectStorage<V>
     {
     /**
-     * Set the marker to the given value and return the prior marker value.
+     * Return the header for this object.
      *
-     * @param o      the object to mark
-     * @param marker the value to mark with
-     *
-     * @return the prior value
+     * @param o the object
+     * @return the header
      */
-    boolean getAndSetMarker(V o, boolean marker);
+    long getHeader(V o);
 
     /**
-     * Return the marker value for the object.
+     * Set the header for this object.
+     *
+     * @param o the object
+     * @return the header
+     */
+    void setHeader(V o, long header);
+
+    /**
+     * Return the shallow size of the object.
      *
      * @param o the object
      *
-     * @return the object's marker value
+     * @return the shallow size in bytes
      */
-    boolean getMarker(V o);
-
+    long getByteSize(V o);
 
     /**
      * Return the number of fields in the object.

@@ -6,9 +6,7 @@ import org.junit.Test;
 import org.xvm.util.ShallowSizeOf;
 
 import javax.swing.text.LayoutQueue;
-import java.util.HashSet;
-import java.util.PrimitiveIterator;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -21,7 +19,7 @@ public class MarkAndSweepGcSpaceTests
     {
     static GcSpace<long[]> makeSpace()
         {
-        return new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE);
+        return new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, w -> {});
         }
 
     static class RootSet
@@ -161,7 +159,7 @@ public class MarkAndSweepGcSpaceTests
         {
         RootSet root = new RootSet();
         long cbLimit = 1024*2048;
-        GcSpace<long[]> space = new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, 1024*1024, cbLimit);
+        GcSpace<long[]> space = new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, w -> {}, 1024*1024, cbLimit);
         space.add(root);
         long p1 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
         root.collectables.add(p1);
@@ -183,5 +181,49 @@ public class MarkAndSweepGcSpaceTests
             assertTrue(space.getByteCount() >= cbLimit);
             assertTrue(space.getByteCount() <= cbLimit + ShallowSizeOf.arrayOf(long.class, 512));
             }
+        }
+
+    @Test
+    public void shouldClearWeakRefsToUnreachables()
+        {
+        LongArrayStorage storage = LongArrayStorage.INSTANCE;
+        List<long[]> cleared = new ArrayList<>();
+        GcSpace<long[]> space = new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, cleared::add);
+        RootSet root = new RootSet();
+        space.add(root);
+        long p1 = space.allocate(() -> storage.allocate(0));
+        long p2 = space.allocate(() -> storage.allocate(1));
+        long wp1 = space.allocate(() -> storage.allocate(1), true);
+        storage.setField(space.get(wp1), 0, p1);
+        storage.setField(space.get(p2), 0, p1);
+        root.collectables.add(wp1);
+        root.collectables.add(p2);
+
+        space.gc();
+
+        // p2 keeps p1 alive; verify that p1 was not collected, and that wp1 was not cleared
+        assertNotNull(space.get(p1));
+        assertEquals(p1, storage.getField(space.get(wp1), 0));
+
+        // verify there have been no notifications
+        assertTrue(cleared.isEmpty());
+
+        // remove the strong ref to p1 and verify that it gets gc'd and that wp1 gets cleared
+        storage.setField(space.get(p2), 0, GcSpace.NULL);
+        space.gc();
+
+        assertEquals(GcSpace.NULL, storage.getField(space.get(wp1), 0));
+        try
+            {
+            space.get(p1);
+            fail();
+            }
+        catch (SegFault e)
+            {
+            // expected
+            }
+
+        // verify that cleared was notified
+        assertTrue(cleared.remove(space.get(wp1)));
         }
     }
