@@ -168,7 +168,7 @@ public class MarkAndSweepGcSpace<V>
                         anNotify = anNotifyNew;
                         ++nNotifyTop;
                         }
-                    else if (anNotify != null && anNotify[nNotifyTop] != 0)
+                    else if (anNotify != null && nNotifyTop < anNotify.length && anNotify[nNotifyTop] != 0)
                         {
                         ++nNotifyTop;
                         }
