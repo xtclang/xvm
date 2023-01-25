@@ -54,6 +54,7 @@ public class Fiber
             {
             // an independent fiber is only limited by the timeout of the parent service
             // and in general has no timeout
+            f_nDepth = 0;
             }
         else
             {
@@ -74,6 +75,7 @@ public class Fiber
                     m_ldtTimeout = System.currentTimeMillis() + cTimeoutMillis;
                     }
                 }
+            f_nDepth = fiberCaller.f_nDepth + 1;
             }
         }
 
@@ -629,6 +631,11 @@ public class Fiber
      * The function of the caller's service invocation Op (used for stack trace only).
      */
     final MethodStructure f_fnCaller;
+
+    /**
+     * The fiber call stack depth.
+     */
+    final int f_nDepth;
 
     /**
      * The fiber status (can only be mutated by the fiber itself).

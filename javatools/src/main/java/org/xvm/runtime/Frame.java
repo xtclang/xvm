@@ -149,7 +149,7 @@ public class Frame
         {
         f_context   = fiber.f_context;
         f_iId       = f_context.m_iFrameCounter++;
-        f_nDepth    = 0;
+        f_nDepth    = fiber.f_nDepth; // under-count, but works to prevent an infinite recursion
         f_fiber     = fiber;
         f_framePrev = null;
         f_iPCPrev   = iCallerPC;
