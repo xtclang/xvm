@@ -369,8 +369,8 @@ public class xRTKeyStore
         cal.setTime(date);
 
         list.add(xInt.makeHandle(cal.get(Calendar.YEAR)));
-        list.add(xInt.makeHandle(cal.get(Calendar.MONTH)));
-        list.add(xInt.makeHandle(cal.get(Calendar.DAY_OF_WEEK)));
+        list.add(xInt.makeHandle(cal.get(Calendar.MONTH) + 1));
+        list.add(xInt.makeHandle(cal.get(Calendar.DAY_OF_MONTH)));
         }
 
     private static int getPublicKeyLength(PublicKey puk)
