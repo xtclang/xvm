@@ -36,6 +36,20 @@ service RTVerifier
     @Override
     Boolean verify(Digest signature, Byte[] data)
         {
+        Object secret;
+        if (publicKey := &publicKey.revealAs(RTPublicKey))
+            {
+            secret = publicKey.as(RTPublicKey).secret;
+            }
+        else if (Byte[] rawKey := publicKey.isVisible())
+            {
+            secret = rawKey;
+            }
+        else
+            {
+            throw new IllegalState($"Unsupported key {publicKey}");
+            }
+
         Byte[] signatureBytes;
         if (signature.is(Signature))
             {
@@ -46,7 +60,7 @@ service RTVerifier
             {
             signatureBytes = signature;
             }
-        return verify(signer, publicKey, signatureBytes, data);
+        return verify(signer, secret, signatureBytes, data);
         }
 
     @Override
@@ -69,8 +83,14 @@ service RTVerifier
         {
         }
 
+    @Override
+    String toString()
+        {
+        return $"{algorithm.name.quoted()} verifier for {publicKey}";
+        }
+
 
     // ----- native helpers ------------------------------------------------------------------------
 
-    private Boolean verify(Object signer, CryptoKey publicKey, Byte[] signature, Byte[] data) {TODO("Native");}
+    protected Boolean verify(Object signer, Object secret, Byte[] signature, Byte[] data) {TODO("Native");}
     }

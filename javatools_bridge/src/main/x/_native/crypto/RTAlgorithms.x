@@ -117,8 +117,8 @@ service RTAlgorithms
     static Tuple<String, KeySize, Int>[] signers =
         [
         ("SHA1withDSA"  , 1024 >> 3, 160 >> 3),
-        ("SHA1withRSA"  , RSA_SIZES, 160 >> 3),
         ("SHA256withDSA", 1024 >> 3, 256 >> 3),
+        ("SHA1withRSA"  , RSA_SIZES, 160 >> 3),
         ("SHA256withRSA", RSA_SIZES, 256 >> 3),
         ];
 

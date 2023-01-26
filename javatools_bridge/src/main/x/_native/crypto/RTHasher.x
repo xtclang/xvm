@@ -10,13 +10,14 @@ import libcrypto.Verifier;
  * The native [Encryption] [Algorithm] implementation that doesn't require a key (also known as
  * a "hasher).
  */
-service RTHasher(String name, Int size)
+service RTHasher(String name, Int signatureSize)
         implements Algorithm, Signer
     {
-    construct(String name, Int size, Object hasher)
+    construct(String name, Int signatureSize, Object hasher)
         {
-        this.name   = name;
-        this.hasher = hasher;
+        this.name          = name;
+        this.signatureSize = signatureSize;
+        this.hasher        = hasher;
         }
 
     /**
@@ -57,12 +58,6 @@ service RTHasher(String name, Int size)
     CryptoKey? privateKey.get()
         {
         return Null;
-        }
-
-    @Override
-    Int signatureSize.get()
-        {
-        return size;
         }
 
     @Override
@@ -131,5 +126,5 @@ service RTHasher(String name, Int size)
 
     // ----- native methods ------------------------------------------------------------------------
 
-    private Byte[] digest(Object hasher, Byte[] data) {TODO("Native");}
+    private Byte[] digest(Object digest, Byte[] data) {TODO("Native");}
     }

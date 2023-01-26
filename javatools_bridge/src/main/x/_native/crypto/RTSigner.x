@@ -28,21 +28,18 @@ service RTSigner
     public/private CryptoKey privateKey;
 
     @Override
-    public/private Int signatureSize;
-
-    @Override
     Signature sign(Byte[] data)
         {
         CryptoKey privateKey = this.privateKey;
         Object    secret;
 
-        if (privateKey.is(RTPrivateKey))
+        if (privateKey := &privateKey.revealAs(RTPrivateKey))
             {
-            secret = privateKey.secret;
+            secret = privateKey.as(RTPrivateKey).secret;
             }
-        else if (Byte[] bytes := privateKey.isVisible())
+        else if (Byte[] rawKey := privateKey.isVisible())
             {
-            secret = bytes;
+            secret = rawKey;
             }
         else
             {
@@ -61,11 +58,11 @@ service RTSigner
     @Override
     String toString()
         {
-        return $"{algorithm.name.quoted()} signer";
+        return $"{algorithm.name.quoted()} signer for {privateKey}";
         }
 
 
     // ----- native helpers ------------------------------------------------------------------------
 
-    private Byte[] sign(Object signer, Object privateKey, Byte[] data) {TODO("Native");}
+    protected Byte[] sign(Object signer, Object secret, Byte[] data) {TODO("Native");}
     }

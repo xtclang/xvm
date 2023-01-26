@@ -17,9 +17,10 @@ module TestCrypto
         assert Certificate cert       := keystore.getCertificate(keyName);
         assert CryptoKey   publicKey  := cert.containsKey();
 
+        KeyPair keyPair = new KeyPair("test", publicKey, privateKey);
+
         @Inject Algorithms algorithms;
 
-        KeyPair keyPair = new KeyPair("hello", publicKey, privateKey);
         testDecryptor(algorithms, "RSA", keyPair, SMALL_TEXT);
         testDecryptor(algorithms, "RSA/ECB/PKCS1Padding", keyPair, SMALL_TEXT);
 
@@ -27,6 +28,13 @@ module TestCrypto
         CryptoKey desKey = desKeyGen.generateSecretKey("hello");
         testDecryptor(algorithms, "DES", desKey, BIG_TEXT);
         testDecryptor(algorithms, "DES/ECB/PKCS5Padding", desKey, BIG_TEXT);
+
+        testHasher(algorithms, "MD5",     BIG_TEXT);
+        testHasher(algorithms, "SHA-1",   BIG_TEXT);
+        testHasher(algorithms, "SHA-256", BIG_TEXT);
+
+        testSigner(algorithms, "SHA1withRSA"  , keyPair, BIG_TEXT);
+        testSigner(algorithms, "SHA256withRSA", keyPair, BIG_TEXT);
         }
 
     void testDecryptor(Algorithms algorithms, String name, CryptoKey key, String text)
@@ -47,13 +55,38 @@ module TestCrypto
             }
         }
 
+    void testHasher(Algorithms algorithms, String name, String text)
+        {
+        if (Signer hasher := algorithms.hasherFor(name))
+            {
+            console.print($"*** {hasher}");
+
+            Signature hash = hasher.sign(text.utf8());
+            console.print(hash.bytes.toHexDump());
+
+            assert hasher.verify(hash, text.utf8());
+            }
+        else
+            {
+            console.print($"Cannot find signer for {name.quoted()}");
+            }
+        }
+
     void testSigner(Algorithms algorithms, String name, CryptoKey key, String text)
         {
-        assert Signer signer := algorithms.signerFor(name, key);
-        console.print($"*** {signer}");
+        if (Signer signer := algorithms.signerFor(name, key))
+            {
+            console.print($"*** {signer}");
 
-        Signature sig = signer.sign(text.utf8());
-        console.print(sig.bytes.toHexDump());
+            Signature sig = signer.sign(text.utf8());
+            console.print(sig.bytes.toHexDump());
+
+            assert signer.verify(sig, text.utf8());
+            }
+        else
+            {
+            console.print($"Cannot find signer for {name.quoted()}");
+            }
         }
 
     static String SMALL_TEXT =

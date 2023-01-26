@@ -23,7 +23,6 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.CipherHandle;
-import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
 
 
 /**
@@ -79,7 +78,7 @@ public class xRTDecryptor
                               ByteArrayHandle haData, int iReturn)
         {
         Cipher cipher = hCipher.f_cipher;
-        Key    key    = extractKey(frame, hKey); // public or symmetric (secret)
+        Key    key    = xRTAlgorithms.extractKey(frame, hKey); // public or symmetric (secret)
         byte[] abData = xRTUInt8Delegate.getBytes(haData);
 
         try
@@ -104,7 +103,7 @@ public class xRTDecryptor
                               ByteArrayHandle haData, int iReturn)
         {
         Cipher cipher     = hCipher.f_cipher;
-        Key    privateKey = extractKey(frame, hKey);
+        Key    privateKey = xRTAlgorithms.extractKey(frame, hKey);
         byte[] abData     = xRTUInt8Delegate.getBytes(haData);
 
         try
@@ -118,21 +117,6 @@ public class xRTDecryptor
         catch (GeneralSecurityException e)
             {
             return frame.raiseException(e.getMessage());
-            }
-        }
-
-    private Key extractKey(Frame frame, ObjectHandle hKey)
-        {
-        if (hKey instanceof SecretHandle hSecret)
-            {
-            return hSecret.f_key;
-            }
-        else
-            {
-            ByteArrayHandle hBytes = (ByteArrayHandle) ((ArrayHandle) hKey).m_hDelegate;
-            byte[] abPrivate = xRTUInt8Delegate.getBytes(hBytes);
-            // make the private key
-            throw new UnsupportedOperationException();
             }
         }
     }

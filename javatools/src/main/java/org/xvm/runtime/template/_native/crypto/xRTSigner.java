@@ -3,18 +3,17 @@ package org.xvm.runtime.template._native.crypto;
 
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
-
-import javax.crypto.Cipher;
+import java.security.PublicKey;
+import java.security.Signature;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -24,8 +23,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
-import org.xvm.runtime.template._native.crypto.xRTAlgorithms.CipherHandle;
-import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SignatureHandle;
 
 
 /**
@@ -49,7 +47,8 @@ public class xRTSigner
     @Override
     public void initNative()
         {
-        markNativeMethod("sign", null, BYTES);
+        markNativeMethod("sign"  , new String[] {OBJECT[0], OBJECT[0], BYTES[0]}, BYTES);
+        markNativeMethod("verify", new String[] {OBJECT[0], OBJECT[0], BYTES[0], BYTES[0]}, BOOLEAN);
 
         invalidateTypeInfo();
         }
@@ -61,8 +60,13 @@ public class xRTSigner
         switch (method.getName())
             {
             case "sign":
-                return invokeSign(frame, (CipherHandle) ahArg[0], ahArg[1],
+                return invokeSign(frame, (SignatureHandle) ahArg[0], ahArg[1],
                     (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
+
+            case "verify":
+                return invokeVerify(frame, (SignatureHandle) ahArg[0], ahArg[1],
+                    (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate,
+                    (ByteArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -70,39 +74,51 @@ public class xRTSigner
 
     /**
      * Native implementation of
-     *     "Byte[] sign(Object cipher, CryptoKey privateKey, Byte[] data)"
+     *     "Byte[] sign(Object cipher, Object secret, Byte[] data)".
      */
-    private int invokeSign(Frame frame, CipherHandle hCipher, ObjectHandle hKey,
+    private int invokeSign(Frame frame, SignatureHandle hSignature, ObjectHandle hKey,
                            ByteArrayHandle haData, int iReturn)
         {
-        Cipher cipher = hCipher.f_cipher;
+        Signature signature = hSignature.f_signature;
 
-        PrivateKey privateKey;
-        if (hKey.getComposition().getInceptionType().toString().contains("RTPrivateKey"))
-            {
-            GenericHandle hRTPrivateKey = (GenericHandle) hKey.revealOrigin();
-            PropertyStructure prop = hRTPrivateKey.getComposition().getTemplate().getStructure().findPropertyDeep("secret");
-
-            SecretHandle hSecret = (SecretHandle) hRTPrivateKey.getField(frame, prop.getIdentityConstant());
-            privateKey = (PrivateKey) hSecret.f_key;
-            }
-        else
-            {
-            ByteArrayHandle hBytes = (ByteArrayHandle) ((ArrayHandle) hKey).m_hDelegate;
-            byte[] abPrivate = xRTUInt8Delegate.getBytes(hBytes);
-            // make the private key
-            throw new UnsupportedOperationException();
-            }
-
-        byte[] abData = xRTUInt8Delegate.getBytes(haData);
+        PrivateKey privateKey = (PrivateKey) xRTAlgorithms.extractKey(frame, hKey);
+        byte[]     abData     = xRTUInt8Delegate.getBytes(haData);
 
         try
             {
-            cipher.init(Cipher.ENCRYPT_MODE, privateKey);
-            byte[] abSig = cipher.doFinal(abData);
+            signature.initSign(privateKey);
+            signature.update(abData);
+            byte[] abSig = signature.sign();
 
             return frame.assignValue(iReturn,
                     xArray.makeByteArrayHandle(abSig, Mutability.Constant));
+            }
+        catch (GeneralSecurityException e)
+            {
+            return frame.raiseException(e.getMessage());
+            }
+        }
+
+    /**
+     * Native implementation of
+     *     "Boolean verify(Object signer, Object secret, Byte[] signature, Byte[] data)".
+     */
+    private int invokeVerify(Frame frame, SignatureHandle hSignature, ObjectHandle hKey,
+                           ByteArrayHandle haSignature, ByteArrayHandle haData, int iReturn)
+        {
+        Signature signature = hSignature.f_signature;
+
+        PublicKey publicKey = (PublicKey) xRTAlgorithms.extractKey(frame, hKey);
+        byte[]     abSig    = xRTUInt8Delegate.getBytes(haSignature);
+        byte[]     abData   = xRTUInt8Delegate.getBytes(haData);
+
+        try
+            {
+            signature.initVerify(publicKey);
+            signature.update(abData);
+
+            return frame.assignValue(iReturn,
+                    xBoolean.makeHandle(signature.verify(abSig)));
             }
         catch (GeneralSecurityException e)
             {

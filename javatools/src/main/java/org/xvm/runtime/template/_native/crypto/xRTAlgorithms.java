@@ -29,9 +29,14 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.collections.xArray;
+
 import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 
 /**
@@ -207,6 +212,30 @@ public class xRTAlgorithms
             return frame.raiseException(e.getMessage());
             }
         }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Extract a key from the specified handle.
+     */
+    public static Key extractKey(Frame frame, ObjectHandle hKey)
+        {
+        if (hKey instanceof SecretHandle hSecret)
+            {
+            return hSecret.f_key;
+            }
+        else
+            {
+            ByteBasedDelegate.ByteArrayHandle hBytes = (ByteBasedDelegate.ByteArrayHandle) ((xArray.ArrayHandle) hKey).m_hDelegate;
+            byte[] abPrivate = xRTUInt8Delegate.getBytes(hBytes);
+            // make a public or private key
+            throw new UnsupportedOperationException("TODO");
+            }
+        }
+
+
+    // ----- handles -------------------------------------------------------------------------------
 
     /**
      * Native handle holding a MessageDigest.
