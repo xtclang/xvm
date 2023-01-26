@@ -23,6 +23,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SignatureHandle;
 
 
@@ -80,12 +81,12 @@ public class xRTSigner
                            ByteArrayHandle haData, int iReturn)
         {
         Signature signature = hSignature.f_signature;
-
-        PrivateKey privateKey = (PrivateKey) xRTAlgorithms.extractKey(frame, hKey);
-        byte[]     abData     = xRTUInt8Delegate.getBytes(haData);
+        byte[]    abData     = xRTUInt8Delegate.getBytes(haData);
 
         try
             {
+            PrivateKey privateKey = (PrivateKey) xRTAlgorithms.extractKey(frame, hKey,
+                                    signature.getAlgorithm(), KeyForm.Private);
             signature.initSign(privateKey);
             signature.update(abData);
             byte[] abSig = signature.sign();
@@ -108,12 +109,13 @@ public class xRTSigner
         {
         Signature signature = hSignature.f_signature;
 
-        PublicKey publicKey = (PublicKey) xRTAlgorithms.extractKey(frame, hKey);
-        byte[]     abSig    = xRTUInt8Delegate.getBytes(haSignature);
-        byte[]     abData   = xRTUInt8Delegate.getBytes(haData);
+        byte[] abSig  = xRTUInt8Delegate.getBytes(haSignature);
+        byte[] abData = xRTUInt8Delegate.getBytes(haData);
 
         try
             {
+            PublicKey publicKey = (PublicKey) xRTAlgorithms.extractKey(frame, hKey,
+                                    signature.getAlgorithm(), KeyForm.Public);
             signature.initVerify(publicKey);
             signature.update(abData);
 

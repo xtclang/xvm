@@ -3,14 +3,19 @@ package org.xvm.runtime.template._native.crypto;
 
 import java.security.GeneralSecurityException;
 import java.security.Key;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.Signature;
 
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKeyFactory;
+
+import javax.crypto.spec.DESKeySpec;
+import javax.crypto.spec.DESedeKeySpec;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -29,13 +34,13 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate;
+import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 
@@ -219,7 +224,8 @@ public class xRTAlgorithms
     /**
      * Extract a key from the specified handle.
      */
-    public static Key extractKey(Frame frame, ObjectHandle hKey)
+    public static Key extractKey(Frame frame, ObjectHandle hKey, String sAlgorithm, KeyForm keyForm)
+            throws GeneralSecurityException
         {
         if (hKey instanceof SecretHandle hSecret)
             {
@@ -227,12 +233,54 @@ public class xRTAlgorithms
             }
         else
             {
-            ByteBasedDelegate.ByteArrayHandle hBytes = (ByteBasedDelegate.ByteArrayHandle) ((xArray.ArrayHandle) hKey).m_hDelegate;
-            byte[] abPrivate = xRTUInt8Delegate.getBytes(hBytes);
-            // make a public or private key
-            throw new UnsupportedOperationException("TODO");
+            ByteArrayHandle hBytes = (ByteArrayHandle) ((ArrayHandle) hKey).m_hDelegate;
+            byte[]          abRaw  = xRTUInt8Delegate.getBytes(hBytes);
+
+            switch (sAlgorithm)
+                {
+                case "DES":
+                    return switch (keyForm)
+                        {
+                        case PublicOrSecret, PrivateOrSecret ->
+                            SecretKeyFactory.getInstance(sAlgorithm).
+                                generateSecret(new DESKeySpec(abRaw));
+
+                        default ->
+                            throw new GeneralSecurityException(
+                                sAlgorithm + " algorithm only supports secret keys");
+                        };
+
+                case "DESede":
+                    return switch (keyForm)
+                        {
+                        case PublicOrSecret, PrivateOrSecret ->
+                            SecretKeyFactory.getInstance(sAlgorithm).
+                                generateSecret(new DESedeKeySpec(abRaw));
+
+                        default ->
+                            throw new GeneralSecurityException(
+                                sAlgorithm + " algorithm only supports secret keys");
+                        };
+
+                case "RSA":
+                    return switch (keyForm)
+                        {
+                        case Public, PublicOrSecret ->
+                            KeyFactory.getInstance("RSA").
+                                generatePublic(new X509EncodedKeySpec(abRaw));
+
+                        case Private, PrivateOrSecret ->
+                            KeyFactory.getInstance("RSA").
+                                generatePrivate(new X509EncodedKeySpec(abRaw));
+                        };
+
+                default:
+                    throw new GeneralSecurityException("Cannot make a raw key for " +  sAlgorithm);
+                }
             }
         }
+
+    enum KeyForm {Public, Private, PublicOrSecret, PrivateOrSecret};
 
 
     // ----- handles -------------------------------------------------------------------------------

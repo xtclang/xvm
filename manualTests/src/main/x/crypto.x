@@ -17,9 +17,10 @@ module TestCrypto
         assert Certificate cert       := keystore.getCertificate(keyName);
         assert CryptoKey   publicKey  := cert.containsKey();
 
-        KeyPair keyPair = new KeyPair("test", publicKey, privateKey);
+        KeyPair keyPair  = new KeyPair("test", publicKey, privateKey);
 
         @Inject Algorithms algorithms;
+        @Inject Random random;
 
         testDecryptor(algorithms, "RSA", keyPair, SMALL_TEXT);
         testDecryptor(algorithms, "RSA/ECB/PKCS1Padding", keyPair, SMALL_TEXT);
@@ -35,6 +36,15 @@ module TestCrypto
 
         testSigner(algorithms, "SHA1withRSA"  , keyPair, BIG_TEXT);
         testSigner(algorithms, "SHA256withRSA", keyPair, BIG_TEXT);
+
+        // manual key creation
+        assert Byte[] publicBytes := publicKey.isVisible();
+        PublicKey publicKeyM = new PublicKey("test-copy", "RSA", publicKey.size, publicBytes);
+        KeyPair keyPairM = new KeyPair("test-copy", publicKeyM, privateKey);
+        testDecryptor(algorithms, "RSA", keyPairM, SMALL_TEXT);
+
+        PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.fill(new Byte[8]));
+        testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
         }
 
     void testDecryptor(Algorithms algorithms, String name, CryptoKey key, String text)

@@ -23,6 +23,7 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.CipherHandle;
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
 
 
 /**
@@ -78,11 +79,12 @@ public class xRTDecryptor
                               ByteArrayHandle haData, int iReturn)
         {
         Cipher cipher = hCipher.f_cipher;
-        Key    key    = xRTAlgorithms.extractKey(frame, hKey); // public or symmetric (secret)
         byte[] abData = xRTUInt8Delegate.getBytes(haData);
 
         try
             {
+            Key key = xRTAlgorithms.extractKey(frame, hKey, cipher.getAlgorithm(),
+                            KeyForm.PublicOrSecret);
             cipher.init(Cipher.ENCRYPT_MODE, key);
             byte[] abEncoded = cipher.doFinal(abData);
 
@@ -102,13 +104,15 @@ public class xRTDecryptor
     private int invokeDecrypt(Frame frame, CipherHandle hCipher, ObjectHandle hKey,
                               ByteArrayHandle haData, int iReturn)
         {
-        Cipher cipher     = hCipher.f_cipher;
-        Key    privateKey = xRTAlgorithms.extractKey(frame, hKey);
-        byte[] abData     = xRTUInt8Delegate.getBytes(haData);
+        byte[] abData  = xRTUInt8Delegate.getBytes(haData);
+        Cipher cipher = hCipher.f_cipher;
 
         try
             {
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            Key key = xRTAlgorithms.extractKey(frame, hKey, cipher.getAlgorithm(),
+                        KeyForm.PrivateOrSecret);
+
+            cipher.init(Cipher.DECRYPT_MODE, key);
             byte[] abSig = cipher.doFinal(abData);
 
             return frame.assignValue(iReturn,
