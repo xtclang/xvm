@@ -45,6 +45,6 @@ const KeyPair(String name, CryptoKey publicKey, CryptoKey privateKey)
     @Override
     String toString()
         {
-        return $"{name.quoted()}, {algorithm} public/private key pair, {size*8} bits";
+        return $"KeyPair({name.quoted()}, {publicKey}/{privateKey})";
         }
     }

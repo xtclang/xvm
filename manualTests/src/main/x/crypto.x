@@ -25,7 +25,7 @@ module TestCrypto
         testDecryptor(algorithms, "RSA/ECB/PKCS1Padding", keyPair, SMALL_TEXT);
 
         assert KeyGenerator desKeyGen := algorithms.keyGeneratorFor("DES");
-        CryptoKey desKey = desKeyGen.generateSecretKey("hello");
+        CryptoKey desKey = desKeyGen.generateSecretKey("test-secret");
         testDecryptor(algorithms, "DES", desKey, BIG_TEXT);
         testDecryptor(algorithms, "DES/ECB/PKCS5Padding", desKey, BIG_TEXT);
 
@@ -68,7 +68,7 @@ module TestCrypto
             }
         else
             {
-            console.print($"Cannot find signer for {name.quoted()}");
+            console.print($"Cannot find hasher for {name.quoted()}");
             }
         }
 

@@ -20,6 +20,6 @@ const PrivateKey(String name, String algorithm, Int size, Byte[] bytes)
     @Override
     String toString()
         {
-        return $"{name.quoted()}, {algorithm} private key, {size*8} bits";
+        return $"PrivateKey({name.quoted()}, {algorithm}, {size*8} bits)";
         }
     }
