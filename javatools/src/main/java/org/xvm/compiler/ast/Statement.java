@@ -224,7 +224,7 @@ public abstract class Statement
             code = code.blackhole();
             }
 
-        boolean fCompletes = fReachable & emit(ctx, fReachable, code, errs);
+        boolean fCompletes = fReachable && emit(ctx, fReachable, code, errs);
 
         if (m_labelEnd != null)
             {

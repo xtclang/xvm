@@ -4,24 +4,17 @@ module TestSimple
 
     void run()
         {
-        Exception? ex = Null;
-        try
-            {
-            new S(1);
-            }
-        catch (Exception e)
-            {
-            ex = e;
-            }
-        assert ex != Null;
-        console.print($"Caught: {ex.text}");
         }
 
-    service S
+    const Test
         {
-        construct(Int n)
+        String name;
+
+        @Override
+        String toString()
             {
-            new S(n); // used to throw up a native StackOverflowError
+            return $"{name.quoted()}";
+            return $"{name.quoted()}"; // this used to blow the compiler
             }
         }
     }
