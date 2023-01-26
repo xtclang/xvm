@@ -3,25 +3,19 @@ package org.xvm.runtime.gc;
 import org.xvm.util.ShallowSizeOf;
 
 /**
- * An {@link ObjectStorage} implementation which stores objects in {@code long[]}.
+ * An {@link ObjectManager} implementation which stores objects in {@code long[]}.
  *
  * @author mf
  */
-public class LongArrayStorage
-    implements ObjectStorage<long[]>
+public class LongArrayObjectManager
+    implements ObjectManager<long[]>
     {
     /**
      * Singleton instance.
      */
-    public static final LongArrayStorage INSTANCE = new LongArrayStorage();
+    public static final LongArrayObjectManager INSTANCE = new LongArrayObjectManager();
 
-    /**
-     * Allocate a new object with the specified field count.
-     *
-     * @param cFields the field count
-     *
-     * @return the object
-     */
+    @Override
     public long[] allocate(int cFields)
         {
         return new long[cFields + 1];

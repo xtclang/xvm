@@ -1,40 +1,14 @@
 package org.xvm.runtime.gc;
 
-import org.xvm.util.ShallowSizeOf;
-
 /**
- * Provides a means by which to modify the raw storage of an object.
+ * A means to access the fields within storage.
  *
- * @param <V> the storage type
+ * @param <V>
+ *
  * @author mf
  */
-public interface ObjectStorage<V>
+public interface FieldAccessor<V>
     {
-    /**
-     * Return the header for this object.
-     *
-     * @param o the object
-     * @return the header
-     */
-    long getHeader(V o);
-
-    /**
-     * Set the header for this object.
-     *
-     * @param o the object
-     * @return the header
-     */
-    void setHeader(V o, long header);
-
-    /**
-     * Return the shallow size of the object.
-     *
-     * @param o the object
-     *
-     * @return the shallow size in bytes
-     */
-    long getByteSize(V o);
-
     /**
      * Return the number of fields in the object.
      *

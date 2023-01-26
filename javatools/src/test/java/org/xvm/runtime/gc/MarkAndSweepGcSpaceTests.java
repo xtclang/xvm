@@ -1,57 +1,64 @@
 package org.xvm.runtime.gc;
 
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matcher;
 import org.junit.Test;
 import org.xvm.util.ShallowSizeOf;
 
-import javax.swing.text.LayoutQueue;
 import java.util.*;
+import java.util.function.LongConsumer;
 
 import static org.junit.Assert.*;
 
 /**
- * Tests of the {@link MarkAndSweepGcSpace}
+ * Tests of the {@link MarkAndSweepGcSpace}.
  *
  * @author mf
  */
-public class MarkAndSweepGcSpaceTests
+public class MarkAndSweepGcSpaceTests<O>
     {
-    static GcSpace<long[]> makeSpace()
+    GcSpace<O> makeSpace()
         {
-        return new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, w -> {});
+        return makeSpace(Long.MAX_VALUE);
+        }
+
+    GcSpace<O> makeSpace(long capacity)
+        {
+        return makeSpace(capacity, wp -> {});
+        }
+
+    @SuppressWarnings("unchecked")
+    GcSpace<O> makeSpace(long capacity, LongConsumer cleared)
+        {
+        return (GcSpace<O>) new MarkAndSweepGcSpace<>(LongArrayObjectManager.INSTANCE, cleared, capacity, capacity);
         }
 
     static class RootSet
-            implements GcSpace.Root
         {
-        final Set<Long> collectables = new HashSet<>();
+        final Set<Long> retained = new HashSet<>();
 
-        @Override
-        public PrimitiveIterator.OfLong collectables()
+        public PrimitiveIterator.OfLong retained()
             {
-            return collectables.stream().mapToLong(l -> l).iterator();
+            return retained.stream().mapToLong(l -> l).iterator();
             }
         }
 
     @Test
     public void shouldAllocateAndGet()
         {
-        GcSpace<long[]> space = makeSpace();
-        long p = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(0));
+        GcSpace<O> space = makeSpace();
+        long p = space.allocate(0);
         assertNotNull(space.get(p));
         }
 
     @Test
     public void shouldCollectUnreachables()
         {
+        GcSpace<O> space = makeSpace();
         RootSet root = new RootSet();
-        GcSpace<long[]> space = makeSpace();
-        space.add(root);
-        long p1 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        long p2 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        root.collectables.add(p1);
-        root.collectables.add(p2);
+        space.addRoot(root::retained);
+        long p1 = space.allocate(3);
+        long p2 = space.allocate(3);
+        root.retained.add(p1);
+        root.retained.add(p2);
         assertNotNull(space.get(p1));
         assertNotNull(space.get(p2));
         assertNotEquals(p1, p2);
@@ -63,7 +70,7 @@ public class MarkAndSweepGcSpaceTests
         assertNotEquals(p1, p2);
 
         // remove an object from the root; gc, and verify it has been removed from the space
-        root.collectables.remove(p2);
+        root.retained.remove(p2);
 
         space.gc();
         assertNotNull(space.get(p1));
@@ -82,21 +89,22 @@ public class MarkAndSweepGcSpaceTests
     public void shouldNotCollectDeepReachables()
         {
         RootSet root = new RootSet();
-        GcSpace<long[]> space = makeSpace();
-        space.add(root);
-        long p1 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        long p2 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        long p3 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        long p4 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        root.collectables.add(p1);
+        GcSpace<O> space = makeSpace();
+        FieldAccessor<O> accessor = space.accessor();
+        space.addRoot(root::retained);
+        long p1 = space.allocate(3);
+        long p2 = space.allocate(3);
+        long p3 = space.allocate(3);
+        long p4 = space.allocate(3);
+        root.retained.add(p1);
         assertNotNull(space.get(p1));
         assertNotNull(space.get(p2));
         assertNotNull(space.get(p3));
         assertNotNull(space.get(p4));
 
-        LongArrayStorage.INSTANCE.setField(space.get(p1), 0, p2);
-        LongArrayStorage.INSTANCE.setField(space.get(p2), 2, p3);
-        LongArrayStorage.INSTANCE.setField(space.get(p4), 0, p4); // cycle
+        accessor.setField(space.get(p1), 0, p2);
+        accessor.setField(space.get(p2), 2, p3);
+        accessor.setField(space.get(p4), 0, p4); // cycle
 
         // force a gc and verify that we didn't lose anything which was reachable
         space.gc();
@@ -119,16 +127,17 @@ public class MarkAndSweepGcSpaceTests
     @Test
     public void shouldAutoCollect()
         {
+        GcSpace<O> space = makeSpace();
+        FieldAccessor<O> accessor = space.accessor();
         RootSet root = new RootSet();
-        GcSpace<long[]> space = makeSpace();
-        space.add(root);
-        long p1 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        long p2 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        long p3 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        root.collectables.add(p1);
+        space.addRoot(root::retained);
+        long p1 = space.allocate(3);
+        long p2 = space.allocate(3);
+        long p3 = space.allocate(3);
+        root.retained.add(p1);
 
-        LongArrayStorage.INSTANCE.setField(space.get(p1), 0, p2);
-        LongArrayStorage.INSTANCE.setField(space.get(p2), 2, p3);
+        accessor.setField(space.get(p1), 0, p2);
+        accessor.setField(space.get(p2), 2, p3);
 
         long cb = space.getByteCount();
         // add objects until we auto-gc
@@ -137,7 +146,7 @@ public class MarkAndSweepGcSpaceTests
         do
             {
             lastCb = space.getByteCount();
-            space.allocate(() -> LongArrayStorage.INSTANCE.allocate(1));
+            space.allocate(1);
             maxCb = Math.max(maxCb, space.getByteCount());
             }
         while (space.getByteCount() > lastCb);
@@ -157,20 +166,21 @@ public class MarkAndSweepGcSpaceTests
     @Test
     public void shouldOOMEOnHardLimit()
         {
-        RootSet root = new RootSet();
         long cbLimit = 1024*2048;
-        GcSpace<long[]> space = new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, w -> {}, 1024*1024, cbLimit);
-        space.add(root);
-        long p1 = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(3));
-        root.collectables.add(p1);
+        GcSpace<O> space = makeSpace(cbLimit);
+        FieldAccessor<O> accessor = space.accessor();
+        RootSet root = new RootSet();
+        space.addRoot(root::retained);
+        long p1 = space.allocate(3);
+        root.retained.add(p1);
 
         long pLast = p1;
         try
             {
             for (int i = 0; i < 2_000_000; ++i)
                 {
-                long p = space.allocate(() -> LongArrayStorage.INSTANCE.allocate(512));
-                LongArrayStorage.INSTANCE.setField(space.get(pLast), 0, p);
+                long p = space.allocate(512);
+                accessor.setField(space.get(pLast), 0, p);
                 pLast = p;
                 }
 
@@ -186,34 +196,34 @@ public class MarkAndSweepGcSpaceTests
     @Test
     public void shouldClearWeakRefsToUnreachables()
         {
-        LongArrayStorage storage = LongArrayStorage.INSTANCE;
         List<Long> cleared = new ArrayList<>();
-        GcSpace<long[]> space = new MarkAndSweepGcSpace<>(LongArrayStorage.INSTANCE, cleared::add);
+        GcSpace<O> space = makeSpace(Long.MAX_VALUE, cleared::add);
+        FieldAccessor<O> accessor = space.accessor();
         RootSet root = new RootSet();
-        space.add(root);
-        long p1 = space.allocate(() -> storage.allocate(0));
-        long p2 = space.allocate(() -> storage.allocate(1));
-        long wp1 = space.allocate(() -> storage.allocate(2), true);
-        storage.setField(space.get(wp1), 0, p1);
-        storage.setField(space.get(wp1), 1, space.allocate(() -> storage.allocate(0))); // notifier
-        storage.setField(space.get(p2), 0, p1);
-        root.collectables.add(wp1);
-        root.collectables.add(p2);
+        space.addRoot(root::retained);
+        long p1 = space.allocate(0);
+        long p2 = space.allocate(1);
+        long wp1 = space.allocate(2, true);
+        accessor.setField(space.get(wp1), 0, p1);
+        accessor.setField(space.get(wp1), 1, space.allocate(0)); // notifier
+        accessor.setField(space.get(p2), 0, p1);
+        root.retained.add(wp1);
+        root.retained.add(p2);
 
         space.gc();
 
         // p2 keeps p1 alive; verify that p1 was not collected, and that wp1 was not cleared
         assertNotNull(space.get(p1));
-        assertEquals(p1, storage.getField(space.get(wp1), 0));
+        assertEquals(p1, accessor.getField(space.get(wp1), 0));
 
         // verify there have been no notifications
         assertTrue(cleared.isEmpty());
 
         // remove the strong ref to p1 and verify that it gets gc'd and that wp1 gets cleared
-        storage.setField(space.get(p2), 0, GcSpace.NULL);
+        accessor.setField(space.get(p2), 0, GcSpace.NULL);
         space.gc();
 
-        assertEquals(GcSpace.NULL, storage.getField(space.get(wp1), 0));
+        assertEquals(GcSpace.NULL, accessor.getField(space.get(wp1), 0));
         try
             {
             space.get(p1);

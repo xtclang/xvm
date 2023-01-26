@@ -2,6 +2,7 @@ package org.xvm.runtime.gc;
 
 
 import java.util.HashSet;
+import java.util.PrimitiveIterator;
 import java.util.Set;
 import java.util.function.LongConsumer;
 import java.util.function.Supplier;
@@ -23,7 +24,7 @@ public class MarkAndSweepGcSpace<V>
      * @param accessor        the accessor of accessing the contents of an object
      * @param clearedListener a function to invoke with a pointer to a weak-ref once it's been cleared
      */
-    public MarkAndSweepGcSpace(ObjectStorage<V> accessor, LongConsumer clearedListener)
+    public MarkAndSweepGcSpace(ObjectManager<V> accessor, LongConsumer clearedListener)
         {
         this(accessor, clearedListener, Long.MAX_VALUE, Long.MAX_VALUE);
         }
@@ -36,7 +37,7 @@ public class MarkAndSweepGcSpace<V>
      * @param cbLimitSoft     the byte size to try to stay within
      * @param cbLimitHard     the maximum allowable byte size
      */
-    public MarkAndSweepGcSpace(ObjectStorage<V> accessor,
+    public MarkAndSweepGcSpace(ObjectManager<V> accessor,
                                LongConsumer clearedListener,
                                long cbLimitSoft,
                                long cbLimitHard)
@@ -54,7 +55,13 @@ public class MarkAndSweepGcSpace<V>
         }
 
     @Override
-    public long allocate(Supplier<? extends V> constructor, boolean fWeak)
+    public FieldAccessor<V> accessor()
+        {
+        return f_accessor;
+        }
+
+    @Override
+    public long allocate(int cFields, boolean fWeak)
             throws OutOfMemoryError
         {
         if (m_nTopFree < 0 || m_cBytes > f_cbLimitSoft)
@@ -70,7 +77,7 @@ public class MarkAndSweepGcSpace<V>
                 }
             }
 
-        V resource = constructor.get();
+        V resource = f_accessor.allocate(cFields);
         getAndSetHeaderBit(resource, MARKER_MASK, m_fAllocationMarker);
         if (fWeak)
             {
@@ -112,13 +119,13 @@ public class MarkAndSweepGcSpace<V>
         }
 
     @Override
-    public void add(Root root)
+    public void addRoot(Supplier<? extends PrimitiveIterator.OfLong> root)
         {
         f_setRoots.add(root);
         }
 
     @Override
-    public void remove(Root root)
+    public void removeRoot(Supplier<? extends PrimitiveIterator.OfLong> root)
         {
         f_setRoots.remove(root);
         }
@@ -135,9 +142,9 @@ public class MarkAndSweepGcSpace<V>
         // mark
         boolean fReachableMarker = !m_fAllocationMarker;
         m_fAllocationMarker = fReachableMarker;
-        for (Root root : f_setRoots)
+        for (var root : f_setRoots)
             {
-            for (var liter = root.collectables(); liter.hasNext(); )
+            for (var liter = root.get(); liter.hasNext(); )
                 {
                 walkAndMark(liter.next(), fReachableMarker);
                 }
@@ -211,15 +218,15 @@ public class MarkAndSweepGcSpace<V>
     private int[] handleWeakSweep(V weak, int nWeak, int[] anNotify, int nNotifyTop, boolean fReachableMarker)
         {
         // clear weak refs as necessary
-        long preferent = f_accessor.getField(weak, 0);
-        if (isLocal(preferent))
+        long pReferent = f_accessor.getField(weak, WEAK_REFERENT_FIELD);
+        if (isLocal(pReferent))
             {
-            V referent = m_aObjects[slot(preferent)];
+            V referent = m_aObjects[slot(pReferent)];
             if (referent == null || getHeaderBit(referent, MARKER_MASK) != fReachableMarker)
                 {
-                f_accessor.setField(weak, 0, NULL); // clear referent
+                f_accessor.setField(weak, WEAK_REFERENT_FIELD, NULL); // clear referent
                 getAndSetHeaderBit(weak, WEAK_MASK, false); // once cleared it can be treated as a "normal" object
-                if (f_accessor.getFieldCount(weak) > 1 && f_accessor.getField(weak, 1) != NULL)
+                if (f_accessor.getFieldCount(weak) > WEAK_NOTIFIER_FIELD && f_accessor.getField(weak, WEAK_NOTIFIER_FIELD) != NULL)
                     {
                     // enqueue the weak-ref
                     if (anNotify == null)
@@ -355,7 +362,7 @@ public class MarkAndSweepGcSpace<V>
     /**
      * The means by which we access an objects storage.
      */
-    final ObjectStorage<V> f_accessor;
+    final ObjectManager<V> f_accessor;
 
     /**
      * The listener to notify when weak-refs become clearable
@@ -396,7 +403,7 @@ public class MarkAndSweepGcSpace<V>
     /**
      * The "gc" roots for this space.
      */
-    final Set<Root> f_setRoots = new HashSet<>();
+    final Set<Supplier<? extends PrimitiveIterator.OfLong>> f_setRoots = new HashSet<>();
 
     /**
      * The marker to set on newly allocated objects

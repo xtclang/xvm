@@ -7,23 +7,27 @@ import java.util.function.Supplier;
  * An interface describing an automatic memory manager for objects of type {@link V} which are to be
  * {@link #get accessed} via {@code long} addresses.
  * <p>
- * {@link #allocate allocated} objects are considered to be garbage once they are not reachable from a {@link #add(Root)} root}.
+ * {@link #allocate allocated} objects are considered to be garbage once they are not reachable from a {@link #addRoot root}.
  *
  * @author mf
  */
 public interface GcSpace<V>
     {
+    /**
+     * @return the {@link FieldAccessor} for the space's object type
+     */
+    FieldAccessor<V> accessor();
 
     /**
      * Allocate an object using the specified "constructor".
      *
-     * @param constructor the function to run to construct the object
+     * @param cFields the number of fields to be able to store
      * @return the address of the allocated resource
      */
-    default long allocate(Supplier<? extends V> constructor)
+    default long allocate(int cFields)
         throws OutOfMemoryError
         {
-        return allocate(constructor, false);
+        return allocate(cFields, false);
         }
 
     /**
@@ -33,11 +37,11 @@ public interface GcSpace<V>
      * If the object is indicated to a "weak" reference, then {@link #get field 0} must be the field which stores
      * the weak referent, and {@link #get field 1} if it exists is used to store the notifier (if any).
      *
-     * @param constructor the function to run to construct the object
+     * @param cFields the number of fields to be able to store
      * @param fWeak {@code true} if the object represents a "weak" reference
      * @return the address of the allocated resource
      */
-    long allocate(Supplier<? extends V> constructor, boolean fWeak)
+    long allocate(int cFields, boolean fWeak)
             throws OutOfMemoryError;
 
     /**
@@ -53,18 +57,18 @@ public interface GcSpace<V>
     /**
      * Add a gc root to this space.
      * <p>
-     * Added roots must ultimately be {@link #remove removed}.
+     * Added roots must ultimately be {@link #removeRoot removed}.
      *
      * @param root the root object
      */
-    void add(Root root);
+    void addRoot(Supplier<? extends PrimitiveIterator.OfLong> root);
 
     /**
      * Remove a gc root from this space.
      *
      * @param root the root object
      */
-    void remove(Root root);
+    void removeRoot(Supplier<? extends PrimitiveIterator.OfLong> root);
 
     /**
      * Perform a garbage collection cycle in an attempt to reclaim memory.
@@ -77,18 +81,17 @@ public interface GcSpace<V>
     long getByteCount();
 
     /**
-     * A representation of a gc root object.
-     */
-    interface Root
-        {
-        /**
-         * @return an iterator over the objects directly accessible from the root.
-         */
-        PrimitiveIterator.OfLong collectables();
-        }
-
-    /**
      * The {@code null} pointer value.
      */
     long NULL = 0;
+
+    /**
+     * For weak-refs the field which contains the referent.
+     */
+    int WEAK_REFERENT_FIELD = 0;
+
+    /**
+     * For weak-refs the field which contains the notifier.
+     */
+    int WEAK_NOTIFIER_FIELD = 1;
     }
