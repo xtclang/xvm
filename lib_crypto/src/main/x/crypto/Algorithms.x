@@ -5,20 +5,23 @@ const Algorithms
     {
     construct(Algorithm[] algorithms)
         {
-        Map<String, Algorithm> byName = new ListMap();
+        Map<String, Algorithm>[] byCategory = new Map[Category.count](_ -> new HashMap());
+
         for (Algorithm algorithm : algorithms)
             {
+            Map<String, Algorithm> byName = byCategory[algorithm.category.ordinal];
+
             assert byName.putIfAbsent(algorithm.name, algorithm)
-                    as $"Duplicate Algorithm: {algorithm.name.quoted()}";
+                    as $"Duplicate {algorithm.category} Algorithm: {algorithm.name.quoted()}";
             }
 
-        this.byName = byName.makeImmutable();
+        this.byCategory = byCategory.makeImmutable();
         }
 
     /**
-     * The [Algorithm] objects managed by this object, keyed by name.
+     * The [Algorithm] objects managed by this object, indexed by Category and keyed by name.
      */
-    Map<String, Algorithm> byName;
+    Map<String, Algorithm>[] byCategory;
 
     /**
      * Algorithms can be specified either by name, or by an [Algorithm] object obtained from this
@@ -181,7 +184,9 @@ const Algorithms
                                                   CryptoKey?         key,
                                                   Boolean            privateRequired)
         {
-        String name = specifier.is(String) ? specifier : specifier.name;
+        String                 name =  specifier.is(String) ? specifier : specifier.name;
+        Map<String, Algorithm> byName = byCategory[category.ordinal];
+
         if (Algorithm algorithm := byName.get(name), algorithm.category == category)
             {
             if (Int|Int[] keySize := algorithm.keyRequired())

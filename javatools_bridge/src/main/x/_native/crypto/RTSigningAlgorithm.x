@@ -23,11 +23,6 @@ service RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
         }
 
     /**
-     * The KeyForm.
-     */
-    private KeyForm keyForm;
-
-    /**
      * The supported key size(s) for this algorithm.
      */
     private Int|Int[] keySize;

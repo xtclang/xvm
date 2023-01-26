@@ -20,10 +20,12 @@ module TestCrypto
         @Inject Algorithms algorithms;
 
         KeyPair keyPair = new KeyPair("hello", publicKey, privateKey);
+        testDecryptor(algorithms, "RSA", keyPair, SMALL_TEXT);
         testDecryptor(algorithms, "RSA/ECB/PKCS1Padding", keyPair, SMALL_TEXT);
 
         assert KeyGenerator desKeyGen := algorithms.keyGeneratorFor("DES");
         CryptoKey desKey = desKeyGen.generateSecretKey("hello");
+        testDecryptor(algorithms, "DES", desKey, BIG_TEXT);
         testDecryptor(algorithms, "DES/ECB/PKCS5Padding", desKey, BIG_TEXT);
         }
 
@@ -31,7 +33,7 @@ module TestCrypto
         {
         if (Decryptor decryptor := algorithms.decryptorFor(name, key))
             {
-            console.print($"*** decryptor={decryptor} for {key}");
+            console.print($"*** {decryptor} for {key}");
 
             Byte[] bytes = decryptor.encrypt(text.utf8());
             console.print($"{bytes.size} bytes: {bytes.slice(0..<16).toHexDump(16)}");
@@ -48,7 +50,7 @@ module TestCrypto
     void testSigner(Algorithms algorithms, String name, CryptoKey key, String text)
         {
         assert Signer signer := algorithms.signerFor(name, key);
-        console.print($"*** signer={signer}");
+        console.print($"*** {signer}");
 
         Signature sig = signer.sign(text.utf8());
         console.print(sig.bytes.toHexDump());

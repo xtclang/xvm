@@ -5,7 +5,7 @@ import libcrypto.KeyGenerator;
 import libcrypto.PrivateKey;
 
 /**
- * The native `KeyGenerator` [Algorithm] implementation.
+ * The native [KeyGenerator] [Algorithm] implementation.
  */
 service RTKeyGenerator(String name, Int seedSize)
         implements Algorithm, KeyGenerator
