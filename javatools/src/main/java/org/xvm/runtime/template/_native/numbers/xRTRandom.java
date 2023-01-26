@@ -112,7 +112,7 @@ public class xRTRandom
         {
         switch (method.getName())
             {
-            case "fill": // Bit[] or Byte[]
+            case "fill": // "Byte[] fill(Byte[] bytes)" or "Bit[] fill(Bit[] bits)"
                 {
                 ArrayHandle hArray = (ArrayHandle) hArg;
                 if (!hArray.isMutable() || hArray.getMutability().compareTo(Mutability.Fixed) < 0)
@@ -133,7 +133,7 @@ public class xRTRandom
                     rnd(hTarget).nextBytes(ab);
                     xByteArray.setBytes(hArray, ab);
                     }
-                return Op.R_NEXT;
+                return frame.assignValue(iReturn, hArg);
                 }
 
             case "int":

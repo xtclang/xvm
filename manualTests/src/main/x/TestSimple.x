@@ -4,17 +4,8 @@ module TestSimple
 
     void run()
         {
-        }
+        @Inject Random random;
 
-    const Test
-        {
-        String name;
-
-        @Override
-        String toString()
-            {
-            return $"{name.quoted()}";
-            return $"{name.quoted()}"; // this used to blow the compiler
-            }
+        console.print(random.fill(new Byte[8])); // used to throw
         }
     }
