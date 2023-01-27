@@ -167,6 +167,7 @@ public class MarkAndSweepGcSpace<V>
                     aObjects[i] = null;
                     anFreeSlots[++m_nTopFree] = i;
                     m_cBytes -= f_accessor.getByteSize(o);
+                    f_accessor.free(o);
                     }
                 else if ((header & WEAK_MASK) == WEAK_MASK)
                     {

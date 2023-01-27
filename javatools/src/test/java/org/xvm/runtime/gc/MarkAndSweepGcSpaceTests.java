@@ -17,16 +17,11 @@ public class MarkAndSweepGcSpaceTests<O>
     {
     GcSpace<O> makeSpace()
         {
-        return makeSpace(Long.MAX_VALUE);
-        }
-
-    GcSpace<O> makeSpace(long capacity)
-        {
-        return makeSpace(capacity, wp -> {});
+        return makeSpace(l -> {}, Long.MAX_VALUE);
         }
 
     @SuppressWarnings("unchecked")
-    GcSpace<O> makeSpace(long capacity, LongConsumer cleared)
+    GcSpace<O> makeSpace(LongConsumer cleared, long capacity)
         {
         return (GcSpace<O>) new MarkAndSweepGcSpace<>(LongArrayObjectManager.INSTANCE, cleared, capacity, capacity);
         }
@@ -167,7 +162,7 @@ public class MarkAndSweepGcSpaceTests<O>
     public void shouldOOMEOnHardLimit()
         {
         long cbLimit = 1024*2048;
-        GcSpace<O> space = makeSpace(cbLimit);
+        GcSpace<O> space = makeSpace(l -> {}, cbLimit);
         FieldAccessor<O> accessor = space.accessor();
         RootSet root = new RootSet();
         space.addRoot(root::retained);
@@ -197,7 +192,7 @@ public class MarkAndSweepGcSpaceTests<O>
     public void shouldClearWeakRefsToUnreachables()
         {
         List<Long> cleared = new ArrayList<>();
-        GcSpace<O> space = makeSpace(Long.MAX_VALUE, cleared::add);
+        GcSpace<O> space = makeSpace(cleared::add, Long.MAX_VALUE);
         FieldAccessor<O> accessor = space.accessor();
         RootSet root = new RootSet();
         space.addRoot(root::retained);

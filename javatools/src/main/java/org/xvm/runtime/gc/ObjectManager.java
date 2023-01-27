@@ -19,6 +19,13 @@ public interface ObjectManager<V>
     V allocate(int cFields);
 
     /**
+     * Return a object to the manager.
+     *
+     * @param o the object to free
+     */
+    void free(V o);
+
+    /**
      * Return the header for this object.
      *
      * @param o the object
