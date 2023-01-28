@@ -805,10 +805,6 @@ public abstract class TypeConstant
             return that;
             }
 
-        // theoretically speaking, we could have done the same Enum value check for "that" type
-        // as above; the problem is, however, that this method is expected to return a type that is
-        // equal to or narrower than "this" and returning "that" might may break that expectation
-
         // type Type is known to have a distributive property:
         // Type<X> + Type<Y> == Type<X + Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
