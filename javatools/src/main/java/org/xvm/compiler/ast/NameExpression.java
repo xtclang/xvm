@@ -2347,10 +2347,9 @@ public class NameExpression
                 m_plan = Plan.None;
 
                 // there is a possibility that the register type in this context is narrower than
-                // its original type; we can return it only if it fits the desired type
-                TypeConstant typeLocal = reg.getType();
-                return isRValue() || typeDesired != null && isA(ctx, typeLocal, typeDesired)
-                        ? typeLocal
+                // its original type; we can return it only for an r-value
+                return isRValue()
+                        ? reg.getType()
                         : reg.getOriginalType();
                 }
             }

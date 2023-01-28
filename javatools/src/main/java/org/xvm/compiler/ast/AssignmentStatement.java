@@ -385,7 +385,7 @@ public class AssignmentStatement
     @Override
     protected boolean isRValue(Expression exprChild)
         {
-        return m_fSuppressLValue || exprChild != lvalue;
+        return exprChild != lvalue;
         }
 
     @Override
@@ -461,19 +461,7 @@ public class AssignmentStatement
         Expression exprLeft = nodeLeft.getLValueExpression();
         if (!exprLeft.isValidated())
             {
-            // the type of l-value may have been narrowed in the current context, so let's try to
-            // extract it and test the r-value with it; to prevent the lvalue from dropping that
-            // narrowed information, we temporarily need to forget it's an lvalue
-            TypeConstant[] atypeLeft;
-            m_fSuppressLValue = true;
-            try
-                {
-                atypeLeft = exprLeft.getImplicitTypes(ctxLValue);
-                }
-            finally
-                {
-                m_fSuppressLValue = false;
-                }
+            TypeConstant[] atypeLeft = exprLeft.getImplicitTypes(ctxLValue);
 
             int cLeft = atypeLeft.length;
             if (cLeft > 0)
@@ -1149,7 +1137,6 @@ public class AssignmentStatement
 
     private transient VariableDeclarationStatement[] m_decls;
     private transient Register                       m_regCond;
-    private transient boolean                        m_fSuppressLValue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
     }
