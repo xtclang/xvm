@@ -2,7 +2,6 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataOutput;
-import java.io.IOException;
 
 import java.util.List;
 import java.util.Set;
@@ -157,6 +156,12 @@ public class UnresolvedTypeConstant
                 }
             }
         return false;
+        }
+
+    @Override
+    public boolean isImmutable()
+        {
+        return isTypeResolved() && getResolvedType().isImmutable();
         }
 
     @Override
@@ -363,9 +368,24 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               boolean fFunction, List<TypeConstant> listParams)
+        {
+        return isTypeResolved() &&
+                getResolvedType().containsSubstitutableMethod(signature, access, fFunction, listParams);
+        }
+
+    @Override
     public boolean containsFormalType(boolean fAllowParams)
         {
         return isTypeResolved() && getResolvedType().containsFormalType(fAllowParams);
+        }
+
+    @Override
+    public boolean containsGenericType(boolean fAllowParams)
+        {
+        return isTypeResolved() &&
+                getResolvedType().containsGenericType(fAllowParams);
         }
 
     @Override
@@ -394,6 +414,18 @@ public class UnresolvedTypeConstant
         return isTypeResolved()
                 ? getResolvedType().checkProduction(sTypeName, access, listParams)
                 : Usage.NO;
+        }
+
+    @Override
+    public boolean isIntoPropertyType()
+        {
+        return isTypeResolved() && getResolvedType().isIntoPropertyType();
+        }
+
+    @Override
+    public boolean isIntoVariableType()
+        {
+        return isTypeResolved() && getResolvedType().isIntoVariableType();
         }
 
     @Override

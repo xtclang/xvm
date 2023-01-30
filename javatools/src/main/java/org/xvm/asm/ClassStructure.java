@@ -2979,6 +2979,10 @@ public class ClassStructure
             if (contrib.getComposition() == Composition.Implements)
                 {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listLeft);
+                if (typeResolved.containsUnresolved())
+                    {
+                    continue;
+                    }
 
                 ClassStructure clzSuper = (ClassStructure)
                     typeResolved.getSingleUnderlyingClass(true).getComponent();
@@ -3069,6 +3073,11 @@ public class ClassStructure
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.containsUnresolved())
+                {
+                continue;
+                }
+
             switch (contrib.getComposition())
                 {
                 case Delegates:
