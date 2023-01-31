@@ -775,6 +775,78 @@ public abstract class TypeConstant
         }
 
     /**
+     * Determine if this type is known to not be combinable (as an intersection) with the specified
+     * type. Note that the negative answer does not guarantee logical combinability.
+     *
+     * @param that  the type to combine with
+     *
+     * @return true if this type is non-combinable with the specified type
+     */
+    public boolean isIncompatibleCombo(TypeConstant that)
+        {
+        if (that instanceof RelationalTypeConstant && !(this instanceof RelationalTypeConstant))
+            {
+            // let the relational type a chance to decompose first
+            return that.isIncompatibleCombo(this);
+            }
+
+        // There are two scenarios of non-combinable types:
+        // - class types (not interfaces or mixins) in which one doesn't extend the other
+        // - one is a class type that is "final" (Null, True, package/module etc.) and known to not
+        //   be the other type
+        return !this.isA(that) && !that.isA(this) &&
+                (this.isIncompatibleComboImpl(that) || that.isIncompatibleComboImpl(this));
+        }
+
+    private boolean isIncompatibleComboImpl(TypeConstant that)
+        {
+        if (isSingleUnderlyingClass(false))
+            {
+            Component clzThis = getSingleUnderlyingClass(false).getComponent();
+            switch (clzThis.getFormat())
+                {
+                case ENUMVALUE, PACKAGE, MODULE:
+                    // those can neither be extended, implemented nor mixed-in
+                    return true;
+
+                case ENUM:
+                    {
+                    // most likely, it's not compatible either, but for extremely exoteric cases
+                    // we need to scan every value to validate
+                    for (Component child : clzThis.children())
+                        {
+                        if (child.getFormat() == Component.Format.ENUMVALUE &&
+                                child.getIdentityConstant().getType().isA(that))
+                            {
+                            return false;
+                            }
+                        }
+                    return true;
+                    }
+
+                case CLASS, CONST, SERVICE:
+                    // we already tested "isA" relationship, so if "this" and "that" are both
+                    // classes, then they are incompatible
+                    if (that.isSingleUnderlyingClass(false))
+                        {
+                        return switch (that.getSingleUnderlyingClass(false).getComponent().getFormat())
+                            {
+                            case ENUMVALUE, PACKAGE, MODULE,
+                                 ENUM,
+                                 CLASS, CONST, SERVICE -> true;
+                            default -> false;
+                            };
+                        }
+                    break;
+
+                default:
+                    break;
+                }
+            }
+        return false;
+        }
+
+    /**
      * Produce a minimal representation of a type that is known to be assignable to both this
      * and the specified type. The resulting type is guaranteed to be the same or narrower than
      * this type.
@@ -796,6 +868,13 @@ public abstract class TypeConstant
             return thisResolved.combine(pool, thatResolved);
             }
 
+        if (that instanceof UnionTypeConstant        && !(this instanceof UnionTypeConstant) ||
+            that instanceof TypeSequenceTypeConstant && !(this instanceof TypeSequenceTypeConstant))
+            {
+            // the union and turtle types have more information and can produce a better result
+            return that.combine(pool, this);
+            }
+
         if (this.isA(that))
             {
             return this;
@@ -805,7 +884,7 @@ public abstract class TypeConstant
             return that;
             }
 
-        // type Type is known to have a distributive property:
+        // the type of Type is known to have a distributive property:
         // Type<X> + Type<Y> == Type<X + Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0

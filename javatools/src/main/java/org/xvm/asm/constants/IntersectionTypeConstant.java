@@ -168,6 +168,14 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean isIncompatibleCombo(TypeConstant that)
+        {
+        TypeConstant type1 = m_constType1.resolveTypedefs();
+        TypeConstant type2 = m_constType2.resolveTypedefs();
+        return type1.isIncompatibleCombo(that) || type2.isIncompatibleCombo(that);
+        }
+
+    @Override
     public TypeConstant andNot(ConstantPool pool, TypeConstant that)
         {
         TypeConstant type1 = m_constType1.resolveTypedefs();

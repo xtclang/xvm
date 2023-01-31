@@ -439,7 +439,6 @@ interface List<Element>
         {
         if (compare == Null)
             {
-            // TODO GG: uncomment this and see what happens: assert Element.is(Type<Orderable>);
             assert compare := Element.ordered();
             }
 

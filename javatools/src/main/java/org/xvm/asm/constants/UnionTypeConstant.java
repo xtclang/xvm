@@ -206,6 +206,37 @@ public class UnionTypeConstant
         }
 
     @Override
+    public boolean isIncompatibleCombo(TypeConstant that)
+        {
+        TypeConstant type1 = m_constType1.resolveTypedefs();
+        TypeConstant type2 = m_constType2.resolveTypedefs();
+        return type1.isIncompatibleCombo(that) && type2.isIncompatibleCombo(that);
+        }
+
+    @Override
+    public TypeConstant combine(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant typeCombo = super.combine(pool, that);
+        if (typeCombo instanceof IntersectionTypeConstant)
+            {
+            // the underlying logic couldn't do any better than simple intersection; let's try if
+            // we can improve that
+            TypeConstant typeThis1 = m_constType1.resolveTypedefs();
+            TypeConstant typeThis2 = m_constType2.resolveTypedefs();
+
+            if (typeThis1.isIncompatibleCombo(that))
+                {
+                return typeThis2.combine(pool, that);
+                }
+            if (typeThis2.isIncompatibleCombo(that))
+                {
+                return typeThis1.combine(pool, that);
+                }
+            }
+        return typeCombo;
+        }
+
+    @Override
     public TypeConstant andNot(ConstantPool pool, TypeConstant that)
         {
         TypeConstant type1 = getUnderlyingType().resolveTypedefs();

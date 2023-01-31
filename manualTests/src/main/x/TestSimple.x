@@ -4,8 +4,25 @@ module TestSimple
 
     void run()
         {
-        @Inject Random random;
+        }
 
-        console.print(random.fill(new Byte[8])); // used to throw
+    interface Iface<Element>
+        {
+        typedef Element.Orderer as Orderer;
+
+        void binarySearch(Element value, Orderer? compare=Null)
+            {
+            if (compare == Null)
+                {
+                assert Element.is(Type<Orderable>); // this line used to cause compilation failure
+                assert compare := Element.ordered();
+                }
+            binarySearch(compare(value, _));
+            }
+
+        void binarySearch(function Ordered(Element) order)
+            {
+            TODO
+            }
         }
     }

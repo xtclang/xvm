@@ -122,6 +122,12 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public boolean isIncompatibleCombo(TypeConstant that)
+        {
+        return false;
+        }
+
+    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         // a difference type is NEVER a class type
