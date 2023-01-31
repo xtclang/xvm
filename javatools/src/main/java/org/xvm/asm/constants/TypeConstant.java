@@ -790,12 +790,56 @@ public abstract class TypeConstant
             return that.isIncompatibleCombo(this);
             }
 
+        if (this.isFormalType() || that.isFormalType())
+            {
+            // with formal types we cannot make a determination
+            return false;
+            }
+
+        // quick "isA" check
+        if (this.isA(that) || that.isA(this))
+            {
+            return false;
+            }
+
+        if (this.isTypeOfType())
+            {
+            if (that.isTypeOfType())
+                {
+                return this.getParamType(0).isIncompatibleCombo(that.getParamType(0));
+                }
+            else
+                {
+                // type is only compatible with another type
+                return true;
+                }
+            }
+        else if (that.isTypeOfType())
+            {
+            // ditto
+            return true;
+            }
+
+        // remove all modifiers; we only concerned with the class types
+        TypeConstant typeThis = this;
+        while (typeThis.isModifyingType())
+            {
+            typeThis = typeThis.getUnderlyingType();
+            }
+
+        TypeConstant typeThat = that;
+        while (typeThat.isModifyingType())
+            {
+            typeThat = typeThat.getUnderlyingType();
+            }
+
         // There are two scenarios of non-combinable types:
         // - class types (not interfaces or mixins) in which one doesn't extend the other
         // - one is a class type that is "final" (Null, True, package/module etc.) and known to not
         //   be the other type
-        return !this.isA(that) && !that.isA(this) &&
-                (this.isIncompatibleComboImpl(that) || that.isIncompatibleComboImpl(this));
+        return !typeThis.isA(typeThat) && !typeThat.isA(typeThis) &&
+                (typeThis.isIncompatibleComboImpl(typeThat) ||
+                 typeThat.isIncompatibleComboImpl(typeThis));
         }
 
     private boolean isIncompatibleComboImpl(TypeConstant that)
