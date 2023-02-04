@@ -13,17 +13,16 @@ import static org.junit.Assert.*;
  *
  * @author mf
  */
-public class MarkAndSweepGcSpaceTests<O>
+public class MarkAndSweepGcSpaceTests
     {
-    GcSpace<O> makeSpace()
+    GcSpace makeSpace()
         {
         return makeSpace(l -> {}, Long.MAX_VALUE);
         }
 
-    @SuppressWarnings("unchecked")
-    GcSpace<O> makeSpace(LongConsumer cleared, long capacity)
+    GcSpace makeSpace(LongConsumer cleared, long capacity)
         {
-        return (GcSpace<O>) new MarkAndSweepGcSpace<>(LongArrayObjectManager.INSTANCE, cleared, capacity, capacity);
+        return new MarkAndSweepGcSpace<>(LongArrayObjectManager.INSTANCE, cleared, capacity, capacity);
         }
 
     static class RootSet
@@ -39,79 +38,70 @@ public class MarkAndSweepGcSpaceTests<O>
     @Test
     public void shouldAllocateAndGet()
         {
-        GcSpace<O> space = makeSpace();
+        GcSpace space = makeSpace();
         long p = space.allocate(0);
-        assertNotNull(space.get(p));
+        assertTrue(space.isValid(p));
         }
 
     @Test
     public void shouldCollectUnreachables()
         {
-        GcSpace<O> space = makeSpace();
+        GcSpace space = makeSpace();
         RootSet root = new RootSet();
         space.addRoot(root::retained);
         long p1 = space.allocate(3);
         long p2 = space.allocate(3);
         root.retained.add(p1);
         root.retained.add(p2);
-        assertNotNull(space.get(p1));
-        assertNotNull(space.get(p2));
+        assertTrue(space.isValid(p1));
+        assertTrue(space.isValid(p2));
         assertNotEquals(p1, p2);
 
         // force a gc and verify that we didn't lose anything
         space.gc();
-        assertNotNull(space.get(p1));
-        assertNotNull(space.get(p2));
+        assertTrue(space.isValid(p1));
+        assertTrue(space.isValid(p2));
         assertNotEquals(p1, p2);
 
         // remove an object from the root; gc, and verify it has been removed from the space
         root.retained.remove(p2);
 
         space.gc();
-        assertNotNull(space.get(p1));
-        try
-            {
-            space.get(p2);
-            fail();
-            }
-        catch (SegFault e)
-            {
-            // expected
-            }
+        assertTrue(space.isValid(p1));
+        assertFalse(space.isValid(p2));
         }
 
     @Test
     public void shouldNotCollectDeepReachables()
         {
         RootSet root = new RootSet();
-        GcSpace<O> space = makeSpace();
-        FieldAccessor<O> accessor = space.accessor();
+        GcSpace space = makeSpace();
         space.addRoot(root::retained);
         long p1 = space.allocate(3);
         long p2 = space.allocate(3);
         long p3 = space.allocate(3);
         long p4 = space.allocate(3);
         root.retained.add(p1);
-        assertNotNull(space.get(p1));
-        assertNotNull(space.get(p2));
-        assertNotNull(space.get(p3));
-        assertNotNull(space.get(p4));
+        assertTrue(space.isValid(p1));
+        assertTrue(space.isValid(p2));
+        assertTrue(space.isValid(p3));
+        assertTrue(space.isValid(p4));
 
-        accessor.setField(space.get(p1), 0, p2);
-        accessor.setField(space.get(p2), 2, p3);
-        accessor.setField(space.get(p4), 0, p4); // cycle
+        space.setField(p1, 0, p2);
+        space.setField(p2, 2, p3);
+        space.setField(p4, 0, p4); // cycle
 
         // force a gc and verify that we didn't lose anything which was reachable
         space.gc();
-        assertNotNull(space.get(p1));
-        assertNotNull(space.get(p2));
-        assertNotNull(space.get(p3));
+        assertTrue(space.isValid(p1));
+        assertTrue(space.isValid(p2));
+        assertTrue(space.isValid(p3));
         assertNotEquals(p1, p2);
 
         // verify that
         try
             {
-            space.get(p4);
+            space.isValid(p4);
             }
         catch (SegFault e)
             {
@@ -122,8 +112,8 @@ public class MarkAndSweepGcSpaceTests<O>
     @Test
     public void shouldAutoCollect()
         {
-        GcSpace<O> space = makeSpace();
-        FieldAccessor<O> accessor = space.accessor();
+        GcSpace space = makeSpace();
+
         RootSet root = new RootSet();
         space.addRoot(root::retained);
         long p1 = space.allocate(3);
@@ -131,8 +121,8 @@ public class MarkAndSweepGcSpaceTests<O>
         long p3 = space.allocate(3);
         root.retained.add(p1);
 
-        accessor.setField(space.get(p1), 0, p2);
-        accessor.setField(space.get(p2), 2, p3);
+        space.setField(p1, 0, p2);
+        space.setField(p2, 2, p3);
 
         long cb = space.getByteCount();
         // add objects until we auto-gc
@@ -153,17 +143,16 @@ public class MarkAndSweepGcSpaceTests<O>
         assertTrue(space.getByteCount() < cb * 2);
 
         // verify we retained the reachable objects
-        assertNotNull(space.get(p1));
-        assertNotNull(space.get(p2));
-        assertNotNull(space.get(p3));
+        assertTrue(space.isValid(p1));
+        assertTrue(space.isValid(p2));
+        assertTrue(space.isValid(p3));
         }
 
     @Test
     public void shouldOOMEOnHardLimit()
         {
         long cbLimit = 1024*2048;
-        GcSpace<O> space = makeSpace(l -> {}, cbLimit);
-        FieldAccessor<O> accessor = space.accessor();
+        GcSpace space = makeSpace(l -> {}, cbLimit);
         RootSet root = new RootSet();
         space.addRoot(root::retained);
         long p1 = space.allocate(3);
@@ -175,7 +164,7 @@ public class MarkAndSweepGcSpaceTests<O>
             for (int i = 0; i < 2_000_000; ++i)
                 {
                 long p = space.allocate(512);
-                accessor.setField(space.get(pLast), 0, p);
+                space.setField(pLast, 0, p);
                 pLast = p;
                 }
 
@@ -192,42 +181,33 @@ public class MarkAndSweepGcSpaceTests<O>
     public void shouldClearWeakRefsToUnreachables()
         {
         List<Long> cleared = new ArrayList<>();
-        GcSpace<O> space = makeSpace(cleared::add, Long.MAX_VALUE);
-        FieldAccessor<O> accessor = space.accessor();
+        GcSpace space = makeSpace(cleared::add, Long.MAX_VALUE);
         RootSet root = new RootSet();
         space.addRoot(root::retained);
         long p1 = space.allocate(0);
         long p2 = space.allocate(1);
         long wp1 = space.allocate(2, true);
-        accessor.setField(space.get(wp1), 0, p1);
-        accessor.setField(space.get(wp1), 1, space.allocate(0)); // notifier
-        accessor.setField(space.get(p2), 0, p1);
+        space.setField(wp1, 0, p1);
+        space.setField(wp1, 1, space.allocate(0)); // notifier
+        space.setField(p2, 0, p1);
         root.retained.add(wp1);
         root.retained.add(p2);
 
         space.gc();
 
         // p2 keeps p1 alive; verify that p1 was not collected, and that wp1 was not cleared
-        assertNotNull(space.get(p1));
-        assertEquals(p1, accessor.getField(space.get(wp1), 0));
+        assertTrue(space.isValid(p1));
+        assertEquals(p1, space.getField(wp1, 0));
 
         // verify there have been no notifications
         assertTrue(cleared.isEmpty());
 
         // remove the strong ref to p1 and verify that it gets gc'd and that wp1 gets cleared
-        accessor.setField(space.get(p2), 0, GcSpace.NULL);
+        space.setField(p2, 0, GcSpace.NULL);
         space.gc();
 
-        assertEquals(GcSpace.NULL, accessor.getField(space.get(wp1), 0));
-        try
-            {
-            space.get(p1);
-            fail();
-            }
-        catch (SegFault e)
-            {
-            // expected
-            }
+        assertEquals(GcSpace.NULL, space.getField(wp1, 0));
+        assertFalse(space.isValid(p1));
 
         // verify that cleared was notified
         assertTrue(cleared.remove(wp1));

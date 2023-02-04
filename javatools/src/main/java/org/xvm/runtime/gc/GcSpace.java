@@ -4,20 +4,14 @@ import java.util.PrimitiveIterator;
 import java.util.function.Supplier;
 
 /**
- * An interface describing an automatic memory manager for objects of type {@link V} which are to be
- * {@link #get accessed} via {@code long} addresses.
+ * An interface describing an automatic memory manager for objects with {@code long} addresses.
  * <p>
  * {@link #allocate allocated} objects are considered to be garbage once they are not reachable from a {@link #addRoot root}.
  *
  * @author mf
  */
-public interface GcSpace<V>
+public interface GcSpace
     {
-    /**
-     * @return the {@link FieldAccessor} for the space's object type
-     */
-    FieldAccessor<V> accessor();
-
     /**
      * Allocate an object using the specified "constructor".
      *
@@ -34,8 +28,8 @@ public interface GcSpace<V>
      * Allocate an object using the specified "constructor".
      *
      * <p>
-     * If the object is indicated to a "weak" reference, then {@link #get field 0} must be the field which stores
-     * the weak referent, and {@link #get field 1} if it exists is used to store the notifier (if any).
+     * If the object is indicated to a "weak" reference, then {@link #getField field 0} must be the field which stores
+     * the weak referent, and {@link #getField field 1} if it exists is used to store the notifier (if any).
      *
      * @param cFields the number of fields to be able to store
      * @param fWeak {@code true} if the object represents a "weak" reference
@@ -45,14 +39,35 @@ public interface GcSpace<V>
             throws OutOfMemoryError;
 
     /**
-     * Return the object at a given address.
+     * Return {@code true} if the address maps to an object in this {@link GcSpace}.
      *
      * @param address the address
-     * @return the object
+     * @return {@code true} if the address maps to an object in this {@link GcSpace}.
+     */
+    boolean isValid(long address);
+
+    /**
+     * Get the field value at a given index.
+     * @param address the object address
+     * @param index the field index
+     *
+     * @return the field value
      * @throws SegFault if the supplied address does not map to a live object
      */
-    V get(long address)
+    long getField(long address, int index)
         throws SegFault;
+
+    /**
+     * Set the field value at a given index.
+     *
+     * @param address the object address
+     * @param index   the field index
+     * @param handle the value to set
+     * @throws SegFault if the supplied address does not map to a live object
+     */
+    void setField(long address, int index, long handle)
+        throws SegFault;
+
 
     /**
      * Add a gc root to this space.
@@ -76,7 +91,7 @@ public interface GcSpace<V>
     void gc();
 
     /**
-     * @return the amount of memory the {@link V}s within this {@link GcSpace} are consuming.
+     * @return the amount of memory consumed by objects managed by this {@link GcSpace}.
      */
     long getByteCount();
 

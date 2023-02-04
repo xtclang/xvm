@@ -15,7 +15,7 @@ import java.util.function.Supplier;
  * @author mf
  */
 public class MarkAndSweepGcSpace<V>
-        implements GcSpace<V>
+        implements GcSpace
     {
 
     /**
@@ -55,12 +55,6 @@ public class MarkAndSweepGcSpace<V>
         }
 
     @Override
-    public FieldAccessor<V> accessor()
-        {
-        return f_accessor;
-        }
-
-    @Override
     public long allocate(int cFields, boolean fWeak)
             throws OutOfMemoryError
         {
@@ -79,6 +73,7 @@ public class MarkAndSweepGcSpace<V>
 
         V resource = f_accessor.allocate(cFields);
         getAndSetHeaderBit(resource, MARKER_MASK, m_fAllocationMarker);
+        setFieldCount(resource, cFields);
         if (fWeak)
             {
             getAndSetHeaderBit(resource, WEAK_MASK, true);
@@ -91,8 +86,30 @@ public class MarkAndSweepGcSpace<V>
         }
 
     @Override
-    public V get(long address)
-            throws SegFault
+    public boolean isValid(long address)
+        {
+        if (address == NULL)
+            {
+            return true;
+            }
+        else if (!isLocal(address))
+            {
+            return false;
+            }
+
+        int slot = slot(address);
+        return slot < m_aObjects.length && m_aObjects[slot] != null;
+        }
+
+    /**
+     * Tests if the address is valid and if no return the storage object.
+     *
+     * @param address the address of the object
+     * @return the object
+     * @throws SegFault if the address is invalid
+     */
+    private V ensure(long address)
+        throws SegFault
         {
         if (address == NULL)
             {
@@ -104,7 +121,7 @@ public class MarkAndSweepGcSpace<V>
             }
 
         int slot = slot(address);
-        if (slot < 0 || slot > m_aObjects.length)
+        if (slot > m_aObjects.length)
             {
             throw new SegFault();
             }
@@ -116,6 +133,18 @@ public class MarkAndSweepGcSpace<V>
             }
 
         return o;
+        }
+
+    @Override
+    public long getField(long address, int index) throws SegFault
+        {
+        return f_accessor.getField(ensure(address), index);
+        }
+
+    @Override
+    public void setField(long address, int index, long handle) throws SegFault
+        {
+        f_accessor.setField(ensure(address), index, handle);
         }
 
     @Override
@@ -199,12 +228,12 @@ public class MarkAndSweepGcSpace<V>
      */
     private void walkAndMark(long po, boolean fReachableMarker)
         {
-        V o = get(po);
+        V o = ensure(po);
         // TODO: dynamically switch from recursive to non-recursive based on depth
         if (o != null && getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
             {
             boolean fWeak = getHeaderBit(o, WEAK_MASK);
-            for (int i = fWeak ? 1 : 0, c = f_accessor.getFieldCount(o); i < c; ++i)
+            for (int i = fWeak ? 1 : 0, c = getFieldCount(o); i < c; ++i)
                 {
                 long address = f_accessor.getField(o, i);
                 if (isLocal(address))
@@ -227,7 +256,7 @@ public class MarkAndSweepGcSpace<V>
                 {
                 f_accessor.setField(weak, WEAK_REFERENT_FIELD, NULL); // clear referent
                 getAndSetHeaderBit(weak, WEAK_MASK, false); // once cleared it can be treated as a "normal" object
-                if (f_accessor.getFieldCount(weak) > WEAK_NOTIFIER_FIELD && f_accessor.getField(weak, WEAK_NOTIFIER_FIELD) != NULL)
+                if (getFieldCount(weak) > WEAK_NOTIFIER_FIELD && f_accessor.getField(weak, WEAK_NOTIFIER_FIELD) != NULL)
                     {
                     // enqueue the weak-ref
                     if (anNotify == null)
@@ -320,7 +349,7 @@ public class MarkAndSweepGcSpace<V>
      * @param mask the header mask to check against
      * @return the marker
      */
-    private boolean getHeaderBit(V o, int mask)
+    private boolean getHeaderBit(V o, long mask)
         {
         return (f_accessor.getHeader(o) & mask) != 0;
         }
@@ -333,7 +362,7 @@ public class MarkAndSweepGcSpace<V>
      * @param value the updated bit value
      * @return the old bit value
      */
-    private boolean getAndSetHeaderBit(V o, int mask, boolean value)
+    private boolean getAndSetHeaderBit(V o, long mask, boolean value)
         {
         long header = f_accessor.getHeader(o);
         if (value)
@@ -348,17 +377,54 @@ public class MarkAndSweepGcSpace<V>
         return (header & mask) != 0;
         }
 
+    /**
+     * Return the number of fields contained in the object.
+     *
+     * @param o the object
+     * @return the field count
+     */
+    private int getFieldCount(V o)
+        {
+        // TODO: get from class type rather then burning bits in the header
+        return (int) ((f_accessor.getHeader(o) & FIELD_COUNT_MASK) >>> FIELD_COUNT_SHIFT);
+        }
+
+    /**
+     * Set the field count for an object.
+     *
+     * @param o the object
+     * @param cFields the field count
+     */
+    private void setFieldCount(V o, int cFields)
+        {
+        if (cFields < 0 || cFields > (FIELD_COUNT_MASK >> FIELD_COUNT_SHIFT))
+            {
+            throw new IllegalArgumentException();
+            }
+
+        f_accessor.setHeader(o, (f_accessor.getHeader(o) & ~FIELD_COUNT_MASK) | ((long) cFields << FIELD_COUNT_SHIFT));
+        }
 
     /**
      * The bit-mask in the header used to mark the object as being reachable.
      */
-    static final int MARKER_MASK = 1;
+    static final long MARKER_MASK = 0x1;
 
     /**
      * The bit-mask in the header used to indicate if the object represents a "weak" ref which requires special
      * handling.
      */
-    static final int WEAK_MASK = 2;
+    static final long WEAK_MASK = 0x2;
+
+    /**
+     * The bit-mask in the header encoding the
+     */
+    static final long FIELD_COUNT_MASK = 0xFFC;
+
+    /**
+     * The right shift of the post masked {@link #FIELD_COUNT_MASK} to obtain the mask
+     */
+    static final int FIELD_COUNT_SHIFT = 2;
 
     /**
      * The means by which we access an objects storage.

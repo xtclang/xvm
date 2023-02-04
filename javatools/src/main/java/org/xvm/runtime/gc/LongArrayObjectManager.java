@@ -48,12 +48,6 @@ public class LongArrayObjectManager
         }
 
     @Override
-    public int getFieldCount(long[] o)
-        {
-        return validate(o).length - 1;
-        }
-
-    @Override
     public long getField(long[] o, int index)
         {
         return validate(o)[index + 1];

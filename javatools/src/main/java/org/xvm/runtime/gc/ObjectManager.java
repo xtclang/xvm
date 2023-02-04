@@ -7,7 +7,6 @@ package org.xvm.runtime.gc;
  * @author mf
  */
 public interface ObjectManager<V>
-    extends FieldAccessor<V>
     {
     /**
      * Allocate a new object with the specified field count.
@@ -49,4 +48,22 @@ public interface ObjectManager<V>
      * @return the shallow size in bytes
      */
     long getByteSize(V o);
+
+    /**
+     * Get the field value at a given index.
+     * @param o     the object
+     * @param index the field index
+     *
+     * @return the field value
+     */
+    long getField(V o, int index);
+
+    /**
+     * Set the field value at a given index.
+     *
+     * @param o       the object
+     * @param index   the field index
+     * @param address the field value
+     */
+    void setField(V o, int index, long address);
     }
