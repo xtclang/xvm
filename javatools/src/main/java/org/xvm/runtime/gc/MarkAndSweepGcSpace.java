@@ -88,11 +88,7 @@ public class MarkAndSweepGcSpace<V>
     @Override
     public boolean isValid(long address)
         {
-        if (address == NULL)
-            {
-            return true;
-            }
-        else if (!isLocal(address))
+        if (!isLocal(address))
             {
             return false;
             }
@@ -113,7 +109,7 @@ public class MarkAndSweepGcSpace<V>
         {
         if (address == NULL)
             {
-            return null;
+            throw new NullPointerException();
             }
         else if (!isLocal(address))
             {
@@ -171,11 +167,12 @@ public class MarkAndSweepGcSpace<V>
         // mark
         boolean fReachableMarker = !m_fAllocationMarker;
         m_fAllocationMarker = fReachableMarker;
+        int[] state = null;
         for (var root : f_setRoots)
             {
             for (var liter = root.get(); liter.hasNext(); )
                 {
-                walkAndMark(liter.next(), fReachableMarker);
+                state = walkAndMark(state, liter.next(), fReachableMarker, 0);
                 }
             }
 
@@ -222,26 +219,109 @@ public class MarkAndSweepGcSpace<V>
     /**
      * Walk and mark the graph of objects reachable from a given object.
      *
-     * @param po               the source object address
+     * @param state            reusable int[] tracking the walk state for iterative marking, or {@code null}
+     * @param address          the source object address
      * @param fReachableMarker the value to mark the objects with
-     * @return the weaks mapping, or {@code null}
+     * @param depth            the recursion depth
+     * @return the current state or {@code null}
      */
-    private void walkAndMark(long po, boolean fReachableMarker)
+    private int[] walkAndMark(int[] state, long address, boolean fReachableMarker, int depth)
         {
-        V o = ensure(po);
-        // TODO: dynamically switch from recursive to non-recursive based on depth
-        if (o != null && getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
+        // start with a fast stack recursion based walk, but dynamically switch to an iterative approach when the
+        // stack gets too deep and we risk StackOverflow
+        if (isLocal(address))
             {
-            boolean fWeak = getHeaderBit(o, WEAK_MASK);
-            for (int i = fWeak ? 1 : 0, c = getFieldCount(o); i < c; ++i)
+            if (depth == 1024)
                 {
-                long address = f_accessor.getField(o, i);
-                if (isLocal(address))
+                // deep stack switch to slower iterative scan
+                state = walkAndMarkIterative(state, address, fReachableMarker);
+                }
+            else
+                {
+                V o = ensure(address);
+                if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
                     {
-                    walkAndMark(address, fReachableMarker);
+                    boolean fWeak = getHeaderBit(o, WEAK_MASK);
+                    for (int i = fWeak ? 1 : 0, c = getFieldCount(o); i < c; ++i)
+                        {
+                        state = walkAndMark(state, f_accessor.getField(o, i), fReachableMarker, depth + 1);
+                        }
                     }
                 }
             }
+
+        return state;
+        }
+
+    /**
+     * Walk and mark the graph of objects reachable from a given object.
+     *
+     * @param state            reusable int[] tracking the walk state for iterative marking, or {@code null}
+     * @param address          the source object address
+     * @param fReachableMarker the value to mark the objects with
+     * @return the current state or {@code null}
+     */
+    private int[] walkAndMarkIterative(int[] state, long address, boolean fReachableMarker)
+        {
+        // state consists of pairs of truncated address (slots) its remaining field count to visit
+        if (isLocal(address))
+            {
+            V o = ensure(address);
+            if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
+                {
+                // initial push
+                int iTop = -1;
+                if (state == null)
+                    {
+                    state = new int[128];
+                    }
+                state[++iTop] = slot(address);
+                state[++iTop] = getFieldCount(o);
+
+                do
+                    {
+                    while (state[iTop] > 0) // remaining field count
+                        {
+                        // read our next field
+                        o = ensure(address(state[iTop - 1]));
+
+                        int iField = --state[iTop];
+                        if (iField == 0 && getHeaderBit(o, WEAK_MASK))
+                            {
+                            continue;
+                            }
+
+                        address = f_accessor.getField(o, iField);
+                        if (isLocal(address))
+                            {
+                            o = ensure(address);
+                            if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
+                                {
+                                int cFields = getFieldCount(o);
+                                if (cFields > 0)
+                                    {
+                                    // push
+
+                                    if (iTop + 1 == state.length)
+                                        {
+                                        // grown state
+                                        int[] newState = new int[state.length * 2];
+                                        System.arraycopy(state, 0, newState, 0, state.length);
+                                        state = newState;
+                                        }
+
+                                    state[++iTop] = slot(address);
+                                    state[++iTop] = cFields;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                while ((iTop -= 2) > 0); // pop
+                }
+            }
+
+        return state;
         }
 
 

@@ -136,7 +136,7 @@ public class MarkAndSweepGcSpaceTests
             }
         while (space.getByteCount() > lastCb);
 
-        // verify we did see signficant growth
+        // verify we did see significant growth
         assertTrue(maxCb > cb * 4);
 
         // verify we've shrunk back to near our reachable set size
@@ -151,8 +151,10 @@ public class MarkAndSweepGcSpaceTests
     @Test
     public void shouldOOMEOnHardLimit()
         {
-        long cbLimit = 1024*2048;
-        GcSpace space = makeSpace(l -> {}, cbLimit);
+        long cbLimit = 1024 * 1024 * 1024;
+        GcSpace space = makeSpace(l ->
+            {
+            }, cbLimit);
         RootSet root = new RootSet();
         space.addRoot(root::retained);
         long p1 = space.allocate(3);
