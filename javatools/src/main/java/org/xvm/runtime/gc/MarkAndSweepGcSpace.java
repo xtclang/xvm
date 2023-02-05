@@ -231,18 +231,19 @@ public class MarkAndSweepGcSpace<V>
         // stack gets too deep and we risk StackOverflow
         if (isLocal(address))
             {
-            if (depth == 1024)
+            V o = ensure(address);
+            if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
                 {
-                // deep stack switch to slower iterative scan
-                state = walkAndMarkIterative(state, address, fReachableMarker);
-                }
-            else
-                {
-                V o = ensure(address);
-                if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
+                int cFields = getFieldCount(o);
+                if (depth == 1024)
+                    {
+                    // deep stack switch to slower iterative scan
+                    state = walkAndMarkIterative(state, address, cFields, fReachableMarker);
+                    }
+                else
                     {
                     boolean fWeak = getHeaderBit(o, WEAK_MASK);
-                    for (int i = fWeak ? 1 : 0, c = getFieldCount(o); i < c; ++i)
+                    for (int i = fWeak ? 1 : 0; i < cFields; ++i)
                         {
                         state = walkAndMark(state, f_accessor.getField(o, i), fReachableMarker, depth + 1);
                         }
@@ -261,65 +262,58 @@ public class MarkAndSweepGcSpace<V>
      * @param fReachableMarker the value to mark the objects with
      * @return the current state or {@code null}
      */
-    private int[] walkAndMarkIterative(int[] state, long address, boolean fReachableMarker)
+    private int[] walkAndMarkIterative(int[] state, long address, int cFields, boolean fReachableMarker)
         {
-        // state consists of pairs of truncated address (slots) its remaining field count to visit
-        if (isLocal(address))
+        if (state == null)
             {
-            V o = ensure(address);
-            if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
+            state = new int[128];
+            }
+
+        // initial push; state consists of pairs of truncated address (slot) and its remaining field count to visit
+        int iTop = -1;
+        state[++iTop] = slot(address);
+        state[++iTop] = cFields;
+
+        do
+            {
+            while (state[iTop] > 0) // remaining field count
                 {
-                // initial push
-                int iTop = -1;
-                if (state == null)
+                // read our next field
+                V o = ensure(address(state[iTop - 1]));
+
+                int iField = --state[iTop];
+                if (iField == 0 && getHeaderBit(o, WEAK_MASK))
                     {
-                    state = new int[128];
+                    continue;
                     }
-                state[++iTop] = slot(address);
-                state[++iTop] = getFieldCount(o);
 
-                do
+                address = f_accessor.getField(o, iField);
+                if (isLocal(address))
                     {
-                    while (state[iTop] > 0) // remaining field count
+                    o = ensure(address);
+                    if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
                         {
-                        // read our next field
-                        o = ensure(address(state[iTop - 1]));
-
-                        int iField = --state[iTop];
-                        if (iField == 0 && getHeaderBit(o, WEAK_MASK))
+                        cFields = getFieldCount(o);
+                        if (cFields > 0)
                             {
-                            continue;
-                            }
+                            // push
 
-                        address = f_accessor.getField(o, iField);
-                        if (isLocal(address))
-                            {
-                            o = ensure(address);
-                            if (getAndSetHeaderBit(o, MARKER_MASK, fReachableMarker) != fReachableMarker)
+                            if (iTop + 1 == state.length)
                                 {
-                                int cFields = getFieldCount(o);
-                                if (cFields > 0)
-                                    {
-                                    // push
-
-                                    if (iTop + 1 == state.length)
-                                        {
-                                        // grown state
-                                        int[] newState = new int[state.length * 2];
-                                        System.arraycopy(state, 0, newState, 0, state.length);
-                                        state = newState;
-                                        }
-
-                                    state[++iTop] = slot(address);
-                                    state[++iTop] = cFields;
-                                    }
+                                // grown state
+                                int[] newState = new int[state.length * 2];
+                                System.arraycopy(state, 0, newState, 0, state.length);
+                                state = newState;
                                 }
+
+                            state[++iTop] = slot(address);
+                            state[++iTop] = cFields;
                             }
                         }
                     }
-                while ((iTop -= 2) > 0); // pop
                 }
             }
+        while ((iTop -= 2) > 0); // pop
 
         return state;
         }
