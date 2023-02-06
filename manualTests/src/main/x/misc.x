@@ -9,7 +9,6 @@ module TestMisc
         testBools();
         testChars();
         testInts();
-        testIsA();
         testCast();
         testTernary();
         testSpaceship();
@@ -116,47 +115,6 @@ module TestMisc
         // this also tests the conditional UInt8 to Int conversion
         assert Int n := chars[0].asciiDigit(), n == 1;
         assert !chars[1].asciiDigit();
-        }
-
-    void testIsA()
-        {
-        console.print("\n** testIsA()");
-
-        console.print("\n(testing a string in a variable of type object)");
-        Object o = "hello";
-        console.print("o           =" + o);
-        console.print("o.is(Object)=" + o.is(Object));
-        console.print("o.is(String)=" + o.is(String));
-        console.print("o.is(Int)   =" + o.is(Int));
-
-        console.print("\n(testing an int in a variable of type int)");
-        Int i = 5;
-        if (i.is(Object))
-            {
-            console.print("i.is(Object) True (good)");
-            }
-        else
-            {
-            console.print("i.is(Object) False (bad)");
-            }
-
-        if (i.is(Int))
-            {
-            console.print("i.is(Int) True (good)");
-            }
-        else
-            {
-            console.print("i.is(Int) False (bad)");
-            }
-
-        if (i.is(String))
-            {
-            console.print("i.is(String) True (bad)");
-            }
-        else
-            {
-            console.print("i.is(String) False (good)");
-            }
         }
 
     void testCast()

@@ -218,9 +218,10 @@ public class NewExpression
             {
             if (isVirtualNew())
                 {
-                typeTarget = left == null
+                // immutability is not carried over
+                typeTarget = (left == null
                         ? ctx.getThisType()
-                        : left.getImplicitType(ctx);
+                        : left.getImplicitType(ctx)).removeImmutable();
                 }
             else
                 {
@@ -304,7 +305,8 @@ public class NewExpression
             typeTarget = ctx.getThisType();
             if (fVirtual)
                 {
-                typeResult = typeTarget;
+                // immutability is not carried over
+                typeResult = typeTarget.removeImmutable();
                 plan       = Plan.Virtual;
                 }
             else
@@ -386,7 +388,8 @@ public class NewExpression
                     log(errs, Severity.ERROR, Compiler.NEW_INVALID_FORMAL, left.toString());
                     return null;
                     }
-                typeResult = typeTarget = typeLeft;
+                // immutability is not carried over
+                typeResult = typeTarget = typeLeft.removeImmutable();
                 plan       = Plan.Virtual;
                 }
             else

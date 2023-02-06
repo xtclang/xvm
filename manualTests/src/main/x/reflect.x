@@ -39,10 +39,7 @@ module TestReflection
 
         Function<<Int, String>, <Int>> f = bar;
         Function<<Int, String>, <Int>> f2 = bar.as(Function<<Int, String>, <Int>>);
-        if (bar.is(Function<<Int, String>, <Int>>))
-            {
-            Int x = 1;
-            }
+        assert f2(1, "") == 0;
         }
 
     void testTypeStrings()

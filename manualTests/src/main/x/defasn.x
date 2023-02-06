@@ -108,7 +108,7 @@ module TestDefAsn
                 }
             }
 
-        assert i.is(Int);
+        assert i >= 0;
         }
 
     void testForLoop(Int? in)
@@ -127,6 +127,6 @@ module TestDefAsn
                 }
             }
 
-        assert i.is(Int);
+        assert i >= 0;
         }
     }

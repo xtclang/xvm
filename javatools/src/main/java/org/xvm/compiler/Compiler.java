@@ -1127,7 +1127,7 @@ public class Compiler
      */
     public static final String UNSUPPORTED_DYNAMIC_TYPE_PARAMS    = "COMPILER-136";
     /**
-     * The evaluating expression {0} has a type of "ecstasy.Type"; it always matches type {1}.
+     * The evaluating expression {0} has a type of {1}; it always matches type {2}.
      */
     public static final String TYPE_MATCHES_ALWAYS                = "COMPILER-137";
     /**
@@ -1326,6 +1326,10 @@ public class Compiler
      * The "super" function is not defined within a non-virtual constructor.
      */
     public static final String NON_VIRTUAL_SUPER                   = "COMPILER-186";
+    /**
+     * The evaluating expression {0} of type {1} can never match type {2}.
+     */
+    public static final String TYPE_MATCHES_NEVER                = "COMPILER-187";
     /**
      * {0} is not yet implemented.
      */

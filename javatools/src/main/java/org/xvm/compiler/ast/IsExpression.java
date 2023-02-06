@@ -110,27 +110,44 @@ public class IsExpression
 
         if (fit.isFit())
             {
-            TypeConstant typeTarget   = exprTarget.getType();
-            TypeConstant typeTest     = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
-            TypeConstant typeInferred = typeTest;
+            TypeConstant typeTarget = exprTarget.getType();
+            TypeConstant typeTest   = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
 
-            if (typeTarget.isTypeOfType() && !typeTest.isFormalType() && exprTest.isConstant())
+            if (typeTarget.isIncompatibleCombo(typeTest))
                 {
-                // the test must be a type unless it's something that any Type is (e.g. Const),
-                // in which case just issue a warning
-                if (!typeTest.isTypeOfType())
+                log(errs, Severity.ERROR, Compiler.TYPE_MATCHES_NEVER,
+                        exprTarget.toString(), typeTarget.getValueString(), typeTest.getValueString());
+                return null;
+                }
+
+            TypeConstant typeInferred = typeTest;
+            if (!typeTest.isFormalType() && exprTest.isConstant())
+                {
+                if (typeTarget.isTypeOfType())
                     {
-                    if (pool.typeConst().isA(typeTest))
+                    // the test must be a type unless it's something that any Type is (e.g. Const),
+                    // in which case just issue a warning
+                    if (!typeTest.isTypeOfType())
                         {
-                        log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS,
-                            exprTarget.toString(), typeTest.getValueString());
+                        if (pool.typeConst().isA(typeTest))
+                            {
+                            log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS,
+                                exprTarget.toString(), pool.typeType().getValueString(),
+                                    typeTest.getValueString());
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                                exprTarget.toString(), typeTest.getValueString());
+                            return null;
+                            }
                         }
-                    else
-                        {
-                        log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
-                            exprTarget.toString(), typeTest.getValueString());
-                        return null;
-                        }
+                    }
+                else if (typeTarget.isA(typeTest))
+                    {
+                    log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS,
+                        exprTarget.toString(), typeTarget.getValueString(),
+                            typeTest.getValueString());
                     }
                 }
 

@@ -26,7 +26,6 @@ const TypeSystem
         assert modules.size > 0;
         if (!modules.is(immutable))
             {
-            assert modules.is(Freezable);
             modules = modules.freeze();
             }
 

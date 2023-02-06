@@ -453,15 +453,12 @@ class ObjectInputStream(Schema schema, Parser parser)
             if (name != Null)
                 {
                 length += 1 + name.estimateStringLength();
-                if (name.is(String))
+                for (Char ch : name)
                     {
-                    for (Char ch : name)
+                    if (ch == '~' || ch == '/')
                         {
-                        if (ch == '~' || ch == '/')
-                            {
-                            ++length;
-                            escape = True;
-                            }
+                        ++length;
+                        escape = True;
                         }
                     }
                 }

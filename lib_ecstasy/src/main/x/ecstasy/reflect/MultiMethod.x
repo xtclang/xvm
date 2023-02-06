@@ -28,7 +28,6 @@ const MultiMethod<Target>(String name, Callable[] callables)
                 methods.add(callable);
                 }
             }
-        assert methods.is(Freezable);
         return methods.freeze(True);
         }
 
@@ -45,7 +44,6 @@ const MultiMethod<Target>(String name, Callable[] callables)
                 functions.add(callable);
                 }
             }
-        assert functions.is(Freezable);
         return functions.freeze(True);
         }
 
