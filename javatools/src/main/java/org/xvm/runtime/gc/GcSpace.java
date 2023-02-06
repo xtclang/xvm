@@ -1,5 +1,7 @@
 package org.xvm.runtime.gc;
 
+import org.xvm.util.LongMuterator;
+
 import java.util.PrimitiveIterator;
 import java.util.function.Supplier;
 
@@ -13,29 +15,24 @@ import java.util.function.Supplier;
 public interface GcSpace
     {
     /**
-     * Allocate an object using the specified "constructor".
+     * Allocate an object.
      *
      * @param cFields the number of fields to be able to store
      * @return the address of the allocated resource
      */
-    default long allocate(int cFields)
-        throws OutOfMemoryError
-        {
-        return allocate(cFields, false);
-        }
+    long allocate(int cFields)
+            throws OutOfMemoryError;
 
     /**
-     * Allocate an object using the specified "constructor".
-     *
+     * Allocate a weak-ref based object.
      * <p>
-     * If the object is indicated to a "weak" reference, then {@link #getField field 0} must be the field which stores
+     * As the object is indicated to a "weak" reference, {@link #getField field 0} must be the field which stores
      * the weak referent, and {@link #getField field 1} if it exists is used to store the notifier (if any).
      *
      * @param cFields the number of fields to be able to store
-     * @param fWeak {@code true} if the object represents a "weak" reference
      * @return the address of the allocated resource
      */
-    long allocate(int cFields, boolean fWeak)
+    long allocateWeak(int cFields)
             throws OutOfMemoryError;
 
     /**
@@ -76,14 +73,14 @@ public interface GcSpace
      *
      * @param root the root object
      */
-    void addRoot(Supplier<? extends PrimitiveIterator.OfLong> root);
+    void addRoot(Supplier<? extends LongMuterator> root);
 
     /**
      * Remove a gc root from this space.
      *
      * @param root the root object
      */
-    void removeRoot(Supplier<? extends PrimitiveIterator.OfLong> root);
+    void removeRoot(Supplier<? extends LongMuterator> root);
 
     /**
      * Perform a garbage collection cycle in an attempt to reclaim memory.
@@ -96,7 +93,7 @@ public interface GcSpace
     long getByteCount();
 
     /**
-     * The {@code null} pointer value.
+     * The {@code null} address value.
      */
     long NULL = 0;
 

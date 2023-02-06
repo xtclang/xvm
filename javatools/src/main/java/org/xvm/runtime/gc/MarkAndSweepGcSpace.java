@@ -1,6 +1,8 @@
 package org.xvm.runtime.gc;
 
 
+import org.xvm.util.LongMuterator;
+
 import java.util.HashSet;
 import java.util.PrimitiveIterator;
 import java.util.Set;
@@ -55,7 +57,7 @@ public class MarkAndSweepGcSpace<V>
         }
 
     @Override
-    public long allocate(int cFields, boolean fWeak)
+    public long allocate(int cFields)
             throws OutOfMemoryError
         {
         if (m_nTopFree < 0 || m_cBytes > f_cbLimitSoft)
@@ -74,15 +76,24 @@ public class MarkAndSweepGcSpace<V>
         V resource = f_accessor.allocate(cFields);
         getAndSetHeaderBit(resource, MARKER_MASK, m_fAllocationMarker);
         setFieldCount(resource, cFields);
-        if (fWeak)
-            {
-            getAndSetHeaderBit(resource, WEAK_MASK, true);
-            }
         m_cBytes += f_accessor.getByteSize(resource);
 
         int slot = m_anFreeSlots[m_nTopFree--];
         m_aObjects[slot] = resource;
         return address(slot);
+        }
+
+    @Override
+    public long allocateWeak(int cFields) throws OutOfMemoryError
+        {
+        if (cFields == 0)
+            {
+            throw new IllegalArgumentException("weak-refs must have at least one field");
+            }
+
+        long address = allocate(cFields);
+        getAndSetHeaderBit(ensure(address), WEAK_MASK, true);
+        return address;
         }
 
     @Override
@@ -144,13 +155,13 @@ public class MarkAndSweepGcSpace<V>
         }
 
     @Override
-    public void addRoot(Supplier<? extends PrimitiveIterator.OfLong> root)
+    public void addRoot(Supplier<? extends LongMuterator> root)
         {
         f_setRoots.add(root);
         }
 
     @Override
-    public void removeRoot(Supplier<? extends PrimitiveIterator.OfLong> root)
+    public void removeRoot(Supplier<? extends LongMuterator> root)
         {
         f_setRoots.remove(root);
         }
@@ -329,7 +340,6 @@ public class MarkAndSweepGcSpace<V>
             if (referent == null || getHeaderBit(referent, MARKER_MASK) != fReachableMarker)
                 {
                 f_accessor.setField(weak, WEAK_REFERENT_FIELD, NULL); // clear referent
-                getAndSetHeaderBit(weak, WEAK_MASK, false); // once cleared it can be treated as a "normal" object
                 if (getFieldCount(weak) > WEAK_NOTIFIER_FIELD && f_accessor.getField(weak, WEAK_NOTIFIER_FIELD) != NULL)
                     {
                     // enqueue the weak-ref
@@ -544,7 +554,7 @@ public class MarkAndSweepGcSpace<V>
     /**
      * The "gc" roots for this space.
      */
-    final Set<Supplier<? extends PrimitiveIterator.OfLong>> f_setRoots = new HashSet<>();
+    final Set<Supplier<? extends LongMuterator>> f_setRoots = new HashSet<>();
 
     /**
      * The marker to set on newly allocated objects

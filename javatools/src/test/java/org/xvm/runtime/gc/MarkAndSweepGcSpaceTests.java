@@ -1,6 +1,7 @@
 package org.xvm.runtime.gc;
 
 import org.junit.Test;
+import org.xvm.util.LongMuterator;
 import org.xvm.util.ShallowSizeOf;
 
 import java.util.*;
@@ -29,9 +30,37 @@ public class MarkAndSweepGcSpaceTests
         {
         final Set<Long> retained = new HashSet<>();
 
-        public PrimitiveIterator.OfLong retained()
+        public LongMuterator retained()
             {
-            return retained.stream().mapToLong(l -> l).iterator();
+            return new LongMuterator()
+                {
+                long lPrior = GcSpace.NULL;
+                PrimitiveIterator.OfLong delegate = retained.stream().mapToLong(l -> l).iterator();
+
+                @Override
+                public void set(long value)
+                    {
+                    if (lPrior == GcSpace.NULL)
+                        {
+                        throw new IllegalStateException();
+                        }
+
+                    retained.remove(lPrior);
+                    retained.add(value);
+                    }
+
+                @Override
+                public long nextLong()
+                    {
+                    return lPrior = delegate.nextLong();
+                    }
+
+                @Override
+                public boolean hasNext()
+                    {
+                    return delegate.hasNext();
+                    }
+                };
             }
         }
 
@@ -151,7 +180,7 @@ public class MarkAndSweepGcSpaceTests
     @Test
     public void shouldOOMEOnHardLimit()
         {
-        long cbLimit = 1024 * 1024 * 1024;
+        long cbLimit = 1024 * 1024 * 128;
         GcSpace space = makeSpace(l ->
             {
             }, cbLimit);
@@ -188,7 +217,7 @@ public class MarkAndSweepGcSpaceTests
         space.addRoot(root::retained);
         long p1 = space.allocate(0);
         long p2 = space.allocate(1);
-        long wp1 = space.allocate(2, true);
+        long wp1 = space.allocateWeak(2);
         space.setField(wp1, 0, p1);
         space.setField(wp1, 1, space.allocate(0)); // notifier
         space.setField(p2, 0, p1);
