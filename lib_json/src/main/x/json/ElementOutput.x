@@ -99,7 +99,10 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
         val type = &value.actualType;
         if (type != mapping.Serializable)
             {
-            mapping := mapping.narrow(schema, type);
+            // the "mapping.Serializable" type could be narrower than "Serializable";
+            // we should not pass "Serializable" to the "narrow()" method, which expects a matching
+            // narrower sub-type
+            mapping := mapping.narrow(schema, type.DataType);
 
             if (schema.enableMetadata)
                 {

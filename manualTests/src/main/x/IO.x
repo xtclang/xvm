@@ -457,7 +457,9 @@ module TestIO
 
         Map<String, Int> map2 = Map:["a"=1, "b"=2];
         testSer(schema, "map", new Test<String, Int>(map2));
-        // testSer(schema, "map", map2); TODO GG: throws TypeMismatch
+        testSer(schema, "map", map2);
+        Map<String, Int>? map3 = map2;
+        testSer(schema, "map", map3);
         }
     const Test<Key, Value>(Map<Key, Value> map);
 
