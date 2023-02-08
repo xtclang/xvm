@@ -40,7 +40,6 @@ import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
-import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
@@ -711,8 +710,13 @@ public class xArray
             --ixUpper;
             }
 
+        if (ixUpper <= ixLower)
+            {
+            return frame.assignValue(iReturn, xArray.ensureEmptyByteArray());
+            }
+
         int cSize = (int) hDelegate.m_cSize;
-        if (ixUpper < ixLower - 1 || ixUpper >= cSize)
+        if (ixUpper >= cSize)
             {
             return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
             }

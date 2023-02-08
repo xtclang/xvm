@@ -430,6 +430,12 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             }
 
         @Override
+        Byte[] read(Range<Int> range)
+            {
+            return origFile.read(range);
+            }
+
+        @Override
         File truncate(Int newSize = 0)
             {
             checkWritable();

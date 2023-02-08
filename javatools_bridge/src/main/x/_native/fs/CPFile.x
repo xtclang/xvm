@@ -29,6 +29,12 @@ const CPFile(Object cookie, FileStore? fileStore, Path path, Time created, Time 
         }
 
     @Override
+    Byte[] read(Range<Int> range)
+        {
+        return contents.slice(range);
+        }
+
+    @Override
     File truncate(Int newSize = 0)
         {
         throw exists ? new AccessDenied() : new FileNotFound();

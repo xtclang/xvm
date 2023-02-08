@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import java.nio.ByteBuffer;
+
 import java.nio.channels.FileChannel;
 
 import java.nio.file.OpenOption;
@@ -27,11 +29,13 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 
@@ -66,6 +70,7 @@ public class xOSFile
         {
         markNativeProperty("contents");
 
+        markNativeMethod("read", null, BYTES);
         markNativeMethod("open", null, null);
         markNativeMethod("appendImpl", null, VOID);
         markNativeMethod("truncateImpl", null, VOID);
@@ -82,28 +87,7 @@ public class xOSFile
         switch (sPropName)
             {
             case "contents":
-                {
-                Path path = hFile.f_path;
-
-                Callable<byte[]> task = () ->
-                        Handy.readFileBytes(path.toFile());
-
-                CompletableFuture<byte[]> cfRead = frame.f_context.f_container.scheduleIO(task);
-                Frame.Continuation continuation = frameCaller ->
-                    {
-                    try
-                        {
-                        return frameCaller.assignValue(iReturn,
-                            xArray.makeByteArrayHandle(cfRead.get(), Mutability.Constant));
-                        }
-                    catch (Throwable e)
-                        {
-                        return raisePathException(frameCaller, e, path);
-                        }
-                    };
-
-                return frame.waitForIO(cfRead, continuation);
-                }
+                return getPropertyContents(frame, hFile, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -118,37 +102,9 @@ public class xOSFile
         switch (sPropName)
             {
             case "contents":
-                {
-                Path   path = hFile.f_path;
-                byte[] ab   = xByteArray.getBytes((ArrayHandle) hValue);
-
-                Callable<Void> task = () ->
-                    {
-                    try (FileOutputStream out = new FileOutputStream(path.toFile()))
-                        {
-                        out.write(ab);
-                        return null;
-                        }
-                    };
-
-                CompletableFuture cfWrite = frame.f_context.f_container.scheduleIO(task);
-
-                Frame.Continuation continuation = frameCaller ->
-                    {
-                    try
-                        {
-                        cfWrite.get();
-                        return Op.R_NEXT;
-                        }
-                    catch (Throwable e)
-                        {
-                        return raisePathException(frameCaller, e, path);
-                        }
-                    };
-
-                return frame.waitForIO(cfWrite, continuation);
-                }
+                return setPropertyContents(frame, hFile, (ArrayHandle) hValue);
             }
+
         return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
         }
 
@@ -160,81 +116,42 @@ public class xOSFile
 
         switch (method.getName())
             {
-            case "appendImpl": // void appendImpl(Byte[] contents)
+            case "read":
                 {
-                Path   path = hFile.f_path;
-                byte[] ab   = xByteArray.getBytes((ArrayHandle) hArg);
+                GenericHandle hRange = (GenericHandle) hArg;
 
-                Callable<Void> task = () ->
+                long    ixLower  = ((JavaLong)      hRange.getField(frame, "lowerBound")).getValue();
+                long    ixUpper  = ((JavaLong)      hRange.getField(frame, "upperBound")).getValue();
+                boolean fExLower = ((BooleanHandle) hRange.getField(frame, "lowerExclusive")).get();
+                boolean fExUpper = ((BooleanHandle) hRange.getField(frame, "upperExclusive")).get();
+
+                if (fExLower)
                     {
-                    try (FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
-                        {
-                        out.write(ab);
-                        return null;
-                        }
-                    };
-
-                CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
-
-                Frame.Continuation continuation = frameCaller ->
-                    {
-                    try
-                        {
-                        cfAppend.get();
-                        return Op.R_NEXT;
-                        }
-                    catch (Throwable e)
-                        {
-                        return raisePathException(frameCaller, e, path);
-                        }
-                    };
-
-                return frame.waitForIO(cfAppend, continuation);
-                }
-
-            case "truncateImpl": // void truncateImpl(Int newSize)
-                {
-                Path path = hFile.f_path;
-                File file = path.toFile();
-                long cOld = file.length();
-                long cNew = ((JavaLong) hArg).getValue();
-
-                if (cNew > cOld || cNew < 0)
-                    {
-                    return frame.raiseException(xException.outOfBounds(frame, cNew, cOld));
+                    // exclusive lower
+                    ++ixLower;
                     }
 
-                Callable<Void> task = () ->
+                if (ixLower < 0)
                     {
-                    try (FileChannel channel = cNew == 0
-                            ? FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
-                            : FileChannel.open(path, StandardOpenOption.WRITE))
-                        {
-                        if (cNew > 0)
-                            {
-                            channel.truncate(cNew);
-                            }
-                        return null;
-                        }
-                    };
+                    return frame.raiseException(xException.outOfBounds(frame, ixLower, 0));
+                    }
 
-                CompletableFuture cfTruncate = frame.f_context.f_container.scheduleIO(task);
-
-                Frame.Continuation continuation = frameCaller ->
+                if (fExUpper)
                     {
-                    try
-                        {
-                        cfTruncate.get();
-                        return Op.R_NEXT;
-                        }
-                    catch (Throwable e)
-                        {
-                        return raisePathException(frameCaller, e, path);
-                        }
-                    };
+                    // exclusive upper
+                    --ixUpper;
+                    }
 
-                return frame.waitForIO(cfTruncate, continuation);
+                return ixUpper > ixLower
+                        ? invokeRead(frame, hFile, ixLower, ixUpper, iReturn)
+                        : frame.assignValue(iReturn, xArray.ensureEmptyByteArray());
                 }
+
+            case "appendImpl":
+                return invokeAppendImpl(frame, hFile, (ArrayHandle) hArg);
+
+            case "truncateImpl":
+                return invokeTruncateImpl(frame, hFile, (JavaLong) hArg);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -271,10 +188,9 @@ public class xOSFile
         {
         TypeComposition clz = ensureClass(frame.f_context.f_container,
                                 getCanonicalType(), frame.poolContext().typeFile());
-
-        NodeHandle     hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
+        NodeHandle hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
                                 path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
 
         return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
         }
@@ -283,9 +199,204 @@ public class xOSFile
     // ----- method implementations ----------------------------------------------------------------
 
     /**
+     * Implementation of "Byte[] contents.get()".
+     */
+    private int getPropertyContents(Frame frame, NodeHandle hFile, int iReturn)
+        {
+        Path path = hFile.f_path;
+
+        // TODO how to limit the consumption? Need to ask the container...
+        Callable<byte[]> task = () ->
+                Handy.readFileBytes(path.toFile());
+
+        CompletableFuture<byte[]> cfRead = frame.f_context.f_container.scheduleIO(task);
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                return frameCaller.assignValue(iReturn,
+                    xArray.makeByteArrayHandle(cfRead.get(), Mutability.Constant));
+                }
+            catch (Throwable e)
+                {
+                return raisePathException(frameCaller, e, path);
+                }
+            };
+
+        return frame.waitForIO(cfRead, continuation);
+        }
+
+    /**
+     * Implementation of "void contents.set(Byte[] value)".
+     */
+    private int setPropertyContents(Frame frame, NodeHandle hFile, ArrayHandle hValue)
+        {
+        Path   path = hFile.f_path;
+        byte[] ab   = xByteArray.getBytes(hValue);
+
+        Callable<Void> task = () ->
+            {
+            try (FileOutputStream out = new FileOutputStream(path.toFile()))
+                {
+                out.write(ab);
+                return null;
+                }
+            };
+
+        CompletableFuture cfWrite = frame.f_context.f_container.scheduleIO(task);
+
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                cfWrite.get();
+                return Op.R_NEXT;
+                }
+            catch (Throwable e)
+                {
+                return raisePathException(frameCaller, e, path);
+                }
+            };
+
+        return frame.waitForIO(cfWrite, continuation);
+        }
+
+    /**
+     * slice(Interval<Int>) implementation.
+     */
+    private int invokeRead(Frame frame, NodeHandle hFile, long ixFrom, long ixTo, int iReturn)
+        {
+        Path path  = hFile.f_path;
+        long cSize = path.toFile().length();
+        if (ixTo >= cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, ixTo, cSize));
+            }
+
+        // TODO how to limit the consumption? Need to ask the container...
+        int        cCapacity = (int) (ixTo - ixFrom + 1);
+        ByteBuffer buffer    = ByteBuffer.allocate(cCapacity);
+
+        Callable<Integer> task = () ->
+            {
+            try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ))
+                {
+                return channel.read(buffer, ixFrom);
+                }
+            };
+
+        CompletableFuture<Integer> cfRead = frame.f_context.f_container.scheduleIO(task);
+
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                if (cfRead.get() == cCapacity)
+                    {
+                    return frameCaller.assignValue(iReturn,
+                        xArray.makeByteArrayHandle(buffer.array(), Mutability.Constant));
+                    }
+                else
+                    {
+                    return frameCaller.raiseException(
+                            xException.ioException(frameCaller, "Read failed"));
+                    }
+                }
+            catch (Throwable e)
+                {
+                return raisePathException(frameCaller, e, path);
+                }
+            };
+
+        return frame.waitForIO(cfRead, continuation);
+        }
+
+    /**
+     * Implementation for: "void truncateImpl(Int newSize)"
+     */
+    private int invokeTruncateImpl(Frame frame, NodeHandle hFile, JavaLong hNewSize)
+        {
+        Path path = hFile.f_path;
+        File file = path.toFile();
+        long cOld = file.length();
+        long cNew = hNewSize.getValue();
+
+        if (cNew > cOld || cNew < 0)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, cNew, cOld));
+            }
+
+        Callable<Void> task = () ->
+            {
+            try (FileChannel channel = cNew == 0
+                    ? FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+                    : FileChannel.open(path, StandardOpenOption.WRITE))
+                {
+                if (cNew > 0)
+                    {
+                    channel.truncate(cNew);
+                    }
+                return null;
+                }
+            };
+
+        CompletableFuture cfTruncate = frame.f_context.f_container.scheduleIO(task);
+
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                cfTruncate.get();
+                return Op.R_NEXT;
+                }
+            catch (Throwable e)
+                {
+                return raisePathException(frameCaller, e, path);
+                }
+            };
+
+        return frame.waitForIO(cfTruncate, continuation);
+        }
+
+    /**
+     * Implementation for: "void appendImpl(Byte[] contents)".
+     */
+    private int invokeAppendImpl(Frame frame, NodeHandle hFile, ArrayHandle hContents)
+        {
+        Path   path = hFile.f_path;
+        byte[] ab   = xByteArray.getBytes(hContents);
+
+        Callable<Void> task = () ->
+            {
+            try (FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
+                {
+                out.write(ab);
+                return null;
+                }
+            };
+
+        CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
+
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                cfAppend.get();
+                return Op.R_NEXT;
+                }
+            catch (Throwable e)
+                {
+                return raisePathException(frameCaller, e, path);
+                }
+            };
+
+        return frame.waitForIO(cfAppend, continuation);
+        }
+
+    /**
      * Implementation for: {@code FileChannel open(ReadOption read=Read, WriteOption[] write = [Write])}.
      */
-    protected int invokeOpen(Frame frame, NodeHandle hFile, ObjectHandle[] ahArg, int iReturn)
+    private int invokeOpen(Frame frame, NodeHandle hFile, ObjectHandle[] ahArg, int iReturn)
         {
         ObjectHandle hReadOption  = ahArg[0];
         ObjectHandle hWriteOption = ahArg[1];

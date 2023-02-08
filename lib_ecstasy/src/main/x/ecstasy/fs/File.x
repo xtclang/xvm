@@ -20,6 +20,18 @@ interface File
     Byte[] contents;
 
     /**
+     * Read a portion of the file contents as an Array of Byte.
+     *
+     * @param range  the Range describing the portion of the content to read
+     *
+     * @throws FileNotFound  if the file does not exist
+     * @throws AccessDenied  if the necessary file permissions to read the content have not
+     *                       been granted
+     * @throws OutOfBounds   if the range is not within `0 ..< size`
+     */
+    Byte[] read(Range<Int> range);
+
+    /**
      * Modify the contents of the file so that it has the specified size.
      *
      * @param newSize  the size to truncate the file to; defaults to 0

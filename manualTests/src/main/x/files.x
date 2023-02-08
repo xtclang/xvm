@@ -126,6 +126,12 @@ module TestFiles
             };
 
         File file = tmpDir.fileFor("test.dat");
+        file.contents = #/files.x;
+
+        Int from = "module ".size;
+        Int to   = "module TestFiles".size;
+        Byte[] bytes = file.read(from ..< to);
+        assert bytes.unpackUtf8() == "TestFiles";
 
         function void () cancel = file.watch(watcher);
 

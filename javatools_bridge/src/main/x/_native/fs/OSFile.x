@@ -15,6 +15,16 @@ const OSFile
         implements File
     {
     @Override
+    immutable Byte[] contents
+        {
+        immutable Byte[] get()                       {TODO("native");}
+        void             set(immutable Byte[] bytes) {TODO("native");}
+        }
+
+    @Override
+    Byte[] read(Range<Int> range) {TODO("native");}
+
+    @Override
     File truncate(Int newSize = 0)
         {
         if (!exists)
@@ -75,6 +85,4 @@ const OSFile
 
     void truncateImpl(Int newSize);
     void appendImpl(Byte[] contents);
-
-    @Override immutable Byte[] contents.get() { TODO("native"); }
     }

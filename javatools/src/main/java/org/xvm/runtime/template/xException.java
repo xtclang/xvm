@@ -158,7 +158,7 @@ public class xException
         {
         return outOfBounds(frame, lIndex < 0 ?
                 "Negative index: " + lIndex :
-                "Array index " + lIndex + " out of range 0.." + (cSize-1));
+                "Index " + lIndex + " out of range 0.." + (cSize-1));
         }
 
     public static ExceptionHandle outOfBounds(Frame frame, String sMsg)
