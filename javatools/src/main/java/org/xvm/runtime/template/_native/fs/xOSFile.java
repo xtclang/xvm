@@ -70,10 +70,10 @@ public class xOSFile
         {
         markNativeProperty("contents");
 
-        markNativeMethod("read", null, BYTES);
-        markNativeMethod("open", null, null);
+        markNativeMethod("readImpl", null, BYTES);
         markNativeMethod("appendImpl", null, VOID);
         markNativeMethod("truncateImpl", null, VOID);
+        markNativeMethod("open", null, null);
 
         invalidateTypeInfo();
 
@@ -116,7 +116,7 @@ public class xOSFile
 
         switch (method.getName())
             {
-            case "read":
+            case "readImpl":
                 {
                 GenericHandle hRange = (GenericHandle) hArg;
 
@@ -143,7 +143,7 @@ public class xOSFile
                     }
 
                 return ixUpper > ixLower
-                        ? invokeRead(frame, hFile, ixLower, ixUpper, iReturn)
+                        ? invokeReadImpl(frame, hFile, ixLower, ixUpper, iReturn)
                         : frame.assignValue(iReturn, xArray.ensureEmptyByteArray());
                 }
 
@@ -262,9 +262,9 @@ public class xOSFile
         }
 
     /**
-     * slice(Interval<Int>) implementation.
+     * Implementation for: readImpl(Range<Int> range).
      */
-    private int invokeRead(Frame frame, NodeHandle hFile, long ixFrom, long ixTo, int iReturn)
+    private int invokeReadImpl(Frame frame, NodeHandle hFile, long ixFrom, long ixTo, int iReturn)
         {
         Path path  = hFile.f_path;
         long cSize = path.toFile().length();

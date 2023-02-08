@@ -22,7 +22,14 @@ const OSFile
         }
 
     @Override
-    Byte[] read(Range<Int> range) {TODO("native");}
+    Byte[] read(Range<Int> range)
+        {
+        if (!exists)
+            {
+            throw new FileNotFound(path);
+            }
+        return readImpl(range);
+        }
 
     @Override
     File truncate(Int newSize = 0)
@@ -78,11 +85,12 @@ const OSFile
         }
 
     @Override
-    FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
+    FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]) {TODO("native");}
 
 
     // ----- native --------------------------------------------------------------------------------
 
-    void truncateImpl(Int newSize);
-    void appendImpl(Byte[] contents);
+    Byte[] readImpl(Range<Int> range) {TODO("native");}
+    void truncateImpl(Int newSize)    {TODO("native");}
+    void appendImpl(Byte[] contents)  {TODO("native");}
     }

@@ -4,25 +4,10 @@ module TestSimple
 
     void run()
         {
-        }
+        @Inject Directory tmpDir;
 
-    interface Iface<Element>
-        {
-        typedef Element.Orderer as Orderer;
+        File file = tmpDir.fileFor("not.there");
 
-        void binarySearch(Element value, Orderer? compare=Null)
-            {
-            if (compare == Null)
-                {
-                assert Element.is(Type<Orderable>); // this line used to cause compilation failure
-                assert compare := Element.ordered();
-                }
-            binarySearch(compare(value, _));
-            }
-
-        void binarySearch(function Ordered(Element) order)
-            {
-            TODO
-            }
+        console.print(file.read(0..2));
         }
     }

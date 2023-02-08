@@ -126,18 +126,17 @@ module TestFiles
             };
 
         File file = tmpDir.fileFor("test.dat");
+
+        function void () cancel = file.watch(watcher);
+
+        console.print($"[{this:service}]: Creating {file.name}");
+
         file.contents = #/files.x;
 
         Int from = "module ".size;
         Int to   = "module TestFiles".size;
         Byte[] bytes = file.read(from ..< to);
         assert bytes.unpackUtf8() == "TestFiles";
-
-        function void () cancel = file.watch(watcher);
-
-        console.print($"[{this:service}]: Creating {file.name}");
-        file.create();
-        assert file.exists;
 
         // on Mac OS the WatchService implementation simply polls every 10 seconds;
         // increase the "wait" value to see the events

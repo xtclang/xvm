@@ -22,7 +22,7 @@ const CPFile(Object cookie, FileStore? fileStore, Path path, Time created, Time 
         {
         if (!exists)
             {
-            throw new FileNotFound();
+            throw new FileNotFound(path);
             }
 
         return CPFileStore.loadFile(cookie);
@@ -37,7 +37,7 @@ const CPFile(Object cookie, FileStore? fileStore, Path path, Time created, Time 
     @Override
     File truncate(Int newSize = 0)
         {
-        throw exists ? new AccessDenied() : new FileNotFound();
+        throw exists ? new AccessDenied() : new FileNotFound(path);
         }
 
     @Override
