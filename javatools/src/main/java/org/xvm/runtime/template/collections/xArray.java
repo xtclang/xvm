@@ -710,11 +710,6 @@ public class xArray
             --ixUpper;
             }
 
-        if (ixUpper <= ixLower)
-            {
-            return frame.assignValue(iReturn, xArray.ensureEmptyByteArray());
-            }
-
         int cSize = (int) hDelegate.m_cSize;
         if (ixUpper >= cSize)
             {
