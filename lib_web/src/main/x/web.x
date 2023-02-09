@@ -137,7 +137,7 @@ module web.xtclang.org
      *     @Restrict(["admin", "manager"])
      *     conditional User createUser(@UriParam String id) {...}
      */
-    mixin Restrict(TrustLevel security=Normal, String|String[] subject)
+    mixin Restrict(String|String[] subject, TrustLevel security=Normal)
             extends LoginRequired(security);
 
     /**
