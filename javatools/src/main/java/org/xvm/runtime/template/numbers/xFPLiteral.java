@@ -51,15 +51,16 @@ public class xFPLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("toFloatN"  , null, new String[]{"numbers.FloatN"});
         markNativeMethod("toFloat16" , null, new String[]{"numbers.Float16"});
         markNativeMethod("toFloat32" , null, new String[]{"numbers.Float32"});
         markNativeMethod("toFloat64" , null, new String[]{"numbers.Float64"});
         markNativeMethod("toFloat128", null, new String[]{"numbers.Float128"});
-        markNativeMethod("toDecN"    , null, new String[]{"numbers.DecN"});
+        markNativeMethod("toFloatN"  , null, new String[]{"numbers.FloatN"});
+        markNativeMethod("toDec"     , null, new String[]{"numbers.Dec"});
         markNativeMethod("toDec32"   , null, new String[]{"numbers.Dec32"});
         markNativeMethod("toDec64"   , null, new String[]{"numbers.Dec64"});
         markNativeMethod("toDec128"  , null, new String[]{"numbers.Dec128"});
+        markNativeMethod("toDecN"    , null, new String[]{"numbers.DecN"});
 
         invalidateTypeInfo();
         }
@@ -160,6 +161,10 @@ public class xFPLiteral
                 return frame.assignValue(iReturn,
                         template.makeHandle(hLiteral.getValue().doubleValue()));
                 }
+
+            case "toDec":
+                return frame.assignValue(iReturn,
+                        xDec.INSTANCE.makeHandle(new Decimal64(hLiteral.getValue())));
 
             case "toDec32":
                 return frame.assignValue(iReturn,
