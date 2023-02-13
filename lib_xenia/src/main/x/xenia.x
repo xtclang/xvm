@@ -13,14 +13,13 @@ module xenia.xtclang.org
 
     import crypto.KeyStore;
 
-    import net.HostPort;
     import net.IPAddress;
     import net.SocketAddress;
     import net.Uri;
 
     import web.Handler;
-    import web.Response;
-    import web.Request;
+    import web.ResponseOut;
+    import web.RequestIn;
     import web.Session;
     import web.WebApp;
 
@@ -38,24 +37,24 @@ module xenia.xtclang.org
      * A function that is able to both pre- **and** post-process a request is called an
      * `Interceptor`. Conceptually, its form is something like:
      *
-     *     Response intercept(Handler handle, Request request)
+     *     ResponseOut intercept(Handler handle, RequestIn request)
      *         {
      *         // pre-processing here
      *         // ...
      *
      *         // pass the flow of control to the handler (passing either the original Request
      *         // object, or one that this method chooses to substitute for the original)
-     *         Response response = handle(request);
+     *         ResponseOut response = handle(request);
      *
      *         // post-processing here
      *         // ...
      *
-     *         // return the response (returning either the original Response from the Handler,
+     *         // return the response (returning either the original response from the Handler,
      *         // or one that this method chooses to substitute for the original)
      *         return response;
      *         }
      */
-    typedef function Response(Session, Request, Handler) as Interceptor;
+    typedef function ResponseOut(Session, RequestIn, Handler) as Interceptor;
 
     /**
      * A function that is called with each incoming request is called an `Observer`. Despite the
@@ -67,18 +66,18 @@ module xenia.xtclang.org
      * or alter the request processing control flow. For purposes of request processing, exceptions
      * from the `Observer` are ignored, including if the `Observer` throws a [RequestAborted].
      */
-    typedef function void(Session, Request) as Observer;
+    typedef function void(Session, RequestIn) as Observer;
 
     /**
      * A function that adds a parameter value to the passed-in tuple of values. Used to collect
      * arguments for the endpoint method invocation.
      */
-    typedef function Tuple(Session, Request, Tuple) as ParameterBinder;
+    typedef function Tuple(Session, RequestIn, Tuple) as ParameterBinder;
 
     /**
-     * A function that converts a result of the endpoint method invocation into a Response object.
+     * A function that converts a result of the endpoint method invocation into a ResponseOut object.
      */
-    typedef function Response(Request, Tuple) as Responder;
+    typedef function ResponseOut(RequestIn, Tuple) as Responder;
 
     /**
      * Create and start an HTTP/HTTPS server for the specified web application.

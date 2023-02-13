@@ -40,7 +40,7 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response get(String | Uri uri)
+    ResponseIn get(String | Uri uri)
         {
         return send(createRequest(uri.is(String) ? new Uri(uri) : uri, GET));
         }
@@ -54,7 +54,7 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response put(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
+    ResponseIn put(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
         {
         return send(createRequest(uri.is(String) ? new Uri(uri) : uri, PUT));
         }
@@ -69,9 +69,9 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response post(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
+    ResponseIn post(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
         {
-        Request request = createRequest(uri.is(String) ? new Uri(uri) : uri, POST);
+        RequestOut request = createRequest(uri.is(String) ? new Uri(uri) : uri, POST);
         Body body  = request.ensureBody(mediaType);
         body.bytes = bytes;
         return send(request);
@@ -84,7 +84,7 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response delete(String | Uri uri)
+    ResponseIn delete(String | Uri uri)
         {
         return send(createRequest(uri.is(String) ? new Uri(uri) : uri, DELETE));
         }
@@ -101,7 +101,7 @@ interface Client
      *
      * @return TODO
      */
-    Request createRequest(Uri uri, HttpMethod method);
+    RequestOut createRequest(Uri uri, HttpMethod method);
 
     /**
      * Send a request.
@@ -112,5 +112,5 @@ interface Client
      *
      * TODO document failure modes (does it return a response? or throw?)
      */
-    Response send(Request request);
+    ResponseIn send(RequestOut request);
     }

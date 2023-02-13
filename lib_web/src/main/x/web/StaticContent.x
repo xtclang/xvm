@@ -18,9 +18,9 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType=Null,
         }
 
     @Get("{path}")
-    conditional Response getResource(String path)
+    conditional ResponseOut getResource(String path)
         {
-        Response createResponse(File file)
+        ResponseOut createResponse(File file)
             {
             if (MediaType mediaType := webApp.registry_.findMediaType(file.name))
                 {

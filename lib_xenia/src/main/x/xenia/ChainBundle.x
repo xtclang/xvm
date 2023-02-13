@@ -141,7 +141,7 @@ service ChainBundle
                 continue;
                 }
 
-            if (param.ParamType == Request)
+            if (param.ParamType == RequestIn)
                 {
                 binders += (session, request, values) -> values.add(request);
                 continue;
@@ -156,8 +156,8 @@ service ChainBundle
             throw new IllegalState($"Unresolved parameter: {name.quoted()} for method {method}");
             }
 
-        typedef Method<WebService, <Session, Request, Handler>, <Response>> as InterceptorMethod;
-        typedef Method<WebService, <Session, Request>, <>>                  as ObserverMethod;
+        typedef Method<WebService, <Session, RequestIn, Handler>, <ResponseOut>> as InterceptorMethod;
+        typedef Method<WebService, <Session, RequestIn>, <>>                     as ObserverMethod;
 
         // start with the innermost endpoint
         WebService webService  = ensureWebService(wsid);
@@ -307,7 +307,7 @@ service ChainBundle
      */
      ErrorHandler? ensureErrorHandler(Int wsid)
         {
-        typedef Method<WebService, <Session, Request, Exception|String|HttpStatus>, <Response>>
+        typedef Method<WebService, <Session, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>
                 as ErrorMethod;
 
         if (ErrorHandler onError ?= errorHandlers[wsid])
@@ -344,9 +344,9 @@ service ChainBundle
         }
 
     /**
-     * Extract the path value from the Request and append it to the values Tuple.
+     * Extract the path value from the request and append it to the values Tuple.
      */
-    private Tuple extractPathValue(Request request, String path, Parameter param, Tuple values)
+    private Tuple extractPathValue(RequestIn request, String path, Parameter param, Tuple values)
         {
         Object paramValue;
         if (UriTemplate.Value value := request.matchResult.get(path))
@@ -365,9 +365,9 @@ service ChainBundle
         }
 
     /**
-     * Extract the query value from the Request and append it to the values Tuple.
+     * Extract the query value from the request and append it to the values Tuple.
      */
-    private Tuple extractQueryValue(Request request, String name, QueryParam param, Tuple values)
+    private Tuple extractQueryValue(RequestIn request, String name, QueryParam param, Tuple values)
         {
         Object paramValue;
         if (UriTemplate.Value value := request.queryParams.get(name))
@@ -418,9 +418,9 @@ service ChainBundle
         }
 
     /**
-     * Extract the body value from the Request and append it to the values Tuple.
+     * Extract the body value from the request and append it to the values Tuple.
      */
-    private Tuple extractBodyValue(Request request, String name, BodyParam param, Tuple values)
+    private Tuple extractBodyValue(RequestIn request, String name, BodyParam param, Tuple values)
         {
         Body? body = request.body;
         if (body == Null)
@@ -472,13 +472,13 @@ service ChainBundle
         // check for special return types
         switch (type.is(_), index)
             {
-            case (Type<Response>, 0):
-                return (request, result) -> result[0].as(Response);
+            case (Type<ResponseOut>, 0):
+                return (request, result) -> result[0].as(ResponseOut);
 
-            case (Type<Response>, 1):
+            case (Type<ResponseOut>, 1):
                 return (request, result) ->
                     (result[0].as(Boolean)
-                        ? result[1].as(Response)
+                        ? result[1].as(ResponseOut)
                         : new SimpleResponse(HttpStatus.NotFound));
 
             case (Type<HttpStatus>, 0):
@@ -557,8 +557,8 @@ service ChainBundle
     /**
      * Create an HTTP response for a single-media producer.
      */
-    private static Response createSimpleResponse(
-            MediaType mediaType, Codec codec, Request request, Object result)
+    private static ResponseOut createSimpleResponse(
+            MediaType mediaType, Codec codec, RequestIn request, Object result)
         {
         if (!request.accepts.matches(mediaType))
             {
@@ -571,8 +571,8 @@ service ChainBundle
     /**
      * Create an HTTP response for a multi-media producer.
      */
-    private static Response createSimpleResponse(
-            MediaType[] mediaTypes, Codec[] codecs, Request request, Object result)
+    private static ResponseOut createSimpleResponse(
+            MediaType[] mediaTypes, Codec[] codecs, RequestIn request, Object result)
         {
         (MediaType, Codec)
                 resolveContentType(MediaType[] mediaTypes, Codec[] codecs, AcceptList accepts)

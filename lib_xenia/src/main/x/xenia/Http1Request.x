@@ -1,5 +1,8 @@
 import ecstasy.collections.CaseInsensitive;
 
+import net.UriTemplate;
+import net.UriTemplate.UriParameters;
+
 import web.AcceptList;
 import web.Body;
 import web.Header;
@@ -8,8 +11,6 @@ import web.HttpMethod;
 import web.MediaType;
 import web.Protocol;
 import web.Scheme;
-import net.UriTemplate;
-import net.UriTemplate.UriParameters;
 
 import HttpServer.RequestInfo;
 
@@ -19,7 +20,7 @@ import HttpServer.RequestInfo;
  * raw request data provided by the `HttpServer.Handler` interface.
  */
 const Http1Request(RequestInfo info, UriParameters matchResult)
-        implements Request
+        implements RequestIn
         implements Header
         implements Body
     {
@@ -88,77 +89,12 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
 
-    // ----- Request interface ---------------------------------------------------------------------
+    // ----- RequestIn Interface -------------------------------------------------------------------
 
     @Override
-    HttpMethod method
+    HttpMethod method.get()
         {
-        @Override
-        HttpMethod get()
-            {
-            return info.getMethod();
-            }
-
-        @Override
-        void set(HttpMethod method)
-            {
-            throw new ReadOnly();
-            }
-        }
-
-    @Override
-    Scheme scheme
-        {
-        @Override
-        Scheme get()
-            {
-            return Scheme.byName.getOrNull(uri.scheme?)? : assert;
-            }
-
-        @Override
-        void set(Scheme scheme)
-            {
-            throw new ReadOnly();
-            }
-        }
-
-    @Override
-    String authority
-        {
-        @Override
-        String get()
-            {
-            return uri.authority ?: assert;
-            }
-
-        @Override
-        void set(String authority)
-            {
-            throw new ReadOnly();
-            }
-        }
-
-    @Override
-    String path
-        {
-        @Override
-        String get()
-            {
-            return uri.path?.toString() : assert;
-            }
-
-        @Override
-        void set(String path)
-            {
-            throw new ReadOnly();
-            }
-        }
-
-    @Override
-    String requestLine.get()
-        {
-        // REVIEW
-        return $"{method} {path} {protocol}";
+        return info.getMethod();
         }
 
     @Override
@@ -180,7 +116,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
     @Override
-    Protocol? protocol.get()
+    Protocol protocol.get()
         {
         String name = info.getProtocolString();
         return Protocol.byProtocolString.getOrCompute(name,
@@ -244,12 +180,6 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
         assert AcceptList list := AcceptList.of(accept);
         return list;
-        }
-
-    @Override
-    void setCookie(String name, String value)
-        {
-        throw new ReadOnly();
         }
 
 

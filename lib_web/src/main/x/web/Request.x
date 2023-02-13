@@ -21,46 +21,38 @@ interface Request
     /**
      * The HTTP method ("GET", "POST", etc.)
      */
-    HttpMethod method;
+    @RO HttpMethod method;
+
+    /**
+     * The URI of the request.
+     */
+    @RO Uri uri;
 
     /**
      * Corresponds to the ":scheme" pseudo-header field in HTTP/2.
      */
-    Scheme scheme;
+    @RO Scheme scheme.get()
+        {
+        return Scheme.byName.getOrNull(uri.scheme?)? : assert;
+        }
 
     /**
      * Corresponds to the ":authority" pseudo-header field in HTTP/2. This includes the authority
      * portion of the target URI.
      */
-    String authority;
+    @RO String authority.get()
+        {
+        return uri.authority ?: assert;
+        }
 
     /**
      * Corresponds to the ":path" pseudo-header field in HTTP/2. This includes the path and query
      * parts of the target URI.
      */
-    String path;
-
-    /**
-     * The request line. For HTTP v1, the request line is directly in the message; for HTTP v2 and
-     * HTTP v3, this information is spread across a number of synthetic header entries, so the
-     * `requestLine` has to be built from that information.
-     */
-    @RO String requestLine;
-
-    /**
-     * The URI of the request.
-     */
-    Uri uri;
-
-    /**
-     * The IP address and port number used by the client to issue the request, if it is known.
-     */
-    @RO SocketAddress? client;
-
-    /**
-     * The IP address and port number used by the server to receive the request, if it is known.
-     */
-    @RO SocketAddress? server;
+    @RO String path.get()
+        {
+        return uri.path?.toString() : "";
+        }
 
     /**
      * The protocol over which the request was received, if the protocol is known.
@@ -68,34 +60,23 @@ interface Request
      * For an out-going request, the protocol is the requested protocol to use to send the request;
      * a client implementation may choose to use a different protocol if necessary.
      */
-    Protocol? protocol;
-
-    /**
-     * The HTTP parameters contained with the URI query string.
-     */
-    Map<String, String|List<String>> queryParams;
-
-    /**
-     * The result of matching a UriTemplate against this request.
-     */
-    UriTemplate.UriParameters matchResult;
+    @RO Protocol? protocol.get()
+        {
+        if (String scheme ?= uri.scheme)
+            {
+            return Protocol.byProtocolString.getOrCompute(scheme,
+                    () -> throw new IllegalState($"unknown protocol: {scheme}"));
+            }
+        return Null;
+        }
 
     /**
      * The accepted media types.
      */
-    AcceptList accepts;
+    @RO AcceptList accepts;
 
     /**
-     * @return an `Iterator` of all cookie names in the request
-     */
-    Iterator<String> cookieNames()
-        {
-        return header.valuesOf(Header.COOKIE, ';')
-                     .map(kv -> kv.extract('=', 0, "???").trim());
-        }
-
-    /**
-     * @return an iterator of all cookie names and values in the request
+     * @return an iterator of all cookie names and values in this request
      */
     Iterator<Tuple<String, String>> cookies()
         {
@@ -104,12 +85,12 @@ interface Request
         }
 
     /**
-     * Obtain the value of the specified cookie, if it is included in the request.
+     * Obtain the value of the specified cookie, if it is included in this request.
      *
      * @return True iff the specified cookie name is in the header
      * @return (conditional) the specified cookie
      */
-    conditional String getCookie(String name)
+    conditional String getCookieValue(String name)
         {
         for (String value : header.valuesOf(Header.COOKIE, ';'))
             {
@@ -121,17 +102,10 @@ interface Request
         return False;
         }
 
-    /**
-     * Add the specified cookie information to the request; if the cookie of the same name already
-     * exists in the request, then it is replaced with the new value.
-     *
-     * @param name   the cookie name to include in the request
-     * @param value  the cookie value
-     */
-    void setCookie(String name, String value)
+    @Override
+    Iterator<String> cookieNames()
         {
-        // TODO remove any existing entry for this cookie name (or replace its value)
-        // TODO validation of cookie name, validation of value
-        header.add(Header.COOKIE, $"{name}={value}");
+        return header.valuesOf(Header.COOKIE, ';')
+                     .map(kv -> kv.extract('=', 0, "???").trim());
         }
     }

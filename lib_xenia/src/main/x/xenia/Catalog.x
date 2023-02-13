@@ -523,7 +523,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                     default:
                         if (method.name == "route" && method.params.size >= 4 &&
                                 method.params[0].ParamType == Session         &&
-                                method.params[1].ParamType == Request         &&
+                                method.params[1].ParamType == RequestIn       &&
                                 method.params[2].ParamType == Handler         &&
                                 method.params[3].ParamType == ErrorHandler)
                             {

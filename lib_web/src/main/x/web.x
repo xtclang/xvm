@@ -19,19 +19,20 @@ module web.xtclang.org
     import net.SocketAddress;
     import net.Uri;
 
-    // ----- fill in name here ------------------------------------------------------------
+
+    // ----- request/response support --------------------------------------------------------------
 
     /**
      * A function that can process an incoming request corresponding to a `Route` is called an
      * `Endpoint Handler`.
      */
-    typedef function Response(Session, Request) as Handler;
+    typedef function ResponseOut(Session, RequestIn) as Handler;
 
     /**
      * A function that is called when an exception occurs (or an internal error represented by a
      * `String` description or an HttpsStatus code) is called an `ErrorHandler`.
      */
-    typedef function Response(Session, Request, Exception|String|HttpStatus) as ErrorHandler;
+    typedef function ResponseOut(Session, RequestIn, Exception|String|HttpStatus) as ErrorHandler;
 
     /**
      * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated
@@ -41,7 +42,7 @@ module web.xtclang.org
     enum TrustLevel {None, Normal, High, Highest}
 
 
-    // ----- fill in name here ------------------------------------------------------------
+    // ----- WebApp mixins -------------------------------------------------------------------------
 
     /**
      * A mixin to indicate the media-types produced by a particular component.
@@ -260,7 +261,7 @@ module web.xtclang.org
      * Example:
      *
      *     @Default @Get
-     *     Response handleMiss() {...}
+     *     ResponseOut handleMiss() {...}
      */
     mixin Default
             into Endpoint;
@@ -271,10 +272,10 @@ module web.xtclang.org
      * Example:
      *
      *     @Intercept(GET)
-     *     Response interceptGet(Session session, Request request, Handler handle) {...}
+     *     ResponseOut interceptGet(Session session, RequestIn request, Handler handle) {...}
      */
     mixin Intercept(HttpMethod? httpMethod=Null)
-            into Method<WebService, <Session, Request, Handler>, <Response>>;
+            into Method<WebService, <Session, RequestIn, Handler>, <ResponseOut>>;
 
     /**
      * Request observer (possibly asynchronous to the request processing itself) for all requests on
@@ -283,15 +284,15 @@ module web.xtclang.org
      * Example:
      *
      *     @Observe
-     *     void logAllRequests(Session session, Request request) {...}
+     *     void logAllRequests(Session session, RequestIn request) {...}
      *
      * And/or:
      *
      *     @Observe(DELETE)
-     *     void logDeleteRequests(Session session, Request request) {...}
+     *     void logDeleteRequests(Session session, RequestIn request) {...}
      */
     mixin Observe(HttpMethod? httpMethod=Null)
-            into Method<WebService, <Session, Request>, <>>;
+            into Method<WebService, <Session, RequestIn>, <>>;
 
     /**
      * Specify a method as handling all errors on (or under) the WebService.
@@ -299,10 +300,10 @@ module web.xtclang.org
      * Example:
      *
      *     @OnError
-     *     void handleErrors(Session session, Request request, Exception|String) {...}
+     *     void handleErrors(Session session, RequestIn request, Exception|String) {...}
      */
     mixin OnError
-            into Method<WebService, <Session?, Request, Exception|String|HttpStatus>, <Response>>;
+            into Method<WebService, <Session?, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>;
 
 
     // ----- parameter annotations -----------------------------------------------------------------

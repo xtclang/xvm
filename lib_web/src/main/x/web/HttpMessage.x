@@ -41,4 +41,9 @@ interface HttpMessage
         // that cannot do so must override this method
         return this.is(immutable) ? this : makeImmutable();
         }
+
+    /**
+     * @return an `Iterator` of all cookie names in this message
+     */
+    Iterator<String> cookieNames();
     }

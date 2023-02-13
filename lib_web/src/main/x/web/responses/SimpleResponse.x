@@ -1,10 +1,8 @@
-import ecstasy.io.ByteArrayOutputStream;
-
 /**
  * The representation of a simple HTTP response that contains only an HTTP status.
  */
 class SimpleResponse
-        implements Response
+        implements ResponseOut
         implements Header
         implements Body
     {
@@ -63,15 +61,18 @@ class SimpleResponse
     // ----- Response interface --------------------------------------------------------------------
 
     @Override
-    Request? request.get()
+    RequestIn? request.get()
         {
-        Request? request = super();
+        RequestIn? request = super();
         if (request == Null, WebService svc := this:service.is(WebService), request ?= svc.request)
             {
             set(request);
             }
         return request;
         }
+
+    @Override
+    HttpStatus status;
 
 
     // ----- Header interface ----------------------------------------------------------------------

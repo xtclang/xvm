@@ -94,13 +94,13 @@ service Dispatcher(Catalog          catalog,
                     }
                 }
 
-            RequestInfo      requestInfo = new RequestInfo(httpServer, context, tls);
-            ChainBundle?     bundle      = Null;
-            @Future Response response;
+            RequestInfo         requestInfo = new RequestInfo(httpServer, context, tls);
+            ChainBundle?        bundle      = Null;
+            @Future ResponseOut response;
             ProcessRequest: if (serviceInfo == Null)
                 {
-                Request  request = new Http1Request(requestInfo, []);
-                Session? session = getSessionOrNull(httpServer, context);
+                RequestIn request = new Http1Request(requestInfo, []);
+                Session?  session = getSessionOrNull(httpServer, context);
 
                 response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
                 }
@@ -113,14 +113,14 @@ service Dispatcher(Catalog          catalog,
                     bundle = bundlePool.allocateBundle(wsid);
 
                     SystemService svc = bundle.ensureWebService(wsid).as(SystemService);
-                    HttpStatus|Response|String result = svc.handle(uriString, requestInfo);
+                    HttpStatus|ResponseOut|String result = svc.handle(uriString, requestInfo);
                     if (result.is(String))
                         {
                         uriString = result;
                         continue FromTheTop;
                         }
 
-                    response = result.is(Response)
+                    response = result.is(ResponseOut)
                             ? result
                             : new SimpleResponse(result).makeImmutable();
 
@@ -182,7 +182,7 @@ service Dispatcher(Catalog          catalog,
                         }
 
                     // there is no matching endpoint
-                    Request     request     = new Http1Request(requestInfo, []);
+                    RequestIn   request     = new Http1Request(requestInfo, []);
                     Session?    session     = getSessionOrNull(httpServer, context);
                     MethodInfo? onErrorInfo = catalog.findOnError(wsid);
                     if (onErrorInfo != Null && session != Null)
@@ -217,8 +217,8 @@ service Dispatcher(Catalog          catalog,
                 (HttpStatus|SessionImpl result, Boolean redirect, Int eraseCookies) = ensureSession(requestInfo);
                 if (result.is(HttpStatus))
                     {
-                    Request  request = new Http1Request(requestInfo, []);
-                    Session? session = getSessionOrNull(httpServer, context);
+                    RequestIn request = new Http1Request(requestInfo, []);
+                    Session?  session = getSessionOrNull(httpServer, context);
                     response = catalog.webApp.handleUnhandledError^(session, request, result);
                     break ProcessRequest;
                     }
@@ -229,7 +229,7 @@ service Dispatcher(Catalog          catalog,
                     Int|HttpStatus redirectResult = session.prepareRedirect_(requestInfo);
                     if (redirectResult.is(HttpStatus))
                         {
-                        Request request = new Http1Request(requestInfo, []);
+                        RequestIn request = new Http1Request(requestInfo, []);
                         response = catalog.webApp.handleUnhandledError^(session, request, redirectResult);
                         break ProcessRequest;
                         }
@@ -271,7 +271,7 @@ service Dispatcher(Catalog          catalog,
                     }
 
                 // this is the "normal" i.e. "actual" request processing
-                Request request = new Http1Request(requestInfo, uriParams);
+                RequestIn request = new Http1Request(requestInfo, uriParams);
                 bundle = bundlePool.allocateBundle(wsid);
                 Handler handle = bundle.ensureCallChain(endpoint);
                 response = handle^(session, request);

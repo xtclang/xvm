@@ -36,7 +36,7 @@ mixin WebApp
      *
      * @return the [Response] to send back to the caller
      */
-    Response handleUnhandledError(Session? session, Request request, Exception|String|HttpStatus error)
+    ResponseOut handleUnhandledError(Session? session, RequestIn request, Exception|String|HttpStatus error)
         {
         // TODO CP: does the exception need to be logged?
         HttpStatus status = error.is(RequestAborted) ? error.status :

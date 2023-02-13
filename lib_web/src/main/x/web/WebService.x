@@ -67,13 +67,13 @@ mixin WebService(String path)
     /**
      * The request for the currently executing handler within this service.
      */
-    Request? request;
+    RequestIn? request;
 
 
     // ----- processing ----------------------------------------------------------------------------
 
     /**
-     * Process a received [Request]. This is invoked by the server in order to transfer control to
+     * Process a received [RequestIn]. This is invoked by the server in order to transfer control to
      * an "EndPoint Handler".
      *
      * This method is called from the previous step in the routing chain, in order to transfer
@@ -82,14 +82,14 @@ mixin WebService(String path)
      *
      * @param session  the [Session] to hold onto (so that it's available for the duration of the
      *                 request processing)
-     * @param request  the [Request] to hold onto (so that it's available for the duration of the
+     * @param request  the [RequestIn] to hold onto (so that it's available for the duration of the
      *                 request processing)
      * @param handler  the handler to delegate the processing to
      * @param onError  (optional) the error handler to delegate the error processing to
      *
-     * @return the [Response] to send back to the caller
+     * @return the [ResponseOut] to send back to the caller
      */
-    Response route(Session session, Request request, Handler handle, ErrorHandler? onError)
+    ResponseOut route(Session session, RequestIn request, Handler handle, ErrorHandler? onError)
         {
         assert this.request == Null;
 

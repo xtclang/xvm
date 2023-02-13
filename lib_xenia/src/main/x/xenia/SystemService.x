@@ -48,9 +48,9 @@ service SystemService
      * @return one of: an `HttpStatus` error code; a complete `Response`; or a new path to use in
      *         place of the passed `uriString`
      */
-    HttpStatus|Response|String handle(String      uriString,
-                                      RequestInfo info,
-                                     )
+    HttpStatus|ResponseOut|String handle(String      uriString,
+                                         RequestInfo info,
+                                        )
         {
         String[] parts = uriString.split('/');
         switch (String command = parts.empty ? "" : parts[0])
@@ -89,9 +89,9 @@ service SystemService
      * @return one of: an `HttpStatus` error code; a complete `Response`; or a new path to use in
      *         place of the passed `uriString`
      */
-    protected HttpStatus|Response|String validateSessionCookies(String      uriString,
-                                                                RequestInfo info,
-                                                                Int64       redirect)
+    protected HttpStatus|ResponseOut|String validateSessionCookies(String      uriString,
+                                                                   RequestInfo info,
+                                                                   Int64       redirect)
         {
         (String? txtTemp, String? tlsTemp, String? consent, Int failures)
                 = Dispatcher.extractSessionCookies(info);
@@ -135,7 +135,7 @@ service SystemService
 
         if (Uri uri := session.claimRedirect_(redirect))
             {
-            Response response = new SimpleResponse(TemporaryRedirect);
+            ResponseOut response = new SimpleResponse(TemporaryRedirect);
             response.header.put(Header.LOCATION, uri.toString());
             return response.makeImmutable();
             }

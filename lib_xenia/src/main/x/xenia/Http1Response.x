@@ -13,7 +13,7 @@ const Http1Response
      * Helper to transform a [Response] object into the constituent pieces used to send a response
      * via the HTTP/1-based prototype.
      */
-    static (Int status, String[] headerNames, String[] headerValues, Byte[] body) prepare(Response response)
+    static (Int status, String[] headerNames, String[] headerValues, Byte[] body) prepare(ResponseOut response)
         {
         Int      status       = response.status.code;
         String[] headerNames  = new String[];

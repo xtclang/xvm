@@ -1,5 +1,3 @@
-import ecstasy.io.ByteArrayOutputStream;
-
 /**
  * A representation of an HTTP response.
  */
@@ -7,12 +5,21 @@ interface Response
         extends HttpMessage
     {
     /**
-     * This is the reference to the `Request`, iff this `Response` is being created in response to
-     * a `Request` and that `Request` object is available.
+     * The reference to the corresponding `Request`.
      */
-    Request? request;
+    @RO Request? request;
 
-    HttpStatus status;
+    /**
+     * The status of this response.
+     */
+    @RO HttpStatus status;
+
+    @Override
+    Iterator<String> cookieNames()
+        {
+        return header.valuesOf(Header.SET_COOKIE, ';')
+                     .map(kv -> kv.extract('=', 0, "???").trim());
+        }
 
 
     // ----- cookie support ------------------------------------------------------------------------
@@ -159,36 +166,5 @@ interface Response
 
             return buf.toString();
             }
-        }
-
-    /**
-     * Obtain the value of the specified cookie, if it is included in the request.
-     *
-     * @return True iff the specified cookie name is present
-     * @return (conditional) the value associated with the specified cookie
-     */
-    conditional Cookie getCookie(String name)
-        {
-        for (String value : header.valuesOf(Header.SET_COOKIE))
-            {
-            // TODO parse name, and if it matches, build the Cookie object
-            }
-        return False;
-        }
-
-    /**
-     * Add the provided cookie value to the response, associated with the specified name; if a
-     * value for the cookie of the same name already exists on the response, then it will be
-     * replaced with the value specified here.
-     *
-     * @param cookie  the cookie
-     */
-    void addCookie(Cookie cookie)
-        {
-        for (String value : header.valuesOf(Header.SET_COOKIE))
-            {
-            // TODO parse name, and if it matches, delete the Cookie object
-            }
-        header.add(Header.SET_COOKIE, cookie.toString());
         }
     }

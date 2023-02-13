@@ -137,7 +137,7 @@ service SessionImpl
      * management console to provide visibility to information that may help identify an application
      * level error.
      */
-    protected/private CircularArray<Request> recentRequests_ = new CircularArray(8);
+    protected/private CircularArray<RequestIn> recentRequests_ = new CircularArray(8);
 
     /**
      * A list of pending prepared system redirects.
@@ -157,7 +157,7 @@ service SessionImpl
      * Session interface to query for the current request objects, but only for the count of current
      * requests.
      */
-    protected/private IdentitySet<Request> requests_ = new IdentitySet(7);
+    protected/private IdentitySet<RequestIn> requests_ = new IdentitySet(7);
 
 
     // ----- inner types ---------------------------------------------------------------------------
@@ -205,12 +205,12 @@ service SessionImpl
 
     // ----- session implementation API ------------------------------------------------------------
 
-    void requestBegin_(Request request)
+    void requestBegin_(RequestIn request)
         {
         assert requests_.addIfAbsent(request);
         }
 
-    void requestEnd_(Request request)
+    void requestEnd_(RequestIn request)
         {
         assert requests_.removeIfPresent(request);
         }
