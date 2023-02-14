@@ -56,7 +56,6 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
@@ -244,7 +243,7 @@ public class xRTServer
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
             }
 
-        String        sHost       = ((StringHandle) ahArg[0]).getStringValue();
+        String         sHost      = ((StringHandle) ahArg[0]).getStringValue();
         KeyStoreHandle hKeystore  = (KeyStoreHandle) ahArg[1];
         int            nHttpPort  = ahArg[2] instanceof JavaLong hPort ? (int) hPort.getValue() : 80;
         int            nHttpsPort = ahArg[3] instanceof JavaLong hPort ? (int) hPort.getValue() : 443;
@@ -259,6 +258,7 @@ public class xRTServer
             }
         catch (IOException | GeneralSecurityException e)
             {
+            frame.f_context.f_container.terminate(hServer.f_context);
             return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
         }
