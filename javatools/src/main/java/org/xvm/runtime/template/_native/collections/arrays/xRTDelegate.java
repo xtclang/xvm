@@ -32,6 +32,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.xNullable;
 
 
 /**
@@ -253,7 +254,7 @@ public class xRTDelegate
             case "reify": // Array reify(Mutability? mutability = Null)
                 {
                 DelegateHandle hDelegate  = (DelegateHandle) hTarget;
-                Mutability     mutability = hArg == ObjectHandle.DEFAULT
+                Mutability     mutability = hArg == ObjectHandle.DEFAULT || hArg == xNullable.NULL
                         ? hDelegate.getMutability()
                         : Mutability.values()[((EnumHandle) hArg).getOrdinal()];
                 return frame.assignValue(iReturn, createCopy(hDelegate, mutability));

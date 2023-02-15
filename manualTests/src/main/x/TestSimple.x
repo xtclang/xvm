@@ -4,10 +4,10 @@ module TestSimple
 
     void run()
         {
-        @Inject Directory tmpDir;
-
-        File file = tmpDir.fileFor("not.there");
-
-        console.print(file.read(0..2));
+        String[] names = ["a", "b", "c", "d", "e"].reify(Mutable);
+        String[] slice = names[2..3];
+        slice = slice.reify(); // this used to produce a Constant array
+        slice[1] = "x";
+        console.print(slice);
         }
     }
