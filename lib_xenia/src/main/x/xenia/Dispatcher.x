@@ -21,9 +21,9 @@ import net.UriTemplate.UriParameters;
  * Dispatcher is responsible for finding an endpoint, creating a call chain for an HTTP request and
  * invoking it on a corresponding WebService.
  */
-service Dispatcher(Catalog          catalog,
-                   BundlePool       bundlePool,
-                   SessionManager   sessionManager,
+service Dispatcher(Catalog        catalog,
+                   BundlePool     bundlePool,
+                   SessionManager sessionManager,
                   )
     {
     /**

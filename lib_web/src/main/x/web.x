@@ -474,7 +474,7 @@ module web.xtclang.org
                 )
             {
             Int year  = year0 * 1000 + year1 * 100 + year2 * 10 + year3;
-            Int month = switch(month0, month1, month2)
+            Int month = switch (month0, month1, month2)
                 {
                 case ('J', 'a', 'n'): 1;
                 case ('F', 'e', 'b'): 2;

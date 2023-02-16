@@ -85,7 +85,7 @@ const HttpStatus(Int code, String reason)
      */
     static HttpStatus of(Int status)
         {
-        return switch(status)
+        return switch (status)
             {
             case 100: Continue;
             case 101: SwitchingProtocols;

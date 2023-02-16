@@ -294,7 +294,7 @@ service Client<Schema extends RootSchema>
         assert internal;
 
         // update the readOnly property of the Client based on the requested transaction ID
-        readOnly = switch(TxManager.txCat(txId))
+        readOnly = switch (TxManager.txCat(txId))
             {
             case ReadOnly    : True;
             case Open        : False;

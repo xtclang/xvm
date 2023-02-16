@@ -136,7 +136,7 @@ const CookieConsent(Boolean necessary       = False,
          */
         conditional Category from(Char abbreviation)
             {
-            switch(abbreviation)
+            switch (abbreviation)
                 {
                 case 'N': return True, Necessary;
                 case 'F': return True, Functionality;
@@ -172,7 +172,7 @@ const CookieConsent(Boolean necessary       = False,
             return False;
             }
 
-        return switch(category)
+        return switch (category)
             {
             case Necessary    : necessary;
             case Functionality: functionality;

@@ -1041,7 +1041,7 @@ service JsonProcessorStore<Message extends immutable Const>
                 ? pidsOrig.remove(pidsRemove)
                 : pidsOrig.removeAll(pid -> pidsRemove.contains(pid));
 
-        return switch(pidsOrig.size)
+        return switch (pidsOrig.size)
             {
             case 0:  Cancel;
             case 1:  pidsOrig[0];
