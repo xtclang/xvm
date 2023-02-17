@@ -288,6 +288,57 @@ const Uri
     String? originalForm;
 
 
+    // ----- modifiers -----------------------------------------------------------------------------
+
+    /**
+     * Construct a new Uri from this Uri with specific changes. This is useful for _adding_
+     * information to a Uri, but is not designed to _remove_ information from an Uri.
+     *
+     * @param scheme     (optional) the scheme name to use
+     * @param authority  (optional) the entire authority string
+     * @param user       (optional) the user name
+     * @param host       (optional) the host string
+     * @param port       (optional) the port number
+     * @param path       (optional) the '/' path portion
+     * @param query      (optional) the '?' query portion
+     * @param fragment   (optional) the '#' fragment portion
+     */
+    Uri with(String?    scheme    = Null,
+             String?    authority = Null,
+             String?    user      = Null,
+             String?    host      = Null,
+             IPAddress? ip        = Null,
+             UInt16?    port      = Null,
+             String?    path      = Null,
+             String?    query     = Null,
+             String?    fragment  = Null,
+            )
+        {
+        if (authority == Null)
+            {
+            return new Uri(scheme    = scheme    ?: this.scheme,
+                           user      = user      ?: this.user,
+                           host      = host      ?: this.host,
+                           ip        = ip        ?: this.ip,
+                           port      = port      ?: this.port,
+                           path      = path      ?: this.path,
+                           query     = query     ?: this.query,
+                           fragment  = fragment  ?: this.fragment,
+                          );
+            }
+        else
+            {
+            assert user == Null && host == Null && ip == Null && port == Null;
+            return new Uri(scheme    = scheme    ?: this.scheme,
+                           authority = authority,
+                           path      = path      ?: this.path,
+                           query     = query     ?: this.query,
+                           fragment  = fragment  ?: this.fragment,
+                          );
+            }
+        }
+
+
     // ----- searching -----------------------------------------------------------------------------
 
     /**
@@ -1837,7 +1888,7 @@ const Uri
             port = 0;
             while (offset < length)
                 {
-                if (Int n := text[offset].asciiDigit())
+                if (Int n := text[offset++].asciiDigit())
                     {
                     n += port.toInt64() * 10;
                     if (n > UInt16.MaxValue)
