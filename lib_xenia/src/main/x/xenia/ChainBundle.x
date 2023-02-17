@@ -495,6 +495,7 @@ service ChainBundle
         // helper function to look up a Codec based on the result type and the MediaType
         Codec findCodec(MediaType mediaType, Type type)
             {
+            // TODO GG: the top part does not seem to be needed anymore
             if (String formatName ?= mediaType.format)
                 {
                 if (Format<type.DataType> format := registry.findFormat(formatName, type.DataType))

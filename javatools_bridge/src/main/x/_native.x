@@ -9,4 +9,5 @@ module _native.xtclang.org
     {
     package libcrypto import crypto.xtclang.org;
     package libnet    import net.xtclang.org;
+    package libweb    import web.xtclang.org;
     }

@@ -55,6 +55,19 @@ interface Body
     Body from(Object content);
 
     /**
+     * Convert the body content to the specified type.
+     *
+     * @param type  the desired result type
+     *
+     * @return True iff the content was successfully turned into a result of the desired type
+     * @return (conditional) the result
+     */
+    <Result> conditional Result to(Type<Result> type)
+        {
+        return False;
+        }
+
+    /**
      * In order to _consume_ the body as a stream of bytes, the caller can use this method to obtain
      * a stream that the bytes can be read from.
      *

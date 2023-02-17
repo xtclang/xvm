@@ -238,6 +238,12 @@ service Registry
                     }
                 }
 
+            if (Format<Value> format := findFormat(type.toString(), type.DataType))
+                {
+                Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
+                registerCodec(mediaType, newCodec);
+                return True, newCodec;
+                }
             codecsByType.put(type, Null); // cache the miss
             }
 
@@ -355,6 +361,40 @@ service Registry
         if (Int of := fileName.lastIndexOf('.'))
             {
             return mediaTypeByExtension.get(fileName.substring(of+1));
+            }
+        return False;
+        }
+
+    /**
+     * Find a `MediaType` that best fits the specified data type.
+     */
+    conditional MediaType inferMediaType(Object content)
+        {
+        switch (content.is(_))
+            {
+            case json.Doc, Number:
+                return True, Json;
+
+            case File:
+                return findMediaType(content.name);
+            }
+
+        Type type = &content.actualType;
+
+        if (jsonSchema.findMapping(type.DataType))
+            {
+            // there's a Json schema for this type, so it's convertible (serializable) as Json
+            return True, Json;
+            }
+
+        // look for a format; if there is one, then we can turn the content into a String and return
+        // as Json
+        for (Format format : formatsByName.values)
+            {
+            if (format.Value == type)
+                {
+                return True, Json;
+                }
             }
         return False;
         }

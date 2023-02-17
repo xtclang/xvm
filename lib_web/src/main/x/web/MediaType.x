@@ -157,6 +157,11 @@ const MediaType
      */
     static conditional MediaType of(String text)
         {
+        if (MediaType mediaType := knownTypes.get(text))
+            {
+            return True, mediaType;
+            }
+
         if (Marker|MediaType result := cache.get(text))
             {
             return result.is(MediaType)
@@ -218,6 +223,23 @@ const MediaType
     MediaType[] alternatives = [];
 
     /**
+     * A cache of predefined MediaType objects keyed by the text used to create the MediaType.
+     */
+    private static HashMap<String, MediaType> knownTypes =
+        {
+        HashMap<String, MediaType> map = new HashMap(Predefined.size);
+        for (MediaType mt : Predefined)
+            {
+            map.put(mt.text, mt);
+            for (MediaType alt : mt.alternatives)
+                {
+                map.put(alt.text, alt);
+                }
+            }
+        return map.freeze(True);
+        };
+
+    /**
      * A token used to indicate a negative cache result.
      */
     private enum Marker {Invalid}
@@ -257,8 +279,6 @@ const MediaType
                 String altName = name[index];
                 assert (String type, String subtype, Map<String, String> params) := parseMediaType(altName);
                 MediaType altType = new MediaType(altName, type, subtype, params);
-                assert !cache.get(altName);
-                cache.put(altName, altType);
                 alternatives.add(altType);
                 }
             name = name[0];

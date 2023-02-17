@@ -1,7 +1,8 @@
 /**
- * The representation of a simple HTTP response that contains only an HTTP status.
+ * The representation of a simple HTTP response that may contain only an HTTP status.
  */
 class SimpleResponse
+        implements ResponseIn
         implements ResponseOut
         implements Header
         implements Body
@@ -16,14 +17,15 @@ class SimpleResponse
             this.request = svc.request;
             }
 
-        this.status = status;
+        this.status    = status;
+        this.mediaType = mediaType ?: Json;
+        this.bytes     = bytes ?: [];
         }
     finally
         {
         if (mediaType != Null || bytes != Null)
             {
-            ensureBody(mediaType ?: Json);
-            this.bytes = bytes?;
+            this.body = this;
             }
         }
 
@@ -61,15 +63,7 @@ class SimpleResponse
     // ----- Response interface --------------------------------------------------------------------
 
     @Override
-    RequestIn? request.get()
-        {
-        RequestIn? request = super();
-        if (request == Null, WebService svc := this:service.is(WebService), request ?= svc.request)
-            {
-            set(request);
-            }
-        return request;
-        }
+    Request? request;
 
     @Override
     HttpStatus status;
@@ -109,17 +103,23 @@ class SimpleResponse
     // ----- Body interface ------------------------------------------------------------------------
 
     @Override
-    @Unassigned
     MediaType mediaType;
 
     @Override
-    @Unassigned
     Byte[] bytes;
 
     @Override
     Body from(Object content)
         {
-        TODO use codec to transform content to bytes
-        return this;
+        throw new UnsupportedOperation();
+        }
+
+
+    // ----- debugging support ---------------------------------------------------------------------
+
+    @Override
+    String toString()
+        {
+        return status.toString();
         }
     }

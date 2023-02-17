@@ -4,9 +4,6 @@
 interface ResponseOut
         extends Response
     {
-    @Override
-    @RO RequestIn? request;
-
     /**
      * Add the provided cookie value to the response, associated with the specified name; if a
      * value for the cookie of the same name already exists on the response, then it will be

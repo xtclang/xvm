@@ -185,6 +185,17 @@ interface Header
      * Add the specified header entry. (Any previously existent headers with the same name will be
      * left unchanged.)
      *
+     * @param entry   the header entry to add
+     */
+    void add(Entry entry)
+        {
+        entries.add(entry);
+        }
+
+    /**
+     * Add the specified header entry. (Any previously existent headers with the same name will be
+     * left unchanged.)
+     *
      * @param name   the case-insensitive header name
      * @param value  the value or values to use for the header name
      */

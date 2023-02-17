@@ -1,3 +1,15 @@
+/**
+ * To run this module, create a self-signed certificate using the following command
+ * (assuming "xvm/manualTests" is the current directory):
+ *
+ *    keytool -genkeypair -keyalg RSA -alias hello -keystore data/hello/https.p12\
+ *            -storetype PKCS12 -storepass password -validity 365 -keysize 2048 -dname cn=xqiz.it
+ *
+ * Then start the server by the command:
+ *
+ *    xec build/Hello.xtc password
+ */
+
 @WebApp
 module Hello
     {
@@ -10,17 +22,6 @@ module Hello
 
     import web.*;
 
-    /**
-     * To run this module, create a self-signed certificate using the following command
-     * (assuming "xvm/manualTests" is the current directory):
-     *
-     *    keytool -genkeypair -keyalg RSA -alias hello -keystore data/hello/https.p12\
-     *            -storetype PKCS12 -storepass password -validity 365 -keysize 2048 -dname cn=xqiz.it
-     *
-     * Then start the server by the command:
-     *
-     *    xec -L ../xdk/build/xdk/lib -L build build/Hello.xtc password
-     */
     void run(String[] args=["password"])
         {
         @Inject Console console;

@@ -1,3 +1,8 @@
+import codecs.Registry;
+
+import requests.SimpleRequest;
+
+
 /**
  * A representation of an HTTP client.
  * TODO how to secure? need to be able to restrict which algos can be used
@@ -8,22 +13,65 @@ interface Client
     // ----- Client configuration ------------------------------------------------------------------
 
     /**
-     * TODO
+     * Create a "restricted" client that allows communication *only* to the specified ports and/or
+     * protocols.
+     *
+     * @param hostPorts    the [HostPort]s that the new Client is allowed to use; if empty, no
+     *                     restrictions are placed
+     * @param protocols    the [Protocol]s that the new Client is allowed to use; if empty, no
+     *                     restrictions are placed
      */
-    Client allow(HostPort|HostPort[]|Protocol|Protocol[] allow);
+    Client allow(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols)
+        {
+        Client restricted = new RestrictedClient(this, Allow, hostPorts, protocols);
+        return &restricted.maskAs(Client);
+        }
 
     /**
-     * TODO
+     * Create a "restricted" client that disallows communication to any the specified ports and/or
+     * protocols.
+     *
+     * @param hostPorts    the [HostPort]s that the new Client is disallowed to use; if empty, no
+     *                     restrictions are placed
+     * @param protocols    the [Protocol]s that the new Client is disallowed to use; if empty, no
+     *                     restrictions are placed
      */
-    Client deny(HostPort|HostPort[]|Protocol|Protocol[] deny);
-
-    // TODO how to specify client certificate (and chain)
-    // authenticate()
+    Client deny(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols)
+        {
+        Client restricted = new RestrictedClient(this, Deny, hostPorts, protocols);
+        return &restricted.maskAs(Client);
+        }
 
     /**
-     * TODO
+     * Create a `Client` that restricts access to URIs "under" the specified [Uri].
      */
-    Client restrictTo(Uri baseURI);
+    Client restrictTo(Uri baseUri)
+        {
+        String   host = baseUri.host ?: assert as "host must be specified";
+        UInt16   port = baseUri.port ?: 0;
+
+        Protocol|Protocol[] protocol = [];
+        if (String scheme ?= baseUri.scheme)
+            {
+            assert protocol := Protocol.byProtocolString.get(scheme) as $"unknown protocol: {scheme}";
+            }
+
+        Client restricted = new RestrictedClient(this, Allow, (host, port), protocol);
+        return &restricted.maskAs(Client);
+        }
+
+    /**
+     * Create a `Client` that is connected (and limited) to the specified [Uri].
+     */
+    Client connectTo(Uri site)
+        {
+        TODO
+        }
+
+    /**
+     * The registry for codecs.
+     */
+    Registry registry;
 
     /**
      * Each request created will include these headers.
@@ -42,21 +90,23 @@ interface Client
      */
     ResponseIn get(String | Uri uri)
         {
-        return send(createRequest(uri.is(String) ? new Uri(uri) : uri, GET));
+        RequestOut request = createRequest(GET, uri.is(String) ? new Uri(uri) : uri);
+        return send(request);
         }
 
     /**
      * Put the specified resource.
      *
      * @param uri        the resource identifier and contents to put
-     * @param bytes      the content of the request body, in bytes
-     * @param mediaType  (optional) the media type of the body; defaults to `Json`
+     * @param content    the content of the request body
+     * @param mediaType  (optional) the media type of the body
      *
      * @return the resulting [Response] object
      */
-    ResponseIn put(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
+    ResponseIn put(String | Uri uri, Object content, MediaType? mediaType=Null)
         {
-        return send(createRequest(uri.is(String) ? new Uri(uri) : uri, PUT));
+        RequestOut request = createRequest(PUT, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
+        return send(request);
         }
 
     /**
@@ -64,16 +114,14 @@ interface Client
      * REVIEW what about a version that takes a (json.Doc json) parameter?
      *
      * @param uri        the resource identifier to post a request to
-     * @param bytes      the content of the request body, in bytes
-     * @param mediaType  (optional) the media type of the body; defaults to `Json`
+     * @param content    the content of the request body
+     * @param mediaType  (optional) the media type of the body
      *
      * @return the resulting [Response] object
      */
-    ResponseIn post(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
+    ResponseIn post(String | Uri uri, Object content, MediaType? mediaType=Null)
         {
-        RequestOut request = createRequest(uri.is(String) ? new Uri(uri) : uri, POST);
-        Body body  = request.ensureBody(mediaType);
-        body.bytes = bytes;
+        RequestOut request = createRequest(POST, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
         return send(request);
         }
 
@@ -86,7 +134,8 @@ interface Client
      */
     ResponseIn delete(String | Uri uri)
         {
-        return send(createRequest(uri.is(String) ? new Uri(uri) : uri, DELETE));
+        RequestOut request = createRequest(DELETE, uri.is(String) ? new Uri(uri) : uri);
+        return send(request);
         }
 
 
@@ -96,12 +145,33 @@ interface Client
      * Create an new Request that contains the default headers and the specified Uri and HTTP
      * method.
      *
-     * @param uri     the [Uri] for the request
-     * @param method  the [HttpMethod] for the request
+     * @param method     the [HttpMethod] for the request
+     * @param uri        the [Uri] for the request
+     * @param content    (optional) the content of the request body
+     * @param mediaType  (optional) the media type of the body
      *
-     * @return TODO
+     * @return a new Request object
      */
-    RequestOut createRequest(Uri uri, HttpMethod method);
+    RequestOut createRequest(HttpMethod method, Uri uri, Object? content=Null, MediaType? mediaType=Null)
+        {
+        SimpleRequest request = new SimpleRequest(this, method, uri);
+        defaultHeaders.entries.forEach(entry -> request.add(entry));
+
+        if (content != Null || mediaType != Null)
+            {
+            assert method.body != Forbidden;
+
+            if (mediaType == Null)
+                {
+                if (!(mediaType := registry.inferMediaType(content)))
+                    {
+                    throw new IllegalArgument($"Unable to find MediaType for: {&content.actualType}");
+                    }
+                }
+            request.ensureBody(mediaType).from(content?);
+            }
+        return request;
+        }
 
     /**
      * Send a request.

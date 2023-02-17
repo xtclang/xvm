@@ -76,6 +76,7 @@ import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
+import org.xvm.runtime.template._native.web.xRTClient;
 import org.xvm.runtime.template._native.web.xRTServer;
 
 import org.xvm.util.Handy;
@@ -363,6 +364,11 @@ public class NativeContainer
         TypeConstant typeAlgorithms = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "Algorithms"));
         addResourceSupplier(new InjectionKey("algorithms", typeAlgorithms), templateAlgorithms::ensureAlgorithms);
+
+        // +++ web:Client
+        xRTClient templateCleint = xRTClient.INSTANCE;
+        TypeConstant typeClient = templateCleint.getCanonicalType();
+        addResourceSupplier(new InjectionKey("client", typeClient), templateCleint::ensureClient);
 
         // +++ web:WebServer
         xRTServer templateServer = xRTServer.INSTANCE;

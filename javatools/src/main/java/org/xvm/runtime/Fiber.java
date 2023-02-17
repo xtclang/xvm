@@ -249,6 +249,20 @@ public class Fiber
         }
 
     /**
+     * @return the calling container
+     */
+    public Container getCallingContainer()
+        {
+        try
+            {
+            return f_fiberCaller.f_context.f_container;
+            }
+        catch (NullPointerException e)
+            {
+            return null;
+            }
+        }
+    /**
      * Check whether we can proceed with the frame execution.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or

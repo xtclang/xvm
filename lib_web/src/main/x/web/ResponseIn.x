@@ -4,21 +4,22 @@
 interface ResponseIn
         extends Response
     {
-    @Override
-    @RO RequestOut? request;
-
     /**
-     * Obtain the value of the specified cookie, if it is included in the response.
+     * Convert the content of the body to the specified type.
      *
-     * @return True iff the specified cookie name is present
-     * @return (conditional) the value associated with the specified cookie
+     * @param type  the desired result type
+     *
+     * @return True iff the content of the body was successfully turned into a result of the
+     *              desired type
+     * @return (conditional) the result
      */
-    conditional Cookie getCookie(String name)
+    <Result> conditional Result to(Type<Result> type)
         {
-        for (String value : header.valuesOf(Header.SET_COOKIE))
+        if (status == OK, Body body ?= this.body)
             {
-            // TODO parse name, and if it matches, build the Cookie object
+            return body.to(type);
             }
+
         return False;
         }
     }
