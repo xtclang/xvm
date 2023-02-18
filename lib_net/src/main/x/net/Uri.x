@@ -338,6 +338,43 @@ const Uri
             }
         }
 
+    /**
+     * Apply parts from the passed Uri to this Uri, resulting in a new Uri.
+     *
+     * @param that  the Uri to "apply" to this Uri
+     *
+     * @return the result of applying the passed Uri to this Uri
+     */
+    Uri apply(Uri that)
+        {
+        String? scheme = that.scheme;
+        if (scheme == Null || scheme == "url")
+            {
+            scheme = this.scheme;
+            }
+
+        String? path = that.path ?: this.path;
+        if (!that.path?.startsWith('/'), Int baseUpTo := this.path?.lastIndexOf('/'))
+            {
+            path = this.path?[0..baseUpTo] + that.path? : assert;
+            if (path.indexOf("./"))
+                {
+                // TODO CP fix Path to allow explicit trailing '/' to indicate a directory
+                path = new Path(path).normalize().toString() + (path.endsWith('/') ? "/" : "");
+                }
+            }
+
+        return new Uri(scheme   = scheme,
+                       user     = that.user     ?: this.user,
+                       host     = that.host     ?: this.host,
+                       ip       = that.ip       ?: this.ip  ,
+                       port     = that.port     ?: this.port,
+                       path     = path,
+                       query    = that.query    ?: this.query,
+                       fragment = that.fragment ?: this.fragment,
+                      );
+        }
+
 
     // ----- searching -----------------------------------------------------------------------------
 
