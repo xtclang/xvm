@@ -238,12 +238,21 @@ service Registry
                     }
                 }
 
+            if (String formatName ?= mediaType.format,
+                    Format<Value> format := findFormat(formatName, type.DataType))
+                {
+                Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
+                registerCodec(mediaType, newCodec);
+                return True, newCodec;
+                }
+
             if (Format<Value> format := findFormat(type.toString(), type.DataType))
                 {
                 Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
                 registerCodec(mediaType, newCodec);
                 return True, newCodec;
                 }
+
             codecsByType.put(type, Null); // cache the miss
             }
 

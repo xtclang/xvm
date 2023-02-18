@@ -68,9 +68,7 @@ service RTClient
                     Int index := responseHeaderNames.indexOf("Location"))
                 {
                 Uri redirect = new Uri(responseHeaderValues[index]);
-
-                // TODO GG: replace with uri.replace(redirect) when done
-                uri = uri.with(scheme=redirect.scheme, port=redirect.port, path=redirect.path);
+                uri = uri.apply(redirect);
                 continue;
                 }
 

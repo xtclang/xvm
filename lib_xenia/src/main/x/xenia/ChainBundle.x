@@ -495,25 +495,12 @@ service ChainBundle
         // helper function to look up a Codec based on the result type and the MediaType
         Codec findCodec(MediaType mediaType, Type type)
             {
-            // TODO GG: the top part does not seem to be needed anymore
-            if (String formatName ?= mediaType.format)
+            if (Codec codec := registry.findCodec(mediaType, type.DataType))
                 {
-                if (Format<type.DataType> format := registry.findFormat(formatName, type.DataType))
-                    {
-                    return new FormatCodec<type.DataType>(Utf8Codec, format);
-                    }
-
-                throw new IllegalState($"Unsupported mediaType format: {formatName}");
+                return codec;
                 }
-            else
-                {
-                if (Codec codec := registry.findCodec(mediaType, type.DataType))
-                    {
-                    return codec;
-                    }
 
-                throw new IllegalState($"Unsupported mediaType: {mediaType}");
-                }
+            throw new IllegalState($"Unsupported mediaType {mediaType} type {type}");
             }
 
         MediaType|MediaType[] produces = endpoint.produces;
