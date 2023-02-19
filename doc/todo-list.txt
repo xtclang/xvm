@@ -1,5 +1,5 @@
 - BinaryInput:
-    - readBytes() methods need to return thee number of bytes read
+    - readBytes() methods need to return the number of bytes read
     - would be nice to have an "eof" indicator
 
 - what to do about passing a const/service argument from a child container into the parent's one?
@@ -27,10 +27,6 @@
         }
 
 - change TxManager.NO_TX to Int64.MinValue
-
-- MapMapping doesn't work for properties that declared as Map classes, e.g.
-    const Test(Map<Int, String> map)     - json serialization works
-    const Test(HashMap<Int, String> map) - json serialization DOESN'T WORK
 
 - need to implement "persistent" mutators for HasherMap
 
@@ -77,14 +73,6 @@
 - rewrite removeAccess() and removeImmutable(); it blows on virtual children now
 
 - consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
-
-- compiler should worn if an is(_) switch uses type as a variablem but doesn't use Type<> as
-  constants (similar to .is() warning)
-
-    switch (type.is(_))
-            {
-            case String: // incorrect!! should be Type<String>
-            }
 
 - consider a new Async mixin:
         mixin Async into Object implements Service {}
