@@ -1267,13 +1267,13 @@ class SkiplistMap<Key extends Orderable, Value>
         Int valueHeight = keyStore.height + valueStore.height;
 
         // allocate the Index store
-        IndexStore nodes = switch (indexType.DataType)
+        IndexStore nodes = switch (indexType)
             {
             case Int8:  new IndexStore8 (initCapacity, valueHeight);
             case Int16: new IndexStore16(initCapacity, valueHeight);
             case Int32: new IndexStore32(initCapacity, valueHeight);
             case Int64: new IndexStore64(initCapacity, valueHeight);
-            default: assert as $"unsupported type: {indexType.DataType}";
+            default: assert as $"unsupported type: {indexType}";
             };
 
         // bind the key and value stores to the new IndexStore

@@ -305,13 +305,7 @@ interface Type<DataType, OuterType>
      */
     Boolean isA(Type!<> that)
         {
-        <ActualType> Boolean test(ActualType testType)
-            {
-            return this.is(ActualType);
-            }
-
-        Type!<> actual = &that.actualType;
-        return test(actual.DataType);
+        return this.is(that.DataType);
         }
 
     /**
@@ -1162,7 +1156,6 @@ interface Type<DataType, OuterType>
      */
     protected Iterator<DataType> createEmptyIterator()
         {
-        Type!<> typeActual = this.DataType;
-        return new iterators.EmptyIterator<typeActual.DataType>().as(Iterator<DataType>);
+        return new iterators.EmptyIterator<DataType>();
         }
     }

@@ -362,7 +362,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         assert:arg paramTypes.size <= canonicalTypes.size;
         for (Int i = 0, Int c = paramTypes.size; i < c; ++i)
             {
-            assert:arg paramTypes[i].isA(canonicalTypes[i].DataType);
+            assert:arg paramTypes[i].isA(canonicalTypes[i]);
             }
 
         assert Class!<> that := PublicType.parameterize(paramTypes).fromClass();

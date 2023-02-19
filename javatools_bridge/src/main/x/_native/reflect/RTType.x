@@ -71,7 +71,7 @@ const RTType<DataType, OuterType>
 
     private @Lazy Hasher<DataType>? hasher.calc()
         {
-        Type typeActual = DataType;
+        Type typeActual = this;
         if (Hasher<typeActual.DataType> hasher := createHasher())
             {
             return hasher;

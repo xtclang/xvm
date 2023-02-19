@@ -364,7 +364,7 @@ const Schema
             // mapping for the requested type wins, otherwise the first one that matches at all wins
             for (Mapping mapping : mappingByType.values)
                 {
-                if (type.DataType.is(Type<mapping.Serializable>))
+                if (type.is(Type<mapping.Serializable>))
                     {
                     if (val narrowedMapping := mapping.narrow(this.Schema, type))
                         {
