@@ -22,7 +22,7 @@ const JsonFormat(Printer printer = DEFAULT)
         {
         if (type.is(Type<Doc>))
             {
-            return True, new NarrowingFormat<Doc, type.DataType>(this);
+            return True, new NarrowingFormat<Doc, type>(this);
             }
 
         return True, new SerializationFormat<OtherValue>(registry.jsonSchema);

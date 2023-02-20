@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver;
 import org.xvm.asm.ConstantPool;
@@ -26,11 +27,14 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PendingTypeConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -43,6 +47,7 @@ import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.ast.Expression.TypeFit;
+import org.xvm.compiler.ast.NameExpression.Meaning;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -1279,6 +1284,8 @@ public abstract class AstNode
             // and the method signature
             if (cTypeParams > 0)
                 {
+                atypeArgs = transformTypeArguments(ctx, method, listArgs, atypeArgs);
+
                 ListMap<String, TypeConstant> mapTypeParams =
                         resolveTypeParameters(method, atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
@@ -1414,6 +1421,51 @@ public abstract class AstNode
             {
             errsKeep.merge();
             }
+        }
+
+    /**
+     * Iterate over the specified argument list, and transform all canonical <code>Type<></code>
+     * types to the corresponding dynamic types.
+     */
+    protected TypeConstant[] transformTypeArguments(Context ctx, MethodStructure method,
+                                                    List<Expression> listArgs, TypeConstant[] atypeArgs)
+        {
+        assert listArgs.size() == atypeArgs.length;
+
+        TypeConstant typeObj = pool().typeObject();
+        for (int i = 0, cArgs = atypeArgs.length; i < cArgs; i++)
+            {
+            TypeConstant type = atypeArgs[i];
+            if (type != null && type.isTypeOfType() && type.getParamType(0).equals(typeObj) &&
+                    listArgs.get(i) instanceof NameExpression exprName &&
+                        exprName.getMeaning() == Meaning.Variable)
+                {
+                type = transformType(ctx, method, exprName);
+                }
+
+            atypeArgs[i] = type;
+            }
+        return atypeArgs;
+        }
+
+    /**
+     * Given a NameExpression whose type is <code>Type<></code>, transform it to a dynamic type
+     * constant <code>Type<[name].DataType></code>.
+     */
+    protected TypeConstant transformType(Context ctx, MethodStructure method, NameExpression exprName)
+        {
+        ConstantPool pool = pool();
+        TypeConstant type = pool.typeType();
+        Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+        if (arg instanceof Register reg)
+            {
+            PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
+            FormalConstant   idFormal = pool.ensureDynamicFormal(
+                method.getIdentityConstant(), reg, idProp, exprName.getName());
+
+            type = pool.ensureParameterizedTypeConstant(type, idFormal.getType());
+            }
+        return type;
         }
 
     /**

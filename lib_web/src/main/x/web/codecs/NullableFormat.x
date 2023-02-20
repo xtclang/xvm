@@ -15,13 +15,13 @@ const NullableFormat<NonNullableValue>(Format<NonNullableValue> notNull)
     @Override
     <OtherValue> conditional Format<OtherValue> forType(Type<OtherValue> type, Registry registry)
         {
-        Type otherNotNullType = type.DataType - Nullable;
-        if (val otherNotNull := notNull.forType(otherNotNullType.DataType, registry))
+        Type otherNotNullType = type - Nullable;
+        if (val otherNotNull := notNull.forType(otherNotNullType, registry))
             {
             TODO CP think this through
-//            return Null.is(type.DataType)
+//            return Null.isA(type)
 //                    ? otherNotNull
-//                    : new NullableFormat<type.DataType>(otherNotNull);
+//                    : new NullableFormat<type>(otherNotNull);
             }
         else
             {

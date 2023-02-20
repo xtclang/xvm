@@ -21,12 +21,12 @@ const FormatCodec<Value>(Codec<String> codec, Format<Value> format)
             return True, codec.as(Codec<OtherValue>);
             }
 
-        if (Codec<OtherValue> newCodec := codec.forType(type.DataType, registry))
+        if (Codec<OtherValue> newCodec := codec.forType(type, registry))
             {
             return True, newCodec;
             }
 
-        if (Format<OtherValue> newFormat := format.forType(type.DataType, registry))
+        if (Format<OtherValue> newFormat := format.forType(type, registry))
             {
             return True, new FormatCodec<OtherValue>(codec, newFormat);
             }

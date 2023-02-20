@@ -892,6 +892,8 @@ public class InvocationExpression
                 Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
                 if (cTypeParams > 0)
                     {
+                    transformTypeArguments(ctx, method, listArgs, atypeArgs);
+
                     // re-resolve against the validated types
                     mapTypeParams = resolveTypeParameters(method,
                         atypeArgs,
@@ -3077,12 +3079,15 @@ public class InvocationExpression
     private GenericTypeResolver makeTypeParameterResolver(
             Context ctx, MethodStructure method, TypeConstant[] atypeReturn, ErrorListener errs)
         {
-        int            cArgs     = args.size();
+        List<Expression> listArgs = args;
+        int              cArgs    = listArgs.size();
         TypeConstant[] atypeArgs = new TypeConstant[cArgs];
         for (int i = 0; i < cArgs; i++)
             {
-            atypeArgs[i] = args.get(i).getImplicitType(ctx);
+            atypeArgs[i] = listArgs.get(i).getImplicitType(ctx);
             }
+
+        transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
         Map<String, TypeConstant> mapTypeParams =
                 resolveTypeParameters(method, atypeArgs, atypeReturn, true);

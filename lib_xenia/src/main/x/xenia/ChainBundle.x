@@ -398,14 +398,14 @@ service ChainBundle
         Format<type.DataType> format;
         if (formatName != Null)
             {
-            if (!(format := registry.findFormat(formatName, type.DataType)))
+            if (!(format := registry.findFormat(formatName, type)))
                 {
                 throw new IllegalState($"Unsupported format: {formatName.quoted} for type {type}");
                 }
             }
         else
             {
-            TODO // format ?:= registry.findFormatByType(type.DataType);
+            TODO // format ?:= registry.findFormatByType(type);
             }
 
         if (value.is(String))
@@ -437,7 +437,7 @@ service ChainBundle
 
             default:
                 Type type = param.ParamType;
-                if (Codec<type.DataType> codec := registry.findCodec(body.mediaType, type.DataType))
+                if (Codec<type.DataType> codec := registry.findCodec(body.mediaType, type))
                     {
                     paramValue = codec.decode(body.bytes);
                     break;
@@ -495,7 +495,7 @@ service ChainBundle
         // helper function to look up a Codec based on the result type and the MediaType
         Codec findCodec(MediaType mediaType, Type type)
             {
-            if (Codec codec := registry.findCodec(mediaType, type.DataType))
+            if (Codec codec := registry.findCodec(mediaType, type))
                 {
                 return codec;
                 }

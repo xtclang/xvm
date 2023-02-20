@@ -18,7 +18,7 @@ const NarrowingFormat<Wide, Value extends Wide>(Format<Wide> format)
             return True, format.as(Format<OtherValue>);
             }
 
-        if (Format<OtherValue> newFormat := format.forType(type.DataType, registry))
+        if (Format<OtherValue> newFormat := format.forType(type, registry))
             {
             return True, newFormat;
             }

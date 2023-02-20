@@ -50,7 +50,7 @@ module TestReflection
         Type[]   types = [Type<String>, Type<String?>, Type<String|Int>, Type<Ref>, Type<Ref<Int> >, Type<Var<Int?>>, Type<Int+Ref>, Type<Var-Ref>];
         Each: for (Type type : types)
             {
-            console.print($"{names[Each.count]}={type.DataType}");
+            console.print($"{names[Each.count]}={type}");
             }
         }
 

@@ -231,7 +231,7 @@ service Registry
 
             for (Codec? codec : codecsByType.values)
                 {
-                if (Codec<Value> newCodec := codec?.forType(type.DataType, this))
+                if (Codec<Value> newCodec := codec?.forType(type, this))
                     {
                     registerCodec(mediaType, newCodec);
                     return True, newCodec;
@@ -239,14 +239,14 @@ service Registry
                 }
 
             if (String formatName ?= mediaType.format,
-                    Format<Value> format := findFormat(formatName, type.DataType))
+                    Format<Value> format := findFormat(formatName, type))
                 {
                 Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
                 registerCodec(mediaType, newCodec);
                 return True, newCodec;
                 }
 
-            if (Format<Value> format := findFormat(type.toString(), type.DataType))
+            if (Format<Value> format := findFormat(type.toString(), type))
                 {
                 Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
                 registerCodec(mediaType, newCodec);
@@ -322,7 +322,7 @@ service Registry
                         : (True, derivedFormat.as(Format<Value>));
                 }
 
-            if (Format<Value> newFormat := format.forType(type.DataType, this))
+            if (Format<Value> newFormat := format.forType(type, this))
                 {
                 derivedFormats.put(type, newFormat);
                 return True, newFormat;
@@ -390,7 +390,7 @@ service Registry
 
         Type type = &content.actualType;
 
-        if (jsonSchema.findMapping(type.DataType))
+        if (jsonSchema.findMapping(type))
             {
             // there's a Json schema for this type, so it's convertible (serializable) as Json
             return True, Json;

@@ -91,7 +91,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             case Union:
                 if ((Type left, Type right) := type.relational(), left == Nullable)
                     {
-                    if (val underlying := schema.findMapping(right.DataType))
+                    if (val underlying := schema.findMapping(right))
                         {
                         return True, new @Narrowable NullableMapping<SubType>(underlying.as(Mapping<SubType>));
                         }
@@ -119,7 +119,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 if (type.is(Type<Array>))
                     {
                     assert Type elementType := type.resolveFormalType("Element");
-                    if (val elementMapping := schema.findMapping(elementType.DataType))
+                    if (val elementMapping := schema.findMapping(elementType))
                         {
                         return True, new ArrayMapping<elementType.DataType>(elementMapping).as(Mapping<SubType>);
                         }
@@ -130,8 +130,8 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     {
                     assert Type keyType   := type.resolveFormalType("Key");
                     assert Type valueType := type.resolveFormalType("Value");
-                    if (val keyMapping   := schema.findMapping(keyType.DataType),
-                        val valueMapping := schema.findMapping(valueType.DataType))
+                    if (val keyMapping   := schema.findMapping(keyType),
+                        val valueMapping := schema.findMapping(valueType))
                         {
                         return True, new @Narrowable MapMapping<keyType.DataType, valueType.DataType>
                                 (keyMapping, valueMapping).as(Mapping<SubType>);

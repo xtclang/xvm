@@ -22,12 +22,12 @@ const CodecFormat<Value>(Format<Byte[]> format, Codec<Value> codec)
             return True, format.as(Format<OtherValue>);
             }
 
-        if (Format<OtherValue> newFormat := format.forType(type.DataType, registry))
+        if (Format<OtherValue> newFormat := format.forType(type, registry))
             {
             return True, newFormat;
             }
 
-        if (Codec<OtherValue> newCodec := codec.forType(type.DataType, registry))
+        if (Codec<OtherValue> newCodec := codec.forType(type, registry))
             {
             return True, new CodecFormat<OtherValue>(format, newCodec);
             }

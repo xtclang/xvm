@@ -106,7 +106,7 @@ class SimpleRequest
     Body from(Object content)
         {
         Type type = &content.actualType;
-        if (Codec codec := client.registry.findCodec(mediaType, type.DataType))
+        if (Codec codec := client.registry.findCodec(mediaType, type))
             {
             bytes = codec.encode(content);
             return this;

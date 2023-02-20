@@ -305,7 +305,7 @@ interface Type<DataType, OuterType>
      */
     Boolean isA(Type!<> that)
         {
-        return this.is(that.DataType);
+        return this.is(Type<that>);
         }
 
     /**

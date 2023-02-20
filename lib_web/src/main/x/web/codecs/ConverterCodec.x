@@ -17,7 +17,7 @@ const ConverterCodec<Raw, Value>(Codec<Raw>             codec,
     @Override
     <OtherValue> conditional Codec<OtherValue> forType(Type<OtherValue> type, Registry registry)
         {
-        if (Codec<OtherValue> newCodec := codec.forType(type.DataType, registry))
+        if (Codec<OtherValue> newCodec := codec.forType(type, registry))
             {
             return True, newCodec;
             }

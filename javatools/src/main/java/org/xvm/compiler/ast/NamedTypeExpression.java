@@ -18,11 +18,9 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
@@ -668,17 +666,7 @@ public class NamedTypeExpression
 
             if (exprNew.isSimpleName() && typeType.getParamType(0).equals(pool.typeObject()))
                 {
-                Argument arg = exprNew.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-                if (arg instanceof Register reg)
-                    {
-                    // transform "List<type>" to "List<type.DataType>"
-                    TypeConstant     typeT    = pool.typeType();
-                    PropertyConstant idProp   = typeT.ensureTypeInfo().findProperty("DataType").getIdentity();
-                    FormalConstant   idFormal = pool.ensureDynamicFormal(
-                            ctx.getMethod().getIdentityConstant(), reg, idProp, exprNew.getName());
-
-                    typeType = pool.ensureParameterizedTypeConstant(typeT, idFormal.getType());
-                    }
+                typeType = transformType(ctx, ctx.getMethod(), exprNew);
                 }
 
             // the underlying type could be either dynamic formal (e.g. array.Element),
