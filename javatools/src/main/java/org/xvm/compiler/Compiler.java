@@ -1119,7 +1119,7 @@ public class Compiler
      */
     public static final String NOT_TYPE_OF_TYPE                   = "COMPILER-134";
     /**
-     * A type is expected, but a property identity for a formal type was encountered.
+     * A simple formal type is expected.
      */
     public static final String INVALID_FORMAL_TYPE_IDENTITY       = "COMPILER-135";
     /**

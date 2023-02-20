@@ -18,9 +18,11 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
@@ -571,33 +573,11 @@ public class NamedTypeExpression
                     }
 
                 Constant constId = resolver.getConstant();
-                Format   format  = constId.getFormat();
-                boolean fProceed = true;
-                if (!format.isTypeable())
-                    {
-                    errsTemp.merge();
-                    log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
-                    fProceed = false;
-                    }
-                else if (format == Format.Property || format == Format.Typedef)
-                    {
-                    if (paramTypes != null)
-                        {
-                        errsTemp.merge();
-                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-                        fProceed = false;
-                        }
-                    else if (format == Format.Property && ((PropertyConstant) constId).isFormalType()
-                            && names != null && names.size() > 1)
-                        {
-                        errsTemp.merge();
-                        log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
-                        fProceed = false;
-                        }
-                    }
+                boolean fProceed = checkValidType(constId, errsTemp);
 
                 if (!fProceed)
                     {
+                    errsTemp.merge();
                     mgr.deferChildren();
                     return;
                     }
@@ -645,7 +625,7 @@ public class NamedTypeExpression
                 }
 
             case ERROR:
-                if (left == null && names != null && names.size() > 1 && access == null
+                if (left == null && names != null && access == null
                         && immutable == null && paramTypes == null && getCodeContainer() != null)
                     {
                     // assume that the type is "dynamic", for example:
@@ -686,6 +666,21 @@ public class NamedTypeExpression
 
             TypeConstant typeType = exprNew.getType();
 
+            if (exprNew.isSimpleName() && typeType.getParamType(0).equals(pool.typeObject()))
+                {
+                Argument arg = exprNew.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+                if (arg instanceof Register reg)
+                    {
+                    // transform "List<type>" to "List<type.DataType>"
+                    TypeConstant     typeT    = pool.typeType();
+                    PropertyConstant idProp   = typeT.ensureTypeInfo().findProperty("DataType").getIdentity();
+                    FormalConstant   idFormal = pool.ensureDynamicFormal(
+                            ctx.getMethod().getIdentityConstant(), reg, idProp, exprNew.getName());
+
+                    typeType = pool.ensureParameterizedTypeConstant(typeT, idFormal.getType());
+                    }
+                }
+
             // the underlying type could be either dynamic formal (e.g. array.Element),
             // or an actual type (e.g. Person.StructType, which is equivalent to Person:struct)
             m_constId = typeType.getParamType(0);
@@ -707,30 +702,11 @@ public class NamedTypeExpression
                 case RESOLVED:
                     {
                     Constant constId = resolver.getConstant();
-                    if (!constId.getFormat().isTypeable())
+                    if (!checkValidType(constId, errsTemp))
                         {
                         errsTemp.merge();
-                        log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
                         return null;
                         }
-
-                    if (constId.getFormat() == Format.Property)
-                        {
-                        if (paramTypes != null)
-                            {
-                            errsTemp.merge();
-                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-                            return null;
-                            }
-                        if (((PropertyConstant) constId).isFormalType()
-                                && names != null && names.size() > 1)
-                            {
-                            errsTemp.merge();
-                            log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
-                            return null;
-                            }
-                        }
-
                     m_constId = inferAutoNarrowing(constId, errsTemp);
                     }
                 }
@@ -1204,6 +1180,40 @@ public class NamedTypeExpression
         return isDynamic()
                 ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
                 : getType().resolveAutoNarrowingBase();
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * @return false iff the specified constant doesn't represent a valid type and an error
+     *         has been reported
+     */
+    private boolean checkValidType(Constant constId, ErrorListener errs)
+        {
+        Format format = constId.getFormat();
+        if (!format.isTypeable())
+            {
+            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
+            return false;
+            }
+
+        if (format == Format.Property || format == Format.Typedef)
+            {
+            if (paramTypes != null)
+                {
+                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                return false;
+                }
+            if (format == Format.Property &&
+                    (!((PropertyConstant) constId).isFormalType() ||
+                        names != null && names.size() > 1))
+                {
+                log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
+                return false;
+                }
+            }
+        return true;
         }
 
 
