@@ -201,14 +201,6 @@ public class CaseManager<CookieType>
         }
 
     /**
-     * @return the label for the "default:" (or fully wild-card "case:") statement; may be null
-     */
-    public Label getDefaultLabel()
-        {
-        return m_labelDefault;
-        }
-
-    /**
      * @return the cookie for the specified label
      */
     public CookieType getCookie(Label label)
@@ -373,11 +365,7 @@ public class CaseManager<CookieType>
                         {
                         if (m_atypeCond[i].isTypeOfType())
                             {
-                            AstNode nodeCond = listCond.get(i);
-                            if (nodeCond instanceof NameExpression)
-                                {
-                                m_lTypeExpr |= 1L << i;
-                                }
+                            m_lTypeExpr |= 1L << i;
                             }
                         }
                     }
@@ -658,10 +646,10 @@ public class CaseManager<CookieType>
             for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
                 {
                 long lPos = 1L << i;
-                if ((m_lTypeExpr & lPos) != 0)
+                if ((m_lTypeExpr & lPos) != 0 &&
+                        m_listCond.get(i) instanceof NameExpression exprTest)
                     {
-                    NameExpression exprTest = (NameExpression) m_listCond.get(i);
-                    TypeConstant   typeCase = (TypeConstant) aConstCase[i];
+                    TypeConstant typeCase = (TypeConstant) aConstCase[i];
                     assert typeCase.isTypeOfType();
 
                     if ((m_afIsSwitch & lPos) == 1)
