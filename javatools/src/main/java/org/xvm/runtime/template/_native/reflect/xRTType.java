@@ -30,6 +30,7 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.RecursiveTypeConstant;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -1614,6 +1615,10 @@ public class xRTType
             }
 
         TypeConstant typeResult = op.makeRelational(pool, type1, type2);
+        if (typeResult instanceof RelationalTypeConstant typeRel)
+            {
+            typeResult = typeRel.simplify(pool);
+            }
         return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
         }
 
