@@ -684,6 +684,7 @@ public class SetTest
             }
 
         Iterator<String> iter = set.iterator();
+        Assert.assertEquals("z", set.last());
         for (char ch = 'a'; ch <= 'z'; ++ch)
             {
             Assert.assertTrue(iter.hasNext());

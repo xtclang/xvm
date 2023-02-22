@@ -100,9 +100,7 @@ public class ListSet<E>
             throw new IllegalStateException();
             }
 
-        Object[] aElem = m_aElem;
-        int      nMask = aElem.length - 1;
-        return toExternal(aElem[m_iTail % nMask]);
+        return get(0);
         }
 
     /**
@@ -115,9 +113,7 @@ public class ListSet<E>
             throw new IllegalStateException();
             }
 
-        Object[] aElem = m_aElem;
-        int      nMask = aElem.length - 1;
-        return toExternal(aElem[(m_iHead - 1) % nMask]);
+        return get(size() - 1);
         }
 
     /**
