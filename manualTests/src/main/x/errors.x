@@ -125,4 +125,14 @@ module TestCompilerErrors
                 }
             }
         }
+
+    void testUnreachable(Object o)
+        {
+        String s = switch (o.is(_))
+            {
+            case IntNumber, FPNumber: "Number";
+            case Int: "Int";  // should not compile: unreachable
+            default:  "other";
+            };
+        }
     }

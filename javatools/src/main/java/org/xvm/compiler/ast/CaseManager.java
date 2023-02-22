@@ -442,6 +442,7 @@ public class CaseManager<CookieType>
         ConstantPool pool       = pool();
         boolean      fIfSwitch  = usesIfLadder();
         boolean      fIntConsts = isCardinal() && m_typeCase.getExplicitClassFormat() != Component.Format.ENUM;
+        int          cPrevCases = m_listsetCase.size();
         for (int iExpr = 0, cExprs = listExprs.size(); iExpr < cExprs; ++iExpr)
             {
             Expression     exprCase  = listExprs.get(iExpr);
@@ -591,13 +592,33 @@ public class CaseManager<CookieType>
                                     TypeConstant typeCase = (TypeConstant) constCase;
                                     assert typeCase.isTypeOfType();
 
+                                    typeCase = typeCase.getParamType(0);
+
                                     TypeConstant typeTest = exprTest.getImplicitType(ctx);
                                     if (typeTest != null && typeTest.isTypeOfType() &&
-                                            !typeCase.getParamType(0).isTypeOfType())
+                                            !typeCase.isTypeOfType())
                                         {
                                         exprNew.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
-                                            exprTest.toString(), typeCase.getParamType(0).getValueString());
+                                            exprTest.toString(), typeCase.getValueString());
                                         fValid = false;
+                                        }
+                                    else
+                                        {
+                                        // check for reachability, since is(_) switch is basically
+                                        // a ladder of consecutive "isA()" tests
+                                        Iterator<Constant> iter = m_listsetCase.iterator();
+                                        for (int i = 0; i < cPrevCases; i++)
+                                            {
+                                            TypeConstant typePrev = (TypeConstant) iter.next();
+                                            assert typePrev.isTypeOfType();
+                                            typePrev = typePrev.getParamType(0);
+                                            if (typeCase.isA(typePrev))
+                                                {
+                                                stmtCase.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                                                fValid = false;
+                                                break;
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -612,12 +633,14 @@ public class CaseManager<CookieType>
                                         TypeConstant typeCase = (TypeConstant) aConstCase[i];
                                         assert typeCase.isTypeOfType();
 
+                                        typeCase = typeCase.getParamType(0);
+
                                         TypeConstant typeTest = exprTest.getImplicitType(ctx);
                                         if (typeTest != null && typeTest.isTypeOfType() &&
-                                                !typeCase.getParamType(0).isTypeOfType())
+                                                !typeCase.isTypeOfType())
                                             {
                                             exprNew.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
-                                                exprTest.toString(), typeCase.getParamType(0).getValueString());
+                                                exprTest.toString(), typeCase.getValueString());
                                             fValid = false;
                                             }
                                         }
