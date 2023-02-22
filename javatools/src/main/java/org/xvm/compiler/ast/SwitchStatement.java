@@ -166,7 +166,7 @@ public class SwitchStatement
                     assert ctxBlock == null;
 
                     ctxBlock = ctxSwitch.enterBlock();
-                    if (fValid)
+                    if (fValid && mgr.hasTypeConditions())
                         {
                         // for now, we only infer a type from a single-case blocks
                         int           cCases   = 0;

@@ -145,6 +145,7 @@ public class SwitchExpression
         List<AstNode>  listNodes = contents;
         boolean        fInCase   = false;
         int            cExprs    = 0;
+        int            cCases    = 0;    // number of cases preceding an expression
         CaseStatement  stmtPrev  = null; // used for error reporting only
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
@@ -167,6 +168,7 @@ public class SwitchExpression
                     fInCase = true;
                     }
                 stmtPrev = stmtCase;
+                cCases  += stmtCase.getExpressionCount();
                 }
             else // it's an expression value
                 {
@@ -183,7 +185,8 @@ public class SwitchExpression
 
                 TypeConstant[] atypeReqScoped = atypeRequest;
                 Context        ctxScope       = ctxCase.enter();
-                if (fValid && mgr.addTypeInference(ctxScope, stmtPrev, errs))
+                if (fValid && mgr.hasTypeConditions() && cCases == 1 &&
+                        mgr.addTypeInference(ctxScope, stmtPrev, errs))
                     {
                     if (atypeReqScoped != null && atypeReqScoped.length > 0)
                         {
@@ -227,6 +230,7 @@ public class SwitchExpression
                                 : atypeRequest);
                         }
                     }
+                cCases = 0; // restart the count
                 }
             }
 

@@ -81,6 +81,14 @@ public class CaseManager<CookieType>
         }
 
     /**
+     * @return true if the switch contains any Type based conditions
+     */
+    public boolean hasTypeConditions()
+        {
+        return m_lTypeExpr != 0;
+        }
+
+    /**
      * @return the type of the condition (which is the basis for the type of each case expression)
      */
     public TypeConstant getConditionType()
@@ -573,6 +581,48 @@ public class CaseManager<CookieType>
                                     incorporateInt(constCase.getIntValue());
                                     }
                                 }
+
+                            // validate "is(_)" type constants
+                            if (getConditionCount() == 1)
+                                {
+                                if ((m_afIsSwitch & 1L) != 0 &&
+                                        m_listCond.get(0) instanceof Expression exprTest)
+                                    {
+                                    TypeConstant typeCase = (TypeConstant) constCase;
+                                    assert typeCase.isTypeOfType();
+
+                                    TypeConstant typeTest = exprTest.getImplicitType(ctx);
+                                    if (typeTest != null && typeTest.isTypeOfType() &&
+                                            !typeCase.getParamType(0).isTypeOfType())
+                                        {
+                                        exprNew.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                                            exprTest.toString(), typeCase.getParamType(0).getValueString());
+                                        fValid = false;
+                                        }
+                                    }
+                                }
+                            else if (m_afIsSwitch != 0 && constCase instanceof ArrayConstant constArray)
+                                {
+                                Constant[] aConstCase = constArray.getValue();
+                                for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_afIsSwitch); i < c; i++)
+                                    {
+                                    if ((m_afIsSwitch & (1L << i)) != 0 &&
+                                            m_listCond.get(i) instanceof Expression exprTest)
+                                        {
+                                        TypeConstant typeCase = (TypeConstant) aConstCase[i];
+                                        assert typeCase.isTypeOfType();
+
+                                        TypeConstant typeTest = exprTest.getImplicitType(ctx);
+                                        if (typeTest != null && typeTest.isTypeOfType() &&
+                                                !typeCase.getParamType(0).isTypeOfType())
+                                            {
+                                            exprNew.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                                                exprTest.toString(), typeCase.getParamType(0).getValueString());
+                                            fValid = false;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -614,29 +664,22 @@ public class CaseManager<CookieType>
         Constant     constCase = m_listsetCase.last();
         if (getConditionCount() == 1)
             {
-            if (constCase instanceof TypeConstant typeCase)
+            if ((m_lTypeExpr & 1L) != 0L &&
+                    m_listCond.get(0) instanceof NameExpression exprTest)
                 {
+                TypeConstant typeCase = (TypeConstant) constCase;
                 assert typeCase.isTypeOfType();
 
-                NameExpression exprTest = (NameExpression) m_listCond.get(0);
-
-                if ((m_afIsSwitch & 1L) == 1)
+                if ((m_afIsSwitch & 1L) != 0L)
                     {
                     typeCase = typeCase.getParamType(0);
 
                     TypeConstant typeTest = exprTest.getImplicitType(ctx);
                     if (typeTest != null)
                         {
-                        if (typeTest.isTypeOfType() && !typeCase.isTypeOfType())
-                            {
-                            stmtCase.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
-                                            exprTest.toString(), typeCase.getValueString());
-                            return false;
-                            }
                         typeCase = IsExpression.computeInferredType(pool, typeTest, typeCase);
                         }
                     }
-
                 exprTest.narrowType(ctx, Branch.Always, typeCase);
                 }
             }
@@ -646,13 +689,13 @@ public class CaseManager<CookieType>
             for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
                 {
                 long lPos = 1L << i;
-                if ((m_lTypeExpr & lPos) != 0 &&
+                if ((m_lTypeExpr & lPos) != 0L &&
                         m_listCond.get(i) instanceof NameExpression exprTest)
                     {
                     TypeConstant typeCase = (TypeConstant) aConstCase[i];
                     assert typeCase.isTypeOfType();
 
-                    if ((m_afIsSwitch & lPos) == 1)
+                    if ((m_afIsSwitch & lPos) != 0L)
                         {
                         typeCase = typeCase.getParamType(0);
 
