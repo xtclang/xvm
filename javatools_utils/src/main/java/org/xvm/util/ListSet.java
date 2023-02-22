@@ -120,6 +120,48 @@ public class ListSet<E>
         return toExternal(aElem[(m_iHead - 1) % nMask]);
         }
 
+    /**
+     * @return the item at the specified position; this operation could be expensive for indexes
+     *         that are not close to either 0 or size()
+     */
+    public E get(int index)
+        {
+        int cSize = size();
+        if (index < 0 || index >= cSize)
+            {
+            throw new IllegalArgumentException();
+            }
+
+        Object[] aElem = m_aElem;
+        int      nMask = aElem.length - 1;
+        if (index > cSize / 2)
+            {
+            // walk back starting at the head
+            int cSkip = cSize - index - 1;
+            for (int i = m_iHead - 1; true; i--)
+                {
+                Object o = aElem[i % nMask];
+                if (o != null && !(o instanceof Stop) && cSkip-- == 0)
+                    {
+                    return toExternal(o);
+                    }
+                }
+            }
+        else
+            {
+            // walk forward starting at the tail
+            int cSkip = index;
+            for (int i = m_iTail; true; i++)
+                {
+                Object o = aElem[i % nMask];
+                if (o != null && !(o instanceof Stop) && cSkip-- == 0)
+                    {
+                    return toExternal(o);
+                    }
+                }
+            }
+        }
+
 
     // ----- Set interface -------------------------------------------------------------------------
 
@@ -1093,7 +1135,7 @@ public class ListSet<E>
     private static class Special {}
 
     /**
-     * A representation of an Interator's planned "hard stop" stopping point that can be stored
+     * A representation of an Iterator's planned "hard stop" stopping point that can be stored
      * (invisibly) in the set.
      */
     private static class Stop

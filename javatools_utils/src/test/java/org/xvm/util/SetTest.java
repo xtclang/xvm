@@ -344,46 +344,32 @@ public class SetTest
         Object rnd();
         }
 
-    public static class StringData
-            implements Data
+    @Test
+    public void testSimple()
         {
-        StringData(int count)
-            {
-            assert count > 0;
-            HashSet<String> set = new HashSet<>(count);
-            for (int i = 0; i < count; ++i)
-                {
-                StringBuilder sb = new StringBuilder();
-                do
-                    {
-                    sb.append((char) ('A' + rnd.nextInt(26)));
-                    }
-                while (!set.add(sb.toString()));
-                }
-            strings = set.toArray(new String[count]);
+        ListSet<String> set = new ListSet<>();
 
-            // Inexplicably this exception occurred once in the rnd() method below, which could only
-            // occur if the "strings" array were of zero length, which should be impossible (given
-            // the assertion above and the algorith in use here in the constructor.) To try to catch
-            // the exception, an assertion was placed here, and then this never showed up again,
-            // even with many thousand and thousands of tests run.
-            //
-            // Exception in thread "main" java.lang.IllegalArgumentException: bound must be positive
-            //    at java.util.Random.nextInt(Random.java:388)
-            //    at org.xvm.util.SetTest$StringData.rnd(SetTest.java:290)
-            //    at org.xvm.util.SetTest$StringData.rnd(SetTest.java:269)
-            //    at org.xvm.util.SetTest.randomOp(SetTest.java:215)
-            //    at org.xvm.util.SetTest.randomTest(SetTest.java:96)
-            //    at org.xvm.util.SetTest.main(SetTest.java:76)
-            assert strings.length > 0;
+        Assert.assertTrue(set.isEmpty());
+        Assert.assertEquals(0, set.size());
+        Assert.assertFalse(set.contains("a"));
+        Assert.assertFalse(set.contains("m"));
+        Assert.assertFalse(set.contains("z"));
+        Assert.assertFalse(set.contains("Z"));
+
+        for (char ch = 'a'; ch <= 'z'; ++ch)
+            {
+            set.add(String.valueOf(ch));
             }
 
-        public String rnd()
-            {
-            return strings[rnd.nextInt(strings.length)];
-            }
+        Assert.assertFalse(set.isEmpty());
+        Assert.assertEquals(26, set.size());
+        Assert.assertTrue(set.contains("a"));
+        Assert.assertTrue(set.contains("m"));
+        Assert.assertTrue(set.contains("z"));
+        Assert.assertFalse(set.contains("Z"));
 
-        String[] strings;
+        Assert.assertEquals("b", set.get(1));
+        Assert.assertEquals("y", set.get(24));
         }
 
     public interface Op
@@ -646,29 +632,46 @@ public class SetTest
 
     // ----- unit tests ----------------------------------------------------------------------------
 
-    @Test
-    public void testSimple()
+    public static class StringData
+            implements Data
         {
-        ListSet<String> set = new ListSet<>();
-
-        Assert.assertTrue(set.isEmpty());
-        Assert.assertEquals(0, set.size());
-        Assert.assertFalse(set.contains("a"));
-        Assert.assertFalse(set.contains("m"));
-        Assert.assertFalse(set.contains("z"));
-        Assert.assertFalse(set.contains("Z"));
-
-        for (char ch = 'a'; ch <= 'z'; ++ch)
+        StringData(int count)
             {
-            set.add(String.valueOf(ch));
+            assert count > 0;
+            HashSet<String> set = new HashSet<>(count);
+            for (int i = 0; i < count; ++i)
+                {
+                StringBuilder sb = new StringBuilder();
+                do
+                    {
+                    sb.append((char) ('A' + rnd.nextInt(26)));
+                    }
+                while (!set.add(sb.toString()));
+                }
+            strings = set.toArray(new String[count]);
+
+            // Inexplicably this exception occurred once in the rnd() method below, which could only
+            // occur if the "strings" array were of zero length, which should be impossible (given
+            // the assertion above and the algorithm in use here in the constructor.) To try to catch
+            // the exception, an assertion was placed here, and then this never showed up again,
+            // even with many thousand and thousands of tests run.
+            //
+            // Exception in thread "main" java.lang.IllegalArgumentException: bound must be positive
+            //    at java.util.Random.nextInt(Random.java:388)
+            //    at org.xvm.util.SetTest$StringData.rnd(SetTest.java:290)
+            //    at org.xvm.util.SetTest$StringData.rnd(SetTest.java:269)
+            //    at org.xvm.util.SetTest.randomOp(SetTest.java:215)
+            //    at org.xvm.util.SetTest.randomTest(SetTest.java:96)
+            //    at org.xvm.util.SetTest.main(SetTest.java:76)
+            assert strings.length > 0;
             }
 
-        Assert.assertFalse(set.isEmpty());
-        Assert.assertEquals(26, set.size());
-        Assert.assertTrue(set.contains("a"));
-        Assert.assertTrue(set.contains("m"));
-        Assert.assertTrue(set.contains("z"));
-        Assert.assertFalse(set.contains("Z"));
+        public String rnd()
+            {
+            return strings[rnd.nextInt(strings.length)];
+            }
+
+        String[] strings;
         }
 
     @Test
