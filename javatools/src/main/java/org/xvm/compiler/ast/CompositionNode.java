@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
@@ -57,6 +58,16 @@ public abstract class CompositionNode
         {
         return type;
         }
+
+    /**
+     * @return the Contribution associated with (created by) this composition
+     */
+    public Contribution getContribution()
+        {
+        return contribution;
+        }
+
+    private transient Contribution contribution;
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
@@ -592,6 +603,14 @@ public abstract class CompositionNode
     protected Expression     condition;
     protected Token          keyword;
     protected TypeExpression type;
+
+    /**
+     * Set the Contribution associated with (created by) this composition.
+     */
+    public void setContribution(Contribution contribution)
+        {
+        this.contribution = contribution;
+        }
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CompositionNode.class, "condition", "type");
     }

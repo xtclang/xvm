@@ -1031,7 +1031,8 @@ public class TypeCompositionStatement
                         for (ClassStructure struct : componentList)
                             {
                             // when an interface "extends" an interface, it is actually implementing
-                            struct.addContribution(Composition.Implements, type);
+                            composition.setContribution(
+                                    struct.addContribution(Composition.Implements, type));
                             }
                         }
                     else
@@ -1058,7 +1059,8 @@ public class TypeCompositionStatement
                             for (ClassStructure struct : componentList)
                                 {
                                 // register the class that the component extends
-                                struct.addContribution(Composition.Extends, type);
+                                composition.setContribution(
+                                        struct.addContribution(Composition.Extends, type));
                                 }
                             }
                         m_listExtendArgs = ((Extends) composition).args;
@@ -1232,8 +1234,9 @@ public class TypeCompositionStatement
                             // register the "into" clause
                             for (ClassStructure struct : componentList)
                                 {
-                                struct.addContribution(Composition.Into,
-                                        composition.getType().ensureTypeConstant());
+                                composition.setContribution(
+                                        struct.addContribution(Composition.Into,
+                                            composition.getType().ensureTypeConstant()));
                                 }
                             }
                         }
@@ -1260,7 +1263,8 @@ public class TypeCompositionStatement
                                 {
                                 typeDefaultImpl = null;
                                 }
-                            struct.addContribution(Composition.Implements, typeImplements);
+                            composition.setContribution(
+                                    struct.addContribution(Composition.Implements, typeImplements));
                             }
                         }
                     break;
@@ -1303,7 +1307,7 @@ public class TypeCompositionStatement
                         {
                         // register the class whose interface the component delegates, and the
                         // property whose value indicates the object to delegate to
-                        struct.addDelegation(typeTarget, idTarget);
+                        composition.setContribution(struct.addDelegation(typeTarget, idTarget));
                         }
                     break;
 
@@ -1343,8 +1347,8 @@ public class TypeCompositionStatement
                             for (ClassStructure struct : componentList)
                                 {
                                 // register the mixin that the component incorporates
-                                struct.addIncorporates(composition.getType().ensureTypeConstant(),
-                                        mapConstraints);
+                                composition.setContribution(struct.addIncorporates(
+                                        composition.getType().ensureTypeConstant(), mapConstraints));
                                 }
                             }
                         }
@@ -1522,10 +1526,9 @@ public class TypeCompositionStatement
                         return;
                         }
 
-                    if (typeContrib.isAccessSpecified() ||
-                        typeContrib.isAnnotated())
+                    if (typeContrib.isAccessSpecified() || typeContrib.isAnnotated())
                         {
-                        findComposition(Id.EXTENDS).log(errs,
+                        findComposition(contrib).log(errs,
                                 Severity.ERROR, Component.VE_TYPE_MODIFIER_ILLEGAL,
                                 component.getIdentityConstant().getValueString(),
                                 typeContrib.getValueString());
@@ -1538,7 +1541,7 @@ public class TypeCompositionStatement
                         Format formatContrib = typeContrib.getExplicitClassFormat();
                         if (!formatThis.isExtendsLegal(formatContrib))
                             {
-                            findComposition(Id.EXTENDS).log(errs,
+                            findComposition(contrib).log(errs,
                                     Severity.ERROR, Constants.VE_EXTENDS_INCOMPATIBLE,
                                     component.getIdentityConstant().getValueString(), formatThis,
                                     typeContrib.getValueString(), formatContrib);
@@ -1683,10 +1686,10 @@ public class TypeCompositionStatement
                 case CONST:
                 case SERVICE:
                     {
-                    Contribution contribExplicit = component.findContribution(Composition.Extends);
                     Contribution contribImplicit = null;
                     for (Contribution contrib : setContrib)
                         {
+                        // the contribution can only be Extends or Implements (see resolveVirtualSuper)
                         if (contrib.getComposition() == Composition.Extends)
                             {
                             if (contribImplicit != null)
@@ -1720,6 +1723,7 @@ public class TypeCompositionStatement
                             }
                         }
 
+                    Contribution contribExplicit = component.findContribution(Composition.Extends);
                     if (contribExplicit == null)
                         {
                         if (contribImplicit == null)
@@ -1866,16 +1870,18 @@ public class TypeCompositionStatement
 
         mgr.processChildren();
 
-        Map<String, Component> mapChildren  = component.ensureChildByNameMap();
-        MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct");
-        List<Parameter>        listParams   = constructorParams;
+        Map<String, Component> mapChildren        = component.ensureChildByNameMap();
+        MultiMethodStructure   constructors       = (MultiMethodStructure) mapChildren.get("construct");
+        List<Parameter>        listParams         = constructorParams;
+        boolean                fExplicitDefault   = false;
+        boolean                fExplicitShorthand = false;
+
         if (listParams == null || listParams.isEmpty())
             {
             // there is no "shorthand" declaration; there must be no more than one explicit
             // no-parameters constructor
             if (constructors != null)
                 {
-                boolean fExplicitDefault = false;
                 for (MethodStructure constructor : constructors.methods())
                     {
                     // verify that all parameters are defaulted
@@ -1954,7 +1960,6 @@ public class TypeCompositionStatement
             // will look for is any constructor that has a matching number of parameters (or a
             // higher number of parameters if the additional parameters are optional), and each
             // parameter type must match the type specified in the shorthand constructor notation
-            boolean fExplicitShorthand = false;
             if (constructors != null)
                 {
                 NextConstructor:
@@ -2027,6 +2032,26 @@ public class TypeCompositionStatement
                 }
             }
 
+        if (fExplicitDefault || fExplicitShorthand)
+            {
+            // when there is an explicit shorthand or default constructor, we don't allow
+            // parameterized contributions ("extends" or "incorporates")
+            for (CompositionNode composition : compositions)
+                {
+                List<Expression> listArgs =
+                        composition instanceof Extends nodeExtends
+                            ? nodeExtends.args :
+                        composition instanceof Incorporates nodeIncorp
+                            ? nodeIncorp.args
+                            : null;
+
+                if (listArgs != null && !listArgs.isEmpty())
+                    {
+                    composition.log(errs, Severity.ERROR, Compiler.CONTRIBUTION_PARAMS_UNEXPECTED);
+                    }
+                }
+            }
+
         // all non-interfaces must have at least one constructor, even if the class is abstract
         if (format != Format.INTERFACE && !mapChildren.containsKey("construct"))
             {
@@ -2092,26 +2117,22 @@ public class TypeCompositionStatement
     private void reportRequireClass(ClassStructure component, Contribution contrib,
                                     TypeConstant typeContrib, ErrorListener errs)
         {
-        Id     id;
         String sCode;
         switch (contrib.getComposition())
             {
             case Implements:
                 if (component.getFormat() != Format.INTERFACE)
                     {
-                    id    = Id.IMPLEMENTS;
                     sCode = Constants.VE_IMPLEMENTS_NOT_CLASS;
                     break;
                     }
                 // fall through for interfaces
 
             case Extends:
-                id    = Id.EXTENDS;
                 sCode = Constants.VE_EXTENDS_NOT_CLASS;
                 break;
 
             case Incorporates:
-                id    = Id.INCORPORATES;
                 sCode = Constants.VE_INCORPORATES_NOT_CLASS;
                 break;
 
@@ -2119,7 +2140,7 @@ public class TypeCompositionStatement
                 throw new IllegalStateException();
             }
 
-        findComposition(id).log(errs, Severity.ERROR, sCode,
+        findComposition(contrib).log(errs, Severity.ERROR, sCode,
                 component.getIdentityConstant().getPathString(),
                 typeContrib.getValueString());
         }
@@ -2466,7 +2487,8 @@ public class TypeCompositionStatement
             {
             MethodStructure constructor =
                     component.findMethod("construct", MethodStructure::isShorthandConstructor);
-            if (constructor == null)
+            if (constructor == null ||
+                    !constructor.isSynthetic() || constructor.ensureCode().hasOps())
                 {
                 break ValidateShorthand;
                 }
@@ -2500,12 +2522,9 @@ public class TypeCompositionStatement
                     }
                 }
 
-            if (constructor.isSynthetic() && !constructor.ensureCode().hasOps())
-                {
-                ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
+            ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
 
-                generateConstructor(ctxConstruct, constructor, typeSuper, idSuper, errs);
-                }
+            generateConstructor(ctxConstruct, constructor, typeSuper, idSuper, errs);
             }
 
         if (compositions == null)
@@ -2816,7 +2835,7 @@ public class TypeCompositionStatement
             MethodStructure constructSuper = (MethodStructure) idSuper.getComponent();
             int             cSuperArgs     = constructSuper.getParamCount();
             Argument[]      aSuperArgs     = new Argument[cSuperArgs];
-            int             cArgs          = listSuperArgs.size();
+            int             cArgs          = listSuperArgs == null ? 0 : listSuperArgs.size();
 
             // generate the super constructor arguments (filling in the default values)
             for (int i = 0; i < cSuperArgs; i++)
@@ -2884,17 +2903,18 @@ public class TypeCompositionStatement
             }
         }
 
-    private AstNode findComposition(Token.Id id)
+    private AstNode findComposition(Contribution contrib)
         {
         for (CompositionNode composition : compositions)
             {
-            if (composition.getKeyword().getId() == id)
+            if (composition.getContribution() == contrib)
                 {
                 return composition;
                 }
             }
         return this;
         }
+
     /**
      * Parse a documentation comment, extracting the "body" of the documentation inside it.
      *

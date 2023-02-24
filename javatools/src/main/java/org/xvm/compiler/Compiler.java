@@ -810,7 +810,8 @@ public class Compiler
      */
     public static final String INVALID_OUTER_THIS                 = "COMPILER-59";
     /**
-     * Because a previous argument specified a parameter name, the argument {0} must specify a parameter name.
+     * Because a previous argument specified a parameter name, the argument {0} must specify a
+     * parameter name.
      */
     public static final String ARG_NAME_REQUIRED                  = "COMPILER-60";
     /**
@@ -842,11 +843,13 @@ public class Compiler
      */
     public static final String MISSING_OPERATOR                   = "COMPILER-67";
     /**
-     * Expression yields the type "{1}" that does not support the "{0}" operator with the {2} specified parameters.
+     * Expression yields the type "{1}" that does not support the "{0}" operator with the {2}
+     * specified parameters.
      */
     public static final String MISSING_OPERATOR_SIGNATURE         = "COMPILER-68";
     /**
-     * The use of the "{0}" operator does not resolve to a single, unambiguous operator implementation on the type "{1}".
+     * The use of the "{0}" operator does not resolve to a single, unambiguous operator
+     * implementation on the type "{1}".
      */
     public static final String AMBIGUOUS_OPERATOR_SIGNATURE       = "COMPILER-69";
     /**
@@ -866,7 +869,8 @@ public class Compiler
      */
     public static final String SHORT_CIRCUIT_ILLEGAL              = "COMPILER-73";
     /**
-     * The expression on the left-hand-side of the colon does not have the potential to use the expression on the right-hand-side.
+     * The expression on the left-hand-side of the colon does not have the potential to use the
+     * expression on the right-hand-side.
      */
     public static final String SHORT_CIRCUIT_REQUIRED             = "COMPILER-74";
     /**
@@ -1037,7 +1041,8 @@ public class Compiler
      */
     public static final String VIRTUAL_CHILD_EXTENDS_INTERFACE    = "COMPILER-114";
     /**
-     * Multiple super virtual child classes exists of the same name {0}, and a class may not extend multiple classes.
+     * Multiple super virtual child classes exists of the same name {0}, and a class may not extend
+     * multiple classes.
      */
     public static final String VIRTUAL_CHILD_EXTENDS_MULTIPLE     = "COMPILER-115";
     /**
@@ -1247,7 +1252,8 @@ public class Compiler
      */
     public static final String GENERIC_PROPERTY_TYPE_NOT_ALLOWED   = "COMPILER-166";
     /**
-     * An explicitly asynchronous invocation “^()” is indicated, but an invocation is not actually being performed.
+     * An explicitly asynchronous invocation “^()” is indicated, but an invocation is not actually
+     * being performed.
      */
     public static final String ASYNC_NOT_ALLOWED                   = "COMPILER-167";
     /**
@@ -1283,7 +1289,8 @@ public class Compiler
      */
     public static final String NEW_UNRELATED_PARENT                = "COMPILER-175";
     /**
-     * The method {0} cannot be called from within construct() because "this" is a reference to the struct, and not to the object.
+     * The method {0} cannot be called from within construct() because "this" is a reference to the
+     * struct, and not to the object.
      */
     public static final String INVALID_CALL_FROM_CONSTRUCT         = "COMPILER-176";
     /**
@@ -1315,7 +1322,8 @@ public class Compiler
      */
     public static final String NEW_INVALID_FORMAL                  = "COMPILER-183";
     /**
-     * The literal path expression type is ambiguous; specify a literal type prefix, such as "Path:", "FileStore:", "Directory:", or "Path:".
+     * The literal path expression type is ambiguous; specify a literal type prefix, such as "Path:",
+     * "FileStore:", "Directory:", or "Path:".
      */
     public static final String AMBIGUOUS_PATH_TYPE                 = "COMPILER-184";
     /**
@@ -1330,6 +1338,11 @@ public class Compiler
      * The evaluating expression {0} of type {1} can never match type {2}.
      */
     public static final String TYPE_MATCHES_NEVER                = "COMPILER-187";
+    /**
+     * The specified arguments for the constructor of the contribution are unused because an
+     * explicit constructor is present.
+     */
+    public static final String CONTRIBUTION_PARAMS_UNEXPECTED    = "COMPILER-188";
     /**
      * {0} is not yet implemented.
      */

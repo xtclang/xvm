@@ -1440,7 +1440,7 @@ service Client<Schema extends RootSchema>
      * The Transaction API, for providing to a database client.
      */
     class Transaction(DBObjectInfo info_, TxInfo txInfo)
-            extends RootSchemaImpl(info_)
+            extends RootSchemaImpl
             implements oodb.Transaction<Schema>
         {
         construct(DBObjectInfo info_, TxInfo txInfo, Int? id=Null)

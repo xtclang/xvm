@@ -44,6 +44,7 @@ import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -553,9 +554,9 @@ public abstract class Component
      * @param composition  the contribution category
      * @param constType    the contribution class type
      */
-    public void addContribution(Composition composition, TypeConstant constType)
+    public Contribution addContribution(Composition composition, TypeConstant constType)
         {
-        addContribution(new Contribution(composition, constType));
+        return addContribution(new Contribution(composition, constType));
         }
 
     /**
@@ -596,9 +597,9 @@ public abstract class Component
      * @param constClass  the class type to delegate
      * @param constProp   the property specifying the reference to delegate to
      */
-    public void addDelegation(TypeConstant constClass, PropertyConstant constProp)
+    public Contribution addDelegation(TypeConstant constClass, PropertyConstant constProp)
         {
-        addContribution(new Contribution(constClass, constProp));
+        return addContribution(new Contribution(constClass, constProp));
         }
 
     /**
@@ -607,7 +608,7 @@ public abstract class Component
      * @param constClass
      * @param mapConstraints
      */
-    public void addIncorporates(TypeConstant constClass,
+    public Contribution addIncorporates(TypeConstant constClass,
                                 Map<String, TypeConstant> mapConstraints)
         {
         ListMap<StringConstant, TypeConstant> map = null;
@@ -621,7 +622,7 @@ public abstract class Component
                 map.put(pool.ensureStringConstant(entry.getKey()), entry.getValue());
                 }
             }
-        addContribution(new Contribution(constClass, map));
+        return addContribution(new Contribution(constClass, map));
         }
 
     /**
@@ -629,7 +630,7 @@ public abstract class Component
      *
      * @param contrib  the contribution to add to the end of the list
      */
-    protected void addContribution(Contribution contrib)
+    protected Contribution addContribution(Contribution contrib)
         {
         List<Contribution> list = m_listContribs;
         if (list == null)
@@ -647,13 +648,14 @@ public abstract class Component
                     {
                     listIterator.previous();
                     listIterator.add(contrib);
-                    return;
+                    return contrib;
                     }
                 }
             }
 
         list.add(contrib);
         markModified();
+        return contrib;
         }
 
     /**
@@ -2035,7 +2037,7 @@ public abstract class Component
             }
 
         // no child by that name; check if it was introduced by a contribution
-        NextContribution: for (Contribution contrib : getContributionsAsList())
+        for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
             if (typeContrib.containsUnresolved())
@@ -2048,7 +2050,7 @@ public abstract class Component
                 case Into:
                     if (!fAllowInto)
                         {
-                        continue NextContribution;
+                        continue;
                         }
                     access = access.minOf(Access.PROTECTED);
                     break;
@@ -3417,6 +3419,14 @@ public abstract class Component
                 {
                 throw new IllegalStateException(e);
                 }
+            }
+
+        @Override
+        public int hashCode()
+            {
+            // unfortunately we cannot use m_typeContrib here, since it starts unresolved and
+            // changes its hash value as it gets resolved
+            return Hash.of(m_composition);
             }
 
         @Override
