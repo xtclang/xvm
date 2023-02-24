@@ -64,10 +64,16 @@ public abstract class CompositionNode
      */
     public Contribution getContribution()
         {
-        return contribution;
+        return m_contribution;
         }
 
-    private transient Contribution contribution;
+    /**
+     * Set the Contribution associated with (created by) this composition.
+     */
+    public void setContribution(Contribution contribution)
+        {
+        this.m_contribution = contribution;
+        }
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
@@ -217,7 +223,8 @@ public abstract class CompositionNode
     public static class Incorporates
             extends CompositionNode
         {
-        public Incorporates(Expression condition, Token keyword, TypeExpression type, List<Expression> args, List<Parameter> constraints)
+        public Incorporates(Expression condition, Token keyword, TypeExpression type,
+                            List<Expression> args, List<Parameter> constraints)
             {
             super(condition, keyword, type);
             this.args        = args;
@@ -375,7 +382,8 @@ public abstract class CompositionNode
     public static class Delegates
             extends CompositionNode
         {
-        public Delegates(Expression condition, Token keyword, TypeExpression type, Expression delegatee, long lEndPos)
+        public Delegates(Expression condition, Token keyword, TypeExpression type,
+                         Expression delegatee, long lEndPos)
             {
             super(condition, keyword, type);
             this.delegatee = delegatee;
@@ -426,7 +434,8 @@ public abstract class CompositionNode
 
         protected transient String name;
 
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Delegates.class, "condition", "type", "delegatee");
+        private static final Field[] CHILD_FIELDS =
+                fieldsForNames(Delegates.class, "condition", "type", "delegatee");
         }
 
 
@@ -447,7 +456,8 @@ public abstract class CompositionNode
     public static class Import
             extends CompositionNode
         {
-        public Import(Expression condition, Token keyword, NamedTypeExpression type, List<VersionOverride> vers, long lEndPos)
+        public Import(Expression condition, Token keyword, NamedTypeExpression type,
+                      List<VersionOverride> vers, long lEndPos)
             {
             super(condition, keyword, type);
             this.vers    = vers;
@@ -549,7 +559,8 @@ public abstract class CompositionNode
         protected List<VersionOverride> vers;
         protected long                  lEndPos;
 
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "type", "vers");
+        private static final Field[] CHILD_FIELDS =
+                fieldsForNames(Import.class, "condition", "type", "vers");
         }
 
 
@@ -604,13 +615,8 @@ public abstract class CompositionNode
     protected Token          keyword;
     protected TypeExpression type;
 
-    /**
-     * Set the Contribution associated with (created by) this composition.
-     */
-    public void setContribution(Contribution contribution)
-        {
-        this.contribution = contribution;
-        }
+    private transient Contribution m_contribution;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(CompositionNode.class, "condition", "type");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(CompositionNode.class, "condition", "type");
     }
