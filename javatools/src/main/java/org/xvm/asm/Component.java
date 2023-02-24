@@ -2850,7 +2850,7 @@ public abstract class Component
      * abstract sense, meaning any class, interface, mixin, const, enum, or service) can be composed
      * of any number of contributing components.
      */
-    public static class Contribution
+    public class Contribution
             implements Cloneable
         {
         /**
@@ -3063,6 +3063,14 @@ public abstract class Component
         public Composition getComposition()
             {
             return m_composition;
+            }
+
+        /**
+         * @return the component this Contribution belongs to
+         */
+        public Component getComponent()
+            {
+            return Component.this;
             }
 
         /**
@@ -3530,7 +3538,7 @@ public abstract class Component
                     }
                 else if (m_typeContrib != null)
                     {
-                    sb.append(m_typeContrib.getDescription());
+                    sb.append(m_typeContrib.resolveTypedefs().getDescription());
                     }
 
                 if (m_composition == Composition.Annotation && m_annotation != null)

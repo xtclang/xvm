@@ -1268,6 +1268,14 @@ public class ClassStructure
         }
 
     /**
+     * @return true iff any contribution for this class has a cyclical dependency
+     */
+    public Contribution hasCyclicalContribution()
+        {
+        return findContributionImpl(getIdentityConstant(), false);
+        }
+
+    /**
      * Check if this class has the specified class as any of its contributions (recursively).
      *
      * @param idClass  the class to test if this class has a contribution of
@@ -1319,8 +1327,6 @@ public class ClassStructure
      */
     private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto)
         {
-        assert !idContrib.equals(getIdentityConstant());
-
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib  = contrib.getTypeConstant();

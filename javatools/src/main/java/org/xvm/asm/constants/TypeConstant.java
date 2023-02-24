@@ -2425,7 +2425,7 @@ public abstract class TypeConstant
 
         // add a marker into the list of contributions at this point to indicate that this class
         // structure's contents need to be processed next
-        listProcess.add(new Contribution(Composition.Equal, this));  // place-holder for "this"
+        listProcess.add(struct.new Contribution(Composition.Equal, this));  // place-holder for "this"
 
         // error check the "into" and "extends" clauses, plus rebasing (they'll get processed later)
         TypeConstant typeInto    = null;
@@ -2602,8 +2602,8 @@ public abstract class TypeConstant
                         {
                         typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
                         }
-                    listProcess.add(new Contribution(Composition.Implements, typeNatural));
-                    listProcess.add(new Contribution(Composition.Implements, pool.typeObject()));
+                    listProcess.add(struct.new Contribution(Composition.Implements, typeNatural));
+                    listProcess.add(struct.new Contribution(Composition.Implements, pool.typeObject()));
                     }
                 else
                     {
@@ -2670,7 +2670,7 @@ public abstract class TypeConstant
                     break;
 
                 case Implements:
-                    processImplements(constId, typeContrib, listProcess, errs);
+                    processImplements(constId, typeContrib, struct, listProcess, errs);
                     break;
 
                 default:
@@ -2683,11 +2683,11 @@ public abstract class TypeConstant
         // container class that implements an implicit "Outer" interface
         if (struct.containsVirtualChild() && !constId.equals(pool.clzOuter()))
             {
-            listProcess.add(new Contribution(Composition.Implements, pool.typeOuter()));
+            listProcess.add(struct.new Contribution(Composition.Implements, pool.typeOuter()));
             }
         if (isVirtualChild() && !constId.equals(pool.clzInner()))
             {
-            listProcess.add(new Contribution(Composition.Implements, pool.typeInner()));
+            listProcess.add(struct.new Contribution(Composition.Implements, pool.typeInner()));
             }
 
         // the last three contributions to get processed are the "re-basing", the "extends" and the
@@ -2695,12 +2695,12 @@ public abstract class TypeConstant
         // "into Object")
         if (typeRebase != null)
             {
-            listProcess.add(new Contribution(Composition.RebasesOnto,
+            listProcess.add(struct.new Contribution(Composition.RebasesOnto,
                     pool.ensureAccessTypeConstant(typeRebase, Access.PROTECTED)));
             }
         if (typeExtends != null)
             {
-            listProcess.add(new Contribution(Composition.Extends,
+            listProcess.add(struct.new Contribution(Composition.Extends,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
             }
         if (typeInto != null)
@@ -2714,7 +2714,7 @@ public abstract class TypeConstant
                         : Access.PROTECTED;
                 typeInto = pool.ensureAccessTypeConstant(typeInto, access);
                 }
-            listProcess.add(new Contribution(Composition.Into, typeInto));
+            listProcess.add(struct.new Contribution(Composition.Into, typeInto));
             }
 
         return new TypeConstant[] {typeInto, typeExtends, typeRebase};
@@ -2895,7 +2895,7 @@ public abstract class TypeConstant
                 return;
                 }
 
-            listProcess.add(new Contribution(Composition.Incorporates,
+            listProcess.add(struct.new Contribution(Composition.Incorporates,
                 pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
             }
         }
@@ -2936,7 +2936,7 @@ public abstract class TypeConstant
             }
         else
             {
-            listProcess.add(new Contribution(typeContrib,
+            listProcess.add(struct.new Contribution(typeContrib,
                 contrib.getDelegatePropertyConstant()));
             }
         }
@@ -2945,6 +2945,7 @@ public abstract class TypeConstant
      * Process the "implements" contribution.
      */
     private void processImplements(IdentityConstant constId, TypeConstant typeContrib,
+                                   ClassStructure struct,
                                    List<Contribution> listProcess, ErrorListener errs)
         {
         if (!typeContrib.isExplicitClassIdentity(true))
@@ -2981,7 +2982,7 @@ public abstract class TypeConstant
             }
         else
             {
-            listProcess.add(new Contribution(Composition.Implements,
+            listProcess.add(struct.new Contribution(Composition.Implements,
                     typeContrib.ensureAccess(Access.PROTECTED)));
             }
         }
@@ -5480,11 +5481,11 @@ public abstract class TypeConstant
         if (annoMixin == null)
             {
             // we don't pass the constraints since the type is known to satisfy the "condition"
-            listProcess.add(new Contribution(typeMixin, ListMap.EMPTY));
+            listProcess.add(structBase.new Contribution(typeMixin, ListMap.EMPTY));
             }
         else
             {
-            listProcess.add(new Contribution(annoMixin, typeMixin));
+            listProcess.add(structBase.new Contribution(annoMixin, typeMixin));
             }
 
         Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);

@@ -71,6 +71,7 @@ import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.CompositionNode.Import;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 
+import org.xvm.runtime.Utils;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
@@ -1501,21 +1502,26 @@ public class TypeCompositionStatement
             }
 
         // check for cyclical contributions and validate contribution types
-        TypeConstant typeThis = component.getIdentityConstant().getType();
+        Contribution contribCyclical = component.hasCyclicalContribution();
+        if (contribCyclical != null)
+            {
+            errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
+                    new Object[]
+                        {
+                        contribCyclical.getComponent().getIdentityConstant().getValueString(),
+                        contribCyclical.toString()
+                        },
+                    getSource(),
+                    compositions.get(0).getStartPosition(),
+                    compositions.get(compositions.size() - 1).getEndPosition()
+                    );
+            return;
+            }
+
         for (Contribution contrib : component.getContributionsAsList())
             {
-            // for now, we're just checking self-referencing; circular references should be caught
-            // by TypeInfo computation logic, it would be best TODO it here
             TypeConstant typeContrib = contrib.getTypeConstant();
-            if (typeContrib.equals(typeThis))
-                {
-                log(errs, Severity.ERROR, Constants.VE_CYCLICAL_CONTRIBUTION,
-                    component.getIdentityConstant().getValueString(),
-                    contrib.toString());
-                return;
-                }
-
-            Composition composition = contrib.getComposition();
+            Composition  composition = contrib.getComposition();
             switch (composition)
                 {
                 case Extends, Implements, Incorporates:
