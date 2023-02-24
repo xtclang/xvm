@@ -1518,7 +1518,7 @@ public class TypeCompositionStatement
                     {
                     if (!typeContrib.isExplicitClassIdentity(true))
                         {
-                        requireClass(component, contrib, typeContrib, errs);
+                        reportRequireClass(component, contrib, typeContrib, errs);
                         return;
                         }
 
@@ -1869,7 +1869,32 @@ public class TypeCompositionStatement
         Map<String, Component> mapChildren  = component.ensureChildByNameMap();
         MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct");
         List<Parameter>        listParams   = constructorParams;
-        if (listParams != null && !listParams.isEmpty())
+        if (listParams == null || listParams.isEmpty())
+            {
+            // there is no "shorthand" declaration; there must be no more than one explicit
+            // no-parameters constructor
+            if (constructors != null)
+                {
+                boolean fExplicitDefault = false;
+                for (MethodStructure constructor : constructors.methods())
+                    {
+                    // verify that all parameters are defaulted
+                    if (constructor.getParamCount() > constructor.getDefaultParamCount())
+                        {
+                        continue;
+                        }
+
+                    // should only find one match; make sure we didn't already find one
+                    if (fExplicitDefault)
+                        {
+                        reportAmbiguousConstructor(listParams, TypeConstant.NO_TYPES, errs);
+                        break;
+                        }
+                    fExplicitDefault = true;
+                    }
+                }
+            }
+        else
             {
             if (fModuleImport)
                 {
@@ -1929,95 +1954,67 @@ public class TypeCompositionStatement
             // will look for is any constructor that has a matching number of parameters (or a
             // higher number of parameters if the additional parameters are optional), and each
             // parameter type must match the type specified in the shorthand constructor notation
-            boolean fFound = false;
+            boolean fExplicitShorthand = false;
             if (constructors != null)
                 {
                 NextConstructor:
-                for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
+                for (MethodStructure constructor : constructors.methods())
                     {
                     org.xvm.asm.Parameter[] aConsParams = constructor.getParamArray();
                     int                     cConsParams = aConsParams.length;
-                    if (cConsParams >= cParams)
+
+                    if (cParams > cConsParams ||
+                        cParams < cConsParams - constructor.getDefaultParamCount())
                         {
-                        // verify that any additional parameters are defaulted
-                        for (int i = cParams; i < cConsParams; ++i)
-                            {
-                            if (!aConsParams[i].hasDefaultValue())
-                                {
-                                continue NextConstructor;
-                                }
-                            }
-
-                        // parameters are allowed to widen from the abbreviated declaration to the
-                        // explicit declaration
-                        for (int i = 0; i < cParams; ++i)
-                            {
-                            TypeConstant typeConsParam = aConsParams[i].getType();
-                            if (typeConsParam.containsUnresolved())
-                                {
-                                mgr.requestRevisit();
-                                return;
-                                }
-                            // note: it is too early in the compilation cycle to use "isA()"
-                            if (!atypeParams[i].equals(typeConsParam))
-                                {
-                                continue NextConstructor;
-                                }
-                            }
-
-                        // should only find one match; make sure we didn't already find one
-                        if (fFound)
-                            {
-                            StringBuilder sb = new StringBuilder();
-                            sb.append("construct(");
-                            for (int i = 0; i < cParams; ++i)
-                                {
-                                if (i > 0)
-                                    {
-                                    sb.append(", ");
-                                    }
-                                sb.append(atypeParams[i].getValueString());
-                                }
-                            sb.append(')');
-
-                            long lStart = name.getStartPosition();
-                            long lEnd   = name.getEndPosition();
-                            if (cParams > 0)
-                                {
-                                lStart = listParams.get(0).getStartPosition();
-                                lEnd   = listParams.get(cParams - 1).getEndPosition();
-                                }
-                            errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-                                    new String[] {sb.toString()}, getSource(), lStart, lEnd);
-                            break;
-                            }
-
-                        constructor.markAsShorthand();
-                        fFound = true;
+                        continue;
                         }
+
+                    // parameters are allowed to widen from the abbreviated declaration to the
+                    // explicit declaration
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        TypeConstant typeConsParam = aConsParams[i].getType();
+                        if (typeConsParam.containsUnresolved())
+                            {
+                            mgr.requestRevisit();
+                            return;
+                            }
+                        // note: it is too early in the compilation cycle to use "isA()"
+                        if (!atypeParams[i].equals(typeConsParam))
+                            {
+                            continue NextConstructor;
+                            }
+                        }
+
+                    // should only find one match; make sure we didn't already find one
+                    if (fExplicitShorthand)
+                        {
+                        reportAmbiguousConstructor(listParams, atypeParams, errs);
+                        break;
+                        }
+
+                    constructor.markAsShorthand();
+                    fExplicitShorthand = true;
                     }
                 }
 
-            if (!fFound)
+            if (!fExplicitShorthand)
                 {
                 // create a constructor based on the "shorthand notation" implicit constructor
                 // definition
-                org.xvm.asm.Parameter[] aParams = org.xvm.asm.Parameter.NO_PARAMS;
-                if (cParams > 0)
+                ConstantPool            pool    = pool();
+                org.xvm.asm.Parameter[] aParams = new org.xvm.asm.Parameter[cParams];
+                for (int i = 0; i < cParams; ++i)
                     {
-                    aParams = new org.xvm.asm.Parameter[cParams];
-                    ConstantPool pool = pool();
-                    for (int i = 0; i < cParams; ++i)
+                    Parameter param = listParams.get(i);
+                    aParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i],
+                            param.getName(), null, false, i, false);
+                    if (param.value != null)
                         {
-                        Parameter param = listParams.get(i);
-                        aParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i],
-                                param.getName(), null, false, i, false);
-                        if (param.value != null)
-                            {
-                            aParams[i].markDefaultValue();
-                            }
+                        aParams[i].markDefaultValue();
                         }
                     }
+
                 MethodStructure constructor = component.createMethod(true, Access.PUBLIC,
                         org.xvm.asm.Annotation.NO_ANNOTATIONS, org.xvm.asm.Parameter.NO_PARAMS,
                         "construct", aParams, true, false);
@@ -2050,7 +2047,7 @@ public class TypeCompositionStatement
             // default values (since the module is a singleton, and is automatically created,
             // i.e. it has to have all of its construction parameters available)
             boolean fFound = false;
-            NextConstructor: for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
+            NextConstructor: for (MethodStructure constructor : constructors.methods())
                 {
                 for (org.xvm.asm.Parameter param : constructor.getParamArray())
                     {
@@ -2090,10 +2087,10 @@ public class TypeCompositionStatement
         }
 
     /**
-     * Error reporting helper.
+     * Error reporting helper for "not a class".
      */
-    private void requireClass(ClassStructure component, Contribution contrib,
-                              TypeConstant typeContrib, ErrorListener errs)
+    private void reportRequireClass(ClassStructure component, Contribution contrib,
+                                    TypeConstant typeContrib, ErrorListener errs)
         {
         Id     id;
         String sCode;
@@ -2125,6 +2122,35 @@ public class TypeCompositionStatement
         findComposition(id).log(errs, Severity.ERROR, sCode,
                 component.getIdentityConstant().getPathString(),
                 typeContrib.getValueString());
+        }
+
+    /**
+     * Error reporting helper for "ambiguous signature".
+     */
+    private void reportAmbiguousConstructor(List<Parameter> listParams, TypeConstant[] atypeParams,
+                                            ErrorListener errs)
+        {
+        int           cParams = atypeParams.length;
+        StringBuilder sb = new StringBuilder("construct(");
+        for (int i = 0; i < cParams; ++i)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append(atypeParams[i].getValueString());
+            }
+        sb.append(')');
+
+        long lStart = name.getStartPosition();
+        long lEnd   = name.getEndPosition();
+        if (cParams > 0)
+            {
+            lStart = listParams.get(0).getStartPosition();
+            lEnd   = listParams.get(cParams - 1).getEndPosition();
+            }
+        errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
+            new String[] {sb.toString()}, getSource(), lStart, lEnd);
         }
 
     /**
