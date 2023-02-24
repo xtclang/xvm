@@ -144,7 +144,7 @@ public class BuildUnicodeTables
                 InputStream in       = new FileInputStream(file);
                 int         cbActual = in.readNBytes(abRaw, 0, cbRaw);
                 assert cbActual == cbRaw;
-                sXML = new String(abRaw, 0);
+                sXML = new String(abRaw);
                 }
             else
                 {
@@ -170,7 +170,7 @@ public class BuildUnicodeTables
                 InputStream in       = zip.getInputStream(entryXML);
                 int         cbActual = in.readNBytes(abRaw, 0, cbRaw);
                 assert cbActual == cbRaw;
-                sXML = new String(abRaw, 0);
+                sXML = new String(abRaw);
                 }
 
             JAXBContext jaxbContext = JAXBContext.newInstance(UCDData.class);

@@ -65,7 +65,7 @@ public class SetTest
                 byte[] ab = new byte[cb];
 
                 new DataInputStream(new FileInputStream(sFile)).readFully(ab);
-                sTest = new String(ab, 0);
+                sTest = new String(ab);
                 }
             catch (IOException e)
                 {
