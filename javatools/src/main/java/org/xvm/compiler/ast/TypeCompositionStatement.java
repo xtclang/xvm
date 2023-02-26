@@ -71,7 +71,6 @@ import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.CompositionNode.Import;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 
-import org.xvm.runtime.Utils;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
@@ -2499,11 +2498,9 @@ public class TypeCompositionStatement
                 break ValidateShorthand;
                 }
 
-            RootContext ctxConstruct = null;
+            RootContext ctxConstruct = ensureConstructorContext(constructor);
             if (constructorParams != null && !constructorParams.isEmpty())
                 {
-                ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
-
                 // resolve the default values for constructor parameters
                 if (!validateDefaultParameters(ctxConstruct, constructor, errs))
                     {
@@ -2517,8 +2514,6 @@ public class TypeCompositionStatement
 
             if (contribExt != null)
                 {
-                ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
-
                 typeSuper = pool().ensureAccessTypeConstant(contribExt.getTypeConstant(), Access.PROTECTED);
                 idSuper   = validateSuperParameters(ctxConstruct, constructor, typeSuper, errs);
                 if (idSuper == null)
@@ -2527,8 +2522,6 @@ public class TypeCompositionStatement
                     return;
                     }
                 }
-
-            ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
 
             generateConstructor(ctxConstruct, constructor, typeSuper, idSuper, errs);
             }
@@ -2580,13 +2573,8 @@ public class TypeCompositionStatement
     /**
      * A simple helper to create a new context for shorthand constructor processing.
      */
-    private RootContext ensureConstructorContext(RootContext ctxConstruct, MethodStructure constructor)
+    private RootContext ensureConstructorContext(MethodStructure constructor)
         {
-        if (ctxConstruct != null)
-            {
-            return ctxConstruct;
-            }
-
         StatementBlock blockBody = body;
         if (body == null)
             {
