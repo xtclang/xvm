@@ -233,8 +233,8 @@ public class VersionTest
         tree.put(new Version("2.2"        ), "2.2"        );
         tree.put(new Version("4"          ), "4"          );
 
-        Assert.assertEquals(null                      , tree.findClosestVersion(new Version("beta")));
-        Assert.assertEquals(null                      , tree.findClosestVersion(new Version("beta2")));
+        Assert.assertNull(tree.findClosestVersion(new Version("beta")));
+        Assert.assertNull(tree.findClosestVersion(new Version("beta2")));
         Assert.assertEquals(new Version("1"          ), tree.findClosestVersion(new Version("1")));
         Assert.assertEquals(new Version("2.0"        ), tree.findClosestVersion(new Version("2")));
         Assert.assertEquals(new Version("2"          ), tree.findClosestVersion(new Version("3")));

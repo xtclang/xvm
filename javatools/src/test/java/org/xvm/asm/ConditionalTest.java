@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
@@ -32,9 +32,9 @@ public class ConditionalTest
         AllCondition        condB  = pool.ensureAllCondition(condX, condY);
         AnyCondition        condE  = pool.ensureAnyCondition(condX, condY);
 
-        Assert.assertTrue(!condX.isTerminalInfluenceBruteForce());
-        Assert.assertTrue(!condY.isTerminalInfluenceBruteForce());
-        Assert.assertTrue(!condB.isTerminalInfluenceBruteForce());
+        Assert.assertFalse(condX.isTerminalInfluenceBruteForce());
+        Assert.assertFalse(condY.isTerminalInfluenceBruteForce());
+        Assert.assertFalse(condB.isTerminalInfluenceBruteForce());
         Assert.assertTrue( condE.isTerminalInfluenceBruteForce());
 
         Set<ConditionalConstant> setX = condX.terminals();
@@ -52,17 +52,17 @@ public class ConditionalTest
         Map<ConditionalConstant, Influence> mapB = condB.terminalInfluences();
         Map<ConditionalConstant, Influence> mapE = condE.terminalInfluences();
 
-        Assert.assertTrue(mapX.size() == 1);
+        Assert.assertEquals(1, mapX.size());
         Assert.assertEquals(mapX.get(condX), Influence.IDENTITY);
 
-        Assert.assertTrue(mapY.size() == 1);
+        Assert.assertEquals(1, mapY.size());
         Assert.assertEquals(mapY.get(condY), Influence.IDENTITY);
 
-        Assert.assertTrue(mapB.size() == 2);
+        Assert.assertEquals(2, mapB.size());
         Assert.assertEquals(mapB.get(condX), Influence.AND);
         Assert.assertEquals(mapB.get(condY), Influence.AND);
 
-        Assert.assertTrue(mapE.size() == 2);
+        Assert.assertEquals(2, mapE.size());
         Assert.assertEquals(mapE.get(condX), Influence.OR);
         Assert.assertEquals(mapE.get(condY), Influence.OR);
         }
@@ -81,8 +81,8 @@ public class ConditionalTest
         ModuleStructure     module = file.getModule();
         ClassStructure      clz    = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Util", null);
         PackageStructure    pkg    = module.createPackage(Constants.Access.PUBLIC, "Util", null);
-        MethodStructure     method = clz.createMethod(false, Constants.Access.PUBLIC, null, new Parameter[]{}, "foo", new Parameter[]{},
-                true, true);
+        MethodStructure     method = clz.createMethod(false, Constants.Access.PUBLIC, null,
+                                        Parameter.NO_PARAMS, "foo", Parameter.NO_PARAMS, true, true);
 
         // module is both v1 and v2
         module.setCondition(condVB);
@@ -98,7 +98,7 @@ public class ConditionalTest
 
         FileStructureTest.testFileStructure(file);
 
-        Assert.assertTrue(pkg.getChild("foo") == clz.getChild("foo"));
+        Assert.assertSame(pkg.getChild("foo"), clz.getChild("foo"));
         Assert.assertTrue(pkg.getChild("foo") instanceof MultiMethodStructure);
 
         Assert.assertTrue(method.getParent() instanceof MultiMethodStructure);

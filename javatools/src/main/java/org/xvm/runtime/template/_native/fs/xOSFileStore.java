@@ -89,8 +89,6 @@ public class xOSFileStore
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
-        ObjectHandle hStore = hTarget;
-
         switch (method.getName())
             {
             case "dirFor":  // (pathString)
@@ -98,7 +96,7 @@ public class xOSFileStore
                 StringHandle hPathString = (StringHandle) hArg;
 
                 Path path = Paths.get(hPathString.getStringValue());
-                return xOSFileNode.createHandle(frame, hStore, path, true, iReturn);
+                return xOSFileNode.createHandle(frame, hTarget, path, true, iReturn);
                 }
 
             case "fileFor":  // (pathString)
@@ -106,7 +104,7 @@ public class xOSFileStore
                 StringHandle hPathString = (StringHandle) hArg;
 
                 Path path = Paths.get(hPathString.getStringValue());
-                return xOSFileNode.createHandle(frame, hStore, path, false, iReturn);
+                return xOSFileNode.createHandle(frame, hTarget, path, false, iReturn);
                 }
             }
 

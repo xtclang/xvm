@@ -225,7 +225,7 @@ public class SimulatedLinkerContext
 
     // ----- fields --------------------------------------------------------------------------------
 
-    public static final SimulatedLinkerContext EMPTY = new SimulatedLinkerContext((ConditionalConstant) null);
+    public static final SimulatedLinkerContext EMPTY = new SimulatedLinkerContext(null);
 
     private final ConditionalConstant           cond;
     private Map<ConditionalConstant, Influence> influences  = Collections.EMPTY_MAP;

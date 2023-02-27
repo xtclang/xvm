@@ -1,9 +1,9 @@
 package org.xvm.asm;
 
 
-import junit.framework.Assert;
-
 import java.io.IOException;
+
+import org.junit.Assert;
 
 import org.xvm.compiler.Compiler;
 

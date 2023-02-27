@@ -325,7 +325,6 @@ public class ByteConstant
                 return getConstantPool().valOrd(this.m_nVal - ((ByteConstant) that).m_nVal);
 
             case "-UInt8":
-                return validate(-this.m_nVal);
             case "~UInt8":
                 return validate(~this.m_nVal);
 

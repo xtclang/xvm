@@ -102,26 +102,6 @@ public class FileStructureTest
         testFileStructure(file);
         }
 
-//    @Test
-    public void testFoo()
-            throws IOException
-        {
-        FileStructure structfile = new FileStructure("test");
-        Assert.assertEquals("test", structfile.getModuleName());
-
-        ModuleStructure  structmodule  = structfile.getModule();
-        PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes", null);
-        ClassStructure   structclass   = structpackage.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
-        MethodStructure  structmethod  = structclass.createMethod(false, Constants.Access.PUBLIC, null,
-                new Parameter[]{},
-                "foo",
-                new Parameter[]{}, true, true);
-
-        testFileStructure(structfile);
-        }
-
-    // ----- internal -----
-
     public static FileStructure createFileStructure(String sCode)
         {
         Source                   source   = new Source(sCode);
@@ -130,9 +110,11 @@ public class FileStructureTest
         List<Statement>          stmts    = parser.parseSource().getStatements();
         TypeCompositionStatement module   = (TypeCompositionStatement) stmts.get(stmts.size() - 1);
         Compiler                 compiler = new Compiler(module, errlist);
-        Assert.assertTrue(errlist.getSeriousErrorCount() == 0);
+        Assert.assertEquals(0, errlist.getSeriousErrorCount());
         return compiler.generateInitialFileStructure();
         }
+
+    // ----- internal -----
 
     public static FileStructure compile(String sSrc, Severity sev, String sCode)
         {
@@ -152,7 +134,7 @@ public class FileStructureTest
             }
         catch (CompilerException e)
             {
-            if (sev == null || (sev != Severity.ERROR && sev != Severity.FATAL))
+            if ((sev != Severity.ERROR && sev != Severity.FATAL))
                 {
                 throw e;
                 }
@@ -205,7 +187,7 @@ public class FileStructureTest
             structfile2.dump(new PrintWriter(System.out, true));
             }
 
-        Assert.assertTrue(structfile.equals(structfile2));
+        Assert.assertEquals(structfile, structfile2);
 
         out = new ByteArrayOutputStream();
         structfile2.writeTo(out);
@@ -225,7 +207,23 @@ public class FileStructureTest
                 }
             }
 
-        Assert.assertTrue(Arrays.equals(ab, ab2));
+        Assert.assertArrayEquals(ab, ab2);
+        }
+
+//    @Test
+    public void testFoo()
+            throws IOException
+        {
+        FileStructure structfile = new FileStructure("test");
+        Assert.assertEquals("test", structfile.getModuleName());
+
+        ModuleStructure  structmodule  = structfile.getModule();
+        PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes", null);
+        ClassStructure   structclass   = structpackage.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
+        MethodStructure  structmethod  = structclass.createMethod(false, Constants.Access.PUBLIC, null,
+            Parameter.NO_PARAMS, "foo", Parameter.NO_PARAMS, true, true);
+
+        testFileStructure(structfile);
         }
 
     static final boolean DEBUG = true;

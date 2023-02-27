@@ -78,14 +78,41 @@ public class Lexer
         return m_source.hasNext();
         }
 
-    @Override
-    public Token next()
+    /**
+     * Validate the specified identifier.
+     *
+     * @param sName  the identifier
+     *
+     * @return true iff the identifier is a lexically valid identifier
+     */
+    public static boolean isValidIdentifier(String sName)
         {
-        boolean fWhitespaceBefore = m_fWhitespace;
-        final Token token = eatToken();
-        boolean fWhitespaceAfter = eatWhitespace();
-        token.noteWhitespace(fWhitespaceBefore, fWhitespaceAfter);
-        return token;
+        if (sName == null)
+            {
+            return false;
+            }
+
+        int cch = sName.length();
+        if (cch == 0)
+            {
+            return false;
+            }
+
+        if (!isIdentifierStart(sName.charAt(0)))
+            {
+            return false;
+            }
+
+        for (int i = 1; i < cch; ++i)
+            {
+            if (!isIdentifierPart(sName.charAt(i)))
+                {
+                return false;
+                }
+            }
+
+        // check if it is a reserved word
+        return Id.valueByText(sName) == null;
         }
 
 
@@ -151,13 +178,172 @@ public class Lexer
     // ----- internal ------------------------------------------------------------------------------
 
     /**
+     * Validate the specified RFC1035 label.
+     *
+     * @param sName  the RFC1035 label
+     *
+     * @return true iff the name is a lexically valid RFC1035 label
+     */
+    public static boolean isValidRFC1035Label(String sName)
+        {
+        if (sName == null)
+            {
+            return false;
+            }
+
+        // internationalization support; see https://tools.ietf.org/html/rfc5894
+        // convert the label to an ASCII label
+        try
+            {
+            sName = IDN.toASCII(sName);
+            }
+        catch (IllegalArgumentException e)
+            {
+            return false;
+            }
+
+        int cch = sName.length();
+        if (cch == 0 || cch > 63)
+            {
+            return false;
+            }
+
+        if (!isAsciiLetter(sName.charAt(0)))
+            {
+            return false;
+            }
+
+        for (int i = 1; i < cch; ++i)
+            {
+            char ch = sName.charAt(i);
+            if (!(isAsciiLetter(ch) || isDigit(ch) || i < cch - 1 && ch == '-'))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    /**
+     * Validate the specified module name.
+     *
+     * @param sName  the module name
+     *
+     * @return true iff the name is a lexically valid qualified module name
+     */
+    public static boolean isValidQualifiedModule(String sName)
+        {
+        if (sName == null)
+            {
+            return false;
+            }
+
+        String[] asName = parseDelimitedString(sName, '.');
+        int      cNames = asName.length;
+        if (cNames < 1)
+            {
+            return false;
+            }
+
+        // the first simple name must be a valid identifier
+        if (!isValidIdentifier(asName[0]))
+            {
+            return false;
+            }
+
+        // the identifier must be followed by a domain name, which is composed of at least two
+        // RFC1035 labels
+        if (cNames == 2)
+            {
+            return false;
+            }
+
+        // check the optional domain name
+        for (int i = 1; i < cNames; ++i)
+            {
+            if (!isValidRFC1035Label(asName[i]))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    @Override
+    public Token next()
+        {
+        boolean fWhitespaceBefore = m_fWhitespace;
+        Token token = eatToken();
+        boolean fWhitespaceAfter = eatWhitespace();
+        token.noteWhitespace(fWhitespaceBefore, fWhitespaceAfter);
+        return token;
+        }
+
+    /**
+     * Eat a string literal.
+     *
+     * @return a string literal as a token
+     */
+    protected Token eatStringLiteral(long lInitPos)
+        {
+        return eatStringChars(lInitPos, false, false);
+        }
+
+    /**
+     * Eat a string literal that is in the freeform/multi-line form.
+     *
+     * @return a string literal as a token
+     */
+    protected Token eatMultilineLiteral(long lInitPos)
+        {
+        return eatStringChars(lInitPos, false, true);
+        }
+
+    /**
+     * Eat a template literal. A template literal is a string literal that may contain expressions;
+     * for example:
+     * <blockquote><code><pre>
+     *   $"x={x}"
+     * </pre></code></blockquote>
+     *
+     * @param lInitPos  the start of the template literal
+     *
+     * @return the resulting token
+     */
+    protected Token eatTemplateLiteral(long lInitPos)
+        {
+        return eatStringChars(lInitPos, true, false);
+        }
+
+    /**
+     * Eat a template literal that uses the multi-line format. A template literal is a string
+     * literal that may contain expressions; for example:
+     * <blockquote><code><pre>
+     *    $|# TOML doc
+     *     |[name]
+     *     |first = "{person.firstname}"
+     *     |last = "{person.lastname}"
+     * </pre></code></blockquote>
+     *
+     * @param lInitPos  the start of the template literal
+     *
+     * @return the resulting token
+     */
+    protected Token eatMultilineTemplateLiteral(long lInitPos)
+        {
+        return eatStringChars(lInitPos, true, true);
+        }
+
+    /**
      * Eat the characters defined as whitespace, which include line terminators and the file
      * terminator. Whitespace does not include comments.
      */
     protected boolean eatWhitespace()
         {
         boolean fWhitespace = false;
-        final Source source = m_source;
+        Source source = m_source;
         while (source.hasNext())
             {
             if (isWhitespace(nextChar()))
@@ -175,6 +361,168 @@ public class Lexer
         return fWhitespace;
         }
 
+    protected boolean isMultilineContinued()
+        {
+        long   lPrev  = mark();
+        Source source = m_source;
+        while (source.hasNext())
+            {
+            char ch = source.next();
+            if (!isWhitespace(ch))
+                {
+                if (ch == '|')
+                    {
+                    return true;
+                    }
+                break;
+                }
+            }
+
+        restore(lPrev);
+        return false;
+        }
+
+    /**
+     * Eat an inline template expression that begins with a '{' and ends with a '}'. The contents
+     * <b>between</b> the opening and closing curlies are returned as an array of tokens.
+     *
+     * @param fMultiline  true iff this is a multi-line format
+     *
+     * @return the tokens found between the opening and closing curly braces
+     */
+    protected Token[] eatTemplateExpression(boolean fMultiline)
+        {
+        int              nPrevLine = m_source.getLine();
+        long             lInitPos  = m_source.getPosition();
+        expect('{');
+        long             lPrevPos  = mark();
+        int              cDepth    = 1;
+        ArrayList<Token> tokens    = new ArrayList<>();
+        while (true)
+            {
+            Token token = next();
+            int   nLine = Source.calculateLine(token.getEndPosition());
+            if (nLine != nPrevLine)
+                {
+                if (!fMultiline || token.getId() != Id.BIT_OR
+                        || Source.calculateLine(token.getStartPosition()) != nLine)
+                    {
+                    // either it's not a multi-line literal, or the new line doesn't start with '|',
+                    // or a token crosses a line boundary; log error: newline in string
+                    restore(lPrevPos);
+                    log(Severity.ERROR, STRING_NO_TERM, null, lInitPos);
+                    return tokens.toArray(new Token[0]);
+                    }
+
+                nPrevLine = nLine;
+                continue; // skip this '|' token
+                }
+
+            switch (token.getId())
+                {
+                case L_CURLY:
+                    ++cDepth;
+                    break;
+
+                case R_CURLY:
+                    if (--cDepth <= 0)
+                        {
+                        if (token.hasTrailingWhitespace())
+                            {
+                            // don't steal the whitespace; we're inside a literal!
+                            m_source.setPosition(token.getEndPosition());
+                            }
+
+                        return tokens.toArray(new Token[0]);
+                        }
+                    break;
+                }
+
+            tokens.add(token);
+            lPrevPos = mark();
+            }
+        }
+
+    /**
+     * Parse the binary literal value.
+     *
+     * @param lInitPos    the location of the "#" at the start of the binary literal value
+     * @param fMultiline  true iff the format is a multiline format
+     *
+     * @return the binary literal
+     */
+    protected Token eatBinaryLiteral(long lInitPos, boolean fMultiline)
+        {
+        StringBuilder sb     = new StringBuilder();
+        Source        source = m_source;
+        boolean       fFirst = true;
+        while (source.hasNext())
+            {
+            char ch = source.next();
+            if (isHexit(ch))
+                {
+                sb.append(ch);
+                }
+            else if (ch == '_')
+                {
+                if (fFirst)
+                    {
+                    // it's an error to start with an underscore
+                    log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)}, lInitPos);
+                    }
+                // ignore the _ (it's used for spacing within the literal)
+                }
+            else if (!fMultiline)
+                {
+                // the first non-hexit / non-underscore character indicates an end-of-value
+                source.rewind();
+                break;
+                }
+            else if (isWhitespace(ch))
+                {
+                // ignore whitespace, unless it's newline
+                if (isLineTerminator(ch) && !isMultilineContinued())
+                    {
+                    source.rewind();
+                    break;
+                    }
+                }
+            else
+                {
+                // error
+                log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)}, lInitPos);
+                source.rewind();
+                break;
+                }
+
+            fFirst = false;
+            }
+
+        return new Token(lInitPos, source.getPosition(), Id.LIT_BINSTR,
+                toBinary(sb.toString().toCharArray()));
+        }
+
+    protected byte[] toBinary(char[] ach)
+        {
+        int    cch  = ach.length;
+        int    ofch = 0;
+        int    cb   = (cch + 1) / 2;
+        int    ofb  = 0;
+        byte[] ab   = new byte[cb];
+        if ((cch & 0x1) != 0)
+            {
+            // odd number of characters means that the first nibble is a pre-pended zero
+            ab[ofb++] = (byte) hexitValue(ach[ofch++]);
+            }
+        while (ofb < cb)
+            {
+            ab[ofb++] = (byte) ( (hexitValue(ach[ofch++]) << 4)
+                                + hexitValue(ach[ofch++])       );
+            }
+
+        return ab;
+        }
+
     /**
      * Parse a single token.
      *
@@ -182,9 +530,9 @@ public class Lexer
      */
     protected Token eatToken()
         {
-        final Source source   = m_source;
-        final long   lInitPos = source.getPosition();
-        final char   chInit   = nextChar();
+        Source source   = m_source;
+        long   lInitPos = source.getPosition();
+        char   chInit   = nextChar();
 
         switch (chInit)
             {
@@ -896,8 +1244,8 @@ public class Lexer
      */
     protected Token eatCharLiteral(long lInitPos)
         {
-        final Source source   = m_source;
-        final long   lPosChar = source.getPosition();
+        Source source   = m_source;
+        long   lPosChar = source.getPosition();
 
         char    ch   = '?';
         boolean term = false;
@@ -1025,61 +1373,6 @@ public class Lexer
         }
 
     /**
-     * Eat a string literal.
-     *
-     * @return a string literal as a token
-     */
-    protected Token eatStringLiteral(long lInitPos)
-        {
-        return eatStringChars(lInitPos, false, false);
-        }
-
-    /**
-     * Eat a string literal that is in the freeform/multi-line form.
-     *
-     * @return a string literal as a token
-     */
-    protected Token eatMultilineLiteral(long lInitPos)
-        {
-        return eatStringChars(lInitPos, false, true);
-        }
-
-    /**
-     * Eat a template literal. A template literal is a string literal that may contain expressions;
-     * for example:
-     * <blockquote><code><pre>
-     *   $"x={x}"
-     * </pre></code></blockquote>
-     *
-     * @param lInitPos  the start of the template literal
-     *
-     * @return the resulting token
-     */
-    protected Token eatTemplateLiteral(long lInitPos)
-        {
-        return eatStringChars(lInitPos, true, false);
-        }
-
-    /**
-     * Eat a template literal that uses the multi-line format. A template literal is a string
-     * literal that may contain expressions; for example:
-     * <blockquote><code><pre>
-     *    $|# TOML doc
-     *     |[name]
-     *     |first = "{person.firstname}"
-     *     |last = "{person.lastname}"
-     * </pre></code></blockquote>
-     *
-     * @param lInitPos  the start of the template literal
-     *
-     * @return the resulting token
-     */
-    protected Token eatMultilineTemplateLiteral(long lInitPos)
-        {
-        return eatStringChars(lInitPos, true, true);
-        }
-
-    /**
      * Eat the character contents of a string literal, including the string literal portion(s) of a
      * template literal.
      *
@@ -1092,7 +1385,7 @@ public class Lexer
      */
     protected Token eatStringChars(long lInitPos, boolean fTemplate, boolean fMultiline)
         {
-        final Source source = m_source;
+        Source source = m_source;
 
         StringBuilder sb        = new StringBuilder();
         ArrayList     list      = fTemplate ? new ArrayList<>() : null;
@@ -1119,7 +1412,7 @@ public class Lexer
                                 {
                                 if (isLineTerminator(source.next()) && isMultilineContinued())
                                     {
-                                    continue Appending;
+                                    continue; // Appending;
                                     }
                                 source.rewind();
                                 }
@@ -1318,168 +1611,6 @@ public class Lexer
         return new Token(lPosStart, source.getPosition(), Id.LIT_STRING, sb.toString());
         }
 
-    protected boolean isMultilineContinued()
-        {
-        long   lPrev  = mark();
-        Source source = m_source;
-        while (source.hasNext())
-            {
-            char ch = source.next();
-            if (!isWhitespace(ch))
-                {
-                if (ch == '|')
-                    {
-                    return true;
-                    }
-                break;
-                }
-            }
-
-        restore(lPrev);
-        return false;
-        }
-
-    /**
-     * Eat an inline template expression that begins with a '{' and ends with a '}'. The contents
-     * <b>between</b> the opening and closing curlies are returned as an array of tokens.
-     *
-     * @param fMultiline  true iff this is a multi-line format
-     *
-     * @return the tokens found between the opening and closing curly braces
-     */
-    protected Token[] eatTemplateExpression(boolean fMultiline)
-        {
-        int              nPrevLine = m_source.getLine();
-        long             lInitPos  = m_source.getPosition();
-        expect('{');
-        long             lPrevPos  = mark();
-        int              cDepth    = 1;
-        ArrayList<Token> tokens    = new ArrayList<>();
-        while (true)
-            {
-            Token token = next();
-            int   nLine = Source.calculateLine(token.getEndPosition());
-            if (nLine != nPrevLine)
-                {
-                if (!fMultiline || token.getId() != Id.BIT_OR
-                        || Source.calculateLine(token.getStartPosition()) != nLine)
-                    {
-                    // either it's not a multi-line literal, or the new line doesn't start with '|',
-                    // or a token crosses a line boundary; log error: newline in string
-                    restore(lPrevPos);
-                    log(Severity.ERROR, STRING_NO_TERM, null, lInitPos);
-                    return tokens.toArray(new Token[0]);
-                    }
-
-                nPrevLine = nLine;
-                continue; // skip this '|' token
-                }
-
-            switch (token.getId())
-                {
-                case L_CURLY:
-                    ++cDepth;
-                    break;
-
-                case R_CURLY:
-                    if (--cDepth <= 0)
-                        {
-                        if (token.hasTrailingWhitespace())
-                            {
-                            // don't steal the whitespace; we're inside a literal!
-                            m_source.setPosition(token.getEndPosition());
-                            }
-
-                        return tokens.toArray(new Token[0]);
-                        }
-                    break;
-                }
-
-            tokens.add(token);
-            lPrevPos = mark();
-            }
-        }
-
-    /**
-     * Parse the binary literal value.
-     *
-     * @param lInitPos    the location of the "#" at the start of the binary literal value
-     * @param fMultiline  true iff the format is a multiline format
-     *
-     * @return the binary literal
-     */
-    protected Token eatBinaryLiteral(long lInitPos, boolean fMultiline)
-        {
-        StringBuilder sb     = new StringBuilder();
-        Source        source = m_source;
-        boolean       fFirst = true;
-        while (source.hasNext())
-            {
-            char ch = source.next();
-            if (isHexit(ch))
-                {
-                sb.append(ch);
-                }
-            else if (ch == '_')
-                {
-                if (fFirst)
-                    {
-                    // it's an error to start with an underscore
-                    log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)}, lInitPos);
-                    }
-                // ignore the _ (it's used for spacing within the literal)
-                }
-            else if (!fMultiline)
-                {
-                // the first non-hexit / non-underscore character indicates an end-of-value
-                source.rewind();
-                break;
-                }
-            else if (isWhitespace(ch))
-                {
-                // ignore whitespace, unless it's newline
-                if (isLineTerminator(ch) && !isMultilineContinued())
-                    {
-                    source.rewind();
-                    break;
-                    }
-                }
-            else
-                {
-                // error
-                log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)}, lInitPos);
-                source.rewind();
-                break;
-                }
-
-            fFirst = false;
-            }
-
-        return new Token(lInitPos, source.getPosition(), Id.LIT_BINSTR,
-                toBinary(sb.toString().toCharArray()));
-        }
-
-    protected byte[] toBinary(char[] ach)
-        {
-        int    cch  = ach.length;
-        int    ofch = 0;
-        int    cb   = (cch + 1) / 2;
-        int    ofb  = 0;
-        byte[] ab   = new byte[cb];
-        if ((cch & 0x1) != 0)
-            {
-            // odd number of characters means that the first nibble is a pre-pended zero
-            ab[ofb++] = (byte) hexitValue(ach[ofch++]);
-            }
-        while (ofb < cb)
-            {
-            ab[ofb++] = (byte) ( (hexitValue(ach[ofch++]) << 4)
-                                + hexitValue(ach[ofch++])       );
-            }
-
-        return ab;
-        }
-
     /**
      * Eat a numeric literal.
      *
@@ -1487,8 +1618,8 @@ public class Lexer
      */
     protected Token eatNumericLiteral()
         {
-        final Source source    = m_source;
-        final long   lStartPos = source.getPosition();
+        Source source    = m_source;
+        long   lStartPos = source.getPosition();
 
         // eat the first part of the number (or the entire number, if it is an integer literal)
         int[] results = new int[2];
@@ -1569,7 +1700,7 @@ public class Lexer
                 }
             }
 
-        final long lPosEnd = source.getPosition();
+        long lPosEnd = source.getPosition();
         if (piFraction == null && piExp == null)
             {
             return new Token(lStartPos, lPosEnd, Id.LIT_INT, piWhole);
@@ -1632,7 +1763,7 @@ public class Lexer
      */
     protected PackedInteger eatIntegerLiteral(int[] otherResults)
         {
-        final Source source = m_source;
+        Source source = m_source;
 
         // the first character could be a sign (+ or -)
         boolean fNeg = false;
@@ -1771,11 +1902,38 @@ public class Lexer
         return pi;
         }
 
+    /**
+     * @return the value, or a negative value if there was no number or the number overflowed
+     */
+    protected long eatUnsignedLong()
+        {
+        long n = 0;
+        if (isNextCharDigit(10))
+            {
+            do
+                {
+                if (n < 0)
+                    {
+                    return n;
+                    }
+
+                n = n * 10 + (nextChar() - '0');
+                }
+            while (isNextCharDigit(10));
+
+            return n;
+            }
+        else
+            {
+            return -1;
+            }
+        }
+
     protected boolean isNextCharDigit(int radix)
         {
         boolean fDigit = false;
 
-        final Source source = m_source;
+        Source source = m_source;
         if (source.hasNext())
             {
             switch (nextChar())
@@ -1820,12 +1978,12 @@ public class Lexer
         boolean    fError  = false;
         int        cDigits = 0;
 
-        final Source source    = m_source;
-        final long   lStartPos = source.getPosition();
+        Source source    = m_source;
+        long   lStartPos = source.getPosition();
         Parsing: while (source.hasNext())
             {
-            final long lPos = source.getPosition();
-            final char ch   = nextChar();
+            long lPos = source.getPosition();
+            char ch   = nextChar();
             switch (ch)
                 {
                 case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
@@ -1856,7 +2014,7 @@ public class Lexer
                             }
                         // while an error was encountered, it was at least a digit, so continue
                         // parsing those digits (even if they are bad)
-                        continue Parsing;
+                        continue; // Parsing;
                         }
                     break;
 
@@ -1870,7 +2028,7 @@ public class Lexer
                             }
                         // while an error was encountered, it was at least a digit, so continue
                         // parsing those digits (even if they are bad)
-                        continue Parsing;
+                        continue; // Parsing;
                         }
                     break;
 
@@ -1884,7 +2042,7 @@ public class Lexer
                         log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos, lPos);
                         fError = true;
                         }
-                    continue Parsing;
+                    continue; // Parsing;
 
                 default:
                     // anything else (including '.') means go to the next step
@@ -1917,183 +2075,6 @@ public class Lexer
             digitCount[0] = cDigits;
             }
         return bigint == null ? new PackedInteger(fNeg ? -lValue : lValue) : new PackedInteger(bigint);
-        }
-
-    /**
-     * Eat a specified number of decimal digits, and convert them to an integer.
-     *
-     * @param digitCount  the number of digits to eat
-     *
-     * @return the parsed integer value, or the negative thereof if an error was encountered
-     */
-    protected int eatDigits(int digitCount)
-        {
-        final Source source    = m_source;
-        final long   lPosStart = source.getPosition();
-
-        int n = 0;
-        for (int i = 0; i < digitCount; ++i)
-            {
-            if (!isNextCharDigit(10))
-                {
-                log(Severity.ERROR, EXPECTED_DIGITS, new Object[] {digitCount, i}, lPosStart);
-                return -n;
-                }
-
-            n = n * 10 + (nextChar() - '0');
-            }
-        return n;
-        }
-
-    /**
-     * @return the value, or a negative value if there was no number or the number overflowed
-     */
-    protected long eatUnsignedLong()
-        {
-        long n = 0;
-        if (isNextCharDigit(10))
-            {
-            do
-                {
-                if (n < 0)
-                    {
-                    return n;
-                    }
-
-                n = n * 10 + (nextChar() - '0');
-                }
-            while (isNextCharDigit(10));
-
-            return n;
-            }
-        else
-            {
-            return -1;
-            }
-        }
-
-    /**
-     * Eat a literal ISO-8601 date value.
-     *
-     * @param lInitPos    the location of the start of the literal token
-     * @param fContinued  true if this is just part of a larger literal
-     *
-     * @return the literal as a Token
-     */
-    protected Token eatDate(long lInitPos, boolean fContinued)
-        {
-        final Source source  = m_source;
-        final long   lLitPos = source.getPosition();
-
-        int nYear;
-        int nMonth = 0;
-        int nDay   = 0;
-
-        if ((nYear = eatDigits(4)) >= 0)
-            {
-            boolean fSep = match('-');
-            if ((nMonth = eatDigits(2)) >= 0)
-                {
-                if (fSep)
-                    {
-                    expect('-');
-                    }
-                if ((nDay = eatDigits(2)) >= 0)
-                    {
-                    if (!fContinued)
-                        {
-                        peekNotIdentifierOrNumber();
-                        }
-                    }
-                }
-            }
-
-        long   lEndPos = source.getPosition();
-        String sDate   = extractSource(lLitPos, lEndPos);
-        if (nYear >= 0 && nMonth >= 0 && nDay >= 0)
-            {
-            if (nYear < 1582 || nMonth < 1 || nMonth > 12 || nDay < 1 || nDay > 31)
-                {
-                log(Severity.ERROR, BAD_DATE, new Object[] {sDate}, lLitPos, lEndPos);
-                }
-            }
-
-        return new Token(lInitPos, lEndPos, Id.LIT_DATE, sDate);
-        }
-
-    /**
-     * Eat a literal ISO-8601 time value (the Ecstasy "TimeOfDay" class).
-     *
-     * @param lInitPos    the location of the start of the literal token
-     * @param fContinued  true if this is just part of a larger literal
-     *
-     * @return the literal as a Token
-     */
-    protected Token eatTimeOfDay(long lInitPos, boolean fContinued)
-        {
-        final Source source = m_source;
-        final long   lStart = source.getPosition();
-
-        int  nHour;
-        int  nMin    = 0;
-        int  nSec    = 0;
-        long nPicos  = 0;
-        int  cDigits;
-
-        if ((nHour = eatDigits(2)) >= 0)
-            {
-            boolean fSep = match(':');
-            if ((nMin = eatDigits(2)) >= 0)
-                {
-                if (fSep && match(':') || !fSep && isNextCharDigit(10))
-                    {
-                    nSec = eatDigits(2);
-                    if (match('.'))
-                        {
-                        if (isNextCharDigit(10))
-                            {
-                            cDigits = 0;
-                            do
-                                {
-                                char ch = nextChar();
-                                if (++cDigits <= 12)
-                                    {
-                                    nPicos = nPicos * 10 + (ch - '0');
-                                    }
-                                }
-                            while (isNextCharDigit(10));
-
-                            // scale the integer value up to picos (trillionths)
-                            while (++cDigits <= 12)
-                                {
-                                nPicos *= 10;
-                                }
-                            }
-                        else
-                            {
-                            // the dot isn't part of the time-of-day
-                            m_source.rewind();
-                            }
-                        }
-                    }
-                if (!fContinued)
-                    {
-                    peekNotIdentifierOrNumber();
-                    }
-                }
-            }
-
-        long   lEnd  = source.getPosition();
-        String sTime = extractSource(lStart, lEnd);
-        if (nHour >= 0 && nMin >= 0 && nSec >= 0)
-            {
-            if (nHour > 23 || nMin > 59 || nSec > 59 && !(nHour == 23 && nMin == 59 && nSec == 60))
-                {
-                log(Severity.ERROR, BAD_TIME_OF_DAY, new Object[] {sTime}, lStart, lEnd);
-                }
-            }
-
-        return new Token(lInitPos, lEnd, Id.LIT_TIMEOFDAY, sTime);
         }
 
     /**
@@ -2178,130 +2159,28 @@ public class Lexer
         }
 
     /**
-     * Eat a literal ISO-8601 duration value.
+     * Eat a specified number of decimal digits, and convert them to an integer.
      *
-     * @param lInitPos  the location of the start of the literal token
+     * @param digitCount  the number of digits to eat
      *
-     * @return the literal as a Token
+     * @return the parsed integer value, or the negative thereof if an error was encountered
      */
-    protected Token eatDuration(long lInitPos)
+    protected int eatDigits(int digitCount)
         {
-        final Source source = m_source;
-        final long   lStart = source.getPosition();
+        long lPosStart = m_source.getPosition();
 
-        // Stages:
-        //   Y, M, D, (T), H, M, S
-        //   1  2  3   4   5  6  7 . 8
-
-        boolean fErr = false;
-        if (!match('P'))
+        int n = 0;
+        for (int i = 0; i < digitCount; ++i)
             {
-            match('p');
-            }
-
-        int nPrevStage = match('T') ? 4 : 0;
-        Loop: while (true)
-            {
-            long lPos = source.getPosition();
-            long lVal = eatUnsignedLong();
-            if (lVal < 0)
+            if (!isNextCharDigit(10))
                 {
-                source.setPosition(lPos);
-                break;
+                log(Severity.ERROR, EXPECTED_DIGITS, new Object[] {digitCount, i}, lPosStart);
+                return -n;
                 }
 
-            char ch = nextChar();
-            switch (ch)
-                {
-                case 'Y':
-                case 'y':
-                    if (nPrevStage >= 1)
-                        {
-                        fErr = true;
-                        }
-                    nPrevStage = Math.max(1, nPrevStage);
-                    break;
-
-                case 'M':
-                case 'm':
-                    if (nPrevStage >= 2)
-                        {
-                        // parse as minute
-                        if (nPrevStage < 4)
-                            {
-                            fErr = true;
-                            }
-                        nPrevStage = Math.max(6, nPrevStage);
-                        }
-                    else
-                        {
-                        // parse as month
-                        nPrevStage = Math.max(2, nPrevStage);
-                        }
-                    break;
-
-                case 'D':
-                case 'd':
-                    if (nPrevStage >= 3)
-                        {
-                        fErr = true;
-                        }
-                    nPrevStage = Math.max(3, nPrevStage);
-                    break;
-
-                case 'H':
-                case 'h':
-                    if (nPrevStage >= 5)
-                        {
-                        fErr = true;
-                        }
-                    nPrevStage = Math.max(5, nPrevStage);
-                    break;
-
-                case 'S':
-                case 's':
-                    break Loop;
-
-                case '.':
-                    if (nPrevStage >= 7)
-                        {
-                        fErr = true;
-                        }
-                    nPrevStage = Math.max(7, nPrevStage);
-                    break;
-
-                default:
-                    source.rewind();
-                    fErr = true;
-                    break Loop;
-                }
-
-            if (match('T') || match('t'))
-                {
-                if (nPrevStage >= 4)
-                    {
-                    fErr = true;
-                    }
-                else
-                    {
-                    nPrevStage = 4;
-                    }
-                }
+            n = n * 10 + (nextChar() - '0');
             }
-
-        long   lEnd      = source.getPosition();
-        String sDuration = extractSource(lStart, lEnd).toUpperCase();
-
-        if (fErr)
-            {
-            log(Severity.ERROR, BAD_DURATION, new Object[] {sDuration}, lStart, lEnd);
-            }
-        else
-            {
-            peekNotIdentifierOrNumber();
-            }
-
-        return new Token(lStart, lEnd, Id.LIT_DURATION, sDuration);
+        return n;
         }
 
     /**
@@ -2526,68 +2405,127 @@ public class Lexer
         }
 
     /**
-     * Eat a single line aka end-of-line comment.
+     * Eat a literal ISO-8601 date value.
      *
-     * @return the comment as a Token
+     * @param lInitPos    the location of the start of the literal token
+     * @param fContinued  true if this is just part of a larger literal
+     *
+     * @return the literal as a Token
      */
-    protected Token eatSingleLineComment(long lPosTokenStart)
+    protected Token eatDate(long lInitPos, boolean fContinued)
         {
-        final Source source        = m_source;
-        final long   lPosTextStart = source.getPosition();
-        while (source.hasNext())
+        Source source  = m_source;
+        long   lLitPos = source.getPosition();
+
+        int nYear;
+        int nMonth = 0;
+        int nDay   = 0;
+
+        if ((nYear = eatDigits(4)) >= 0)
             {
-            if (isLineTerminator(nextChar()))
+            boolean fSep = match('-');
+            if ((nMonth = eatDigits(2)) >= 0)
                 {
-                source.rewind();
-                break;
+                if (fSep)
+                    {
+                    expect('-');
+                    }
+                if ((nDay = eatDigits(2)) >= 0)
+                    {
+                    if (!fContinued)
+                        {
+                        peekNotIdentifierOrNumber();
+                        }
+                    }
                 }
             }
-        final long lPosEnd = source.getPosition();
-        return new Token(lPosTokenStart, lPosEnd, Id.EOL_COMMENT,
-                extractSource(lPosTextStart, lPosEnd));
+
+        long   lEndPos = source.getPosition();
+        String sDate   = extractSource(lLitPos, lEndPos);
+        if (nYear >= 0 && nMonth >= 0 && nDay >= 0)
+            {
+            if (nYear < 1582 || nMonth < 1 || nMonth > 12 || nDay < 1 || nDay > 31)
+                {
+                log(Severity.ERROR, BAD_DATE, new Object[] {sDate}, lLitPos, lEndPos);
+                }
+            }
+
+        return new Token(lInitPos, lEndPos, Id.LIT_DATE, sDate);
         }
 
     /**
-     * Eat a multi-line aka enclosed comment.
+     * Eat a literal ISO-8601 time value (the Ecstasy "TimeOfDay" class).
      *
-     * @return the comment as a Token
+     * @param lInitPos    the location of the start of the literal token
+     * @param fContinued  true if this is just part of a larger literal
+     *
+     * @return the literal as a Token
      */
-    protected Token eatEnclosedComment(long lPosTokenStart)
+    protected Token eatTimeOfDay(long lInitPos, boolean fContinued)
         {
-        final Source source        = m_source;
-        final long   lPosTextStart = source.getPosition();
+        Source source = m_source;
+        long   lStart = source.getPosition();
 
-        boolean fAsterisk = false;
-        while (source.hasNext())
+        int  nHour;
+        int  nMin    = 0;
+        int  nSec    = 0;
+        long nPicos  = 0;
+        int  cDigits;
+
+        if ((nHour = eatDigits(2)) >= 0)
             {
-            final char chNext = nextChar();
-            if (chNext == '*')
+            boolean fSep = match(':');
+            if ((nMin = eatDigits(2)) >= 0)
                 {
-                fAsterisk = true;
-                }
-            else if (fAsterisk && chNext == '/')
-                {
-                final long lPosTokenEnd = source.getPosition();
-                source.rewind();
-                source.rewind();
-                final long lPosTextEnd  = source.getPosition();
-                source.setPosition(lPosTokenEnd);
-                return new Token(lPosTokenStart, lPosTokenEnd, Id.ENC_COMMENT,
-                        extractSource(lPosTextStart, lPosTextEnd));
-                }
-            else
-                {
-                fAsterisk = false;
+                if (fSep && match(':') || !fSep && isNextCharDigit(10))
+                    {
+                    nSec = eatDigits(2);
+                    if (match('.'))
+                        {
+                        if (isNextCharDigit(10))
+                            {
+                            cDigits = 0;
+                            do
+                                {
+                                char ch = nextChar();
+                                if (++cDigits <= 12)
+                                    {
+                                    nPicos = nPicos * 10 + (ch - '0');
+                                    }
+                                }
+                            while (isNextCharDigit(10));
+
+                            // scale the integer value up to picos (trillionths)
+                            while (++cDigits <= 12)
+                                {
+                                nPicos *= 10;
+                                }
+                            }
+                        else
+                            {
+                            // the dot isn't part of the time-of-day
+                            source.rewind();
+                            }
+                        }
+                    }
+                if (!fContinued)
+                    {
+                    peekNotIdentifierOrNumber();
+                    }
                 }
             }
 
-        // missing the enclosing "*/"
-        log(Severity.ERROR, EXPECTED_ENDCOMMENT, null, lPosTextStart);
+        long   lEnd  = source.getPosition();
+        String sTime = extractSource(lStart, lEnd);
+        if (nHour >= 0 && nMin >= 0 && nSec >= 0)
+            {
+            if (nHour > 23 || nMin > 59 || nSec > 59 && !(nHour == 23 && nMin == 59 && nSec == 60))
+                {
+                log(Severity.ERROR, BAD_TIME_OF_DAY, new Object[] {sTime}, lStart, lEnd);
+                }
+            }
 
-        // just pretend that the rest of the file was all one big comment
-        final long lPosEnd = source.getPosition();
-        return new Token(lPosTokenStart, lPosEnd, Id.ENC_COMMENT,
-                extractSource(lPosTextStart, lPosEnd));
+        return new Token(lInitPos, lEnd, Id.LIT_TIMEOFDAY, sTime);
         }
 
     /**
@@ -2636,58 +2574,195 @@ public class Lexer
         }
 
     /**
-     * Get the next character of source code, but do not move the current location.
+     * Eat a literal ISO-8601 duration value.
+     *
+     * @param lInitPos  the location of the start of the literal token
+     *
+     * @return the literal as a Token
      */
-    protected char peekChar()
+    protected Token eatDuration(long lInitPos)
         {
-        final char ch = m_source.next();
-        m_source.rewind();
-        return ch;
+        Source source = m_source;
+        long   lStart = source.getPosition();
+
+        // Stages:
+        //   Y, M, D, (T), H, M, S
+        //   1  2  3   4   5  6  7 . 8
+
+        boolean fErr = false;
+        if (!match('P'))
+            {
+            match('p');
+            }
+
+        int nPrevStage = match('T') ? 4 : 0;
+        Loop: while (true)
+            {
+            long lPos = source.getPosition();
+            long lVal = eatUnsignedLong();
+            if (lVal < 0)
+                {
+                source.setPosition(lPos);
+                break;
+                }
+
+            char ch = nextChar();
+            switch (ch)
+                {
+                case 'Y':
+                case 'y':
+                    if (nPrevStage >= 1)
+                        {
+                        fErr = true;
+                        }
+                    nPrevStage = Math.max(1, nPrevStage);
+                    break;
+
+                case 'M':
+                case 'm':
+                    if (nPrevStage >= 2)
+                        {
+                        // parse as minute
+                        if (nPrevStage < 4)
+                            {
+                            fErr = true;
+                            }
+                        nPrevStage = Math.max(6, nPrevStage);
+                        }
+                    else
+                        {
+                        // parse as month
+                        nPrevStage = Math.max(2, nPrevStage);
+                        }
+                    break;
+
+                case 'D':
+                case 'd':
+                    if (nPrevStage >= 3)
+                        {
+                        fErr = true;
+                        }
+                    nPrevStage = Math.max(3, nPrevStage);
+                    break;
+
+                case 'H':
+                case 'h':
+                    if (nPrevStage >= 5)
+                        {
+                        fErr = true;
+                        }
+                    nPrevStage = Math.max(5, nPrevStage);
+                    break;
+
+                case 'S':
+                case 's':
+                    break Loop;
+
+                case '.':
+                    if (nPrevStage >= 7)
+                        {
+                        fErr = true;
+                        }
+                    nPrevStage = Math.max(7, nPrevStage);
+                    break;
+
+                default:
+                    source.rewind();
+                    fErr = true;
+                    break Loop;
+                }
+
+            if (match('T') || match('t'))
+                {
+                if (nPrevStage >= 4)
+                    {
+                    fErr = true;
+                    }
+                else
+                    {
+                    nPrevStage = 4;
+                    }
+                }
+            }
+
+        long   lEnd      = source.getPosition();
+        String sDuration = extractSource(lStart, lEnd).toUpperCase();
+
+        if (fErr)
+            {
+            log(Severity.ERROR, BAD_DURATION, new Object[] {sDuration}, lStart, lEnd);
+            }
+        else
+            {
+            peekNotIdentifierOrNumber();
+            }
+
+        return new Token(lStart, lEnd, Id.LIT_DURATION, sDuration);
         }
 
     /**
-     * Get the next character of source code, but do some additional checks on the character to make
-     * sure it's legal, such as checking for an illegal SUB character.
+     * Eat a single line aka end-of-line comment.
+     *
+     * @return the comment as a Token
      */
-    protected char nextChar()
+    protected Token eatSingleLineComment(long lPosTokenStart)
         {
-        final char ch = m_source.next();
-
-        // it is illegal for the SUB aka EOF character to occur
-        // anywhere in the source other than at the end
-        if (ch == EOF && m_source.hasNext())
+        Source source        = m_source;
+        long   lPosTextStart = source.getPosition();
+        while (source.hasNext())
             {
-            // back up to get the location of the SUB character
-            final long lPos = m_source.getPosition();
-            m_source.rewind();
-            final long lStartPos = m_source.getPosition();
-            m_source.setPosition(lPos);
-
-            log(Severity.ERROR, UNEXPECTED_EOF, null, lStartPos);
+            if (isLineTerminator(nextChar()))
+                {
+                source.rewind();
+                break;
+                }
             }
-
-        return ch;
+        long lPosEnd = source.getPosition();
+        return new Token(lPosTokenStart, lPosEnd, Id.EOL_COMMENT,
+                extractSource(lPosTextStart, lPosEnd));
         }
 
     /**
-     * Get the next character of source code, but do some additional checks on the character to make
-     * sure it's legal, such as checking for an illegal SUB character.
+     * Eat a multi-line aka enclosed comment.
+     *
+     * @return the comment as a Token
      */
-    protected char needCharOrElse(String sError)
+    protected Token eatEnclosedComment(long lPosTokenStart)
         {
-        try
+        Source source        = m_source;
+        long   lPosTextStart = source.getPosition();
+
+        boolean fAsterisk = false;
+        while (source.hasNext())
             {
-            return nextChar();
-            }
-        catch (NoSuchElementException e)
-            {
-            log(Severity.ERROR, sError, m_source.getPosition(),
-                    m_source.getPosition());
+            char chNext = nextChar();
+            if (chNext == '*')
+                {
+                fAsterisk = true;
+                }
+            else if (fAsterisk && chNext == '/')
+                {
+                long lPosTokenEnd = source.getPosition();
+                source.rewind();
+                source.rewind();
+                long lPosTextEnd  = source.getPosition();
+                source.setPosition(lPosTokenEnd);
+                return new Token(lPosTokenStart, lPosTokenEnd, Id.ENC_COMMENT,
+                        extractSource(lPosTextStart, lPosTextEnd));
+                }
+            else
+                {
+                fAsterisk = false;
+                }
             }
 
-        // already logged an error; just pretend we hit a closing brace (since all roads should have
-        // gone there)
-        return '}';
+        // missing the enclosing "*/"
+        log(Severity.ERROR, EXPECTED_ENDCOMMENT, null, lPosTextStart);
+
+        // just pretend that the rest of the file was all one big comment
+        long lPosEnd = source.getPosition();
+        return new Token(lPosTokenStart, lPosEnd, Id.ENC_COMMENT,
+                extractSource(lPosTextStart, lPosEnd));
         }
 
     /**
@@ -2964,134 +3039,58 @@ public class Lexer
         }
 
     /**
-     * Validate the specified identifier.
-     *
-     * @param sName  the identifier
-     *
-     * @return true iff the identifier is a lexically valid identifier
+     * Get the next character of source code, but do not move the current location.
      */
-    public static boolean isValidIdentifier(String sName)
+    protected char peekChar()
         {
-        if (sName == null)
-            {
-            return false;
-            }
-
-        final int cch = sName.length();
-        if (cch == 0)
-            {
-            return false;
-            }
-
-        if (!isIdentifierStart(sName.charAt(0)))
-            {
-            return false;
-            }
-
-        for (int i = 1; i < cch; ++i)
-            {
-            if (!isIdentifierPart(sName.charAt(i)))
-                {
-                return false;
-                }
-            }
-
-        // check if it is a reserved word
-        return Id.valueByText(sName) == null;
+        char ch = m_source.next();
+        m_source.rewind();
+        return ch;
         }
 
     /**
-     * Validate the specified RFC1035 label.
-     *
-     * @param sName  the RFC1035 label
-     *
-     * @return true iff the name is a lexically valid RFC1035 label
+     * Get the next character of source code, but do some additional checks on the character to make
+     * sure it's legal, such as checking for an illegal SUB character.
      */
-    public static boolean isValidRFC1035Label(String sName)
+    protected char nextChar()
         {
-        if (sName == null)
+        Source source = m_source;
+        char   ch     = source.next();
+
+        // it is illegal for the SUB aka EOF character to occur
+        // anywhere in the source other than at the end
+        if (ch == EOF && source.hasNext())
             {
-            return false;
+            // back up to get the location of the SUB character
+            long lPos = source.getPosition();
+            source.rewind();
+            long lStartPos = source.getPosition();
+            source.setPosition(lPos);
+
+            log(Severity.ERROR, UNEXPECTED_EOF, null, lStartPos);
             }
 
-        // internationalization support; see https://tools.ietf.org/html/rfc5894
-        // convert the label to an ASCII label
+        return ch;
+        }
+
+    /**
+     * Get the next character of source code, but do some additional checks on the character to make
+     * sure it's legal, such as checking for an illegal SUB character.
+     */
+    protected char needCharOrElse(String sError)
+        {
         try
             {
-            sName = IDN.toASCII(sName);
+            return nextChar();
             }
-        catch (IllegalArgumentException e)
+        catch (NoSuchElementException e)
             {
-            return false;
+            log(Severity.ERROR, sError, m_source.getPosition(), m_source.getPosition());
             }
 
-        final int cch = sName.length();
-        if (cch == 0 || cch > 63)
-            {
-            return false;
-            }
-
-        if (!isAsciiLetter(sName.charAt(0)))
-            {
-            return false;
-            }
-
-        for (int i = 1; i < cch; ++i)
-            {
-            final char ch = sName.charAt(i);
-            if (!(isAsciiLetter(ch) || isDigit(ch) || i < cch - 1 && ch == '-'))
-                {
-                return false;
-                }
-            }
-
-        return true;
-        }
-
-    /**
-     * Validate the specified module name.
-     *
-     * @param sName  the module name
-     *
-     * @return true iff the name is a lexically valid qualified module name
-     */
-    public static boolean isValidQualifiedModule(String sName)
-        {
-        if (sName == null)
-            {
-            return false;
-            }
-
-        final String[] asName = parseDelimitedString(sName, '.');
-        final int      cNames = asName.length;
-        if (cNames < 1)
-            {
-            return false;
-            }
-
-        // the first simple name must be a valid identifier
-        if (!isValidIdentifier(asName[0]))
-            {
-            return false;
-            }
-
-        // the identifier must be followed by a domain name, which is composed of at least two
-        // RFC1035 labels
-        if (cNames == 2)
-            {
-            return false;
-            }
-
-        // check the optional domain name
-        for (int i = 1; i < cNames; ++i)
-            {
-            if (!isValidRFC1035Label(asName[i]))
-                {
-                return false;
-                }
-            }
-
-        return true;
+        // already logged an error; just pretend we hit a closing brace (since all roads should have
+        // gone there)
+        return '}';
         }
 
 

@@ -55,7 +55,6 @@ public class BuildUnicodeTables
      */
     public BuildUnicodeTables(String[] asArgs)
         {
-        f_asArgs = asArgs;
         }
 
     /**
@@ -591,9 +590,4 @@ public class BuildUnicodeTables
     // ----- fields --------------------------------------------------------------------------------
 
     public static final boolean TEST = false;
-
-    /**
-     * The command-line arguments.
-     */
-    private final String[] f_asArgs;
     }

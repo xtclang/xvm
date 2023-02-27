@@ -280,7 +280,7 @@ public class xRTAlgorithms
             }
         }
 
-    enum KeyForm {Public, Private, PublicOrSecret, PrivateOrSecret};
+    enum KeyForm {Public, Private, PublicOrSecret, PrivateOrSecret}
 
 
     // ----- handles -------------------------------------------------------------------------------

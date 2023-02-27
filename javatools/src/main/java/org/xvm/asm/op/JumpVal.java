@@ -202,7 +202,6 @@ public class JumpVal
         ObjectHandle[] ahCase = m_ahCase;
         int            cCases = ahCase.length;
 
-        NextCase:
         for (; iCase < cCases; iCase++)
             {
             ObjectHandle hCase    = ahCase[iCase];
@@ -232,7 +231,7 @@ public class JumpVal
                                     // it's a match
                                     return iPC + m_aofCase[iCase];
                                     }
-                            continue NextCase;
+                            continue;
 
                             case Op.R_CALL:
                                 frame.m_frameNext.addContinuation(frameCaller ->
@@ -261,7 +260,7 @@ public class JumpVal
                                 // it's a match
                                 return iPC + m_aofCase[iCase];
                                 }
-                            continue NextCase;
+                            continue;
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->

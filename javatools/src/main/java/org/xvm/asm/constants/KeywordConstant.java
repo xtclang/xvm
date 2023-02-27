@@ -53,12 +53,8 @@ public class KeywordConstant
         {
         return format != null && switch (format)
             {
-            case IsConst   -> true;
-            case IsEnum    -> true;
-            case IsModule  -> true;
-            case IsPackage -> true;
-            case IsClass   -> true;
-            default        -> false;
+            case IsConst, IsEnum, IsModule, IsPackage, IsClass -> true;
+            default                                            -> false;
             };
         }
 

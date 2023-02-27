@@ -90,9 +90,9 @@ public class ArrayAccessExpression
         {
         for (Expression index : indexes)
             {
-            if (index instanceof RelOpExpression expr)
+            if (index instanceof RelOpExpression exprRel)
                 {
-                switch (expr.operator.getId())
+                switch (exprRel.operator.getId())
                     {
                     case I_RANGE_I:
                     case E_RANGE_I:

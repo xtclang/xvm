@@ -539,7 +539,7 @@ public abstract class Container
             for (ModuleConstant idDep : mapModules.entrySet().stream()
                     .sorted(Map.Entry.comparingByValue())
                     .map(Map.Entry::getKey)
-                    .collect(Collectors.toList()))
+                    .toList())
                 {
                 ObjectHandle hModule = frame.getConstHandle(idDep);
                 ahModules[index] = hModule;

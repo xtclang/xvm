@@ -132,10 +132,8 @@ public class HandyTest
     @Test
     public void testHexStringToByteArray()
         {
-        Assert.assertTrue(Arrays.equals(hexStringToByteArray("01FF785A"),
-                new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}));
-        Assert.assertTrue(Arrays.equals(hexStringToByteArray("0x01FF785A"),
-                new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}));
+        Assert.assertArrayEquals(hexStringToByteArray("01FF785A"), new byte[]{0x01, (byte) 0xFF, 0x78, 0x5A});
+        Assert.assertArrayEquals(hexStringToByteArray("0x01FF785A"), new byte[]{0x01, (byte) 0xFF, 0x78, 0x5A});
         }
 
     @Test

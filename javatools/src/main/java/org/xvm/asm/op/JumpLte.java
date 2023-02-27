@@ -32,7 +32,7 @@ public class JumpLte
      */
     public JumpLte(int nValue1, int nValue2, int nRelAddr)
         {
-        super((Argument) null, null, null);
+        super(null, null, null);
 
         m_nArg  = nValue1;
         m_nArg2 = nValue2;

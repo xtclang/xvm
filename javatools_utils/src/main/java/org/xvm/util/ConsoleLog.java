@@ -107,12 +107,9 @@ public class ConsoleLog
         int cHigh   = height-2;
 
         StringBuilder sb = new StringBuilder(width);
-        sb.append('|');
-        for (int i = 0; i < cchWide; ++i)
-            {
-            sb.append('-');
-            }
-        sb.append('|');
+        sb.append('|')
+          .append("-".repeat(Math.max(0, cchWide)))
+          .append('|');
         String sHeader = sb.toString();
 
         // render the lines backwards
