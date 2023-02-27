@@ -3246,6 +3246,31 @@ public abstract class Component
             }
 
         /**
+         * @return the canonical type for this contribution, which is the same as the contribution
+         *         type for the non-conditional incorporates and the "minimal" applicable type
+         *         that would make the conditional incorporation to apply
+         */
+        public TypeConstant getCanonicalType()
+            {
+            TypeConstant typeContrib = getTypeConstant();
+
+            Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
+            if (mapConditional == null)
+                {
+                return typeContrib;
+                }
+
+            assert typeContrib.isSingleUnderlyingClass(false);
+
+            ConstantPool   pool       = getConstantPool();
+            ClassStructure clzContrib = (ClassStructure)
+                typeContrib.getSingleUnderlyingClass(false).getComponent();
+            TypeConstant   typeFormal = clzContrib.getFormalType();
+            return typeFormal.resolveGenerics(pool, sFormalName ->
+                mapConditional.get(pool.ensureStringConstant(sFormalName)));
+            }
+
+        /**
          * Resolve the type of this contribution based on the specified list of actual types.
          *
          * @param pool        the ConstantPool to place a potentially created new constant into
