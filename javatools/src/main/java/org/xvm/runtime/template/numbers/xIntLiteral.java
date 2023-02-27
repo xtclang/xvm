@@ -288,7 +288,7 @@ public class xIntLiteral
                 return invokeShl(frame, hTarget, hArg, iReturn);
 
             case "shiftRight":
-                return invokeShl(frame, hTarget, hArg, iReturn);
+                return invokeShr(frame, hTarget, hArg, iReturn);
 
             case "shiftAllRight":
                 return invokeShrAll(frame, hTarget, hArg, iReturn);
