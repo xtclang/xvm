@@ -19,7 +19,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 

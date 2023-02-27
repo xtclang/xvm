@@ -4,7 +4,6 @@ package org.xvm.runtime.gc;
 import org.xvm.util.LongMuterator;
 
 import java.util.HashSet;
-import java.util.PrimitiveIterator;
 import java.util.Set;
 import java.util.function.LongConsumer;
 import java.util.function.Supplier;

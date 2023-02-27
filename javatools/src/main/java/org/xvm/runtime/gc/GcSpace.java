@@ -2,7 +2,6 @@ package org.xvm.runtime.gc;
 
 import org.xvm.util.LongMuterator;
 
-import java.util.PrimitiveIterator;
 import java.util.function.Supplier;
 
 /**
