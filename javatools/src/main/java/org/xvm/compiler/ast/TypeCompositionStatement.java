@@ -41,8 +41,10 @@ import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
@@ -74,6 +76,7 @@ import org.xvm.compiler.ast.CompositionNode.Delegates;
 import org.xvm.compiler.ast.CompositionNode.Extends;
 import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.CompositionNode.Import;
+import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 
 import org.xvm.util.Handy;
@@ -2511,22 +2514,6 @@ public class TypeCompositionStatement
         return true;
         }
 
-
-    // ----- helper methods ------------------------------------------------------------------------
-
-    /**
-     * A simple helper to create a new context for shorthand constructor processing.
-     */
-    private RootContext ensureConstructorContext(MethodStructure constructor)
-        {
-        StatementBlock blockBody = body;
-        if (body == null)
-            {
-            blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
-            }
-        return new RootContext(blockBody, constructor);
-        }
-
     @Override
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
@@ -2549,7 +2536,7 @@ public class TypeCompositionStatement
                 break ValidateShorthand;
                 }
 
-            RootContext ctxConstruct = ensureConstructorContext(constructor);
+            RootContext ctxConstruct = createConstructorContext(constructor);
             if (constructorParams != null && !constructorParams.isEmpty())
                 {
                 // resolve the default values for constructor parameters
@@ -2604,8 +2591,8 @@ public class TypeCompositionStatement
                             listSuperArgs = args;
                             }
 
-                        idSuper = validateSuperParameters(ctxConstruct, constructor, typeSuper,
-                                        listSuperArgs, errs);
+                        idSuper = validateSuperParameters(ctxConstruct.validatingContext(),
+                                        constructor, typeSuper, listSuperArgs, errs);
                         if (idSuper == null)
                             {
                             // error must have been reported
@@ -2620,9 +2607,14 @@ public class TypeCompositionStatement
                     case Incorporates:
                         assert args == null; // no "incorporates" for anonymous classes or enums
 
-                        typeSuper     = contrib.getCanonicalType().adjustAccess(component.getIdentityConstant());
+                        Context ctx = ctxConstruct.validatingContext();
+
+                        typeSuper = (contrib.isConditional()
+                                ? resolveConditionalMixin(ctx, contrib)
+                                : contrib.getTypeConstant()).
+                                    adjustAccess(component.getIdentityConstant());
                         listSuperArgs = entry.getValue();
-                        idSuper       = validateSuperParameters(ctxConstruct, constructor, typeSuper,
+                        idSuper       = validateSuperParameters(ctx, constructor, typeSuper,
                                             listSuperArgs, errs);
                         if (idSuper == null)
                             {
@@ -2666,11 +2658,26 @@ public class TypeCompositionStatement
                 if (!typeProp.isA(typeDelegate))
                     {
                     composition.log(errs, Severity.ERROR, Compiler.DELEGATE_PROP_WRONG_TYPE, sProp,
-                            typeDelegate.getValueString(), typeProp.getValueString());
+                        typeDelegate.getValueString(), typeProp.getValueString());
                     return;
                     }
                 }
             }
+        }
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * A simple helper to create a new context for shorthand constructor processing.
+     */
+    private RootContext createConstructorContext(MethodStructure constructor)
+        {
+        StatementBlock blockBody = body;
+        if (body == null)
+            {
+            blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
+            }
+        return new RootContext(blockBody, constructor);
         }
 
     /**
@@ -2729,17 +2736,55 @@ public class TypeCompositionStatement
         return list == null ? new ArrayList<>() : list;
         }
 
+   /**
+    * Given a contribution representing a conditional mixin, compute a "minimal" type that would
+    * make the conditional incorporation applicable. Additionally, make the specified context aware
+    * of the narrowed generic types, so it can be used for argument validation.
+    */
+    private TypeConstant resolveConditionalMixin(Context ctx, Contribution contrib)
+        {
+        Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
+        assert mapConstraints != null;
+
+        TypeConstant typeContrib = contrib.getTypeConstant();
+        if (typeContrib instanceof ParameterizedTypeConstant)
+            {
+            typeContrib = typeContrib.getUnderlyingType();
+            }
+
+        ClassStructure clzThis       = ctx.getThisClass();
+        TypeConstant[] atypeResolved = new TypeConstant[clzThis.getTypeParamCount()];
+        int            ix            = 0;
+        for (Map.Entry<StringConstant, TypeConstant> entry : clzThis.getTypeParams().entrySet())
+            {
+            StringConstant constName = entry.getKey();
+
+            TypeConstant typeConstraint = mapConstraints.get(constName);
+            if (typeConstraint == null)
+                {
+                atypeResolved[ix++] = entry.getValue();
+                }
+            else
+                {
+                atypeResolved[ix++] = typeConstraint;
+
+                PropertyConstant idFormal = clzThis.getFormalType().ensureTypeInfo().
+                        findProperty(constName.getValue()).getIdentity();
+                ctx.replaceGenericType(idFormal, Branch.Always, typeConstraint.getType());
+                }
+            }
+        return pool().ensureParameterizedTypeConstant(typeContrib, atypeResolved);
+        }
+
     /**
      * Validate "extend" parameters and mark the constructor with constant arguments.
      *
      * @return the MethodConstant for the super constructor; null if the validation failed
      */
-    private MethodConstant validateSuperParameters(RootContext ctxConstruct,
-                MethodStructure constructor, TypeConstant typeSuper,
-                List<Expression> listSuperArgs, ErrorListener errs)
+    private MethodConstant validateSuperParameters(Context ctx, MethodStructure constructor,
+                TypeConstant typeSuper, List<Expression> listSuperArgs, ErrorListener errs)
         {
         ClassStructure component = (ClassStructure) getComponent();
-        Context        ctx       = ctxConstruct.validatingContext();
         TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
         MethodConstant idSuper   = findMethod(ctx, typeSuper, infoSuper, "construct",
                                     listSuperArgs, MethodKind.Constructor, true, false, null, errs);

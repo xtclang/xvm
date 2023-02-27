@@ -3168,6 +3168,14 @@ public abstract class Component
             }
 
         /**
+         * @return true iff this contribution represents a conditional mixin
+         */
+        public boolean isConditional()
+            {
+            return m_mapParams != null;
+            }
+
+        /**
          * Obtain the type constraints for the conditional mixin.
          *
          * @return a read-only map of type parameter name to type constraint, or null if the
@@ -3243,31 +3251,6 @@ public abstract class Component
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(typeContrib) ?
                 typeContrib : null;
-            }
-
-        /**
-         * @return the canonical type for this contribution, which is the same as the contribution
-         *         type for the non-conditional incorporates and the "minimal" applicable type
-         *         that would make the conditional incorporation to apply
-         */
-        public TypeConstant getCanonicalType()
-            {
-            TypeConstant typeContrib = getTypeConstant();
-
-            Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
-            if (mapConditional == null)
-                {
-                return typeContrib;
-                }
-
-            assert typeContrib.isSingleUnderlyingClass(false);
-
-            ConstantPool   pool       = getConstantPool();
-            ClassStructure clzContrib = (ClassStructure)
-                typeContrib.getSingleUnderlyingClass(false).getComponent();
-            TypeConstant   typeFormal = clzContrib.getFormalType();
-            return typeFormal.resolveGenerics(pool, sFormalName ->
-                mapConditional.get(pool.ensureStringConstant(sFormalName)));
             }
 
         /**

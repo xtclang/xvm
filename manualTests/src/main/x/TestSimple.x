@@ -45,8 +45,8 @@ module TestSimple
         }
 
     const Derived3<Value>(Value d3i)
-            extends Base2(7)
-            incorporates conditional M<Value extends Int>(d3i.as(Int)) // TODO GG: cast should not be needed
+            extends Base2(8)
+            incorporates conditional M<Value extends Int>(d3i+1)
         {
         }
     }
