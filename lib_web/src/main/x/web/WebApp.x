@@ -4,6 +4,9 @@ import ecstasy.reflect.ClassTemplate.Composition;
 
 import codecs.Registry;
 
+import security.Authenticator;
+import security.NeverAuthenticator;
+
 
 /**
  * The `@WebApp` annotation is used to mark a module as being a web-application module. It can
@@ -44,5 +47,31 @@ mixin WebApp
                                                      : InternalServerError;
 
         return new responses.SimpleResponse(status=status, bytes=error.toString().utf8());
+        }
+
+    /**
+     * The [Authenticator] for the web application.
+     */
+    @Lazy Authenticator authenticator.get()
+        {
+        // use the Authenticator provided by injection, which allows a deployer to select a specific
+        // form of authentication; if one is injected, use it, otherwise, use the one specified by
+        // this application
+        @Inject Authenticator? providedAuthenticator;
+        return providedAuthenticator ?: createAuthenticator();
+        }
+
+    /**
+     * Create the appropriate [Authenticator] for this web application.
+     *
+     * The default implementation of this method does not have any concept of user identity or
+     * authentication, so it provides a [NeverAuthenticator] by default. Any application that needs
+     * client/user authentication should override this method.
+     *
+     * @return the Authenticator service that can authenticate clients of this web application
+     */
+    protected Authenticator createAuthenticator()
+        {
+        return new NeverAuthenticator();
         }
     }

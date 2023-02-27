@@ -354,11 +354,11 @@ interface Session
      * the session. This method allows an application to perform its own explicit authentication.
      *
      * @param userId          the user identity to associate with the session
-     * @param exclusiveAgent  pass `True` iff the device and `User-Agent` that the login is
-     *                        occurring from is used exclusively by one person; pass `False` for a
-     *                        public or shared device
+     * @param exclusiveAgent  (optional) pass `True` iff the device and `User-Agent` that the login
+     *                        is occurring from is used exclusively by the user being authenticated;
+     *                        pass `False` for a public or shared device
      */
-    void authenticate(String userId, Boolean exclusiveAgent);
+    void authenticate(String userId, Boolean exclusiveAgent = False);
 
     /**
      * This method allows an application to explicitly de-authenticate the session. One obvious

@@ -2,7 +2,6 @@
  * Web client and server APIs.
  *
  * TODO pre and post examples, and how to configure
- * TODO auth and auth, and examples
  */
 module web.xtclang.org
     {
