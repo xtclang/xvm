@@ -652,6 +652,14 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff there are any ops in the code
+     */
+    public boolean hasOps()
+        {
+        return ensureCode().hasOps();
+        }
+
+    /**
      * @return the op-code array for this method
      */
     public Op[] getOps()
@@ -2099,7 +2107,7 @@ public class MethodStructure
     protected void dump(PrintWriter out, String sIndent)
         {
         super.dump(out, sIndent);
-        if (!isAbstract() && !isNative() && ensureCode().hasOps())
+        if (!isAbstract() && !isNative() && hasOps())
             {
             out.println(indentLines(ensureCode().toString(), nextIndent(sIndent)));
             }

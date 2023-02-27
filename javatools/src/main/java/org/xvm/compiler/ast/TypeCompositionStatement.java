@@ -2531,16 +2531,18 @@ public class TypeCompositionStatement
             MethodStructure constructor =
                     component.findMethod("construct", MethodStructure::isShorthandConstructor);
             if (constructor == null ||
-                    !constructor.isSynthetic() || constructor.ensureCode().hasOps())
+                    !constructor.isSynthetic() || constructor.hasOps())
                 {
                 break ValidateShorthand;
                 }
 
             RootContext ctxConstruct = createConstructorContext(constructor);
+            Context     ctx          = ctxConstruct.validatingContext();
+
             if (constructorParams != null && !constructorParams.isEmpty())
                 {
                 // resolve the default values for constructor parameters
-                if (!validateDefaultParameters(ctxConstruct, constructor, errs))
+                if (!validateDefaultParameters(ctx, constructor, errs))
                     {
                     return;
                     }
@@ -2557,7 +2559,6 @@ public class TypeCompositionStatement
                 Contribution  contrib = entry.getKey();
 
                 TypeConstant     typeSuper;
-                MethodConstant   idSuper;
                 List<Expression> listSuperArgs;
 
                 switch (contrib.getComposition())
@@ -2590,42 +2591,58 @@ public class TypeCompositionStatement
                             //          }
                             listSuperArgs = args;
                             }
-
-                        idSuper = validateSuperParameters(ctxConstruct.validatingContext(),
-                                        constructor, typeSuper, listSuperArgs, errs);
-                        if (idSuper == null)
-                            {
-                            // error must have been reported
-                            return;
-                            }
-                        (listContribs = ensureList(listContribs)).add(contrib);
-                        (listTypes    = ensureList(listTypes))   .add(typeSuper);
-                        (listIds      = ensureList(listIds))     .add(idSuper);
-                        (listArgLists = ensureList(listArgLists)).add(listSuperArgs);
                         break;
 
                     case Incorporates:
                         assert args == null; // no "incorporates" for anonymous classes or enums
-
-                        Context ctx = ctxConstruct.validatingContext();
 
                         typeSuper = (contrib.isConditional()
                                 ? resolveConditionalMixin(ctx, contrib)
                                 : contrib.getTypeConstant()).
                                     adjustAccess(component.getIdentityConstant());
                         listSuperArgs = entry.getValue();
-                        idSuper       = validateSuperParameters(ctx, constructor, typeSuper,
-                                            listSuperArgs, errs);
-                        if (idSuper == null)
-                            {
-                            // error must have been reported
-                            return;
-                            }
-                        (listContribs = ensureList(listContribs)).add(contrib);
-                        (listTypes    = ensureList(listTypes))   .add(typeSuper);
-                        (listIds      = ensureList(listIds))     .add(idSuper);
-                        (listArgLists = ensureList(listArgLists)).add(listSuperArgs);
                         break;
+
+                    default:
+                        typeSuper     = null;
+                        listSuperArgs = null;
+                        break;
+                    }
+
+                if (typeSuper != null)
+                    {
+                    MethodConstant idSuper =
+                            findSuperConstructor(ctx, typeSuper, listSuperArgs, errs);
+                    if (idSuper == null)
+                        {
+                        // error must have been reported
+                        return;
+                        }
+
+                    MethodStructure constructSuper = typeSuper.ensureTypeInfo().
+                            getMethodById(idSuper).getHead().getMethodStructure();
+
+                    assert constructSuper != null;
+                    if (!constructSuper.hasOps())
+                        {
+                        mgr.requestRevisit();
+                        return;
+                        }
+
+                    if (!validateSuperParameters(ctx, constructor, idSuper, constructSuper,
+                                listSuperArgs, errs))
+                        {
+                        // error must have been reported
+                        return;
+                        }
+
+                    // replace a possibly synthetic (type dependant) identity with an absolute one
+                    idSuper = constructSuper.getIdentityConstant();
+
+                    (listContribs = ensureList(listContribs)).add(contrib);
+                    (listTypes    = ensureList(listTypes))   .add(typeSuper);
+                    (listIds      = ensureList(listIds))     .add(idSuper);
+                    (listArgLists = ensureList(listArgLists)).add(listSuperArgs);
                     }
                 }
 
@@ -2683,10 +2700,9 @@ public class TypeCompositionStatement
     /**
      * Validate shorthand constructor's default parameters.
      */
-    private boolean validateDefaultParameters(RootContext ctxConstruct, MethodStructure constructor,
+    private boolean validateDefaultParameters(Context ctx, MethodStructure constructor,
                                               ErrorListener errs)
         {
-        Context         ctx        = ctxConstruct.validatingContext();
         boolean         fValid     = true;
         List<Parameter> listParams = constructorParams;
 
@@ -2777,14 +2793,12 @@ public class TypeCompositionStatement
         }
 
     /**
-     * Validate "extend" parameters and mark the constructor with constant arguments.
-     *
-     * @return the MethodConstant for the super constructor; null if the validation failed
+     * @return a MethodConstant for the specified super type constructor; null if an error has
+     *         been logged
      */
-    private MethodConstant validateSuperParameters(Context ctx, MethodStructure constructor,
-                TypeConstant typeSuper, List<Expression> listSuperArgs, ErrorListener errs)
+    private MethodConstant findSuperConstructor(Context ctx, TypeConstant typeSuper,
+                                                 List<Expression> listSuperArgs, ErrorListener errs)
         {
-        ClassStructure component = (ClassStructure) getComponent();
         TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
         MethodConstant idSuper   = findMethod(ctx, typeSuper, infoSuper, "construct",
                                     listSuperArgs, MethodKind.Constructor, true, false, null, errs);
@@ -2792,16 +2806,25 @@ public class TypeCompositionStatement
             {
             // if an error has already been logged, this is an additional information
             log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
-                    component.getIdentityConstant().getValueString(), typeSuper.getValueString());
+                    getComponent().getIdentityConstant().getValueString(), typeSuper.getValueString());
             return null;
             }
 
-        MethodStructure constructSuper =
-                infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
+        return idSuper;
+        }
 
+    /**
+     * Validate "extend" parameters and mark the constructor with constant arguments.
+     *
+     * @return the MethodConstant for the super constructor; null if the validation failed
+     */
+    private boolean validateSuperParameters(Context ctx, MethodStructure constructor,
+                MethodConstant idSuper, MethodStructure constructSuper,
+                List<Expression> listSuperArgs, ErrorListener errs)
+        {
         // validate
         Constant[] aconstSuper = null;
-        if (constructSuper != null && listSuperArgs != null && !listSuperArgs.isEmpty())
+        if (listSuperArgs != null && !listSuperArgs.isEmpty())
             {
             if (containsNamedArgs(listSuperArgs))
                 {
@@ -2809,7 +2832,7 @@ public class TypeCompositionStatement
                 if (listSuperArgs == null)
                     {
                     // invalid names encountered
-                    return null;
+                    return false;
                     }
                 }
 
@@ -2822,7 +2845,7 @@ public class TypeCompositionStatement
                     {
                     // this could happen for anonymous inner classes, in which case arguments
                     // are validated by NewExpression
-                    assert component.isAnonInnerClass();
+                    assert ctx.getThisClass().isAnonInnerClass();
                     continue;
                     }
                 Expression exprNew = exprOld.validate(ctx, atypeArgs[i], errs);
@@ -2850,19 +2873,17 @@ public class TypeCompositionStatement
 
             if (!fValid)
                 {
-                return null;
+                return false;
                 }
             }
 
-        idSuper = constructSuper.getIdentityConstant();
-
-        if (component.getFormat() == Format.MIXIN)
+        if (getComponent().getFormat() == Format.MIXIN)
             {
             // annotation mixins are applied to the underlying classes dynamically and need to
             // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
             constructor.setShorthandInitialization(idSuper, aconstSuper);
             }
-        return idSuper;
+        return true;
         }
 
     private void disallowTypeParams(ErrorListener errs)
@@ -2901,6 +2922,178 @@ public class TypeCompositionStatement
                 }
             }
         return this;
+        }
+
+    /**
+     * Emit the synthetic constructor's code.
+     */
+    private void generateConstructor(RootContext ctxConstruct, MethodStructure constructor,
+                                     List<Contribution> listContribs, List<TypeConstant> listTypes,
+                                     List<MethodConstant> listIds, List<List<Expression>> listArgLists,
+                                     ErrorListener errs)
+        {
+        // the constructor has two responsibilities:
+        // 1) set each property based on the parameter name and value passed in as an arg
+        // 2) call the super constructors (for extended class and incorporated mixins)
+        ConstantPool   pool      = pool();
+        ClassStructure component = (ClassStructure) getComponent();
+        Code           code      = constructor.ensureCode();
+        Context        ctxEmit   = ctxConstruct.emittingContext(code);
+
+        if (args == null)
+            {
+            // parameters that don't exist on the super and mixins must be properties on "this"
+            // and we need to assign them
+            for (int iParam = 0, cParams = constructor.getParamCount(); iParam < cParams; ++iParam)
+                {
+                var     param  = constructor.getParam(iParam);
+                String  sParam = param.getName();
+                boolean fSuper = false;
+                if (listTypes != null)
+                    {
+                    for (TypeConstant typeSuper : listTypes)
+                        {
+                        PropertyInfo propSuper = typeSuper.ensureTypeInfo(errs).findProperty(sParam);
+                        if (propSuper != null && !propSuper.isAbstract())
+                            {
+                            fSuper = true;
+                            break;
+                            }
+                        }
+                    }
+
+                if (!fSuper)
+                    {
+                    // there must be a property by the same name on "this"
+                    TypeInfo infoThis  = pool.ensureAccessTypeConstant(
+                            component.getFormalType(), Access.PRIVATE).ensureTypeInfo(errs);
+                    PropertyInfo propThis = infoThis.findProperty(sParam);
+                    if (propThis == null || !propThis.isVar())
+                        {
+                        constructorParams.get(iParam).log(errs, Severity.ERROR,
+                                    Compiler.IMPLICIT_PROP_MISSING, sParam);
+                        }
+                    else
+                        {
+                        TypeConstant typeProp = propThis.getType();
+                        TypeConstant typeVal  = param.getType();
+                        if (param.getType().isA(typeProp))
+                            {
+                            code.add(new L_Set(propThis.getIdentity(), ctxEmit.getVar(sParam)));
+                            }
+                        else
+                            {
+                            constructorParams.get(iParam).log(errs, Severity.ERROR,
+                                    Compiler.IMPLICIT_PROP_WRONG_TYPE, sParam,
+                                    typeVal.getValueString(), typeProp.getValueString());
+                            }
+                        }
+                    }
+                }
+            }
+
+        if (listContribs == null)
+            {
+            if (constructor.isAnonymousClassWrapperConstructor())
+                {
+                // call the default initializer
+                code.add(new SynInit());
+                }
+            }
+        else
+            {
+            for (int iSuper = 0, cSupers = listContribs.size(); iSuper < cSupers; iSuper++)
+                {
+                MethodConstant   idSuper        = listIds.get(iSuper);
+                MethodStructure  constructSuper = (MethodStructure) idSuper.getComponent();
+
+                // a no-op super constructor in the same module con be safely skipped
+                if (constructSuper.isNoOp() &&
+                        constructor   .getIdentityConstant().getModuleConstant().equals(
+                        constructSuper.getIdentityConstant().getModuleConstant()))
+                    {
+                    continue;
+                    }
+
+                Contribution     contrib        = listContribs.get(iSuper);
+                List<Expression> listSuperArgs  = listArgLists.get(iSuper);
+                int              cSuperArgs     = constructSuper.getParamCount();
+                Argument[]       aSuperArgs     = new Argument[cSuperArgs];
+                int              cArgs          = listSuperArgs == null ? 0 : listSuperArgs.size();
+
+                Label labelSkipSuper = null;
+                if (contrib.getComposition() == Composition.Extends)
+                    {
+                    if (constructor.isAnonymousClassWrapperConstructor() &&
+                            !constructSuper.isAnonymousClassWrapperConstructor())
+                        {
+                        // call the default initializer
+                        code.add(new SynInit());
+                        }
+                    }
+                else // Composition.Incorporates
+                    {
+                    Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
+                    if (mapConstraints != null)
+                        {
+                        // generate a type check for "incorporates conditional M<T extends T0, ...>"
+                        labelSkipSuper = new Label("skip_super");
+
+                        TypeInfo infoThis = component.getFormalType().ensureTypeInfo(errs);
+                        for (Map.Entry<StringConstant, TypeConstant> entry : mapConstraints.entrySet())
+                            {
+                            PropertyInfo propFormal = infoThis.findProperty(entry.getKey().getValue());
+                            assert propFormal != null && propFormal.isFormalType();
+
+                            TypeConstant typeConstraint = entry.getValue().getType();
+
+                            Register regActualType = new Register(typeConstraint, Op.A_STACK);
+                            code.add(new L_Get(propFormal.getIdentity(), regActualType));
+
+                            Register regIs = new Register(pool.typeBoolean(), Op.A_STACK);
+                            code.add(new IsType(regActualType, typeConstraint, regIs));
+                            code.add(new JumpFalse(regIs, labelSkipSuper));
+                            }
+                        }
+                    }
+
+                // generate the super constructor arguments (filling in the default values)
+                for (int i = 0; i < cSuperArgs; i++)
+                    {
+                    if (i < cArgs)
+                        {
+                        aSuperArgs[i] = listSuperArgs.get(i).generateArgument(ctxEmit, code, true, true, errs);
+                        }
+                    else
+                        {
+                        assert constructSuper.getParam(i).hasDefaultValue();
+                        aSuperArgs[i] = Register.DEFAULT;
+                        }
+                    }
+
+                switch (cSuperArgs)
+                    {
+                    case 0:
+                        code.add(new Construct_0(idSuper));
+                        break;
+
+                    case 1:
+                        code.add(new Construct_1(idSuper, aSuperArgs[0]));
+                        break;
+
+                    default:
+                        code.add(new Construct_N(idSuper, aSuperArgs));
+                        break;
+                    }
+
+                if (labelSkipSuper != null)
+                    {
+                    code.add(labelSkipSuper);
+                    }
+                }
+            }
+
+        code.add(new Return_0());
         }
 
     /**
@@ -3286,183 +3479,6 @@ public class TypeCompositionStatement
      * True iff this is a virtual child class.
      */
     private boolean m_fVirtChild;
-
-    /**
-     * Emit the synthetic constructor's code.
-     */
-    private void generateConstructor(RootContext ctxConstruct, MethodStructure constructor,
-                                     List<Contribution> listContribs, List<TypeConstant> listTypes,
-                                     List<MethodConstant> listIds, List<List<Expression>> listArgLists,
-                                     ErrorListener errs)
-        {
-        // the constructor has two responsibilities:
-        // 1) set each property based on the parameter name and value passed in as an arg
-        // 2) call the super constructors (for extended class and incorporated mixins)
-        ConstantPool   pool      = pool();
-        ClassStructure component = (ClassStructure) getComponent();
-        Code           code      = constructor.ensureCode();
-        Context        ctxEmit   = ctxConstruct.emittingContext(code);
-
-        if (args == null)
-            {
-            // parameters that don't exist on the super and mixins must be properties on "this"
-            // and we need to assign them
-            for (int iParam = 0, cParams = constructor.getParamCount(); iParam < cParams; ++iParam)
-                {
-                var     param  = constructor.getParam(iParam);
-                String  sParam = param.getName();
-                boolean fSuper = false;
-                if (listTypes != null)
-                    {
-                    for (TypeConstant typeSuper : listTypes)
-                        {
-                        PropertyInfo propSuper = typeSuper.ensureTypeInfo(errs).findProperty(sParam);
-                        if (propSuper != null && !propSuper.isAbstract())
-                            {
-                            fSuper = true;
-                            break;
-                            }
-                        }
-                    }
-
-                if (!fSuper)
-                    {
-                    // there must be a property by the same name on "this"
-                    TypeInfo infoThis  = pool.ensureAccessTypeConstant(
-                            component.getFormalType(), Access.PRIVATE).ensureTypeInfo(errs);
-                    PropertyInfo propThis = infoThis.findProperty(sParam);
-                    if (propThis == null || !propThis.isVar())
-                        {
-                        constructorParams.get(iParam).log(errs, Severity.ERROR,
-                                    Compiler.IMPLICIT_PROP_MISSING, sParam);
-                        }
-                    else
-                        {
-                        TypeConstant typeProp = propThis.getType();
-                        TypeConstant typeVal  = param.getType();
-                        if (param.getType().isA(typeProp))
-                            {
-                            code.add(new L_Set(propThis.getIdentity(), ctxEmit.getVar(sParam)));
-                            }
-                        else
-                            {
-                            constructorParams.get(iParam).log(errs, Severity.ERROR,
-                                    Compiler.IMPLICIT_PROP_WRONG_TYPE, sParam,
-                                    typeVal.getValueString(), typeProp.getValueString());
-                            }
-                        }
-                    }
-                }
-            }
-
-        if (listContribs == null)
-            {
-            if (constructor.isAnonymousClassWrapperConstructor())
-                {
-                // call the default initializer
-                code.add(new SynInit());
-                }
-            }
-        else
-            {
-            for (int iSuper = 0, cSupers = listContribs.size(); iSuper < cSupers; iSuper++)
-                {
-                Contribution     contrib        = listContribs.get(iSuper);
-                MethodConstant   idSuper        = listIds.get(iSuper);
-                List<Expression> listSuperArgs  = listArgLists.get(iSuper);
-                MethodStructure  constructSuper = (MethodStructure) idSuper.getComponent();
-                int              cSuperArgs     = constructSuper.getParamCount();
-                Argument[]       aSuperArgs     = new Argument[cSuperArgs];
-                int              cArgs          = listSuperArgs == null ? 0 : listSuperArgs.size();
-
-                try
-                    {
-                    if (cArgs == 0 && constructSuper.isNoOp())
-                        {
-                        continue;
-                        }
-                    }
-                catch (Exception e)
-                    {
-                    // TODO GG: super constructor hasn't been generated yet; how to defer?
-                    // System.err.println(getName() + ": possible optimization for super construct of " +
-                    //     constructSuper.getContainingClass(true).getName());
-                    }
-
-                Label labelSkipSuper = null;
-                if (contrib.getComposition() == Composition.Extends)
-                    {
-                    if (constructor.isAnonymousClassWrapperConstructor() &&
-                            !constructSuper.isAnonymousClassWrapperConstructor())
-                        {
-                        // call the default initializer
-                        code.add(new SynInit());
-                        }
-                    }
-                else // Composition.Incorporates
-                    {
-                    Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
-                    if (mapConstraints != null)
-                        {
-                        // generate a type check for "incorporates conditional M<T extends T0, ...>"
-                        labelSkipSuper = new Label("skip_super");
-
-                        TypeInfo infoThis = component.getFormalType().ensureTypeInfo(errs);
-                        for (Map.Entry<StringConstant, TypeConstant> entry : mapConstraints.entrySet())
-                            {
-                            PropertyInfo propFormal = infoThis.findProperty(entry.getKey().getValue());
-                            assert propFormal != null && propFormal.isFormalType();
-
-                            TypeConstant typeConstraint = entry.getValue().getType();
-
-                            Register regActualType = new Register(typeConstraint, Op.A_STACK);
-                            code.add(new L_Get(propFormal.getIdentity(), regActualType));
-
-                            Register regIs = new Register(pool.typeBoolean(), Op.A_STACK);
-                            code.add(new IsType(regActualType, typeConstraint, regIs));
-                            code.add(new JumpFalse(regIs, labelSkipSuper));
-                            }
-                        }
-                    }
-
-                // generate the super constructor arguments (filling in the default values)
-                for (int i = 0; i < cSuperArgs; i++)
-                    {
-                    if (i < cArgs)
-                        {
-                        aSuperArgs[i] = listSuperArgs.get(i).generateArgument(ctxEmit, code, true, true, errs);
-                        }
-                    else
-                        {
-                        assert constructSuper.getParam(i).hasDefaultValue();
-                        aSuperArgs[i] = Register.DEFAULT;
-                        }
-                    }
-
-                switch (cSuperArgs)
-                    {
-                    case 0:
-                        code.add(new Construct_0(idSuper));
-                        break;
-
-                    case 1:
-                        code.add(new Construct_1(idSuper, aSuperArgs[0]));
-                        break;
-
-                    default:
-                        code.add(new Construct_N(idSuper, aSuperArgs));
-                        break;
-                    }
-
-                if (labelSkipSuper != null)
-                    {
-                    code.add(labelSkipSuper);
-                    }
-                }
-            }
-
-        code.add(new Return_0());
-        }
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",
