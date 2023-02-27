@@ -10,6 +10,7 @@ module TestGenerics
         testVirtualChild();
         testTypeParams();
         testTurtleType();
+        testConditionalMixins();
         }
 
     void testArrayType()
@@ -84,18 +85,6 @@ module TestGenerics
             Base<Int>.Child2<String> c5 = b2.new Child2<String>();
             }
 
-//        void createChildTestExpectedFailure1()
-//            {
-//            Base<Int> bi = new Base<Int>();
-//            Child ci = bi.new Child(); // compile time error; type is B<Int>.C; not assignable to B<T>.C
-//            }
-//
-//        void createChildTestExpectedFailure2()
-//            {
-//            Base<> b = createBase();              mj
-//            Child c = b.new Child(); // compile time error; type is B<Object>.C; not assignable to B<T>.C
-//            }
-//
         Base!<> createBase()
             {
             return new Base<String>();
@@ -140,5 +129,51 @@ module TestGenerics
                 return TurtleTypes[index];
                 }
             }
+        }
+
+    void testConditionalMixins()
+        {
+        import testConditional.*;
+
+        Derived1 d1 = new Derived1();
+        assert d1.mi == 1;
+
+        Derived2 d2 = new Derived2();
+        assert d2.mi == 1 && d2.bi == 2;
+
+        Derived2a d2a = new Derived2a(3);
+        assert d2a.mi == 4 && d2a.bi == 5;
+
+        Derived3<Number> d3n = new Derived3(Int:3);
+        assert d3n.bi == 1;
+
+        Derived3<Int> d3i = new Derived3(3);
+        assert d3i.bi == 1 && d3i.mi == 4;
+        }
+
+    package testConditional
+        {
+        const Base {}
+
+        const Base2(Int bi)
+                extends Base {}
+
+        mixin Mix<Element>(Int mi)
+                into Base {}
+
+        const Derived1 extends Base
+                incorporates Mix(1) {}
+
+        const Derived2
+                incorporates Mix(1)
+                extends Base2(2) {}
+
+        const Derived2a(Int d2i)
+                incorporates Mix(d2i+1)
+                extends Base2(d2i+2) {}
+
+        const Derived3<Value>(Value d3i)
+                extends Base2(1)
+                incorporates conditional Mix<Value extends Int>(d3i+1) {}
         }
     }

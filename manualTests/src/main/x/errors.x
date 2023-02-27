@@ -135,4 +135,26 @@ module TestCompilerErrors
             default:  "other";
             };
         }
+
+    package TestGenerics
+        {
+        class Base<BaseType>
+            {
+            Base<BaseType>? nextBase;
+            Child? nextChild;
+
+            class Child {}
+
+            Base!<> createBase()
+                {
+                return new Base<String>();
+                }
+
+            void createChildTest1()
+                {
+                Base<Int> bi = new Base<Int>();
+                Child ci = bi.new Child(); // should not compile: type is B<Int>.C; not assignable to B<BT>.C
+                }
+            }
+        }
     }
