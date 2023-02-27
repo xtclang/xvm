@@ -60,6 +60,7 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
+
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -5481,7 +5482,7 @@ public abstract class TypeConstant
         if (annoMixin == null)
             {
             // we don't pass the constraints since the type is known to satisfy the "condition"
-            listProcess.add(structBase.new Contribution(typeMixin, ListMap.EMPTY));
+            listProcess.add(structBase.new Contribution(typeMixin, (ListMap) null));
             }
         else
             {

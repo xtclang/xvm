@@ -563,7 +563,7 @@ public abstract class Component
      * Add a module import contribution.
      *
      * @param composition  the contribution type
-     * @param constModule   the contribution class
+     * @param constModule  the contribution class
      */
     public void addImport(Composition composition, ModuleConstant constModule)
         {
@@ -605,14 +605,14 @@ public abstract class Component
     /**
      * Add a mixin via an "incorporates" or "incorporates conditional".
      *
-     * @param constClass
-     * @param mapConstraints
+     * @param constClass      the mixin class type
+     * @param mapConstraints  the type constraints that make the mixin conditional
      */
     public Contribution addIncorporates(TypeConstant constClass,
                                 Map<String, TypeConstant> mapConstraints)
         {
         ListMap<StringConstant, TypeConstant> map = null;
-        if (mapConstraints != null && !mapConstraints.isEmpty())
+        if (mapConstraints != null)
             {
             ConstantPool pool = getConstantPool();
 
@@ -3052,6 +3052,7 @@ public abstract class Component
             {
             this(Composition.Incorporates, constType);
 
+            assert mapConstraints == null || !mapConstraints.isEmpty();
             m_mapParams = mapConstraints;
             }
 
@@ -3315,8 +3316,8 @@ public abstract class Component
             }
 
         /**
-         * Check if this "incorporate" contribution is conditional and if so,
-         * whether or not it applies to this type
+         * Check if this "incorporate" contribution is conditional and if so, whether or not it
+         * applies to the specified type.
          *
          * @param typeContrib  the actual (resolved) contribution type
          *
@@ -3329,7 +3330,7 @@ public abstract class Component
             TypeConstant[] atypeParams = typeContrib.getParamTypesArray();
 
             Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
-            if (mapConditional != null && !mapConditional.isEmpty())
+            if (mapConditional != null)
                 {
                 // conditional incorporation; check if the actual parameters apply
                 assert atypeParams.length == mapConditional.size();
