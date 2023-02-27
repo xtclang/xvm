@@ -3623,17 +3623,10 @@ public class ConstantPool
     public Relation checkMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
         IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
-        if (!idRight.equals(clzMethod()))
-            {
-            // compare the "naked" contribution
-            ClassStructure clzRight = (ClassStructure) idRight.getComponent();
-            if (clzRight.calculateRelation(typeMethod(), idRight.getType()) != Relation.IS_A)
-                {
-                return Relation.INCOMPATIBLE;
-                }
-            }
 
-        return checkFunctionOrMethodCompatibility(typeLeft, typeRight, true);
+        return idRight.equals(clzMethod())
+                ? checkFunctionOrMethodCompatibility(typeLeft, typeRight, true)
+                : null;
         }
 
     private Relation checkFunctionOrMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight,

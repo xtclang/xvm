@@ -127,7 +127,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
     static const EndpointInfo
             extends MethodInfo
         {
-        construct(Method<WebService> method, Int id, Int wsid,
+        construct(Endpoint method, Int id, Int wsid,
                  Boolean               serviceTls,
                  TrustLevel            serviceTrust,
                  MediaType|MediaType[] serviceProduces,
@@ -137,8 +137,6 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                  Boolean               serviceStreamResponse
                  )
             {
-            assert method.is(Endpoint);
-
             this.id = id;
             construct MethodInfo(method, wsid);
 
