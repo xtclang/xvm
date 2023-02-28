@@ -2184,6 +2184,7 @@ public class TypeCompositionStatement
                         composition instanceof Extends nodeExtends
                             ? nodeExtends.args :
                         composition instanceof Incorporates nodeIncorp
+                                && !nodeIncorp.isAnnotation()
                             ? nodeIncorp.args
                             : null;
 
