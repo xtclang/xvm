@@ -3,7 +3,9 @@ import ecstasy.io.ByteArrayOutputStream;
 
 
 /**
- * Represents a binary codec that can be converted from and to another type.
+ * Represents the ability to encode a `Value` as a `Byte[]` of a specific binary format, and to
+ * decode a `Byte[]` of that same format into a `Value`. The binary format is referred to as a
+ * "codec".
  *
  * Implementations of this interface should be `const`, immutable, [Freezable], or a service.
  */

@@ -1,3 +1,4 @@
+import json.Doc;
 import json.Schema;
 
 
@@ -90,7 +91,7 @@ service Registry
      */
     static Map<MediaType, Codec> DefaultCodecs =
         [
-        Json       = Utf8Codec,
+        Json       = new FormatCodec<Doc>(Utf8Codec, JsonFormat.DEFAULT),
         JsonLD     = Utf8Codec,
         JsonPatch  = Utf8Codec,
         CSS        = Utf8Codec,
@@ -115,7 +116,7 @@ service Registry
         new BasicFormat<TimeOfDay>(),
         new BasicFormat<Duration>(),
 
-        new JsonFormat(),
+        JsonFormat.DEFAULT,
 
         new BasicFormat<IntLiteral>(),
         new BasicFormat<FPLiteral>(),
@@ -237,25 +238,27 @@ service Registry
                     return True, newCodec;
                     }
                 }
-
-            if (String formatName ?= mediaType.format,
-                    Format<Value> format := findFormat(formatName, type))
-                {
-                Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
-                registerCodec(mediaType, newCodec);
-                return True, newCodec;
-                }
-
-            if (Format<Value> format := findFormat(type.toString(), type))
-                {
-                Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
-                registerCodec(mediaType, newCodec);
-                return True, newCodec;
-                }
-
-            codecsByType.put(type, Null); // cache the miss
             }
 
+        if (String formatName ?= mediaType.format,
+                Format<Value> format := findFormat(formatName, type))
+            {
+            Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
+            registerCodec(mediaType, newCodec);
+            return True, newCodec;
+            }
+
+        if (Format<Value> format := findFormat(type.toString(), type))
+            {
+            Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
+            registerCodec(mediaType, newCodec);
+            return True, newCodec;
+            }
+
+        // cache the miss
+        Map<Type, Codec?> codecsByType =
+            codecsByMedia.computeIfAbsent(mediaType, () -> new HashMap());
+        codecsByType.put(type, Null);
         return False;
         }
 

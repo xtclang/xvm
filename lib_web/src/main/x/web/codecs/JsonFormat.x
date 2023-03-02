@@ -9,9 +9,9 @@ import json.Printer;
 import json.Schema;
 
 /**
- * A codec that handles the `application/json` MediaType.
+ * A [Format] that handles the [json.Doc] type.
  */
-const JsonFormat(Printer printer = DEFAULT)
+const JsonFormat(Printer printer = Printer.DEFAULT)
         implements Format<Doc>
     {
     @Override
@@ -84,4 +84,6 @@ const JsonFormat(Printer printer = DEFAULT)
             schema.createObjectOutput(stream).write(value);
             }
         }
+
+    static JsonFormat DEFAULT = new JsonFormat();
     }

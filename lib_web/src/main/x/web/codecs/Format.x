@@ -1,5 +1,6 @@
 /**
- * Represents a `String` format that can be converted from and to another type.
+ * Represents the ability to encode a `Value` into a `String` of a particular format, and decode a
+ * `String` of that same format into a `Value`.
  *
  * Implementations of this interface should be `const`, immutable, [Freezable], or a service.
  */

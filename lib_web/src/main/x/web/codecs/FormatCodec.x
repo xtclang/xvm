@@ -16,11 +16,6 @@ const FormatCodec<Value>(Codec<String> codec, Format<Value> format)
     @Override
     <OtherValue> conditional Codec<OtherValue> forType(Type<OtherValue> type, Registry registry)
         {
-        if (type == String)
-            {
-            return True, codec.as(Codec<OtherValue>);
-            }
-
         if (Codec<OtherValue> newCodec := codec.forType(type, registry))
             {
             return True, newCodec;
