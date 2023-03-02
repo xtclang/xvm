@@ -8,11 +8,14 @@ import HttpServer.RequestInfo;
 import SessionCookie.CookieId;
 
 import web.CookieConsent;
+import web.Endpoint;
 import web.ErrorHandler;
 import web.Header;
 import web.HttpStatus;
 
 import web.responses.SimpleResponse;
+
+import web.security.Authenticator;
 
 import net.UriTemplate.UriParameters;
 
@@ -24,6 +27,7 @@ import net.UriTemplate.UriParameters;
 service Dispatcher(Catalog        catalog,
                    BundlePool     bundlePool,
                    SessionManager sessionManager,
+                   Authenticator  authenticator,
                   )
     {
     /**
@@ -40,6 +44,11 @@ service Dispatcher(Catalog        catalog,
      * The session manager.
      */
     protected SessionManager sessionManager;
+
+    /**
+     * The user authenticator.
+     */
+    protected Authenticator authenticator;
 
     /**
      * Pending request counter.
@@ -117,6 +126,7 @@ service Dispatcher(Catalog        catalog,
                     if (result.is(String))
                         {
                         uriString = result;
+                        bundlePool.releaseBundle(bundle);
                         continue FromTheTop;
                         }
 
@@ -260,18 +270,52 @@ service Dispatcher(Catalog        catalog,
                     break ProcessRequest;
                     }
 
+                // create a Request object to represent the incoming request
+                RequestIn request = new Http1Request(requestInfo, uriParams);
+
                 // each endpoint has a required trust level, and the session knows its own trust
                 // level; if the endpoint requirement is higher, then we have to re-authenticate
-                // the user agent
+                // the user agent; the server must respond in a manner that causes the client to
+                // authenticate, including (but not limited to) any of the following manners:
+                // * with the `Unauthorized` error code (and related information) that indicates
+                //   that the client must authenticate itself
+                // * with a redirect to a URL that provides the necessary login user interface
                 if (endpoint.requiredTrust > session.trustLevel)
                     {
-                    // TODO handle the redirect here
-                    TODO response =
-                    break ProcessRequest;
+                    Boolean|ResponseOut success = authenticator.authenticate(request, session, endpoint.method);
+                    switch (success)
+                        {
+                        case True:
+                            // Authenticator has verified that the user is authenticated (the
+                            // Authenticator should have already updated the session accordingly)
+                            if (endpoint.requiredTrust > session.trustLevel)
+                                {
+                                // the user is authenticated, but the user doesn't have the
+                                // necessary security access
+                                response = new SimpleResponse(Forbidden);
+                                break ProcessRequest;
+                                }
+
+                            // the user is authenticated and has the necessary security access;
+                            // continue processing the request
+                            break;
+
+                        case False:
+                            // authentication didn't just fail, but it has been disallowed; respond
+                            // with an HTTP "Forbidden"
+                            response = new SimpleResponse(Forbidden);
+                            break ProcessRequest;
+
+                        default:
+                            // "success" isn't a boolean, it's an HTTP response; send the response
+                            // back to the client as the next step in authenticating the client
+                            // TODO GG: response = success; // "Type mismatch: "web:ResponseOut" expected, "Boolean | web:ResponseOut" found."
+                            response = success.as(ResponseOut);
+                            break ProcessRequest;
+                        }
                     }
 
                 // this is the "normal" i.e. "actual" request processing
-                RequestIn request = new Http1Request(requestInfo, uriParams);
                 bundle = bundlePool.allocateBundle(wsid);
                 Handler handle = bundle.ensureCallChain(endpoint);
                 response = handle^(session, request);

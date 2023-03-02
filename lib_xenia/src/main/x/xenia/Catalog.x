@@ -155,23 +155,12 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                         ? !method.is(HttpsOptional)
                         :  method.is(HttpsRequired);
 
-            TrustLevel? methodTrust = method.is(LoginOptional)
-                        ? None
-                        : method.is(LoginRequired)
-                            ? method.security
-                            : Null;
-            if (serviceTrust == None)
+            this.requiredTrust = switch (method.is(_))
                 {
-                this.requiredTrust = methodTrust ?: None;
-                }
-            else
-                {
-                this.requiredTrust = methodTrust == Null
-                        ? serviceTrust
-                        : methodTrust == None
-                            ? None // method is explicitly specified as "optional"
-                            : TrustLevel.maxOf(serviceTrust, methodTrust);
-                }
+                case LoginRequired: TrustLevel.maxOf(serviceTrust, method.security);
+                case LoginOptional: None; // explicitly optional overrides service trust level
+                default:            serviceTrust;
+                };
 
             this.produces = method.is(Produces)
                         ? method.produces
@@ -189,9 +178,12 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             }
 
         @Override
+        Endpoint method;
+
+        @Override
         HttpMethod httpMethod.get()
             {
-            return endpoint.httpMethod;
+            return method.httpMethod;
             }
 
         /**
@@ -200,14 +192,6 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
         Boolean conditionalResult.get()
             {
             return method.conditionalResult;
-            }
-
-        /**
-         * The endpoint Method.
-         */
-        Endpoint endpoint.get()
-            {
-            return method.as(Endpoint);
             }
 
         /**

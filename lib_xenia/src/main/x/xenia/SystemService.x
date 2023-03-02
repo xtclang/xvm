@@ -10,8 +10,9 @@ import web.responses.SimpleResponse;
 
 
 /**
- * Dispatcher is responsible for finding an endpoint, creating a call chain for an HTTP request and
- * invoking it on a corresponding WebService.
+ * The SystemService provides end points for "system" functionality (like verifying HTTPS/TLS is
+ * enabled, handling some forms of authentication, etc.), and is automatically added to every
+ * Xenia-hosted web application.
  */
 @WebService("/xverify")
 service SystemService

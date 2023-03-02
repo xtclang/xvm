@@ -51,7 +51,7 @@ service SessionImpl
                            Int64                sessionId,
                            RequestInfo          requestInfo)
         {
-        Time now = xenia.clock.now;
+        Time now = clock.now;
 
         structure.manager_        = manager;
         structure.created         = now;
@@ -143,6 +143,11 @@ service SessionImpl
      * A list of pending prepared system redirects.
      */
     protected/private PendingRedirect_[]? pendingRedirects_;
+
+    /**
+     * A limit to the number of redirects, in order to suppress DDOS attacks.
+     */
+    static protected Int MaxRedirects = 8;
 
     /**
      * Internal recording of events related to the session, maintained for security and debugging
@@ -265,11 +270,25 @@ service SessionImpl
     public/private String sessionId;
 
     @Override
-    void authenticate(String userId, Boolean exclusiveAgent)
+    void authenticate(String userId, Boolean exclusiveAgent = False, TrustLevel trustLevel = Highest)
         {
         this.userId            = userId;
         this.exclusiveAgent    = exclusiveAgent;
+        this.trustLevel        = trustLevel;
         this.lastAuthenticated = clock.now;
+
+        // reset failed attempt count since we succeeded in logging in
+        // TODO
+        }
+
+    @Override
+    Boolean authenticationFailed(String? userId)
+        {
+        // accumulate failure information, both in absolute terms (number of attempts), and per
+        // user id
+        // TODO
+
+        return False;
         }
 
     @Override
@@ -419,7 +438,7 @@ service SessionImpl
 
         version_ = newVersion ?: version_ + 1;
 
-        Time now     = xenia.clock.now;
+        Time now     = clock.now;
         Time expires = now + manager_.persistentCookieDuration;
         for (CookieId cookieId : CookieId.values)
             {
@@ -450,18 +469,24 @@ service SessionImpl
      */
     Int|HttpStatus prepareRedirect_(RequestInfo info)
         {
+        // get rid of any excess pending redirects (size limit the array of "in flight" redirects)
+        if (PendingRedirect_[] pending ?= pendingRedirects_, pending.size > MaxRedirects)
+            {
+            // keep the most recent redirects, but one less than MaxRedirects to make room for the
+            // new one we're about to add
+            pendingRedirects_ = pending[pending.size-MaxRedirects >..< MaxRedirects];
+            }
+
         // prune any old redirects
-        Time now     = xenia.clock.now;
+        Time now     = clock.now;
         Time ancient = now - Duration:60s;
         pendingRedirects_ = pendingRedirects_?.removeAll(r -> r.created < ancient);
-
-        // TODO limit the number of pending redirects; return error
 
         // allocate a unique id
         Int64 id;
         do
             {
-            id = xenia.rnd.int(100k).toInt64() + 1;
+            id = rnd.int(100k).toInt64() + 1;
             }
         while (pendingRedirects_?.any(r -> r.id == id));
 

@@ -1,5 +1,9 @@
 import web.HttpStatus;
+
+
 import web.codecs.Registry;
+
+import web.security.Authenticator;
 
 import HttpServer.Handler;
 import HttpServer.RequestContext;
@@ -22,10 +26,11 @@ service HttpHandler
         this.busy           = new Boolean[];
         this.bundlePool     = new BundlePool(catalog);
         this.sessionManager = createSessionManager(catalog);
+        this.authenticator  = app.authenticator;
 
         Registry registry = app.registry_;
         registry.registerResource("sessionManager", this.sessionManager);
-        registry.registerResource("catalog", this.catalog);
+        registry.registerResource("catalog"       , this.catalog);
         }
 
     /**
@@ -57,6 +62,11 @@ service HttpHandler
      * The session manager.
      */
     protected SessionManager sessionManager;
+
+    /**
+     * The [WebApp]'s [Authenticator].
+     */
+    protected Authenticator authenticator;
 
     /**
      * Closing flag.
@@ -149,7 +159,7 @@ service HttpHandler
         Int          count       = dispatchers.size;
         if (count == 0)
             {
-            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
             busy.add(True);
             lastIndex = 0;
             return 0;
@@ -169,7 +179,7 @@ service HttpHandler
 
         if (count < maxCount)
             {
-            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
             busy.add(True);
             return count; // don't change the lastIndex to retain some fairness
             }

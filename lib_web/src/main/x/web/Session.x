@@ -357,8 +357,31 @@ interface Session
      * @param exclusiveAgent  (optional) pass `True` iff the device and `User-Agent` that the login
      *                        is occurring from is used exclusively by the user being authenticated;
      *                        pass `False` for a public or shared device
+     * @param trustLevel      (optional) pass the `TrustLevel` for the newly authenticated session;
+     *                        by default, the trust level is set to the highest level because the
+     *                        user has just now successfully authenticated, but a custom
+     *                        authentication scheme could specify a lower trust level by default
+     *                        until additional steps (like a second factor authentication) are
+     *                        performed
      */
-    void authenticate(String userId, Boolean exclusiveAgent = False);
+    void authenticate(String userId, Boolean exclusiveAgent = False, TrustLevel trustLevel = Highest);
+
+    /**
+     * This method is invoked when an authentication attempt is made, but fails; for example, when
+     * an incorrect password is provided.
+     *
+     * This is not a session event; like the [authenticate] method, this method allows an
+     * Authenticator and/or custom application logic to register an attempt to authenticate that
+     * did not succeed. While this is often an expected occurrence, the presence of repeated failed
+     * attempts by the same session, or failed attempts by different sessions against the same user
+     * id, can indicate the presence of a security threat.
+     *
+     * @param userId  the user identity that the authentication attempt specified, or `Null` if no
+     *                user identity was specified
+     *
+     * @return True if the caller should abort additional attempts to authenticate at this point
+     */
+    Boolean authenticationFailed(String? userId);
 
     /**
      * This method allows an application to explicitly de-authenticate the session. One obvious
