@@ -9,7 +9,7 @@
  *
  *    xec build/Hello.xtc password
  */
-
+@BasicAuth(MyRealm)
 @WebApp
 module Hello
     {
@@ -17,10 +17,13 @@ module Hello
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
+    // TODO: package authdb import webauthdb.xtclang.org;
+
     import crypto.KeyStore;
     import crypto.KeyStore.Info;
 
     import web.*;
+    import web.security.BasicAuthenticator as BasicAuth;
 
     void run(String[] args=["password"])
         {
@@ -56,6 +59,18 @@ module Hello
                          |
                          |Use Ctrl-C to stop.
                         );
+        }
+
+    /**
+     * This is for example purposes only; TODO get rid of this and use authdb
+     */
+    static const MyRealm
+            implements web.security.Realm
+        {
+        Boolean validate(String user, String password)
+            {
+            return user == "admin" && password == "addaya";
+            }
         }
 
     package inner
