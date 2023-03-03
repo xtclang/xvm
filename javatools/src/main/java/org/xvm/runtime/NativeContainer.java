@@ -39,6 +39,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -48,6 +49,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -374,6 +376,16 @@ public class NativeContainer
         xRTServer templateServer = xRTServer.INSTANCE;
         TypeConstant typeServer  = templateServer.getCanonicalType();
         addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
+
+        // +++ web:Authenticator (Nullable|Authenticator)
+        ModuleConstant  moduleWeb       = pool.ensureModuleConstant("web.xtclang.org");
+        TypeConstant typeAuthenticator = pool.ensureTerminalTypeConstant(
+                pool.ensureClassConstant(pool.ensurePackageConstant(moduleWeb, "security"), "Authenticator")).
+                    ensureNullable();
+        // the NativeContainer can only supply a trivial result; anything better than that must be
+        // done naturally by a container that hosts the calling container
+        addResourceSupplier(new InjectionKey("providedAuthenticator", typeAuthenticator),
+                (frame_, opts_) -> xNullable.NULL);
 
         // +++ mgmt.Linker
         xContainerLinker templateLinker = xContainerLinker.INSTANCE;
