@@ -10,9 +10,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-
-import java.util.stream.Collectors;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -31,6 +28,7 @@ import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -41,6 +39,7 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -609,32 +608,51 @@ public abstract class Container
     /**
      * Mask the resource if necessary.
      *
-     * @param hResource  the resource handle
-     * @param type       the desired type
+     * @param hResource   the resource handle
+     * @param typeInject  the desired injection type
      *
      * @return the injected resource of the specified type
      */
-    protected ObjectHandle maskInjection(ObjectHandle hResource, TypeConstant type)
+    protected ObjectHandle maskInjection(ObjectHandle hResource, TypeConstant typeInject)
         {
         if (hResource instanceof DeferredCallHandle hDeferred)
             {
             hDeferred.addContinuation(frameCaller ->
-                frameCaller.pushStack(completeMasking(frameCaller.popStack(), type)));
+                frameCaller.pushStack(completeMasking(frameCaller.popStack(), typeInject)));
             return hResource;
             }
-        return completeMasking(hResource, type);
+        return completeMasking(hResource, typeInject);
         }
 
-    private ObjectHandle completeMasking(ObjectHandle hResource, TypeConstant type)
+    private ObjectHandle completeMasking(ObjectHandle hResource, TypeConstant typeInject)
         {
         TypeConstant typeResource = hResource.getComposition().getType();
         if (typeResource.isShared(getConstantPool()))
             {
-            return typeResource.equals(type)
+            if (typeInject instanceof UnionTypeConstant typeUnion)
+                {
+                if (typeInject.isNullable())
+                    {
+                    if (hResource == xNullable.NULL)
+                        {
+                        return hResource;
+                        }
+                    typeInject = typeInject.removeNullable();
+                    }
+                else
+                    {
+                    // the injection's declared type is A|B; this should be extremely rare, if ever
+                    // used at all; the code below is just for completeness
+                    Set<TypeConstant> setMatch = typeUnion.collectMatching(typeInject, null);
+                    assert setMatch.size() == 1;
+                    typeInject = setMatch.iterator().next();
+                    }
+                }
+            return typeResource.equals(typeInject)
                     ? hResource
-                    : hResource.maskAs(this, type);
+                    : hResource.maskAs(this, typeInject);
             }
-        throw new UnsupportedOperationException("Pure type injecttion");
+        throw new UnsupportedOperationException("Pure type injection");
         }
 
 
