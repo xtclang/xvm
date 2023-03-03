@@ -8,9 +8,9 @@ version = "0.4.3"
 allprojects {
     configurations.all {
         resolutionStrategy.dependencySubstitution {
-            substitute(module("org.xtclang.xvm:javatools_utils"  )).with(project(":javatools_utils"))
-            substitute(module("org.xtclang.xvm:javatools_unicode")).with(project(":javatools_unicode"))
-            substitute(module("org.xtclang.xvm:javatools"        )).with(project(":javatools"))
+            substitute(module("org.xtclang.xvm:javatools_utils"  )).using(project(":javatools_utils"))
+            substitute(module("org.xtclang.xvm:javatools_unicode")).using(project(":javatools_unicode"))
+            substitute(module("org.xtclang.xvm:javatools"        )).using(project(":javatools"))
         }
     }
 
