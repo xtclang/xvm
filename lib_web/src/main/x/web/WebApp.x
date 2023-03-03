@@ -52,7 +52,7 @@ mixin WebApp
     /**
      * The [Authenticator] for the web application.
      */
-    @Lazy Authenticator authenticator.get()
+    @Lazy Authenticator authenticator.calc()
         {
         // use the Authenticator provided by injection, which allows a deployer to select a specific
         // form of authentication; if one is injected, use it, otherwise, use the one specified by
