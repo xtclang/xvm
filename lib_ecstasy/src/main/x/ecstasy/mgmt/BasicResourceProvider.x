@@ -1,6 +1,6 @@
 /**
  * BasicResourceProvider is a minimal `ResourceProvider` implementation that is necessary to
- * load a Ecstasy module dynamically into a lightweight container. The example use:
+ * load an Ecstasy module dynamically into a lightweight container. The example use:
  *
  *   void runModule(String moduleName)
  *       {
@@ -50,12 +50,15 @@ service BasicResourceProvider
                     return random;
                     };
 
-            case (Linker, "linker"):
-                @Inject Linker linker;
-                return linker;
-
             default:
-                throw new Exception($"Invalid resource: type=\"{type}\", name=\"{name}\"");
+                // if the type is Nullable, no need to complain; just return Null, otherwise
+                // return a deferred exception (thrown only if the container actually asks for the
+                // resource at run time)
+                return Nullable.as(Type).isA(type)
+                    ? Null.as(Supplier)
+                    : (InjectedRef.Options opts) ->
+                        throw new Exception($|Unsupported resource: type="{type}", name="{name}"
+                                           );
             }
         }
     }
