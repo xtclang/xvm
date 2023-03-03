@@ -89,7 +89,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
 
-    // ----- RequestIn Interface -------------------------------------------------------------------
+    // ----- Request Interface ---------------------------------------------------------------------
 
     @Override
     HttpMethod method.get()
@@ -104,6 +104,42 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
     @Override
+    Scheme scheme.get()
+        {
+        return protocol.scheme;
+        }
+
+    @Override
+    Protocol protocol.get()
+        {
+        String name = info.getProtocolString();
+        return Protocol.byProtocolString.getOrCompute(name,
+                () -> throw new IllegalState($"unknown protocol: {name}"));
+        }
+
+    @Override
+    AcceptList accepts.get()
+        {
+        String accept = "";
+        Loop: for (String add : valuesOf(Header.ACCEPT))
+            {
+            add = add.trim();
+            if (add != "")
+                {
+                accept = accept == ""
+                        ? add
+                        : $"{accept},{add}";
+                }
+            }
+
+        assert AcceptList list := AcceptList.of(accept);
+        return list;
+        }
+
+
+    // ----- RequestIn Interface -------------------------------------------------------------------
+
+    @Override
     @RO SocketAddress? client.get()
         {
         return (info.getClientAddress(), info.getClientPort());
@@ -113,14 +149,6 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @RO SocketAddress? server.get()
         {
         return (info.getServerAddress(), info.getServerPort());
-        }
-
-    @Override
-    Protocol protocol.get()
-        {
-        String name = info.getProtocolString();
-        return Protocol.byProtocolString.getOrCompute(name,
-                () -> throw new IllegalState($"unknown protocol: {name}"));
         }
 
     typedef (String | List<String>) as QueryParameter;
@@ -162,25 +190,6 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
     @Override
     UriParameters matchResult;
-
-    @Override
-    AcceptList accepts.get()
-        {
-        String accept = "";
-        Loop: for (String add : valuesOf(Header.ACCEPT))
-            {
-            add = add.trim();
-            if (add != "")
-                {
-                accept = accept == ""
-                        ? add
-                        : $"{accept},{add}";
-                }
-            }
-
-        assert AcceptList list := AcceptList.of(accept);
-        return list;
-        }
 
 
     // ----- Header interface ----------------------------------------------------------------------
