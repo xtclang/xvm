@@ -2,13 +2,21 @@ module TestSimple
     {
     @Inject Console console;
 
-    package web import web.xtclang.org;
-
-    import web.security.Authenticator;
-
-    void run(Int depth=0)
+    void run()
         {
-        @Inject Authenticator? providedAuthenticator;
-        console.print(providedAuthenticator);
+        new Test("hello").foo();
+        }
+
+    const Test(String? text)
+        {
+        void foo()
+            {
+            if (String text ?= text)
+                {
+                text = "replace"; // used to fail at run-time
+                console.print(text);
+                }
+            console.print(text);
+            }
         }
     }

@@ -1923,7 +1923,7 @@ public class NameExpression
                         // TODO still some work here to
                         //      (i) save off the TargetInfo
                         //      (ii) use it in code gen
-                        //      (iii) mark the this (and outer this) as being used
+                        //      (iii) mark "this" (and outer "this") as being used
                         MultiMethodConstant  idMM = (MultiMethodConstant) id;
                         MultiMethodStructure mms  = (MultiMethodStructure) idMM.getComponent();
 
@@ -3254,6 +3254,12 @@ public class NameExpression
                         {
                         assert sName.equals(id.getName());
 
+                        // make sure the property hasn't been hidden by a local var
+                        if (ctx.getVar(sName) instanceof Register)
+                            {
+                            return;
+                            }
+
                         if (idProp.isFormalType())
                             {
                             ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
@@ -3278,6 +3284,12 @@ public class NameExpression
                 else if (arg instanceof PropertyConstant idProp)
                     {
                     assert sName.equals(idProp.getName());
+
+                    // make sure the property hasn't been hidden by a local var
+                    if (ctx.getVar(sName) instanceof Register)
+                        {
+                        return;
+                        }
 
                     if (idProp.isFormalType())
                         {
