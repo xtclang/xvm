@@ -636,6 +636,7 @@ service Dispatcher(Catalog        catalog,
                         if (!tls && cookieId.tlsOnly)
                             {
                             // user agent should have hidden the cookie; this should be impossible
+                            // TODO CP: FireFox fails to do that (at least on localhost); how to react?
                             failures |= cookieId.mask;
                             }
                         }
