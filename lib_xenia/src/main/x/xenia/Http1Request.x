@@ -112,9 +112,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     Protocol protocol.get()
         {
-        String name = info.getProtocolString();
-        return Protocol.byProtocolString.getOrCompute(name,
-                () -> throw new IllegalState($"unknown protocol: {name}"));
+        return info.getProtocol();
         }
 
     @Override

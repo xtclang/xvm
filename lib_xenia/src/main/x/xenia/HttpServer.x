@@ -244,6 +244,10 @@ interface HttpServer
             {
             if (Protocol protocol := Protocol.byProtocolString.get(getProtocolString()))
                 {
+                if (tls && !protocol.TLS)
+                    {
+                    assert protocol ?= protocol.upgradeToTls;
+                    }
                 return protocol;
                 }
             assert as $"Unknown protocol: {getProtocolString().quoted()}";

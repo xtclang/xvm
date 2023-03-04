@@ -1,7 +1,8 @@
 /**
  * A representation of a protocol used for web services.
  */
-const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=Null)
+const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=Null,
+               Protocol? upgradeToTls=Null)
     {
     // ----- constants -----------------------------------------------------------------------------
 
@@ -21,7 +22,7 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
      * using it for anything but a "home page" (a pre-login welcome mat) by requiring a secure
      * connection by default.
      */
-    static Protocol HTTP1_1 = new Protocol("HTTP/1.1", HTTP, v:1.1);
+    static Protocol HTTP1_1 = new Protocol("HTTP/1.1", HTTP, v:1.1, upgradeToTls=HTTPS1_1);
 
     /**
      * HTTP/1.1 over an SSL connection.
@@ -42,7 +43,7 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
      * This unsecured protocol is almost never encountered, because all known browser
      * implementations that support HTTP/2 require a TLS connection; see [HTTPS2].
      */
-    static Protocol HTTP2 = new Protocol("HTTP/2", HTTP, v:2, "h2c");
+    static Protocol HTTP2 = new Protocol("HTTP/2", HTTP, v:2, "h2c", HTTPS2);
 
     /**
      * HTTP/2 over a TLS connection.
@@ -59,7 +60,7 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
      * Like HTTP/2, HTTP/3 is almost never encountered, because all known browser implementations
      * that support HTTP/3 require TLS; see [HTTPS3].
      */
-    static Protocol HTTP3   = new Protocol("HTTP/3", HTTP, v:3);
+    static Protocol HTTP3   = new Protocol("HTTP/3", HTTP, v:3, upgradeToTls=HTTPS3);
 
     /**
      * HTTP/3 with TLS.
@@ -71,7 +72,7 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
     /**
      * Web Socket protocol.
      */
-    static Protocol WS13 = new Protocol("WS/13", WS, v:13);
+    static Protocol WS13 = new Protocol("WS/13", WS, v:13, upgradeToTls=WSS13);
 
     /**
      * Web Socket Secure protocol, which is the Web Socket protocol with TLS.
@@ -118,10 +119,18 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
      * True iff the protocol provides "transport layer security", which is the case for HTTPS and
      * WSS.
      */
-    Boolean TLS;
+    Boolean TLS.get()
+        {
+        return scheme.tls;
+        }
 
     /**
      * The Application-Layer Protocol Negotiation (ALPN) identifier for the protocol.
      */
     String? ALPN_Id;
+
+    /**
+     * The related protocol that provides "transport layer security", or Null iff `TLS==True`.
+     */
+    Protocol? upgradeToTls;
     }
