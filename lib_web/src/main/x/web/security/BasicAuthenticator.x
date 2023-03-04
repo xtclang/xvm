@@ -51,6 +51,6 @@ service BasicAuthenticator(Realm realm)
         ResponseOut response = new SimpleResponse(Unauthorized);
         response.header.put("WWW-Authenticate", $|Basic realm="{realm.name}", charset="UTF-8"
                            );
-        return response;
+        return response.freeze(inPlace=True);
         }
     }
