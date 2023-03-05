@@ -307,9 +307,8 @@ service Dispatcher(Catalog        catalog,
                             break ProcessRequest;
 
                         default:
-                            // "success" isn't a boolean, it's an HTTP response; send the response
+                            // "success" isn't a Boolean, it's an HTTP response; send the response
                             // back to the client as the next step in authenticating the client
-                            // TODO GG: response = success; // "Type mismatch: "web:ResponseOut" expected, "Boolean | web:ResponseOut" found."
                             response = success.as(ResponseOut);
                             break ProcessRequest;
                         }
