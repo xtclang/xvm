@@ -8,6 +8,8 @@ import crypto.Signer;
 const FixedRealm
         implements Realm
     {
+    typedef immutable Byte[] as Hash;
+
     /**
      * Construct a `FixedRealm` from plain text user names and passwords, using an optional list
      * of [hashing algorithms](Signer).
@@ -37,8 +39,7 @@ const FixedRealm
 
         // hash the passwords (and possibly the user names)
         Int hasherCount      = hashers.size.notLessThan(1);
-        val userPwdsByHasher = new HashMap<Hash, Hash>[hasherCount](new HashMap<Hash, Hash>(userPwds.size));
-                                                        // TODO GG (new HashMap(userPwds.size));
+        val userPwdsByHasher = new HashMap<Hash, Hash>[hasherCount](_ -> new HashMap(userPwds.size));
 
         for (Int i : 0 ..< hasherCount)
             {
@@ -63,8 +64,6 @@ const FixedRealm
      * the default MD5 algorithm if none was provided.
      */
     protected/private Signer defaultHasher;
-
-    typedef immutable Byte[] as Hash;
 
     /**
      * For each [hashing algorithm](Signer) provided to this FixedRealm (or the default MD5 if none
