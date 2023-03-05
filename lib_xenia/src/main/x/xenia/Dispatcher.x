@@ -677,6 +677,8 @@ service Dispatcher(Catalog        catalog,
      */
     private void suspectCookie(RequestInfo requestInfo, String value)
         {
-        TODO($"suspect {value}");
+        // TODO CP
+        @Inject Console console;
+        console.print($"suspect cookie: {value}");
         }
     }

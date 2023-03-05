@@ -9,9 +9,8 @@
  *
  *    xec build/Hello.xtc password
  */
-@BasicAuth(MyRealm)
-@WebApp
 module Hello
+        incorporates WebApp
     {
     package crypto import crypto.xtclang.org;
     package web    import web.xtclang.org;
@@ -23,7 +22,7 @@ module Hello
     import crypto.KeyStore.Info;
 
     import web.*;
-    import web.security.BasicAuthenticator as BasicAuth;
+    import web.security.*;
 
     void run(String[] args=["password"])
         {
@@ -61,16 +60,10 @@ module Hello
                         );
         }
 
-    /**
-     * This is for example purposes only; TODO get rid of this and use authdb
-     */
-    static const MyRealm
-            implements web.security.Realm
+    @Override
+    protected Authenticator createAuthenticator()
         {
-        Boolean validate(String user, String password)
-            {
-            return user == "admin" && password == "addaya";
-            }
+        return new BasicAuthenticator(new FixedRealm("Hello", ["admin"="addaya"]));
         }
 
     package inner
@@ -94,6 +87,13 @@ module Hello
             String secure()
                 {
                 return "secure";
+                }
+
+            @LoginRequired
+            @Get("l")
+            String logMeIn(Session session)
+                {
+                return $"logged in as {session.userId}";
                 }
 
             @Get("c")
