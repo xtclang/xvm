@@ -22,6 +22,7 @@ module Hello
     import crypto.KeyStore.Info;
 
     import web.*;
+    import web.responses.*;
     import web.security.*;
 
     void run(String[] args=["password"])
@@ -77,9 +78,11 @@ module Hello
                 }
 
             @Get
-            String hello()
+            ResponseOut hello()
                 {
-                return "hello";
+                File file = /resources/hello/index.html;
+
+                return new SimpleResponse(OK, HTML, file.contents).makeImmutable();
                 }
 
             @HttpsRequired
@@ -124,8 +127,16 @@ module Hello
                 {
                 assert:debug path != "debug";
 
-                Map<String, String|List<String>> query = request?.queryParams : assert;
-                return [path, query.empty ? "" : $"{query}"];
+                assert RequestIn request ?= this.request;
+                return [
+                        $"uri={request.uri}",
+                        $"scheme={request.scheme}",
+                        $"authority={request.scheme}",
+                        $"path={request.path}",
+                        $"protocol={request.protocol}",
+                        $"accepts={request.accepts}",
+                        $"query={request.queryParams}",
+                       ];
                 }
             }
 
