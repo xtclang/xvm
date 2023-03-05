@@ -37,10 +37,10 @@ const FixedRealm
 
         // hash the passwords (and possibly the user names)
         Int hasherCount      = hashers.size.notLessThan(1);
-        val userPwdsByHasher = new HashMap<immutable Byte[], immutable Byte[]>[hasherCount]
-                                    // TODO GG (new HashMap(userPwds.size));
-                                    (new HashMap<immutable Byte[], immutable Byte[]>(userPwds.size));
-        for (Int i : 0..<hasherCount)
+        val userPwdsByHasher = new HashMap<Hash, Hash>[hasherCount](new HashMap<Hash, Hash>(userPwds.size));
+                                                        // TODO GG (new HashMap(userPwds.size));
+
+        for (Int i : 0 ..< hasherCount)
             {
             Signer hasher = i < hashers.size ? hashers[i] : defaultHasher;
             val hashedPwds = userPwdsByHasher[i];
@@ -64,11 +64,13 @@ const FixedRealm
      */
     protected/private Signer defaultHasher;
 
+    typedef immutable Byte[] as Hash;
+
     /**
      * For each [hashing algorithm](Signer) provided to this FixedRealm (or the default MD5 if none
      * was provided), a map of user hash to password hash is held.
      */
-    protected/private immutable Map<immutable Byte[], immutable Byte[]>[] userPwdsByHasher;
+    protected/private immutable Map<Hash, Hash>[] userPwdsByHasher;
 
 
     // ----- Realm interface -----------------------------------------------------------------------
@@ -76,15 +78,15 @@ const FixedRealm
     @Override
     Boolean validate(String user, String password)
         {
-        Signer           hasher   = defaultHasher;
-        immutable Byte[] pwdHash  = passwordDigest(user, name, password, hasher);
+        Signer hasher  = defaultHasher;
+        Hash   pwdHash = passwordDigest(user, name, password, hasher);
         return validateHash(user, pwdHash, hasher);
         }
 
     @Override
-    Boolean validateHash(String | immutable Byte[] user, immutable Byte[] password, Signer hasher)
+    Boolean validateHash(String | Hash user, Hash password, Signer hasher)
         {
-        immutable Byte[] userHash = userHash(user, name, hasher);
+        Hash userHash = userHash(user, name, hasher);
         return userPwds(hasher)[userHash] == password;
         }
 
@@ -100,7 +102,7 @@ const FixedRealm
 
     // ----- internal ------------------------------------------------------------------------------
 
-    typedef String | immutable Byte[] as UserId;
+    typedef String | Hash as UserId;
 
     /**
      * Given a user either as a string or as a hash, obtain the key used by the FixedRealm to find
@@ -114,10 +116,10 @@ const FixedRealm
      * @return the digest that represents the user information that is used by the FixedRealm as a
      *         key to the password digest
      */
-    static immutable Byte[] userHash(UserId user, String realm, Signer hasher)
+    static Hash userHash(UserId user, String realm, Signer hasher)
         {
         return user.is(String)
-                ? hasher.sign($"{user}:{realm}".utf8()).bytes.freeze(True)
+                ? hasher.sign($"{user}:{realm}".utf8()).bytes
                 : user;
         }
 
@@ -135,9 +137,9 @@ const FixedRealm
      *
      * @return the digest that represents the password information as it is held by the FixedRealm
      */
-    static immutable Byte[] passwordDigest(String user, String realm, String password, Signer hasher)
+    static Hash passwordDigest(String user, String realm, String password, Signer hasher)
         {
-        return hasher.sign($"{user}:{realm}:{password}".utf8()).bytes.freeze(True);
+        return hasher.sign($"{user}:{realm}:{password}".utf8()).bytes;
         }
 
     /**
@@ -150,7 +152,7 @@ const FixedRealm
      *
      * @return the map containing the user names and passwords hashed by the specified hasher
      */
-    protected Map<immutable Byte[], immutable Byte[]> userPwds(Signer? hasher = Null)
+    protected Map<Hash, Hash> userPwds(Signer? hasher = Null)
         {
         if (hasher? == defaultHasher : True)
             {
