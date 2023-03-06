@@ -33,7 +33,7 @@ class MapSet<Element>
      * @param that  the [Duplicable] `MapSet` object to duplicate from
      */
     @Override
-    construct(MapSet<Element> that)
+    construct(MapSet that)
         {
         this.contents = that.contents.duplicate();
         }

@@ -1387,7 +1387,7 @@ class HasherMap<Key, Value>
                     return this;
                     }
 
-                return new ListSet<Key>(this, size).freeze(True);
+                return new ListSet<Key>(this).freeze(True);
                 }
             }
         }

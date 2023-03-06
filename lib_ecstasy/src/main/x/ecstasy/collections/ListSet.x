@@ -9,16 +9,25 @@ class ListSet<Element>
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a ListSet that optionally contains an initial set of values.
+     * [Replicable] constructor.
      *
-     * @param values        (optional) initial values to store in the ListSet
      * @param initCapacity  (optional) initial capacity of the ListSet
      */
     @Override
-    construct(Iterable<Element>? values = Null, Int initCapacity = 0)
+    construct(Int initCapacity = 0)
         {
-        ListMap<Element, Nullable> map = new ListMap(values?.size : initCapacity);
-        for (Element value : values?)
+        construct MapSet(new ListMap(initCapacity));
+        }
+
+    /**
+     * Construct a ListSet that contains an initial set of values.
+     *
+     * @param values  initial values to store in the ListSet
+     */
+    construct(Iterable<Element> values)
+        {
+        ListMap<Element, Nullable> map = new ListMap(values.size);
+        for (Element value : values)
             {
             map.put(value, Null);
             }
