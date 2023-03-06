@@ -600,7 +600,7 @@ service Dispatcher(Catalog        catalog,
             {
             for (String cookieHeader : cookies)
                 {
-                for (String cookie : cookieHeader.split(';'))
+                NextCookie: for (String cookie : cookieHeader.split(';'))
                     {
                     if (Int      delim    := cookie.indexOf('='),
                         CookieId cookieId := CookieId.lookupCookie(cookie[0 ..< delim].trim()))
@@ -615,11 +615,23 @@ service Dispatcher(Catalog        catalog,
                                 break;
 
                             case Encrypted:
+                                // firefox bug: TLS-only cookies sent to localhost when TLS is false
+                                if (!tls && requestInfo.getClientAddress().loopback)
+                                    {
+                                    continue NextCookie;
+                                    }
+
                                 oldValue = tlsTemp;
                                 tlsTemp  = newValue;
                                 break;
 
                             case Consent:
+                                // firefox bug: TLS-only cookies sent to localhost when TLS is false
+                                if (!tls && requestInfo.getClientAddress().loopback)
+                                    {
+                                    continue NextCookie;
+                                    }
+
                                 oldValue = consent;
                                 consent  = newValue;
                                 break;
@@ -635,7 +647,6 @@ service Dispatcher(Catalog        catalog,
                         if (!tls && cookieId.tlsOnly)
                             {
                             // user agent should have hidden the cookie; this should be impossible
-                            // TODO CP: FireFox fails to do that (at least on localhost); how to react?
                             failures |= cookieId.mask;
                             }
                         }
