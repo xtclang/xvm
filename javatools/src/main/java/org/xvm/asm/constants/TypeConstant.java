@@ -3971,13 +3971,14 @@ public abstract class TypeConstant
                                         }
 
                                     MethodBody bodyHead = methodContrib.getHead();
-                                    if (!bodyHead.isOverride() && !bodyHead.isSynthetic())
+                                    if (!bodyHead.isOverride())
                                         {
-                                        idContrib.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
-                                                removeAccess().getValueString(),
-                                                idBase.getSignature().getValueString(),
-                                                ctor.getIdentity().getNamespace().getValueString()
-                                                );
+                                        // the constructor is not marked as "@Override", which makes
+                                        // it non-virtual, and it can only be called explicitly
+                                        // (via "new" or "construct");
+                                        // the fact that its "substitutable" just means that the
+                                        // run-time will need to choose the correct one
+                                        continue;
                                         }
                                     methodContrib = ctor.layerOnVirtualConstructor(methodContrib);
                                     fKeep         = true;
@@ -6033,9 +6034,7 @@ public abstract class TypeConstant
      */
     public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
         {
-        // types may be equivalent, but not equal, for examples if some parameters are not
-        // specified: ("Array" and "Array<Object>")
-        if (typeBase.isA(this) && this.isA(typeBase))
+        if (typeBase.isA(this))
             {
             return true;
             }
@@ -6986,7 +6985,8 @@ public abstract class TypeConstant
         }
 
     /**
-     * Find a callable function with the specified signature.
+     * Find a callable function with the specified signature. Note: this method is called *only*
+     * by the run-time.
      *
      * @param sig  the function signature
      *
@@ -6994,10 +6994,11 @@ public abstract class TypeConstant
      */
     public MethodStructure findCallable(SignatureConstant sig)
         {
-        MethodInfo infoFn = findFunctionInfo(sig);
+        TypeInfo   infoType = ensureTypeInfo();
+        MethodInfo infoFn   = infoType.getMethodBySignature(sig, true);
         return infoFn == null || infoFn.isAbstract()
                 ? null
-                : infoFn.getTopmostMethodStructure(ensureTypeInfo());
+                : infoFn.getTopmostMethodStructure(infoType);
         }
 
     /**

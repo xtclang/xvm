@@ -13,11 +13,8 @@ mixin AutoFreezable(Boolean inPlace=True)
         into Freezable
     {
     @Override
-// TODO GG
-    immutable AutoFreezable freeze(Boolean inPlace)
-//  immutable AutoFreezable freeze(Boolean? inPlace=Null)
+    immutable AutoFreezable freeze(Boolean? inPlace=Null)
         {
-        return super(inPlace);
-//      return super(inPlace ?: this.inPlace);
+        return super(inPlace ?: this.inPlace);
         }
     }

@@ -1269,7 +1269,9 @@ public class TypeInfo
 
                 // test the actual body signature
                 SignatureConstant sigTest0 = body.getSignature();
-                if (sigTest0.equals(sig) || sigTest0.isSubstitutableFor(sig, typeCtx))
+                boolean           fEquals0;
+                if ((fEquals0 = sigTest0.equals(sig)) ||
+                        sigTest0.isSubstitutableFor(sig, typeCtx))
                     {
                     if (methodTest.isCapped())
                         {
@@ -1277,14 +1279,16 @@ public class TypeInfo
                         }
                     else
                         {
-                        methodBest = chooseBest(methodBest, methodTest);
+                        methodBest = fEquals0 ? methodTest : chooseBest(methodBest, methodTest);
                         }
                     break;
                     }
 
                 // test the resolved identity signature
                 SignatureConstant sigTest1 = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
-                if (sigTest1.equals(sig) || sigTest1.isSubstitutableFor(sig, typeCtx))
+                boolean           fEquals1;
+                if ((fEquals1 = sigTest1.equals(sig)) ||
+                        sigTest1.isSubstitutableFor(sig, typeCtx))
                     {
                     if (methodTest.isCapped())
                         {
@@ -1292,7 +1296,7 @@ public class TypeInfo
                         }
                     else
                         {
-                        methodBest = chooseBest(methodBest, methodTest);
+                        methodBest = fEquals1 ? methodTest : chooseBest(methodBest, methodTest);
                         }
                     break;
                     }

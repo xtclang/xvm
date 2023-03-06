@@ -4,19 +4,26 @@ module TestSimple
 
     void run()
         {
-        new Test("hello").foo();
+        new Derived().f(new Narrow());
         }
 
-    const Test(String? text)
+    class Wide {}
+    class Narrow extends Wide {}
+
+    class Base
         {
-        void foo()
+        void f(Narrow n)
             {
-            if (String text ?= text)
-                {
-                text = "replace"; // used to fail at run-time
-                console.print(text);
-                }
-            console.print(text);
+            }
+        }
+
+    class Derived extends Base
+        {
+        @Override
+        void f(Wide n)
+            {
+            assert n.is(Narrow);
+            super(n);
             }
         }
     }
