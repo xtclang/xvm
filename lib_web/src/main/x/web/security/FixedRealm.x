@@ -8,8 +8,6 @@ import crypto.Signer;
 const FixedRealm
         implements Realm
     {
-    typedef immutable Byte[] as Hash;
-
     /**
      * Construct a `FixedRealm` from plain text user names and passwords, using an optional list
      * of [hashing algorithms](Signer).
@@ -38,25 +36,56 @@ const FixedRealm
             }
 
         // hash the passwords (and possibly the user names)
-        Int hasherCount      = hashers.size.notLessThan(1);
-        val userPwdsByHasher = new HashMap<Hash, Hash>[hasherCount](_ -> new HashMap(userPwds.size));
+        Int                            userCount   = userPwds.size;
+        Int                            hasherCount = hashers.size.notLessThan(1);
+        HashMap<String, Hash|Hash[]>   pwdsByUser  = new HashMap(userCount);
+        HashMap<Hash, String|String[]> usersByHash = new HashMap(userCount * hasherCount);
 
-        for (Int i : 0 ..< hasherCount)
+        static Boolean addUser(HashMap<Hash, String|String[]>.Entry entry, String user)
             {
-            Signer hasher = i < hashers.size ? hashers[i] : defaultHasher;
-            val hashedPwds = userPwdsByHasher[i];
-            for ((String user, String pwd) : userPwds)
+            if (entry.exists)
                 {
-                hashedPwds.put(userHash(user, realmName, hasher),
-                               passwordDigest(user, realmName, pwd, hasher));
+                String|String[] users = entry.value;
+                entry.value = users.is(String[]) ? users + user : [users, user];
                 }
-            userPwdsByHasher[i] = hashedPwds.freeze(True);
+            else
+                {
+                entry.value = user;
+                }
+            return True;
             }
 
-        this.name             = realmName;
-        this.hashers          = hashers;
-        this.defaultHasher    = defaultHasher;
-        this.userPwdsByHasher = userPwdsByHasher.freeze(True);
+        if (hasherCount > 1)
+            {
+            for ((String user, String pwd) : userPwds)
+                {
+                pwdsByUser.put(user, new Hash[hasherCount]
+                        (i -> passwordHash(user, realmName, pwd, hashers[i]))
+                        .freeze(inPlace=True));
+                }
+
+            for (Signer hasher : hashers)
+                {
+                for (String user : userPwds)
+                    {
+                    usersByHash.process(userHash(user, realmName, hasher), addUser(_, user));
+                    }
+                }
+            }
+        else
+            {
+            for ((String user, String pwd) : userPwds)
+                {
+                usersByHash.process(userHash(user, realmName, defaultHasher), addUser(_, user));
+                pwdsByUser.put(user, passwordHash(user, realmName, pwd, defaultHasher));
+                }
+            }
+
+        this.name          = realmName;
+        this.hashers       = hashers;
+        this.defaultHasher = defaultHasher;
+        this.pwdsByUser    = pwdsByUser.freeze(True);
+        this.usersByHash   = usersByHash.freeze(True);
         }
 
     /**
@@ -66,10 +95,15 @@ const FixedRealm
     protected/private Signer defaultHasher;
 
     /**
-     * For each [hashing algorithm](Signer) provided to this FixedRealm (or the default MD5 if none
+     * For each user, a password hash from each [hashing algorithm](Signer) is held.
+     */
+    protected/private immutable Map<String, Hash|Hash[]> pwdsByUser;
+
+    /**
+     * For each user hash, there is typically one user name; in the rare case that a  a For each [hashing algorithm](Signer) provided to this FixedRealm (or the default MD5 if none
      * was provided), a map of user hash to password hash is held.
      */
-    protected/private immutable Map<Hash, Hash>[] userPwdsByHasher;
+    protected/private immutable Map<Hash, String|String[]> usersByHash;
 
 
     // ----- Realm interface -----------------------------------------------------------------------
@@ -77,16 +111,41 @@ const FixedRealm
     @Override
     Boolean validate(String user, String password)
         {
-        Signer hasher  = defaultHasher;
-        Hash   pwdHash = passwordDigest(user, name, password, hasher);
-        return validateHash(user, pwdHash, hasher);
+        return validateHash(user, passwordHash(user, name, password, defaultHasher), defaultHasher);
         }
 
     @Override
-    Boolean validateHash(String | Hash user, Hash password, Signer hasher)
+    conditional String validateHash(UserId user, Hash password, Signer hasher)
         {
-        Hash userHash = userHash(user, name, hasher);
-        return userPwds(hasher)[userHash] == password;
+        if (user.is(String))
+            {
+            if (Hash|Hash[] pwdHashes := pwdsByUser.get(user))
+                {
+                Hash pwdHash = pwdHashes.is(Hash) ? pwdHashes : pwdHashes[hashIndex(hasher)];
+                return password == pwdHash, user;
+                }
+
+            return False;
+            }
+
+        // look up the user by the user hash
+        if (String|String[] plainTextUsers := usersByHash.get(user))
+            {
+            if (plainTextUsers.is(String))
+                {
+                return validateHash(plainTextUsers, password, hasher);
+                }
+
+            for (String plainTextUser : plainTextUsers)
+                {
+                if (validateHash(plainTextUser, password, hasher))
+                    {
+                    return True, plainTextUser;
+                    }
+                }
+            }
+
+        return False;
         }
 
     @Override
@@ -101,46 +160,6 @@ const FixedRealm
 
     // ----- internal ------------------------------------------------------------------------------
 
-    typedef String | Hash as UserId;
-
-    /**
-     * Given a user either as a string or as a hash, obtain the key used by the FixedRealm to find
-     * the user's password digest.
-     *
-     * @param user    the user name in plain text, or the hash of the user name as specified by
-     *                [RFC7616](https://datatracker.ietf.org/doc/html/rfc7616#section-3.4.4)
-     * @param realm   the realm name in plain text
-     * @param hasher  the hasher (a [Signer]) to use
-     *
-     * @return the digest that represents the user information that is used by the FixedRealm as a
-     *         key to the password digest
-     */
-    static Hash userHash(UserId user, String realm, Signer hasher)
-        {
-        return user.is(String)
-                ? hasher.sign($"{user}:{realm}".utf8()).bytes
-                : user;
-        }
-
-    /**
-     * Produce a password digest.
-     *
-     * The [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616)
-     * standard specifies the password digest that the client and server are each aware of as
-     * `H(user:realm:pwd)`, where `H` is the hash function.
-     *
-     * @param user      the user name in plain text
-     * @param realm     the realm name in plain text
-     * @param password  the password in plain text
-     * @param hasher    the hasher (a [Signer]) to use
-     *
-     * @return the digest that represents the password information as it is held by the FixedRealm
-     */
-    static Hash passwordDigest(String user, String realm, String password, Signer hasher)
-        {
-        return hasher.sign($"{user}:{realm}:{password}".utf8()).bytes;
-        }
-
     /**
      * Obtain the user/password lookup map that contains the user name and password information that
      * was hashed by a particular hasher.
@@ -151,20 +170,18 @@ const FixedRealm
      *
      * @return the map containing the user names and passwords hashed by the specified hasher
      */
-    protected Map<Hash, Hash> userPwds(Signer? hasher = Null)
+    protected Int hashIndex(Signer hasher)
         {
-        if (hasher? == defaultHasher : True)
+        if (hasher == defaultHasher)
             {
-            return userPwdsByHasher[userPwdsByHasher.size-1];
+            return hashers.size.notLessThan(1) - 1;
             }
-
-        assert hasher != Null; // TODO GG this should not be necessary
 
         Loop: for (val candidate : hashers)
             {
             if (hasher.algorithm == candidate.algorithm)
                 {
-                return userPwdsByHasher[Loop.count];
+                return Loop.count;
                 }
             }
 

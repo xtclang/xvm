@@ -7,6 +7,10 @@ import crypto.Signer;
  */
 interface Realm
     {
+    typedef immutable Byte[] as Hash;
+
+    typedef String | Hash as UserId;
+
     /**
      * The name of the Realm is intended to be human-readable and short-yet-descriptive.
      */
@@ -32,8 +36,9 @@ interface Realm
      *
      * @return True iff the user identity is verified to exist, and the provided password is
      *         correct for that user
+     * @return (conditional) the user identity in plain text
      */
-    Boolean validateHash(String | immutable Byte[] user, immutable Byte[] password, Signer hasher)
+    conditional String validateHash(UserId user, Hash password, Signer hasher)
         {
         TODO User identity and password hashing are not supported by this Realm
         }
@@ -99,5 +104,51 @@ interface Realm
     @RO Boolean userHashed.get()
         {
         return False;
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Produce a user hash.
+     *
+     * The approach specified in section 3.4.4 of the
+     * [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616) standard
+     * serves as the basis for this feature:
+     *
+     *     username = H( unq(username) ":" unq(realm) )
+     *
+     * @param user    the user name in plain text, or the hash of the user name as specified by
+     *                [RFC7616](https://datatracker.ietf.org/doc/html/rfc7616#section-3.4.4)
+     * @param realm   the realm name in plain text
+     * @param hasher  the hasher (a [Signer]) to use
+     *
+     * @return the digest that represents the user information that is used by the FixedRealm as a
+     *         key to the password digest
+     */
+    static Hash userHash(UserId user, String realm, Signer hasher)
+        {
+        return user.is(String)
+                ? hasher.sign($"{user}:{realm}".utf8()).bytes
+                : user;
+        }
+
+    /**
+     * Produce a password digest.
+     *
+     * The [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616)
+     * standard specifies the password digest that the client and server are each aware of as
+     * `H(user:realm:pwd)`, where `H` is the hash function.
+     *
+     * @param user      the user name in plain text
+     * @param realm     the realm name in plain text
+     * @param password  the password in plain text
+     * @param hasher    the hasher (a [Signer]) to use
+     *
+     * @return the digest that represents the password information as it is held by the FixedRealm
+     */
+    static Hash passwordHash(String user, String realm, String password, Signer hasher)
+        {
+        return hasher.sign($"{user}:{realm}:{password}".utf8()).bytes;
         }
     }
