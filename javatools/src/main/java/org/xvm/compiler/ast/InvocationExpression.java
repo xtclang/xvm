@@ -1357,7 +1357,7 @@ public class InvocationExpression
                                               m_fBjarne || m_idFormal != null);
                     if (m_idFormal == null)
                         {
-                        argFn      = idMethod;
+                        argFn      = m_method.getIdentityConstant();
                         fConstruct = m_method.isConstructor();
                         if (exprLeft instanceof TraceExpression)
                             {
