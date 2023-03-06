@@ -33,6 +33,7 @@ module TestCrypto
         testHasher(algorithms, "MD5",     BIG_TEXT);
         testHasher(algorithms, "SHA-1",   BIG_TEXT);
         testHasher(algorithms, "SHA-256", BIG_TEXT);
+        testHasher(algorithms, "SHA-512", BIG_TEXT);
 
         testSigner(algorithms, "SHA1withRSA"  , keyPair, BIG_TEXT);
         testSigner(algorithms, "SHA256withRSA", keyPair, BIG_TEXT);
