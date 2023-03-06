@@ -35,11 +35,17 @@ interface HttpMessage
     Body ensureBody(MediaType mediaType, Boolean streaming=False);
 
     @Override
-    immutable HttpMessage freeze(Boolean inPlace = False)
+    immutable HttpMessage freeze(Boolean inPlace = True)
         {
+        if (this.is(immutable))
+            {
+            return this;
+            }
+
         // the interface for the message objects are designed to be freezable in-place; sub-classes
         // that cannot do so must override this method
-        return this.is(immutable) ? this : makeImmutable();
+        assert inPlace;
+        return makeImmutable();
         }
 
     /**
