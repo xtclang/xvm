@@ -1297,30 +1297,9 @@ public class TypeInfo
                     break;
                     }
 
-                // test the canonical identity signature
-                SignatureConstant sigTest2 = body.getIdentity().getSignature();
-                if (sigTest2.containsGenericTypes())
-                    {
-                    sigTest2 = sigTest2.resolveGenericTypes(pool(), getCanonicalResolver());
-
-                    if (sigTest2.equals(sig) || sigTest2.isSubstitutableFor(sig, typeCtx))
-                        {
-                        if (methodTest.isCapped())
-                            {
-                            methodCapped = methodTest;
-                            }
-                        else
-                            {
-                            methodBest = chooseBest(methodBest, methodTest);
-                            }
-                        break;
-                        }
-                    }
-
                 if (fRuntime && methodBest == null && methodCapped == null &&
                         (sigTest0.isCallableAs(sig) ||
-                         sigTest1.isCallableAs(sig) ||
-                         sigTest2.isCallableAs(sig)))
+                         sigTest1.isCallableAs(sig)))
                     {
                     methodRT = methodTest;
                     break;
@@ -1685,6 +1664,7 @@ public class TypeInfo
         //   single selection, then that single selection is used.
         // - Otherwise, the ambiguity is an error.
         // TODO - how to factor in conversions?
+        System.err.println("conflicting matches " + mapMatch);
         return null;
         }
 
@@ -2381,20 +2361,6 @@ public class TypeInfo
 
     // ----- internal helpers ----------------------------------------------------------------------
 
-    private GenericTypeResolver getCanonicalResolver()
-        {
-        GenericTypeResolver resolver = m_resolverCanonical;
-        if (resolver == null)
-            {
-            m_resolverCanonical = resolver = sName ->
-                {
-                ParamInfo param = getTypeParams().get(sName);
-                return param == null ? null : param.getConstraintType();
-                };
-            }
-        return resolver;
-        }
-
     private static Annotation[] validateAnnotations(Annotation[] annotations)
         {
         if (annotations == null)
@@ -2652,5 +2618,4 @@ public class TypeInfo
     private transient Map<String, Set<MethodConstant>> m_mapOps;
     private transient Map<String, Set<MethodConstant>> m_mapMethodsByName;
     private transient Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
-    private transient GenericTypeResolver              m_resolverCanonical;
     }
