@@ -294,7 +294,12 @@ service SessionImpl
     @Override
     void deauthenticate()
         {
-        TODO
+        this.userId            = Null;
+        this.exclusiveAgent    = False;
+        this.trustLevel        = None;
+        this.lastAuthenticated = Null;
+
+        sessionDestroyed();
         }
 
     @Override

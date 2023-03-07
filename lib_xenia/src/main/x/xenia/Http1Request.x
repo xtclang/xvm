@@ -110,6 +110,12 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
     @Override
+    String authority.get()
+        {
+        return url.authority ?: assert;
+        }
+
+    @Override
     Protocol protocol.get()
         {
         return info.getProtocol();
@@ -136,6 +142,36 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
 
     // ----- RequestIn Interface -------------------------------------------------------------------
+
+    @Override
+    @Lazy Uri url.calc()
+        {
+        HttpServer server = info.server;
+        Scheme     scheme = this.scheme;
+        UInt16?    port;
+
+        if (scheme.tls)
+            {
+            port = server.tlsPort;
+            if (port == 443)
+                {
+                port = Null;
+                }
+            }
+        else
+            {
+            port = server.plainPort;
+            if (port == 80)
+                {
+                port = Null;
+                }
+            }
+
+        return uri.with(scheme = scheme.name,
+                        host   = server.hostName,
+                        port   = port
+                       );
+        }
 
     @Override
     @RO SocketAddress? client.get()

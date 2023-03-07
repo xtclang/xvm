@@ -18,6 +18,15 @@ interface RequestIn
         }
 
     /**
+     * The [Uri] that represents the *complete* request URL.
+     *
+     * Note: The string form of the URI may not be exactly what was displayed in the browser's
+     * address bar, for example, but it will be an equivalent representation that would result in
+     * the request arriving at this server in the manner that the actual request was received.
+     */
+    Uri url;
+
+    /**
      * The IP address and port number used by the requester to issue the request, if it is known.
      */
     @RO SocketAddress? client;

@@ -94,12 +94,10 @@ public class xRTServer
     @Override
     public void initNative()
         {
-        markNativeProperty("tlsPort");
-
-        markNativeMethod("configure", null, VOID);
-        markNativeMethod("start"    , null, VOID);
-        markNativeMethod("send"     , null, VOID);
-        markNativeMethod("close"    , null, VOID);
+        markNativeMethod("configureImpl", null, VOID);
+        markNativeMethod("start"       , null, VOID);
+        markNativeMethod("send"        , null, VOID);
+        markNativeMethod("close"       , null, VOID);
 
         markNativeMethod("getClientAddressBytes",  null, null);
         markNativeMethod("getClientPort",          null, null);
@@ -139,28 +137,19 @@ public class xRTServer
         return hService;
         }
 
-    @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "tlsPort":
-                {
-                HttpServerHandle hServer = (HttpServerHandle) hTarget;
-                return frame.assignValue(iReturn,
-                        xUInt16.INSTANCE.makeJavaLong(hServer.m_httpsServer.getAddress().getPort()));
-                }
-            }
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
-
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         switch (method.getName())
             {
             case "start":
-                return invokeStart(frame, (HttpServerHandle) hTarget, (ServiceHandle) hArg);
+                {
+                HttpServerHandle hService = (HttpServerHandle) hTarget;
+                return frame.f_context == hService.f_context
+                        ? invokeStart(frame, hService, (ServiceHandle) hArg)
+                        : xRTFunction.makeAsyncNativeHandle(method).
+                                call1(frame, hService, new ObjectHandle[]{hArg}, iReturn);
+                }
 
             case "getClientAddressBytes":
                 return invokeGetClientAddress(frame, (HttpContextHandle) hArg, iReturn);
@@ -187,7 +176,13 @@ public class xRTServer
                 return invokeGetHeaderNames(frame, (HttpContextHandle) hArg, iReturn);
 
             case "close":
-                return invokeClose((HttpServerHandle) hTarget);
+                {
+                HttpServerHandle hService = (HttpServerHandle) hTarget;
+                return frame.f_context == hService.f_context
+                        ? invokeClose(hService)
+                        : xRTFunction.makeAsyncNativeHandle(method).
+                                call1(frame, hService, new ObjectHandle[]{hArg}, iReturn);
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -198,11 +193,17 @@ public class xRTServer
         {
         switch (method.getName())
             {
-            case "configure":
+            case "configureImpl":
                 return invokeConfigure(frame, (HttpServerHandle) hTarget,  ahArg);
 
             case "send":
-                return invokeSend(frame, ahArg);
+                {
+                HttpServerHandle hService = (HttpServerHandle) hTarget;
+                return frame.f_context == hService.f_context
+                        ? invokeSend(frame, ahArg)
+                        : xRTFunction.makeAsyncNativeHandle(method).
+                                call1(frame, hService, ahArg, iReturn);
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -233,20 +234,20 @@ public class xRTServer
 
 
     /**
-     * Implementation of "configure(String hostName, KeyStore keystore,
-     *                              UInt16 httpPort = 80, UInt16 httpsPort = 443)" method.
+     * Implementation of "configureImpl(String hostName, KeyStore keystore,
+     *                                UInt16 httpPort = 80, UInt16 httpsPort = 443)" method.
      */
     private int invokeConfigure(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
-        if (hServer.m_httpServer != null)
+        if (hServer.getHttpServer() != null)
             {
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
             }
 
-        String         sHost      = ((StringHandle) ahArg[0]).getStringValue();
-        KeyStoreHandle hKeystore  = (KeyStoreHandle) ahArg[1];
-        int            nHttpPort  = ahArg[2] instanceof JavaLong hPort ? (int) hPort.getValue() : 80;
-        int            nHttpsPort = ahArg[3] instanceof JavaLong hPort ? (int) hPort.getValue() : 443;
+        String         sHost      = ((StringHandle)   ahArg[0]).getStringValue();
+        KeyStoreHandle hKeystore  = (KeyStoreHandle)  ahArg[1];
+        int            nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
+        int            nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
         String         sAlias     = null; // TODO add to the configure API
         try
             {
@@ -322,15 +323,15 @@ public class xRTServer
      */
     private int invokeStart(Frame frame, HttpServerHandle hServer, ServiceHandle hHandler)
         {
-        HttpServer  httpServer  = hServer.m_httpServer;
-        HttpsServer httpsServer = hServer.m_httpsServer;
+        HttpServer  httpServer  = hServer.getHttpServer();
+        HttpsServer httpsServer = hServer.getHttpsServer();
 
         if (httpServer == null)
             {
             return frame.raiseException(xException.illegalState(frame, "Server is not configured"));
             }
 
-        if (hServer.m_httpHandler == null)
+        if (hServer.getRequestHandler() == null)
             {
             // this is a very first call; set up the thread pool
             String        sName   = "HttpHandler";
@@ -374,7 +375,7 @@ public class xRTServer
         httpServer .createContext("/", handler);
         httpsServer.createContext("/", handler);
 
-        hServer.m_httpHandler = handler;
+        hServer.setRequestHandler(handler);
         return Op.R_NEXT;
         }
 
@@ -501,7 +502,8 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "conditional RequestContext[] containsNestedBodies(RequestContext context)" method.
+     * Implementation of
+     *  "conditional RequestContext[] containsNestedBodies(RequestContext context)" method.
      */
     private int invokeContainsBodies(Frame frame, HttpContextHandle hCtx, int[] aiResult)
         {
@@ -514,8 +516,8 @@ public class xRTServer
      */
     private int invokeClose(HttpServerHandle hServer)
         {
-        HttpServer httpServer  = hServer.m_httpServer;
-        HttpServer httpsServer = hServer.m_httpsServer;
+        HttpServer httpServer  = hServer.getHttpServer();
+        HttpServer httpsServer = hServer.getHttpsServer();
         if (hServer != null)
             {
             if (httpServer.getExecutor() == null)
@@ -536,7 +538,7 @@ public class xRTServer
                 ((ExecutorService) httpServer.getExecutor()).shutdown();
                 hServer.f_context.f_container.getServiceContext().unregisterNotification();
                 }
-            hServer.m_httpHandler = null;
+            hServer.setRequestHandler(null);
             }
 
         return Op.R_NEXT;
@@ -744,33 +746,58 @@ public class xRTServer
             super(clazz, context);
             }
 
+        /**
+         * The underlying native state needs to be kept in an array, so cloning the handle would
+         * not splinter the state.
+         */
+        private final Object[] f_aoNative = new Object[3];
+
         protected void configure(HttpServer httpServer, HttpsServer httpsServer)
             {
-            m_httpServer  = httpServer;
-            m_httpsServer = httpsServer;
+            f_aoNative[0] = httpServer;
+            f_aoNative[1] = httpsServer;
             }
 
         @Override
         public String toString()
             {
             return "HttpServer" +
-                    (m_httpServer == null ? "" : "@" + m_httpServer.getAddress().getHostString());
+                    (getHttpServer() == null
+                        ? ""
+                        : "@" + getHttpServer().getAddress().getHostString());
             }
 
         /**
-         * The underlying {@link HttpServer}.
+         * @return underlying {@link HttpServer}.
          */
-        protected HttpServer m_httpServer;
+        protected HttpServer getHttpServer()
+            {
+            return (HttpServer) f_aoNative[0];
+            }
 
         /**
-         * The underlying {@link HttpsServer}.
+         * @return the underlying {@link HttpsServer}
          */
-        protected HttpsServer m_httpsServer;
+        protected HttpsServer getHttpsServer()
+            {
+            return (HttpsServer) f_aoNative[1];
+            }
 
         /**
-         * The handle to the http(s) request handler.
+         * @return the http(s) request handler
          */
-        protected RequestHandler m_httpHandler;
+        protected RequestHandler getRequestHandler()
+            {
+            return (RequestHandler) f_aoNative[2];
+            }
+
+        /**
+         * Store the http(s) request handler.
+         */
+        protected void setRequestHandler(RequestHandler handler)
+            {
+            f_aoNative[2] = handler;
+            }
         }
 
     /**

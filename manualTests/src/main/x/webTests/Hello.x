@@ -99,6 +99,13 @@ module Hello
                 return $"logged in as {session.userId}";
                 }
 
+            @Get("d")
+            ResponseOut logMeOut()
+                {
+                session?.deauthenticate();
+                return hello();
+                }
+
             @Get("c")
             Int count(SimpleData sessionData)
                 {
@@ -128,14 +135,20 @@ module Hello
                 assert:debug path != "debug";
 
                 assert RequestIn request ?= this.request;
+
+                Session? session = this.session;
                 return [
+                        $"url={request.url}",
                         $"uri={request.uri}",
                         $"scheme={request.scheme}",
-                        $"authority={request.scheme}",
+                        $"client={request.client}",
+                        $"server={request.server}",
+                        $"authority={request.authority}",
                         $"path={request.path}",
                         $"protocol={request.protocol}",
                         $"accepts={request.accepts}",
                         $"query={request.queryParams}",
+                        $"user={session?.userId? : "<anonymous>"}",
                        ];
                 }
             }

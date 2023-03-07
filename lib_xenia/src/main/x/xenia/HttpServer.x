@@ -24,6 +24,16 @@ interface HttpServer
         }
 
     /**
+     * The host name that was used to start the HttpServer.
+     */
+    @RO String hostName;
+
+    /**
+     * The server port number that is used for plain text requests.
+     */
+    @RO UInt16 plainPort;
+
+    /**
      * The server port number that provides "transport layer security".
      */
     @RO UInt16 tlsPort;
@@ -316,23 +326,9 @@ interface HttpServer
 
             Scheme scheme    = getProtocol().scheme;
             Scheme tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
-            String host;
+            UInt16 tlsPort   = server.tlsPort;
 
-            if (String[] hosts := getHeaderValuesForName(Header.HOST))
-                {
-                host = hosts[0];
-                if (Int portOffset := host.lastIndexOf(':'))
-                    {
-                    host = host[0 ..< portOffset];
-                    }
-                }
-            else
-                {
-                host = getServerAddress().toString();
-                }
-            UInt16 tlsPort = server.tlsPort;
-
-            return $|{tlsScheme.name}://{host}\
+            return $|{tlsScheme.name}://{server.hostName}\
                     |{{if (tlsPort!=443) {$.add(':').append(tlsPort);}}}\
                     |{server.getUriString(context)}
                     ;

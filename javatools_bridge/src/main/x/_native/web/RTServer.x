@@ -10,11 +10,28 @@ service RTServer
     typedef immutable Object as RequestContext;
 
     @Override
-    UInt16 tlsPort.get()
-        {TODO("Native");}
+    String hostName;
+
+    @Override
+    UInt16 plainPort;
+
+    @Override
+    UInt16 tlsPort;
 
     @Override
     void configure(String hostName, KeyStore keystore, UInt16 httpPort = 80, UInt16 httpsPort = 443)
+        {
+        configureImpl(hostName, keystore, httpPort, httpsPort);
+
+        this.hostName  = hostName;
+        this.plainPort = httpPort;
+        this.tlsPort   = httpsPort;
+        }
+
+    /**
+     * Native implementation of "configure" that runs on the service context.
+     */
+    private void configureImpl(String hostName, KeyStore keystore, UInt16 httpPort, UInt16 httpsPort)
         {TODO("Native");}
 
     @Override
@@ -85,6 +102,16 @@ service RTServer
     static interface HttpServer
             extends Closeable
         {
+        /**
+         * The host name that was used to start the HttpServer.
+         */
+        @RO String hostName;
+
+        /**
+         * The server port number that is used for plain text requests.
+         */
+        @RO UInt16 plainPort;
+
         /**
          * The server port number that provides "transport layer security".
          */
