@@ -125,11 +125,11 @@ const String
      *
      * @return the contents of this String, but without any leading or trailing whitespace
      */
-    String trim()
+    String trim(function Boolean(Char) whitespace = ch -> ch.isWhitespace())
         {
         Int leading = 0;
         val length  = size;
-        while (leading < length && this[leading].isWhitespace())
+        while (leading < length && whitespace(this[leading]))
             {
             ++leading;
             }
@@ -140,7 +140,7 @@ const String
             }
 
         Int trailing = 0;
-        while (this[length-trailing-1].isWhitespace())
+        while (whitespace(this[length-trailing-1]))
             {
             ++trailing;
             }
@@ -257,14 +257,16 @@ const String
      *
      * @return an array of Strings
      */
-    Map<String!, String!> splitMap(Char kvSeparator='=', Char entrySeparator=',')
+    Map<String!, String!> splitMap(Char                   kvSeparator    ='=',
+                                   Char                   entrySeparator =',',
+                                   function Boolean(Char) whitespace     = ch -> ch.isWhitespace())
         {
         if (size == 0)
             {
             return [];
             }
 
-        return new StringMap(this, kvSeparator, entrySeparator);
+        return new StringMap(this, kvSeparator, entrySeparator, whitespace);
         }
 
     /**
@@ -273,7 +275,10 @@ const String
      * sequential, e.g. a call to `get(k)` in the Map will return the value from  the first entry
      * with that key.
      */
-    protected static const StringMap(String data, Char kvSep, Char entrySep)
+    protected static const StringMap(String                 data,
+                                     Char                   kvSep,
+                                     Char                   entrySep,
+                                     function Boolean(Char) whitespace)
             implements Map<String, String>
             incorporates collections.maps.KeySetBasedMap<String, String>
         {
@@ -306,7 +311,7 @@ const String
             {
             if ((Int keyStart, Int sepOffset, Int valueEnd) := find(key))
                 {
-                return True, valueEnd > sepOffset+1 ? data[sepOffset >..< valueEnd] : "";
+                return True, valueEnd > sepOffset+1 ? data[sepOffset >..< valueEnd].trim(whitespace) : "";
                 }
             return False;
             }
@@ -321,9 +326,23 @@ const String
             EachEntry: while (offset + keyLength <= length)
                 {
                 keyOffset = offset;
+
+                while (whitespace(data[offset]))
+                    {
+                    if (++offset >= length)
+                        {
+                        return False;
+                        }
+                    }
+
                 Boolean match = True;
                 for (Char keyChar : key)
                     {
+                    if (offset >= length)
+                        {
+                        return False;
+                        }
+
                     Char mapChar = data[offset++];
                     if (mapChar != keyChar)
                         {
@@ -337,6 +356,11 @@ const String
                             break;
                             }
                         }
+                    }
+
+                while (offset < length && whitespace(data[offset]))
+                    {
+                    ++offset;
                     }
 
                 if (offset >= length)
