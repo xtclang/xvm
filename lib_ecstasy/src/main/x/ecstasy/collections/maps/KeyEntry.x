@@ -78,7 +78,7 @@ mixin KeyEntry<Key, Value>
                 {
                 return value;
                 }
-            throw new OutOfBounds();
+            throw new OutOfBounds($"Entry missing: \"{key}\"");
             }
 
         @Override
