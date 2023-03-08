@@ -60,10 +60,6 @@ public class VirtualChildTypeConstant
         {
         super(pool, typeParent);
 
-         if (typeParent.isAnnotated())
-             {
-             throw new IllegalArgumentException("parent's annotations cannot be specified");
-             }
         if (sName == null)
             {
             throw new IllegalArgumentException("name is required");
