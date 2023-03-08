@@ -71,6 +71,7 @@ service DigestAuthenticator(Realm realm)
                      String nonce,
                      String uri,
                      String cnonce,
+                     String ncText,
                      Int    nc          ) := parseDigest(auth.substring(7)))
                     {
                     // verify that the server nonce is still acceptable; the client nonce and its
@@ -137,8 +138,8 @@ service DigestAuthenticator(Realm realm)
                         //    H( unq(username) ":" unq(realm) ":" passwd )
                         Hash hashA1   = toHash($"{toString(pwdHash)}:{nonce}:{cnonce}", hasher);
                         Hash hashA2   = toHash($"{request.method.name}:{uri}"         , hasher);
-                        Hash expected = toHash($|{toString(hashA1)}:{nonce}:{nc}:{cnonce}:auth:\
-                                                |{toString(hashA2)}
+                        Hash expected = toHash($|{toString(hashA1)}:{nonce}:{ncText}\
+                                                |:{cnonce}:auth:{toString(hashA2)}
                                                                                       , hasher);
                         if (responseHash == expected)
                             {
@@ -327,6 +328,7 @@ service DigestAuthenticator(Realm realm)
      * @return (conditional) nonce - the nonce string previous sent by this authenticator
      * @return (conditional) uri - the URI being accessed by the client
      * @return (conditional) cnonce - the nonce created by the client
+     * @return (conditional) ncText - the `nc` value before it is parsed
      * @return (conditional) nc - the number of times, including this time, that the client nonce
      *         has been sent in a response
      */
@@ -337,7 +339,8 @@ service DigestAuthenticator(Realm realm)
                  String nonce,
                  String uri,
                  String cnonce,
-                 Int    nc) parseDigest(String text)
+                 String ncText,
+                 Int    nc          ) parseDigest(String text)
         {
         val props = text.trim().splitMap();
 
@@ -515,7 +518,7 @@ service DigestAuthenticator(Realm realm)
             }
         responseHash = hash.freeze(inPlace=True);
 
-        return True, userId, responseHash, hasher, opaque, nonce, uri, cnonce, nc;
+        return True, userId, responseHash, hasher, opaque, nonce, uri, cnonce, ncHex, nc;
         }
 
     /**
