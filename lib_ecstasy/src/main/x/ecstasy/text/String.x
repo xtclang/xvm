@@ -466,7 +466,7 @@ const String
                             endKey = endEntry;
                             }
 
-                        String key = data[offset ..< endKey];
+                        String key = data[offset ..< endKey].trim(whitespace);
                         offset = endEntry + 1;
 
                         return True, key;
