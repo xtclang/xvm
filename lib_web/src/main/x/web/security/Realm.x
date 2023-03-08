@@ -9,6 +9,12 @@ interface Realm
     {
     typedef immutable Byte[] as Hash;
 
+    /**
+     * A `UserId` is either a plain text user name, or the hash specified in section 3.4.4 of the
+     * [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616) standard:
+     *
+     *     username = H( unq(username) ":" unq(realm) )
+     */
     typedef String | Hash as UserId;
 
     /**
@@ -26,22 +32,6 @@ interface Realm
      *         correct for that user
      */
     Boolean validate(String user, String password);
-
-    /**
-     * Validate the passed user name, which may be hashed, and password, which is hashed.
-     *
-     * @param user      the user's identity, which may be in plain text or as a hash, as provided by
-     *                  the client
-     * @param password  the user's password, as provided by the client
-     *
-     * @return True iff the user identity is verified to exist, and the provided password is
-     *         correct for that user
-     * @return (conditional) the user identity in plain text
-     */
-    conditional String validateHash(UserId user, Hash password, Signer hasher)
-        {
-        TODO User identity and password hashing are not supported by this Realm
-        }
 
     /**
      * A realm may support user id and password hashes directly, which allows the realm to not store
@@ -74,36 +64,54 @@ interface Realm
         }
 
     /**
-     * `True` iff the user identity is passed from the client to the server in a hashed form, which
-     * prevents the user identity from being in plain text form in the message.
+     * Given a user (either plain text or hashed) and a [hasher](Signer), obtain the corresponding
+     * hashed password information, if any.
      *
-     * The approach specified in the
-     * [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616) standard
-     * serves as the basis for this feature:
+     * The forms of the hashes are specified by the
+     * [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616)
+     * standard.
      *
-     *     3.4.4.  Username Hashing
-     *
-     *     To protect the transport of the username from the client to the
-     *     server, the server SHOULD set the userhash parameter with the value
-     *     of "true" in the WWW-Authentication header field.
-     *
-     *     If the client supports the userhash parameter, and the userhash
-     *     parameter value in the WWW-Authentication header field is set to
-     *     "true", then the client MUST calculate a hash of the username after
-     *     any other hash calculation and include the userhash parameter with
-     *     the value of "true" in the Authorization header field.  If the client
-     *     does not provide the username as a hash value or the userhash
-     *     parameter with the value of "true", the server MAY reject the
-     *     request.
-     *
-     *     The following is the operation that the client will perform to hash
-     *     the username, using the same algorithm used to hash the credentials:
+     * If the `userId` is hashed, the hash is in the form:
      *
      *     username = H( unq(username) ":" unq(realm) )
+     *
+     * The returned hashes are in the form:
+     *
+     *     A1 = unq(username) ":" unq(realm) ":" passwd
+     *
+     * @param userId  the plain text or hashed user identity
+     * @param hasher  the specific [hasher](Signer) which corresponds to the resulting password
+     *                hashes
+     *
+     * @return an array of zero or more password hashes that correspond to the specified `userId`
      */
-    @RO Boolean userHashed.get()
+    Hash[] hashesFor(UserId userId, Signer hasher);
+
+    /**
+     * Validate the passed user name, which may be hashed, and password, which is hashed.
+     *
+     * The forms of the hashes are specified by the
+     * [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616)
+     * standard.
+     *
+     * If the `userId` is hashed, the hash is in the form:
+     *
+     *     username = H( unq(username) ":" unq(realm) )
+     *
+     * The `pwdHash` is in the form:
+     *
+     *     A1 = unq(username) ":" unq(realm) ":" passwd
+     *
+     * @param userId   the user's identity, which may be either plain text or a hash
+     * @param pwdHash  the user's password, which is in a hashed form
+     *
+     * @return True iff the user identity is verified to exist, and the provided password is
+     *         correct for that user
+     * @return (conditional) the user identity in plain text
+     */
+    conditional String validateHash(UserId userId, Hash pwdHash, Signer hasher)
         {
-        return False;
+        TODO User identity and password hashing are not supported by this Realm
         }
 
 

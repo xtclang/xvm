@@ -588,4 +588,16 @@ interface Session
         // trust is assumed to be destroyed
         return None;
         }
+
+    /**
+     * This method is not an event, but it answers the question: "Has any significant session event
+     * occurred since a specific point in time in the past?" This is particularly useful when a
+     * multi-step process needs to be allowed to complete if-and-only-if no significant event
+     * occurred since some point in the past, such as when the process began.
+     *
+     * @param time  a time value, presumably in the past
+     *
+     * @return `True` iff session events have occurred since the specified time
+     */
+    Boolean anyEventsSince(Time time);
     }

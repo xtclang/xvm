@@ -147,7 +147,7 @@ service SessionImpl
     /**
      * A limit to the number of redirects, in order to suppress DDOS attacks.
      */
-    static protected Int MaxRedirects = 8;
+    static protected Int MaxRedirects_ = 8;
 
     /**
      * Internal recording of events related to the session, maintained for security and debugging
@@ -163,6 +163,12 @@ service SessionImpl
      * requests.
      */
     protected/private IdentitySet<RequestIn> requests_ = new IdentitySet(7);
+
+    /**
+     * The actual storage for arbitrary named session attributes.
+     */
+    @Lazy(() -> new HashMap())
+    protected/private Map<String, Shareable> attributes_;
 
 
     // ----- inner types ---------------------------------------------------------------------------
@@ -224,8 +230,11 @@ service SessionImpl
     // ----- session interface ---------------------------------------------------------------------
 
     @Override
-    @Lazy(() -> new HashMap())
-    public/private Map<String, Shareable> attributes;
+    @Lazy
+    public/private Map<String, Shareable> attributes.calc()
+        {
+        return new AttributeMap_();
+        }
 
     @Override
     public/private Time created;
@@ -344,8 +353,29 @@ service SessionImpl
         {
         }
 
+    @Override
+    Boolean anyEventsSince(Time time)
+        {
+        return time < versionChanged_;
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * The AttributeMap_ inner class is used to provide a service reference to the map of arbitrary
+     * session attributes.
+     *
+     * REVIEW GG verify that the delegation happens within the Session service
+     */
+    class AttributeMap_
+            delegates Map<String, Shareable>(actualMap)
+        {
+        Map<String, Shareable> actualMap.get()
+            {
+            return attributes_;
+            }
+        }
 
     /**
      * Obtain the specified cookie information.
@@ -475,11 +505,11 @@ service SessionImpl
     Int|HttpStatus prepareRedirect_(RequestInfo info)
         {
         // get rid of any excess pending redirects (size limit the array of "in flight" redirects)
-        if (PendingRedirect_[] pending ?= pendingRedirects_, pending.size > MaxRedirects)
+        if (PendingRedirect_[] pending ?= pendingRedirects_, pending.size > MaxRedirects_)
             {
-            // keep the most recent redirects, but one less than MaxRedirects to make room for the
+            // keep the most recent redirects, but one less than MaxRedirects_ to make room for the
             // new one we're about to add
-            pendingRedirects_ = pending[pending.size-MaxRedirects >..< MaxRedirects];
+            pendingRedirects_ = pending[pending.size-MaxRedirects_ >..< MaxRedirects_];
             }
 
         // prune any old redirects

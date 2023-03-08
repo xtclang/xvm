@@ -35,9 +35,15 @@ const FixedRealm
                 }
             }
 
+        // incorporate the default hasher into the array of hashers if it wasn't already present
+        if (hashers.empty)
+            {
+            hashers = [defaultHasher];
+            }
+
         // hash the passwords (and possibly the user names)
         Int                            userCount   = userPwds.size;
-        Int                            hasherCount = hashers.size.notLessThan(1);
+        Int                            hasherCount = hashers.size;
         HashMap<String, Hash|Hash[]>   pwdsByUser  = new HashMap(userCount);
         HashMap<Hash, String|String[]> usersByHash = new HashMap(userCount * hasherCount);
 
@@ -115,6 +121,46 @@ const FixedRealm
         }
 
     @Override
+    Signer[] hashers;
+
+    @Override
+    Hash[] hashesFor(UserId userId, Signer hasher)
+        {
+        if (userId.is(String))
+            {
+            if (Hash|Hash[] pwdHashes := pwdsByUser.get(userId))
+                {
+                return [pwdHashes.is(Hash) ? pwdHashes : pwdHashes[hashIndex(hasher)]];
+                }
+
+            return [];
+            }
+
+        String|String[] users = usersByHash.getOrDefault(userId, []);
+        if (users.is(String))
+            {
+            return hashesFor(users, hasher);
+            }
+
+        switch (users.size)
+            {
+            case 0:
+                return [];
+
+            case 1:
+                return hashesFor(users[0], hasher);
+
+            default:
+                Hash[] pwdHashes = new Hash[];
+                for (String user : users)
+                    {
+                    pwdHashes += hashesFor(user, hasher);
+                    }
+                return pwdHashes.freeze(inPlace=True);
+            }
+        }
+
+    @Override
     conditional String validateHash(UserId user, Hash password, Signer hasher)
         {
         if (user.is(String))
@@ -148,33 +194,23 @@ const FixedRealm
         return False;
         }
 
-    @Override
-    Signer[] hashers;
-
-    @Override
-    Boolean userHashed.get()
-        {
-        return !hashers.empty;
-        }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Obtain the user/password lookup map that contains the user name and password information that
-     * was hashed by a particular hasher.
+     * Obtain the index within the values (arrays of hashed passwords) stored in `pwdsByUser` that
+     * corresponds to a particular [hasher](Signer).
      *
-     * @param hasher  (optional) the hasher (a [Signer]) that indicates which set of digested
-     *                passwords to obtain, i.e. passwords that were digested by that hasher; if
-     *                none is specified, then the default hasher is assumed
+     * @param hasher  the [hasher](Signer) that indicates which digested passwords to hash or verify
      *
-     * @return the map containing the user names and passwords hashed by the specified hasher
+     * @return the index within the arrays of hashed passwords stored as the values of the
+     *         `pwdsByUser` map
      */
     protected Int hashIndex(Signer hasher)
         {
         if (hasher == defaultHasher)
             {
-            return hashers.size.notLessThan(1) - 1;
+            return hashers.size - 1;
             }
 
         Loop: for (val candidate : hashers)
