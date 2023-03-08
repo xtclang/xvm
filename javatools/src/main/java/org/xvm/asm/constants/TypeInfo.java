@@ -1270,8 +1270,7 @@ public class TypeInfo
                 // test the actual body signature
                 SignatureConstant sigTest0 = body.getSignature();
                 boolean           fEquals0;
-                if ((fEquals0 = sigTest0.equals(sig)) ||
-                        sigTest0.isSubstitutableFor(sig, typeCtx))
+                if ((fEquals0 = sigTest0.equals(sig)) || sigTest0.isSubstitutableFor(sig, typeCtx))
                     {
                     if (methodTest.isCapped())
                         {
@@ -1287,8 +1286,7 @@ public class TypeInfo
                 // test the resolved identity signature
                 SignatureConstant sigTest1 = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
                 boolean           fEquals1;
-                if ((fEquals1 = sigTest1.equals(sig)) ||
-                        sigTest1.isSubstitutableFor(sig, typeCtx))
+                if ((fEquals1 = sigTest1.equals(sig)) || sigTest1.isSubstitutableFor(sig, typeCtx))
                     {
                     if (methodTest.isCapped())
                         {
@@ -1301,9 +1299,26 @@ public class TypeInfo
                     break;
                     }
 
+                // test the canonical identity signature
+                SignatureConstant sigTest2 = body.getIdentity().getSignature();
+                boolean           fEquals2;
+                if ((fEquals2 = sigTest2.equals(sig)) || sigTest2.isSubstitutableFor(sig, typeCtx))
+                    {
+                    if (methodTest.isCapped())
+                        {
+                        methodCapped = methodTest;
+                        }
+                    else
+                        {
+                        methodBest = fEquals2 ? methodTest : chooseBest(methodBest, methodTest);
+                        }
+                    break;
+                    }
+
                 if (fRuntime && methodBest == null && methodCapped == null &&
                         (sigTest0.isCallableAs(sig) ||
-                         sigTest1.isCallableAs(sig)))
+                         sigTest1.isCallableAs(sig) ||
+                         sigTest2.isCallableAs(sig)))
                     {
                     methodRT = methodTest;
                     break;
