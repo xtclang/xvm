@@ -123,6 +123,8 @@ const String
     /**
      * Strip the whitespace off of the front and back of the string.
      *
+     * @param whitespace  a function that determines whether a character should be trimmed
+     *
      * @return the contents of this String, but without any leading or trailing whitespace
      */
     String trim(function Boolean(Char) whitespace = ch -> ch.isWhitespace())
@@ -253,7 +255,11 @@ const String
      * the specified entry separator character within the String, and collecting the array of
      * Strings demarcated by that character.
      *
-     * @param separator  the character that separates the items in the String
+     * @param kvSeparator     the character that separates each key from its corresponding value in
+     *                        each entry of the "map entries" represented by the String
+     * @param entrySeparator  the character that separates each entry from the next entry in the
+     *                        the sequence of "map entries" represented by the String
+     * @param whitespace      a function that identifies white space to strip off of keys and values
      *
      * @return an array of Strings
      */
@@ -316,7 +322,10 @@ const String
             return False;
             }
 
-        conditional (Int keyStart, Int sepOffset, Int valueEnd) find(String key)
+        /**
+         * Internal helper to find a "key in a map" that is actually in the underlying String.
+         */
+        protected conditional (Int keyStart, Int sepOffset, Int valueEnd) find(String key)
             {
             String data      = data;
             Int    length    = data.size;
