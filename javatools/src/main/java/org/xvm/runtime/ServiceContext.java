@@ -1615,7 +1615,7 @@ public class ServiceContext
                             if (index == 0 &&
                                     hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
                                 {
-                                return Utils.callFreeze(frame, hReturn, frameCaller ->
+                                return Utils.callFreeze(frame, hReturn, null, frameCaller ->
                                     {
                                     frameCaller.f_ahVar[0] = frameCaller.popStack();
                                     return checkResponse(fiberCaller, frameCaller, cReturns, 1);
@@ -1651,11 +1651,12 @@ public class ServiceContext
                                     {
                                     if (hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
                                         {
-                                        return Utils.callFreeze(frame, hReturn, frameCaller ->
+                                        int ix = i;
+                                        return Utils.callFreeze(frame, hReturn, null, frameCaller ->
                                             {
-                                            ((TupleHandle) frameCaller.f_ahVar[0]).m_ahValue[index] =
+                                            ((TupleHandle) frameCaller.f_ahVar[0]).m_ahValue[ix] =
                                                     frameCaller.popStack();
-                                            return checkResponse(fiberCaller, frameCaller, cReturns, index+1);
+                                            return checkResponse(fiberCaller, frameCaller, cReturns, ix+1);
                                             });
                                         }
                                     ObjectHandle hProxy = hReturn.getTemplate().
@@ -1668,6 +1669,14 @@ public class ServiceContext
                                         }
                                     ahReturn[i] = hProxy;
                                     }
+                                }
+
+                            // all values are pass-through; mark the tuple itself immutable;
+                            // we can do it since this tuple was created automatically by
+                            // "frame.assignTuple()" method
+                            if (!hTuple.getType().isImmutable())
+                                {
+                                hTuple.makeImmutable();
                                 }
                             }
                         frame.f_ahVar[0] = hTuple;
@@ -1697,12 +1706,13 @@ public class ServiceContext
                                 }
                             else if (!hReturn.isPassThrough(containerDst))
                                 {
+                                int ix = i;
                                 if (hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
                                     {
-                                    return Utils.callFreeze(frame, hReturn, frameCaller ->
+                                    return Utils.callFreeze(frame, hReturn, null, frameCaller ->
                                         {
-                                        ahReturn[index] = frameCaller.popStack();
-                                        return checkResponse(fiberCaller, frameCaller, cReturns, index+1);
+                                        ahReturn[ix] = frameCaller.popStack();
+                                        return checkResponse(fiberCaller, frameCaller, cReturns, ix+1);
                                         });
                                     }
                                 ObjectHandle hProxy = hReturn.getTemplate().

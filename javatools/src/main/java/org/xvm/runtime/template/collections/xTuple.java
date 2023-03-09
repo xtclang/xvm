@@ -2,7 +2,6 @@ package org.xvm.runtime.template.collections;
 
 
 import java.util.Arrays;
-
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -10,7 +9,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ArrayConstant;
@@ -788,7 +786,8 @@ public class xTuple
         }
 
     /**
-     * Make a mutable (fixed size) Tuple handle.
+     * Make a Tuple handle depending on the specified type composition. If the type is mutable,
+     * the resulting Tuple mutability is Fixed; otherwise Constant.
      *
      * @param clazz    the tuple class composition
      * @param ahValue  the values
@@ -797,7 +796,8 @@ public class xTuple
      */
     public static TupleHandle makeHandle(TypeComposition clazz, ObjectHandle... ahValue)
         {
-        return new TupleHandle(clazz, ahValue, Mutability.Fixed);
+        return new TupleHandle(clazz, ahValue,
+                clazz.getType().isImmutable() ? Mutability.Constant : Mutability.Fixed);
         }
 
     public static class TupleHandle

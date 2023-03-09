@@ -89,7 +89,7 @@ public class xLazyVar
             {
             if (hValue.getType().isA(frame.poolContext().typeFreezable()))
                 {
-                return Utils.callFreeze(frame, hValue, frameCaller ->
+                return Utils.callFreeze(frame, hValue, null, frameCaller ->
                     completeInvokeSet(frameCaller, hLazy, frameCaller.popStack()));
                 }
 

@@ -1626,12 +1626,15 @@ public abstract class Utils
      * Helper method for the "freeze()" method invocation that pushes the result onto the frame's
      * stack.
      *
-     * @param frame   the current frame
-     * @param hValue  the Freezable value to call the "freeze()" on
+     * @param frame     the current frame
+     * @param hValue    the Freezable value to call the "freeze()" on
+     * @param FInPlace  if Null, don't pass it (the callee will use default), otherwise pass the
+     *                  corresponding BooleanHandle
      *
      * @return R_NEXT, R_CALL or R_EXCEPTION value
      */
-    public static int callFreeze(Frame frame, ObjectHandle hValue, Frame.Continuation continuation)
+    public static int callFreeze(Frame frame, ObjectHandle hValue, Boolean FInPlace,
+                                 Frame.Continuation continuation)
         {
         CallChain chain = hValue.getComposition().getMethodCallChain(SIG_FREEZE);
         if (chain.isEmpty())
@@ -1640,7 +1643,11 @@ public abstract class Utils
                 "Missing method \"freeze()\" on " + hValue.getType().getValueString());
             }
 
-        switch (chain.invoke(frame, hValue, Op.A_STACK))
+        int iResult = FInPlace == null
+            ? chain.invoke(frame, hValue, Op.A_STACK)
+            : chain.invoke(frame, hValue, xBoolean.makeHandle(FInPlace), Op.A_STACK);
+
+        switch (iResult)
             {
             case Op.R_NEXT:
                 return continuation.proceed(frame);

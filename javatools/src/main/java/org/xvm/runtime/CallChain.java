@@ -445,7 +445,7 @@ public class CallChain
 
         return frame.raiseException(xException.makeHandle(frame,
             "Missing super() implementation for \"" + sig.getValueString() +
-                "\" on \"" + frame.getThis().getType().getValueString() + '"'));
+                "\" on \"" + frame.getThis().getType().removeAccess().getValueString() + '"'));
         }
 
 

@@ -122,7 +122,7 @@ public class Var_TN
                 Frame.Continuation stepNext = frameCaller ->
                     {
                     frameCaller.introduceVar(m_nVar, convertId(m_nType), m_nNameId,
-                        Frame.VAR_STANDARD, xTuple.makeImmutableHandle(clzTuple, ahArg));
+                        Frame.VAR_STANDARD, xTuple.makeHandle(clzTuple, ahArg));
                     return iPC + 1;
                     };
 
@@ -130,7 +130,7 @@ public class Var_TN
                 }
 
             frame.introduceVar(m_nVar, convertId(m_nType), m_nNameId,
-                Frame.VAR_STANDARD, xTuple.makeImmutableHandle(clzTuple, ahArg));
+                Frame.VAR_STANDARD, xTuple.makeHandle(clzTuple, ahArg));
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)

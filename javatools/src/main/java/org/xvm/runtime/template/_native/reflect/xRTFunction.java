@@ -1618,12 +1618,12 @@ public class xRTFunction
                 {
                 case Op.R_NEXT:
                     return frame.assignValue(iReturn,
-                        xTuple.makeImmutableHandle(clzTuple, frame.popStack()));
+                        xTuple.makeHandle(clzTuple, frame.popStack()));
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
                         frameCaller.assignValue(iReturn,
-                            xTuple.makeImmutableHandle(clzTuple, frameCaller.popStack())));
+                            xTuple.makeHandle(clzTuple, frameCaller.popStack())));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
