@@ -10,13 +10,13 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SignatureConstant;
 
-import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.reflect.xVar;
 
@@ -37,9 +37,6 @@ public class xLazyVar
     @Override
     public void initNative()
         {
-        ClassStructure clzFreezable = (ClassStructure) pool().typeFreezable().
-                                        getSingleUnderlyingClass(true).getComponent();
-        SIG_FREEZE = clzFreezable.findMethod("freeze", 1).getIdentityConstant().getSignature();
         }
 
     @Override
@@ -92,24 +89,8 @@ public class xLazyVar
             {
             if (hValue.getType().isA(frame.poolContext().typeFreezable()))
                 {
-                CallChain chain = hValue.getComposition().getMethodCallChain(SIG_FREEZE);
-                if (!chain.isEmpty())
-                    {
-                    switch (chain.invoke(frame, hValue, Op.A_STACK))
-                        {
-                        case Op.R_NEXT:
-                            return completeInvokeSet(frame, hLazy, frame.popStack());
-
-                        case Op.R_CALL:
-                            frame.m_frameNext.addContinuation(frameCaller ->
-                                completeInvokeSet(frameCaller, hLazy, frameCaller.popStack()));
-                            return Op.R_CALL;
-
-                        default:
-                            // throw the "non-freezable" exception below
-                            break;
-                        }
-                    }
+                return Utils.callFreeze(frame, hValue, frameCaller ->
+                    completeInvokeSet(frameCaller, hLazy, frameCaller.popStack()));
                 }
 
             ObjectHandle hOuter = hLazy.getField(frame, GenericHandle.OUTER);

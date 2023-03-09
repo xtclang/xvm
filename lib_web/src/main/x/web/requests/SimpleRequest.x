@@ -4,6 +4,7 @@ import codecs.Registry;
 /**
  * Represents a simple outgoing HTTP [Request] that can be configured and sent by a [Client].
  */
+@AutoFreezable
 class SimpleRequest
         implements RequestOut
         implements Header

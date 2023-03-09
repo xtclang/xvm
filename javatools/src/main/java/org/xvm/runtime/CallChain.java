@@ -9,8 +9,11 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
@@ -275,12 +278,27 @@ public class CallChain
         }
 
     /**
+     * Create a CallChain representing a property access.
+     */
+    public static CallChain createPropertyCallChain(MethodBody[] aMethods)
+        {
+        return aMethods.length == 1 && aMethods[0].getImplementation() == Implementation.Field
+                ? new FieldAccessChain(aMethods)
+                : new CallChain(aMethods);
+        }
+
+    /**
      * Super invocation with no arguments and a single return.
      */
     public int callSuper01(Frame frame, int iReturn)
         {
+        int nDepth = frame.m_nChainDepth + 1;
+        if (nDepth >= f_aMethods.length)
+            {
+            return missingSuper(frame);
+            }
+
         ObjectHandle hThis     = frame.getThis();
-        int          nDepth    = frame.m_nChainDepth + 1;
         MethodBody   bodySuper = f_aMethods[nDepth];
 
         switch (bodySuper.getImplementation())
@@ -317,8 +335,13 @@ public class CallChain
      */
     public int callSuper10(Frame frame, ObjectHandle hArg)
         {
+        int nDepth = frame.m_nChainDepth + 1;
+        if (nDepth >= f_aMethods.length)
+            {
+            return missingSuper(frame);
+            }
+
         ObjectHandle hThis     = frame.getThis();
-        int          nDepth    = frame.m_nChainDepth + 1;
         MethodBody   bodySuper = f_aMethods[nDepth];
 
         switch (bodySuper.getImplementation())
@@ -351,8 +374,13 @@ public class CallChain
      */
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple)
         {
+        int nDepth = frame.m_nChainDepth + 1;
+        if (nDepth >= f_aMethods.length)
+            {
+            return missingSuper(frame);
+            }
+
         ObjectHandle    hThis       = frame.getThis();
-        int             nDepth      = frame.m_nChainDepth + 1;
         MethodBody      bodySuper   = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
@@ -385,8 +413,13 @@ public class CallChain
      */
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
         {
+        int nDepth = frame.m_nChainDepth + 1;
+        if (nDepth >= f_aMethods.length)
+            {
+            return missingSuper(frame);
+            }
+
         ObjectHandle    hThis       = frame.getThis();
-        int             nDepth      = frame.m_nChainDepth + 1;
         MethodBody      bodySuper   = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
@@ -403,18 +436,23 @@ public class CallChain
             };
         }
 
-    public static CallChain createPropertyCallChain(MethodBody[] aMethods)
+    /**
+     * Raise a "missing super" exception.
+     */
+    private int missingSuper(Frame frame)
         {
-        return aMethods.length == 1 && aMethods[0].getImplementation() == Implementation.Field
-                ? new FieldAccessChain(aMethods)
-                : new CallChain(aMethods);
+        SignatureConstant sig = f_aMethods[0].getSignature().removeAutoNarrowing();
+
+        return frame.raiseException(xException.makeHandle(frame,
+            "Missing super() implementation for \"" + sig.getValueString() +
+                "\" on \"" + frame.getThis().getType().getValueString() + '"'));
         }
 
 
     // ----- CallChain subclasses ------------------------------------------------------------------
 
     /**
-     * A CallChain representing an exception.
+     * A CallChain representing a field access.
      */
     public static class FieldAccessChain
             extends CallChain

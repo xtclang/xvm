@@ -26,6 +26,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -64,30 +65,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
  */
 public abstract class Utils
     {
-    /**
-     * Collect necessary constants for future use.
-     *
-     * @param container the template registry
-     */
-    public static void initNative(NativeContainer container)
-        {
-        ConstantPool pool = container.getConstantPool();
-
-        ANNOTATION_TEMPLATE           = container.getTemplate("reflect.Annotation");
-        ANNOTATION_TEMPLATE_TEMPLATE  = container.getTemplate("reflect.AnnotationTemplate");
-        ARGUMENT_TEMPLATE             = container.getTemplate("reflect.Argument");
-        RT_PARAMETER_TEMPLATE         = container.getTemplate("_native.reflect.RTParameter");
-        ANNOTATION_CONSTRUCT          = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
-        ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
-        ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
-        RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT            = container.getClassStructure("collections.ListMap").findMethod("construct", 2);
-        ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
-        ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
-        CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
-        STRING_VALUE_OF               = CONST_HELPER.findMethod("valueOf", 1);
-
-        }
+    // assigned by initNative()
+    private static ClassTemplate     ANNOTATION_TEMPLATE;
 
     /**
      * Ensure that the specified array of arguments is of the specified size.
@@ -145,24 +124,8 @@ public abstract class Utils
             ? hValue.getTemplate().buildStringValue(frame, hValue, Op.A_STACK)
             : chain.invoke(frame, hValue, OBJECTS_NONE, Op.A_STACK);
         }
-
-    /**
-     * Helper method for the "toString()" method invocation that pushes the result onto the frame's
-     * stack. This method never throws a natural exception; instead it creates a resulting string
-     * with some basic exception information.
-     *
-     * @param frame   the current frame
-     * @param hValue  the value to get a string value for
-     *
-     * @return R_CALL value
-     */
-    public static int callValueOf(Frame frame, ObjectHandle hValue)
-        {
-        ObjectHandle[] ahVar = new ObjectHandle[STRING_VALUE_OF.getMaxVars()];
-        ahVar[0] = hValue;
-        frame.call1(STRING_VALUE_OF, null, ahVar, Op.A_STACK);
-        return Op.R_CALL;
-        }
+    private static ClassTemplate     ANNOTATION_TEMPLATE_TEMPLATE;
+    private static ClassTemplate     ARGUMENT_TEMPLATE;
 
     /**
      * An adapter method that assigns the result of a natural execution to a calling frame
@@ -1605,18 +1568,92 @@ public abstract class Utils
     public final static Predicate          ANY  = t -> true;
 
     public static ClassStructure  CONST_HELPER;
+    private static ClassTemplate     RT_PARAMETER_TEMPLATE;
+    private static MethodStructure   ANNOTATION_CONSTRUCT;
+    private static MethodStructure   ANNOTATION_TEMPLATE_CONSTRUCT;
+    private static MethodStructure   ARGUMENT_CONSTRUCT;
+    private static MethodStructure   RT_PARAMETER_CONSTRUCT;
+    private static MethodStructure   LIST_MAP_CONSTRUCT;
+    private static MethodStructure   STRING_VALUE_OF;
+    private static TypeConstant      ANNOTATION_ARRAY_TYPE;
+    private static TypeConstant      ARGUMENT_ARRAY_TYPE;
+    private static SignatureConstant SIG_FREEZE;
 
-    // assigned by initNative()
-    private static ClassTemplate   ANNOTATION_TEMPLATE;
-    private static MethodStructure ANNOTATION_CONSTRUCT;
-    private static ClassTemplate   ANNOTATION_TEMPLATE_TEMPLATE;
-    private static MethodStructure ANNOTATION_TEMPLATE_CONSTRUCT;
-    private static ClassTemplate   ARGUMENT_TEMPLATE;
-    private static MethodStructure ARGUMENT_CONSTRUCT;
-    private static ClassTemplate   RT_PARAMETER_TEMPLATE;
-    private static MethodStructure RT_PARAMETER_CONSTRUCT;
-    private static MethodStructure LIST_MAP_CONSTRUCT;
-    private static MethodStructure STRING_VALUE_OF;
-    private static TypeConstant    ANNOTATION_ARRAY_TYPE;
-    private static TypeConstant    ARGUMENT_ARRAY_TYPE;
+    /**
+     * Collect necessary constants for future use.
+     *
+     * @param container the template registry
+     */
+    public static void initNative(NativeContainer container)
+        {
+        ConstantPool pool = container.getConstantPool();
+
+        ANNOTATION_TEMPLATE           = container.getTemplate("reflect.Annotation");
+        ANNOTATION_TEMPLATE_TEMPLATE  = container.getTemplate("reflect.AnnotationTemplate");
+        ARGUMENT_TEMPLATE             = container.getTemplate("reflect.Argument");
+        RT_PARAMETER_TEMPLATE         = container.getTemplate("_native.reflect.RTParameter");
+        ANNOTATION_CONSTRUCT          = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
+        ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
+        ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
+        RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
+        LIST_MAP_CONSTRUCT            = container.getClassStructure("collections.ListMap").findMethod("construct", 2);
+        ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
+        ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
+        CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
+        STRING_VALUE_OF               = CONST_HELPER.findMethod("valueOf", 1);
+        SIG_FREEZE                    = container.getClassStructure("Freezable").findMethod("freeze", 1).
+                                            getIdentityConstant().getSignature();
+        }
+
+    /**
+     * Helper method for the "toString()" method invocation that pushes the result onto the frame's
+     * stack. This method never throws a natural exception; instead it creates a resulting string
+     * with some basic exception information.
+     *
+     * @param frame   the current frame
+     * @param hValue  the value to get a string value for
+     *
+     * @return R_CALL value
+     */
+    public static int callValueOf(Frame frame, ObjectHandle hValue)
+        {
+        ObjectHandle[] ahVar = new ObjectHandle[STRING_VALUE_OF.getMaxVars()];
+        ahVar[0] = hValue;
+        return frame.call1(STRING_VALUE_OF, null, ahVar, Op.A_STACK);
+        }
+
+    /**
+     * Helper method for the "freeze()" method invocation that pushes the result onto the frame's
+     * stack.
+     *
+     * @param frame   the current frame
+     * @param hValue  the Freezable value to call the "freeze()" on
+     *
+     * @return R_NEXT, R_CALL or R_EXCEPTION value
+     */
+    public static int callFreeze(Frame frame, ObjectHandle hValue, Frame.Continuation continuation)
+        {
+        CallChain chain = hValue.getComposition().getMethodCallChain(SIG_FREEZE);
+        if (chain.isEmpty())
+            {
+            return frame.raiseException(
+                "Missing method \"freeze()\" on " + hValue.getType().getValueString());
+            }
+
+        switch (chain.invoke(frame, hValue, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return continuation.proceed(frame);
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(continuation);
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
     }

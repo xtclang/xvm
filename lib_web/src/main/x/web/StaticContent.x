@@ -24,7 +24,7 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType=Null,
             {
             if (MediaType mediaType := webApp.registry_.findMediaType(file.name))
                 {
-                return new SimpleResponse(OK, mediaType, file.contents).makeImmutable();
+                return new SimpleResponse(OK, mediaType, file.contents);
                 }
             throw new RequestAborted(NoContent, $"Unknown media type for {file.name}");
             }

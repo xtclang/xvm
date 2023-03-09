@@ -43,6 +43,7 @@ import ecstasy.UnsupportedOperation;
 import ecstasy.annotations.Abstract;
 import ecstasy.annotations.AtomicVar         as Atomic;
 import ecstasy.annotations.AutoConversion    as Auto;
+import ecstasy.annotations.AutoFreezable     as AutoFreezable;
 import ecstasy.annotations.Concurrent;
 import ecstasy.annotations.ConditionalTuple;
 import ecstasy.annotations.Debug;

@@ -6,6 +6,7 @@ import java.lang.invoke.VarHandle;
 
 import java.lang.ref.WeakReference;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -802,23 +803,11 @@ public class ServiceContext
 
                         // no one handled the exception, and we have reached the "proto-frame";
                         // it will process the exception
-                        if (frame.m_continuation == null)
-                            {
-                            throw new IllegalStateException(
-                                "Proto-frame is missing the continuation: " + hException);
-                            }
-
                         frame.raiseException(hException);
-
-                        // R_NEXT indicates this fiber is done
-                        if (frame.m_continuation.proceed(null) != Op.R_NEXT)
-                            {
-                            // the proto-frame never calls anything naturally nor throws
-                            throw new IllegalStateException();
-                            }
-
-                        terminateFiber(fiber);
-                        return m_frameCurrent = null;
+                        m_frameCurrent = frame;
+                        aOp = frame.f_aOp;
+                        iPC = frame.m_iPC + 1;
+                        break;
                         }
                     break;
                     }
@@ -1588,9 +1577,18 @@ public class ServiceContext
             }
 
         /**
-         * Send the specified number of return values back to the caller.
+         * The CompletableFuture associates with this request.
          */
-        protected int sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
+        final public CompletableFuture f_future;
+        /**
+         * The Fiber this request runs on.
+         */
+        public Fiber m_fiber;
+
+        /**
+         * Check the response values and call "freeze" or create proxies if necessary.
+         */
+        protected int checkResponse(Fiber fiberCaller, Frame frame, int cReturns, int index)
             {
             ServiceContext ctxSrc = frame.f_context;
             ServiceContext ctxDst = fiberCaller.f_context;
@@ -1602,74 +1600,172 @@ public class ServiceContext
 
             switch (cReturns)
                 {
-                case 0 -> ctxDst.respond(
-                    new Response<ObjectHandle>(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                case 0:
+                    break;
 
-                case 1 ->
+                case 1:
                     {
                     ObjectHandle    hReturn    = frame.f_ahVar[0];
                     ExceptionHandle hException = frame.m_hException;
 
                     if (hException == null)
                         {
-                        if (hReturn == null)
+                        if (hReturn != null && !hReturn.isPassThrough(containerDst))
                             {
-                            // this must be an async void call
-                            hReturn = xTuple.H_VOID;
-                            }
-                        else if (!hReturn.isPassThrough(containerDst))
-                            {
-                            hReturn = hReturn.getTemplate().createProxyHandle(ctxSrc, hReturn, null);
-                            if (hReturn == null)
+                            if (index == 0 &&
+                                    hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
                                 {
-                                hException = xException.illegalArgument(frame,
-                                    "Mutable return value from \"" + this + '"');
+                                return Utils.callFreeze(frame, hReturn, frameCaller ->
+                                    {
+                                    frameCaller.f_ahVar[0] = frameCaller.popStack();
+                                    return checkResponse(fiberCaller, frameCaller, cReturns, 1);
+                                    });
                                 }
+                            ObjectHandle hProxy = hReturn.getTemplate().
+                                    createProxyHandle(ctxSrc, hReturn, null);
+                            if (hProxy == null)
+                                {
+                                reportMutable(frame, hReturn);
+                                return Op.R_EXCEPTION;
+                                }
+                            frame.f_ahVar[0] = hProxy;
                             }
                         }
-                    ctxDst.respond(
-                            new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                    break;
                     }
 
-                case -1 -> // tuple return
+                case -1: // tuple return
                     {
                     ObjectHandle[]  ahReturn   = frame.f_ahVar;
                     ExceptionHandle hException = frame.m_hException;
-                    TupleHandle     hTuple     = null;
                     if (hException == null)
                         {
-                        hTuple = (TupleHandle) ahReturn[0];
-                        if (hTuple == null)
-                            {
-                            // indicates a "void" return
-                            hTuple = xTuple.H_VOID;
-                            }
-                        else
+                        TupleHandle hTuple = (TupleHandle) ahReturn[0];
+                        if (hTuple != null)
                             {
                             ahReturn = hTuple.m_ahValue;
-                            for (int i = 0, c = ahReturn.length; i < c; i++)
+                            for (int i = index, c = ahReturn.length; i < c; i++)
                                 {
                                 ObjectHandle hReturn = ahReturn[i];
                                 if (!hReturn.isPassThrough(containerDst))
                                     {
-                                    hReturn = hReturn.getTemplate().createProxyHandle(ctxSrc, hReturn, null);
-                                    if (hReturn == null)
+                                    if (hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
                                         {
-                                        hException = xException.illegalArgument(frame,
-                                            "Mutable return value from \"" + this + '"');
+                                        return Utils.callFreeze(frame, hReturn, frameCaller ->
+                                            {
+                                            ((TupleHandle) frameCaller.f_ahVar[0]).m_ahValue[index] =
+                                                    frameCaller.popStack();
+                                            return checkResponse(fiberCaller, frameCaller, cReturns, index+1);
+                                            });
+                                        }
+                                    ObjectHandle hProxy = hReturn.getTemplate().
+                                            createProxyHandle(ctxSrc, hReturn, null);
+                                    if (hProxy == null)
+                                        {
+                                        reportMutable(frame, hReturn);
                                         hTuple = null;
                                         break;
                                         }
-                                    ahReturn[i] = hReturn;
+                                    ahReturn[i] = hProxy;
                                     }
                                 }
                             }
+                        frame.f_ahVar[0] = hTuple;
                         }
-                    ctxDst.respond(
-                            new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                    break;
                     }
 
-                default ->
+                default:
+                    {
+                    assert cReturns > 1;
+                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                    ExceptionHandle hException = frame.m_hException;
+
+                    if (hException == null)
+                        {
+                        for (int i = index, c = ahReturn.length; i < c; i++)
+                            {
+                            ObjectHandle hReturn = ahReturn[i];
+                            if (hReturn == null)
+                                {
+                                // this is only possible for a conditional return of "False"
+                                assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+
+                                // since "null" indicates a deferred future value, replace it with
+                                // the DEFAULT value (see Utils.GET_AND_RETURN)
+                                ahReturn[i] = ObjectHandle.DEFAULT;
+                                }
+                            else if (!hReturn.isPassThrough(containerDst))
+                                {
+                                if (hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
+                                    {
+                                    return Utils.callFreeze(frame, hReturn, frameCaller ->
+                                        {
+                                        ahReturn[index] = frameCaller.popStack();
+                                        return checkResponse(fiberCaller, frameCaller, cReturns, index+1);
+                                        });
+                                    }
+                                ObjectHandle hProxy = hReturn.getTemplate().
+                                        createProxyHandle(ctxSrc, hReturn, null);
+                                if (hProxy == null)
+                                    {
+                                    reportMutable(frame, hReturn);
+                                    Arrays.fill(ahReturn, null);
+                                    return Op.R_EXCEPTION;
+                                    }
+                                ahReturn[i] = hProxy;
+                                }
+                            }
+                        }
+                    break;
+                    }
+                }
+            return Op.R_NEXT;
+            }
+
+        private void reportMutable(Frame frame, ObjectHandle hValue)
+            {
+            frame.raiseException(xException.illegalArgument(frame,
+                    "Mutable return value from \"" + this +
+                    "\"; type=" + hValue.getType().getValueString()));
+            }
+
+        /**
+         * Send the specified number of return values back to the caller.
+         */
+        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
+            {
+            ServiceContext ctxDst = fiberCaller.f_context;
+
+            switch (cReturns)
+                {
+                case 0:
+                    ctxDst.respond(new Response<ObjectHandle>(
+                            fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                    break;
+
+                case 1:
+                    {
+                    ObjectHandle    hReturn    = frame.f_ahVar[0];
+                    ExceptionHandle hException = frame.m_hException;
+
+                    ctxDst.respond(
+                            new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                    break;
+                    }
+
+                case -1: // tuple return
+                    {
+                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                    ExceptionHandle hException = frame.m_hException;
+                    TupleHandle     hTuple     = hException == null ? (TupleHandle) ahReturn[0] : null;
+
+                    ctxDst.respond(
+                            new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                    break;
+                    }
+
+                default:
                     {
                     assert cReturns > 1;
                     ObjectHandle[]  ahReturn   = frame.f_ahVar;
@@ -1689,31 +1785,14 @@ public class ServiceContext
                                 // the DEFAULT value (see Utils.GET_AND_RETURN)
                                 ahReturn[i] = ObjectHandle.DEFAULT;
                                 }
-                            else if (!hReturn.isPassThrough(containerDst))
-                                {
-                                hReturn = hReturn.getTemplate().
-                                            createProxyHandle(ctxSrc, hReturn, null);
-                                if (hReturn == null)
-                                    {
-                                    hException = xException.illegalArgument(frame,
-                                        "Mutable return value from \"" + this + '"');
-                                    ahReturn = null;
-                                    break;
-                                    }
-                                ahReturn[i] = hReturn;
-                                }
                             }
                         }
                     ctxDst.respond(
                             new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
+                    break;
                     }
                 }
-            return Op.R_NEXT;
             }
-
-        final public CompletableFuture f_future;
-
-        public Fiber m_fiber;
         }
 
     /**
@@ -1733,11 +1812,37 @@ public class ServiceContext
         @Override
         public Frame createFrame(ServiceContext context)
             {
-            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns, new Op[]{f_op, Return_0.INSTANCE});
+            Op opCheck = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    return checkResponse(f_fiberCaller, frame, f_cReturns, 0);
+                    }
+                @Override
+                public String toString()
+                    {
+                    return "Check";
+                    }
+                };
+
+            Op opRespond = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    sendResponse(f_fiberCaller, frame, f_future, f_cReturns);
+                    return iPC + 1;
+                    }
+                @Override
+                public String toString()
+                    {
+                    return "Respond";
+                    }
+                };
+
+            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
+                        new Op[]{f_op, opCheck, opRespond, Return_0.INSTANCE});
 
             m_fiber = frame0.f_fiber;
-
-            frame0.addContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
             return frame0;
             }
 
@@ -1749,7 +1854,7 @@ public class ServiceContext
 
         private final Op  f_op;
         private final int f_cReturns;
-       }
+        }
 
     /**
      * Represents a natural "fire and forget" or a native call request to a service.
@@ -1817,7 +1922,10 @@ public class ServiceContext
             else
                 {
                 frame0.addContinuation(_null ->
-                        sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
+                    {
+                    sendResponse(f_fiberCaller, frame0, f_future, f_cReturns);
+                    return Op.R_NEXT;
+                    });
                 }
 
             return frame0;

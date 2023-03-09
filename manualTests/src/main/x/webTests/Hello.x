@@ -82,7 +82,7 @@ module Hello
                 {
                 File file = /resources/hello/index.html;
 
-                return new SimpleResponse(OK, HTML, file.contents).makeImmutable();
+                return new SimpleResponse(OK, HTML, file.contents);
                 }
 
             @HttpsRequired

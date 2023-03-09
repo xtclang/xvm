@@ -132,7 +132,7 @@ service Dispatcher(Catalog        catalog,
 
                     response = result.is(ResponseOut)
                             ? result
-                            : new SimpleResponse(result).makeImmutable();
+                            : new SimpleResponse(result);
 
                     break ProcessRequest;
                     }

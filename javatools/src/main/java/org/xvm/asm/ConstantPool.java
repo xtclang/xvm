@@ -424,19 +424,18 @@ public class ConstantPool
             }
         }
 
+    private transient TypeConstant      m_typeAutoFreezable;
+
+    /**
+     * Given the specified {@code int} value for a bit, obtain a ByteConstant that represents it.
+     *
+     * @param n  the {@code int} value of the bit
+     *
+     * @return an ByteConstant for the passed bit value
+     */
     public ByteConstant ensureBitConstant(int n)
         {
         return ensureByteConstant(Format.Bit, n);
-        }
-
-    public ByteConstant ensureNibbleConstant(int n)
-        {
-        return ensureByteConstant(Format.Nibble, n);
-        }
-
-    public ByteConstant ensureByteConstant(int n)
-        {
-        return ensureByteConstant(Format.CUInt8, n);
         }
 
     public ByteConstant ensureByteConstant(Format format, int n)
@@ -1256,19 +1255,6 @@ public class ConstantPool
         return constClass.getComponent().getFormat() == Component.Format.ENUMVALUE
                 ? (EnumValueConstant) register(new EnumValueConstant(this, (ClassConstant) constClass))
                 : (SingletonConstant) register(new SingletonConstant(this, Format.SingletonConst, constClass));
-        }
-
-    /**
-     * Given a ClassConstant for a service, obtain a constant that represents the singleton instance
-     * of the class.
-     *
-     * @param constClass  a ClassConstant of a singleton service
-     *
-     * @return an SingletonConstant representing the singleton service instance
-     */
-    public SingletonConstant ensureSingletonServiceConstant(ClassConstant constClass)
-        {
-        return (SingletonConstant) register(new SingletonConstant(this, Format.SingletonService, constClass));
         }
 
     /**
@@ -2287,234 +2273,458 @@ public class ConstantPool
 
     // ----- caching helpers -----------------------------------------------------------------------
 
-    public ModuleConstant    modEcstasy()       {ModuleConstant    c = m_valEcstasy;      if (c == null) {m_valEcstasy      = c = ensureModuleConstant(ECSTASY_MODULE)                             ;} return c;}
+    /**
+     * Given the specified {@code int} value for a nibble, obtain a ByteConstant that represents it.
+     *
+     * @param n  the {@code int} value of the nibble
+     *
+     * @return an ByteConstant for the passed nibble value
+     */
+    public ByteConstant ensureNibbleConstant(int n)
+        {
+        return ensureByteConstant(Format.Nibble, n);
+        }
 
-    public ClassConstant     clzObject()        {ClassConstant     c = m_clzObject;       if (c == null) {m_clzObject       = c = (ClassConstant) getImplicitlyImportedIdentity("Object"          );} return c;}
-    public ClassConstant     clzInner()         {ClassConstant     c = m_clzInner;        if (c == null) {m_clzInner        = c = (ClassConstant) getImplicitlyImportedIdentity("Inner"           );} return c;}
-    public ClassConstant     clzOuter()         {ClassConstant     c = m_clzOuter;        if (c == null) {m_clzOuter        = c = (ClassConstant) getImplicitlyImportedIdentity("Outer"           );} return c;}
-    public ClassConstant     clzRef()           {ClassConstant     c = m_clzRef;          if (c == null) {m_clzRef          = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"             );} return c;}
-    public ClassConstant     clzVar()           {ClassConstant     c = m_clzVar;          if (c == null) {m_clzVar          = c = (ClassConstant) getImplicitlyImportedIdentity("Var"             );} return c;}
-    public ClassConstant     clzStruct()        {ClassConstant     c = m_clzStruct;       if (c == null) {m_clzStruct       = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"          );} return c;}
-    public ClassConstant     clzType()          {ClassConstant     c = m_clzType;         if (c == null) {m_clzType         = c = (ClassConstant) getImplicitlyImportedIdentity("Type"            );} return c;}
-    public ClassConstant     clzConst()         {ClassConstant     c = m_clzConst;        if (c == null) {m_clzConst        = c = (ClassConstant) getImplicitlyImportedIdentity("Const"           );} return c;}
-    public ClassConstant     clzService()       {ClassConstant     c = m_clzService;      if (c == null) {m_clzService      = c = (ClassConstant) getImplicitlyImportedIdentity("Service"         );} return c;}
-    public ClassConstant     clzModule()        {ClassConstant     c = m_clzModule;       if (c == null) {m_clzModule       = c = (ClassConstant) getImplicitlyImportedIdentity("Module"          );} return c;}
-    public ClassConstant     clzPackage()       {ClassConstant     c = m_clzPackage;      if (c == null) {m_clzPackage      = c = (ClassConstant) getImplicitlyImportedIdentity("Package"         );} return c;}
-    public ClassConstant     clzEnum()          {ClassConstant     c = m_clzEnum;         if (c == null) {m_clzEnum         = c = (ClassConstant) getImplicitlyImportedIdentity("Enum"            );} return c;}
-    public ClassConstant     clzEnumeration()   {ClassConstant     c = m_clzEnumeration;  if (c == null) {m_clzEnumeration  = c = (ClassConstant) getImplicitlyImportedIdentity("Enumeration"     );} return c;}
-    public ClassConstant     clzEnumValue()     {ClassConstant     c = m_clzEnumValue;    if (c == null) {m_clzEnumValue    = c = (ClassConstant) getImplicitlyImportedIdentity("EnumValue"       );} return c;}
-    public ClassConstant     clzCloseable()     {ClassConstant     c = m_clzCloseable;    if (c == null) {m_clzCloseable    = c = (ClassConstant) getImplicitlyImportedIdentity("Closeable"       );} return c;}
-    public ClassConstant     clzException()     {ClassConstant     c = m_clzException;    if (c == null) {m_clzException    = c = (ClassConstant) getImplicitlyImportedIdentity("Exception"       );} return c;}
-    public ClassConstant     clzProperty()      {ClassConstant     c = m_clzProperty;     if (c == null) {m_clzProperty     = c = (ClassConstant) getImplicitlyImportedIdentity("Property"        );} return c;}
-    public ClassConstant     clzMethod()        {ClassConstant     c = m_clzMethod;       if (c == null) {m_clzMethod       = c = (ClassConstant) getImplicitlyImportedIdentity("Method"          );} return c;}
-    public ClassConstant     clzFunction()      {ClassConstant     c = m_clzFunction;     if (c == null) {m_clzFunction     = c = (ClassConstant) getImplicitlyImportedIdentity("Function"        );} return c;}
-    public ClassConstant     clzNullable()      {ClassConstant     c = m_clzNullable;     if (c == null) {m_clzNullable     = c = (ClassConstant) getImplicitlyImportedIdentity("Nullable"        );} return c;}
-    public ClassConstant     clzCollection()    {ClassConstant     c = m_clzCollection;   if (c == null) {m_clzCollection   = c = (ClassConstant) getImplicitlyImportedIdentity("Collection"      );} return c;}
-    public ClassConstant     clzSet()           {ClassConstant     c = m_clzSet;          if (c == null) {m_clzSet          = c = (ClassConstant) getImplicitlyImportedIdentity("Set"             );} return c;}
-    public ClassConstant     clzList()          {ClassConstant     c = m_clzList;         if (c == null) {m_clzList         = c = (ClassConstant) getImplicitlyImportedIdentity("List"            );} return c;}
-    public ClassConstant     clzArray()         {ClassConstant     c = m_clzArray;        if (c == null) {m_clzArray        = c = (ClassConstant) getImplicitlyImportedIdentity("Array"           );} return c;}
-    public ClassConstant     clzMatrix()        {ClassConstant     c = m_clzMatrix;       if (c == null) {m_clzMatrix       = c = (ClassConstant) getImplicitlyImportedIdentity("Matrix"          );} return c;}
-    public ClassConstant     clzMap()           {ClassConstant     c = m_clzMap;          if (c == null) {m_clzMap          = c = (ClassConstant) getImplicitlyImportedIdentity("Map"             );} return c;}
-    public ClassConstant     clzSliceable()     {ClassConstant     c = m_clzSliceable;    if (c == null) {m_clzSliceable    = c = (ClassConstant) getImplicitlyImportedIdentity("Sliceable"       );} return c;}
-    public ClassConstant     clzOrderable()     {ClassConstant     c = m_clzOrderable;    if (c == null) {m_clzOrderable    = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"       );} return c;}
-    public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"           );} return c;}
-    public ClassConstant     clzCondTuple()     {ClassConstant     c = m_clzCondTuple;    if (c == null) {m_clzCondTuple    = c = (ClassConstant) getImplicitlyImportedIdentity("ConditionalTuple");} return c;}
-    public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"            );} return c;}
-    public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"              );} return c;}
-    public ClassConstant     clzRO()            {ClassConstant     c = m_clzRO;           if (c == null) {m_clzRO           = c = (ClassConstant) getImplicitlyImportedIdentity("RO"              );} return c;}
-    public ClassConstant     clzFinal()         {ClassConstant     c = m_clzFinal;        if (c == null) {m_clzFinal        = c = (ClassConstant) getImplicitlyImportedIdentity("Final"           );} return c;}
-    public ClassConstant     clzInject()        {ClassConstant     c = m_clzInject;       if (c == null) {m_clzInject       = c = (ClassConstant) getImplicitlyImportedIdentity("Inject"          );} return c;}
-    public ClassConstant     clzAbstract()      {ClassConstant     c = m_clzAbstract;     if (c == null) {m_clzAbstract     = c = (ClassConstant) getImplicitlyImportedIdentity("Abstract"        );} return c;}
-    public ClassConstant     clzAtomic()        {ClassConstant     c = m_clzAtomic;       if (c == null) {m_clzAtomic       = c = (ClassConstant) getImplicitlyImportedIdentity("Atomic"          );} return c;}
-    public ClassConstant     clzConcurrent()    {ClassConstant     c = m_clzConcurrent;   if (c == null) {m_clzConcurrent   = c = (ClassConstant) getImplicitlyImportedIdentity("Concurrent"      );} return c;}
-    public ClassConstant     clzSynchronized()  {ClassConstant     c = m_clzSynchronized; if (c == null) {m_clzSynchronized = c = (ClassConstant) getImplicitlyImportedIdentity("Synchronized"    );} return c;}
-    public ClassConstant     clzFuture()        {ClassConstant     c = m_clzFuture;       if (c == null) {m_clzFuture       = c = (ClassConstant) getImplicitlyImportedIdentity("Future"          );} return c;}
-    public ClassConstant     clzOverride()      {ClassConstant     c = m_clzOverride;     if (c == null) {m_clzOverride     = c = (ClassConstant) getImplicitlyImportedIdentity("Override"        );} return c;}
-    public ClassConstant     clzLazy()          {ClassConstant     c = m_clzLazy;         if (c == null) {m_clzLazy         = c = (ClassConstant) getImplicitlyImportedIdentity("Lazy"            );} return c;}
-    public ClassConstant     clzTest()          {ClassConstant     c = m_clzTest;         if (c == null) {m_clzTest         = c = (ClassConstant) getImplicitlyImportedIdentity("Test"            );} return c;}
-    public ClassConstant     clzTransient()     {ClassConstant     c = m_clzTransient;    if (c == null) {m_clzTransient    = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
-    public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"       );} return c;}
-    public ClassConstant     clzUnassigned()    {ClassConstant     c = m_clzUnassigned;   if (c == null) {m_clzUnassigned   = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
+    public ModuleConstant    modEcstasy()        {ModuleConstant    c = m_valEcstasy;        if (c == null) {m_valEcstasy        = c = ensureModuleConstant(ECSTASY_MODULE)                             ;} return c;}
 
-    public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                          );} return c;}
-    public TypeConstant      typeInner()        {TypeConstant      c = m_typeInner;       if (c == null) {m_typeInner       = c = ensureVirtualChildTypeConstant(typeOuter(), "Inner"             );} return c;}
-    public TypeConstant      typeOuter()        {TypeConstant      c = m_typeOuter;       if (c == null) {m_typeOuter       = c = ensureTerminalTypeConstant(clzOuter()                           );} return c;}
-    public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                             );} return c;}
-    public TypeConstant      typeRefRB()        {TypeConstant      c = m_typeRefRB;       if (c == null) {m_typeRefRB       = c = makeNativeRebase(clzRef()                                       );} return c;}
-    public TypeConstant      typeVar()          {TypeConstant      c = m_typeVar;         if (c == null) {m_typeVar         = c = ensureTerminalTypeConstant(clzVar()                             );} return c;}
-    public TypeConstant      typeVarRB()        {TypeConstant      c = m_typeVarRB;       if (c == null) {m_typeVarRB       = c = makeNativeRebase(clzVar()                                       );} return c;}
-    public TypeConstant      typeStruct()       {TypeConstant      c = m_typeStruct;      if (c == null) {m_typeStruct      = c = ensureTerminalTypeConstant(clzStruct()                          );} return c;}
-    public TypeConstant      typeType()         {TypeConstant      c = m_typeType;        if (c == null) {m_typeType        = c = ensureTerminalTypeConstant(clzType()                            );} return c;}
-    public TypeConstant      typeClass()        {TypeConstant      c = m_typeClass;       if (c == null) {m_typeClass       = c = ensureTerminalTypeConstant(clzClass()                           );} return c;}
-    public TypeConstant      typeConst()        {TypeConstant      c = m_typeConst;       if (c == null) {m_typeConst       = c = ensureTerminalTypeConstant(clzConst()                           );} return c;}
-    public TypeConstant      typeConstRB()      {TypeConstant      c = m_typeConstRB;     if (c == null) {m_typeConstRB     = c = makeNativeRebase(clzConst()                                     );} return c;}
-    public TypeConstant      typeService()      {TypeConstant      c = m_typeService;     if (c == null) {m_typeService     = c = ensureTerminalTypeConstant(clzService()                         );} return c;}
-    public TypeConstant      typeServiceRB()    {TypeConstant      c = m_typeServiceRB;   if (c == null) {m_typeServiceRB   = c = makeNativeRebase(clzService()                                   );} return c;}
-    public TypeConstant      typeModule()       {TypeConstant      c = m_typeModule;      if (c == null) {m_typeModule      = c = ensureTerminalTypeConstant(clzModule()                          );} return c;}
-    public TypeConstant      typeModuleRB()     {TypeConstant      c = m_typeModuleRB;    if (c == null) {m_typeModuleRB    = c = makeNativeRebase(clzModule()                                    );} return c;}
-    public TypeConstant      typePackage()      {TypeConstant      c = m_typePackage;     if (c == null) {m_typePackage     = c = ensureTerminalTypeConstant(clzPackage()                         );} return c;}
-    public TypeConstant      typePackageRB()    {TypeConstant      c = m_typePackageRB;   if (c == null) {m_typePackageRB   = c = makeNativeRebase(clzPackage()                                   );} return c;}
-    public TypeConstant      typeEnumRB()       {TypeConstant      c = m_typeEnumRB;      if (c == null) {m_typeEnumRB      = c = makeNativeRebase(clzEnum()                                      );} return c;}
-    public TypeConstant      typeEnumeration()  {TypeConstant      c = m_typeEnumeration; if (c == null) {m_typeEnumeration = c = ensureTerminalTypeConstant(clzEnumeration()                     );} return c;}
-    public TypeConstant      typeEnumValue()    {TypeConstant      c = m_typeEnumValue;   if (c == null) {m_typeEnumValue   = c = ensureTerminalTypeConstant(clzEnumValue()                       );} return c;}
-    public TypeConstant      typeException()    {TypeConstant      c = m_typeException;   if (c == null) {m_typeException   = c = ensureTerminalTypeConstant(clzException()                       );} return c;}
-    public TypeConstant      typeCloseable()    {TypeConstant      c = m_typeCloseable;   if (c == null) {m_typeCloseable   = c = ensureTerminalTypeConstant(clzCloseable()                       );} return c;}
-    public TypeConstant      typeProperty()     {TypeConstant      c = m_typeProperty;    if (c == null) {m_typeProperty    = c = ensureTerminalTypeConstant(clzProperty()                        );} return c;}
-    public TypeConstant      typeMethod()       {TypeConstant      c = m_typeMethod;      if (c == null) {m_typeMethod      = c = ensureTerminalTypeConstant(clzMethod()                          );} return c;}
-    public TypeConstant      typeParameter()    {TypeConstant      c = m_typeParameter;   if (c == null) {m_typeParameter   = c = ensureTerminalTypeConstant(clzParameter()                       );} return c;}
-    public TypeConstant      typeFunction()     {TypeConstant      c = m_typeFunction;    if (c == null) {m_typeFunction    = c = ensureTerminalTypeConstant(clzFunction()                        );} return c;}
-    public TypeConstant      typeBoolean()      {TypeConstant      c = m_typeBoolean;     if (c == null) {m_typeBoolean     = c = ensureTerminalTypeConstant(clzBoolean()                         );} return c;}
-    public TypeConstant      typeTrue()         {TypeConstant      c = m_typeTrue;        if (c == null) {m_typeTrue        = c = ensureTerminalTypeConstant(clzTrue()                            );} return c;}
-    public TypeConstant      typeFalse()        {TypeConstant      c = m_typeFalse;       if (c == null) {m_typeFalse       = c = ensureTerminalTypeConstant(clzFalse()                           );} return c;}
-    public TypeConstant      typeNullable()     {TypeConstant      c = m_typeNullable;    if (c == null) {m_typeNullable    = c = ensureTerminalTypeConstant(clzNullable()                        );} return c;}
-    public TypeConstant      typeOrdered()      {TypeConstant      c = m_typeOrdered;     if (c == null) {m_typeOrdered     = c = ensureTerminalTypeConstant(clzOrdered()                         );} return c;}
-    public TypeConstant      typeNull()         {TypeConstant      c = m_typeNull;        if (c == null) {m_typeNull        = c = ensureTerminalTypeConstant(clzNull()                            );} return c;}
-    public TypeConstant      typeChar()         {TypeConstant      c = m_typeChar;        if (c == null) {m_typeChar        = c = ensureTerminalTypeConstant(clzChar()                            );} return c;}
-    public TypeConstant      typeIntLiteral()   {TypeConstant      c = m_typeIntLiteral;  if (c == null) {m_typeIntLiteral  = c = ensureTerminalTypeConstant(clzIntLiteral()                      );} return c;}
-    public TypeConstant      typeFPLiteral()    {TypeConstant      c = m_typeFPLiteral;   if (c == null) {m_typeFPLiteral   = c = ensureTerminalTypeConstant(clzFPLiteral()                       );} return c;}
-    public TypeConstant      typeRegEx()        {TypeConstant      c = m_typeRegEx;       if (c == null) {m_typeRegEx       = c = ensureTerminalTypeConstant(clzRegEx()                           );} return c;}
-    public TypeConstant      typeString()       {TypeConstant      c = m_typeString;      if (c == null) {m_typeString      = c = ensureTerminalTypeConstant(clzString()                          );} return c;}
-    public TypeConstant      typeStringable()   {TypeConstant      c = m_typeStringable;  if (c == null) {m_typeStringable  = c = ensureTerminalTypeConstant(clzStringable()                      );} return c;}
-    public TypeConstant      typeStringBuffer() {TypeConstant      c = m_typeStringBuffer;if (c == null) {m_typeStringBuffer= c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
-    public TypeConstant      typeBit()          {TypeConstant      c = m_typeBit;         if (c == null) {m_typeBit         = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
-    public TypeConstant      typeNibble()       {TypeConstant      c = m_typeNibble;      if (c == null) {m_typeNibble      = c = ensureTerminalTypeConstant(clzNibble()                          );} return c;}
-    public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                             );} return c;}
-    public TypeConstant      typeCInt8()        {TypeConstant      c = m_typeCInt8;       if (c == null) {m_typeCInt8       = c = ensureTerminalTypeConstant(clzCInt8()                           );} return c;}
-    public TypeConstant      typeInt8()         {TypeConstant      c = m_typeInt8;        if (c == null) {m_typeInt8        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt8()   );} return c;}
-    public TypeConstant      typeCInt16()       {TypeConstant      c = m_typeCInt16;      if (c == null) {m_typeCInt16      = c = ensureTerminalTypeConstant(clzCInt16()                          );} return c;}
-    public TypeConstant      typeInt16()        {TypeConstant      c = m_typeInt16;       if (c == null) {m_typeInt16       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt16()  );} return c;}
-    public TypeConstant      typeCInt32()       {TypeConstant      c = m_typeCInt32;      if (c == null) {m_typeCInt32      = c = ensureTerminalTypeConstant(clzCInt32()                          );} return c;}
-    public TypeConstant      typeInt32()        {TypeConstant      c = m_typeInt32;       if (c == null) {m_typeInt32       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt32()  );} return c;}
-    public TypeConstant      typeCInt64()       {TypeConstant      c = m_typeCInt64;      if (c == null) {m_typeCInt64      = c = ensureTerminalTypeConstant(clzCInt64()                          );} return c;}
-    public TypeConstant      typeInt64()        {TypeConstant      c = m_typeInt64;       if (c == null) {m_typeInt64       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt64()  );} return c;}
-    public TypeConstant      typeCInt128()      {TypeConstant      c = m_typeCInt128;     if (c == null) {m_typeCInt128     = c = ensureTerminalTypeConstant(clzCInt128()                         );} return c;}
-    public TypeConstant      typeInt128()       {TypeConstant      c = m_typeInt128;      if (c == null) {m_typeInt128      = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt128() );} return c;}
-    public TypeConstant      typeCIntN()        {TypeConstant      c = m_typeCIntN;       if (c == null) {m_typeCIntN       = c = ensureTerminalTypeConstant(clzCIntN()                           );} return c;}
-    public TypeConstant      typeIntN()         {TypeConstant      c = m_typeIntN;        if (c == null) {m_typeIntN        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCIntN()   );} return c;}
-    public TypeConstant      typeUInt()         {TypeConstant      c = m_typeUInt;        if (c == null) {m_typeUInt        = c = ensureTerminalTypeConstant(clzUInt()                            );} return c;}
-    public TypeConstant      typeByte()         { /* Byte is just an alias */ return typeCUInt8();                                                                                                             }
-    public TypeConstant      typeCUInt8()       {TypeConstant      c = m_typeCUInt8;      if (c == null) {m_typeCUInt8      = c = ensureTerminalTypeConstant(clzCUInt8()                          );} return c;}
-    public TypeConstant      typeUInt8()        {TypeConstant      c = m_typeUInt8;       if (c == null) {m_typeUInt8       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt8()  );} return c;}
-    public TypeConstant      typeCUInt16()      {TypeConstant      c = m_typeCUInt16;     if (c == null) {m_typeCUInt16     = c = ensureTerminalTypeConstant(clzCUInt16()                         );} return c;}
-    public TypeConstant      typeUInt16()       {TypeConstant      c = m_typeUInt16;      if (c == null) {m_typeUInt16      = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt16() );} return c;}
-    public TypeConstant      typeCUInt32()      {TypeConstant      c = m_typeCUInt32;     if (c == null) {m_typeCUInt32     = c = ensureTerminalTypeConstant(clzCUInt32()                         );} return c;}
-    public TypeConstant      typeUInt32()       {TypeConstant      c = m_typeUInt32;      if (c == null) {m_typeUInt32      = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt32() );} return c;}
-    public TypeConstant      typeCUInt64()      {TypeConstant      c = m_typeCUInt64;     if (c == null) {m_typeCUInt64     = c = ensureTerminalTypeConstant(clzCUInt64()                         );} return c;}
-    public TypeConstant      typeUInt64()       {TypeConstant      c = m_typeUInt64;      if (c == null) {m_typeUInt64      = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt64() );} return c;}
-    public TypeConstant      typeCUInt128()     {TypeConstant      c = m_typeCUInt128;    if (c == null) {m_typeCUInt128    = c = ensureTerminalTypeConstant(clzCUInt128()                        );} return c;}
-    public TypeConstant      typeUInt128()      {TypeConstant      c = m_typeUInt128;     if (c == null) {m_typeUInt128     = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt128());} return c;}
-    public TypeConstant      typeCUIntN()       {TypeConstant      c = m_typeCUIntN;      if (c == null) {m_typeCUIntN      = c = ensureTerminalTypeConstant(clzCUIntN()                          );} return c;}
-    public TypeConstant      typeUIntN()        {TypeConstant      c = m_typeUIntN;       if (c == null) {m_typeUIntN       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUIntN()  );} return c;}
-    public TypeConstant      typeDec()          {TypeConstant      c = m_typeDec;         if (c == null) {m_typeDec         = c = ensureTerminalTypeConstant(clzDec()                             );} return c;}
-    public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
-    public TypeConstant      typeArray()        {TypeConstant      c = m_typeArray;       if (c == null) {m_typeArray       = c = ensureTerminalTypeConstant(clzArray()                           );} return c;}
-    public TypeConstant      typeMatrix()       {TypeConstant      c = m_typeMatrix;      if (c == null) {m_typeMatrix      = c = ensureTerminalTypeConstant(clzMatrix()                          );} return c;}
-    public TypeConstant      typeCollection()   {TypeConstant      c = m_typeCollection;  if (c == null) {m_typeCollection  = c = ensureTerminalTypeConstant(clzCollection()                      );} return c;}
-    public TypeConstant      typeSet()          {TypeConstant      c = m_typeSet;         if (c == null) {m_typeSet         = c = ensureTerminalTypeConstant(clzSet()                             );} return c;}
-    public TypeConstant      typeList()         {TypeConstant      c = m_typeList;        if (c == null) {m_typeList        = c = ensureTerminalTypeConstant(clzList()                            );} return c;}
-    public TypeConstant      typeMap()          {TypeConstant      c = m_typeMap;         if (c == null) {m_typeMap         = c = ensureTerminalTypeConstant(clzMap()                             );} return c;}
-    public TypeConstant      typeSliceable()    {TypeConstant      c = m_typeSliceable;   if (c == null) {m_typeSliceable   = c = ensureTerminalTypeConstant(clzSliceable()                       );} return c;}
-    public TypeConstant      typeOrderable()    {TypeConstant      c = m_typeOrderable;   if (c == null) {m_typeOrderable   = c = ensureTerminalTypeConstant(clzOrderable()                       );} return c;}
-    public TypeConstant      typeSequential()   {TypeConstant      c = m_typeSequential;  if (c == null) {m_typeSequential  = c = ensureTerminalTypeConstant(clzSequential()                      );} return c;}
-    public TypeConstant      typeNumber()       {TypeConstant      c = m_typeNumber;      if (c == null) {m_typeNumber      = c = ensureTerminalTypeConstant(clzNumber()                          );} return c;}
-    public TypeConstant      typeRange()        {TypeConstant      c = m_typeRange;       if (c == null) {m_typeRange       = c = ensureTerminalTypeConstant(clzRange()                           );} return c;}
-    public TypeConstant      typeInterval()     {TypeConstant      c = m_typeInterval;    if (c == null) {m_typeInterval    = c = ensureTerminalTypeConstant(clzInterval()                        );} return c;}
-    public TypeConstant      typeFreezable()    {TypeConstant      c = m_typeFreezable;   if (c == null) {m_typeFreezable   = c = ensureTerminalTypeConstant(clzFreezable()                       );} return c;}
-    public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                        );} return c;}
-    public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                        );} return c;}
-    public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                           );} return c;}
-    public TypeConstant      typeTuple0()       {TypeConstant      c = m_typeTuple0;      if (c == null) {m_typeTuple0      = c = ensureParameterizedTypeConstant(typeTuple()                     );} return c;}
-    public TypeConstant      typeCondTuple()    {TypeConstant      c = m_typeCondTuple;   if (c == null) {m_typeCondTuple   = c = ensureTerminalTypeConstant(clzCondTuple()                       );} return c;}
-    public TypeConstant      typeDate()         {TypeConstant      c = m_typeDate;        if (c == null) {m_typeDate        = c = ensureTerminalTypeConstant(clzDate()                            );} return c;}
-    public TypeConstant      typeTimeOfDay()    {TypeConstant      c = m_typeTimeOfDay;   if (c == null) {m_typeTimeOfDay   = c = ensureTerminalTypeConstant(clzTimeOfDay()                       );} return c;}
-    public TypeConstant      typeTime()         {TypeConstant      c = m_typeTime;        if (c == null) {m_typeTime        = c = ensureTerminalTypeConstant(clzTime()                            );} return c;}
-    public TypeConstant      typeTimeZone()     {TypeConstant      c = m_typeTimeZone;    if (c == null) {m_typeTimeZone    = c = ensureTerminalTypeConstant(clzTimeZone()                        );} return c;}
-    public TypeConstant      typeDuration()     {TypeConstant      c = m_typeDuration;    if (c == null) {m_typeDuration    = c = ensureTerminalTypeConstant(clzDuration()                        );} return c;}
-    public TypeConstant      typeVersion()      {TypeConstant      c = m_typeVersion;     if (c == null) {m_typeVersion     = c = ensureTerminalTypeConstant(clzVersion()                         );} return c;}
-    public TypeConstant      typePath()         {TypeConstant      c = m_typePath;        if (c == null) {m_typePath        = c = ensureTerminalTypeConstant(clzPath()                            );} return c;}
-    public TypeConstant      typeFileStore()    {TypeConstant      c = m_typeFileStore;   if (c == null) {m_typeFileStore   = c = ensureTerminalTypeConstant(clzFileStore()                       );} return c;}
-    public TypeConstant      typeDirectory()    {TypeConstant      c = m_typeDirectory;   if (c == null) {m_typeDirectory   = c = ensureTerminalTypeConstant(clzDirectory()                       );} return c;}
-    public TypeConstant      typeFile()         {TypeConstant      c = m_typeFile;        if (c == null) {m_typeFile        = c = ensureTerminalTypeConstant(clzFile()                            );} return c;}
-    public TypeConstant      typeFileNode()     {TypeConstant      c = m_typeFileNode;    if (c == null) {m_typeFileNode    = c = ensureTerminalTypeConstant(clzFileNode()                        );} return c;}
+    public ClassConstant     clzObject()         {ClassConstant     c = m_clzObject;         if (c == null) {m_clzObject         = c = (ClassConstant) getImplicitlyImportedIdentity("Object"          );} return c;}
 
-    public TypeConstant      typeBitArray()     {TypeConstant      c = m_typeBitArray;    if (c == null) {m_typeBitArray    = c = ensureClassTypeConstant(clzArray(), null, typeBit()             );} return c;}
-    public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte()            );} return c;}
-    public TypeConstant      typeBinary()       {TypeConstant      c = m_typeBinary;      if (c == null) {m_typeBinary      = c = ensureImmutableTypeConstant(typeByteArray()                     );} return c;}
+    public ClassConstant     clzInner()          {ClassConstant     c = m_clzInner;          if (c == null) {m_clzInner          = c = (ClassConstant) getImplicitlyImportedIdentity("Inner"           );} return c;}
 
-    public TypeConstant      typeException१()   {TypeConstant      c = m_typeException१;  if (c == null) {m_typeException१  = c = ensureNullableTypeConstant(typeException()                       );} return c;}
-    public TypeConstant      typeString१()      {TypeConstant      c = m_typeString१;     if (c == null) {m_typeString१     = c = ensureNullableTypeConstant(typeString()                          );} return c;}
+    public ClassConstant     clzOuter()          {ClassConstant     c = m_clzOuter;          if (c == null) {m_clzOuter          = c = (ClassConstant) getImplicitlyImportedIdentity("Outer"           );} return c;}
 
-    public IntConstant       val0()             {IntConstant       c = m_val0;            if (c == null) {m_val0            = c = ensureIntConstant(0)                                             ;} return c;}
-    public IntConstant       val1()             {IntConstant       c = m_val1;            if (c == null) {m_val1            = c = ensureIntConstant(1)                                             ;} return c;}
-    public SingletonConstant valFalse()         {SingletonConstant c = m_valFalse;        if (c == null) {m_valFalse        = c = ensureSingletonConstConstant(clzFalse())                         ;} return c;}
-    public SingletonConstant valTrue()          {SingletonConstant c = m_valTrue;         if (c == null) {m_valTrue         = c = ensureSingletonConstConstant(clzTrue())                          ;} return c;}
-    public SingletonConstant valLesser()        {SingletonConstant c = m_valLesser;       if (c == null) {m_valLesser       = c = ensureSingletonConstConstant(clzLesser())                        ;} return c;}
-    public SingletonConstant valEqual()         {SingletonConstant c = m_valEqual;        if (c == null) {m_valEqual        = c = ensureSingletonConstConstant(clzEqual())                         ;} return c;}
-    public SingletonConstant valGreater()       {SingletonConstant c = m_valGreater;      if (c == null) {m_valGreater      = c = ensureSingletonConstConstant(clzGreater())                       ;} return c;}
-    public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                          ;} return c;}
-    public RegisterConstant  valDefault()       {RegisterConstant  c = m_valDefault;      if (c == null) {m_valDefault      = c = new RegisterConstant(this, Register.DEFAULT)                     ;} return c;}
+    public ClassConstant     clzRef()            {ClassConstant     c = m_clzRef;            if (c == null) {m_clzRef            = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"             );} return c;}
 
-    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = getSignature("Object",    "toString",  0)                        ;} return c;}
-    public SignatureConstant sigEquals()        {SignatureConstant c = m_sigEquals;       if (c == null) {m_sigEquals       = c = getSignature("Object",    "equals",    3)                        ;} return c;}
-    public SignatureConstant sigCompare()       {SignatureConstant c = m_sigCompare;      if (c == null) {m_sigCompare      = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
-    public SignatureConstant sigValidator()     {SignatureConstant c = m_sigValidator;    if (c == null) {m_sigValidator    = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
+    public ClassConstant     clzVar()            {ClassConstant     c = m_clzVar;            if (c == null) {m_clzVar            = c = (ClassConstant) getImplicitlyImportedIdentity("Var"             );} return c;}
+
+    public ClassConstant     clzStruct()         {ClassConstant     c = m_clzStruct;         if (c == null) {m_clzStruct         = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"          );} return c;}
+
+    public ClassConstant     clzType()           {ClassConstant     c = m_clzType;           if (c == null) {m_clzType           = c = (ClassConstant) getImplicitlyImportedIdentity("Type"            );} return c;}
+
+    public ClassConstant     clzConst()          {ClassConstant     c = m_clzConst;          if (c == null) {m_clzConst          = c = (ClassConstant) getImplicitlyImportedIdentity("Const"           );} return c;}
+
+    public ClassConstant     clzService()        {ClassConstant     c = m_clzService;        if (c == null) {m_clzService        = c = (ClassConstant) getImplicitlyImportedIdentity("Service"         );} return c;}
+
+    public ClassConstant     clzModule()         {ClassConstant     c = m_clzModule;         if (c == null) {m_clzModule         = c = (ClassConstant) getImplicitlyImportedIdentity("Module"          );} return c;}
+
+    public ClassConstant     clzPackage()        {ClassConstant     c = m_clzPackage;        if (c == null) {m_clzPackage        = c = (ClassConstant) getImplicitlyImportedIdentity("Package"         );} return c;}
+
+    public ClassConstant     clzEnum()           {ClassConstant     c = m_clzEnum;           if (c == null) {m_clzEnum           = c = (ClassConstant) getImplicitlyImportedIdentity("Enum"            );} return c;}
+
+    public ClassConstant     clzEnumeration()    {ClassConstant     c = m_clzEnumeration;    if (c == null) {m_clzEnumeration    = c = (ClassConstant) getImplicitlyImportedIdentity("Enumeration"     );} return c;}
+
+    public ClassConstant     clzEnumValue()      {ClassConstant     c = m_clzEnumValue;      if (c == null) {m_clzEnumValue      = c = (ClassConstant) getImplicitlyImportedIdentity("EnumValue"       );} return c;}
+
+    public ClassConstant     clzCloseable()      {ClassConstant     c = m_clzCloseable;      if (c == null) {m_clzCloseable      = c = (ClassConstant) getImplicitlyImportedIdentity("Closeable"       );} return c;}
+
+    public ClassConstant     clzException()      {ClassConstant     c = m_clzException;      if (c == null) {m_clzException      = c = (ClassConstant) getImplicitlyImportedIdentity("Exception"       );} return c;}
+
+    public ClassConstant     clzProperty()       {ClassConstant     c = m_clzProperty;       if (c == null) {m_clzProperty       = c = (ClassConstant) getImplicitlyImportedIdentity("Property"        );} return c;}
+
+    public ClassConstant     clzMethod()         {ClassConstant     c = m_clzMethod;         if (c == null) {m_clzMethod         = c = (ClassConstant) getImplicitlyImportedIdentity("Method"          );} return c;}
+
+    public ClassConstant     clzFunction()       {ClassConstant     c = m_clzFunction;       if (c == null) {m_clzFunction       = c = (ClassConstant) getImplicitlyImportedIdentity("Function"        );} return c;}
+
+    public ClassConstant     clzNullable()       {ClassConstant     c = m_clzNullable;       if (c == null) {m_clzNullable       = c = (ClassConstant) getImplicitlyImportedIdentity("Nullable"        );} return c;}
+
+    public ClassConstant     clzCollection()     {ClassConstant     c = m_clzCollection;     if (c == null) {m_clzCollection     = c = (ClassConstant) getImplicitlyImportedIdentity("Collection"      );} return c;}
+
+    public ClassConstant     clzSet()            {ClassConstant     c = m_clzSet;            if (c == null) {m_clzSet            = c = (ClassConstant) getImplicitlyImportedIdentity("Set"             );} return c;}
+
+    public ClassConstant     clzList()           {ClassConstant     c = m_clzList;           if (c == null) {m_clzList           = c = (ClassConstant) getImplicitlyImportedIdentity("List"            );} return c;}
+
+    public ClassConstant     clzArray()          {ClassConstant     c = m_clzArray;          if (c == null) {m_clzArray          = c = (ClassConstant) getImplicitlyImportedIdentity("Array"           );} return c;}
+
+    public ClassConstant     clzMatrix()         {ClassConstant     c = m_clzMatrix;         if (c == null) {m_clzMatrix         = c = (ClassConstant) getImplicitlyImportedIdentity("Matrix"          );} return c;}
+
+    public ClassConstant     clzMap()            {ClassConstant     c = m_clzMap;            if (c == null) {m_clzMap            = c = (ClassConstant) getImplicitlyImportedIdentity("Map"             );} return c;}
+
+    public ClassConstant     clzSliceable()      {ClassConstant     c = m_clzSliceable;      if (c == null) {m_clzSliceable      = c = (ClassConstant) getImplicitlyImportedIdentity("Sliceable"       );} return c;}
+
+    public ClassConstant     clzOrderable()      {ClassConstant     c = m_clzOrderable;      if (c == null) {m_clzOrderable      = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"       );} return c;}
+
+    public ClassConstant     clzTuple()          {ClassConstant     c = m_clzTuple;          if (c == null) {m_clzTuple          = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"           );} return c;}
+
+    public ClassConstant     clzCondTuple()      {ClassConstant     c = m_clzCondTuple;      if (c == null) {m_clzCondTuple      = c = (ClassConstant) getImplicitlyImportedIdentity("ConditionalTuple");} return c;}
+
+    public ClassConstant     clzAuto()           {ClassConstant     c = m_clzAuto;           if (c == null) {m_clzAuto           = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"            );} return c;}
+
+    public ClassConstant     clzOp()             {ClassConstant     c = m_clzOp;             if (c == null) {m_clzOp             = c = (ClassConstant) getImplicitlyImportedIdentity("Op"              );} return c;}
+
+    public ClassConstant     clzRO()             {ClassConstant     c = m_clzRO;             if (c == null) {m_clzRO             = c = (ClassConstant) getImplicitlyImportedIdentity("RO"              );} return c;}
+
+    public ClassConstant     clzFinal()          {ClassConstant     c = m_clzFinal;          if (c == null) {m_clzFinal          = c = (ClassConstant) getImplicitlyImportedIdentity("Final"           );} return c;}
+
+    public ClassConstant     clzInject()         {ClassConstant     c = m_clzInject;         if (c == null) {m_clzInject         = c = (ClassConstant) getImplicitlyImportedIdentity("Inject"          );} return c;}
+
+    public ClassConstant     clzAbstract()       {ClassConstant     c = m_clzAbstract;       if (c == null) {m_clzAbstract       = c = (ClassConstant) getImplicitlyImportedIdentity("Abstract"        );} return c;}
+
+    public ClassConstant     clzAtomic()         {ClassConstant     c = m_clzAtomic;         if (c == null) {m_clzAtomic         = c = (ClassConstant) getImplicitlyImportedIdentity("Atomic"          );} return c;}
+
+    public ClassConstant     clzConcurrent()     {ClassConstant     c = m_clzConcurrent;     if (c == null) {m_clzConcurrent     = c = (ClassConstant) getImplicitlyImportedIdentity("Concurrent"      );} return c;}
+
+    public ClassConstant     clzSynchronized()   {ClassConstant     c = m_clzSynchronized;   if (c == null) {m_clzSynchronized   = c = (ClassConstant) getImplicitlyImportedIdentity("Synchronized"    );} return c;}
+
+    public ClassConstant     clzFuture()         {ClassConstant     c = m_clzFuture;         if (c == null) {m_clzFuture         = c = (ClassConstant) getImplicitlyImportedIdentity("Future"          );} return c;}
+
+    public ClassConstant     clzOverride()       {ClassConstant     c = m_clzOverride;       if (c == null) {m_clzOverride       = c = (ClassConstant) getImplicitlyImportedIdentity("Override"        );} return c;}
+
+    public ClassConstant     clzLazy()           {ClassConstant     c = m_clzLazy;           if (c == null) {m_clzLazy           = c = (ClassConstant) getImplicitlyImportedIdentity("Lazy"            );} return c;}
+
+    public ClassConstant     clzTest()           {ClassConstant     c = m_clzTest;           if (c == null) {m_clzTest           = c = (ClassConstant) getImplicitlyImportedIdentity("Test"            );} return c;}
+
+    public ClassConstant     clzTransient()      {ClassConstant     c = m_clzTransient;      if (c == null) {m_clzTransient      = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
+
+    public ClassConstant     clzUnchecked()      {ClassConstant     c = m_clzUnchecked;      if (c == null) {m_clzUnchecked      = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"       );} return c;}
+
+    public ClassConstant     clzUnassigned()     {ClassConstant     c = m_clzUnassigned;     if (c == null) {m_clzUnassigned     = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
+
+    public TypeConstant      typeObject()        {TypeConstant      c = m_typeObject;        if (c == null) {m_typeObject        = c = ensureTerminalTypeConstant(clzObject()                          );} return c;}
+
+    public TypeConstant      typeInner()         {TypeConstant      c = m_typeInner;         if (c == null) {m_typeInner         = c = ensureVirtualChildTypeConstant(typeOuter(), "Inner"             );} return c;}
+
+    public TypeConstant      typeOuter()         {TypeConstant      c = m_typeOuter;         if (c == null) {m_typeOuter         = c = ensureTerminalTypeConstant(clzOuter()                           );} return c;}
+
+    public TypeConstant      typeRef()           {TypeConstant      c = m_typeRef;           if (c == null) {m_typeRef           = c = ensureTerminalTypeConstant(clzRef()                             );} return c;}
+
+    public TypeConstant      typeRefRB()         {TypeConstant      c = m_typeRefRB;         if (c == null) {m_typeRefRB         = c = makeNativeRebase(clzRef()                                       );} return c;}
+
+    public TypeConstant      typeVar()           {TypeConstant      c = m_typeVar;           if (c == null) {m_typeVar           = c = ensureTerminalTypeConstant(clzVar()                             );} return c;}
+
+    public TypeConstant      typeVarRB()         {TypeConstant      c = m_typeVarRB;         if (c == null) {m_typeVarRB         = c = makeNativeRebase(clzVar()                                       );} return c;}
+
+    public TypeConstant      typeStruct()        {TypeConstant      c = m_typeStruct;        if (c == null) {m_typeStruct        = c = ensureTerminalTypeConstant(clzStruct()                          );} return c;}
+
+    public TypeConstant      typeType()          {TypeConstant      c = m_typeType;          if (c == null) {m_typeType          = c = ensureTerminalTypeConstant(clzType()                            );} return c;}
+
+    public TypeConstant      typeClass()         {TypeConstant      c = m_typeClass;         if (c == null) {m_typeClass         = c = ensureTerminalTypeConstant(clzClass()                           );} return c;}
+
+    public TypeConstant      typeConst()         {TypeConstant      c = m_typeConst;         if (c == null) {m_typeConst         = c = ensureTerminalTypeConstant(clzConst()                           );} return c;}
+
+    public TypeConstant      typeConstRB()       {TypeConstant      c = m_typeConstRB;       if (c == null) {m_typeConstRB       = c = makeNativeRebase(clzConst()                                     );} return c;}
+
+    public TypeConstant      typeService()       {TypeConstant      c = m_typeService;       if (c == null) {m_typeService       = c = ensureTerminalTypeConstant(clzService()                         );} return c;}
+
+    public TypeConstant      typeServiceRB()     {TypeConstant      c = m_typeServiceRB;     if (c == null) {m_typeServiceRB     = c = makeNativeRebase(clzService()                                   );} return c;}
+
+    public TypeConstant      typeModule()        {TypeConstant      c = m_typeModule;        if (c == null) {m_typeModule        = c = ensureTerminalTypeConstant(clzModule()                          );} return c;}
+
+    public TypeConstant      typeModuleRB()      {TypeConstant      c = m_typeModuleRB;      if (c == null) {m_typeModuleRB      = c = makeNativeRebase(clzModule()                                    );} return c;}
+
+    public TypeConstant      typePackage()       {TypeConstant      c = m_typePackage;       if (c == null) {m_typePackage       = c = ensureTerminalTypeConstant(clzPackage()                         );} return c;}
+
+    public TypeConstant      typePackageRB()     {TypeConstant      c = m_typePackageRB;     if (c == null) {m_typePackageRB     = c = makeNativeRebase(clzPackage()                                   );} return c;}
+
+    public TypeConstant      typeEnumRB()        {TypeConstant      c = m_typeEnumRB;        if (c == null) {m_typeEnumRB        = c = makeNativeRebase(clzEnum()                                      );} return c;}
+
+    public TypeConstant      typeEnumeration()   {TypeConstant      c = m_typeEnumeration;   if (c == null) {m_typeEnumeration   = c = ensureTerminalTypeConstant(clzEnumeration()                     );} return c;}
+
+    public TypeConstant      typeEnumValue()     {TypeConstant      c = m_typeEnumValue;     if (c == null) {m_typeEnumValue     = c = ensureTerminalTypeConstant(clzEnumValue()                       );} return c;}
+
+    public TypeConstant      typeException()     {TypeConstant      c = m_typeException;     if (c == null) {m_typeException     = c = ensureTerminalTypeConstant(clzException()                       );} return c;}
+
+    public TypeConstant      typeCloseable()     {TypeConstant      c = m_typeCloseable;     if (c == null) {m_typeCloseable     = c = ensureTerminalTypeConstant(clzCloseable()                       );} return c;}
+
+    public TypeConstant      typeProperty()      {TypeConstant      c = m_typeProperty;      if (c == null) {m_typeProperty      = c = ensureTerminalTypeConstant(clzProperty()                        );} return c;}
+
+    public TypeConstant      typeMethod()        {TypeConstant      c = m_typeMethod;        if (c == null) {m_typeMethod        = c = ensureTerminalTypeConstant(clzMethod()                          );} return c;}
+
+    public TypeConstant      typeParameter()     {TypeConstant      c = m_typeParameter;     if (c == null) {m_typeParameter     = c = ensureTerminalTypeConstant(clzParameter()                       );} return c;}
+
+    public TypeConstant      typeFunction()      {TypeConstant      c = m_typeFunction;      if (c == null) {m_typeFunction      = c = ensureTerminalTypeConstant(clzFunction()                        );} return c;}
+
+    public TypeConstant      typeBoolean()       {TypeConstant      c = m_typeBoolean;       if (c == null) {m_typeBoolean       = c = ensureTerminalTypeConstant(clzBoolean()                         );} return c;}
+
+    public TypeConstant      typeTrue()          {TypeConstant      c = m_typeTrue;          if (c == null) {m_typeTrue          = c = ensureTerminalTypeConstant(clzTrue()                            );} return c;}
+
+    public TypeConstant      typeFalse()         {TypeConstant      c = m_typeFalse;         if (c == null) {m_typeFalse         = c = ensureTerminalTypeConstant(clzFalse()                           );} return c;}
+
+    public TypeConstant      typeNullable()      {TypeConstant      c = m_typeNullable;      if (c == null) {m_typeNullable      = c = ensureTerminalTypeConstant(clzNullable()                        );} return c;}
+
+    public TypeConstant      typeOrdered()       {TypeConstant      c = m_typeOrdered;       if (c == null) {m_typeOrdered       = c = ensureTerminalTypeConstant(clzOrdered()                         );} return c;}
+
+    public TypeConstant      typeNull()          {TypeConstant      c = m_typeNull;          if (c == null) {m_typeNull          = c = ensureTerminalTypeConstant(clzNull()                            );} return c;}
+
+    public TypeConstant      typeChar()          {TypeConstant      c = m_typeChar;          if (c == null) {m_typeChar          = c = ensureTerminalTypeConstant(clzChar()                            );} return c;}
+
+    public TypeConstant      typeIntLiteral()    {TypeConstant      c = m_typeIntLiteral;    if (c == null) {m_typeIntLiteral    = c = ensureTerminalTypeConstant(clzIntLiteral()                      );} return c;}
+
+    public TypeConstant      typeFPLiteral()     {TypeConstant      c = m_typeFPLiteral;     if (c == null) {m_typeFPLiteral     = c = ensureTerminalTypeConstant(clzFPLiteral()                       );} return c;}
+
+    public TypeConstant      typeRegEx()         {TypeConstant      c = m_typeRegEx;         if (c == null) {m_typeRegEx         = c = ensureTerminalTypeConstant(clzRegEx()                           );} return c;}
+
+    public TypeConstant      typeString()        {TypeConstant      c = m_typeString;        if (c == null) {m_typeString        = c = ensureTerminalTypeConstant(clzString()                          );} return c;}
+
+    public TypeConstant      typeStringable()    {TypeConstant      c = m_typeStringable;    if (c == null) {m_typeStringable    = c = ensureTerminalTypeConstant(clzStringable()                      );} return c;}
+
+    public TypeConstant      typeStringBuffer()  {TypeConstant      c = m_typeStringBuffer;  if (c == null) {m_typeStringBuffer  = c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
+
+    public TypeConstant      typeBit()           {TypeConstant      c = m_typeBit;           if (c == null) {m_typeBit           = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
+
+    public TypeConstant      typeNibble()        {TypeConstant      c = m_typeNibble;        if (c == null) {m_typeNibble        = c = ensureTerminalTypeConstant(clzNibble()                          );} return c;}
+
+    public TypeConstant      typeInt()           {TypeConstant      c = m_typeInt;           if (c == null) {m_typeInt           = c = ensureTerminalTypeConstant(clzInt()                             );} return c;}
+
+    public TypeConstant      typeCInt8()         {TypeConstant      c = m_typeCInt8;         if (c == null) {m_typeCInt8         = c = ensureTerminalTypeConstant(clzCInt8()                           );} return c;}
+
+    public TypeConstant      typeInt8()          {TypeConstant      c = m_typeInt8;          if (c == null) {m_typeInt8          = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt8()   );} return c;}
+
+    public TypeConstant      typeCInt16()        {TypeConstant      c = m_typeCInt16;        if (c == null) {m_typeCInt16        = c = ensureTerminalTypeConstant(clzCInt16()                          );} return c;}
+
+    public TypeConstant      typeInt16()         {TypeConstant      c = m_typeInt16;         if (c == null) {m_typeInt16         = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt16()  );} return c;}
+
+    public TypeConstant      typeCInt32()        {TypeConstant      c = m_typeCInt32;        if (c == null) {m_typeCInt32        = c = ensureTerminalTypeConstant(clzCInt32()                          );} return c;}
+
+    public TypeConstant      typeInt32()         {TypeConstant      c = m_typeInt32;         if (c == null) {m_typeInt32         = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt32()  );} return c;}
+
+    public TypeConstant      typeCInt64()        {TypeConstant      c = m_typeCInt64;        if (c == null) {m_typeCInt64        = c = ensureTerminalTypeConstant(clzCInt64()                          );} return c;}
+
+    public TypeConstant      typeInt64()         {TypeConstant      c = m_typeInt64;         if (c == null) {m_typeInt64         = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt64()  );} return c;}
+
+    public TypeConstant      typeCInt128()       {TypeConstant      c = m_typeCInt128;       if (c == null) {m_typeCInt128       = c = ensureTerminalTypeConstant(clzCInt128()                         );} return c;}
+
+    public TypeConstant      typeInt128()        {TypeConstant      c = m_typeInt128;        if (c == null) {m_typeInt128        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCInt128() );} return c;}
+
+    public TypeConstant      typeCIntN()         {TypeConstant      c = m_typeCIntN;         if (c == null) {m_typeCIntN         = c = ensureTerminalTypeConstant(clzCIntN()                           );} return c;}
+
+    public TypeConstant      typeIntN()          {TypeConstant      c = m_typeIntN;          if (c == null) {m_typeIntN          = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCIntN()   );} return c;}
+
+    public TypeConstant      typeUInt()          {TypeConstant      c = m_typeUInt;          if (c == null) {m_typeUInt          = c = ensureTerminalTypeConstant(clzUInt()                            );} return c;}
+
+    public TypeConstant      typeByte()          { /* Just an alias */ return typeCUInt8();                                                                                                               }
+
+    public TypeConstant      typeCUInt8()        {TypeConstant      c = m_typeCUInt8;        if (c == null) {m_typeCUInt8        = c = ensureTerminalTypeConstant(clzCUInt8()                          );} return c;}
+
+    public TypeConstant      typeUInt8()         {TypeConstant      c = m_typeUInt8;         if (c == null) {m_typeUInt8         = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt8()  );} return c;}
+
+    public TypeConstant      typeCUInt16()       {TypeConstant      c = m_typeCUInt16;       if (c == null) {m_typeCUInt16       = c = ensureTerminalTypeConstant(clzCUInt16()                         );} return c;}
+
+    public TypeConstant      typeUInt16()        {TypeConstant      c = m_typeUInt16;        if (c == null) {m_typeUInt16        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt16() );} return c;}
+
+    public TypeConstant      typeCUInt32()       {TypeConstant      c = m_typeCUInt32;       if (c == null) {m_typeCUInt32       = c = ensureTerminalTypeConstant(clzCUInt32()                         );} return c;}
+
+    public TypeConstant      typeUInt32()        {TypeConstant      c = m_typeUInt32;        if (c == null) {m_typeUInt32        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt32() );} return c;}
+
+    public TypeConstant      typeCUInt64()       {TypeConstant      c = m_typeCUInt64;       if (c == null) {m_typeCUInt64       = c = ensureTerminalTypeConstant(clzCUInt64()                         );} return c;}
+
+    public TypeConstant      typeUInt64()        {TypeConstant      c = m_typeUInt64;        if (c == null) {m_typeUInt64        = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt64() );} return c;}
+
+    public TypeConstant      typeCUInt128()      {TypeConstant      c = m_typeCUInt128;      if (c == null) {m_typeCUInt128      = c = ensureTerminalTypeConstant(clzCUInt128()                        );} return c;}
+
+    public TypeConstant      typeUInt128()       {TypeConstant      c = m_typeUInt128;       if (c == null) {m_typeUInt128       = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUInt128());} return c;}
+
+    public TypeConstant      typeCUIntN()        {TypeConstant      c = m_typeCUIntN;        if (c == null) {m_typeCUIntN        = c = ensureTerminalTypeConstant(clzCUIntN()                          );} return c;}
+
+    public TypeConstant      typeUIntN()         {TypeConstant      c = m_typeUIntN;         if (c == null) {m_typeUIntN         = c = ensureAnnotatedTypeConstant(clzUnchecked(), null, typeCUIntN()  );} return c;}
+
+    public TypeConstant      typeDec()           {TypeConstant      c = m_typeDec;           if (c == null) {m_typeDec           = c = ensureTerminalTypeConstant(clzDec()                             );} return c;}
+
+    public TypeConstant      typeIndexed()       {TypeConstant      c = m_typeIndexed;       if (c == null) {m_typeIndexed       = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
+
+    public TypeConstant      typeArray()         {TypeConstant      c = m_typeArray;         if (c == null) {m_typeArray         = c = ensureTerminalTypeConstant(clzArray()                           );} return c;}
+
+    public TypeConstant      typeMatrix()        {TypeConstant      c = m_typeMatrix;        if (c == null) {m_typeMatrix        = c = ensureTerminalTypeConstant(clzMatrix()                          );} return c;}
+
+    public TypeConstant      typeCollection()    {TypeConstant      c = m_typeCollection;    if (c == null) {m_typeCollection    = c = ensureTerminalTypeConstant(clzCollection()                      );} return c;}
+
+    public TypeConstant      typeSet()           {TypeConstant      c = m_typeSet;           if (c == null) {m_typeSet           = c = ensureTerminalTypeConstant(clzSet()                             );} return c;}
+
+    public TypeConstant      typeList()          {TypeConstant      c = m_typeList;          if (c == null) {m_typeList          = c = ensureTerminalTypeConstant(clzList()                            );} return c;}
+
+    public TypeConstant      typeMap()           {TypeConstant      c = m_typeMap;           if (c == null) {m_typeMap           = c = ensureTerminalTypeConstant(clzMap()                             );} return c;}
+
+    public TypeConstant      typeSliceable()     {TypeConstant      c = m_typeSliceable;     if (c == null) {m_typeSliceable     = c = ensureTerminalTypeConstant(clzSliceable()                       );} return c;}
+
+    public TypeConstant      typeOrderable()     {TypeConstant      c = m_typeOrderable;     if (c == null) {m_typeOrderable     = c = ensureTerminalTypeConstant(clzOrderable()                       );} return c;}
+
+    public TypeConstant      typeSequential()    {TypeConstant      c = m_typeSequential;    if (c == null) {m_typeSequential    = c = ensureTerminalTypeConstant(clzSequential()                      );} return c;}
+
+    public TypeConstant      typeNumber()        {TypeConstant      c = m_typeNumber;        if (c == null) {m_typeNumber        = c = ensureTerminalTypeConstant(clzNumber()                          );} return c;}
+
+    public TypeConstant      typeRange()         {TypeConstant      c = m_typeRange;         if (c == null) {m_typeRange         = c = ensureTerminalTypeConstant(clzRange()                           );} return c;}
+
+    public TypeConstant      typeInterval()      {TypeConstant      c = m_typeInterval;      if (c == null) {m_typeInterval      = c = ensureTerminalTypeConstant(clzInterval()                        );} return c;}
+
+    public TypeConstant      typeFreezable()     {TypeConstant      c = m_typeFreezable;     if (c == null) {m_typeFreezable     = c = ensureTerminalTypeConstant(clzFreezable()                       );} return c;}
+
+    public TypeConstant      typeAutoFreezable() {TypeConstant      c = m_typeAutoFreezable; if (c == null) {m_typeAutoFreezable = c = ensureTerminalTypeConstant(clzAutoFreezable()                   );} return c;}
+
+    public TypeConstant      typeIterable()      {TypeConstant      c = m_typeIterable;      if (c == null) {m_typeIterable      = c = ensureTerminalTypeConstant(clzIterable()                        );} return c;}
+
+    public TypeConstant      typeIterator()      {TypeConstant      c = m_typeIterator;      if (c == null) {m_typeIterator      = c = ensureTerminalTypeConstant(clzIterator()                        );} return c;}
+
+    public TypeConstant      typeTuple()         {TypeConstant      c = m_typeTuple;         if (c == null) {m_typeTuple         = c = ensureTerminalTypeConstant(clzTuple()                           );} return c;}
+
+    public TypeConstant      typeTuple0()        {TypeConstant      c = m_typeTuple0;        if (c == null) {m_typeTuple0        = c = ensureParameterizedTypeConstant(typeTuple()                     );} return c;}
+
+    public TypeConstant      typeCondTuple()     {TypeConstant      c = m_typeCondTuple;     if (c == null) {m_typeCondTuple     = c = ensureTerminalTypeConstant(clzCondTuple()                       );} return c;}
+
+    public TypeConstant      typeDate()          {TypeConstant      c = m_typeDate;          if (c == null) {m_typeDate          = c = ensureTerminalTypeConstant(clzDate()                            );} return c;}
+
+    public TypeConstant      typeTimeOfDay()     {TypeConstant      c = m_typeTimeOfDay;     if (c == null) {m_typeTimeOfDay     = c = ensureTerminalTypeConstant(clzTimeOfDay()                       );} return c;}
+
+    public TypeConstant      typeTime()          {TypeConstant      c = m_typeTime;          if (c == null) {m_typeTime          = c = ensureTerminalTypeConstant(clzTime()                            );} return c;}
+
+    public TypeConstant      typeTimeZone()      {TypeConstant      c = m_typeTimeZone;      if (c == null) {m_typeTimeZone      = c = ensureTerminalTypeConstant(clzTimeZone()                        );} return c;}
+
+    public TypeConstant      typeDuration()      {TypeConstant      c = m_typeDuration;      if (c == null) {m_typeDuration      = c = ensureTerminalTypeConstant(clzDuration()                        );} return c;}
+
+    public TypeConstant      typeVersion()       {TypeConstant      c = m_typeVersion;       if (c == null) {m_typeVersion       = c = ensureTerminalTypeConstant(clzVersion()                         );} return c;}
+
+    public TypeConstant      typePath()          {TypeConstant      c = m_typePath;          if (c == null) {m_typePath          = c = ensureTerminalTypeConstant(clzPath()                            );} return c;}
+
+    public TypeConstant      typeFileStore()     {TypeConstant      c = m_typeFileStore;     if (c == null) {m_typeFileStore     = c = ensureTerminalTypeConstant(clzFileStore()                       );} return c;}
+
+    public TypeConstant      typeDirectory()     {TypeConstant      c = m_typeDirectory;     if (c == null) {m_typeDirectory     = c = ensureTerminalTypeConstant(clzDirectory()                       );} return c;}
+
+    public TypeConstant      typeFile()          {TypeConstant      c = m_typeFile;          if (c == null) {m_typeFile          = c = ensureTerminalTypeConstant(clzFile()                            );} return c;}
+
+    public TypeConstant      typeFileNode()      {TypeConstant      c = m_typeFileNode;      if (c == null) {m_typeFileNode      = c = ensureTerminalTypeConstant(clzFileNode()                        );} return c;}
+
+    public TypeConstant      typeBitArray()      {TypeConstant      c = m_typeBitArray;      if (c == null) {m_typeBitArray      = c = ensureClassTypeConstant(clzArray(), null, typeBit()             );} return c;}
+
+    public TypeConstant      typeByteArray()     {TypeConstant      c = m_typeByteArray;     if (c == null) {m_typeByteArray     = c = ensureClassTypeConstant(clzArray(), null, typeByte()            );} return c;}
+
+    public TypeConstant      typeBinary()        {TypeConstant      c = m_typeBinary;        if (c == null) {m_typeBinary        = c = ensureImmutableTypeConstant(typeByteArray()                     );} return c;}
+
+    public TypeConstant      typeException१()    {TypeConstant      c = m_typeException१;    if (c == null) {m_typeException१    = c = ensureNullableTypeConstant(typeException()                       );} return c;}
+
+    public TypeConstant      typeString१()       {TypeConstant      c = m_typeString१;       if (c == null) {m_typeString१       = c = ensureNullableTypeConstant(typeString()                          );} return c;}
+
+    public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
+
+    public IntConstant       val1()              {IntConstant       c = m_val1;              if (c == null) {m_val1              = c = ensureIntConstant(1)                                             ;} return c;}
+
+    public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse())                         ;} return c;}
+
+    public SingletonConstant valTrue()           {SingletonConstant c = m_valTrue;           if (c == null) {m_valTrue           = c = ensureSingletonConstConstant(clzTrue())                          ;} return c;}
+
+    public SingletonConstant valLesser()         {SingletonConstant c = m_valLesser;         if (c == null) {m_valLesser         = c = ensureSingletonConstConstant(clzLesser())                        ;} return c;}
+
+    public SingletonConstant valEqual()          {SingletonConstant c = m_valEqual;          if (c == null) {m_valEqual          = c = ensureSingletonConstConstant(clzEqual())                         ;} return c;}
+
+    public SingletonConstant valGreater()        {SingletonConstant c = m_valGreater;        if (c == null) {m_valGreater        = c = ensureSingletonConstConstant(clzGreater())                       ;} return c;}
+
+    public SingletonConstant valNull()           {SingletonConstant c = m_valNull;           if (c == null) {m_valNull           = c = ensureSingletonConstConstant(clzNull())                          ;} return c;}
+
+    public RegisterConstant  valDefault()        {RegisterConstant  c = m_valDefault;        if (c == null) {m_valDefault        = c = new RegisterConstant(this, Register.DEFAULT)                     ;} return c;}
+
+    public SignatureConstant sigToString()       {SignatureConstant c = m_sigToString;       if (c == null) {m_sigToString       = c = getSignature("Object",    "toString",  0)                        ;} return c;}
+
+    public SignatureConstant sigEquals()         {SignatureConstant c = m_sigEquals;         if (c == null) {m_sigEquals         = c = getSignature("Object",    "equals",    3)                        ;} return c;}
+
+    public SignatureConstant sigCompare()        {SignatureConstant c = m_sigCompare;        if (c == null) {m_sigCompare        = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
 
 
     // ---- internal class helpers -----------------------------------------------------------------
 
-    protected ClassConstant  clzClass()        {return (ClassConstant) getImplicitlyImportedIdentity("Class"                );}
-    protected ClassConstant  clzParameter()    {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"            );}
-    protected ClassConstant  clzBoolean()      {return (ClassConstant) getImplicitlyImportedIdentity("Boolean"              );}
-    protected ClassConstant  clzFalse()        {return (ClassConstant) getImplicitlyImportedIdentity("False"                );}
-    protected ClassConstant  clzTrue()         {return (ClassConstant) getImplicitlyImportedIdentity("True"                 );}
-    protected ClassConstant  clzOrdered()      {return (ClassConstant) getImplicitlyImportedIdentity("Ordered"              );}
-    protected ClassConstant  clzLesser()       {return (ClassConstant) getImplicitlyImportedIdentity("Lesser"               );}
-    protected ClassConstant  clzEqual()        {return (ClassConstant) getImplicitlyImportedIdentity("Equal"                );}
-    protected ClassConstant  clzGreater()      {return (ClassConstant) getImplicitlyImportedIdentity("Greater"              );}
-    protected ClassConstant  clzNull()         {return (ClassConstant) getImplicitlyImportedIdentity("Null"                 );}
-    protected ClassConstant  clzChar()         {return (ClassConstant) getImplicitlyImportedIdentity("Char"                 );}
-    protected ClassConstant  clzRegEx()        {return                 ensureEcstasyClassConstant   ("text.RegEx"           );}
-    protected ClassConstant  clzString()       {return (ClassConstant) getImplicitlyImportedIdentity("String"               );}
-    protected ClassConstant  clzStringable()   {return (ClassConstant) getImplicitlyImportedIdentity("Stringable"           );}
-    protected ClassConstant  clzStringBuffer() {return (ClassConstant) getImplicitlyImportedIdentity("StringBuffer"         );}
-    protected ClassConstant  clzIntLiteral()   {return (ClassConstant) getImplicitlyImportedIdentity("IntLiteral"           );}
-    protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"            );}
-    protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                  );}
-    protected ClassConstant  clzNibble()       {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"               );}
-    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Int"                  );}
-    protected ClassConstant  clzUInt()         {return (ClassConstant) getImplicitlyImportedIdentity("UInt"                 );}
-    protected ClassConstant  clzDec()          {return (ClassConstant) getImplicitlyImportedIdentity("Dec"                  );}
-    protected ClassConstant  clzCInt8()        {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                 );}
-    protected ClassConstant  clzCInt16()       {return (ClassConstant) getImplicitlyImportedIdentity("Int16"                );}
-    protected ClassConstant  clzCInt32()       {return (ClassConstant) getImplicitlyImportedIdentity("Int32"                );}
-    protected ClassConstant  clzCInt64()       {return (ClassConstant) getImplicitlyImportedIdentity("Int64"                );}
-    protected ClassConstant  clzCInt128()      {return (ClassConstant) getImplicitlyImportedIdentity("Int128"               );}
-    protected ClassConstant  clzCIntN()        {return (ClassConstant) getImplicitlyImportedIdentity("IntN"                 );}
-    protected ClassConstant  clzCUInt8()       {return (ClassConstant) getImplicitlyImportedIdentity("UInt8"                );}
-    protected ClassConstant  clzCUInt16()      {return (ClassConstant) getImplicitlyImportedIdentity("UInt16"               );}
-    protected ClassConstant  clzCUInt32()      {return (ClassConstant) getImplicitlyImportedIdentity("UInt32"               );}
-    protected ClassConstant  clzCUInt64()      {return (ClassConstant) getImplicitlyImportedIdentity("UInt64"               );}
-    protected ClassConstant  clzCUInt128()     {return (ClassConstant) getImplicitlyImportedIdentity("UInt128"              );}
-    protected ClassConstant  clzCUIntN()       {return (ClassConstant) getImplicitlyImportedIdentity("UIntN"                );}
-    protected ClassConstant  clzIndexed()      {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"       );}
-    protected ClassConstant  clzInterval()     {return (ClassConstant) getImplicitlyImportedIdentity("Interval"             );}
-    protected ClassConstant  clzIterable()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterable"             );}
-    protected ClassConstant  clzIterator()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterator"             );}
-    protected ClassConstant  clzNumber()       {return (ClassConstant) getImplicitlyImportedIdentity("Number"               );}
-    protected ClassConstant  clzRange()        {return (ClassConstant) getImplicitlyImportedIdentity("Range"                );}
-    protected ClassConstant  clzSequential()   {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"           );}
-    protected ClassConstant  clzFreezable()    {return (ClassConstant) getImplicitlyImportedIdentity("Freezable"            );}
-    protected ClassConstant  clzDate()         {return (ClassConstant) getImplicitlyImportedIdentity("Date"                 );}
-    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("Time"                 );}
-    protected ClassConstant  clzDuration()     {return (ClassConstant) getImplicitlyImportedIdentity("Duration"             );}
-    protected ClassConstant  clzTimeOfDay()    {return (ClassConstant) getImplicitlyImportedIdentity("TimeOfDay"            );}
-    protected ClassConstant  clzTimeZone()     {return (ClassConstant) getImplicitlyImportedIdentity("TimeZone"             );}
-    protected ClassConstant  clzPath()         {return (ClassConstant) getImplicitlyImportedIdentity("Path"                 );}
-    protected ClassConstant  clzVersion()      {return (ClassConstant) getImplicitlyImportedIdentity("Version"              );}
-    protected ClassConstant  clzDirectory()    {return (ClassConstant) getImplicitlyImportedIdentity("Directory"            );}
-    protected ClassConstant  clzFile()         {return (ClassConstant) getImplicitlyImportedIdentity("File"                 );}
-    protected ClassConstant  clzFileNode()     {return                 ensureEcstasyClassConstant   ("fs.FileNode"          );}
-    protected ClassConstant  clzFileStore()    {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"            );}
+    public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
+
+    protected ClassConstant  clzClass()         {return (ClassConstant) getImplicitlyImportedIdentity("Class"                    );}
+
+    protected ClassConstant  clzParameter()     {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"                );}
+
+    protected ClassConstant  clzBoolean()       {return (ClassConstant) getImplicitlyImportedIdentity("Boolean"                  );}
+
+    protected ClassConstant  clzFalse()         {return (ClassConstant) getImplicitlyImportedIdentity("False"                    );}
+
+    protected ClassConstant  clzTrue()          {return (ClassConstant) getImplicitlyImportedIdentity("True"                     );}
+
+    protected ClassConstant  clzOrdered()       {return (ClassConstant) getImplicitlyImportedIdentity("Ordered"                  );}
+
+    protected ClassConstant  clzLesser()        {return (ClassConstant) getImplicitlyImportedIdentity("Lesser"                   );}
+
+    protected ClassConstant  clzEqual()         {return (ClassConstant) getImplicitlyImportedIdentity("Equal"                    );}
+
+    protected ClassConstant  clzGreater()       {return (ClassConstant) getImplicitlyImportedIdentity("Greater"                  );}
+
+    protected ClassConstant  clzNull()          {return (ClassConstant) getImplicitlyImportedIdentity("Null"                     );}
+
+    protected ClassConstant  clzChar()          {return (ClassConstant) getImplicitlyImportedIdentity("Char"                     );}
+
+    protected ClassConstant  clzRegEx()         {return                 ensureEcstasyClassConstant   ("text.RegEx"               );}
+
+    protected ClassConstant  clzString()        {return (ClassConstant) getImplicitlyImportedIdentity("String"                   );}
+
+    protected ClassConstant  clzStringable()    {return (ClassConstant) getImplicitlyImportedIdentity("Stringable"               );}
+
+    protected ClassConstant  clzStringBuffer()  {return (ClassConstant) getImplicitlyImportedIdentity("StringBuffer"             );}
+
+    protected ClassConstant  clzIntLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("IntLiteral"               );}
+
+    protected ClassConstant  clzFPLiteral()     {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"                );}
+
+    protected ClassConstant  clzBit()           {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                      );}
+
+    protected ClassConstant  clzNibble()        {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"                   );}
+
+    protected ClassConstant  clzInt()           {return (ClassConstant) getImplicitlyImportedIdentity("Int"                      );}
+
+    protected ClassConstant  clzUInt()          {return (ClassConstant) getImplicitlyImportedIdentity("UInt"                     );}
+
+    protected ClassConstant  clzDec()           {return (ClassConstant) getImplicitlyImportedIdentity("Dec"                      );}
+
+    protected ClassConstant  clzCInt8()         {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                     );}
+
+    protected ClassConstant  clzCInt16()        {return (ClassConstant) getImplicitlyImportedIdentity("Int16"                    );}
+
+    protected ClassConstant  clzCInt32()        {return (ClassConstant) getImplicitlyImportedIdentity("Int32"                    );}
+
+    protected ClassConstant  clzCInt64()        {return (ClassConstant) getImplicitlyImportedIdentity("Int64"                    );}
+
+    protected ClassConstant  clzCInt128()       {return (ClassConstant) getImplicitlyImportedIdentity("Int128"                   );}
+
+    protected ClassConstant  clzCIntN()         {return (ClassConstant) getImplicitlyImportedIdentity("IntN"                     );}
+
+    protected ClassConstant  clzCUInt8()        {return (ClassConstant) getImplicitlyImportedIdentity("UInt8"                    );}
+
+    protected ClassConstant  clzCUInt16()       {return (ClassConstant) getImplicitlyImportedIdentity("UInt16"                   );}
+
+    protected ClassConstant  clzCUInt32()       {return (ClassConstant) getImplicitlyImportedIdentity("UInt32"                   );}
+
+    protected ClassConstant  clzCUInt64()       {return (ClassConstant) getImplicitlyImportedIdentity("UInt64"                   );}
+
+    protected ClassConstant  clzCUInt128()      {return (ClassConstant) getImplicitlyImportedIdentity("UInt128"                  );}
+
+    protected ClassConstant  clzCUIntN()        {return (ClassConstant) getImplicitlyImportedIdentity("UIntN"                    );}
+
+    protected ClassConstant  clzIndexed()       {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"           );}
+
+    protected ClassConstant  clzInterval()      {return (ClassConstant) getImplicitlyImportedIdentity("Interval"                 );}
+
+    protected ClassConstant  clzIterable()      {return (ClassConstant) getImplicitlyImportedIdentity("Iterable"                 );}
+
+    protected ClassConstant  clzIterator()      {return (ClassConstant) getImplicitlyImportedIdentity("Iterator"                 );}
+
+    protected ClassConstant  clzNumber()        {return (ClassConstant) getImplicitlyImportedIdentity("Number"                   );}
+
+    protected ClassConstant  clzRange()         {return (ClassConstant) getImplicitlyImportedIdentity("Range"                    );}
+
+    protected ClassConstant  clzSequential()    {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"               );}
+
+    protected ClassConstant  clzFreezable()     {return (ClassConstant) getImplicitlyImportedIdentity("Freezable"                );}
+
+    protected ClassConstant  clzAutoFreezable() {return                 ensureEcstasyClassConstant   ("annotations.AutoFreezable");}
+
+    protected ClassConstant  clzDate()          {return (ClassConstant) getImplicitlyImportedIdentity("Date"                     );}
+
+    protected ClassConstant  clzTime()          {return (ClassConstant) getImplicitlyImportedIdentity("Time"                     );}
+
+    protected ClassConstant  clzDuration()      {return (ClassConstant) getImplicitlyImportedIdentity("Duration"                 );}
+
+    protected ClassConstant  clzTimeOfDay()     {return (ClassConstant) getImplicitlyImportedIdentity("TimeOfDay"                );}
+
+    protected ClassConstant  clzTimeZone()      {return (ClassConstant) getImplicitlyImportedIdentity("TimeZone"                 );}
+
+    protected ClassConstant  clzPath()          {return (ClassConstant) getImplicitlyImportedIdentity("Path"                     );}
+
+    protected ClassConstant  clzVersion()       {return (ClassConstant) getImplicitlyImportedIdentity("Version"                  );}
+
+    protected ClassConstant  clzDirectory()     {return (ClassConstant) getImplicitlyImportedIdentity("Directory"                );}
+
+    protected ClassConstant  clzFile()          {return (ClassConstant) getImplicitlyImportedIdentity("File"                     );}
+
+    protected ClassConstant  clzFileNode()      {return                 ensureEcstasyClassConstant   ("fs.FileNode"              );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -3134,217 +3344,7 @@ public class ConstantPool
             }
         }
 
-    /**
-     * Discard unused Constants and order the remaining constants so that the most-referred-to
-     * Constants occur before the less used constants.
-     */
-    private void optimize()
-        {
-        ArrayList<Constant> list = m_listConst;
-
-        // remove unused constants
-        int cBefore       = list.size();
-        Constant[] aconst = new Constant[cBefore];
-        int cAfter        = 0;
-
-        for (int i = 0; i < cBefore; i++)
-            {
-            Constant constant = list.get(i);
-            if (constant.hasRefs())
-                {
-                aconst[cAfter++] = constant;
-                }
-            else
-                {
-                constant.setPosition(-1);
-                }
-            }
-
-        m_valEcstasy      = null;
-        m_clzObject       = null;
-        m_clzInner        = null;
-        m_clzOuter        = null;
-        m_clzRef          = null;
-        m_clzVar          = null;
-        m_clzStruct       = null;
-        m_clzType         = null;
-        m_clzCloseable    = null;
-        m_clzConst        = null;
-        m_clzService      = null;
-        m_clzModule       = null;
-        m_clzPackage      = null;
-        m_clzEnum         = null;
-        m_clzEnumeration  = null;
-        m_clzEnumValue    = null;
-        m_clzException    = null;
-        m_clzProperty     = null;
-        m_clzMethod       = null;
-        m_clzFunction     = null;
-        m_clzNullable     = null;
-        m_clzCollection   = null;
-        m_clzSet          = null;
-        m_clzList         = null;
-        m_clzArray        = null;
-        m_clzMatrix       = null;
-        m_clzMap          = null;
-        m_clzOrderable    = null;
-        m_clzTuple        = null;
-        m_clzCondTuple    = null;
-        m_clzAuto         = null;
-        m_clzOp           = null;
-        m_clzRO           = null;
-        m_clzFinal        = null;
-        m_clzInject       = null;
-        m_clzAbstract     = null;
-        m_clzAtomic       = null;
-        m_clzConcurrent   = null;
-        m_clzSynchronized = null;
-        m_clzFuture       = null;
-        m_clzOverride     = null;
-        m_clzLazy         = null;
-        m_clzTest         = null;
-        m_clzTransient    = null;
-        m_clzUnchecked    = null;
-        m_clzUnassigned   = null;
-        m_typeObject      = null;
-        m_typeInner       = null;
-        m_typeOuter       = null;
-        m_typeRef         = null;
-        m_typeRefRB       = null;
-        m_typeVar         = null;
-        m_typeVarRB       = null;
-        m_typeStruct      = null;
-        m_typeType        = null;
-        m_typeClass       = null;
-        m_typeConst       = null;
-        m_typeConstRB     = null;
-        m_typeService     = null;
-        m_typeServiceRB   = null;
-        m_typeModule      = null;
-        m_typeModuleRB    = null;
-        m_typePackage     = null;
-        m_typePackageRB   = null;
-        m_typeEnumRB      = null;
-        m_typeEnumeration = null;
-        m_typeEnumValue   = null;
-        m_typeException   = null;
-        m_typeException१  = null;
-        m_typeProperty    = null;
-        m_typeMethod      = null;
-        m_typeParameter   = null;
-        m_typeFunction    = null;
-        m_typeBoolean     = null;
-        m_typeTrue        = null;
-        m_typeFalse       = null;
-        m_typeCloseable   = null;
-        m_typeNullable    = null;
-        m_typeOrdered     = null;
-        m_typeNull        = null;
-        m_typeChar        = null;
-        m_typeIntLiteral  = null;
-        m_typeFPLiteral   = null;
-        m_typeRegEx       = null;
-        m_typeString      = null;
-        m_typeStringable  = null;
-        m_typeStringBuffer= null;
-        m_typeString१     = null;
-        m_typeBit         = null;
-        m_typeNibble      = null;
-        m_typeBitArray    = null;
-        m_typeByteArray   = null;
-        m_typeBinary      = null;
-        m_typeInt         = null;
-        m_typeCInt8       = null;
-        m_typeInt8        = null;
-        m_typeCInt16      = null;
-        m_typeInt16       = null;
-        m_typeCInt32      = null;
-        m_typeInt32       = null;
-        m_typeCInt64      = null;
-        m_typeInt64       = null;
-        m_typeCInt128     = null;
-        m_typeInt128      = null;
-        m_typeCIntN       = null;
-        m_typeIntN        = null;
-        m_typeUInt        = null;
-        m_typeCUInt8      = null;
-        m_typeUInt8       = null;
-        m_typeCUInt16     = null;
-        m_typeUInt16      = null;
-        m_typeCUInt32     = null;
-        m_typeUInt32      = null;
-        m_typeCUInt64     = null;
-        m_typeUInt64      = null;
-        m_typeCUInt128    = null;
-        m_typeUInt128     = null;
-        m_typeCUIntN      = null;
-        m_typeUIntN       = null;
-        m_typeDec         = null;
-        m_typeIndexed     = null;
-        m_typeArray       = null;
-        m_typeMatrix      = null;
-        m_typeCollection  = null;
-        m_typeSet         = null;
-        m_typeList        = null;
-        m_typeMap         = null;
-        m_typeSliceable   = null;
-        m_typeOrderable   = null;
-        m_typeSequential  = null;
-        m_typeNumber      = null;
-        m_typeFreezable   = null;
-        m_typeRange       = null;
-        m_typeInterval    = null;
-        m_typeIterable    = null;
-        m_typeIterator    = null;
-        m_typeTuple       = null;
-        m_typeTuple0      = null;
-        m_typeCondTuple   = null;
-        m_typeDate        = null;
-        m_typeTimeOfDay   = null;
-        m_typeTime        = null;
-        m_typeTimeZone    = null;
-        m_typeDuration    = null;
-        m_typeVersion     = null;
-        m_typePath        = null;
-        m_typeFileStore   = null;
-        m_typeDirectory   = null;
-        m_typeFile        = null;
-        m_typeFileNode    = null;
-        m_val0            = null;
-        m_val1            = null;
-        m_valFalse        = null;
-        m_valTrue         = null;
-        m_valLesser       = null;
-        m_valEqual        = null;
-        m_valGreater      = null;
-        m_valNull         = null;
-        m_valDefault      = null;
-        m_sigToString     = null;
-        m_sigEquals       = null;
-        m_sigCompare      = null;
-        m_sigValidator    = null;
-        m_infoPlaceholder = null;
-
-        // sort the Constants by how often they are referred to within the FileStructure, with the
-        // most frequently referred-to Constants appearing first
-        Arrays.sort(aconst, 0, cAfter, DEBUG
-                ? Comparator.naturalOrder()
-                : Constant.MFU_ORDER);
-
-        // mark each constant with its new position and add to the list
-        list.clear();
-        for (int i = 0; i < cAfter; ++i)
-            {
-            Constant constant = aconst[i];
-            constant.setPosition(i);
-            list.add(constant);
-            }
-
-        // discard any previous lookup structures, since contents may have changed
-        m_mapConstants.clear();
-        m_mapLocators.clear();
-        f_implicits.clear();
-        }
+    protected ClassConstant  clzFileStore()     {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"                );}
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -4217,6 +4217,219 @@ public class ConstantPool
     private transient TypeConstant      m_typeSequential;
     private transient TypeConstant      m_typeNumber;
     private transient TypeConstant      m_typeFreezable;
+
+    /**
+     * Discard unused Constants and order the remaining constants so that the most-referred-to
+     * Constants occur before the less used constants.
+     */
+    private void optimize()
+        {
+        ArrayList<Constant> list = m_listConst;
+
+        // remove unused constants
+        int cBefore       = list.size();
+        Constant[] aconst = new Constant[cBefore];
+        int cAfter        = 0;
+
+        for (int i = 0; i < cBefore; i++)
+            {
+            Constant constant = list.get(i);
+            if (constant.hasRefs())
+                {
+                aconst[cAfter++] = constant;
+                }
+            else
+                {
+                constant.setPosition(-1);
+                }
+            }
+
+        m_valEcstasy        = null;
+        m_clzObject         = null;
+        m_clzInner          = null;
+        m_clzOuter          = null;
+        m_clzRef            = null;
+        m_clzVar            = null;
+        m_clzStruct         = null;
+        m_clzType           = null;
+        m_clzCloseable      = null;
+        m_clzConst          = null;
+        m_clzService        = null;
+        m_clzModule         = null;
+        m_clzPackage        = null;
+        m_clzEnum           = null;
+        m_clzEnumeration    = null;
+        m_clzEnumValue      = null;
+        m_clzException      = null;
+        m_clzProperty       = null;
+        m_clzMethod         = null;
+        m_clzFunction       = null;
+        m_clzNullable       = null;
+        m_clzCollection     = null;
+        m_clzSet            = null;
+        m_clzList           = null;
+        m_clzArray          = null;
+        m_clzMatrix         = null;
+        m_clzMap            = null;
+        m_clzOrderable      = null;
+        m_clzTuple          = null;
+        m_clzCondTuple      = null;
+        m_clzAuto           = null;
+        m_clzOp             = null;
+        m_clzRO             = null;
+        m_clzFinal          = null;
+        m_clzInject         = null;
+        m_clzAbstract       = null;
+        m_clzAtomic         = null;
+        m_clzConcurrent     = null;
+        m_clzSynchronized   = null;
+        m_clzFuture         = null;
+        m_clzOverride       = null;
+        m_clzLazy           = null;
+        m_clzTest           = null;
+        m_clzTransient      = null;
+        m_clzUnchecked      = null;
+        m_clzUnassigned     = null;
+        m_typeObject        = null;
+        m_typeInner         = null;
+        m_typeOuter         = null;
+        m_typeRef           = null;
+        m_typeRefRB         = null;
+        m_typeVar           = null;
+        m_typeVarRB         = null;
+        m_typeStruct        = null;
+        m_typeType          = null;
+        m_typeClass         = null;
+        m_typeConst         = null;
+        m_typeConstRB       = null;
+        m_typeService       = null;
+        m_typeServiceRB     = null;
+        m_typeModule        = null;
+        m_typeModuleRB      = null;
+        m_typePackage       = null;
+        m_typePackageRB     = null;
+        m_typeEnumRB        = null;
+        m_typeEnumeration   = null;
+        m_typeEnumValue     = null;
+        m_typeException     = null;
+        m_typeException१    = null;
+        m_typeProperty      = null;
+        m_typeMethod        = null;
+        m_typeParameter     = null;
+        m_typeFunction      = null;
+        m_typeBoolean       = null;
+        m_typeTrue          = null;
+        m_typeFalse         = null;
+        m_typeCloseable     = null;
+        m_typeNullable      = null;
+        m_typeOrdered       = null;
+        m_typeNull          = null;
+        m_typeChar          = null;
+        m_typeIntLiteral    = null;
+        m_typeFPLiteral     = null;
+        m_typeRegEx         = null;
+        m_typeString        = null;
+        m_typeStringable    = null;
+        m_typeStringBuffer  = null;
+        m_typeString१       = null;
+        m_typeBit           = null;
+        m_typeNibble        = null;
+        m_typeBitArray      = null;
+        m_typeByteArray     = null;
+        m_typeBinary        = null;
+        m_typeInt           = null;
+        m_typeCInt8         = null;
+        m_typeInt8          = null;
+        m_typeCInt16        = null;
+        m_typeInt16         = null;
+        m_typeCInt32        = null;
+        m_typeInt32         = null;
+        m_typeCInt64        = null;
+        m_typeInt64         = null;
+        m_typeCInt128       = null;
+        m_typeInt128        = null;
+        m_typeCIntN         = null;
+        m_typeIntN          = null;
+        m_typeUInt          = null;
+        m_typeCUInt8        = null;
+        m_typeUInt8         = null;
+        m_typeCUInt16       = null;
+        m_typeUInt16        = null;
+        m_typeCUInt32       = null;
+        m_typeUInt32        = null;
+        m_typeCUInt64       = null;
+        m_typeUInt64        = null;
+        m_typeCUInt128      = null;
+        m_typeUInt128       = null;
+        m_typeCUIntN        = null;
+        m_typeUIntN         = null;
+        m_typeDec           = null;
+        m_typeIndexed       = null;
+        m_typeArray         = null;
+        m_typeMatrix        = null;
+        m_typeCollection    = null;
+        m_typeSet           = null;
+        m_typeList          = null;
+        m_typeMap           = null;
+        m_typeSliceable     = null;
+        m_typeOrderable     = null;
+        m_typeSequential    = null;
+        m_typeNumber        = null;
+        m_typeFreezable     = null;
+        m_typeAutoFreezable = null;
+        m_typeRange         = null;
+        m_typeInterval      = null;
+        m_typeIterable      = null;
+        m_typeIterator      = null;
+        m_typeTuple         = null;
+        m_typeTuple0        = null;
+        m_typeCondTuple     = null;
+        m_typeDate          = null;
+        m_typeTimeOfDay     = null;
+        m_typeTime          = null;
+        m_typeTimeZone      = null;
+        m_typeDuration      = null;
+        m_typeVersion       = null;
+        m_typePath          = null;
+        m_typeFileStore     = null;
+        m_typeDirectory     = null;
+        m_typeFile          = null;
+        m_typeFileNode      = null;
+        m_val0              = null;
+        m_val1              = null;
+        m_valFalse          = null;
+        m_valTrue           = null;
+        m_valLesser         = null;
+        m_valEqual          = null;
+        m_valGreater        = null;
+        m_valNull           = null;
+        m_valDefault        = null;
+        m_sigToString       = null;
+        m_sigEquals         = null;
+        m_sigCompare        = null;
+        m_sigValidator      = null;
+        m_infoPlaceholder   = null;
+
+        // sort the Constants by how often they are referred to within the FileStructure, with the
+        // most frequently referred-to Constants appearing first
+        Arrays.sort(aconst, 0, cAfter, DEBUG
+                ? Comparator.naturalOrder()
+                : Constant.MFU_ORDER);
+
+        // mark each constant with its new position and add to the list
+        list.clear();
+        for (int i = 0; i < cAfter; ++i)
+            {
+            Constant constant = aconst[i];
+            constant.setPosition(i);
+            list.add(constant);
+            }
+
+        // discard any previous lookup structures, since contents may have changed
+        m_mapConstants.clear();
+        m_mapLocators.clear();
+        f_implicits.clear();
+        }
     private transient TypeConstant      m_typeRange;
     private transient TypeConstant      m_typeInterval;
     private transient TypeConstant      m_typeIterable;

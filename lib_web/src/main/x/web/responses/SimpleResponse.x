@@ -1,6 +1,7 @@
 /**
  * The representation of a simple HTTP response that may contain only an HTTP status.
  */
+@AutoFreezable
 class SimpleResponse
         implements ResponseIn
         implements ResponseOut

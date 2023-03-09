@@ -138,7 +138,7 @@ service SystemService
             {
             ResponseOut response = new SimpleResponse(TemporaryRedirect);
             response.header.put(Header.LOCATION, uri.toString());
-            return response.makeImmutable();
+            return response;
             }
 
         return NotFound;

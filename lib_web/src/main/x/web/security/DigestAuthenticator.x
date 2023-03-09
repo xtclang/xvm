@@ -155,7 +155,7 @@ service DigestAuthenticator(Realm realm)
                     }
                 else
                     {
-                    return new SimpleResponse(BadRequest).freeze(inPlace=True);
+                    return new SimpleResponse(BadRequest);
                     }
                 }
             }
