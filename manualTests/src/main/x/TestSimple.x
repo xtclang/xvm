@@ -15,9 +15,9 @@ module TestSimple
         Tuple<Value, Value> t1 = test.getValues();
         console.print($"t1={t1.is(immutable)}, t1[0]={t1[0].is(immutable)}, t1[1]={t1[1].is(immutable)}");
 
-//        Tuple t2 = test.getValuesAsTuple();
-//        console.print($"t2={t2.is(immutable)}, t2[0]={t2[0].is(immutable)}, t2[1]={t2[1].is(immutable)}");
-//
+        Tuple t2 = test.getValuesAsTuple();
+        console.print($"t2={t2.is(immutable)}, t2[0]={t2[0].is(immutable)}, t2[1]={t2[1].is(immutable)}");
+
 //        test.setValue(new Value(7));
         }
 

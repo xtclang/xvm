@@ -423,30 +423,71 @@ public class xTuple
             case Constant:
                 return frame.assignValue(iReturn, hTuple);
 
-            case Fixed:
-                // TODO: ensure all elements are immutable or Freezable
-                if (fInPlace)
-                    {
-                    hTuple.makeImmutable();
-                    return frame.assignValue(iReturn, hTuple);
-                    }
-                return frame.assignValue(iReturn,
-                    new TupleHandle(hTuple.getComposition(),
-                        hTuple.m_ahValue.clone(), Mutability.Constant));
-
             case Persistent:
+            case Fixed:
+                {
+                ObjectHandle[]     ahValue;
+                Frame.Continuation stepNext;
+
                 if (fInPlace)
                     {
-                    hTuple.m_mutability = Mutability.Fixed;
-                    return frame.assignValue(iReturn, hTuple);
+                    ahValue  = hTuple.m_ahValue;
+                    stepNext = frameCaller ->
+                        {
+                        hTuple.makeImmutable();
+                        return frameCaller.assignValue(iReturn, hTuple);
+                        };
                     }
-                return frame.assignValue(iReturn,
-                    new TupleHandle(hTuple.getComposition(),
-                        hTuple.m_ahValue.clone(), Mutability.Fixed));
+                else
+                    {
+                    ahValue  = hTuple.m_ahValue.clone();
+                    stepNext = frameCaller -> frameCaller.assignValue(iReturn,
+                            new TupleHandle(hTuple.getComposition(), ahValue, Mutability.Constant));
+                    }
+
+                switch (freezeValues(frame, ahValue, fInPlace, 0))
+                    {
+                    case Op.R_NEXT:
+                        return stepNext.proceed(frame);
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(stepNext);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
 
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    private int freezeValues(Frame frame, ObjectHandle[] ahValue, boolean fInPlace, int index)
+        {
+        for (int i = index, c = ahValue.length; i < c; i++)
+            {
+            ObjectHandle hValue = ahValue[i];
+            if (!hValue.isPassThrough(null))
+                {
+                if (hValue.getType().isA(frame.poolContext().typeFreezable()))
+                    {
+                    int ix = i;
+                    return Utils.callFreeze(frame, hValue, fInPlace, frameCaller ->
+                        {
+                        ahValue[ix] = frameCaller.popStack();
+                        return freezeValues(frameCaller, ahValue, fInPlace, ix+1);
+                        });
+                    }
+                return frame.raiseException("Tuple element [" + i + "] of type \"" +
+                    hValue.getType().removeAccess().getValueString() + "\" is not freezable");
+                }
+            }
+        return Op.R_NEXT;
         }
 
     /**
