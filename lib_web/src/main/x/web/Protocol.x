@@ -86,11 +86,11 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
             [
             HTTP1.string    =  HTTP1,
             HTTP1_1.string  =  HTTP1_1,
-            HTTPS1_1.string =  HTTPS1_1,
+         // HTTPS1_1.string =  HTTPS1_1,    // same protocol string as HTTP1_1
             HTTP2.string    =  HTTP2,
-            HTTPS2.string   =  HTTPS2,
+         // HTTPS2.string   =  HTTPS2,      // same protocol string as HTTP2
             HTTP3.string    =  HTTP3,
-            HTTPS3.string   =  HTTPS3,
+         // HTTPS3.string   =  HTTPS3,      // same protocol string as HTTP3
             WS13.string     =  WS13,
             WSS13.string    =  WSS13,
             ];
