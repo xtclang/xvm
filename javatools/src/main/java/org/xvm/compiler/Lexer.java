@@ -1566,15 +1566,31 @@ public class Lexer
                         if (fTemplate)
                             {
                             source.rewind();
-                            long lPosCur = source.getPosition();
+                            long lPosEndText = source.getPosition();
+
+                            // eat from the opening { to the closing } (inclusive of both)
+                            Token[] aTokens = eatTemplateExpression(fMultiline);
+                            int     cTokens = aTokens.length;
+
+                            // if the last token was '=', then add the entire expression up to that
+                            // point as literal text, and discard the '='
+                            if (cTokens > 1 && aTokens[cTokens-1].getId() == Id.ASN)
+                                {
+                                Token[] aTokensOld = aTokens;
+                                aTokens = new Token[--cTokens];
+                                System.arraycopy(aTokensOld, 0, aTokens, 0, cTokens);
+
+                                sb.append(source.toString(aTokensOld[0].getStartPosition(),
+                                                          aTokensOld[cTokens].getEndPosition()));
+                                }
+
                             if (sb.length() > 0)
                                 {
-                                list.add(new Token(lPosStart, lPosCur, Id.LIT_STRING, sb.toString()));
+                                list.add(new Token(lPosStart, lPosEndText, Id.LIT_STRING, sb.toString()));
                                 sb = new StringBuilder();
                                 }
 
-                            // eat from the opening { to the closing } (inclusive of both)
-                            list.add(eatTemplateExpression(fMultiline));
+                            list.add(aTokens);
 
                             // start eating a new string portion of the template from this point
                             lPosStart = source.getPosition();
