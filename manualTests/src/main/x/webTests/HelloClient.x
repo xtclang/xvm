@@ -26,5 +26,7 @@ module HelloClient
             assert Int count := client.get(uri + "/c").to(Int);
             console.print(count);
             }
+
+        console.print(client.get(uri + "/l"));
         }
     }
