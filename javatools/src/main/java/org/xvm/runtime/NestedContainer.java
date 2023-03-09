@@ -69,7 +69,6 @@ public class NestedContainer
      */
     public void addResourceSupplier(InjectionKey key, ServiceHandle hService, ObjectHandle hSupplier)
         {
-        TypeConstant typeResource = key.f_type;
         if (hSupplier instanceof FunctionHandle hFunction)
             {
             Container      container = hService.f_context.f_container;
@@ -82,15 +81,14 @@ public class NestedContainer
                 switch (hProxy.call1(frame, null, ahArg, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        // mask the injection type (and ensure the ownership)
-                        return frame.popStack().maskAs(container, typeResource);
+                        return validateResource(frame, container, key);
 
                     case Op.R_CALL:
                         {
                         DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
                         hDeferred.addContinuation(frameCaller ->
                             {
-                            frameCaller.pushStack(frameCaller.popStack().maskAs(container, typeResource));
+                            frameCaller.pushStack(validateResource(frameCaller, container, key));
                             return Op.R_NEXT;
                             });
                         return hDeferred;
@@ -114,6 +112,27 @@ public class NestedContainer
             f_mapResources.put(key, (frame, hOpts) -> new DeferredCallHandle(
                     xException.makeHandle(frame, "Non-shareable resource: " + key)));
             }
+        }
+
+    /**
+     * Validate, mask the injection type and ensure the ownership if necessary
+     */
+    private ObjectHandle validateResource(Frame frame, Container container, InjectionKey key)
+        {
+        ObjectHandle hResource = frame.popStack();
+        if (hResource.isService())
+            {
+            hResource = hResource.maskAs(container, key.f_type);
+            }
+        else if (hResource.isMutable())
+            {
+            // the resource must be a service or a constant
+            hResource = null;
+            }
+
+        return hResource == null
+            ? new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + key))
+            : hResource;
         }
 
 
