@@ -288,6 +288,7 @@ RedundantReturnSpecifier
 
 MethodDeclarationFinish
     ";"
+    "=" Expression ";"
     StatementBlock
 
 #

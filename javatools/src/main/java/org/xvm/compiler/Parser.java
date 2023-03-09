@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -1343,10 +1344,27 @@ public class Parser
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false, true);
         List<Parameter>      params           = parseParameterList(true);
         long                 lEndPos          = prev().getEndPosition();
-        StatementBlock       body             = match(Id.SEMICOLON) == null ? parseStatementBlock() : null;
-        Token                tokFinally       = null;
-        StatementBlock       stmtFinally      = null;
+        StatementBlock       body;
+        switch (peek().getId())
+            {
+            case SEMICOLON:
+                body = null;
+                expect(Id.SEMICOLON);
+                break;
+            case ASN:
+                Token eq = expect(Id.ASN);
+                Expression expr = parseExpression();
+                Token semi = expect(Id.SEMICOLON);
+                ReturnStatement stmt = new ReturnStatement(eq, expr);
+                body = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(), semi.getEndPosition());
+                break;
+            default:
+                body = parseStatementBlock();
+                break;
+            }
 
+        Token          tokFinally  = null;
+        StatementBlock stmtFinally = null;
         if (body != null)
             {
             // check for "constructor finally" block

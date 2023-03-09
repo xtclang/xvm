@@ -4,26 +4,10 @@ module TestSimple
 
     void run()
         {
-        new Derived().f(new Narrow());
+        Int x = 4;
+        Int y = 5;
+        console.print($"{x=}, {y=}, {foo(x,y)=}");
         }
 
-    class Wide {}
-    class Narrow extends Wide {}
-
-    class Base
-        {
-        void f(Narrow n)
-            {
-            }
-        }
-
-    class Derived extends Base
-        {
-        @Override
-        void f(Wide n)
-            {
-            assert n.is(Narrow);
-            super(n);
-            }
-        }
+    Int foo(Int x, Int y) = x+y;
     }
