@@ -86,8 +86,7 @@ class HasherMap<Key, Value>
             construct HasherMap(hasher, that.size);
             }
         }
-    finally // REVIEW GG+CP - wouldn't it be nice if "finally" could capture from the "construct" block?
-            // e.g.: Boolean optimized = that.is(HasherMap) && hasher == that.hasher;
+    finally
         {
         if (!(that.is(HasherMap) && hasher == that.hasher))
             {

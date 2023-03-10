@@ -346,8 +346,6 @@ service SessionImpl
     /**
      * The AttributeMap_ inner class is used to provide a service reference to the map of arbitrary
      * session attributes.
-     *
-     * REVIEW GG verify that the delegation happens within the Session service
      */
     class AttributeMap_
             delegates Map<String, Shareable>(actualMap)

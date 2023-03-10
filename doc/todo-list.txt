@@ -11,6 +11,12 @@
   Alternatively, we could have @CaptureByValue that would be equivalent of creating a synthetic
   effectively final value to capture.
 
+- consider changing Service.callLater() API to
+    <Result> Future<Result> callLater(function Result doLater());
+
+- consider a @Proxy annotation for mutable service properties to create a delegation pattern (see
+  SessionImpl.attributes)
+
 - add a method to Map API to evaluate the "worst lookup cost" based on the current content
   (Mark's suggestion to evaluated keys' hashCode distribution)
 

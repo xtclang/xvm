@@ -361,8 +361,6 @@ interface Service
      * Exceptions raised by the `doLater` function are ignored and lost by the runtime.
      */
     void callLater(function void doLater());
-    // REVIEW GG:
-    // <Result> Future<Result> callLater(function Result doLater());
 
     /**
      * Register a ContextToken, replacing any previously registered ContextToken with the same name.

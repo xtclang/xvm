@@ -782,7 +782,7 @@ const String
                 switch (append.sign)
                     {
                     case Negative:
-                        return this[0 ..< length];  // REVIEW GG
+                        return this[0 ..< length];
 
                     case Zero:
                         return this;

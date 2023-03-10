@@ -95,7 +95,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             construct ConcurrentHasherMap(hasher, that.size, parallelism);
             }
         }
-    finally // REVIEW GG+CP - wouldn't it be nice if "finally" could capture from the "construct" block?
+    finally
         {
         if (!(that.is(ConcurrentHasherMap) && hasher == that.hasher))
             {
