@@ -149,9 +149,11 @@ public class xException
         return makeHandle(frame, s_clzInvalidType, sMsg);
         }
 
-    public static ExceptionHandle mutableObject(Frame frame)
+    public static ExceptionHandle mutableObject(Frame frame, TypeConstant type)
         {
-        return illegalArgument(frame, "mutable object cannot be used for a service call");
+        return illegalArgument(frame, "Mutable object of type \" "
+                + type.removeAccess().getValueString()
+                + "\" cannot be used for a service call");
         }
 
     public static ExceptionHandle outOfBounds(Frame frame, long lIndex, long cSize)

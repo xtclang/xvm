@@ -190,15 +190,17 @@ public class xRTType
         }
 
     @Override
-    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
-                                          TypeConstant typeProxy)
+    public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
+                                 TypeConstant typeProxy)
         {
         if (typeProxy == null)
             {
             // a proxy for a non-shareable TypeHandle is a "foreign" handle
-            return makeHandle(ctx.f_container, ((TypeHandle) hTarget).getUnsafeDataType(), false);
+            return frame.assignValue(Op.A_STACK,
+                makeHandle(ctxTarget.f_container, ((TypeHandle) hTarget).getUnsafeDataType(), false));
             }
-        return super.createProxyHandle(ctx, hTarget, typeProxy);
+
+        return super.createProxyHandle(frame, ctxTarget, hTarget, typeProxy);
         }
 
     @Override

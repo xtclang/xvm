@@ -283,7 +283,7 @@ public class xClass
 
         if (hParent != null && !hParent.isPassThrough())
             {
-            return frame.raiseException(xException.mutableObject(frame));
+            return frame.raiseException(xException.mutableObject(frame, hParent.getType()));
             }
 
         switch (contextAlloc.sendAllocateRequest(frame, clzPublic, hParent, Op.A_STACK))
@@ -293,8 +293,7 @@ public class xClass
 
             case Op.R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack())
-                    );
+                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()));
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:

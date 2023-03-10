@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -69,23 +70,24 @@ public class Proxy
         }
 
     @Override
-    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
-                                          TypeConstant typeProxy)
+    public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
+                                 TypeConstant typeProxy)
         {
         ProxyHandle hProxy = (ProxyHandle) hTarget;
-        if (ctx != hProxy.f_context)
+        if (ctxTarget != hProxy.f_context)
             {
-            return null;
+            return frame.raiseException("Out of context \"" + hProxy.f_context.f_sName + "\" service");
             }
 
         if (hProxy.getType().equals(typeProxy))
             {
-            return hProxy;
+            return frame.assignValue(Op.A_STACK, hProxy);
             }
 
         ProxyComposition clzProxy = new ProxyComposition(
                 hProxy.getComposition().getOrigin(), typeProxy);
-        return Proxy.makeHandle(clzProxy, ctx, hProxy.getTarget());
+        return frame.assignValue(Op.A_STACK,
+                Proxy.makeHandle(clzProxy, ctxTarget, hProxy.getTarget()));
         }
 
     @Override

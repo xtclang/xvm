@@ -859,18 +859,22 @@ public class xTuple
         @Override
         public boolean makeImmutable()
             {
-            m_mutability = Mutability.Constant;
-
-            ObjectHandle[] ahValue = m_ahValue;
-            for (int i = 0, c = ahValue.length; i < c; i++)
+            if (m_fMutable)
                 {
-                ObjectHandle hValue = ahValue[i];
-                if (!hValue.isService() && !hValue.makeImmutable())
+                m_mutability = Mutability.Constant;
+
+                ObjectHandle[] ahValue = m_ahValue;
+                for (int i = 0, c = ahValue.length; i < c; i++)
                     {
-                    return false;
+                    ObjectHandle hValue = ahValue[i];
+                    if (!hValue.isService() && !hValue.makeImmutable())
+                        {
+                        return false;
+                        }
                     }
+                return super.makeImmutable();
                 }
-            return super.makeImmutable();
+            return true;
             }
 
         @Override

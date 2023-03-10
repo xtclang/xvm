@@ -1045,18 +1045,38 @@ public class ServiceContext
      * Check if all the arguments are pass-through from this service to the destination service;
      * replace the proxyable ones with the corresponding proxy handles.
      *
+     * @param frame   the current frame
      * @param ctxDst  the service context that the arguments are to be sent to
-     * @param method  the method that is to be called on the "destination" context
+     * @param method  (optional) the method that is to be called on the "destination" context
      * @param ahArg   the actual arguments
      *
-     * @return true iff all the arguments are pass-through or have been successfully proxied
+     * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
-    public boolean validatePassThrough(ServiceContext ctxDst,
-                                       MethodStructure method, ObjectHandle[] ahArg)
+    public int validatePassThrough(Frame frame, ServiceContext ctxDst,
+                                   MethodStructure method, ObjectHandle[] ahArg)
         {
         // no need to check the container sharing unless we're crossing the container boundaries
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
-        for (int i = 0, c = ahArg.length; i < c; i++)
+
+        return validatePassThroughArgs(frame, container,
+                method == null ? null : method.getParamTypes(), ahArg, ahArg.length, 0);
+        }
+
+    /**
+     * Same as the method above, but allows specifying the number of arguments and their proxy types.
+     */
+    public int validatePassThrough(Frame frame, ServiceContext ctxDst,
+                                   TypeConstant[] atype, ObjectHandle[] ahArg, int cArgs)
+        {
+        Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
+
+        return validatePassThroughArgs(frame, container, atype, ahArg, cArgs, 0);
+        }
+
+    private int validatePassThroughArgs(Frame frame, Container container, TypeConstant[] atype,
+                                        ObjectHandle[] ahArg, int cArgs, int ixStart)
+        {
+        for (int i = ixStart; i < cArgs; i++)
             {
             ObjectHandle hArg = ahArg[i];
             if (hArg == null)
@@ -1067,15 +1087,44 @@ public class ServiceContext
 
             if (!hArg.isPassThrough(container))
                 {
-                hArg = hArg.getTemplate().createProxyHandle(this, hArg, method.getParamTypes()[i]);
-                if (hArg == null)
+                int ix = i;
+                if (hArg.getType().isA(frame.poolContext().typeAutoFreezable()))
                     {
-                    return false;
+                    return Utils.callFreeze(frame, hArg, null, frameCaller ->
+                        {
+                        ahArg[ix] = frameCaller.popStack();
+                        return validatePassThroughArgs(
+                                frameCaller, container, atype, ahArg, cArgs, ix+1);
+                        });
                     }
-                ahArg[i] = hArg;
+
+                switch (hArg.getTemplate().createProxyHandle(
+                            frame, this, hArg, atype == null ? null : atype[i]))
+                    {
+                    case Op.R_NEXT:
+                        ahArg[i] = frame.popStack();
+                        break;
+
+                    case Op.R_CALL:
+                        {
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            {
+                            ahArg[ix] = frameCaller.popStack();
+                            return validatePassThroughArgs(
+                                    frameCaller, container, atype, ahArg, cArgs, ix+1);
+                            });
+                        return Op.R_CALL;
+                        }
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
                 }
             }
-        return true;
+        return Op.R_NEXT;
         }
 
     /**
@@ -1111,19 +1160,19 @@ public class ServiceContext
      * The caller is responsible for handling any potential exceptions thrown by the called
      * function, which would be provided via the returned CompletableFuture.
      *
-     * @param frameCaller  (optional) the caller's frame
+     * @param frame  (optional) the caller's frame
      *
      * @return a CompletableFuture for the call or null if the service has terminated
      */
-    public CompletableFuture<ObjectHandle> postRequest(
-            Frame frameCaller, FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
+    public CompletableFuture<ObjectHandle> postRequest(Frame frame, FunctionHandle hFunction,
+                                                       ObjectHandle[] ahArg, int cReturns)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
             return null;
             }
 
-        Request request = new CallLaterRequest(frameCaller, hFunction, ahArg, cReturns);
+        Request request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
 
         // TODO: should we reject (throw) if the service overwhelmed?
         addRequest(request, true);
@@ -1134,27 +1183,31 @@ public class ServiceContext
     /**
      * Send an asynchronous Op-based message to this context with one return value.
      *
+     * @param frame  the caller's frame
+     *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendOp1Request(Frame frameCaller, Op op, int iReturn)
+    public int sendOp1Request(Frame frame, Op op, int iReturn)
         {
         assert iReturn != Op.A_IGNORE_ASYNC;
 
-        OpRequest request = new OpRequest(frameCaller, op, iReturn == Op.A_IGNORE ? 0 : 1);
+        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1);
 
-        addRequest(request, frameCaller.isDynamicVar(iReturn));
+        addRequest(request, frame.isDynamicVar(iReturn));
 
-        frameCaller.f_fiber.registerRequest(request);
+        frame.f_fiber.registerRequest(request);
 
-        return frameCaller.assignFutureResult(iReturn, request.f_future);
+        return frame.assignFutureResult(iReturn, request.f_future);
         }
 
     /**
      * Send an asynchronous "construct service" request to this context.
      *
+     * @param frame  the caller's frame
+     *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendConstructRequest(Frame frameCaller, TypeComposition clazz,
+    public int sendConstructRequest(Frame frame, TypeComposition clazz,
                                     MethodStructure constructor,
                                     ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
@@ -1174,16 +1227,17 @@ public class ServiceContext
                 }
             };
 
-        return sendOp1Request(frameCaller, opConstruct, iReturn);
+        return sendOp1Request(frame, opConstruct, iReturn);
         }
 
     /**
      * Send an asynchronous "allocate structure" request to this context.
      *
+     * @param frame  the caller's frame
+     *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendAllocateRequest(Frame frameCaller, TypeComposition clazz,
-                                   ObjectHandle hParent, int iReturn)
+    public int sendAllocateRequest(Frame frame, TypeComposition clazz, ObjectHandle hParent, int iReturn)
         {
         assert iReturn != Op.A_IGNORE;
 
@@ -1204,23 +1258,24 @@ public class ServiceContext
                 }
             };
 
-        return sendOp1Request(frameCaller, opAllocate, iReturn);
+        return sendOp1Request(frame, opAllocate, iReturn);
         }
 
     /**
      * Send an asynchronous "invoke" request with zero or one return value.
      *
+     * @param frame    the caller's frame
      * @param fTuple   if true, the tuple is expected as a result of async execution
      * @param iReturn  a register id ({@link Op#A_IGNORE_ASYNC} for fire and forget)
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendInvoke1Request(Frame frameCaller, FunctionHandle hFunction,
+    public int sendInvoke1Request(Frame frame, FunctionHandle hFunction,
                                   ObjectHandle hTarget, ObjectHandle[] ahArg, boolean fTuple, int iReturn)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
-            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
 
         boolean fAsync;
@@ -1244,7 +1299,7 @@ public class ServiceContext
 
             default ->
                 {
-                fAsync            = frameCaller.isDynamicVar(iReturn);
+                fAsync            = frame.isDynamicVar(iReturn);
                 fHandleExceptions = false;
                 cReturns          = fTuple ? -1 : 1;
                 }
@@ -1269,12 +1324,12 @@ public class ServiceContext
                 }
             };
 
-        OpRequest                       request = new OpRequest(frameCaller, opCall, cReturns);
+        OpRequest                       request = new OpRequest(frame, opCall, cReturns);
         CompletableFuture<ObjectHandle> future  = request.f_future;
 
         boolean fOverwhelmed = addRequest(request, fAsync);
 
-        Fiber fiber = frameCaller.f_fiber;
+        Fiber fiber = frame.f_fiber;
         if (fHandleExceptions)
             {
             // in the case of an ignored return and underwhelmed queue - fire and forget
@@ -1282,7 +1337,7 @@ public class ServiceContext
                 {
                 if (future.isDone())
                     {
-                    return frameCaller.assignFutureResult(iReturn, future);
+                    return frame.assignFutureResult(iReturn, future);
                     }
                 fiber.registerUncapturedRequest(request);
                 return Op.R_NEXT;
@@ -1294,20 +1349,22 @@ public class ServiceContext
 
         fiber.registerRequest(request);
 
-        return frameCaller.assignFutureResult(iReturn, future);
+        return frame.assignFutureResult(iReturn, future);
         }
 
     /**
      * Send an asynchronous "invoke" request with multiple return values.
      *
+     * @param frame  the caller's frame
+     *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendInvokeNRequest(Frame frameCaller, FunctionHandle hFunction,
+    public int sendInvokeNRequest(Frame frame, FunctionHandle hFunction,
                                   ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
-            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
 
         int cReturns = aiReturn.length;
@@ -1331,17 +1388,17 @@ public class ServiceContext
                 }
             };
 
-        OpRequest                         request = new OpRequest(frameCaller, opCall, cReturns);
+        OpRequest                         request = new OpRequest(frame, opCall, cReturns);
         CompletableFuture<ObjectHandle[]> future  = request.f_future;
 
         boolean fOverwhelmed = addRequest(request, false);
 
-        Fiber fiber = frameCaller.f_fiber;
+        Fiber fiber = frame.f_fiber;
         if (cReturns == 0)
             {
             fiber.registerUncapturedRequest(request);
             return fOverwhelmed || future.isDone()
-                ? frameCaller.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
+                ? frame.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
                 : Op.R_NEXT;
             }
 
@@ -1350,24 +1407,26 @@ public class ServiceContext
             {
             CompletableFuture<ObjectHandle> cfReturn =
                     future.thenApply(ahResult -> ahResult[0]);
-            return frameCaller.assignFutureResult(aiReturn[0], cfReturn);
+            return frame.assignFutureResult(aiReturn[0], cfReturn);
             }
 
         // TODO replace with: assignFutureResults()
-        return frameCaller.call(frameCaller.createWaitFrame(future, aiReturn));
+        return frame.call(frame.createWaitFrame(future, aiReturn));
         }
 
     /**
      * Send an asynchronous property "read" operation request.
      *
+     * @param frame  the caller's frame
+     *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendProperty01Request(Frame frameCaller, ObjectHandle hTarget,
+    public int sendProperty01Request(Frame frame, ObjectHandle hTarget,
                                      PropertyConstant idProp, int iReturn, PropertyOperation01 op)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
-            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
 
         Op opGet = new Op()
@@ -1389,7 +1448,7 @@ public class ServiceContext
                 }
             };
 
-        return sendOp1Request(frameCaller, opGet, iReturn);
+        return sendOp1Request(frame, opGet, iReturn);
         }
 
     /**
@@ -1400,33 +1459,50 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendProperty10Request(Frame frameCaller, ObjectHandle hTarget,
+    public int sendProperty10Request(Frame frame, ObjectHandle hTarget,
                                      PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
-            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
 
         // no need to check the container sharing unless we're crossing the container boundaries
-        Container containerDst = frameCaller.f_context.f_container == f_container ? null : f_container;
+        Container containerDst = frame.f_context.f_container == f_container ? null : f_container;
 
-        ObjectHandle hPassValue;
         if (hValue.isPassThrough(containerDst))
             {
-            hPassValue = hValue;
-            }
-        else
-            {
-            hPassValue = idProp == null
-                    ? null
-                    : hValue.getTemplate().createProxyHandle(this, hValue, idProp.getType());
-            if (hPassValue == null)
-                {
-                return frameCaller.raiseException(xException.mutableObject(frameCaller));
-                }
+            return completeSendProperty10(frame, hTarget, idProp, hValue, op);
             }
 
+        if (idProp == null)
+            {
+            return frame.raiseException(xException.mutableObject(frame, hValue.getType()));
+            }
+
+        ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+        TypeConstant[] atype   = new TypeConstant[] {idProp.getType()};
+        switch (frame.f_context.validatePassThrough(frame, this, atype, ahValue, 1))
+            {
+            case Op.R_NEXT:
+                return completeSendProperty10(frame, hTarget, idProp, ahValue[0], op);
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    completeSendProperty10(frameCaller, hTarget, idProp, ahValue[0], op));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    private int completeSendProperty10(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
+                                       ObjectHandle hPassValue, PropertyOperation10 op)
+        {
         Op opSet = new Op()
             {
             public int process(Frame frame, int iPC)
@@ -1440,13 +1516,13 @@ public class ServiceContext
                 }
             };
 
-        return sendOp1Request(frameCaller, opSet, Op.A_IGNORE);
+        return sendOp1Request(frame, opSet, Op.A_IGNORE);
         }
 
     /**
      * Send an asynchronous "constant initialization" message.
      */
-    public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frameCaller,
+    public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frame,
                                                                List<SingletonConstant> listConstants)
         {
         Op opInit = new Op()
@@ -1463,7 +1539,7 @@ public class ServiceContext
                 }
             };
 
-        OpRequest request = new OpRequest(frameCaller, opInit, 1);
+        OpRequest request = new OpRequest(frame, opInit, 1);
 
         addRequest(request, false);
 
@@ -1593,46 +1669,22 @@ public class ServiceContext
             ServiceContext ctxSrc = frame.f_context;
             ServiceContext ctxDst = fiberCaller.f_context;
 
-            // no need to check the container sharing unless we're crossing the container boundaries
-            Container containerDst = ctxSrc.f_container == ctxDst.f_container
-                ? null
-                : ctxDst.f_container;
-
             switch (cReturns)
                 {
                 case 0:
                     break;
 
                 case 1:
-                    {
-                    ObjectHandle    hReturn    = frame.f_ahVar[0];
-                    ExceptionHandle hException = frame.m_hException;
-
-                    if (hException == null)
+                    if (frame.m_hException == null)
                         {
-                        if (hReturn != null && !hReturn.isPassThrough(containerDst))
+                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, null, frame.f_ahVar, 1);
+                        if (iResult == Op.R_EXCEPTION)
                             {
-                            if (index == 0 &&
-                                    hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
-                                {
-                                return Utils.callFreeze(frame, hReturn, null, frameCaller ->
-                                    {
-                                    frameCaller.f_ahVar[0] = frameCaller.popStack();
-                                    return checkResponse(fiberCaller, frameCaller, cReturns, 1);
-                                    });
-                                }
-                            ObjectHandle hProxy = hReturn.getTemplate().
-                                    createProxyHandle(ctxSrc, hReturn, null);
-                            if (hProxy == null)
-                                {
-                                reportMutable(frame, hReturn);
-                                return Op.R_EXCEPTION;
-                                }
-                            frame.f_ahVar[0] = hProxy;
+                            Arrays.fill(frame.f_ahVar, null);
                             }
+                        return iResult;
                         }
                     break;
-                    }
 
                 case -1: // tuple return
                     {
@@ -1643,43 +1695,32 @@ public class ServiceContext
                         TupleHandle hTuple = (TupleHandle) ahReturn[0];
                         if (hTuple != null)
                             {
-                            ahReturn = hTuple.m_ahValue;
-                            for (int i = index, c = ahReturn.length; i < c; i++)
+                            ObjectHandle[] ahValue = hTuple.m_ahValue;
+                            switch (ctxSrc.validatePassThrough(frame, ctxDst, null, ahValue))
                                 {
-                                ObjectHandle hReturn = ahReturn[i];
-                                if (!hReturn.isPassThrough(containerDst))
-                                    {
-                                    if (hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
-                                        {
-                                        int ix = i;
-                                        return Utils.callFreeze(frame, hReturn, null, frameCaller ->
-                                            {
-                                            ((TupleHandle) frameCaller.f_ahVar[0]).m_ahValue[ix] =
-                                                    frameCaller.popStack();
-                                            return checkResponse(fiberCaller, frameCaller, cReturns, ix+1);
-                                            });
-                                        }
-                                    ObjectHandle hProxy = hReturn.getTemplate().
-                                            createProxyHandle(ctxSrc, hReturn, null);
-                                    if (hProxy == null)
-                                        {
-                                        reportMutable(frame, hReturn);
-                                        hTuple = null;
-                                        break;
-                                        }
-                                    ahReturn[i] = hProxy;
-                                    }
-                                }
+                                case Op.R_NEXT:
+                                    // all values are pass-through; mark the tuple itself immutable;
+                                    // we can do it since this tuple was created automatically by
+                                    // "frame.assignTuple()" method
+                                    hTuple.makeImmutable();
+                                    break;
 
-                            // all values are pass-through; mark the tuple itself immutable;
-                            // we can do it since this tuple was created automatically by
-                            // "frame.assignTuple()" method
-                            if (!hTuple.getType().isImmutable())
-                                {
-                                hTuple.makeImmutable();
+                                case Op.R_CALL:
+                                    frame.m_frameNext.addContinuation(frameCaller ->
+                                        {
+                                        hTuple.makeImmutable();
+                                        return Op.R_NEXT;
+                                        });
+                                    return Op.R_CALL;
+
+                                case Op.R_EXCEPTION:
+                                    Arrays.fill(ahValue, null);
+                                    return Op.R_EXCEPTION;
+
+                                default:
+                                    throw new IllegalStateException();
                                 }
                             }
-                        frame.f_ahVar[0] = hTuple;
                         }
                     break;
                     }
@@ -1692,7 +1733,7 @@ public class ServiceContext
 
                     if (hException == null)
                         {
-                        for (int i = index, c = ahReturn.length; i < c; i++)
+                        for (int i = index; i < cReturns; i++)
                             {
                             ObjectHandle hReturn = ahReturn[i];
                             if (hReturn == null)
@@ -1704,40 +1745,19 @@ public class ServiceContext
                                 // the DEFAULT value (see Utils.GET_AND_RETURN)
                                 ahReturn[i] = ObjectHandle.DEFAULT;
                                 }
-                            else if (!hReturn.isPassThrough(containerDst))
-                                {
-                                int ix = i;
-                                if (hReturn.getType().isA(frame.poolContext().typeAutoFreezable()))
-                                    {
-                                    return Utils.callFreeze(frame, hReturn, null, frameCaller ->
-                                        {
-                                        ahReturn[ix] = frameCaller.popStack();
-                                        return checkResponse(fiberCaller, frameCaller, cReturns, ix+1);
-                                        });
-                                    }
-                                ObjectHandle hProxy = hReturn.getTemplate().
-                                        createProxyHandle(ctxSrc, hReturn, null);
-                                if (hProxy == null)
-                                    {
-                                    reportMutable(frame, hReturn);
-                                    Arrays.fill(ahReturn, null);
-                                    return Op.R_EXCEPTION;
-                                    }
-                                ahReturn[i] = hProxy;
-                                }
                             }
+
+                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, null, ahReturn, cReturns);
+                        if (iResult == Op.R_EXCEPTION)
+                            {
+                            Arrays.fill(ahReturn, null);
+                            }
+                        return iResult;
                         }
                     break;
                     }
                 }
             return Op.R_NEXT;
-            }
-
-        private void reportMutable(Frame frame, ObjectHandle hValue)
-            {
-            frame.raiseException(xException.illegalArgument(frame,
-                    "Mutable return value from \"" + this +
-                    "\"; type=" + hValue.getType().getValueString()));
             }
 
         /**

@@ -155,13 +155,24 @@ public class xService
         ServiceContext context    = frame.f_context;
         ServiceContext contextNew = context.f_container.createServiceContext(f_sName);
 
-        if (hParent != null && !hParent.isPassThrough() ||
-                !context.validatePassThrough(contextNew, constructor, ahArg))
+        switch (context.validatePassThrough(frame, contextNew, constructor, ahArg))
             {
-            return frame.raiseException(xException.mutableObject(frame));
-            }
+            case Op.R_NEXT:
+                return contextNew.sendConstructRequest(
+                        frame, clazz, constructor, hParent, ahArg, iReturn);
 
-        return contextNew.sendConstructRequest(frame, clazz, constructor, hParent, ahArg, iReturn);
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    contextNew.sendConstructRequest(
+                            frameCaller, clazz, constructor, hParent, ahArg, iReturn));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override

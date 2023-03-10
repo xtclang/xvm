@@ -458,17 +458,18 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Create a proxy handle that could be sent over the service/container boundaries.
+     * Create a proxy handle that could be sent over the service/container boundaries and place it
+     * on the caller frame stack.
      *
-     * @param ctx        the service context that the mutable object "belongs" to
+     * @param frame      the current frame
+     * @param ctxTarget  the service context that the proxy "belongs" to
      * @param hTarget    the object handle that needs to be proxied
      * @param typeProxy  (optional) the [revealed] type of the proxy handle
      *
-     * @return a new ObjectHandle to replace a "non-pass-through" object with or null if a proxy
-     *         cannot be created
+     * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
-    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
-                                          TypeConstant typeProxy)
+    public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
+                                 TypeConstant typeProxy)
         {
         if (typeProxy == null)
             {
@@ -477,10 +478,13 @@ public abstract class ClassTemplate
                 ProxyComposition clzProxy = new ProxyComposition(
                         (ClassComposition) hTarget.getComposition(), hTarget.getType());
 
-                return Proxy.makeHandle(clzProxy, ctx, hTarget);
+                return frame.assignValue(Op.A_STACK,
+                        Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
                 }
+            return frame.raiseException(xException.mutableObject(frame, hTarget.getType()));
             }
-        else if (typeProxy.isInterfaceType())
+
+        if (typeProxy.isInterfaceType())
             {
             assert hTarget.getType().isA(typeProxy);
 
@@ -500,7 +504,7 @@ public abstract class ClassTemplate
                         TypeConstant typeParam = method.getParam(i).getType();
                         if (!typeParam.isProxyable())
                             {
-                            return null;
+                            return frame.raiseException(xException.mutableObject(frame, typeParam));
                             }
                         }
                     }
@@ -514,7 +518,7 @@ public abstract class ClassTemplate
                     {
                     if (!infoProp.getType().isProxyable())
                         {
-                        return null;
+                        return frame.raiseException(xException.mutableObject(frame, infoProp.getType()));
                         }
                     }
                 }
@@ -522,9 +526,11 @@ public abstract class ClassTemplate
             ClassComposition clzTarget = (ClassComposition) hTarget.getComposition();
             ProxyComposition clzProxy  = clzTarget.ensureProxyComposition(typeProxy);
 
-            return Proxy.makeHandle(clzProxy, ctx, hTarget);
+            return frame.assignValue(Op.A_STACK,
+                    Proxy.makeHandle(clzProxy, frame.f_context, hTarget));
             }
-        return null;
+
+        return frame.raiseException(xException.mutableObject(frame, typeProxy));
         }
 
 

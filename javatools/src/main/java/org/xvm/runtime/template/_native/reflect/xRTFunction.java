@@ -134,12 +134,13 @@ public class xRTFunction
         }
 
     @Override
-    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
-                                          TypeConstant typeProxy)
+    public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
+                                 TypeConstant typeProxy)
         {
         assert typeProxy == null || typeProxy.isA(pool().typeFunction());
 
-        return ((FunctionHandle) hTarget).createProxyHandle(ctx);
+        return frame.assignValue(Op.A_STACK,
+                ((FunctionHandle) hTarget).createProxyHandle(ctxTarget));
         }
 
     @Override
@@ -1174,20 +1175,30 @@ public class xRTFunction
 
             if (frame.f_context == ctxTarget)
                 {
-                hTarget = getContextTarget(frame, hTarget);
+                ObjectHandle hCtxTarget = getContextTarget(frame, hTarget);
 
-                return Op.isDeferred(hTarget)
-                        ? hTarget.proceed(frame, frameCaller ->
+                return Op.isDeferred(hCtxTarget)
+                        ? hCtxTarget.proceed(frame, frameCaller ->
                             super.call1Impl(frameCaller, frameCaller.popStack(), ahVar, iReturn))
-                        : super.call1Impl(frame, hTarget, ahVar, iReturn);
+                        : super.call1Impl(frame, hCtxTarget, ahVar, iReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(ctxTarget, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
 
-            return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        ctxTarget.sendInvoke1Request(frameCaller, this, hTarget, ahVar, false, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         @Override
@@ -1199,20 +1210,30 @@ public class xRTFunction
 
             if (frame.f_context == ctxTarget)
                 {
-                hTarget = getContextTarget(frame, hTarget);
+                ObjectHandle hCtxTarget = getContextTarget(frame, hTarget);
 
-                return Op.isDeferred(hTarget)
-                        ? hTarget.proceed(frame, frameCaller ->
+                return Op.isDeferred(hCtxTarget)
+                        ? hCtxTarget.proceed(frame, frameCaller ->
                             super.callTImpl(frameCaller, frameCaller.popStack(), ahVar, iReturn))
-                        : super.callTImpl(frame, hTarget, ahVar, iReturn);
+                        : super.callTImpl(frame, hCtxTarget, ahVar, iReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(ctxTarget, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
 
-            return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        ctxTarget.sendInvoke1Request(frameCaller, this, hTarget, ahVar, true, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         @Override
@@ -1224,20 +1245,30 @@ public class xRTFunction
 
             if (frame.f_context == ctxTarget)
                 {
-                hTarget = getContextTarget(frame, hTarget);
+                ObjectHandle hCtxTarget = getContextTarget(frame, hTarget);
 
-                return Op.isDeferred(hTarget)
-                        ? hTarget.proceed(frame, frameCaller ->
+                return Op.isDeferred(hCtxTarget)
+                        ? hCtxTarget.proceed(frame, frameCaller ->
                             super.callNImpl(frameCaller, frameCaller.popStack(), ahVar, aiReturn))
-                        : super.callNImpl(frame, hTarget, ahVar, aiReturn);
+                        : super.callNImpl(frame, hCtxTarget, ahVar, aiReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(ctxTarget, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return ctxTarget.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
 
-            return ctxTarget.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        ctxTarget.sendInvokeNRequest(frameCaller, this, hTarget, ahVar, aiReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         }
 
@@ -1270,55 +1301,88 @@ public class xRTFunction
         @Override
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            ServiceHandle hService = f_hService;
+            ServiceHandle  hService  = f_hService;
+            ServiceContext ctxTarget = hService.f_context;
 
-            if (frame.f_context == hService.f_context)
+            if (frame.f_context == ctxTarget)
                 {
                 return super.call1Impl(frame, null, ahVar, iReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(hService.f_context, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return ctxTarget.sendInvoke1Request(frame, this, hService, ahVar, false, iReturn);
 
-            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, false, iReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        ctxTarget.sendInvoke1Request(frameCaller, this, hService, ahVar, false, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         @Override
         protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            ServiceHandle hService = f_hService;
+            ServiceHandle  hService  = f_hService;
+            ServiceContext ctxTarget = hService.f_context;
 
-            if (frame.f_context == hService.f_context)
+            if (frame.f_context == ctxTarget)
                 {
                 return super.callTImpl(frame, null, ahVar, iReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(hService.f_context, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return ctxTarget.sendInvoke1Request(frame, this, hService, ahVar, true, iReturn);
 
-            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, true, iReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        ctxTarget.sendInvoke1Request(frameCaller, this, hService, ahVar, true, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         @Override
         protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            ServiceHandle hService = f_hService;
+            ServiceHandle  hService  = f_hService;
+            ServiceContext ctxTarget = hService.f_context;
 
-            if (frame.f_context == hService.f_context)
+            if (frame.f_context == ctxTarget)
                 {
                 return super.callNImpl(frame, null, ahVar, aiReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(hService.f_context, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return ctxTarget.sendInvokeNRequest(frame, this, hService, ahVar, aiReturn);
 
-            return hService.f_context.sendInvokeNRequest(frame, this, hService, ahVar, aiReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        ctxTarget.sendInvokeNRequest(frameCaller, this, hService, ahVar, aiReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         }
 
@@ -1362,12 +1426,22 @@ public class xRTFunction
                 return super.call1(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(f_ctx, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, f_ctx, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
 
-            return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        f_ctx.sendInvoke1Request(frameCaller, this, hTarget, ahVar, false, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         @Override
@@ -1378,12 +1452,22 @@ public class xRTFunction
                 return super.callT(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(f_ctx, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, f_ctx, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
 
-            return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        f_ctx.sendInvoke1Request(frameCaller, this, hTarget, ahVar, true, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         @Override
@@ -1394,12 +1478,22 @@ public class xRTFunction
                 return super.callN(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!frame.f_context.validatePassThrough(f_ctx, getMethod(), ahVar))
+            switch (frame.f_context.validatePassThrough(frame, f_ctx, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject(frame));
-                }
+                case Op.R_NEXT:
+                    return f_ctx.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
 
-            return f_ctx.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        f_ctx.sendInvokeNRequest(frameCaller, this, hTarget, ahVar, aiReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         }
 
