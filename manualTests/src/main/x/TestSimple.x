@@ -27,7 +27,7 @@ module TestSimple
 
         (Value, Value) getValues() = (new Value(2), new Value(3));
 
-        Tuple getValuesAsTuple() = (new Value(4), new Value(5), -1).freeze();
+        Tuple getValuesAsTuple() = (new Value(4), new Value(5), -1);
 
         void setValue(Value v)
             {

@@ -23,6 +23,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -167,6 +168,35 @@ public class xTuple
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
+            }
+        }
+
+    @Override
+    public int createProxyHandle(Frame frame, ServiceContext ctxTarget,
+                                 ObjectHandle hTarget, TypeConstant typeProxy)
+        {
+        // this method is called from ServiceContext.validatePassThrough(); see if we can freeze all
+        // the tuple values (implementing AutoFreezable(False) contract)
+        TupleHandle    hTuple  = (TupleHandle) hTarget;
+        ObjectHandle[] ahValue = hTuple.m_ahValue.clone();
+
+        switch (frame.f_context.validatePassThrough(frame, ctxTarget, null, ahValue))
+            {
+            case Op.R_NEXT:
+                return frame.assignValue(Op.A_STACK,
+                    new TupleHandle(hTuple.getComposition(), ahValue, Mutability.Constant));
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    frameCaller.assignValue(Op.A_STACK,
+                        new TupleHandle(hTuple.getComposition(), ahValue, Mutability.Constant)));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 
@@ -629,7 +659,7 @@ public class xTuple
         }
 
 
-    // ----- IndexSupport methods -----
+    // ----- IndexSupport methods ------------------------------------------------------------------
 
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)

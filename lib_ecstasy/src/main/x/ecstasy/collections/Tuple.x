@@ -23,7 +23,13 @@
  *
  * Due to the complexity of the non-uniform element type, Tuple is not intended to be implemented by
  * the developer; rather, it is a data type provided by the runtime, and whose type safety is
- * explicitly supported by both the compiler and the runtime.
+ * explicitly supported by both the compiler and the runtime. The implementation provided by the
+ * runtime uses either the [Fixed](Mutability.Fixed) or [Constant](Mutability.Constant) mutability
+ * by default, depending on the types of the elements; if the elements are all immutable or
+ * services, then the tuple mutability will be `Constant`; otherwise, it will be `Fixed`.
+ * The run-time also provides an implementation of the `Freezable` interface. Additionally, for a
+ * tuple that contains only `immutable`, `service`, and `AutoFreezable` elements, the Tuple will
+ * automatically incorporate `AutoFreezable(inPlace=False)`.
  */
 interface Tuple<ElementTypes extends Tuple<ElementTypes>>
         extends Freezable
