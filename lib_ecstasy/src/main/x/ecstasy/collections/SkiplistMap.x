@@ -2156,12 +2156,12 @@ class SkiplistMap<Key extends Orderable, Value>
         // ----- properties -------------------------------------------------------------------
 
         /**
-         * This ExternalStore stores the index of each value in each node of the IndexStore.
+         * This ElementStore stores the index of each value in each node of the IndexStore.
          */
         protected IndexStore? nodes;
 
         /**
-         * This ExternalStore stores the index of each value in each node of the IndexStore,
+         * This ElementStore stores the index of each value in each node of the IndexStore,
          * and at this value-offset within the node.
          */
         protected Int valueOffset;
