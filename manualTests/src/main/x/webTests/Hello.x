@@ -61,10 +61,10 @@ module Hello
                         );
         }
 
-    @Override
-    protected Authenticator createAuthenticator()
+    // TODO GG this cannot be protected or private?
+    Authenticator createAuthenticator()
         {
-        return new BasicAuthenticator(new FixedRealm("Hello", ["admin"="addaya"]));
+        return new DigestAuthenticator(new FixedRealm("Hello", ["admin"="addaya"]));
         }
 
     package inner

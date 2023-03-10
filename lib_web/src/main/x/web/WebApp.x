@@ -58,20 +58,22 @@ mixin WebApp
         // form of authentication; if one is injected, use it, otherwise, use the one specified by
         // this application
         @Inject Authenticator? providedAuthenticator;
-        return providedAuthenticator ?: createAuthenticator();
-        }
+        return providedAuthenticator?;
 
-    /**
-     * Create the appropriate [Authenticator] for this web application.
-     *
-     * The default implementation of this method does not have any concept of user identity or
-     * authentication, so it provides a [NeverAuthenticator] by default. Any application that needs
-     * client/user authentication should override this method.
-     *
-     * @return the Authenticator service that can authenticate clients of this web application
-     */
-    protected Authenticator createAuthenticator()
-        {
+        // allow a module to implement the factory method createAuthenticator() - the module doesn't
+        // have to "implement" this interface; it's only spelled out here so we can duck type it
+        interface AuthenticatorFactory
+            {
+            Authenticator createAuthenticator();
+            }
+
+        // TODO GG if (this.is(AuthenticatorFactory))
+        if (AuthenticatorFactory af := this.is(AuthenticatorFactory))
+            {
+            return af.createAuthenticator();
+            }
+
+        // disable authentication, since no authenticator was found
         return new NeverAuthenticator();
         }
     }
