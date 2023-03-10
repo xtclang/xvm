@@ -1356,7 +1356,8 @@ public class Parser
                 Expression expr = parseExpression();
                 Token semi = expect(Id.SEMICOLON);
                 ReturnStatement stmt = new ReturnStatement(eq, expr);
-                body = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(), semi.getEndPosition());
+                body = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
+                                                               semi.getEndPosition());
                 break;
             default:
                 body = parseStatementBlock();
@@ -1400,15 +1401,30 @@ public class Parser
             Expression exprCondition, Token doc, List<Token> modifiers,
             List<AnnotationExpression> annotations, TypeExpression type, Token name)
         {
-        StatementBlock body    = null;
-        long           lEndPos = prev().getEndPosition();
+        StatementBlock body       = null;
+        long           lEndPos    = prev().getEndPosition();
+        boolean        fNeedsSemi = false;
         if (match(Id.DOT) != null)
             {
             // "." Name Parameters MethodBody
-            Token                      methodName = expect(Id.IDENTIFIER);
-            List<Parameter>            params     = parseParameterList(true);
-            StatementBlock             block      = parseStatementBlock();
-            MethodDeclarationStatement method     = new MethodDeclarationStatement(
+            Token           methodName = expect(Id.IDENTIFIER);
+            List<Parameter> params     = parseParameterList(true);
+            StatementBlock  block;
+            Token           eq         =  match(Id.ASN);
+            if (eq != null)
+                {
+                Expression expr = parseExpression();
+                ReturnStatement stmt = new ReturnStatement(eq, expr);
+                block = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
+                                                                stmt.getEndPosition());
+                fNeedsSemi = true;
+                }
+            else
+                {
+                block      = parseStatementBlock();
+                }
+
+            MethodDeclarationStatement method = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
                     null, null, methodName, null, params, block, null, null, null);
             body    = new StatementBlock(Collections.singletonList(method),
@@ -1432,7 +1448,7 @@ public class Parser
             lEndPos = value.getEndPosition();
             expect(Id.SEMICOLON);
             }
-        else if (body == null)
+        else if (body == null || fNeedsSemi)
             {
             expect(Id.SEMICOLON);
             }

@@ -231,10 +231,7 @@ service SessionImpl
 
     @Override
     @Lazy
-    public/private Map<String, Shareable> attributes.calc()
-        {
-        return new AttributeMap_();
-        }
+    public/private Map<String, Shareable> attributes.calc() = new AttributeMap_();
 
     @Override
     public/private Time created;
@@ -246,10 +243,7 @@ service SessionImpl
     public/private Int requestCount;
 
     @Override
-    public Int activeRequests.get()
-        {
-        return requests_.size;
-        }
+    public Int activeRequests.get() = requests_.size;
 
     @Override
     public/private Time lastUse;
@@ -329,35 +323,22 @@ service SessionImpl
         }
 
     @Override
-    void sessionDestroyed()
-        {
-        }
+    void sessionDestroyed() {}
 
     @Override
-    void sessionMergedFrom(Session temp)
-        {
-        }
+    void sessionMergedFrom(Session temp) {}
 
     @Override
-    void sessionForked()
-        {
-        }
+    void sessionForked() {}
 
     @Override
-    void sessionAuthenticated(String user)
-        {
-        }
+    void sessionAuthenticated(String user) {}
 
     @Override
-    void sessionDeauthenticated(String user)
-        {
-        }
+    void sessionDeauthenticated(String user) {}
 
     @Override
-    Boolean anyEventsSince(Time time)
-        {
-        return time < versionChanged_;
-        }
+    Boolean anyEventsSince(Time time) = time < versionChanged_;
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -371,10 +352,7 @@ service SessionImpl
     class AttributeMap_
             delegates Map<String, Shareable>(actualMap)
         {
-        Map<String, Shareable> actualMap.get()
-            {
-            return attributes_;
-            }
+        Map<String, Shareable> actualMap.get() = attributes_;
         }
 
     /**
