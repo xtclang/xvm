@@ -307,12 +307,12 @@ module jsondb.xtclang.org
 
         import ecstasy.lang.src.Compiler;
 
+        import ecstasy.mgmt.BasicResourceProvider;
         import ecstasy.mgmt.Container;
         import ecstasy.mgmt.Container.Linker;
         import ecstasy.mgmt.DirRepository;
         import ecstasy.mgmt.LinkedRepository;
         import ecstasy.mgmt.ModuleRepository;
-        import ecstasy.mgmt.ResourceProvider;
 
         import ecstasy.reflect.ModuleTemplate;
 
@@ -349,7 +349,7 @@ module jsondb.xtclang.org
          * maps all * Directory resources as relative to the specified home directory.
          */
         service Injector(Directory homeDir)
-                implements ResourceProvider
+                extends BasicResourceProvider
             {
             @Lazy FileStore store.calc()
                 {
@@ -363,21 +363,6 @@ module jsondb.xtclang.org
                 {
                 switch (type, name)
                     {
-                    case (Console, "console"):
-                        @Inject Console console;
-                        return console;
-
-                    case (Clock, "clock"):
-                        @Inject Clock clock;
-                        return clock;
-
-                    case (Timer, "timer"):
-                        return (InjectedRef.Options opts) ->
-                            {
-                            @Inject(opts=opts) Timer timer;
-                            return timer;
-                            };
-
                     case (FileStore, "storage"):
                         return &store.maskAs(FileStore);
 
@@ -404,29 +389,16 @@ module jsondb.xtclang.org
                                 throw new Exception($"Invalid Directory resource: \"{name}\"");
                             }
 
-                    case (Random, "random"):
-                    case (Random, "rnd"):
-                        return (InjectedRef.Options opts) ->
-                            {
-                            @Inject(opts=opts) Random random;
-                            return random;
-                            };
-
                     case (Compiler, "compiler"):
                         @Inject Compiler compiler;
                         return compiler;
 
-                    case (Linker, "linker"):
-                        @Inject Linker linker;
-                        return linker;
-
                     case (ModuleRepository, "repository"):
                         @Inject ModuleRepository repository;
                         return repository;
-
-                    default:
-                       throw new Exception($"Invalid resource: type=\"{type}\", name=\"{name}\"");
                     }
+
+                return super(type, name);
                }
             }
         }
