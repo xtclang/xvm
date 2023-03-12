@@ -25,8 +25,8 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
-
 import org.xvm.asm.constants.PropertyConstant;
+
 import org.xvm.compiler.EvalCompiler;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
@@ -37,6 +37,8 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -275,7 +277,7 @@ public class DebugConsole
                             }
 
                         writer.println(renderBreakpoints());
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "B+":
                         switch (cArgs)
@@ -283,8 +285,12 @@ public class DebugConsole
                             case 0:
                                 if (iPC >= 0)
                                     {
-                                    addBP(makeBreakPoint(frame, iPC, false));
-                                    continue NextCommand;
+                                    BreakPoint bp = makeBreakPointPC(frame, iPC);
+                                    if (bp != null)
+                                        {
+                                        addBP(bp);
+                                        continue; // NextCommand
+                                        }
                                     }
                                 break; // the command is not allowed
 
@@ -292,9 +298,8 @@ public class DebugConsole
                                 int nLine = parseNonNegative(asParts[1]);
                                 if (nLine > 0)
                                     {
-                                    MethodStructure method = frame.f_function;
-                                    String          sName  = method.getContainingClass().getName();
-                                    addBP(new BreakPoint(sName, nLine, false));
+                                    addBP(makeBreakPointLine(frame, nLine, false));
+                                    continue; // NextCommand
                                     }
                                 break;  // invalid break point
 
@@ -303,7 +308,7 @@ public class DebugConsole
                                 if (bp != null)
                                     {
                                     addBP(bp);
-                                    continue NextCommand;
+                                    continue; // NextCommand
                                     }
                                 break;  // invalid break point
                             }
@@ -316,8 +321,12 @@ public class DebugConsole
                                 // "B-" remove the current line from the list of breakpoints
                                 if (iPC >= 0)
                                     {
-                                    removeBP(makeBreakPoint(frame, iPC, false));
-                                    continue NextCommand;
+                                    BreakPoint bp = makeBreakPointPC(frame, iPC);
+                                    if (bp != null)
+                                        {
+                                        removeBP(bp);
+                                        continue; // NextCommand
+                                        }
                                     }
                                 break; // the command is not allowed
 
@@ -329,7 +338,7 @@ public class DebugConsole
                                     m_setLineBreaks     = null;
                                     m_setThrowBreaks    = null;
                                     saveBreakpoints();
-                                    continue NextCommand;
+                                    continue; // NextCommand
                                     }
                                 // "B- 3"  (# is from the previously displayed list of breakpoints)
                                 else if (m_aBreaks != null)
@@ -338,7 +347,7 @@ public class DebugConsole
                                     if (n >= 0 && n < m_aBreaks.length)
                                         {
                                         removeBP(m_aBreaks[n]);
-                                        continue NextCommand;
+                                        continue;  // NextCommand
                                         }
                                     }
                                 break; // invalid command
@@ -349,7 +358,7 @@ public class DebugConsole
                                 if (bp != null)
                                     {
                                     removeBP(bp);
-                                    continue NextCommand;
+                                    continue; // NextCommand
                                     }
                                 break; // invalid break point
                             }
@@ -359,7 +368,7 @@ public class DebugConsole
                         if (cArgs == 1)
                             {
                             addBP(new BreakPoint(asParts[1]));
-                            continue NextCommand;
+                            continue; // NextCommand
                             }
                         break; // invalid command
 
@@ -367,7 +376,7 @@ public class DebugConsole
                         if (cArgs == 1)
                             {
                             removeBP(new BreakPoint(asParts[1]));
-                            continue NextCommand;
+                            continue; // NextCommand
                             }
                         break; // invalid command
 
@@ -377,17 +386,20 @@ public class DebugConsole
                             case 0:
                                 if (iPC >= 0)
                                     {
-                                    BreakPoint bp       = makeBreakPoint(frame, iPC, false);
-                                    BreakPoint bpExists = findBP(bp);
-                                    if (bpExists == null)
+                                    BreakPoint bp = makeBreakPointPC(frame, iPC);
+                                    if (bp != null)
                                         {
-                                        addBP(bp);
+                                        BreakPoint bpExists = findBP(bp);
+                                        if (bpExists == null)
+                                            {
+                                            addBP(bp);
+                                            }
+                                        else
+                                            {
+                                            toggleBP(bpExists);
+                                            }
+                                        continue; // NextCommand
                                         }
-                                    else
-                                        {
-                                        toggleBP(bpExists);
-                                        }
-                                    continue NextCommand;
                                     }
                                  break; // invalid command
 
@@ -407,7 +419,7 @@ public class DebugConsole
                                             Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
                                         }
                                     saveBreakpoints();
-                                    continue NextCommand;
+                                    continue; // NextCommand
                                     }
                                 // "BT 3"  (# is from the previously displayed list of breakpoints)
                                 else if (m_aBreaks != null)
@@ -424,13 +436,13 @@ public class DebugConsole
                                             {
                                             bp.enable();
                                             }
-                                        continue NextCommand;
+                                        continue; // NextCommand
                                         }
                                     }
                                 else
                                     {
                                     toggleBP(new BreakPoint(asParts[1]));
-                                    continue NextCommand;
+                                    continue; // NextCommand
                                     }
                                 break;
 
@@ -440,7 +452,7 @@ public class DebugConsole
                                 if (bp != null)
                                     {
                                     toggleBP(bp);
-                                    continue NextCommand;
+                                    continue; // NextCommand
                                     }
                                 }
                                 break;
@@ -457,11 +469,11 @@ public class DebugConsole
                             }
 
                         writer.println(renderDebugger());
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "?": case "H": case "HELP":
                         writer.println(renderHelp());
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "N":
                     case "S":
@@ -489,12 +501,10 @@ public class DebugConsole
                             case 0:
                                 if (iPC >= 0)
                                     {
-                                    MethodStructure method = frame.f_function;
-                                    int nLine = method.calculateLineNumber(iPC);
+                                    int nLine = frame.f_function.calculateLineNumber(iPC);
                                     if (nLine > 0)
                                         {
-                                        String sName  = method.getContainingClass().getName();
-                                        addBP(new BreakPoint(sName, nLine, true));
+                                        addBP(makeBreakPointLine(frame, nLine, true));
                                         m_stepMode = StepMode.None;
                                         break NextCommand;
                                         }
@@ -505,9 +515,7 @@ public class DebugConsole
                                 int nLine = parseNonNegative(asParts[1]);
                                 if (nLine > 0)
                                     {
-                                    MethodStructure method = frame.f_function;
-                                    String          sName  = method.getContainingClass().getName();
-                                    addBP(new BreakPoint(sName, nLine, true));
+                                    addBP(makeBreakPointLine(frame, nLine, true));
                                     m_stepMode = StepMode.None;
                                     break NextCommand;
                                     }
@@ -532,17 +540,17 @@ public class DebugConsole
                     case "VC":
                         m_viewMode = ViewMode.Console;
                         writer.println(renderConsole());
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "VD":
                         m_viewMode = ViewMode.Frames;
                         writer.println(renderDebugger());
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "VF":
                         m_viewMode = ViewMode.Services;
                         writer.println(renderServices());
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "VS":
                         switch (cArgs)
@@ -550,7 +558,7 @@ public class DebugConsole
                             case 0:
                                 writer.println("Current debugger text width=" + m_cWidth +
                                                " characters, height= " + m_cHeight + " lines.");
-                                continue NextCommand;
+                                continue; // NextCommand
 
                             case 2:
                                 {
@@ -565,7 +573,7 @@ public class DebugConsole
                                 else
                                     {
                                     writer.println("Illegal text height: " + asParts[2]);
-                                    continue NextCommand;
+                                    continue; // NextCommand
                                     }
                                 }
                                 // fall through
@@ -583,7 +591,7 @@ public class DebugConsole
                                     {
                                     writer.println("Illegal text width: " + asParts[1]);
                                     }
-                                continue NextCommand;
+                                continue; // NextCommand
                                 }
                             }
                         break;
@@ -647,7 +655,7 @@ public class DebugConsole
                     case "V":
                         // TODO toggle between native vs. toString() (and possibly a third, type-specific format for some types)
                         writer.println("View format has not been implemented.");
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "E", "EVAL":
                         {
@@ -659,7 +667,7 @@ public class DebugConsole
                         if (m_frameFocus != frame || frame.isNative())
                             {
                             writer.println("The \"eval\" command is only supported at the top frame.");
-                            continue NextCommand;
+                            continue; // NextCommand
                             }
 
                         StringBuilder sb = new StringBuilder("{\nreturn");
@@ -682,13 +690,13 @@ public class DebugConsole
                             {
                             return resolveEvalArgs(frame, lambda, compiler.getArgs(), writer);
                             }
-                        continue NextCommand;
+                        continue; // NextCommand
                         }
 
                     case "WE":
                         // TODO watch eval <expr>
                         writer.println("Watch Eval has not been implemented.");
-                        continue NextCommand;
+                        continue; // NextCommand
 
                     case "WO":
                         if (cArgs >= 1)
@@ -736,7 +744,7 @@ public class DebugConsole
                                 {
                                 writer.println(renderDebugger());
                                 }
-                            continue NextCommand;
+                        continue; // NextCommand
                             }
                         break;
 
@@ -802,7 +810,7 @@ public class DebugConsole
                                 {
                                 writer.println(renderDebugger());
                                 }
-                            continue NextCommand;
+                        continue; // NextCommand
                             }
                         break;
 
@@ -839,7 +847,7 @@ public class DebugConsole
                                 {
                                 writer.println(renderDebugger());
                                 }
-                            continue NextCommand;
+                            continue; // NextCommand
                             }
                         break;
 
@@ -861,7 +869,7 @@ public class DebugConsole
                                     catch (Throwable e)
                                         {
                                         writer.println("Invalid property: " + sProp);
-                                        continue NextCommand;
+                                        continue; // NextCommand
                                         }
                                     }
 
@@ -869,7 +877,7 @@ public class DebugConsole
 
                                 renderVar(hVar, false, sb, "   +");
                                 writer.println(sb);
-                                continue NextCommand;
+                                continue; // NextCommand
                                 }
                             }
                         break;
@@ -894,7 +902,7 @@ public class DebugConsole
                                         catch (Throwable e)
                                             {
                                             writer.println("Invalid property: " + sProp);
-                                            continue NextCommand;
+                                            continue; // NextCommand
                                             }
                                         }
                                     }
@@ -907,14 +915,14 @@ public class DebugConsole
                                     {
                                     return Op.R_CALL;
                                     }
-                                continue NextCommand;
+                                continue; // NextCommand
                                 }
                             }
                         break;
 
                     default:
                         writer.println("Unknown command: \"" + sCommand + "\"; enter '?' for help");
-                        continue NextCommand;
+                        continue; // NextCommand
                     }
 
                 writer.println("Invalid command: " + sCommand);
@@ -1083,22 +1091,24 @@ public class DebugConsole
                 : getFrameStash() ).ensureExpandMap();
         }
 
-    private BreakPoint makeBreakPoint(Frame frame, int iPC, boolean fOneTime)
+    private BreakPoint makeBreakPointPC(Frame frame, int iPC)
         {
-        MethodStructure method = frame.f_function;
-        String          sName  = method.getContainingClass().getName();
-        int             nLine  = method.calculateLineNumber(iPC);
+        int nLine = frame.f_function.calculateLineNumber(iPC);
+
+        return nLine > 0
+                ? makeBreakPointLine(frame, nLine, false)
+                : null;
+        }
+
+    private BreakPoint makeBreakPointLine(Frame frame, int nLine, boolean fOneTime)
+        {
+        String sName = frame.f_function.getContainingClass().getName();
 
         return new BreakPoint(sName, nLine, fOneTime);
         }
 
     private void addBP(BreakPoint bp)
         {
-        if (bp == null)
-            {
-            return;
-            }
-
         Set<BreakPoint> setBP = bp.isException() ? m_setThrowBreaks : m_setLineBreaks;
         if (setBP == null)
             {
@@ -1132,11 +1142,6 @@ public class DebugConsole
 
     private void removeBP(BreakPoint bp)
         {
-        if (bp == null)
-            {
-            return;
-            }
-
         Set<BreakPoint> setBP = bp.isException() ? m_setThrowBreaks : m_setLineBreaks;
         if (setBP != null)
             {
@@ -1621,9 +1626,14 @@ public class DebugConsole
     private VarDisplay addVar(int cIndent, String sPath, String sVar, ObjectHandle hVar,
                         ArrayList<VarDisplay> listVars, Map<String, Integer> mapExpand)
         {
-        boolean      fCanExpand = false;
-        boolean      fArray     = false;
-        long         cElements  = 0;
+        boolean fCanExpand = false;
+        boolean fArray     = false;
+        long    cElements  = 0;
+
+        if (hVar instanceof RefHandle hRef)
+            {
+            hVar = hRef.getReferent();
+            }
 
         ListMap<String, FieldInfo> mapLayout = null;
         if (hVar != null)
@@ -1964,7 +1974,7 @@ public class DebugConsole
              DS <var#>            Display the "toString()" value of the specified variable number
             
              S  (or N)            Step over ("proceed to next line")
-             S  (or N) <count>    Repeatedlyl step over ("proceed to next line") <count> times
+             S  (or N) <count>    Repeatedly step over ("proceed to next line") <count> times
              S+ (or I)            Step in
              S- (or O)            Step out of frame
              SL                   Step (run) to current line
