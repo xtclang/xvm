@@ -14,12 +14,6 @@ interface Signer
     @RO CryptoKey? privateKey;
 
     /**
-     * For a `Signing` algorithm, this is the size in bytes of the resulting signature. (A signature
-     * is also called a "_hash_" or a "_message digest_".)
-     */
-    @RO Int signatureSize;
-
-    /**
      * Produce a signature for the contents of the passed stream.
      *
      * @param in  an [InputStream]
@@ -50,7 +44,7 @@ interface Signer
      * @param annotation   (optional) one or more mixins to include in the returned [OutputSigner]
      */
     OutputSigner createOutputSigner(BinaryOutput? destination=Null,
-                                    Annotations?  annotation=Null);
+                                    Annotations?  annotations=Null);
 
     /**
      * A stateful output stream that collects information as it is written to (or thru) the stream,

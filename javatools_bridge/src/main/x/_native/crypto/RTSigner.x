@@ -13,12 +13,11 @@ service RTSigner
     {
     construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Int signatureSize, Object signer)
         {
-        construct RTVerifier(algorithm, publicKey, signer);
+        construct RTVerifier(algorithm, publicKey, signatureSize, signer);
 
         assert privateKey.form == Secret;
 
-        this.privateKey    = privateKey;
-        this.signatureSize = signatureSize;
+        this.privateKey = privateKey;
         }
 
 
@@ -50,7 +49,7 @@ service RTSigner
 
     @Override
     OutputSigner createOutputSigner(BinaryOutput? destination=Null,
-                                    Annotations?  annotation=Null)
+                                    Annotations?  annotations=Null)
         {
         TODO
         }

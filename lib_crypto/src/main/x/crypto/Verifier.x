@@ -23,6 +23,12 @@ interface Verifier
     typedef Signature|Byte[] as Digest;
 
     /**
+     * For a `Signing` algorithm, this is the size in bytes of the resulting signature. (A signature
+     * is also called a "_hash_" or a "_message digest_".)
+     */
+    @RO Int signatureSize;
+
+    /**
      * Verify that the provided signature is valid for the contents of the passed stream.
      *
      * @param signature  the previously generated [Signature] (or `Byte[]`) to verify
@@ -51,8 +57,8 @@ interface Verifier
 
     /**
      * Create an output stream that will verify a signature using all of the data written to (or
-     * through) the stream. In theory, this allows a massive amount of signed data to be streamed and
-     * its signature verified, without having to buffer all of the data in memory.
+     * through) the stream. In theory, this allows a massive amount of signed data to be streamed
+     * and its signature verified, without having to buffer all of the data in memory.
      *
      * @param signature    the previously generated [Signature] (or `Byte[]`) to verify
      * @param destination  (optional) an underlying stream that the [OutputSigner] will use to write
@@ -61,7 +67,7 @@ interface Verifier
      */
     OutputVerifier createOutputVerifier(Digest        signature,
                                         BinaryOutput? destination=Null,
-                                        Annotations?  annotation=Null);
+                                        Annotations?  annotations=Null);
 
     /**
      * A stateful output stream that collects information as it is written to (or through) the

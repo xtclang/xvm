@@ -68,7 +68,7 @@ service RTHasher(String name, Int signatureSize)
 
     @Override
     OutputSigner createOutputSigner(BinaryOutput? destination=Null,
-                                    Annotations?  annotation=Null)
+                                    Annotations?  annotations=Null)
         {
         TODO
         }
@@ -98,7 +98,7 @@ service RTHasher(String name, Int signatureSize)
     @Override
     OutputVerifier createOutputVerifier(Digest        signature,
                                         BinaryOutput? destination=Null,
-                                        Annotations?  annotation=Null)
+                                        Annotations?  annotations=Null)
         {
         TODO
         }

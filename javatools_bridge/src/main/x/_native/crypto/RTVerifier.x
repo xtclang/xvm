@@ -10,13 +10,14 @@ import libcrypto.Verifier;
 service RTVerifier
         implements Verifier
     {
-    construct(Algorithm algorithm, CryptoKey publicKey, Object signer)
+    construct(Algorithm algorithm, CryptoKey publicKey, Int signatureSize, Object signer)
         {
         assert publicKey.form == Public;
 
-        this.algorithm = algorithm;
-        this.publicKey = publicKey;
-        this.signer    = signer;
+        this.algorithm     = algorithm;
+        this.publicKey     = publicKey;
+        this.signatureSize = signatureSize;
+        this.signer        = signer;
         }
 
     /**
@@ -66,7 +67,7 @@ service RTVerifier
     @Override
     OutputVerifier createOutputVerifier(Digest        signature,
                                         BinaryOutput? destination=Null,
-                                        Annotations?  annotation=Null)
+                                        Annotations?  annotations=Null)
         {
         TODO
         }

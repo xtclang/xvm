@@ -60,7 +60,7 @@ service RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
             case Public:
                 // verifier
                 assert Algorithms.validSize(keySize, key.size) as $"Invalid key size for {this}";
-                Verifier verifier = new RTVerifier(this, key, signer);
+                Verifier verifier = new RTVerifier(this, key, signatureSize, signer);
                 return &verifier.maskAs(Verifier);
 
             case Pair:

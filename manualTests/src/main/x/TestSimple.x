@@ -2,47 +2,41 @@ module TestSimple
     {
     @Inject Console console;
 
+    import crypto.xtclang.org as crypto;
+
+    import crypto.*;
+
     void run()
         {
-        Test test = new Test();
+        @Inject Algorithms algorithms;
+        assert Signer md5 := algorithms.hasherFor("MD5");
+        assert Signer sha_256 := algorithms.hasherFor("SHA-256");
+        assert Signer sha_512 := algorithms.hasherFor("SHA-512");
+        Signer sha_512_256 = new TruncatingSigner(sha_512, 256/8);
 
-        Value v = test.getValue();
-        console.print($"v={v.is(immutable)}");
-
-        (Value v1, Value v2) = test.getValues();
-        console.print($"v1={v1.is(immutable)}, v2={v2.is(immutable)}");
-
-        Tuple<Value, Value> t1 = test.getValues();
-        console.print($"t1={t1.is(immutable)}, t1[0]={t1[0].is(immutable)}, t1[1]={t1[1].is(immutable)}");
-
-        Tuple t2 = test.getValuesAsTuple();
-        console.print($"t2={t2.is(immutable)}, t2[0]={t2[0].is(immutable)}, t2[1]={t2[1].is(immutable)}");
-
-        test.setValue(new Value(7));
+        Signer[] signers = [md5, sha_256, sha_512, sha_512_256];
+        test(signers, "Hello world!");
         }
 
-    service Test
+    void test(Signer[] signers, String text)
         {
-        Value getValue() = new Value(1);
-
-        (Value, Value) getValues() = (new Value(2), new Value(3));
-
-        Tuple getValuesAsTuple() = (new Value(4), new Value(5), -1);
-
-        void setValue(Value v)
+        Byte[] message = text.utf8();
+        for (Int i = 0, c = signers.size; i < c; ++i)
             {
-            console.print($"setValue: {v.is(immutable)}");
-            }
-        }
-
-    @AutoFreezable
-    class Value(Int n) implements Freezable
-        {
-        @Override
-        immutable Value freeze(Boolean inPlace)
-            {
-            console.print($"Freezing {n=}; {inPlace=}");
-            return makeImmutable();
+            Signer    signer = signers[i];
+            Signature digest = signer.sign(message);
+            assert signer.verify(digest, message);
             }
         }
     }
+
+// TODO GG:
+//Exception in thread "main" java.lang.StackOverflowError
+//	at org.xvm.compiler.ast.NameResolver.resolveImport(NameResolver.java:529)
+//	at org.xvm.compiler.ast.NameResolver.resolve(NameResolver.java:164)
+//	at org.xvm.compiler.ast.NameResolver.resolveImport(NameResolver.java:530)
+//	at org.xvm.compiler.ast.NameResolver.resolve(NameResolver.java:164)
+//	at org.xvm.compiler.ast.NameResolver.resolveImport(NameResolver.java:530)
+//	at org.xvm.compiler.ast.NameResolver.resolve(NameResolver.java:164)
+//	at org.xvm.compiler.ast.NameResolver.resolveImport(NameResolver.java:530)
+//	at org.xvm.compiler.ast.NameResolver.resolve(NameResolver.java:164)
