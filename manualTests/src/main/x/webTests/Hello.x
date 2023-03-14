@@ -50,15 +50,15 @@ module Hello
         xenia.createServer(this, hostName, keystore, httpPort, httpsPort);
 
         console.print($|Use the curl command to test, for example:
-                         |
-                         |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/
-                         |
-                         | To activate the debugger:
-                         |
-                         |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/e/debug
-                         |
-                         |Use Ctrl-C to stop.
-                        );
+                       |
+                       |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/
+                       |
+                       | To activate the debugger:
+                       |
+                       |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/e/debug
+                       |
+                       |Use Ctrl-C to stop.
+                     );
         }
 
     // TODO GG this cannot be protected or private?
