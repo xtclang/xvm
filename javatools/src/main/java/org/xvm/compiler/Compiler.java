@@ -673,7 +673,7 @@ public class Compiler
      */
     public static final String CONFLICTING_VERSIONS               = "COMPILER-25";
     /**
-     * Conflicting import composition when importing one's own module.
+     * An import of the primary module cannot specify import modifiers or versions.
      */
     public static final String ILLEGAL_SELF_IMPORT                = "COMPILER-26";
     /**
@@ -681,7 +681,7 @@ public class Compiler
      */
     public static final String ILLEGAL_CONDITIONAL                = "COMPILER-27";
     /**
-     * Duplicate import with the same alias.
+     * Duplicate import with the same alias: {0}.
      */
     public static final String DUPLICATE_IMPORT                   = "COMPILER-28";
     /**
@@ -693,8 +693,7 @@ public class Compiler
      */
     public static final String INFINITE_RESOLVE_LOOP              = "COMPILER-30";
     /**
-     * Name collision. For example, anything named "ecstasy" nested under a module, or a property
-     * that has the same name as a type parameter or method, etc.
+     * Name collision: {0}.
      */
     public static final String NAME_COLLISION                     = "COMPILER-31";
     /**

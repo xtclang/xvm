@@ -136,6 +136,20 @@ public class NameResolver
                 m_stmtImport = m_node.resolveImportBySingleName(m_sName, errs);
                 if (m_stmtImport != null)
                     {
+                    if (m_stmtImport == m_node)
+                        {
+                        // report a self-referencing import as a "name collision"
+                        StringBuilder sb = new StringBuilder(m_sName);
+                        while (m_iter.hasNext())
+                            {
+                            sb.append('.')
+                              .append(m_iter.next());
+                            }
+                        m_stmtImport.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sb.toString());
+                        m_stage = Stage.ERROR;
+                        return Result.ERROR;
+                        }
+
                     m_blockImport = m_stmtImport.getParentBlock();
                     }
                 m_stage = Stage.RESOLVE_FIRST_NAME;
