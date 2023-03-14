@@ -162,11 +162,20 @@ public abstract class OpInvocable extends Op
                             frame.poolContext(), frame.getGenericsResolver(true));
 
             chain = clazz.getMethodCallChain(nid);
-            if (chain.isEmpty() && hTarget instanceof RefHandle hRef && hRef.isProperty())
+            if (chain.isEmpty())
                 {
-                // this is likely an invocation on a dynamically created Ref for a non-inflated
-                // property; try to call the referent itself
-                chain = hRef.getReferentHolder().getComposition().getMethodCallChain(nid);
+                if (hTarget instanceof RefHandle hRef && hRef.isProperty())
+                    {
+                    // this is likely an invocation on a dynamically created Ref for a non-inflated
+                    // property; try to call the referent itself
+                    chain = hRef.getReferentHolder().getComposition().getMethodCallChain(nid);
+                    }
+                else
+                    {
+                    // try an unresolved nid
+                    chain = clazz.getMethodCallChain(
+                            idMethod.resolveNestedIdentity(frame.poolContext(), null));
+                    }
                 }
             }
         else
