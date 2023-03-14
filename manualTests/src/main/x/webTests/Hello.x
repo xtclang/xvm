@@ -30,7 +30,7 @@ module Hello
         @Inject Console console;
         @Inject Directory curDir;
 
-        File   store = curDir.fileFor("data/hello/https.p12");
+        File   store = /resources/hello/https.p12; // include a self-signed certificate for HTTPS
         String password;
         if (args.size == 0)
             {
