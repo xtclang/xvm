@@ -14,6 +14,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -39,7 +40,7 @@ public class RegisterConstant
         super(pool);
 
         m_reg  = reg;
-        f_nReg = reg.isUnknown() ? Register.UNKNOWN : reg.getIndex();
+        f_nReg = reg.getIndex();
         }
 
     /**
@@ -74,11 +75,9 @@ public class RegisterConstant
      */
     public int getRegisterIndex()
         {
-        return f_nReg == Register.UNKNOWN
-                ? m_reg.isUnknown()
-                    ? Register.UNKNOWN
-                    : m_reg.getIndex()
-                : f_nReg;
+        return m_reg == null
+                ? f_nReg
+                : m_reg.getIndex();
         }
 
 
@@ -110,13 +109,13 @@ public class RegisterConstant
     @Override
     public boolean containsUnresolved()
         {
-        return getRegisterIndex() == Register.UNKNOWN;
+        return getRegisterIndex() >= Register.UNKNOWN;
         }
 
     @Override
     protected int compareDetails(Constant constant)
         {
-        assert getRegisterIndex() != Register.UNKNOWN;
+        assert getRegisterIndex() < Register.UNKNOWN;
         return constant instanceof RegisterConstant that
                 ? this.getRegisterIndex() - that.getRegisterIndex()
                 : -1;
@@ -127,7 +126,7 @@ public class RegisterConstant
         {
         int nReg = getRegisterIndex();
 
-        return "Register " + (nReg == Register.UNKNOWN ? "?" : String.valueOf(nReg));
+        return "Register " + (nReg >= Register.UNKNOWN ? "?" : String.valueOf(nReg));
         }
 
 
@@ -138,6 +137,8 @@ public class RegisterConstant
             throws IOException
         {
         super.assemble(out);
+
+        assert !m_reg.isUnknown();
 
         writePackedLong(out, m_reg.getIndex());
         }

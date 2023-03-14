@@ -1057,8 +1057,8 @@ interface Type<DataType, OuterType>
                     {
                     assert (Type!<> t1, Type!<> t2) := relational();
 
-                    if (Hasher<t1.DataType> hasher1 := t1.hashed(),
-                        Hasher<t2.DataType> hasher2 := t2.hashed())
+                    if (Hasher<t1.DataType> hasher1 := t1.DataType.hashed(),
+                        Hasher<t2.DataType> hasher2 := t2.DataType.hashed())
                         {
                         return True, new Hasher<DataType>()
                             {
@@ -1067,12 +1067,12 @@ interface Type<DataType, OuterType>
                                 {
                                 if (&value.actualType.isA(t1))
                                     {
-                                    assert Hasher<t1.DataType> hasher := t1.hashed();
+                                    assert Hasher<t1.DataType> hasher := t1.DataType.hashed();
                                     return hasher.hashOf(value.as(t1.DataType));
                                     }
                                 else
                                     {
-                                    assert Hasher<t2.DataType> hasher := t2.hashed();
+                                    assert Hasher<t2.DataType> hasher := t2.DataType.hashed();
                                     return hasher.hashOf(value.as(t2.DataType));
                                     }
                                 }
@@ -1085,13 +1085,13 @@ interface Type<DataType, OuterType>
 
                                 if (actualType1.isA(t1) && actualType2.isA(t1))
                                     {
-                                    assert Hasher<t1.DataType> hasher := t1.hashed();
+                                    assert Hasher<t1.DataType> hasher := t1.DataType.hashed();
                                     return hasher.areEqual(value1.as(t1.DataType),
                                                            value2.as(t1.DataType));
                                     }
                                 if (actualType1.isA(t2) && actualType2.isA(t2))
                                     {
-                                    assert Hasher<t2.DataType> hasher := t2.hashed();
+                                    assert Hasher<t2.DataType> hasher := t2.DataType.hashed();
                                     return hasher.areEqual(value1.as(t2.DataType),
                                                            value2.as(t2.DataType));
                                     }
@@ -1106,9 +1106,9 @@ interface Type<DataType, OuterType>
                     {
                     assert (Type!<> t1, Type!<> t2) := relational();
 
-                    if (Hasher<t1.DataType> hasher1 := t1.hashed())
+                    if (Hasher<t1.DataType> hasher1 := t1.DataType.hashed())
                         {
-                        if (Hasher<t2.DataType> hasher2 := t2.hashed())
+                        if (Hasher<t2.DataType> hasher2 := t2.DataType.hashed())
                             {
                             return True, new Hasher<DataType>()
                                 {
@@ -1134,7 +1134,7 @@ interface Type<DataType, OuterType>
                         }
                     else
                         {
-                        return t2.hashed();
+                        return t2.DataType.hashed();
                         }
                     }
 
@@ -1142,7 +1142,7 @@ interface Type<DataType, OuterType>
                 case Access:
                 case Annotated:
                     assert Type!<> t := modifying();
-                    return t.hashed();
+                    return t.DataType.hashed();
 
                 default:
                     break;

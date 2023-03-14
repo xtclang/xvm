@@ -742,7 +742,7 @@ public class StatementBlock
             Argument arg = getNameMap().get(sName);
             if (arg instanceof Register reg)
                 {
-                return reg.isUnknown() || reg.getIndex() >= 0;
+                return reg.isUnknown() || !reg.isPredefined();
                 }
 
             return false;

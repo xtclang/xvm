@@ -49,7 +49,7 @@ public class DynamicFormalConstant
         m_reg         = reg;
         m_typeReg     = reg.getType();
         m_constFormal = constFormal;
-        m_nReg        = reg.isUnknown() ? Register.UNKNOWN : reg.getIndex();
+        m_nReg        = reg.getIndex();
         }
 
     /**
@@ -105,11 +105,9 @@ public class DynamicFormalConstant
      */
     public int getRegisterIndex()
         {
-        return m_nReg == Register.UNKNOWN
-                ? m_reg.isUnknown()
-                    ? Register.UNKNOWN
-                    : m_reg.getIndex()
-                : m_nReg;
+        return m_reg == null
+                ? m_nReg
+                : m_reg.getIndex();
         }
 
 
@@ -200,12 +198,16 @@ public class DynamicFormalConstant
             return n;
             }
 
-        if (this.m_reg != null && m_reg.isUnknown())
+        if (this.m_reg == null)
             {
-            return this.m_reg == that.m_reg ? 0 : -1;
+            return that.m_reg == null
+                ? this.m_nReg - that.m_nReg
+                : -1;
             }
 
-        return this.getRegisterIndex() - that.getRegisterIndex();
+        return that.m_reg == null
+            ? 1
+            : this.m_reg.getOriginalIndex() - that.m_reg.getOriginalIndex();
         }
 
     @Override
@@ -213,7 +215,7 @@ public class DynamicFormalConstant
         {
         int nReg = getRegisterIndex();
 
-        return (nReg == Register.UNKNOWN ? "?" : String.valueOf(nReg)) +
+        return (nReg >= Register.UNKNOWN ? "?" : String.valueOf(nReg)) +
                "=>" + m_constFormal.getValueString();
         }
 
@@ -240,6 +242,8 @@ public class DynamicFormalConstant
             throws IOException
         {
         super.assemble(out);
+
+        assert !m_reg.isUnknown();
 
         out.writeShort(m_reg.getIndex());
         writePackedLong(out, m_typeReg.getPosition());

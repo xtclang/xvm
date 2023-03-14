@@ -2,9 +2,12 @@ module TestSimple
     {
     @Inject Console console;
 
-    import crypto.xtclang.org as crypto; // used to blow the compiler (infinite recursion)
+    typedef immutable Byte[] as Hash;
 
     void run()
         {
+        HashMap<Hash, Hash>[] array = new HashMap[5](_ -> new HashMap());
+
+        console.print(array); // this used to produce run-time "WARNING: suspicious assignment"
         }
     }
