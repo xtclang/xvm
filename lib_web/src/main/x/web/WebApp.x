@@ -50,6 +50,21 @@ mixin WebApp
         }
 
     /**
+     * A Webapp that knows how to provide an `Authenticator` should implement this interface in
+     * order to do so.
+     */
+    static interface AuthenticatorFactory
+        {
+        /**
+         * Create (or otherwise provide) the `Authenticator` that this WebApp will use. It is
+         * expected that this method will only be called once.
+         *
+         * @return the `Authenticator` for this WebApp
+         */
+        Authenticator createAuthenticator();
+        }
+
+    /**
      * The [Authenticator] for the web application.
      */
     @Lazy Authenticator authenticator.calc()
@@ -60,15 +75,13 @@ mixin WebApp
         @Inject Authenticator? providedAuthenticator;
         return providedAuthenticator?;
 
-        // allow a module to implement the factory method createAuthenticator() - the module doesn't
-        // have to "implement" this interface; it's only spelled out here so we can duck type it
-        interface AuthenticatorFactory
-            {
-            Authenticator createAuthenticator();
-            }
-
-        // TODO GG if (this.is(AuthenticatorFactory))
-        if (AuthenticatorFactory af := this.is(AuthenticatorFactory))
+        // allow a module to implement the factory method createAuthenticator()
+// TODO GG:
+//        if (this.is(AuthenticatorFactory))
+//            {
+//            return this.createAuthenticator();
+//            }
+        if (AuthenticatorFactory af := this:private.is(AuthenticatorFactory))
             {
             return af.createAuthenticator();
             }
