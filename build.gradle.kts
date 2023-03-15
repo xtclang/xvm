@@ -23,6 +23,10 @@ allprojects {
     }
 }
 
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
 tasks.register("build") {
     group       = "Build"
     description = "Build all projects"
