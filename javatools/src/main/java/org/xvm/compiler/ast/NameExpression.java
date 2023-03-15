@@ -1004,23 +1004,20 @@ public class NameExpression
                         return;
                         }
 
-                    if (argRaw instanceof TypeConstant)
-                        {
-                        int cSteps = m_targetInfo == null ? 1 :  m_targetInfo.getStepsOut();
+                    TargetInfo targetInfo = (TargetInfo) argRaw;
+                    int        cSteps     = targetInfo.getStepsOut();
 
-                        code.add(new MoveThis(cSteps, argLVal, access));
-                        return;
-                        }
-                    break;
+                    code.add(new MoveThis(cSteps, argLVal, access));
+                    return;
                     }
 
                 case OuterRef:
                     {
                     assert getMeaning() == Meaning.Class;
 
-                    int cSteps = argRaw instanceof ThisClassConstant
-                            ? 0
-                            : ((ParentClassConstant) argRaw).getDepth();
+                    int cSteps = argRaw instanceof ParentClassConstant constParent
+                            ? constParent.getDepth()
+                            : 0;
 
                     TypeConstant typeRef      = getType();
                     TypeConstant typeReferent = typeRef.getParamType(0);
@@ -1213,15 +1210,16 @@ public class NameExpression
                 {
                 TypeConstant typeOuter;
                 int          cSteps;
-                if (argRaw instanceof TypeConstant type)
+                if (argRaw instanceof ParentClassConstant constParent)
                     {
-                    typeOuter = type;
-                    cSteps    = m_targetInfo == null ? 1 : m_targetInfo.getStepsOut();
+                    typeOuter = getType();
+                    cSteps    = constParent.getDepth();
                     }
                 else
                     {
-                    typeOuter = getType();
-                    cSteps    = ((ParentClassConstant) argRaw).getDepth();
+                    TargetInfo targetInfo = (TargetInfo) argRaw;
+                    typeOuter = targetInfo.getType();
+                    cSteps    = targetInfo.getStepsOut();
                     }
 
                 if (left instanceof NameExpression nameLeft &&
@@ -1242,19 +1240,19 @@ public class NameExpression
                 TypeConstant typeRef;
                 TypeConstant typeOuter;
                 int          cSteps;
-                if (argRaw instanceof TypeConstant type)
+                if (argRaw instanceof TargetInfo targetInfo)
                     {
-                    typeOuter = type;
+                    typeOuter = targetInfo.getType();
                     typeRef   = pool().ensureParameterizedTypeConstant(pool().typeRef(), typeOuter);
-                    cSteps    = m_targetInfo.getStepsOut();
+                    cSteps    = targetInfo.getStepsOut();
                     }
                 else
                     {
                     typeRef   = getType();
                     typeOuter = typeRef.getParamType(0);
-                    cSteps    = argRaw instanceof ThisClassConstant
-                            ? 0
-                            : ((ParentClassConstant) argRaw).getDepth();
+                    cSteps    = argRaw instanceof ParentClassConstant constParent
+                                ? constParent.getDepth()
+                                : 0;
                     }
 
                 Register regOuter = createRegister(typeOuter, fUsedOnce);
@@ -2005,7 +2003,7 @@ public class NameExpression
                     case Package:
                     case Class:
                         // this indicates an "outer this"
-                        m_arg = target.getType();
+                        m_arg = target;
                         break;
 
                     default:
@@ -2223,7 +2221,7 @@ public class NameExpression
                                     log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
                                     return null;
                                     }
-                                return m_arg = typeLeft.getParentType();
+                                return m_arg = new TargetInfo(sName, typeLeft.getParentType(), 1);
                                 }
 
                             // they may choose to emphasize the exact type of "this" by writing:
@@ -2354,18 +2352,18 @@ public class NameExpression
                 }
             }
 
-        if (argRaw instanceof TypeConstant typeParent)
+        if (argRaw instanceof TargetInfo targetInfo)
             {
             // this can only mean an "outer this"
             if (fSuppressDeref)
                 {
                 m_plan = Plan.OuterRef;
-                return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeParent);
+                return pool.ensureParameterizedTypeConstant(pool.typeRef(), targetInfo.getType());
                 }
             else
                 {
                 m_plan = Plan.OuterThis;
-                return typeParent;
+                return targetInfo.getType();
                 }
             }
 
@@ -2982,9 +2980,9 @@ public class NameExpression
                     : Meaning.Variable;
             }
 
-        if (arg instanceof TypeConstant)
+        if (arg instanceof TargetInfo)
             {
-            // outer this
+            // this indicates an "outer this"
             return Meaning.Reserved;
             }
 
@@ -3279,6 +3277,11 @@ public class NameExpression
                                 ctx.narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
                                 }
                             }
+                        }
+                    else if (id instanceof IdentityConstant)
+                        {
+                        // narrow the "outer this"
+                        ctx.replaceArgument("this", branch, new TargetInfo(info, typeNarrow));
                         }
                     }
                 else if (arg instanceof PropertyConstant idProp)

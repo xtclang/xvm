@@ -365,7 +365,7 @@ public class InvocationExpression
 
             // the return types are a combination of required and redundant types
             TypeConstant[]       atypeReturn   = atypeRequired;
-            List<TypeExpression> listRedundant = exprName.params;
+            List<TypeExpression> listRedundant = exprName.getTrailingTypeParams();
 
             if (listRedundant != null)
                 {
@@ -703,7 +703,7 @@ public class InvocationExpression
 
             // the return types are a combination of required and redundant types
             TypeConstant[]       atypeReturn   = atypeRequired;
-            List<TypeExpression> listRedundant = exprName.params;
+            List<TypeExpression> listRedundant = exprName.getTrailingTypeParams();
             if (listRedundant != null)
                 {
                 atypeReturn = applyRedundantTypes(ctx, atypeRequired, listRedundant, true, errs);

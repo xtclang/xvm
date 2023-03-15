@@ -1,20 +1,28 @@
 module TestSimple
+        incorporates Report
     {
     @Inject Console console;
 
-    class Box<A>(A object);
-
-    <A> void f(A a, Int n = 0)
-        {
-        console.print(A);
-        if (n < 10)
-            {
-            f(new Box<A>(a), n+1);
-            }
-        }
-
     void run()
         {
-        f("hello");
+        console.print(report);
+        }
+
+    String value = "hello";
+
+    interface Duck
+        {
+        String value;
+        }
+
+    mixin Report
+            into Module
+        {
+        @Lazy String report.calc()
+            {
+            return this.is(Duck)
+                ? this.value // this used to fail to compile
+                : "?";
+            }
         }
     }

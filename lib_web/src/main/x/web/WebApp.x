@@ -76,14 +76,9 @@ mixin WebApp
         return providedAuthenticator?;
 
         // allow a module to implement the factory method createAuthenticator()
-// TODO GG:
-//        if (this.is(AuthenticatorFactory))
-//            {
-//            return this.createAuthenticator();
-//            }
-        if (AuthenticatorFactory af := this:private.is(AuthenticatorFactory))
+        if (this.is(AuthenticatorFactory))
             {
-            return af.createAuthenticator();
+            return createAuthenticator();
             }
 
         // disable authentication, since no authenticator was found
