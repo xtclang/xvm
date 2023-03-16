@@ -5719,8 +5719,12 @@ public abstract class TypeConstant
 
                 if (relation == null)
                     {
-                    relation = typeRight.removeAccess().
-                            calculateRelation(typeLeft.removeAccess());
+                    relation = typeRight.removeAccess().calculateRelation(typeLeft.removeAccess());
+
+                    if (relation == Relation.INCOMPATIBLE && accessRight != Access.PUBLIC)
+                        {
+                        relation = calculateDuckTypeRelation(typeLeft, typeRight, accessRight);
+                        }
                     }
                 mapRelations.put(typeLeft, relation);
                 return relation;
@@ -5757,15 +5761,7 @@ public abstract class TypeConstant
 
             if (relation == Relation.INCOMPATIBLE)
                 {
-                TypeConstant typeLeftN  = typeLeft.normalizeParameters();
-                TypeConstant typeRightN = typeRight.normalizeParameters();
-                if (typeLeftN.isDuckTypeAbleFrom(typeRightN))
-                    {
-                    // left is an interface; check the duck-typing
-                    relation = typeLeftN.isInterfaceAssignableFrom(
-                                    typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
-                            ? Relation.IS_A : Relation.INCOMPATIBLE;
-                    }
+                relation = calculateDuckTypeRelation(typeLeft, typeRight, Access.PUBLIC);
                 }
 
             mapRelations.put(typeLeft, relation);
@@ -5957,6 +5953,22 @@ public abstract class TypeConstant
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdRight);
             }
+        }
+
+    /**
+     * @return a "duck-type" relation between the specified (L-Value) and (R-value) types
+     */
+    protected Relation calculateDuckTypeRelation(TypeConstant typeLeft,
+                                                 TypeConstant typeRight, Access accessRight)
+        {
+        TypeConstant typeLeftN  = typeLeft.normalizeParameters();
+        TypeConstant typeRightN = typeRight.normalizeParameters();
+
+        return typeLeftN.isDuckTypeAbleFrom(typeRightN) &&
+               typeLeftN.isInterfaceAssignableFrom(
+                        typeRightN, accessRight, Collections.EMPTY_LIST).isEmpty()
+                ? Relation.IS_A
+                : Relation.INCOMPATIBLE;
         }
 
     /**

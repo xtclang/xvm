@@ -1,28 +1,58 @@
 module TestSimple
-        incorporates Report
     {
     @Inject Console console;
 
     void run()
         {
-        console.print(report);
+        C c = new C();
+
+        report("outside", c);
+
+        c.reportSelf();
         }
 
-    String value = "hello";
-
-    interface Duck
+    static void report(String header, Object o)
         {
-        String value;
+        console.print(header);
+        console.print($"{o.is(Duck1)=}");
+        console.print($"{o.is(Duck2)=}"); // used to always be "False"
+        console.print($"{o.is(Duck3)=}"); // ditto
+        console.print();
         }
 
-    mixin Report
-            into Module
+    interface Duck1
         {
-        @Lazy String report.calc()
+        String value1;
+        }
+
+    interface Duck2
+        {
+        String value2;
+        }
+
+    interface Duck3
+        {
+        String value3;
+        }
+
+    class C
+        {
+        construct()
             {
-            return this.is(Duck)
-                ? this.value // this used to fail to compile
-                : "?";
+            value1 = "1";
+            value2 = "2";
+            value3 = "3";
+            }
+
+        String           value1;
+        protected String value2;
+        private   String value3;
+
+        void reportSelf()
+            {
+            report("public",    this:public);
+            report("protected", this:protected);
+            report("private",   this:private);
             }
         }
     }

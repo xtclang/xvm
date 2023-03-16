@@ -2883,13 +2883,13 @@ public class ClassStructure
      * For this class structure representing an L-Value interface, check recursively if all properties
      * and methods have a matching (substitutable) property or method on the specified R-value type.
      *
-     * @param typeRight   the type to look for the matching methods
-     * @param accessLeft  the access level to limit the check for
-     * @param listLeft    the actual generic parameters for this interface
+     * @param typeRight    the type to look for the matching methods
+     * @param accessRight  the access level to extend the check for
+     * @param listLeft     the actual generic parameters for this interface
      *
      * @return a set of method/property signatures that don't have a match
      */
-    public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
+    public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessRight,
                                                             List<TypeConstant> listLeft)
         {
         ConstantPool           pool     = typeRight.getConstantPool();
@@ -2910,7 +2910,7 @@ public class ClassStructure
                 else
                     {
                     // TODO: should we check the "Var" access?
-                    if (!prop.isRefAccessible(accessLeft))
+                    if (!prop.isRefAccessible(accessRight))
                         {
                         continue;
                         }
@@ -2926,7 +2926,7 @@ public class ClassStructure
                         }
 
                     if (!typeRight.containsSubstitutableMethod(sig,
-                            Access.PUBLIC, false, Collections.EMPTY_LIST))
+                            accessRight, false, Collections.EMPTY_LIST))
                         {
                         setMiss.add(sig);
                         }
@@ -2936,7 +2936,7 @@ public class ClassStructure
                 {
                 for (MethodStructure method : mms.methods())
                     {
-                    if (!method.isAccessible(accessLeft))
+                    if (!method.isAccessible(accessRight))
                         {
                         continue;
                         }
@@ -2952,7 +2952,7 @@ public class ClassStructure
                     else if (method.isFunction())
                         {
                         if (!typeRight.containsSubstitutableMethod(sig,
-                                Access.PUBLIC, true, Collections.EMPTY_LIST))
+                                accessRight, true, Collections.EMPTY_LIST))
                             {
                             setMiss.add(sig);
                             }
@@ -2971,7 +2971,7 @@ public class ClassStructure
                             }
 
                         if (!typeRight.containsSubstitutableMethod(sig,
-                                Access.PUBLIC, false, Collections.EMPTY_LIST))
+                                accessRight, false, Collections.EMPTY_LIST))
                             {
                             setMiss.add(sig);
                             }
@@ -2995,8 +2995,8 @@ public class ClassStructure
 
                 assert clzSuper.getFormat() == Component.Format.INTERFACE;
 
-                setMiss.addAll(
-                    clzSuper.isInterfaceAssignableFrom(typeRight, accessLeft, typeResolved.getParamTypes()));
+                setMiss.addAll(clzSuper.isInterfaceAssignableFrom(
+                        typeRight, accessRight, typeResolved.getParamTypes()));
                 }
             }
         return setMiss;
