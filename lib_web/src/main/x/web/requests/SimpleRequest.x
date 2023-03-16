@@ -45,7 +45,7 @@ class SimpleRequest
     Uri uri;
 
     @Override
-    AcceptList accepts = Nothing;
+    AcceptList accepts = Everything;
 
 
     // ----- HttpMessage interface -----------------------------------------------------------------

@@ -54,7 +54,7 @@ const AcceptList
     /**
      * Internal constructor.
      *
-     * @param text    the text of the
+     * @param text    the textual form of the AcceptList
      * @param always  the array of AcceptTypes with quality 1.0
      * @param maybes  the array of AcceptTypes with quality between 0 and 1, exclusive
      * @param nevers  the array of AcceptTypes with quality 0.0
@@ -130,6 +130,11 @@ const AcceptList
      * An empty AcceptList.
      */
     static AcceptList Nothing = new AcceptList([]);
+
+    /**
+     * An AcceptList that allows everything.
+     */
+    static AcceptList Everything = {assert AcceptList all := AcceptList.of("*/*"); return all;};
 
     /**
      * The textual form of the AcceptList, as it would appear in an "Accept:" header.
