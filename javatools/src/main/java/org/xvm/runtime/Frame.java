@@ -119,7 +119,7 @@ public class Frame
         f_context   = framePrev.f_context;
         f_iId       = f_context.m_iFrameCounter++;
         f_nDepth    = framePrev.f_nDepth + 1;
-        f_fiber     = framePrev.f_fiber;
+        f_fiber      = framePrev.f_fiber;
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
         f_function  = function;
@@ -150,7 +150,7 @@ public class Frame
         f_context   = fiber.f_context;
         f_iId       = f_context.m_iFrameCounter++;
         f_nDepth    = fiber.f_nDepth; // under-count, but works to prevent an infinite recursion
-        f_fiber     = fiber;
+        f_fiber      = fiber;
         f_framePrev = null;
         f_iPCPrev   = iCallerPC;
         f_function  = null;
@@ -171,7 +171,7 @@ public class Frame
         f_context   = framePrev.f_context;
         f_iId       = f_context.m_iFrameCounter++;
         f_nDepth    = framePrev.f_nDepth + 1;
-        f_fiber     = framePrev.f_fiber;
+        f_fiber      = framePrev.f_fiber;
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
         f_function  = null;

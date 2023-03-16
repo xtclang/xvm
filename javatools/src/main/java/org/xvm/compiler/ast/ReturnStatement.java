@@ -147,9 +147,6 @@ public class ReturnStatement
                     aRetTypes = aRetTypes.clone();
                     fClone    = false;
                     }
-                IdentityConstant idCtx = ctx.isMethod()
-                        ? ctx.getThisClass().getIdentityConstant()
-                        : null;
                 aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, false, ctx.getThisType(), null);
                 }
             }

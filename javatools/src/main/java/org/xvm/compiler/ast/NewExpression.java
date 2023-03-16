@@ -537,7 +537,7 @@ public class NewExpression
 
             if (left == null)
                 {
-                boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant());
+                boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClassId());
 
                 // now we should have enough type information to create the real anon inner class
                 if (fAnonymous)

@@ -3267,7 +3267,7 @@ public class NameExpression
                             TypeConstant     typeTarget = info.getTargetType();
                             IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
                             MethodStructure  method     = ctx.getMethod();
-                            if (idTarget.equals(ctx.getThisClass().getIdentityConstant()) &&
+                            if (idTarget.equals(ctx.getThisClassId()) &&
                                     (method.isConstructor() || method.isValidator()))
                                 {
                                 // no property narrowing in the constructor

@@ -148,6 +148,14 @@ public class Context
         }
 
     /**
+     * @return the identity of the containing ClassStructure for the method
+     */
+    public IdentityConstant getThisClassId()
+        {
+        return getThisClass().getIdentityConstant();
+        }
+
+    /**
      * @return the formal type for "this" (could be narrowed within this context)
      */
     public TypeConstant getThisType()
@@ -939,7 +947,7 @@ public class Context
                     {
                     MethodStructure  method = getMethod();
                     IdentityConstant idCtx  = method == null
-                            ? getThisClass().getIdentityConstant()
+                            ? getThisClassId()
                             : method.getIdentityConstant();
 
                     tokName.log(errs, getSource(), Severity.ERROR,

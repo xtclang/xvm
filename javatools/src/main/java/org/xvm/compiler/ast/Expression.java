@@ -1947,7 +1947,7 @@ public abstract class Expression
         {
         return type == null
                 ? pool().ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE).ensureTypeInfo(errs)
-                : type.ensureTypeInfo(ctx.getThisClass().getIdentityConstant(), errs);
+                : type.ensureTypeInfo(ctx.getThisClassId(), errs);
         }
 
     /**
