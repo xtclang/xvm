@@ -57,3 +57,4 @@ build/
 prj/
 .idea/
 .gradle/
+!gradle-wrapper.jar
