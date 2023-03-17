@@ -469,8 +469,6 @@ const Class<PublicType, ProtectedType extends PublicType,
             return False;
             }
 
-        // TODO GG, CP: we need to pass PublicType.template as a TypeResolver, so the ClassTemplate
-        //              logic could resolve the contributions formal types
         return this.composition.mixesInto(type.template);
         }
 
