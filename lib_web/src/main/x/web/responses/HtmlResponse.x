@@ -9,4 +9,9 @@ class HtmlResponse
         {
         construct SimpleResponse(OK, HTML, html.utf8());
         }
+
+    construct(File file)
+        {
+        construct SimpleResponse(OK, HTML, file.contents);
+        }
     }

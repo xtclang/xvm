@@ -80,9 +80,7 @@ module Hello
             @Get
             ResponseOut hello()
                 {
-                File file = /resources/hello/index.html;
-
-                return new SimpleResponse(OK, HTML, file.contents);
+                return new HtmlResponse(/resources/hello/index.html);
                 }
 
             @HttpsRequired
