@@ -204,8 +204,7 @@ public class xRTClient
         {
         // REVIEW: should we allow them to specify default headers in the injection definition?
 
-        String sAgent = "Ecstasy WebClient for " +
-                frame.f_fiber.getCallingContainer().getModule().getName();
+        String sAgent = "Mozilla/5.0 (compatible; Ecstasy/0.43)";
 
         ArrayHandle hNames  = xString.makeArrayHandle(new String[] {"User-Agent"});
         ArrayHandle hValues = xString.makeArrayHandle(new String[] {sAgent});
