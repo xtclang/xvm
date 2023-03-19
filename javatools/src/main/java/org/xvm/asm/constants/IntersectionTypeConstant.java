@@ -141,6 +141,9 @@ public class IntersectionTypeConstant
         TypeConstant type1 = m_constType1;
         TypeConstant type2 = m_constType2;
 
+        // this could be called by the run-time for injected intersection types, for example:
+        //     oodb:Connection<Bank:BankSchema> + Bank:BankSchema
+
         return type1.isService() && type2.isService()
                 ? this
                 : cloneRelational(getConstantPool(), type1.ensureService(), type2.ensureService());

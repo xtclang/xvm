@@ -357,7 +357,9 @@ public abstract class TypeConstant
      */
     public TypeConstant ensureAccess(Access access)
         {
-        return getConstantPool().ensureAccessTypeConstant(this, access);
+        return getAccess().isMoreAccessibleThan(access)
+                ? getConstantPool().ensureAccessTypeConstant(this, access)
+                : this;
         }
 
     /**
