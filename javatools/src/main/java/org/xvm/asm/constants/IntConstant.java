@@ -1196,11 +1196,11 @@ public class IntConstant
             }
         else if (typeOut.equals(pool.typeCInt8()))
             {
-            return toIntConstant(Format.CInt8);
+            return toByteConstant(Format.CInt8);
             }
         else if (typeOut.equals(pool.typeInt8()))
             {
-            return toIntConstant(Format.Int8);
+            return toByteConstant(Format.Int8);
             }
         else if (typeOut.equals(pool.typeCInt16()))
             {
@@ -1246,13 +1246,21 @@ public class IntConstant
             {
             return toIntConstant(Format.UInt);
             }
+        else if (typeOut.equals(pool.typeBit()))
+            {
+            return toByteConstant(Format.Bit);
+            }
+        else if (typeOut.equals(pool.typeNibble()))
+            {
+            return toByteConstant(Format.Nibble);
+            }
         else if (typeOut.equals(pool.typeCUInt8()))
             {
-            return toIntConstant(Format.CUInt8);
+            return toByteConstant(Format.CUInt8);
             }
         else if (typeOut.equals(pool.typeUInt8()))
             {
-            return toIntConstant(Format.UInt8);
+            return toByteConstant(Format.UInt8);
             }
         else if (typeOut.equals(pool.typeCUInt16()))
             {
@@ -1298,6 +1306,27 @@ public class IntConstant
         }
 
     /**
+     * Convert this IntConstant to a ByteConstant of the specified format.
+     *
+     * @param format  the format of the ByteConstant to use
+     *
+     * @return a ByteConstant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public ByteConstant toByteConstant(Format format)
+        {
+        PackedInteger pi = getValue();
+        if (       pi.compareTo(PackedInteger.valueOf(ByteConstant.getMinLimit(format))) < 0
+                || pi.compareTo(PackedInteger.valueOf(ByteConstant.getMaxLimit(format))) > 0)
+            {
+            throw new ArithmeticException("out of range: " + pi);
+            }
+
+        return getConstantPool().ensureByteConstant(format, pi.getInt());
+        }
+
+    /**
      * Convert this IntConstant to an IntConstant of the specified format.
      *
      * @param format  the format of the IntConstant to use
@@ -1308,16 +1337,30 @@ public class IntConstant
      */
     public IntConstant toIntConstant(Format format)
         {
-        PackedInteger pi = getValue();
+        return toIntConstant(format, getValue(), getConstantPool());
+        }
+
+    /**
+     * Convert the specified PackedInteger to an IntConstant of the specified format.
+     *
+     * @param format  the format of the IntConstant to use
+     * @param pi      the PackedInteger value
+     * @param pool    the ConstantPool to use
+     *
+     * @return an IntConstant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public static IntConstant toIntConstant(Format format, PackedInteger pi, ConstantPool pool)
+        {
         if (       pi.compareTo(IntConstant.getMinLimit(format)) < 0
                 || pi.compareTo(IntConstant.getMaxLimit(format)) > 0)
             {
             throw new ArithmeticException("out of range: " + pi);
             }
 
-        return getConstantPool().ensureIntConstant(pi, format);
+        return pool.ensureIntConstant(pi, format);
         }
-
 
     @Override
     public Object getLocator()

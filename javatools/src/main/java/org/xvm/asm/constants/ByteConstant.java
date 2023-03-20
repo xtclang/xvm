@@ -104,6 +104,74 @@ public class ByteConstant
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
+     * @return the minimum value for the format of this ByteConstant
+     */
+    public int getMinLimit()
+        {
+        return getMinLimit(m_format);
+        }
+
+    /**
+     * @param format  the format to determine the minimum value of
+     *
+     * @return the minimum value for the specified format of ByteConstant
+     */
+    public static int getMinLimit(Format format)
+        {
+        switch (format)
+            {
+            case CInt8:
+            case Int8:
+                return -128;
+
+            case Bit:
+            case Nibble:
+            case CUInt8:
+            case UInt8:
+                return 0;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return the maximum value for the format of this ByteConstant
+     */
+    public int getMaxLimit()
+        {
+        return getMaxLimit(m_format);
+        }
+
+    /**
+     * @param format  the format to determine the maximum value of
+     *
+     * @return the maximum value for the specified format of ByteConstant
+     */
+    public static int getMaxLimit(Format format)
+        {
+        switch (format)
+            {
+            case Bit:
+                return 1;
+
+            case Nibble:
+                return 0xF;
+
+            case CInt8:
+            case Int8:
+                return 127;
+
+            case CUInt8:
+            case UInt8:
+                return 255;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
      * Create a new ByteConstant with the specified value, but only if it is in the legal range.
      *
      * @param n  an integer value
@@ -476,6 +544,152 @@ public class ByteConstant
             case UInt8:
                 return byteToHexString(m_nVal);
             }
+        }
+
+    @Override
+    public Constant convertTo(TypeConstant typeOut)
+        {
+        Constant constant = super.convertTo(typeOut);
+        if (constant != null)
+            {
+            return constant;
+            }
+
+        ConstantPool pool = getConstantPool();
+        if (typeOut.equals(pool.typeInt()))
+            {
+            return IntConstant.toIntConstant(Format.Int, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCInt8()))
+            {
+            return new ByteConstant(pool, Format.CInt8, m_nVal);
+            }
+        else if (typeOut.equals(pool.typeInt8()))
+            {
+            return new ByteConstant(pool, Format.Int8, m_nVal);
+            }
+        else if (typeOut.equals(pool.typeCInt16()))
+            {
+            return IntConstant.toIntConstant(Format.CInt16, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeInt16()))
+            {
+            return IntConstant.toIntConstant(Format.Int16, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCInt32()))
+            {
+            return IntConstant.toIntConstant(Format.CInt32, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeInt32()))
+            {
+            return IntConstant.toIntConstant(Format.Int32, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCInt64()))
+            {
+            return IntConstant.toIntConstant(Format.CInt64, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeInt64()))
+            {
+            return IntConstant.toIntConstant(Format.Int64, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCInt128()))
+            {
+            return IntConstant.toIntConstant(Format.CInt128, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeInt128()))
+            {
+            return IntConstant.toIntConstant(Format.Int128, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCIntN()))
+            {
+            return IntConstant.toIntConstant(Format.CIntN, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeIntN()))
+            {
+            return IntConstant.toIntConstant(Format.IntN, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeUInt()))
+            {
+            return IntConstant.toIntConstant(Format.UInt, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeBit()))
+            {
+            return toByteConstant(Format.Bit);
+            }
+        else if (typeOut.equals(pool.typeNibble()))
+            {
+            return toByteConstant(Format.Nibble);
+            }
+        else if (typeOut.equals(pool.typeCUInt8()))
+            {
+            return toByteConstant(Format.CUInt8);
+            }
+        else if (typeOut.equals(pool.typeUInt8()))
+            {
+            return toByteConstant(Format.UInt8);
+            }
+        else if (typeOut.equals(pool.typeCUInt16()))
+            {
+            return IntConstant.toIntConstant(Format.CUInt16, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeUInt16()))
+            {
+            return IntConstant.toIntConstant(Format.UInt16, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCUInt32()))
+            {
+            return IntConstant.toIntConstant(Format.CUInt32, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeUInt32()))
+            {
+            return IntConstant.toIntConstant(Format.UInt32, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCUInt64()))
+            {
+            return IntConstant.toIntConstant(Format.CUInt64, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeUInt64()))
+            {
+            return IntConstant.toIntConstant(Format.UInt64, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCUInt128()))
+            {
+            return IntConstant.toIntConstant(Format.CUInt128, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeUInt128()))
+            {
+            return IntConstant.toIntConstant(Format.UInt128, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeCUIntN()))
+            {
+            return IntConstant.toIntConstant(Format.CUIntN, new PackedInteger(m_nVal), pool);
+            }
+        else if (typeOut.equals(pool.typeUIntN()))
+            {
+            return IntConstant.toIntConstant(Format.UIntN, new PackedInteger(m_nVal), pool);
+            }
+
+        return null;
+        }
+
+    /**
+     * Convert this ByteConstant to a ByteConstant of the specified format.
+     *
+     * @param format  the format of the ByteConstant to use
+     *
+     * @return a ByteConstant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public ByteConstant toByteConstant(Format format)
+        {
+        int n = m_nVal;
+        if (n < getMinLimit(format) || n > getMaxLimit(format))
+            {
+            throw new ArithmeticException("out of range: " + n);
+            }
+
+        return getConstantPool().ensureByteConstant(format, n);
         }
 
 
