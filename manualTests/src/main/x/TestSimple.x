@@ -4,55 +4,17 @@ module TestSimple
 
     void run()
         {
-        C c = new C();
+        // these now work: the compiler will force a rebuild if anything changes
+        Directory dir   = /resources;
+        File      file1 = ./annos.x;
 
-        report("outside", c);
+        // the following currently doesn't work - no automatic rebuild upon a change:
 
-        c.reportSelf();
-        }
+        // - need to change FSNodeConstant, so the compiler knows the source
+        File file2 = ./webTests/Curl.x;
 
-    static void report(String header, Object o)
-        {
-        console.print(header);
-        console.print($"{o.is(Duck1)=}");
-        console.print($"{o.is(Duck2)=}"); // used to always be "False"
-        console.print($"{o.is(Duck3)=}"); // ditto
-        console.print();
-        }
-
-    interface Duck1
-        {
-        String value1;
-        }
-
-    interface Duck2
-        {
-        String value2;
-        }
-
-    interface Duck3
-        {
-        String value3;
-        }
-
-    class C
-        {
-        construct()
-            {
-            value1 = "1";
-            value2 = "2";
-            value3 = "3";
-            }
-
-        String           value1;
-        protected String value2;
-        private   String value3;
-
-        void reportSelf()
-            {
-            report("public",    this:public);
-            report("protected", this:protected);
-            report("private",   this:private);
-            }
+        // - need to change the LiteralConstant to hold the "source" for this to work
+        Byte[] bytes  = #./webTests/resources/hello/index.html;
+        String string = $./webTests/resources/hello/index.html;
         }
     }

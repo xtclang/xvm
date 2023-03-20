@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,6 +29,9 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.XvmStructure;
+
+import org.xvm.asm.constants.FSNodeConstant;
 
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.CompilerException;
@@ -433,14 +437,6 @@ public abstract class Launcher
             addOption("help"   , Form.Name, false, "Displays this help message");
             addOption("v"      , Form.Name, false, "Enables \"verbose\" logging and messages");
             addOption("verbose", Form.Name, false, "Enables \"verbose\" logging and messages");
-            }
-
-        /**
-         * @return the containing Launcher
-         */
-        public Launcher launcher()
-            {
-            return Launcher.this;
             }
 
         /**
@@ -1961,12 +1957,152 @@ public abstract class Launcher
      */
     protected boolean moduleUpToDate(Node nodeSourceTree, File fileModuleLocation)
         {
-        String sModule    = nodeSourceTree.name();
+        String sModule   = nodeSourceTree.name();
         File   fileModule = fileModuleLocation.isDirectory()
                 ? new File(fileModuleLocation, sModule + ".xtc")
                 : fileModuleLocation;
-        return fileModule.isFile() && fileModule.exists()
-                && fileModule.lastModified() > nodeSourceTree.lastModified();
+
+        if (fileModule.isFile() && fileModule.exists())
+            {
+            long ldtModule = fileModule.lastModified();
+            if (nodeSourceTree.lastModified() >= ldtModule)
+                {
+                return false;
+                }
+
+            File dirParent = nodeSourceTree.file().getParentFile();
+            try
+                {
+                FileStructure       struct      = new FileStructure(fileModule);
+                Set<FSNodeConstant> setChecked  = new HashSet<>();
+                Set<FSNodeConstant> setDeferred = new HashSet<>();
+                for (Iterator<? extends XvmStructure> it = struct.getConstantPool().getContained();
+                        it.hasNext(); )
+                    {
+                    if (it.next() instanceof FSNodeConstant constNode)
+                        {
+                        switch (constNode.getFormat())
+                            {
+                            case FSDir:
+                                if (!dirUpToDate(dirParent, constNode, ldtModule, setChecked, setDeferred))
+                                    {
+                                    return false;
+                                    }
+                                break;
+
+                            case FSFile, FSLink:
+                                if (!fileUpToDate(dirParent, constNode, ldtModule, setChecked, setDeferred))
+                                    {
+                                    return false;
+                                    }
+                                break;
+                            }
+                        }
+                    }
+
+                // non-empty deferred set indicates that some resources were removed;
+                // we need to force recompilation to report on that
+                return setDeferred.isEmpty();
+                }
+            catch (Exception ignore) {}
+            }
+        return false;
+        }
+
+    /**
+     * Determine if the directory stored within the module is up to date vis-a-vis the source.
+     *
+     * @param dirParent    the parent directory for the source content
+     * @param constDir     the FSNodeConstant representing the directory
+     * @param ldtModule    the timestamp of the module
+     * @param setChecked   already processed constants
+     * @param setDeferred  deferred constants
+     *
+     * @return false iff the directory content is *not* up to date
+     */
+    private boolean dirUpToDate(File dirParent, FSNodeConstant constDir, long ldtModule,
+                                Set<FSNodeConstant> setChecked, Set<FSNodeConstant> setDeferred)
+        {
+        if (!setChecked.add(constDir))
+            {
+            // already processed
+            return true;
+            }
+
+        File fileDir = new File(dirParent, constDir.getName());
+        if (fileDir.exists())
+            {
+            setDeferred.remove(constDir);
+            }
+        else
+            {
+            setChecked.remove(constDir);
+            setDeferred.add(constDir);
+            return true;
+            }
+
+        if (fileDir.lastModified() >= ldtModule)
+            {
+            return false;
+            }
+
+        for (FSNodeConstant constNode : constDir.getDirectoryContents())
+            {
+            switch (constNode.getFormat())
+                {
+                case FSDir:
+                    if (!dirUpToDate(fileDir, constNode, ldtModule, setChecked, setDeferred))
+                        {
+                        return false;
+                        }
+                    break;
+
+                case FSFile, FSLink:
+                    {
+                    // REVIEW: do we need a special "follow the link" processing for links?
+                    if (!fileUpToDate(fileDir, constNode, ldtModule, setChecked, setDeferred))
+                        {
+                        return false;
+                        }
+                    break;
+                    }
+                }
+            }
+        return true;
+        }
+
+    /**
+     * Determine if the file stored within the module is up to date vis-a-vis the source.
+     *
+     * @param dirParent    the parent directory for the source content
+     * @param constFile    the FSNodeConstant representing the file
+     * @param ldtModule    the timestamp of the module
+     * @param setChecked   already processed constants
+     * @param setDeferred  deferred constants
+     *
+     * @return false iff the directory content is *not* up to date
+     */
+    private boolean fileUpToDate(File dirParent, FSNodeConstant constFile, long ldtModule,
+                                 Set<FSNodeConstant> setChecked, Set<FSNodeConstant> setDeferred)
+        {
+        if (!setChecked.add(constFile))
+            {
+            // already checked
+            return true;
+            }
+
+        File fileResource = new File(dirParent, constFile.getName());
+        if (fileResource.exists())
+            {
+            setDeferred.remove(constFile);
+            return fileResource.lastModified() < ldtModule;
+            }
+        else
+            {
+            setChecked.remove(constFile);
+            setDeferred.add(constFile);
+            return true;
+            }
         }
 
     /**
@@ -1974,7 +2110,7 @@ public abstract class Launcher
      * {@link #findModule(File)}, produce a source tree of the desired processing stage.
      *
      * @param fileModule  a file as returned from {@link #findModule(File)}
-     * @param desired     the desired stage of processing: Parsed, Named, or Linked
+     * @param desired    the desired stage of processing: Parsed, Named, or Linked
      *
      * @return the root {@link Node} of the tree
      */
@@ -2018,7 +2154,7 @@ public abstract class Launcher
      */
     protected Node buildSourceTree(File fileModule)
         {
-        // look for a sub-directory containing expanded module contents
+        // look for a subdirectory containing expanded module contents
         String sFile = fileModule.getName();
         if (sFile.endsWith(".x"))
             {
@@ -2038,8 +2174,8 @@ public abstract class Launcher
     /**
      * Build a sub-tree of source files that are in the specified directory.
      *
-     * @param nodeParent    the parent node
-     * @param fileDir   a directory that may contain source code
+     * @param nodeParent  the parent node
+     * @param fileDir     a directory that may contain source code
      */
     protected void buildSourceTree(DirNode nodeParent, File fileDir)
         {

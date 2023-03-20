@@ -1,17 +1,24 @@
-- BinaryInput:
+- GG: add break-point-on-watch for the debugger
+
+- GG: improve FileExpression, LiteralExpression for LIT_BINSTR and LIT_STRING to retain the "origin" File
+  and produce one or more FSNodeConstants that the resulting Constant (e.g.: ByteArray or String)
+  optionally depends on; this will allow "upToDate" computation in the Launcher.java to figure out
+  whether a rebuild of the module is required
+
+- CP: BinaryInput:
     - readBytes() methods need to return the number of bytes read
     - would be nice to have an "eof" indicator
 
 - what to do about passing a const/service argument from a child container into the parent's one?
 
-- entering the debugger should stop time
+- GG: entering the debugger should stop time
 
 - lambda capture of a non-effectively final var as a Ref or Var needs to be explicitly allowed
   by the code; for example: "@AllowCapture String name = ..."
   Alternatively, we could have @CaptureByValue that would be equivalent of creating a synthetic
   effectively final value to capture.
 
-- consider changing Service.callLater() API to
+- GG: consider changing Service.callLater() API to
     <Result> Future<Result> callLater(function Result doLater());
 
 - consider a @Proxy annotation for mutable service properties to create a delegation pattern (see
@@ -20,7 +27,7 @@
 - add a method to Map API to evaluate the "worst lookup cost" based on the current content
   (Mark's suggestion to evaluated keys' hashCode distribution)
 
-- implement timeout for IO operations (interrupt IO executor threads)
+- GG: implement timeout for IO operations (interrupt IO executor threads)
 
 - enum should validate that none of the declared properties step on the existing Enum properties
   for example, the following should not compile
@@ -30,25 +37,20 @@
         PlainText("xplaintext", False),
         }
 
-- change TxManager.NO_TX to Int64.MinValue
+- CP: change TxManager.NO_TX to Int64.MinValue or -1
 
-- need to implement "persistent" mutators for HasherMap
+- CP: need to implement "persistent" mutators for HasherMap
 
-- should this compile?
+- GG: should this compile?
     if (ParamType body := request.attributes.getAttribute(HttpAttributes.BODY))
 
 - how to move ecstasy.mgmt package to a separate module? FileTemplate depends on ModuleRepository...
 
-- if an object is not auto-proxy'ed then try to freeze before throwing an exception
+- GG: enum ClassCompositions without type parameters could be made into CanonicalCompositions
 
-- enum ClassCompositions without type parameters could be made into CanonicalCompositions
+- GG: add eval command history for the debugger
 
-- add eval command history for the debugger
-
-- the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
-  is not specified
-
-- add "-version" option to xec command
+- GG: add "-version" option to xec command
 
 - add a periodic re-schedule to Timer API
 
@@ -74,7 +76,7 @@
             }
         }
 
-- consider adding specialized String.append(Char c) and String.append(String s)
+- CP: consider adding specialized String.append(Char c) and String.append(String s)
 
 - consider not needing the ^ for a return of a tail-call invocation (except in a try block?)
     "return foo();" should be equivalent to "return foo^();"
@@ -86,11 +88,9 @@
   one could simply write:
     return write^(buffer).thenDo(() -> written(buffer));
 
-- discuss recursive lambda calls (use this:function?)
+- GG: rewrite removeAccess() and removeImmutable(); it blows on virtual children now
 
-- rewrite removeAccess() and removeImmutable(); it blows on virtual children now
-
-- consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
+- CP: consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
 
 - consider a new Async mixin:
         mixin Async into Object implements Service {}
@@ -99,13 +99,13 @@
 
 - add compiler support for conditional Tuple
 
-- ComponentTemplate equality is not working; how/where to declare it native?
+- GG: ComponentTemplate equality is not working; how/where to declare it native?
     static <CompileType extends RTComponentTemplate> Boolean equals(CompileType o1, CompileType o2)
         {
         TODO("native");
         }
 
-- override of @Lazy property with a different @Lazy blows
+- GG: override of @Lazy property with a different @Lazy blows
 
 - consider adding a V_GET opcode that would combine the functionality of L_GET and MOVE_THIS for
   dynamically inflated (via & ref) or non-inflated properties; it would eliminate the need for
@@ -137,7 +137,7 @@
             }
         }.&element;
 
-- optimize-out unnecessary array cloning by changing getBytes() to copyBytes(arrayInto)
+- GG: optimize-out unnecessary array cloning by changing getBytes() to copyBytes(arrayInto)
 
 - consider @Proxyable annotation for compiler to enforce proxy-ability of an interface
 
