@@ -2517,6 +2517,7 @@ public class ConstantPool
     protected ClassConstant  clzDirectory()     {return (ClassConstant) getImplicitlyImportedIdentity("Directory"                );}
     protected ClassConstant  clzFile()          {return (ClassConstant) getImplicitlyImportedIdentity("File"                     );}
     protected ClassConstant  clzFileNode()      {return                 ensureEcstasyClassConstant   ("fs.FileNode"              );}
+    protected ClassConstant  clzFileStore()     {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"                );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -3135,8 +3136,6 @@ public class ConstantPool
             optimize();
             }
         }
-
-    protected ClassConstant  clzFileStore()     {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"                );}
 
 
     // ----- internal ------------------------------------------------------------------------------
