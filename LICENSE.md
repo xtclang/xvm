@@ -6,7 +6,7 @@ explicitly noted. We chose Apache 2.0 for its compatibility
 with almost every reasonable use, and its compatibility
 with almost every license, reasonable or otherwise.
 
-The license for documentationds (including the wiki and any
+The license for documentation (including the wiki and any
 embedded API documentation and/or derivative forms thereof)
 is Creative Commons CC-BY-4.0, unless explicitly noted.
 
