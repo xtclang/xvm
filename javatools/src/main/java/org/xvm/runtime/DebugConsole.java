@@ -670,15 +670,15 @@ public class DebugConsole
                             continue; // NextCommand
                             }
 
-                        StringBuilder sb = new StringBuilder("{\nreturn");
+                        StringBuilder sb = new StringBuilder("{\nreturn {Object r__ = {return");
                         for (int i = 1; i < cArgs + 1; i++)
                             {
                             sb.append(' ').append(asParts[i]);
                             }
-                        sb.append(";\n}");
+                        sb.append(";}; return r__.toString();};\n}");
 
                         EvalCompiler    compiler = new EvalCompiler(frame, sb.toString());
-                        MethodStructure lambda   = compiler.createLambda();
+                        MethodStructure lambda   = compiler.createLambda(frame.poolContext().typeString());
                         if (lambda == null)
                             {
                             for (ErrorInfo err : compiler.getErrors())
@@ -962,7 +962,10 @@ public class DebugConsole
             {
             case Op.R_NEXT:
                 lambda.getParent().removeChild(lambda);
-                return callToString(frame, hExPrev, frame.popStack(), writer);
+                writer.println(((StringHandle) frame.popStack()).getStringValue());
+                m_stepMode = StepMode.None;
+                frame.m_hException = hExPrev;
+                return Op.R_NEXT;
 
             case Op.R_CALL:
                 m_stepMode = StepMode.NaturalCall;
@@ -972,10 +975,7 @@ public class DebugConsole
                     ExceptionHandle hEx = frameCaller.clearException();
                     if (hEx == null)
                         {
-                        if (callToString(frameCaller, hExPrev, frameCaller.popStack(), writer) == Op.R_CALL)
-                            {
-                            return Op.R_CALL;
-                            }
+                        writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
                         }
                     else
                         {

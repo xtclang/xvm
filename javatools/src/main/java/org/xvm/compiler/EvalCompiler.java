@@ -61,7 +61,7 @@ public class EvalCompiler
      *
      * @return the newly created lambda or null if the compilation failed
      */
-    public MethodStructure createLambda()
+    public MethodStructure createLambda(TypeConstant typeReturn)
         {
         ConstantPool pool = f_frame.poolContext();
         ErrorList    errs = m_errs = new ErrorList(1);
@@ -73,7 +73,7 @@ public class EvalCompiler
 
         TypeConstant[] atypeRets    = new TypeConstant[] {pool.typeObject()};
         Parameter[]    aparamRets   = new Parameter[] {
-                new Parameter(pool, pool.typeObject(), null, null, true, 0, false)};
+                new Parameter(pool, typeReturn, null, null, true, 0, false)};
 
         lambda.configureLambda(Parameter.NO_PARAMS, 0, aparamRets);
         lambda.setStatic(method.isFunction());
