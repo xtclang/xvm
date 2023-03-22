@@ -5,8 +5,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.nio.charset.StandardCharsets;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,8 +35,11 @@ import org.xvm.compiler.EvalCompiler;
 import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.Frame.VarInfo;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -113,16 +119,29 @@ public class DebugConsole
             case None:
                 if (m_setLineBreaks != null)
                     {
+                    FindBreakpoint:
                     for (Iterator<BreakPoint> iter = m_setLineBreaks.iterator(); iter.hasNext(); )
                         {
                         BreakPoint bp = iter.next();
-                        if (bp.matches(frame, iPC))
+                        switch (bp.matches(frame, iPC))
                             {
-                            fDebug = true;
-                            if (bp.oneTime)
-                                {
-                                iter.remove();
-                                }
+                            case Op.R_NEXT:
+                                // doesn't match
+                                break;
+
+                            case Op.R_CALL:
+                                // evaluate the condition at this frame
+                                m_frame = frame;
+                                return Op.R_CALL;
+
+                            default:
+                                fDebug = true;
+                                if (bp.oneTime)
+                                    {
+                                    iter.remove();
+                                    }
+                                // go into the debugger
+                                break FindBreakpoint;
                             }
                         }
                     }
@@ -139,8 +158,8 @@ public class DebugConsole
         {
         if (m_stepMode == StepMode.NaturalCall)
             {
-            // exception by the natural code called from the debugger ("EVAL" or "DS")
-            if (frame.f_framePrev == m_frame)
+            // exception by the natural code called from the debugger ("EVAL", "DS" or "BC")
+            if (frame.f_framePrev.f_function == m_frame.f_function)
                 {
                 return frame.m_continuation.proceed(frame);
                 }
@@ -363,6 +382,49 @@ public class DebugConsole
                                 break; // invalid break point
                             }
                         break;
+
+                    case "BC":
+                        {
+                        BreakPoint bp = null;
+                        switch (cArgs)
+                            {
+                            case 0:
+                                break; // invalid; args are missing
+
+                            case 1:
+                                bp = makeBreakPointPC(frame, iPC);
+                                bp.condition = asParts[1];
+                                break;
+
+                            case 2:
+                                int nLine = parseNonNegative(asParts[1]);
+                                if (nLine > 0)
+                                    {
+                                    bp = makeBreakPointLine(frame, nLine, false);
+                                    bp.condition = asParts[2];
+                                    }
+                                break;
+
+                            default:
+                                bp = parseBreakPoint(asParts[1], asParts[2], false);
+                                if (bp != null)
+                                    {
+                                    StringBuilder sb = new StringBuilder();
+                                    for (int i = 3; i < cArgs + 1; i++)
+                                        {
+                                        sb.append(asParts[i]).append(' ');
+                                        }
+                                    bp.condition = sb.toString();
+                                    }
+                                break;
+                            }
+                        if (bp == null)
+                            {
+                            break; // invalid command
+                            }
+                        addBP(bp);
+                        continue; // NextCommand
+                        }
 
                     case "BE+":
                         if (cArgs == 1)
@@ -670,12 +732,12 @@ public class DebugConsole
                             continue; // NextCommand
                             }
 
-                        StringBuilder sb = new StringBuilder("{\nreturn {Object r__ = {return");
+                        StringBuilder sb = new StringBuilder("{\nreturn {Object r__ = {\nreturn");
                         for (int i = 1; i < cArgs + 1; i++)
                             {
                             sb.append(' ').append(asParts[i]);
                             }
-                        sb.append(";}; return r__.toString();};\n}");
+                        sb.append(";\n}; return r__.toString();};\n}");
 
                         EvalCompiler    compiler = new EvalCompiler(frame, sb.toString());
                         MethodStructure lambda   = compiler.createLambda(frame.poolContext().typeString());
@@ -688,7 +750,23 @@ public class DebugConsole
                             }
                         else
                             {
-                            return resolveEvalArgs(frame, lambda, compiler.getArgs(), writer);
+                            Frame.Continuation continuation = frameCaller ->
+                                {
+                                ExceptionHandle hEx = frameCaller.clearException();
+                                if (hEx == null)
+                                    {
+                                    writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
+                                    }
+                                else
+                                    {
+                                    writer.println("\"Eval\" threw an exception " + hEx);
+                                    writer.println(frameCaller.getStackTrace());
+                                    }
+                                return iPC;
+                                };
+
+                            ObjectHandle[] ahArgs = getArguments(frame, lambda, compiler.getArgs());
+                            return resolveEvalArgs(frame, lambda, ahArgs, continuation);
                             }
                         continue; // NextCommand
                         }
@@ -744,7 +822,7 @@ public class DebugConsole
                                 {
                                 writer.println(renderDebugger());
                                 }
-                        continue; // NextCommand
+                            continue; // NextCommand
                             }
                         break;
 
@@ -938,55 +1016,47 @@ public class DebugConsole
     /**
      * Process the "eval" command.
      */
-    private int resolveEvalArgs(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg, PrintWriter writer)
+    private int resolveEvalArgs(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg,
+                                Frame.Continuation continuation)
         {
         if (Op.anyDeferred(ahArg))
             {
             Frame.Continuation stepNext =
-                    frameCaller -> callEval(frameCaller, lambda, ahArg, writer);
+                    frameCaller -> callEval(frameCaller, lambda, ahArg, continuation);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
-        return callEval(frame, lambda, ahArg, writer);
+        return callEval(frame, lambda, ahArg, continuation);
         }
 
     /**
      * Complete the "eval" command.
      */
-    private int callEval(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg, PrintWriter writer)
+    private int callEval(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg,
+                         Frame.Continuation continuation)
         {
         ObjectHandle    hThis   = frame.f_function.isFunction() ? null : frame.getThis();
         ExceptionHandle hExPrev = frame.clearException(); // save off the current exception (if any)
         switch (frame.call1(lambda, hThis, ahArg, Op.A_STACK))
             {
-            case Op.R_NEXT:
-                lambda.getParent().removeChild(lambda);
-                writer.println(((StringHandle) frame.popStack()).getStringValue());
-                m_stepMode = StepMode.None;
-                frame.m_hException = hExPrev;
-                return Op.R_NEXT;
-
             case Op.R_CALL:
                 m_stepMode = StepMode.NaturalCall;
                 frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     lambda.getParent().removeChild(lambda);
-                    ExceptionHandle hEx = frameCaller.clearException();
-                    if (hEx == null)
-                        {
-                        writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
-                        }
-                    else
-                        {
-                        writer.println("\"Eval\" threw an exception " + hEx);
-                        writer.println(frameCaller.getStackTrace());
-                        }
                     m_stepMode = StepMode.NaturalReturn;
+
+                    int iResult = continuation.proceed(frameCaller);
                     frameCaller.m_hException = hExPrev;
-                    return m_iPC;
+                    return iResult;
                     });
                 return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                // this can only be a "stack overflow"
+                m_stepMode = StepMode.None;
+                return Op.R_EXCEPTION;
 
             default:
                 throw new IllegalStateException();
@@ -1122,13 +1192,19 @@ public class DebugConsole
                 m_setLineBreaks = setBP;
                 }
             }
-        if (setBP.contains(bp))
+        BreakPoint bpExists = findBP(bp);
+        if (bpExists == null)
             {
-            findBP(bp).enable();
+            setBP.add(bp);
             }
         else
             {
-            setBP.add(bp);
+            bpExists.enable();
+            if (bp.condition != null)
+                {
+                bpExists.condition = bp.condition;
+                }
+            bp = bpExists;
             }
 
         if (bp.className.equals("*"))
@@ -1257,9 +1333,19 @@ public class DebugConsole
                 BreakPoint bp = nLine >= 0
                         ? new BreakPoint(sName, nLine)      // line #
                         : new BreakPoint(sName);            // exception
-                if (settings.length >= 3 && settings[2].equals("off"))
+                if (settings.length >= 3)
                     {
-                    bp.disable();
+                    String sCondB64 = settings[2];
+                    if (sCondB64.length() > 0)
+                        {
+                        byte[] abCond = Base64.getDecoder().decode(sCondB64);
+                        bp.condition = new String(abCond, StandardCharsets.UTF_8);
+                        }
+
+                    if (settings.length >= 4 && settings[3].equals("off"))
+                        {
+                        bp.disable();
+                        }
                     }
                 setBP.add(bp);
                 }
@@ -1298,6 +1384,26 @@ public class DebugConsole
             sb.append(bp.toPrefString());
             }
         return sb.toString();
+        }
+
+    /**
+     * Obtain the lambda's captures.
+     */
+    protected ObjectHandle[] getArguments(Frame frame, MethodStructure lambda, int[] aiArgs)
+        {
+        ObjectHandle[] ahArg = new ObjectHandle[lambda.getMaxVars()];
+        for (int i = 0, c = aiArgs.length; i < c; i++)
+            {
+            try
+                {
+                ahArg[i] = frame.getArgument(aiArgs[i]);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                ahArg[i] = new DeferredCallHandle(e.getExceptionHandle());
+                }
+            }
+        return ahArg;
         }
 
 
@@ -1960,50 +2066,53 @@ public class DebugConsole
         {
         return """
             
-             Command              Description
-             -------------------  ---------------------------------------------
-             F <frame#>           Switch to the specified Frame number
-             X <var#>             Expand (or contract) the specified variable number
-             V <var#>             Toggle the view mode (output format) for the specified variable number
-             E <expr>             Evaluate the specified expression
-             WE <expr>            Add a "watch" for the specified expression
-             WO <var#>            Add a watch on the specified referent (the object itself)
-             WR <var#>            Add a watch on the specified reference (the property or variable)
-             W- <var#>            Remove the specified watch
-             D <var#>             Display the structure view of the specified variable number
-             DS <var#>            Display the "toString()" value of the specified variable number
-            
-             S  (or N)            Step over ("proceed to next line")
-             S  (or N) <count>    Repeatedly step over ("proceed to next line") <count> times
-             S+ (or I)            Step in
-             S- (or O)            Step out of frame
-             SL                   Step (run) to current line
-             SL <line>            Step (run) to specified line
-             SL <name> <line>     Step (run) to specified line
-             R                    Run to next breakpoint
-            
-             B+                   Add breakpoint for the current line
-             B-                   Remove breakpoint for the current line
-             BT                   Toggle breakpoint for the current line
-             B+ <line>            Add specified breakpoint
-             B+ <name> <line>     Add specified breakpoint
-             B- <name> <line>     Remove specified breakpoint
-             BT <name> <line>     Toggle specified breakpoint
-             BE+ <exception>      Break on exception
-             BE- <exception>      Remove exception breakpoint
-             BE+ *                Break on all exceptions
-             BE- *                Remove the "all exception" breakpoint
-             B- *                 Clear all breakpoints
-             BT *                 Toggle all breakpoints (enable all iff all enabled; otherwise disable all)
-             B                    List current breakpoints
-             B- <breakpoint#>     Remove specified breakpoint (from the breakpoint list)
-             BT <breakpoint#>     Toggle specified breakpoint (from the breakpoint list)
-            
-             VC                   View Console
-             VD                   View Debugger
-             VF                   View Services and Fibers
-             VS <width> <height>  Set view width and optional height for debugger and console views
-             ?  (or HELP)         Display this help message""";
+             Command                  Description
+             -------------------      ---------------------------------------------
+             F <frame#>               Switch to the specified Frame number
+             X <var#>                 Expand (or contract) the specified variable number
+             V <var#>                 Toggle the view mode (output format) for the specified variable number
+             E <expr>                 Evaluate the specified expression
+             WE <expr>                Add a "watch" for the specified expression
+             WO <var#>                Add a watch on the specified referent (the object itself)
+             WR <var#>                Add a watch on the specified reference (the property or variable)
+             W- <var#>                Remove the specified watch
+             D <var#>                 Display the structure view of the specified variable number
+             DS <var#>                Display the "toString()" value of the specified variable number
+                                      
+             S  (or N)                Step over ("proceed to next line")
+             S  (or N) <count>        Repeatedly step over ("proceed to next line") <count> times
+             S+ (or I)                Step in
+             S- (or O)                Step out of frame
+             SL                       Step (run) to current line
+             SL <line>                Step (run) to specified line
+             SL <name> <line>         Step (run) to specified line
+             R                        Run to next breakpoint
+                                      
+             B+                       Add breakpoint for the current line
+             B-                       Remove breakpoint for the current line
+             BT                       Toggle breakpoint for the current line
+             B+ <line>                Add specified breakpoint
+             B+ <name> <line>         Add specified breakpoint
+             B- <name> <line>         Remove specified breakpoint
+             BC <cond>                Add conditional breakpoint for the current line
+             BC <line> <cond>         Add specified conditional breakpoint
+             BC <name> <line> <cond>  Add specified conditional breakpoint
+             BT <name> <line>         Toggle specified breakpoint
+             BE+ <exception>          Break on exception
+             BE- <exception>          Remove exception breakpoint
+             BE+ *                    Break on all exceptions
+             BE- *                    Remove the "all exception" breakpoint
+             B- *                     Clear all breakpoints
+             BT *                     Toggle all breakpoints (enable all iff all enabled; otherwise disable all)
+             B                        List current breakpoints
+             B- <breakpoint#>         Remove specified breakpoint (from the breakpoint list)
+             BT <breakpoint#>         Toggle specified breakpoint (from the breakpoint list)
+                                      
+             VC                       View Console
+             VD                       View Debugger
+             VF                       View Services and Fibers
+             VS <width> <height>      Set view width and optional height for debugger and console views
+             ?  (or HELP)             Display this help message""";
         }
 
 
@@ -2093,17 +2202,7 @@ public class DebugConsole
             return lineNumber < 0;
             }
 
-        public boolean matches(Frame frame, int iPC)
-            {
-            if (!isEnabled() || isException())
-                {
-                return false;
-                }
-
-            MethodStructure method = frame.f_function;
-            return className.equals(method.getContainingClass().getName()) &&
-                   lineNumber == method.calculateLineNumber(iPC);
-            }
+        public final String className;  // "*" means all exceptions
 
         public boolean matches(ExceptionHandle hE)
             {
@@ -2171,43 +2270,128 @@ public class DebugConsole
                 return this.className.compareTo(that.className);
                 }
             }
+        public final int    lineNumber; // -1 for exceptions
+        public  String          condition;
+        public  boolean         oneTime;
+        private boolean         disabled;
+        private MethodStructure lambda;
+        private int[]           lambdaArgs;
+
+        /**
+         * Check if the breakpoint matches the current frame/PC.
+         *
+         * @return {@link Op#R_NEXT} if it does not; {@link Op#R_CALL} if a condition needs to be
+         *         evaluated, iPC (>=0) to enter the debugger
+         */
+        public int matches(Frame frame, int iPC)
+            {
+            if (!isEnabled() || isException())
+                {
+                return Op.R_NEXT;
+                }
+
+            MethodStructure method = frame.f_function;
+            if (className.equals(method.getContainingClass().getName()) &&
+                   lineNumber == method.calculateLineNumber(iPC))
+                {
+                if (condition != null)
+                    {
+                    PrintWriter writer = xTerminalConsole.CONSOLE_OUT;
+                    if (lambda == null)
+                        {
+                        String       sEval    = "{return " + condition + ";}";
+                        EvalCompiler compiler = new EvalCompiler(frame, sEval);
+
+                        lambda = compiler.createLambda(frame.poolContext().typeBoolean());
+                        if (lambda == null)
+                            {
+                            writer.println("Removing invalid breakpoint condition");
+                            for (ErrorInfo err : compiler.getErrors())
+                                {
+                                writer.println(err.getMessageText());
+                                condition = null;
+                                }
+                            return iPC;
+                            }
+                        lambdaArgs = compiler.getArgs();
+                        }
+
+                    Frame.Continuation continuation = frameCaller ->
+                        {
+                        ExceptionHandle hEx = frameCaller.clearException();
+                        if (hEx == null)
+                            {
+                            if (((BooleanHandle) frameCaller.popStack()).get())
+                                {
+                                // the condition matched
+                                return INSTANCE.enterCommand(frameCaller, iPC, true);
+                                }
+
+                            INSTANCE.m_stepMode = StepMode.None;
+                            return iPC + 1;
+                            }
+                        else
+                            {
+                            writer.println("Breakpoint evaluation threw an exception " + hEx);
+                            writer.println(frameCaller.getStackTrace());
+                            return iPC;
+                            }
+                        };
+
+                    ObjectHandle[] ahArgs = INSTANCE.getArguments(frame, lambda, lambdaArgs);
+                    return INSTANCE.resolveEvalArgs(frame, lambda, ahArgs, continuation);
+                    }
+                return iPC;
+                }
+            return Op.R_NEXT;
+            }
 
         @Override
         public String toString()
             {
-            String s = lineNumber < 0
+            StringBuilder sb = new StringBuilder();
+            sb.append(lineNumber < 0
                     ? className.equals("*")
                             ? "On ALL exceptions"
                             : "On exception: " + className
-                    : "At " + className + ':' + lineNumber;
+                    : "At " + className + ':' + lineNumber);
 
             if (oneTime)
                 {
-                s += " (one time)";
+                sb.append(" (one time)");
                 }
             else if (disabled)
                 {
-                s += " (disabled)";
+                sb.append(" (disabled)");
                 }
 
-            return s;
+            if (condition != null)
+                {
+                sb.append(" Condition: ").append(condition);
+                }
+            return sb.toString();
             }
 
         String toPrefString()
             {
-            return (lineNumber < 0)
-                    ? disabled
-                            ? className + "::off"
-                            : className
-                    : disabled
-                            ? className + ":" + lineNumber + ":off"
-                            : className + ":" + lineNumber;
+            StringBuilder sb = new StringBuilder(className);
+            sb.append(':');
+            if (lineNumber >= 0)
+                {
+                sb.append(lineNumber);
+                }
+            sb.append(':');
+            if (condition != null)
+                {
+                byte[] ab = condition.getBytes(StandardCharsets.UTF_8);
+                sb.append(Base64.getEncoder().encodeToString(ab));
+                }
+            if (disabled)
+                {
+                sb.append(":off");
+                }
+            return sb.toString();
             }
-
-        public String  className;  // "*" means all exceptions
-        public int     lineNumber; // -1 for exceptions
-        public boolean oneTime;
-        public boolean disabled;
         }
 
 

@@ -1,5 +1,3 @@
-- GG: add break-point-on-watch for the debugger
-
 - GG: improve FileExpression, LiteralExpression for LIT_BINSTR and LIT_STRING to retain the "origin" File
   and produce one or more FSNodeConstants that the resulting Constant (e.g.: ByteArray or String)
   optionally depends on; this will allow "upToDate" computation in the Launcher.java to figure out

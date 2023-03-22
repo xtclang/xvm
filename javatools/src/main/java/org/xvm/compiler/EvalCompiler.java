@@ -34,7 +34,6 @@ import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 import org.xvm.compiler.ast.TypeExpression;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
@@ -54,10 +53,15 @@ public class EvalCompiler
         }
 
     /**
+     * The arguments' indexes.
+     */
+    private int[] m_aiArg;
+
+    /**
      * Create the lambda structure and compute the arguments.
      *
-     * If the compilation succeeds, the arguments could be retrieved via {@link #getArgs()};
-     * otherwise there are errors in the {@link #getErrors() error list}.
+     * If the compilation succeeds, the indexes for arguments could be retrieved via
+     * {@link #getArgs()}; otherwise there are errors in the {@link #getErrors() error list}.
      *
      * @return the newly created lambda or null if the compilation failed
      */
@@ -136,7 +140,7 @@ public class EvalCompiler
                     pool.ensureSignatureConstant("->", atypeParams, atypeRets));
             lambda.ensureCode().registerConstants(pool);
 
-            m_ahArg = astMethod.getArguments().toArray(new ObjectHandle[lambda.getMaxVars()]);
+            m_aiArg = astMethod.getArguments();
             return lambda;
             }
         catch (Exception e)
@@ -151,20 +155,199 @@ public class EvalCompiler
         }
 
     /**
-     * @return the lambda arguments
-     */
-    public ObjectHandle[] getArgs()
-        {
-        return m_ahArg;
-        }
-
-    /**
      * @return a list of errors
      */
     public List<ErrorListener.ErrorInfo> getErrors()
         {
         return m_errs.getErrors();
         }
+
+    /**
+     * @return the lambda arguments indexes
+     */
+    public int[] getArgs()
+        {
+        return m_aiArg;
+        }
+
+    /**
+     * A synthetic RootContext used by the {@link EvalStatement}.
+     */
+    protected static class EvalContext
+            extends RootContext
+        {
+        public EvalContext(Frame frame, StatementBlock stmt, MethodStructure lambda)
+            {
+            super(stmt, lambda);
+
+            f_frame = frame;
+            }
+
+        @Override
+        public TypeConstant getThisType()
+            {
+            ConstantPool pool = pool();
+
+            // for the purpose of the eval compilation we always assume PRIVATE access
+            MethodStructure function = f_frame.f_function;
+            if (function.isFunction())
+                {
+                return pool.ensureAccessTypeConstant(super.getThisType(), Access.PRIVATE);
+                }
+
+            // The type of "this" is possibly narrower than the level of the contributing class
+            // teh current frame belongs to
+            ClassStructure clz  = function.getContainingClass();
+            TypeConstant   type = clz.getFormalType().resolveGenerics(pool, f_frame.getThis().getType());
+            return pool.ensureAccessTypeConstant(type, Access.PRIVATE);
+            }
+
+        @Override
+        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
+            {
+            Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
+            if (arg == null)
+                {
+                try
+                    {
+                    if (!f_frame.f_function.isFunction() &&
+                            f_frame.getArgument(Op.A_PRIVATE) instanceof GenericHandle hThis)
+                        {
+                        ClassStructure       clz = getThisClass();
+                        MultiMethodStructure mms = (MultiMethodStructure) clz.findChildDeep(sName);
+                        if (mms != null)
+                            {
+                            arg = new TargetInfo(sName, mms.getIdentityConstant(),
+                                    true, getThisType(), 0);
+                            ensureNameMap().put(sName, arg);
+                            return arg;
+                            }
+
+                        // try to find it above the current level
+                        clz = (ClassStructure) hThis.getType().getSingleUnderlyingClass(true).getComponent();
+                        mms = (MultiMethodStructure) clz.findChildDeep(sName);
+                        if (mms != null)
+                            {
+                            arg = new TargetInfo(sName, mms.getIdentityConstant(), true,
+                                        hThis.getType(), 0);
+                            ensureNameMap().put(sName, arg);
+                            return arg;
+                            }
+                        }
+                    }
+                catch (ExceptionHandle.WrapperException ignore) {}
+                }
+            return arg;
+            }
+
+        /**
+         * The list of indexes for captured arguments.
+         */
+        public final List<Integer> f_listRegisters = new ArrayList<>();
+
+        @Override
+        public ConstantPool pool()
+            {
+            return f_frame.poolContext();
+            }
+
+        @Override
+        public ClassStructure getEnclosingClass()
+            {
+            return getMethod().getContainingClass();
+            }
+
+        @Override
+        public boolean isAnonInnerClass()
+            {
+            return getEnclosingClass().isAnonInnerClass();
+            }
+
+        /**
+         * The current frame.
+         */
+        private final Frame f_frame;
+
+        /**
+         * The map of captured arguments.
+         */
+        public final Map<String, Argument> f_mapCapture  = new ListMap<>();
+
+        @Override
+        protected Argument getLocalVar(String sName, Branch branch)
+            {
+            Argument arg = getNameMap().get(sName);
+            if (arg != null)
+                {
+                return arg;
+                }
+
+            Frame.VarInfo[] aInfo = f_frame.f_aInfo;
+            int             cVars = f_frame.getCurrentVarCount();
+
+            for (int iVar = 0; iVar < cVars; iVar++)
+                {
+                Frame.VarInfo info = aInfo[iVar];
+                if (info != null && info.getName().equals(sName))
+                    {
+                    Register reg = new Register(info.getType(), f_listRegisters.size());
+
+                    f_mapCapture.put(sName, reg);
+                    f_listRegisters.add(iVar);
+
+                    ensureNameMap().put(sName, reg);
+                    ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
+                    return reg;
+                    }
+                }
+
+            if (!f_frame.f_function.isFunction())
+                {
+                if (sName.equals("this"))
+                    {
+                    Register reg = new Register(getThisType(), Op.A_THIS);
+                    ensureNameMap().put(sName, reg);
+                    return reg;
+                    }
+
+                if (f_frame.getThis().ensureAccess(Access.PRIVATE) instanceof GenericHandle hThis)
+                    {
+                    TypeConstant type = getThisType();
+                    PropertyInfo prop = type.ensureTypeInfo().findProperty(sName);
+                    if (prop != null)
+                        {
+                        ensureNameMap().put(sName, arg = prop.getIdentity());
+                        return arg;
+                        }
+
+                    type = hThis.getType();
+                    prop = type.ensureTypeInfo().findProperty(sName);
+                    if (prop != null)
+                        {
+                        ensureNameMap().put(sName, arg = prop.getIdentity());
+                        return arg;
+                        }
+                    }
+                }
+            return null;
+            }
+        }
+
+
+    /**
+     * The current frame.
+     */
+    private final Frame f_frame;
+
+    /**
+     * The source.
+     */
+    private final Source f_source;
+
+    /**
+     * The errors.
+     */
+    private ErrorList m_errs;
 
     /**
      * A synthetic MethodDeclarationStatement that contains the eval body.
@@ -190,11 +373,18 @@ public class EvalCompiler
             }
 
         /**
-         * @return the lambda arguments (ObjectHandles)
+         * @return the list of indexes for lambda arguments
          */
-        public List<ObjectHandle> getArguments()
+        public int[] getArguments()
             {
-            return f_ctx.f_listHandles;
+            List<Integer> listIndex = f_ctx.f_listRegisters;
+            int           cArgs     = listIndex.size();
+            int[]         aIndex    = new int[cArgs];
+            for (int i = 0; i < cArgs; i++)
+                {
+                aIndex[i] = listIndex.get(i);
+                }
+            return aIndex;
             }
 
         @Override
@@ -284,194 +474,4 @@ public class EvalCompiler
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class, "body");
         }
-
-    /**
-     * A synthetic RootContext used by the {@link EvalStatement}.
-     */
-    protected static class EvalContext
-            extends RootContext
-        {
-        public EvalContext(Frame frame, StatementBlock stmt, MethodStructure lambda)
-            {
-            super(stmt, lambda);
-
-            f_frame = frame;
-            }
-
-        @Override
-        public TypeConstant getThisType()
-            {
-            ConstantPool pool = pool();
-
-            // for the purpose of the eval compilation we always assume PRIVATE access
-            MethodStructure function = f_frame.f_function;
-            if (function.isFunction())
-                {
-                return pool.ensureAccessTypeConstant(super.getThisType(), Access.PRIVATE);
-                }
-
-            // The type of "this" is possibly narrower than the level of the contributing class
-            // teh current frame belongs to
-            ClassStructure clz  = function.getContainingClass();
-            TypeConstant   type = clz.getFormalType().resolveGenerics(pool, f_frame.getThis().getType());
-            return pool.ensureAccessTypeConstant(type, Access.PRIVATE);
-            }
-
-        @Override
-        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
-            {
-            Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
-            if (arg == null)
-                {
-                try
-                    {
-                    if (!f_frame.f_function.isFunction() &&
-                            f_frame.getArgument(Op.A_PRIVATE) instanceof GenericHandle hThis)
-                        {
-                        ClassStructure       clz = getThisClass();
-                        MultiMethodStructure mms = (MultiMethodStructure) clz.findChildDeep(sName);
-                        if (mms != null)
-                            {
-                            arg = new TargetInfo(sName, mms.getIdentityConstant(),
-                                    true, getThisType(), 0);
-                            ensureNameMap().put(sName, arg);
-                            return arg;
-                            }
-
-                        // try to find it above the current level
-                        clz = (ClassStructure) hThis.getType().getSingleUnderlyingClass(true).getComponent();
-                        mms = (MultiMethodStructure) clz.findChildDeep(sName);
-                        if (mms != null)
-                            {
-                            arg = new TargetInfo(sName, mms.getIdentityConstant(), true,
-                                        hThis.getType(), 0);
-                            ensureNameMap().put(sName, arg);
-                            return arg;
-                            }
-                        }
-                    }
-                catch (ExceptionHandle.WrapperException ignore) {}
-                }
-            return arg;
-            }
-
-        @Override
-        protected Argument getLocalVar(String sName, Branch branch)
-            {
-            Argument arg = getNameMap().get(sName);
-            if (arg != null)
-                {
-                return arg;
-                }
-
-            Frame.VarInfo[] aInfo = f_frame.f_aInfo;
-            int             cVars = f_frame.getCurrentVarCount();
-            try
-                {
-                for (int iVar = 0; iVar < cVars; iVar++)
-                    {
-                    Frame.VarInfo info = aInfo[iVar];
-                    if (info != null && info.getName().equals(sName))
-                        {
-                        Register reg = new Register(info.getType(), f_listHandles.size());
-
-                        f_mapCapture.put(sName, reg);
-                        f_listHandles.add(f_frame.getArgument(iVar));
-
-                        ensureNameMap().put(sName, reg);
-                        ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
-                        return reg;
-                        }
-                    }
-
-                if (!f_frame.f_function.isFunction())
-                    {
-                    if (sName.equals("this"))
-                        {
-                        Register reg = new Register(getThisType(), Op.A_THIS);
-                        ensureNameMap().put(sName, reg);
-                        return reg;
-                        }
-
-                    if (f_frame.getArgument(Op.A_PRIVATE) instanceof GenericHandle hThis)
-                        {
-                        TypeConstant type = getThisType();
-                        PropertyInfo prop = type.ensureTypeInfo().findProperty(sName);
-                        if (prop != null)
-                            {
-                            ensureNameMap().put(sName, arg = prop.getIdentity());
-                            return arg;
-                            }
-
-                        type = hThis.getType();
-                        prop = type.ensureTypeInfo().findProperty(sName);
-                        if (prop != null)
-                            {
-                            ensureNameMap().put(sName, arg = prop.getIdentity());
-                            return arg;
-                            }
-                        }
-                    }
-                return null;
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                throw new IllegalStateException(e); // TODO GG: log a better error?
-                }
-            }
-
-        @Override
-        public ConstantPool pool()
-            {
-            return f_frame.poolContext();
-            }
-
-        @Override
-        public ClassStructure getEnclosingClass()
-            {
-            return getMethod().getContainingClass();
-            }
-
-        @Override
-        public boolean isAnonInnerClass()
-            {
-            return getEnclosingClass().isAnonInnerClass();
-            }
-
-        /**
-         * The current frame.
-         */
-        private final Frame f_frame;
-
-        /**
-         * The map of captured arguments.
-         */
-        public final Map<String, Argument> f_mapCapture  = new ListMap<>();
-
-        /**
-         * The list of values for captured arguments.
-         */
-        public final List<ObjectHandle> f_listHandles = new ArrayList<>();
-        }
-
-
-    /**
-     * The current frame.
-     */
-    private final Frame f_frame;
-
-    /**
-     * The source.
-     */
-    private final Source f_source;
-
-    /**
-     * The errors.
-     */
-    private ErrorList m_errs;
-
-    /**
-     * The arguments.
-     */
-    private ObjectHandle[] m_ahArg;
     }
