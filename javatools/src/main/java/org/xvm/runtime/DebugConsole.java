@@ -2202,8 +2202,6 @@ public class DebugConsole
             return lineNumber < 0;
             }
 
-        public final String className;  // "*" means all exceptions
-
         public boolean matches(ExceptionHandle hE)
             {
             if (!isEnabled() || !isException())
@@ -2270,12 +2268,6 @@ public class DebugConsole
                 return this.className.compareTo(that.className);
                 }
             }
-        public final int    lineNumber; // -1 for exceptions
-        public  String          condition;
-        public  boolean         oneTime;
-        private boolean         disabled;
-        private MethodStructure lambda;
-        private int[]           lambdaArgs;
 
         /**
          * Check if the breakpoint matches the current frame/PC.
@@ -2392,6 +2384,14 @@ public class DebugConsole
                 }
             return sb.toString();
             }
+
+        public final String     className;  // "*" means all exceptions
+        public final int        lineNumber; // -1 for exceptions
+        public  String          condition;
+        public  boolean         oneTime;
+        private boolean         disabled;
+        private MethodStructure lambda;
+        private int[]           lambdaArgs;
         }
 
 
