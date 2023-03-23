@@ -1,3 +1,10 @@
+- CP: a content-type header for FormData has the following format:
+    multipart/form-data; boundary=---------------------------1612195806993123533773008794
+  the logic in MediaType.of() does not recognize it as parameters; simply drops it
+
+- CP: add API support for multi-part body, for example (Body.x):
+    conditional Body[] multipart() = False;
+
 - GG: improve FileExpression, LiteralExpression for LIT_BINSTR and LIT_STRING to retain the "origin" File
   and produce one or more FSNodeConstants that the resulting Constant (e.g.: ByteArray or String)
   optionally depends on; this will allow "upToDate" computation in the Launcher.java to figure out
