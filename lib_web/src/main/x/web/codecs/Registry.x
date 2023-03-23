@@ -110,7 +110,7 @@ service Registry
         new BasicFormat<Uri>(),
         new BasicFormat<IPAddress>(),
 
-        // REVIEW CP - should we support Time using the Header.parseImfFixDate() & Header.formatImfFixDate() helpers instead?
+        // REVIEW CP - should we support Time using the http.parseImfFixDate() & http.formatImfFixDate() helpers instead?
         new BasicFormat<Time>(),
         new BasicFormat<Date>(),
         new BasicFormat<TimeOfDay>(),
