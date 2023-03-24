@@ -21,6 +21,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -29,24 +30,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 
-import org.xvm.asm.op.Enter;
-import org.xvm.asm.op.Exit;
-import org.xvm.asm.op.IP_Dec;
-import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.I_Get;
-import org.xvm.asm.op.Invoke_01;
-import org.xvm.asm.op.Invoke_0N;
-import org.xvm.asm.op.IsEq;
-import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.JumpFalse;
-import org.xvm.asm.op.JumpGte;
-import org.xvm.asm.op.JumpTrue;
-import org.xvm.asm.op.Label;
-import org.xvm.asm.op.Move;
-import org.xvm.asm.op.P_Get;
-import org.xvm.asm.op.Var;
-import org.xvm.asm.op.Var_IN;
-import org.xvm.asm.op.Var_N;
+import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
@@ -831,7 +815,8 @@ public class ForEachStatement
     private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         // code simplification for intrinsic sequential types
-        boolean fConstant = m_exprRValue.isConstant();
+        boolean      fConstant   = m_exprRValue.isConstant();
+        TypeConstant typeElement = getElementType().removeAutoNarrowing();
         if (fConstant)
             {
             switch (m_exprRValue.getType().getParamType(0).removeAutoNarrowing().getEcstasyClassName())
@@ -853,53 +838,41 @@ public class ForEachStatement
                 case "numbers.UInt64":
                 case "numbers.UInt128":
                 case "numbers.UIntN":
-                    return emitConstantRange(ctx, fReachable, code, errs);
+                    return emitConstantRange(ctx, fReachable, code, typeElement, errs);
+                }
+
+            if (typeElement.isExplicitClassIdentity(false) &&
+                typeElement.getExplicitClassFormat() == Component.Format.ENUM)
+                {
+                return emitConstantRange(ctx, fReachable, code, typeElement, errs);
                 }
             }
 
-        TypeConstant typeElement = getElementType().removeAutoNarrowing();
-        if (fConstant
-                && typeElement.isExplicitClassIdentity(false)
-                && typeElement.getExplicitClassFormat() == Component.Format.ENUM)
+        if (!typeElement.isA(pool().typeSequential()))
             {
-            return emitConstantRange(ctx, fReachable, code, errs);
-            }
-
-        ConstantPool pool      = pool();
-        TypeConstant typeRange = pool.ensureRangeType(typeElement);
-        TypeConstant typeIter  = pool.ensureVirtualChildTypeConstant(typeRange, "IntervalIterator");
-
-        code.add(new Var(typeIter));
-        Register regIter = code.lastRegister();
-
-        Argument       argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
-        TypeInfo       infoAble = typeRange.ensureTypeInfo(errs);
-        MethodConstant idIter   = findWellKnownMethod(infoAble, "iterator", errs);
-        if (idIter == null)
-            {
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                    pool().typeSequential().getValueString(), typeElement.getValueString());
             return false;
             }
 
-        code.add(new Invoke_01(argAble, idIter, regIter));
-        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
+        return emitVariableRange(ctx, fReachable, code, typeElement, errs);
         }
 
     /**
-     * Handle optimized code generation for the Range/Interval type when the range is a constant
-     * value.
+     * Handle optimized code generation for the Interval type when the Range is a constant value.
      */
-    private boolean emitConstantRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitConstantRange(Context ctx, boolean fReachable, Code code,
+                                      TypeConstant typeSeq, ErrorListener errs)
         {
-        ConstantPool  pool     = pool();
-        TypeConstant  typeSeq  = getElementType();
-        RangeConstant range    = (RangeConstant) m_exprRValue.toConstant();
+        ConstantPool  pool  = pool();
+        RangeConstant range = (RangeConstant) m_exprRValue.toConstant();
 
         if (range.size() < 1)
             {
             return fReachable;
             }
 
-        // VAR_I "cur"  T _start_           ; initialize the current value to the Range "start"
+        // VAR_IN "cur"  T _start_          ; initialize the current value to the Range "start"
         // VAR   "last" Boolean             ; (optional) if no label.last exists, create a temp for it
         // Repeat:
         // IS_EQ cur _end_ -> last          ; compare current value to last value
@@ -938,6 +911,111 @@ public class ForEachStatement
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
         code.add(range.isReverse() ? new IP_Dec(regVal) : new IP_Inc(regVal));
+        if (m_regFirst != null)
+            {
+            code.add(new Move(pool.valFalse(), m_regFirst));
+            }
+        if (m_regCount != null)
+            {
+            code.add(new IP_Inc(m_regCount));
+            }
+        code.add(new Jump(lblRepeat));
+
+        return fReachable;
+        }
+
+    /**
+     * Handle optimized code generation for the Interval type when the Range is not a constant.
+     */
+    private boolean emitVariableRange(Context ctx, boolean fReachable, Code code,
+                                      TypeConstant typeSeq, ErrorListener errs)
+        {
+        ConstantPool pool = pool();
+
+        Argument argRange = m_exprRValue.generateArgument(ctx, code, true, false, errs);
+
+        TypeInfo         infoRange = pool.ensureRangeType(typeSeq).ensureTypeInfo(errs);
+        PropertyConstant idFirst   = findWellKnownProperty(infoRange, "effectiveFirst", errs);
+        PropertyConstant idLast    = findWellKnownProperty(infoRange, "effectiveLast", errs);
+        PropertyConstant idDescend = findWellKnownProperty(infoRange, "descending", errs);
+
+        assert idFirst != null && idLast != null && idDescend != null;
+
+        code.add(new Var(typeSeq));
+        Register regFirstValue = code.lastRegister();
+        code.add(new P_Get(idFirst, argRange, regFirstValue));
+
+        code.add(new Var(typeSeq));
+        Register regLastValue = code.lastRegister();
+        code.add(new P_Get(idLast, argRange, regLastValue));
+
+        code.add(new Var(pool.typeBoolean()));
+        Register regDescend = code.lastRegister();
+        code.add(new P_Get(idDescend, argRange, regDescend));
+
+        // check if the interval is empty
+        Label labelCheckDescending  = new Label("check_descending" + getLabelId());
+        Label labelLoop             = new Label("loop" + getLabelId());
+
+        code.add(new JumpTrue(regDescend, labelCheckDescending));
+        code.add(new JumpGt(regFirstValue, regLastValue, getEndLabel(), typeSeq)); // r1 > r2 => empty
+        code.add(new Jump(labelLoop));
+        code.add(labelCheckDescending);
+        code.add(new JumpLt(regFirstValue, regLastValue, getEndLabel(), typeSeq)); // r1 < r2 => empty
+        code.add(labelLoop);
+
+        // from here down - almost identical to the emitConstantRange logic
+
+        // VAR_I "cur"  T _start_           ; initialize the current value to the Range "start"
+        // VAR   "last" Boolean             ; (optional) if no label.last exists, create a temp for it
+        // Repeat:
+        // IS_EQ cur _end_ -> last          ; compare current value to last value
+        // MOV cur lval                     ; whatever code Assignable generates for "lval=cur"
+        // {...}                            ; body
+        // Continue:
+        // JMP_T last Exit                  ; exit after last iteration
+        // IP_INC/IP_DEC cur                ; increment (or decrement) the current value
+        // MOV False first                  ; (optional) no longer the L.first
+        // IP_INC count                     ; (optional) increment the L.count
+        // JMP Repeat                       ; loop
+        // Exit:
+
+        Assignable LVal = m_exprLValue.generateAssignable(ctx, code, errs);
+
+        code.add(new Var_IN(typeSeq,
+                pool.ensureStringConstant(getLoopPrefix() + "current"), regFirstValue));
+        Register regVal = code.lastRegister();
+
+        Register regLast = m_regLast;
+        if (regLast == null)
+            {
+            code.add(new Var_N(pool.typeBoolean(),
+                    pool.ensureStringConstant(getLoopPrefix() + "last")));
+            regLast = code.lastRegister();
+            }
+
+        Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
+        code.add(lblRepeat);
+        code.add(new IsEq(regVal, regLastValue, regLast, regVal.getType()));
+        LVal.assign(regVal, code, errs);
+
+        // we explicitly do NOT check the block completion, since our completion is not dependent on
+        // the block's ability to complete (since the loop may execute zero times)
+        block.completes(ctx, fReachable, code, errs);
+
+        code.add(getContinueLabel());
+        code.add(new JumpTrue(regLast, getEndLabel()));
+
+        Label labelDecrement  = new Label("decrement" + getLabelId());
+        Label labelUpdateVars = new Label("update_vars" + getLabelId());
+
+        code.add(new JumpTrue(regDescend, labelDecrement));
+        code.add(new IP_Inc(regVal));
+        code.add(new Jump(labelUpdateVars));
+        code.add(labelDecrement);
+        code.add(new IP_Dec(regVal));
+        code.add(labelUpdateVars);
+
         if (m_regFirst != null)
             {
             code.add(new Move(pool.valFalse(), m_regFirst));
@@ -1335,9 +1413,29 @@ public class ForEachStatement
         {
         Set<MethodConstant> setId = info.findMethods(sMethodName, 0, MethodKind.Method);
 
-        return setId.isEmpty()
-                ? null
-                : chooseBest(setId, info.getType(), errs);
+        if (setId.isEmpty())
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
+                    sMethodName, info.getType().getValueString());
+            return null;
+            }
+        return chooseBest(setId, info.getType(), errs);
+        }
+
+    /**
+     * Trivial helper.
+     */
+    private PropertyConstant findWellKnownProperty(TypeInfo info, String sPropName, ErrorListener errs)
+        {
+        PropertyInfo prop = info.findProperty(sPropName);
+
+        if (prop == null)
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
+                sPropName + ".get()", info.getType().getValueString());
+            return null;
+            }
+        return prop.getIdentity();
         }
 
     /**

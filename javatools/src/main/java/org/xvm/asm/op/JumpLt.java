@@ -36,6 +36,21 @@ public class JumpLt
         }
 
     /**
+     * Construct a JMP_LT op and set the "common" type.
+     *
+     * @param arg1  the first argument to compare
+     * @param arg2  the second argument to compare
+     * @param op    the op to conditionally jump to
+     * @param type  the "common"  type
+     */
+    public JumpLt(Argument arg1, Argument arg2, Op op, TypeConstant type)
+        {
+        super(arg1, arg2, op);
+
+        m_typeCommon = type;
+        }
+
+    /**
      * Deserialization constructor.
      *
      * @param in      the DataInput to read from

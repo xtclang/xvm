@@ -2,19 +2,25 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run(   )
         {
-        // these now work: the compiler will force a rebuild if anything changes
-        Directory dir   = /resources;
-        File      file1 = ./annos.x;
+        Int[] ints = [1, 2, 3];
+        Int   size = ints.size;
 
-        // the following currently doesn't work - no automatic rebuild upon a change:
+        Loop1: for (Int i : 0 ..< size)
+            {
+            console.print($"{i=} {Loop1.first=} {Loop1.last=}");
+            }
 
-        // - need to change FSNodeConstant, so the compiler knows the source
-        File file2 = ./webTests/Curl.x;
+        size = 0;
+        Loop2: for (Int i : 0 .. size)
+            {
+            console.print($"{i=} {Loop2.first=} {Loop2.last=}");
+            }
 
-        // - need to change the LiteralConstant to hold the "source" for this to work
-        Byte[] bytes  = #./webTests/resources/hello/index.html;
-        String string = $./webTests/resources/hello/index.html;
+        Loop3: for (Int i : size >.. 0)
+            {
+            TODO
+            }
         }
     }
