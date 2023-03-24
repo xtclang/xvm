@@ -583,7 +583,7 @@ class HasherMap<Key, Value>
     protected static class TreeNode<Key, Value>
             extends HashBucket<Key, Value>
         {
-        construct (HashBucket<Key, Value> node1, HashBucket<Key, Value> node2)
+        construct(HashBucket<Key, Value> node1, HashBucket<Key, Value> node2)
             {
             nodes = new HashBucket<Key, Value>[](4);
             if (node1.hash > node2.hash)

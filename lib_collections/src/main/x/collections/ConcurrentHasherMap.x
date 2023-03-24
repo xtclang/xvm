@@ -444,7 +444,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
     protected static class GrowableCompoundIterator<Element>
             extends CompoundIterator<Element>
         {
-        construct (Iterator<Element> iter1, Iterator<Element> iter2)
+        construct(Iterator<Element> iter1, Iterator<Element> iter2)
             {
             construct CompoundIterator(iter1, iter2);
             }

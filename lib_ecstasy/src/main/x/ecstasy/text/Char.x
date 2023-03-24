@@ -883,7 +883,7 @@ const Char(UInt32 codepoint)
         Boolean separator;
         Boolean other;
 
-        construct (String code, String description)
+        construct(String code, String description)
             {
             this.code        = code;
             this.description = description;

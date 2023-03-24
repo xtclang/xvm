@@ -52,7 +52,7 @@ const TimeOfDay(UInt64 picos)
      * Construct a `TimeOfDay` from an ISO-8601 time string.
      */
     @Override
-    construct (String text)
+    construct(String text)
         {
         String   hours;
         String   mins;

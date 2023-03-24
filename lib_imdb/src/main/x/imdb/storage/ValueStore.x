@@ -4,7 +4,7 @@
 class ValueStore<Value extends immutable Const>
         extends ObjectStore(info, errs)
     {
-    construct (DBObjectInfo info, Appender<String> errs, Value initial)
+    construct(DBObjectInfo info, Appender<String> errs, Value initial)
         {
         construct ObjectStore(info, errs);
 

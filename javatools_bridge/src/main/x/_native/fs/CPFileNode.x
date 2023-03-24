@@ -11,7 +11,7 @@ const CPFileNode(Object cookie, FileStore? fileStore, Path path, Time created, T
         implements FileNode
         delegates  Stringable(path)
     {
-    construct (Object cookie)
+    construct(Object cookie)
         {
         (Boolean isDir, String name, Time created, Time modified, Int size) =
                 CPFileStore.loadNode(cookie);

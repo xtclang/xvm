@@ -12,7 +12,7 @@ const CPFile(Object cookie, FileStore? fileStore, Path path, Time created, Time 
         extends CPFileNode(cookie, fileStore, path, created, modified, size)
         implements File
     {
-    construct (Object cookie)
+    construct(Object cookie)
         {
         construct CPFileNode(cookie);
         }

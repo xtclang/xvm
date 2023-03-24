@@ -19,7 +19,7 @@ const Source
      * @param path      the path corresponding to this source code (which may be a directory), used
      *                  to evaluate file and directory literals
      */
-    construct (String contents, Directory? root = Null, Path? path=Null)
+    construct(String contents, Directory? root = Null, Path? path=Null)
         {
         this.contents = contents;
         this.root     = root;
@@ -33,7 +33,7 @@ const Source
      * @param root  the directory that acts as the "root" of the source and resource hierarchy, used
      *              to obtain file and directory literals
      */
-    construct (File file, Directory? root = Null)
+    construct(File file, Directory? root = Null)
         {
         this.file = file;
         construct Source(loadText(file), root, file.path);

@@ -14,7 +14,7 @@ const CPDirectory(Object cookie, FileStore? fileStore, Path path, Time created, 
         extends CPFileNode(cookie, fileStore, path, created, modified, size)
         implements Directory
     {
-    construct (Object cookie)
+    construct(Object cookie)
         {
         construct CPFileNode(cookie);
 

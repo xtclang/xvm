@@ -25,7 +25,7 @@ const Date(Int32 epochDay)
      * @param day    a day in the range 1..31 (or a smaller legal range, depending on the year and
      *               month)
      */
-    construct (Int year, Int month, Int day)
+    construct(Int year, Int month, Int day)
         {
         construct Date(calcEpochOffset(year, month, day));
         }
@@ -34,7 +34,7 @@ const Date(Int32 epochDay)
      * Construct a Date from an ISO-8601 date string.
      */
     @Override
-    construct (String date)
+    construct(String date)
         {
         Int year;
         Int month;
