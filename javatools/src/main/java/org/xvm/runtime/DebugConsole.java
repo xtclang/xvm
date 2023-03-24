@@ -159,7 +159,7 @@ public class DebugConsole
         if (m_stepMode == StepMode.NaturalCall)
             {
             // exception by the natural code called from the debugger ("EVAL", "DS" or "BC")
-            if (frame.f_framePrev.f_function == m_frame.f_function)
+            if (frame.f_framePrev == m_frame)
                 {
                 return frame.m_continuation.proceed(frame);
                 }
