@@ -118,8 +118,7 @@ public class Assert
         if (m_nConstructor == A_IGNORE)
             {
             // debugger break-point
-            frame.f_context.getDebugger().activate(frame);
-            return iPC + 1;
+            return frame.f_context.getDebugger().activate(frame, iPC);
             }
 
         MethodConstant   idConstruct = (MethodConstant) frame.getConstant(m_nConstructor);

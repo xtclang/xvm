@@ -30,6 +30,8 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.asm.op.Nop;
+
 import org.xvm.compiler.EvalCompiler;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
@@ -72,13 +74,29 @@ public class DebugConsole
         }
 
     @Override
-    public void activate(Frame frame)
+    public synchronized int activate(Frame frame, int iPC)
         {
         frame.f_context.setDebuggerActive(true);
 
-        // stop at the first possibility
-        m_frame    = frame;
-        m_stepMode = StepMode.StepInto;
+        // Check if there are any natural landing ops beyond this point; otherwise "StepInto" mode
+        // may cause the debugger to stop in a completely unexpected place.
+        // Note, that the simple algorithm below does not guarantee a stop at this frame since
+        // we don't analyze the control flow ops, so there could theoretically be a Jump before the
+        // first Nop, preventing a stop to occur. The probability of that is quite low though.
+        Op[] aop = frame.f_aOp;
+        for (int i = iPC, c = aop.length; i < c; i++)
+            {
+            if (aop[i] instanceof Nop)
+                {
+                // stop at the first possibility (most likely in this frame)
+                m_frame    = frame;
+                m_stepMode = StepMode.StepInto;
+                return iPC + 1;
+                }
+            }
+
+        // a natural landing op is not found; enter the debugger right here
+        return enterCommand(frame, iPC, true);
         }
 
     /**
