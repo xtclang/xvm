@@ -851,8 +851,18 @@ public class xFutureVar
         @Override
         public ObjectHandle getReferent()
             {
-            // never called
-            throw new IllegalStateException();
+            // can only be called by the debugger
+            CompletableFuture<ObjectHandle> future = getFuture();
+            if (future != null && future.isDone())
+                {
+                try
+                    {
+                    return future.get();
+                    }
+                catch (Exception ignore) {}
+                }
+
+            return null;
             }
 
         public CompletableFuture<ObjectHandle> getFuture()
