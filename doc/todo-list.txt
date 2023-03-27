@@ -18,6 +18,8 @@
 
 - GG: entering the debugger should stop time
 
+- GG: consider allowing to debug an eval expression (debug eval)
+
 - lambda capture of a non-effectively final var as a Ref or Var needs to be explicitly allowed
   by the code; for example: "@AllowCapture String name = ..."
   Alternatively, we could have @CaptureByValue that would be equivalent of creating a synthetic
@@ -56,6 +58,8 @@
 - GG: add eval command history for the debugger
 
 - GG: add "-version" option to xec command
+
+- consider allowing comparison between T and T?; for example making Null always "Lesser"
 
 - add a periodic re-schedule to Timer API
 
