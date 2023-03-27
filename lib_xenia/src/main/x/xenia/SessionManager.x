@@ -173,7 +173,8 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      */
     conditional SessionImpl getSessionByCookie(String cookieText)
         {
-        if (SessionImpl|SessionStatus session := sessionByCookie.get(cookieText))
+        if (SessionImpl|SessionStatus session := sessionByCookie.get(
+                SessionCookie.textFromCookie(cookieText)))
             {
             if (session.is(SessionImpl))
                 {
@@ -334,8 +335,27 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      */
     void destroySession(Int id)
         {
-        // TODO probably ask the session to delete itself, if the session is (or may be) currently in use
-        store.erase^(id);
+        if (SessionImpl session := getSessionById(id))
+            {
+            session.destroy^();
+            }
+        }
+
+    /**
+     * Unregister the specified session.
+     *
+     * @param id  the session id
+     */
+    void unregisterSession(Int            id,
+                           SessionCookie? txtCookie,
+                           SessionCookie? tlsCookie,
+                           SessionCookie? consentCookie,
+                          )
+        {
         sessions.put(id, Nonexistent);
+        sessionByCookie.remove(txtCookie?.text);
+        sessionByCookie.remove(tlsCookie?.text);
+        sessionByCookie.remove(consentCookie?.text);
+        store.erase^(id);
         }
     }

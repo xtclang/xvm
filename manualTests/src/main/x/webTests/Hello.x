@@ -151,6 +151,50 @@ module Hello
                 }
             }
 
+        @WebService("/settings")
+        service Settings
+            {
+            @LoginRequired
+            @Get("allow-cookies")
+            ResponseOut turnOnPersistentCookies(Session session)
+                {
+                Boolean       oldExclusiveAgent = session.exclusiveAgent;
+                CookieConsent oldCookieConsent  = session.cookieConsent;
+
+                session.exclusiveAgent = True;
+                session.cookieConsent  = oldCookieConsent.with(necessary   = True,
+                                                               lastConsent = xenia.clock.now.date
+                                                              );
+
+                return new HtmlResponse($|Session cookies enabled=\
+                                         |{session.exclusiveAgent}\
+                                         | (was {oldExclusiveAgent});\
+                                         | consent={session.cookieConsent}\
+                                         | (was {oldCookieConsent})
+                                         |<br><a href="/">home</a>
+                                       );
+                }
+
+            @HttpsRequired
+            @Get("disallow-cookies")
+            ResponseOut turnOffPersistentCookies(Session session)
+                {
+                Boolean       oldExclusiveAgent = session.exclusiveAgent;
+                CookieConsent oldCookieConsent  = session.cookieConsent;
+
+                session.exclusiveAgent = False;
+                session.cookieConsent  = new CookieConsent(lastConsent=xenia.clock.now.date);
+
+                return new HtmlResponse($|Session cookies enabled=\
+                                         |{session.exclusiveAgent}\
+                                         | (was {oldExclusiveAgent});\
+                                         | consent={session.cookieConsent}\
+                                         | (was {oldCookieConsent})
+                                         |<br><a href="/">home</a>
+                                       );
+                }
+            }
+
         @StaticContent("/static", /resources/hello)
         service Content
             {

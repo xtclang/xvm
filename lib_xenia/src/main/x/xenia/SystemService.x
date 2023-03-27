@@ -90,10 +90,11 @@ service SystemService
      * @return one of: an `HttpStatus` error code; a complete `Response`; or a new path to use in
      *         place of the passed `uriString`
      */
-    protected HttpStatus|ResponseOut|String validateSessionCookies(String      uriString,
-                                                                   RequestInfo info,
-                                                                   Int64       redirect)
+    protected HttpStatus|ResponseOut validateSessionCookies(String      uriString,
+                                                            RequestInfo info,
+                                                            Int64       redirect)
         {
+        // find up to three session cookies that were passed in with the request
         (String? txtTemp, String? tlsTemp, String? consent, Int failures)
                 = Dispatcher.extractSessionCookies(info);
         if (failures != 0)
@@ -103,14 +104,16 @@ service SystemService
             return BadRequest;
             }
 
-        // use the plain text cookie (which must exist) to find the session; use the session to then
-        // validate the cookie
-        SessionImpl session;
+        // the plain text cookie must exist
         if (txtTemp == Null)
             {
             return BadRequest;
             }
-        else if (session := sessionManager.getSessionByCookie(txtTemp),
+
+        // use the plain text cookie to find the session
+        // use the session to validate the cookie
+        SessionImpl session;
+        if (session := sessionManager.getSessionByCookie(txtTemp),
                 session.cookieMatches_(PlainText, txtTemp) == Correct)
             {
             if (info.tls)
@@ -128,6 +131,13 @@ service SystemService
                     return BadRequest;
                     }
                 }
+            else if (tlsTemp != Null || consent != Null)
+                {
+                // the TLS-only cookies should not have been passed (note that there is a Firefox
+                // bug that does pass them, but we should have filtered them out in the
+                // extractSessionCookies() method)
+                return BadRequest;
+                }
             }
         else
             {
@@ -143,7 +153,4 @@ service SystemService
 
         return NotFound;
         }
-
-
-    // ----- internal ------------------------------------------------------------------------
     }

@@ -253,9 +253,34 @@ const SessionCookie
             }
 
         /**
+         * Turn a bitmask of cookie ID ordinals into an array of corresponding cookie IDs.
+         */
+        static CookieId[] from(Int mask)
+            {
+            return switch (mask)
+                {
+                case 0b000: [                             ];
+                case 0b001: [PlainText,                   ];
+                case 0b010: [           Encrypted,        ];
+                case 0b011: [PlainText, Encrypted,        ];
+                case 0b100: [                      Consent];
+                case 0b101: [PlainText,            Consent];
+                case 0b110: [           Encrypted, Consent];
+                case 0b111: [PlainText, Encrypted, Consent];
+                default: assert;
+                };
+            }
+
+        /**
+         * A response header value that will erase this CookieId from the user agent.
+         */
+        @Lazy(() -> $"{cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT{attributes}")
+        String eraser;
+
+        /**
          * The bitmask for this CookieId.
          */
-        Int mask.get()
+        Byte mask.get()
             {
             return 1 << ordinal;
             }
@@ -263,37 +288,37 @@ const SessionCookie
         /**
          * A bitset representing no cookies.
          */
-        static Int None = 0b000;
+        static Byte None = 0b000;
 
         /**
          * A bitset representing just the plaintext cookie.
          */
-        static Int NoTls = 0b001;
+        static Byte NoTls = 0b001;
 
         /**
          * A bitset representing just the TLS temporary cookie.
          */
-        static Int TlsTemp = 0b010;
+        static Byte TlsTemp = 0b010;
 
         /**
          * A bitset representing both of the TLS cookies.
          */
-        static Int BothTls = 0b110;
+        static Byte BothTls = 0b110;
 
         /**
          * A bitset representing just the temporary cookies.
          */
-        static Int BothTemp = 0b011;
+        static Byte BothTemp = 0b011;
 
         /**
          * A bitset representing just the consent cookie.
          */
-        static Int OnlyConsent = 0b100;
+        static Byte OnlyConsent = 0b100;
 
         /**
          * A bitset representing all three cookies.
          */
-        static Int All = 0b111;
+        static Byte All = 0b111;
         }
 
 
@@ -453,6 +478,25 @@ const SessionCookie
             {
             return Null;
             }
+        }
+
+    /**
+     * Obtain the "cookie text" from a raw cookie string. In the case of the persistent cookie,
+     * there is a human-readable chunk of text added to the front of the "cookie text" and delimited
+     * by a forward slash character.
+     *
+     * @param cookie  a raw cookie passed from a user agent
+     *
+     * @return the "cookie text" portion of the raw cookie string
+     */
+    static String textFromCookie(String cookie)
+        {
+        if (Int div := cookie.lastIndexOf('/'))
+            {
+            return cookie.substring(div+1);
+            }
+
+        return cookie;
         }
 
 

@@ -7,6 +7,8 @@ import HttpServer.RequestInfo;
 
 import SessionCookie.CookieId;
 
+import SessionImpl.Match_;
+
 import web.CookieConsent;
 import web.Endpoint;
 import web.ErrorHandler;
@@ -227,9 +229,11 @@ service Dispatcher(Catalog        catalog,
                 (HttpStatus|SessionImpl result, Boolean redirect, Int eraseCookies) = ensureSession(requestInfo);
                 if (result.is(HttpStatus))
                     {
-                    RequestIn request = new Http1Request(requestInfo, []);
-                    Session?  session = getSessionOrNull(httpServer, context);
-                    response = catalog.webApp.handleUnhandledError^(session, request, result);
+                    response = new SimpleResponse(result);
+                    for (CookieId cookieId : CookieId.from(eraseCookies))
+                        {
+                        response.header.add(Header.SET_COOKIE, cookieId.eraser);
+                        }
                     break ProcessRequest;
                     }
 
@@ -247,19 +251,18 @@ service Dispatcher(Catalog        catalog,
                     Int redirectId = redirectResult;
                     response = new SimpleResponse(TemporaryRedirect);
                     Header header = response.header;
-                    assert SessionCookie cookie := session.getCookie_(PlainText);
-                    header.add(Header.SET_COOKIE, cookie.toString());
-
-                    if (tls)
+// REVIEW
+                    Byte desired = session.desiredCookies_(tls);
+                    for (CookieId cookieId : CookieId.values)
                         {
-                        assert cookie := session.getCookie_(Encrypted);
-                        header.add(Header.SET_COOKIE, cookie.toString());
-
-                        CookieConsent cookieConsent = session.cookieConsent;
-                        if (cookieConsent.lastConsent != Null)
+                        if (desired & cookieId.mask != 0)
                             {
-                            assert cookie := session.getCookie_(Consent);
+                            assert SessionCookie cookie := session.getCookie_(cookieId);
                             header.add(Header.SET_COOKIE, cookie.toString());
+                            }
+                        else if (eraseCookies & cookieId.mask != 0)
+                            {
+                            header.add(Header.SET_COOKIE, cookieId.eraser);
                             }
                         }
 
@@ -390,8 +393,11 @@ service Dispatcher(Catalog        catalog,
      *
      * @param requestInfo  the incoming request
      *
-     * @return result    the session object, or a `4xx`-range `HttpStatus` that indicates a failure
-     * @return redirect  True indicates that redirection is required to update the session cookies
+     * @return result        the session object, or a `4xx`-range `HttpStatus` that indicates a
+     *                       failure
+     * @return redirect      True indicates that redirection is required to update the session
+     *                       cookies
+     * @return eraseCookies  a bit mask of the cookie ID ordinals to delete
      */
     private (SessionImpl|HttpStatus result, Boolean redirect, Int eraseCookies)
             ensureSession(RequestInfo requestInfo)
@@ -403,6 +409,8 @@ service Dispatcher(Catalog        catalog,
             return BadRequest, False, eraseCookies;
             }
 
+        Boolean tls = requestInfo.tls;
+
         // 1 2 3TLS description/action
         // - - - -  ------------------
         //       0  create new session; redirect to verification (send cookie 1)
@@ -412,170 +420,167 @@ service Dispatcher(Catalog        catalog,
         //          they were, then this is an error, because it indicates the likely theft of the
         //          plain text cookie); redirect to verification (send cookies 1 and 2, and 3 if
         //          [cookieConsent] has been set)
-        //   x   0  error (no TLS, so cookie 2 is illegally present; also missing cookie 1)
+        //   x   0* error (no TLS, so cookie 2 is illegally present; also missing cookie 1)
         //   x   1  error (missing cookie 1)
-        // x x   0  error (no TLS, so cookie 2 is illegally present)
+        // x x   0* error (no TLS, so cookie 2 is illegally present)
         // x x   1  validate cookie 1 & 2; if [cookieConsent] has been set, redirect to verification
-        //     x 0  error (no TLS, so cookie 3 is illegally present)
+        //     x 0*  error (no TLS, so cookie 3 is illegally present)
         //     x 1  validate cookie 3; assume temporary cookies absent due to user agent discarding
         //          temporary cookies; redirect to verification (send cookies 1 and 2)
-        // x   x 0  error (no TLS, so cookie 3 is illegally present)
+        // x   x 0* error (no TLS, so cookie 3 is illegally present)
         // x   x 1  validate cookie 1 & 3 (1 must be newer than 3), and verify that cookie 2 was NOT
         //          already sent & verified; merge session for cookie 1 into session for cookie 3;
         //          redirect to verification; (send cookies 1 and 2)
-        //   x x 0  error (no TLS, so cookie 2 and 3 are illegally present)
+        //   x x 0* error (no TLS, so cookie 2 and 3 are illegally present)
         //   x x 1  error (missing cookie 1)
-        // x x x 0  error (no TLS, so cookies 2 and 3 are illegally present)
+        // x x x 0* error (no TLS, so cookies 2 and 3 are illegally present)
         // x x x 1  validate cookie 1 & 2 & 3 (must be same session)
-        switch (txtTemp != Null, tlsTemp != Null, consent != Null, requestInfo.tls)
+        //
+        // * handled by the following "illegal" check
+
+        // no cookies implies that we must create a new session
+        Byte present = (txtTemp == Null ? 0 : CookieId.NoTls)
+                     | (tlsTemp == Null ? 0 : CookieId.TlsTemp)
+                     | (consent == Null ? 0 : CookieId.OnlyConsent);
+        if (present == CookieId.None)
             {
-            case (False, False, False, _):
-                // create a new session
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (True , False, False, False):  // validate cookie 1
-                // validate cookie 1
-                assert txtTemp != Null;
-                if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
-                    {
-                    (val matches, val cookie) = session.cookieMatches_(PlainText, txtTemp);
-                    switch (matches)
-                        {
-                        case Newer:
-                            assert cookie != Null;
-                            session.incrementVersion_(cookie.version+1);
-                            break;
-
-                        case Corrupt:
-                            suspectCookie(requestInfo, txtTemp);
-                            break;
-                        }
-
-                    return session, matches != Correct, CookieId.None;
-                    }
-
-                // session cookie did not identify a session, so assume that the session was
-                // valid but has since been destroyed; create a new session
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (True , False, False, True ):
-                // validate cookie 1 & verify that cookie 2/3 were NOT already sent & verified (if
-                // they were, then this is an error, because it indicates either a manual deletion
-                // of the tls cookie or a potential theft of the plain text cookie);
-                // redirect to verification (send cookies 1 and 2, and 3 if [cookieConsent] has been
-                // set)
-                assert txtTemp != Null;
-                if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
-                    {
-                    if (session.knownCookies_ == CookieId.NoTls)
-                        {
-                        (val matches, val cookie) = session.cookieMatches_(PlainText, txtTemp);
-                        switch (matches)
-                            {
-                            case Newer:
-                                assert cookie != Null;
-                                session.incrementVersion_(cookie.version+1);
-                                break;
-
-                            case Correct:
-                                break;
-
-                            default:
-                                suspectCookie(requestInfo, txtTemp);
-                                break;
-                            }
-                        }
-                    else
-                        {
-                        suspectCookie(requestInfo, txtTemp);
-                        }
-                    session.ensureCookies_(CookieId.BothTemp);
-                    return session, True, CookieId.None;
-                    }
-
-                // session cookie did not identify a session, so assume that the session was
-                // valid but has since been destroyed; create a new session
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (False, True , False, False):  // error (cookie 2 illegal; missing cookie 1)
-            case (False, True , False, True ):  // error (missing cookie 1)
-            case (True , True , False, False):  // error (cookie 2 illegal)
-                suspectCookie(requestInfo, txtTemp?);
-                suspectCookie(requestInfo, tlsTemp?);
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (True , True , False, True ):
-                // validate cookie 1 & 2; if [session.cookieConsent] has been set, redirect to
-                // verification
-                assert txtTemp != Null && tlsTemp != Null;
-                if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
-                    {
-                    if (session.knownCookies_ == CookieId.BothTemp)
-                        {
-                        (val matchesPln, val cookiePln) = session.cookieMatches_(PlainText, txtTemp);
-                        (val matchesTls, val cookieTls) = session.cookieMatches_(Encrypted, tlsTemp);
-                        switch (matchesPln, matchesTls)
-                            {
-                            case (Correct, Correct):
-                                break;
-
-                            case (Newer,   Newer  ):
-                            case (Newer,   Correct):
-                            case (Correct, Newer  ):
-                                assert cookiePln != Null && cookieTls != Null;
-                                session.incrementVersion_(Int.maxOf(cookiePln.version, cookieTls.version)+1);
-                                break;
-
-                            default:
-                                suspectCookie(requestInfo, txtTemp);
-                                break;
-                            }
-                        }
-                    else
-                        {
-                        suspectCookie(requestInfo, txtTemp);
-                        }
-                    Boolean consentRequired = session.cookieConsent != None;
-                    session.ensureCookies_(consentRequired ? CookieId.All : CookieId.BothTemp);
-                    return session, consentRequired, CookieId.None;
-                    }
-
-                // session cookie did not identify a session, so assume that the session was
-                // valid but has since been destroyed; create a new session
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (False, False, True , False):  // error (cookie 3 illegal)
-                suspectCookie(requestInfo, consent?);
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (False, False, True , True ):
-                // validate cookie 3; assume temporary cookies absent due to user agent discarding
-                // temporary cookies; redirect to verification (send cookies 1 and 2)
-                TODO
-
-            case (True , False, True , False):  // error (cookie 3 illegal)
-                suspectCookie(requestInfo, tlsTemp?);
-                suspectCookie(requestInfo, consent?);
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (True , False, True , True ):
-                // validate cookie 1 & 3 (1 must be newer than 3), and verify that cookie 2 was NOT
-                // already sent & verified; merge session for cookie 1 into session for cookie 3;
-                // redirect to verification; (send cookies 1 and 2)
-                TODO
-
-            case (False, True , True , False): // error (cookie 2 and 3 illegal)
-            case (False, True , True , True ): // error (missing cookie 1)
-            case (True , True , True , False): // error (cookies 2 and 3 illegal)
-                // TODO mark the passed in cookies as suspect
-                return createSession(requestInfo), True, CookieId.None;
-
-            case (True , True , True , True ):
-                // validate cookie 1 & 2 & 3 (must be same session)
-                TODO
+            return createSession(requestInfo), True, CookieId.None;
             }
-        }
 
+        // based on whether the request came in on plain-text or TLS, it might be illegal for some
+        // of the cookies to have been included
+        Byte accept  = tls ? CookieId.All : CookieId.NoTls;
+        Byte illegal = present & ~accept;
+        if (illegal != 0)
+            {
+            // these are cases that we have no intelligent way to handle: the browser has sent
+            // cookies that should not have been sent. we can try to log the error against the
+            // session, but the only obvious thing to do at this point is to delete the unacceptable
+            // cookies and start over
+            SessionImpl? sessionNoTls = Null;
+            sessionNoTls := sessionManager.getSessionByCookie(txtTemp?);
+
+            for (CookieId cookieId : CookieId.from(illegal))
+                {
+                String cookie = switch (cookieId)
+                    {
+                    case PlainText: txtTemp;
+                    case Encrypted: tlsTemp;
+                    case Consent:   consent;
+                    } ?: assert as $"missing {cookieId} cookie";
+
+                if (SessionImpl session := sessionManager.getSessionByCookie(cookie))
+                    {
+                    if (sessionNoTls?.internalId_ != session.internalId_)
+                        {
+                        // the sessions are different, so report to both sessions that the other
+                        // cookie was for the wrong session
+                        suspectCookie(requestInfo, sessionNoTls, cookie  , WrongSession);
+                        suspectCookie(requestInfo, session     , txtTemp?, WrongSession);
+                        }
+                    else
+                        {
+                        // report to the session (from the illegal cookie) that that cookie was
+                        // unexpected
+                        suspectCookie(requestInfo, session, cookie, Unexpected);
+                        }
+                    }
+                }
+
+            return BadRequest, False, illegal;
+            }
+
+        // perform a "fast path" check: if all the present cookies point to the same session
+        if ((SessionImpl session, Boolean redirect) := findSession(txtTemp, tlsTemp, consent))
+            {
+            Byte desired = session.desiredCookies_(tls);
+            session.ensureCookies_(desired);
+            return session, redirect || desired != present, present & ~desired;
+            }
+
+        // look up the session by each of the available cookies
+        SessionImpl? txtSession = Null;
+        SessionImpl? tlsSession = Null;
+        SessionImpl? conSession = Null;
+
+        txtSession := sessionManager.getSessionByCookie(txtTemp?);
+        tlsSession := sessionManager.getSessionByCookie(tlsTemp?);
+        conSession := sessionManager.getSessionByCookie(consent?);
+
+        // common case: there's a persistent session that we found, but there was already a
+        // temporary session created with a plain text cookie before the user agent connected over
+        // TLS and sent us the persistent cookie
+        if (conSession != Null)
+            {
+            (Match_ match, SessionCookie? cookie) = conSession.cookieMatches_(Consent, consent ?: assert);
+            switch (match)
+                {
+                case Correct:
+                case Older:
+                case Newer:
+                    // if the session specified by the plain text cookie is different from the session
+                    // specified by the persistent cookie, then it may have more recent information that we
+                    // want to retain (i.e. add to the session specified by the persistent cookie)
+                    if (txtSession?.internalId_ != conSession.internalId_)
+                        {
+                        conSession.merge_(txtSession);
+                        }
+
+                    // there should NOT be a TLS cookie with a different ID from the persistent cookie,
+                    // since they both go over TLS
+                    if (tlsSession?.internalId_ != conSession.internalId_)
+                        {
+                        suspectCookie(requestInfo, conSession, tlsTemp ?: assert, WrongSession);
+                        }
+
+                    // treat this event as significant enough to warrant a new session version; this
+                    // helps to force the bifurcation of the session in the case of cookie theft
+                    conSession.incrementVersion_();
+
+                    // redirect to make sure all cookies are up to date
+                    return conSession, True, CookieId.None;
+                }
+            }
+
+        // remaining cases: either no session was found (even if there are some session cookies)
+        if (txtSession == Null && tlsSession == Null && conSession == Null)
+            {
+            // create a new session
+            HttpStatus|SessionImpl result = sessionManager.createSession(requestInfo);
+            if (result.is(HttpStatus))
+                {
+                // failed to create a session, which is reported back as an error, and we'll erase
+                // any non-persistent cookies (we don't erase the persistent cookie because it may
+                // contain consent info)
+                return result, False, present & CookieId.BothTemp;
+                }
+
+            // don't lose previous consent information if there was any in the persistent cookie
+            // (the "consent" variable holds the text content of the persistent cookie)
+            SessionImpl session = result;
+            if (consent != Null)
+                {
+                try
+                    {
+                    SessionCookie cookie = new SessionCookie(consent);
+                    session.cookieConsent = cookie.consent;
+                    }
+                catch (Exception _) {}
+                }
+
+            // create the desired cookies, and delete the undesired cookies
+            Byte desired = session.desiredCookies_(tls);
+            session.ensureCookies_(desired);
+            return session, True, present & ~desired;
+            }
+
+        // every other case: blow it all up and start over
+        suspectCookie(requestInfo, txtSession?, tlsTemp?, WrongSession);
+        suspectCookie(requestInfo, txtSession?, consent?, WrongSession);
+        suspectCookie(requestInfo, tlsSession?, txtTemp?, WrongSession);
+        suspectCookie(requestInfo, tlsSession?, consent?, WrongSession);
+        return createSession(requestInfo), True, CookieId.None;
+        }
 
     /**
      * Using the request information, find any session cookie values.
@@ -657,6 +662,82 @@ service Dispatcher(Catalog        catalog,
         return txtTemp, tlsTemp, consent, failures;
         }
 
+    /**
+     * Look up the session specified by the provided cookies.
+     *
+     * @param txtTemp   the temporary plaintext session cookie value, or Null if absent
+     * @param tlsTemp   the temporary TSL-protected session cookie value, or Null if absent
+     * @param consent   the persistent consent cookie value, or Null if absent
+     *
+     * @return True iff the passed cookies are valid and all point to the same session
+     * @return (conditional) the session, iff the provided cookies all point to the same session
+     * @return (conditional) True if the user agent's cookies need to be updated
+     */
+    conditional (SessionImpl session, Boolean redirect)
+            findSession(String? txtTemp, String? tlsTemp, String? consent)
+        {
+        SessionImpl? session  = Null;
+        Boolean      redirect = False;
+
+        for (CookieId cookieId : PlainText..Consent)
+            {
+            String? cookieText = switch(cookieId)
+                {
+                case PlainText: txtTemp;
+                case Encrypted: tlsTemp;
+                case Consent  : consent;
+                };
+
+            if (cookieText == Null)
+                {
+                continue;
+                }
+
+            if (SessionImpl current := sessionManager.getSessionByCookie(cookieText))
+                {
+                if (session == Null)
+                    {
+                    session = current;
+                    }
+                else if (session.internalId_ != current.internalId_)
+                    {
+                    return False;
+                    }
+
+                (Match_ match, SessionCookie? cookie) = current.cookieMatches_(cookieId, cookieText);
+                switch (match)
+                    {
+                    case Correct:
+                        break;
+
+                    case Older:
+                        // the redirect will update the cookies to the current one
+                        redirect = True;
+                        break;
+
+                    case Newer:
+                        // this can happen if the server crashed after incrementing the session
+                        // version and after sending the cookie(s) back to the user agent, but
+                        // before persistently recording the updated session information
+                        assert cookie != Null;
+                        current.incrementVersion_(cookie.version+1);
+                        redirect = True;
+                        break;
+
+                    default:
+                        return False;
+                    }
+                }
+            else
+                {
+                return False;
+                }
+            }
+
+        return session == Null
+                ? False
+                : (True, session, redirect);
+        }
 
     /**
      * Using the request information, look up or create the session object.
@@ -679,16 +760,23 @@ service Dispatcher(Catalog        catalog,
         }
 
     /**
-     * Using the request information, look up or create the session object.
+     * This method is invoked when a cookie is determined to be suspect.
      *
      * @param requestInfo  the incoming request
-     *
-     * @return the session object, or a `4xx`-range `HttpStatus` that indicates a failure
+     * @param session      the session against which the bad cookie is suspected
+     * @param value        the cookie value
+     * @param failure      the [SessionImpl.Match_] value indicating the failure
      */
-    private void suspectCookie(RequestInfo requestInfo, String value)
+    private void suspectCookie(RequestInfo        requestInfo,
+                               SessionImpl        session,
+                               String             value,
+                               SessionImpl.Match_ failure)
         {
         // TODO CP
         @Inject Console console;
-        console.print($"suspect cookie: {value}");
+        console.print($|Suspect cookie {value.quoted()} with {failure=}\
+                       | for session {session.internalId_}
+                       | with known cookies {CookieId.from(session.knownCookies_)}
+                     );
         }
     }

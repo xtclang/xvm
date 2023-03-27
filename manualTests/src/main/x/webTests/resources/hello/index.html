@@ -3,11 +3,14 @@
   <body>
     <h1>HELLO</h1>
     <ul>
-      <li><a href="https://localhost:8090/static" rel="noopener noreferrer" target="_blank">secure</a></li>
-      <li><a href="/l">login</a></li>
       <li><a href="/c">count</a></li>
+      <li><a href="https://localhost:8090/static" rel="noopener noreferrer" target="_blank">with TLS</a> /
+          <a href="http://localhost:8080/static"  rel="noopener noreferrer" target="_blank">without TLS</a></li>
+      <li><a href="/l">login</a> /
+          <a href="/d">logout</a></li>
+      <li><a href="/settings/allow-cookies">enable</a> /
+          <a href="/settings/disallow-cookies">disable</a> persistent session cookie</li>
       <li><a href="/e">info</a></li>
-      <li><a href="/d">logout</a></li>
     </ul>
   </body>
 </html>

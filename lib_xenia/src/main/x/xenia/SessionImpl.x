@@ -129,6 +129,7 @@ service SessionImpl
     /**
      * If the session has been destroyed, it may contain "forwarding addresses" for the user agent
      * to follow.
+     * TODO - implement or remove
      */
     protected/private SessionRename_[] renamed_ = [];
 
@@ -182,7 +183,15 @@ service SessionImpl
      * * The [verified] property indicates that the cookie was successfully received by the user
      *   agent, and if so, when it was verified as received.
      */
-    protected static class SessionCookieInfo_(SessionCookie cookie, Time? sent=Null, Time? verified=Null, Time? expires=Null);
+    protected static class SessionCookieInfo_(SessionCookie cookie,
+                                              Time?         sent     = Null,
+                                              Time?         verified = Null,
+                                              Time?         expires  = Null,
+                                             )
+        {
+        @Override
+        String toString() = $"{cookie=}, {sent=}, {verified=}, {expires=}";
+        }
 
     /**
      * A record of session migration, in which a new session identity is created to represent this
@@ -211,6 +220,7 @@ service SessionImpl
         Newer,          // e.g. if the SessionManager didn't synchronously persist, then crashed
         Corrupt,        // could not deserialize
         WrongCookieId,  // cookie was copied from one name to another (an attempted hack!)
+        Unexpected,     // cookie should not have been sent
         }
 
 
@@ -308,7 +318,20 @@ service SessionImpl
     @Override
     void destroy()
         {
-        TODO
+        try
+            {
+            sessionDestroyed();
+            }
+        catch (Exception e)
+            {
+            log($"An exception occurred destroying session {internalId_}: {e}");
+            }
+
+        manager_.unregisterSession(internalId_,
+                                   sessionCookieInfos_[0]?.cookie : Null,
+                                   sessionCookieInfos_[1]?.cookie : Null,
+                                   sessionCookieInfos_[2]?.cookie : Null,
+                                  );
         }
 
     @Override
@@ -379,17 +402,18 @@ service SessionImpl
      * Determine if the provided session cookie matches the one stored in this session.
      *
      * @param cookieId  specifies which cookie
-     * @param value
+     * @param value     the cookie contents
      *
      * @return a `Match_` value
      * @return a cookie, if the `Match_` value was `Correct`, `Older`, `Newer`, or `WrongId`, and
      *         sometimes `Corrupt`; otherwise, `Null`
      */
-    (Match_, SessionCookie? cookie) cookieMatches_(CookieId cookieId, String value)
+    (Match_ match, SessionCookie? cookie) cookieMatches_(CookieId cookieId, String value)
         {
         SessionCookieInfo_? info = sessionCookieInfos_[cookieId.ordinal];
-        if (value == info?.cookie.text)
+        if (SessionCookie.textFromCookie(value) == info?.cookie.text)
             {
+            info.verified ?:= clock.now;
             return Correct, info.cookie;
             }
 
@@ -422,6 +446,27 @@ service SessionImpl
         }
 
     /**
+     * Indicates whether the persistent cookie should be used for this session.
+     */
+    Boolean usePersistentCookie_.get() = exclusiveAgent && cookieConsent.allows(Necessary);
+
+    /**
+     * Determine the cookies that should be shared with the user agent associated with this session.
+     *
+     * @param tls  True indicates that the request arrived on a TLS enabled connection
+     *
+     * @return a bitmask indicating the session cookies that the user agent should have
+     */
+    Byte desiredCookies_(Boolean tls)
+        {
+        return tls
+                ? usePersistentCookie_
+                        ? CookieId.All
+                        : CookieId.BothTemp
+                : CookieId.NoTls;
+        }
+
+    /**
      * Make sure that the specified cookies exist.
      *
      * @param cookieId  which session cookie to ask for
@@ -439,18 +484,23 @@ service SessionImpl
         }
 
     /**
-     * Make sure that the specified cookies exist.
+     * Increment the session version as the result of a significant change to the session.
      *
-     * @param cookieId  which session cookie to ask for
+     * @param newVersion  (optional) the suggested new version number
      */
     void incrementVersion_(Int? newVersion=Null)
         {
         assert knownCookies_ != 0;
 
-        version_ = newVersion ?: version_ + 1;
+        version_ = version_ + 1;
+        if (newVersion? > version_)
+            {
+            version_ = newVersion;
+            }
 
         Time now     = clock.now;
         Time expires = now + manager_.persistentCookieDuration;
+        Byte desired = desiredCookies_(knownCookies_ & CookieId.BothTls != 0);
         for (CookieId cookieId : CookieId.values)
             {
             Int i = cookieId.ordinal;
@@ -460,15 +510,49 @@ service SessionImpl
                 manager_.removeSessionCookie(this, oldInfo.cookie);
                 }
 
-            if (knownCookies_ & cookieId.mask != 0)
+            if (desired & cookieId.mask == 0)
+                {
+                sessionCookieInfos_[i] = Null;
+                }
+            else
                 {
                 // create the session cookie
                 SessionCookie cookie = new SessionCookie(internalId_, cookieId, knownCookies_,
-                        cookieConsent, cookieId.persistent ? expires : Null, ipAddress, now);
+                        cookieConsent, cookieId.persistent ? expires : Null, ipAddress, now, version_);
                 sessionCookieInfos_[i] = new SessionCookieInfo_(cookie);
                 manager_.addSessionCookie(this, cookie);
                 }
             }
+        }
+
+    /**
+     * Merge the passed temporary session into this session.
+     *
+     * @param temp  a session that will be discarded, because it was determined to be a temporary
+     *              session that was being used in lieu of this session
+     */
+    void merge_(SessionImpl temp)
+        {
+        try
+            {
+            sessionMergedFrom(temp);
+            }
+        catch (Exception e)
+            {
+            log($"An exception occurred merging session {temp.internalId_} into {this.internalId_}: {e}");
+            }
+
+        this.lastUse         = this.lastUse.notLessThan(temp.lastUse);
+        this.exclusiveAgent |= temp.exclusiveAgent;
+
+        Date? tempConsent = temp.cookieConsent.lastConsent;
+        Date? thisConsent = this.cookieConsent.lastConsent;
+        if (tempConsent != Null && (thisConsent == Null || tempConsent > thisConsent))
+            {
+            this.cookieConsent = temp.cookieConsent;
+            }
+
+        temp.destroy();
         }
 
     /**

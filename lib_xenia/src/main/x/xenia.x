@@ -108,6 +108,15 @@ module xenia.xtclang.org
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
+     * TODO this is temporary, but we do need a permanent way to log
+     */
+    static void log(String text)
+        {
+        @Inject Console console;
+        console.print($"**Log: {text}");
+        }
+
+    /**
      * Obtain the user agent string.
      */
     static String extractUserAgent(HttpServer.RequestInfo requestInfo)
