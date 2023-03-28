@@ -6,8 +6,6 @@ import web.CookieConsent;
 import web.Header;
 import web.TrustLevel;
 
-import web.codecs.Base64Format;
-
 import HttpServer.RequestInfo;
 
 import TimeOfDay.PICOS_PER_SECOND;
@@ -96,12 +94,16 @@ import TimeOfDay.PICOS_PER_SECOND;
  *   session before it is discarded, and all three cookies are then re-written.
  */
 const SessionCookie
-        implements Destringable
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    @Override
-    construct(String text)
+    /**
+     * Construct a SessionCookie from the text of the cookie as provided by a user agent.
+     *
+     * @param manager  the SessionManager
+     * @param text     the entire text of the cookie value
+     */
+    construct(SessionManager manager, String text)
         {
         // if the text is the entire toString() value, then just extract the cookie value from it
         if (Int assign := text.indexOf('='))
@@ -129,7 +131,10 @@ const SessionCookie
             }
 
         // decrypt and deserialize the cookie value
-        String[] parts    = decrypt(text).split(',');
+        assert:arg String plaintext := manager.decryptCookie(text);
+        String[] parts = plaintext.split(',');
+        assert:arg parts.size == 9 as $"Invalid cookie: {text.quoted()}";
+
         this.sessionId    = new Int(parts[0]);
         this.cookieId     = CookieId.values[new Int(parts[1])];
         this.knownCookies = new Int(parts[2]);
@@ -152,6 +157,7 @@ const SessionCookie
     /**
      * Construct a SessionCookie from its constituent members.
      *
+     * @param manager       the SessionManager
      * @param sessionId     the session identity
      * @param cookieId      the cookie identity used by the user agent
      * @param knownCookies  the bitset of known cookies for the user agent
@@ -163,16 +169,17 @@ const SessionCookie
      * @param salt          (optional) the salt value to include when encrypting the cookie
      * @param text          (optional) the text of the cookie, as provided by the user agent
      */
-    construct(Int           sessionId,
-              CookieId      cookieId,
-              Int           knownCookies,
-              CookieConsent consent,
-              Time?         expires,
-              IPAddress     lastIp,
-              Time?         created = Null,
-              Int?          version = Null,
-              UInt16?       salt    = Null,
-              String?       text    = Null,
+    construct(SessionManager manager,
+              Int            sessionId,
+              CookieId       cookieId,
+              Int            knownCookies,
+              CookieConsent  consent,
+              Time?          expires,
+              IPAddress      lastIp,
+              Time?          created = Null,
+              Int?           version = Null,
+              UInt16?        salt    = Null,
+              String?        text    = Null,
              )
         {
         this.sessionId    = sessionId;
@@ -215,7 +222,8 @@ const SessionCookie
                        String?        text         = Null,
                       )
         {
-        return new SessionCookie(sessionId    = sessionId    ?: this.sessionId,
+        return new SessionCookie(manager      =                 this.manager,
+                                 sessionId    = sessionId    ?: this.sessionId,
                                  cookieId     = cookieId     ?: this.cookieId,
                                  knownCookies = knownCookies ?: this.knownCookies,
                                  consent      = consent      ?: this.consent,
@@ -325,6 +333,12 @@ const SessionCookie
     // ----- properties ----------------------------------------------------------------------------
 
     /**
+     * As an internal implementation detail, the SessionManager is retained because it provides the
+     * sole means of cookie encryption and decryption.
+     */
+    private SessionManager manager;
+
+    /**
      * The temporally unique session identifier.
      */
     Int sessionId;
@@ -387,48 +401,13 @@ const SessionCookie
         String raw = $|{sessionId},{cookieId.ordinal},{knownCookies},{consent},\
                       |{encodeTime(expires)},{lastIp},{encodeTime(created)},{version},{salt}
                      ;
-        encrypt(raw).appendTo(buf);
+        manager.encryptCookie(raw).appendTo(buf);
 
         return buf.toString();
         }
 
 
-    // ----- encoding support ----------------------------------------------------------------------
-
-    /**
-     * Encrypt the passed readable string into an unreadable, tamper-proof, BASE-64 string
-     *
-     * @param text  the readable string
-     *
-     * @return the encrypted string in BASE-64 format
-     */
-    static String encrypt(String text)
-        {
-        Byte[] bytes = text.utf8();
-        // TODO CP bytes = encryption ...
-        return Base64Format.Instance.encode(bytes);
-        }
-
-    /**
-     * Decrypt the passed string back into a readable String
-     *
-     * @param text  the encrypted string in BASE-64 format
-     *
-     * @return the readable string
-     */
-    static String decrypt(String text)
-        {
-        try
-            {
-            Byte[] bytes = Base64Format.Instance.decode(text);
-            // TODO CP bytes = decryption ...
-            return bytes.unpackUtf8();
-            }
-        catch (Exception e)
-            {
-            return "";
-            }
-        }
+    // ----- internal helpers ----------------------------------------------------------------------
 
     /**
      * Round the time to the nearest second.
@@ -498,9 +477,6 @@ const SessionCookie
 
         return cookie;
         }
-
-
-    // ----- internal helpers ----------------------------------------------------------------------
 
     /**
      * Create a new salt value.

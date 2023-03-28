@@ -16,6 +16,12 @@ import HttpServer.RequestContext;
 service HttpHandler
         implements Handler
     {
+    /**
+     * Construct an HttpHandler for a specific application using a provided HttpServer.
+     *
+     * @param httpServer  the HttpServer
+     * @param app         the application
+     */
     construct(HttpServer httpServer, WebApp app)
         {
         Catalog catalog = buildCatalog(app);
@@ -25,7 +31,7 @@ service HttpHandler
         this.dispatchers    = new Dispatcher[];
         this.busy           = new Boolean[];
         this.bundlePool     = new BundlePool(catalog);
-        this.sessionManager = createSessionManager(catalog);
+        this.sessionManager = createSessionManager(httpServer, catalog);
         this.authenticator  = app.authenticator;
 
         Registry registry = app.registry_;
@@ -190,7 +196,14 @@ service HttpHandler
         return lastIndex++;
         }
 
-    private static SessionManager createSessionManager(Catalog catalog)
+    /**
+     * Instantiate a SessionManager for the application described by the provided [Catalog] using
+     * the specified HttpServer.
+     *
+     * @param httpServer  the HttpServer
+     * @param catalog     the application's Catalog
+     */
+    private static SessionManager createSessionManager(HttpServer httpServer, Catalog catalog)
         {
         import ecstasy.reflect.Annotation;
         import SessionManager.SessionProducer;
@@ -220,6 +233,8 @@ service HttpHandler
                 };
             }
 
-        return new SessionManager(new SessionStore(), sessionProducer);
+        SessionManager mgr = new SessionManager(new SessionStore(), sessionProducer);
+        httpServer.configureService(mgr);
+        return mgr;
         }
     }

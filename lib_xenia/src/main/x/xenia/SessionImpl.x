@@ -449,7 +449,7 @@ service SessionImpl
         SessionCookie cookie;
         try
             {
-            cookie = new SessionCookie(value);
+            cookie = new SessionCookie(manager_, value);
             }
         catch (Exception _)
             {
@@ -546,8 +546,9 @@ service SessionImpl
             else
                 {
                 // create the session cookie
-                SessionCookie cookie = new SessionCookie(internalId_, cookieId, knownCookies_,
-                        cookieConsent, cookieId.persistent ? expires : Null, ipAddress, now, version_);
+                SessionCookie cookie = new SessionCookie(manager_, internalId_, cookieId,
+                        knownCookies_, cookieConsent, cookieId.persistent ? expires : Null,
+                        ipAddress, now, version_);
                 sessionCookieInfos_[i] = new SessionCookieInfo_(cookie);
                 manager_.addSessionCookie(this, cookie);
                 }

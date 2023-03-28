@@ -1,4 +1,7 @@
+import crypto.Decryptor;
+
 import web.HttpStatus;
+import web.codecs.Base64Format;
 
 import HttpServer.RequestInfo;
 import SessionStore.IOResult;
@@ -137,6 +140,60 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      */
     public/private Duration persistentCookieDuration = Duration:760D;  // default: 2 years + 1 month
 
+    /**
+     * The encryptor/decryptor used for session cookie values.
+     */
+    @Unassigned
+    private Decryptor cookieDecryptor;
+
+
+    // ----- cookie encoding support ---------------------------------------------------------------
+
+    void configureEncryption(Decryptor cookieDecryptor)
+        {
+        assert this.&cookieDecryptor.assigned == False;
+        this.cookieDecryptor = cookieDecryptor;
+        }
+
+    /**
+     * Encrypt the passed readable string into an unreadable, tamper-proof, BASE-64 string
+     *
+     * @param text  the readable string
+     *
+     * @return the encrypted string in BASE-64 format
+     */
+    String encryptCookie(String text)
+        {
+        Byte[] bytes = text.utf8();
+
+        bytes = cookieDecryptor.encrypt(bytes);
+
+        return Base64Format.Instance.encode(bytes);
+        }
+
+    /**
+     * Decrypt the passed string back into a readable String
+     *
+     * @param text  the encrypted string in BASE-64 format
+     *
+     * @return the readable string
+     */
+    conditional String decryptCookie(String text)
+        {
+        try
+            {
+            Byte[] bytes = Base64Format.Instance.decode(text);
+
+            bytes = cookieDecryptor.decrypt(bytes);
+
+            return True, bytes.unpackUtf8();
+            }
+        catch (Exception e)
+            {
+            return False;
+            }
+        }
+
 
     // ----- session control -----------------------------------------------------------------------
 
@@ -213,7 +270,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
 
         try
             {
-            SessionCookie cookie = new SessionCookie(cookieText);
+            SessionCookie cookie = new SessionCookie(this, cookieText);
             return getSessionById(cookie.sessionId);
             }
         catch (Exception e)

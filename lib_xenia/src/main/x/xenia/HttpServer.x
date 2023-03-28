@@ -49,6 +49,11 @@ interface HttpServer
     void configure(String hostName, KeyStore keystore, UInt16 httpPort = 80, UInt16 httpsPort = 443);
 
     /**
+     * Configure a Xenia service.
+     */
+    void configureService((service) svc);
+
+    /**
      * Start the server, routing all incoming requests to the specified handler.
      */
     void start(Handler handler);

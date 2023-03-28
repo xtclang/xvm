@@ -565,7 +565,7 @@ service Dispatcher(Catalog        catalog,
                 {
                 try
                     {
-                    SessionCookie cookie = new SessionCookie(consent);
+                    SessionCookie cookie = new SessionCookie(sessionManager, consent);
                     session.cookieConsent = cookie.consent;
                     }
                 catch (Exception _) {}
