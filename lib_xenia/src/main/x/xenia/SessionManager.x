@@ -7,14 +7,36 @@ import SessionStore.IOResult;
 /**
  * A service that keeps track of all of the `Session` objects.
  *
-* The implementation of `Session` uses three cookies:
+ * The implementation of `Session` uses three cookies:
  *
+ * * A "plain text" temporary (i.e. not stored on disk by the user agent) cookie, which is not
+ *   itself in plain text (since all cookies are encrypted), but rather it is a cookie that is
+ *   allowed to be sent and received over a "plain text" (non TLS) connection;
+ * * A "TLS only" temporary cookie, which plays the same role as the plain text cookie, but is only
+ *   allowed to be sent and received over a TLS connection for security reasons; and
+ * * A persistent "consent" cookie, i.e. a cookie that the user has given permission (like "remember
+ *   me on this device") to store persistently, and which also includes the information about cookie
+ *   consent so that it is not lost when the user agent restarts, etc.
  *
- * TODO CP
- * - assume anonymous user
- * - assume shared device (allow user to explicitly indicate that device is not shared)
- * - assume no consent (allow user to consent, which enables persistent cookies if device is explicitly not shared)
- *
+ * The assumption is that there is no consent to store persistent cookies unless the user explicitly
+ * gives consent. This is based on a number of regulations by various nation states and by the EU.
+ * While an application can override this by forcing fake consent information into the session,
+ * doing so would be dangerous in terms of legal liabilities, and counter-productive in terms of
+ * the effort generally required to implement consent tracking. As a result, the session management
+ * is fully capable of operating without consent, because it does so using non-persistent cookies.
+ * In some jurisdictions, it is considered acceptable to use persistent cookies for "necessary"
+ * information without consent, and that "necessary" information may apply to session cookies; as
+ * with any legal matter, a legal expert should be consulted when in doubt. Regardless, the approach
+ * selected by this implementation is to always assume that the user desires anonymity unless
+ * otherwise indicated; that the user is on a shared device unless otherwise indicated; and that
+ * the user withholds all consent, unless otherwise indicated. These choices are made explicitly
+ * for the benefit of the user; applications that desire to override these choices should do so with
+ * the consent of the user. The exception is when the context of the application is well known, and
+ * these defaults are contrary to that context -- and that the users would wholeheartedly agree;
+ * this is often the case when building an application used within a specific company, for example,
+ * in which the end users are employees or partners, and there is a reasonable expectation of
+ * certain functionality being provided automatically, and there is no reasonable expectation of
+ * either anonymity or privacy.
  */
 @Concurrent
 service SessionManager(SessionStore store, SessionProducer instantiateSession)
