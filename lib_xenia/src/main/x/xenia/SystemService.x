@@ -1,4 +1,6 @@
 import HttpServer.RequestInfo;
+import SessionCookie.CookieId;
+import SessionImpl.Match_;
 
 import web.Header;
 import web.HttpStatus;
@@ -110,47 +112,125 @@ service SystemService
             return BadRequest;
             }
 
-        // use the plain text cookie to find the session
-        // use the session to validate the cookie
-        SessionImpl session;
-        if (session := sessionManager.getSessionByCookie(txtTemp),
-                session.cookieMatches_(PlainText, txtTemp) == Correct)
+        // the TLS cookies must NOT exist if we do not have TLS request
+        Boolean tls = info.tls;
+        if (!tls && (tlsTemp != Null || consent != Null))
             {
-            if (info.tls)
-                {
-                // use the session to validate the TLS cookie
-                if (tlsTemp == Null || session.cookieMatches_(Encrypted, tlsTemp) != Correct)
-                    {
-                    return BadRequest;
-                    }
-
-                // use the session to validate the persistent consent cookie
-                if (session.cookieConsent != None,
-                        consent == Null || session.cookieMatches_(Consent, consent) != Correct)
-                    {
-                    return BadRequest;
-                    }
-                }
-            else if (tlsTemp != Null || consent != Null)
-                {
-                // the TLS-only cookies should not have been passed (note that there is a Firefox
-                // bug that does pass them, but we should have filtered them out in the
-                // extractSessionCookies() method)
-                return BadRequest;
-                }
-            }
-        else
-            {
+            // the TLS-only cookies should not have been passed (note that there is a
+            // Firefox bug that does pass them, but we should have filtered them out in
+            // the extractSessionCookies() method)
             return BadRequest;
             }
 
-        if (Uri uri := session.claimRedirect_(redirect))
+        // use the plain text cookie to find the session
+        // use the session to validate the cookie
+        SessionImpl session;
+        if (session := sessionManager.getSessionByCookie(txtTemp))
             {
-            ResponseOut response = new SimpleResponse(TemporaryRedirect);
-            response.header.put(Header.LOCATION, uri.toString());
-            return response;
+            Boolean repeat = False;
+            (Match_ match, SessionCookie? cookie) = session.cookieMatches_(PlainText, txtTemp);
+            switch (match)
+                {
+                case Correct:
+                    session.cookieVerified_(cookie ?: assert);
+                    break;
+
+                case Older:
+                    // need to redirect (again) because the session version was just incremented
+                    // while we were waiting for the current redirect
+                    repeat = True;
+                    break;
+
+                default:
+                    return BadRequest;
+                }
+
+            if (tlsTemp == Null)
+                {
+                // if the redirect came in on TLS, then the TLS "temporary" cookie should have been
+                // included
+                if (tls)
+                    {
+                    return BadRequest;
+                    }
+                }
+            else
+                {
+                (match, cookie) = session.cookieMatches_(Encrypted, tlsTemp);
+                switch (match)
+                    {
+                    case Correct:
+                        session.cookieVerified_(cookie ?: assert);
+                        break;
+
+                    case Older:
+                        repeat = True;
+                        break;
+
+                    default:
+                        return BadRequest;
+                    }
+                }
+
+            if (consent == Null)
+                {
+                // the consent cookie is required over TLS if the session has sent it out, unless
+                // we've already determined that we need to redirect yet again)
+                if (tls && session.usePersistentCookie_ && !repeat,
+                        (_, Time? sent) := session.getCookie_(Consent), sent != Null)
+                    {
+                    return BadRequest;
+                    }
+                }
+            else
+                {
+                (match, cookie) = session.cookieMatches_(Consent, consent);
+                switch (match)
+                    {
+                    case Correct:
+                        session.cookieVerified_(cookie ?: assert);
+                        break;
+
+                    case Older:
+                        repeat = True;
+                        break;
+
+                    default:
+                        return BadRequest;
+                    }
+                }
+
+            // handle the (rare) case in which we need to repeat the redirect
+            if (repeat)
+                {
+                ResponseOut response = new SimpleResponse(TemporaryRedirect);
+                Header      header   = response.header;
+                for (CookieId cookieId : CookieId.from(session.desiredCookies_(tls)))
+                    {
+                    if ((SessionCookie resendCookie, Time? sent, Time? verified)
+                            := session.getCookie_(cookieId), verified == Null)
+                        {
+                        header.add(Header.SET_COOKIE, resendCookie.toString());
+                        session.cookieSent_(resendCookie);
+                        }
+                    }
+
+                // come back to verify that the user agent received and subsequently sent the
+                // cookies
+                Uri newUri = new Uri(path=$"{catalog.services[0].path}/session/{redirect}");
+                header.put(Header.LOCATION, newUri.toString());
+                return response;
+                }
+
+            // handle the (common) case in which the redirect was successful
+            if (Uri uri := session.claimRedirect_(redirect))
+                {
+                ResponseOut response = new SimpleResponse(TemporaryRedirect);
+                response.header.put(Header.LOCATION, uri.toString());
+                return response;
+                }
             }
 
-        return NotFound;
+        return BadRequest;
         }
     }

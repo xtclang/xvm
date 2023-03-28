@@ -248,17 +248,20 @@ service Dispatcher(Catalog        catalog,
                         break ProcessRequest;
                         }
 
-                    Int redirectId = redirectResult;
                     response = new SimpleResponse(TemporaryRedirect);
-                    Header header = response.header;
-// REVIEW
-                    Byte desired = session.desiredCookies_(tls);
+                    Int    redirectId = redirectResult;
+                    Header header     = response.header;
+                    Byte   desired    = session.desiredCookies_(tls);
                     for (CookieId cookieId : CookieId.values)
                         {
                         if (desired & cookieId.mask != 0)
                             {
-                            assert SessionCookie cookie := session.getCookie_(cookieId);
-                            header.add(Header.SET_COOKIE, cookie.toString());
+                            if ((SessionCookie cookie, Time? sent, Time? verified)
+                                    := session.getCookie_(cookieId), verified == Null)
+                                {
+                                header.add(Header.SET_COOKIE, cookie.toString());
+                                session.cookieSent_(cookie);
+                                }
                             }
                         else if (eraseCookies & cookieId.mask != 0)
                             {

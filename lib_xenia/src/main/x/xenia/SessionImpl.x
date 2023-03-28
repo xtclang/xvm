@@ -399,6 +399,35 @@ service SessionImpl
         }
 
     /**
+     * Record that the specified cookie was sent to the user agent.
+     *
+     * @param cookie  one of the session cookies
+     */
+    void cookieSent_(SessionCookie cookie)
+        {
+        if (SessionCookieInfo_ info ?= sessionCookieInfos_[cookie.cookieId.ordinal],
+                cookie.version == info.cookie.version)
+            {
+            info.sent = clock.now;
+            }
+        }
+
+    /**
+     * Record that the specified cookie was received by the user agent.
+     *
+     * @param cookie  one of the session cookies
+     */
+    void cookieVerified_(SessionCookie cookie)
+        {
+        if (SessionCookieInfo_ info ?= sessionCookieInfos_[cookie.cookieId.ordinal],
+                cookie.version == info.cookie.version)
+            {
+            info.verified = clock.now;
+            }
+        }
+
+
+    /**
      * Determine if the provided session cookie matches the one stored in this session.
      *
      * @param cookieId  specifies which cookie
