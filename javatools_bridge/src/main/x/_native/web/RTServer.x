@@ -1,3 +1,4 @@
+import libcrypto.Decryptor;
 import libcrypto.KeyStore;
 
 /**
@@ -26,6 +27,59 @@ service RTServer
         this.hostName  = hostName;
         this.plainPort = httpPort;
         this.tlsPort   = httpsPort;
+        }
+
+    @Override
+    void configureService((service) svc)
+        {
+        if (svc.is(DecryptorDependent))
+            {
+            // TEMPORARY!!
+            import libcrypto.Algorithm;
+            import libcrypto.Annotations;
+            import libcrypto.CryptoKey;
+            import libcrypto.Encryptor;
+
+            Decryptor decryptor = new Decryptor()
+                {
+                @Override
+                CryptoKey? privateKey;
+
+                @Override
+                Byte[] decrypt(Byte[] bytes)
+                    {
+                    return bytes;
+                    }
+
+                @Override
+                (Int bytesRead, Int bytesWritten) decrypt(BinaryInput source, BinaryOutput destination) = TODO
+
+                @Override
+                BinaryInput createInputDecryptor(BinaryInput  source, Annotations? annotations=Null) = TODO
+
+                @Override
+                Algorithm algorithm.get() = TODO
+
+                @Override
+                @RO CryptoKey? publicKey;
+
+                @Override
+                Byte[] encrypt(Byte[] data)
+                    {
+                    return data;
+                    }
+
+                @Override
+                (Int bytesRead, Int bytesWritten) encrypt(BinaryInput source, BinaryOutput destination) = TODO
+
+                @Override
+                BinaryOutput createOutputEncryptor(BinaryOutput destination, Annotations? annotations=Null) = TODO
+
+                @Override
+                void close(Exception? cause = Null) {}
+                };
+            svc.configureEncryption(decryptor.makeImmutable());
+            }
         }
 
     /**
@@ -126,6 +180,11 @@ service RTServer
          * @param httpsPort  the port for encrypted (tls) communications
          */
         void configure(String hostName, KeyStore keystore, UInt16 httpPort = 80, UInt16 httpsPort = 443);
+
+        /**
+         * Configure a naturally implemented service.
+         */
+        void configureService((service) svc);
 
         /**
          * Start the server, routing all incoming requests to the specified handler.
@@ -251,5 +310,14 @@ service RTServer
     static interface Handler
         {
         void handle(RequestContext context, String uri, String method, Boolean tls);
+        }
+
+    /**
+     * Duck-type based marker interface that identifies service that need to be injected with a
+     * [Decryptor]. The name of this interface is irrelevant.
+     */
+    static interface DecryptorDependent
+        {
+        void configureEncryption(Decryptor cookieDecryptor);
         }
     }

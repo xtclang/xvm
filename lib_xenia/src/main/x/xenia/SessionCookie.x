@@ -182,6 +182,7 @@ const SessionCookie
               String?        text    = Null,
              )
         {
+        this.manager      = manager;
         this.sessionId    = sessionId;
         this.cookieId     = cookieId;
         this.knownCookies = knownCookies;
