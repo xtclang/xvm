@@ -186,11 +186,10 @@ service SessionImpl
     protected static class SessionCookieInfo_(SessionCookie cookie,
                                               Time?         sent     = Null,
                                               Time?         verified = Null,
-                                              Time?         expires  = Null,
                                              )
         {
         @Override
-        String toString() = $"{cookie=}, {sent=}, {verified=}, {expires=}";
+        String toString() = $"{cookie=}, {sent=}, {verified=}";
         }
 
     /**
@@ -408,12 +407,12 @@ service SessionImpl
     conditional (SessionCookie cookie,
                  Time?         sent,
                  Time?         verified,
-                 Time?         expires  ) getCookie_(CookieId cookieId)
+                ) getCookie_(CookieId cookieId)
         {
         SessionCookieInfo_? info = sessionCookieInfos_[cookieId.ordinal];
         return info == Null
                 ? False
-                : (True, info.cookie, info.sent, info.verified, info.expires);
+                : (True, info.cookie, info.sent, info.verified);
         }
 
     /**
