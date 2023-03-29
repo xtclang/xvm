@@ -4,11 +4,13 @@ module TestSimple
 
     void run()
         {
-        console.print($"false={foo(False)? : "?"}, true={foo(True)? : "?"}");
+        String? x = bar();
+        String? y = baz();
+        console.print($"before: {x=}, {y=}");
+        x = y?;
+        console.print($"after: {x=}");
         }
 
-    conditional String foo(Boolean f)
-        {
-        return f, "hello";
-        }
+    String? bar() = "hello";
+    String? baz() = Null;
     }

@@ -24,11 +24,17 @@ import org.xvm.util.Severity;
 
 
 /**
- * A short-circuiting expression for testing if a sub-expression is null.
+ * A short-circuiting expression for testing if a sub-expression is null, and yielding the non-null
+ * value if the sub-expression is not null.
+ *
+ * Experimental feature: Alternatively, this short-circuiting expression tests a "conditional"
+ * expression (one that yields both a Boolean and at least one additional value), and short-circuits
+ * iff that first Boolean value yielded is False, and otherwise yields the second value.
  * <p/>
  * <pre>
  *     PostfixExpression NoWhitespace "?"
  * </pre>
+ *
  */
 public class NotNullExpression
         extends Expression
@@ -272,19 +278,11 @@ public class NotNullExpression
             return;
             }
 
-        if (LVal.isStack())
-            {
-            // cannot use the stack twice; generate a temporary argument
-            Argument arg = expr.generateArgument(ctx, code, true, false, errs);
-            code.add(new JumpNull(arg, m_labelShort));
-            LVal.assign(arg, code, errs);
-            }
-        else
-            {
-            // REVIEW GG is it possible that we are assigning a null directly to the resulting LVal?
-            expr.generateAssignment(ctx, code, LVal, errs);
-            code.add(new JumpNull(LVal.getLocalArgument(), m_labelShort));
-            }
+        // generate a temporary argument to avoid overwriting the destination LVal with a potential
+        // Null value
+        Argument arg = expr.generateArgument(ctx, code, true, false, errs);
+        code.add(new JumpNull(arg, m_labelShort));
+        LVal.assign(arg, code, errs);
         }
 
 
