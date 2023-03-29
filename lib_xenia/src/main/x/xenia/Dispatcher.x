@@ -582,7 +582,10 @@ service Dispatcher(Catalog        catalog,
         suspectCookie(requestInfo, txtSession?, consent?, WrongSession);
         suspectCookie(requestInfo, tlsSession?, txtTemp?, WrongSession);
         suspectCookie(requestInfo, tlsSession?, consent?, WrongSession);
-        return createSession(requestInfo), True, CookieId.None;
+
+        HttpStatus|SessionImpl result = createSession(requestInfo);
+        Byte desired = result.is(SessionImpl) ? result.desiredCookies_(tls) : CookieId.None;
+        return result, True, present & ~desired;
         }
 
     /**
