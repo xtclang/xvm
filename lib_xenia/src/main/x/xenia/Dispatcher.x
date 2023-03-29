@@ -545,11 +545,19 @@ service Dispatcher(Catalog        catalog,
                 }
             }
 
-        // remaining cases: either no session was found (even if there are some session cookies)
-        if (txtSession == Null && tlsSession == Null && conSession == Null)
+        // remaining cases: either no session was found (even if there are some session cookies), or
+        // it's possible that sessions have been lost (e.g. from a server restart), and then the
+        // user agent reestablished a connection on a non-TLS connection and the server created a
+        // new session in response, and then the user agent just now switched to a TLS connection
+        // and passed its older TLS cookie(s) from the old lost session (in which case we need to
+        // just discard those abandoned cookies, after grabbing the consent data from the persistent
+        // cookie, if there is any)
+        if (tlsSession == Null && conSession == Null)
             {
-            // create a new session
-            HttpStatus|SessionImpl result = sessionManager.createSession(requestInfo);
+            // create a new session if necessary
+            HttpStatus|SessionImpl result = txtSession == Null
+                    ? sessionManager.createSession(requestInfo)
+                    : txtSession;
             if (result.is(HttpStatus))
                 {
                 // failed to create a session, which is reported back as an error, and we'll erase
@@ -559,14 +567,16 @@ service Dispatcher(Catalog        catalog,
                 }
 
             // don't lose previous consent information if there was any in the persistent cookie
-            // (the "consent" variable holds the text content of the persistent cookie)
+            // (the "consent" variable holds the text content of the persistent cookie, and it
+            // implies that the user agent had previously specified "exclusive agent" mode)
             SessionImpl session = result;
             if (consent != Null)
                 {
                 try
                     {
                     SessionCookie cookie = new SessionCookie(sessionManager, consent);
-                    session.cookieConsent = cookie.consent;
+                    session.cookieConsent  = cookie.consent;
+                    session.exclusiveAgent = True;
                     }
                 catch (Exception _) {}
                 }
