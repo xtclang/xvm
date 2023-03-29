@@ -135,6 +135,7 @@ const SessionCookie
         String[] parts = plaintext.split(',');
         assert:arg parts.size == 9 as $"Invalid cookie: {text.quoted()}";
 
+        this.manager      = manager;
         this.sessionId    = new Int(parts[0]);
         this.cookieId     = CookieId.values[new Int(parts[1])];
         this.knownCookies = new Int(parts[2]);

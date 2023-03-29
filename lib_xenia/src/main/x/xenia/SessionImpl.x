@@ -265,10 +265,28 @@ service SessionImpl
     public/private String userAgent;
 
     @Override
-    Boolean exclusiveAgent;
+    Boolean exclusiveAgent.set(Boolean exclusive)
+        {
+        Boolean pre = usePersistentCookie_;
+        super(exclusive);
+        Boolean post = usePersistentCookie_;
+        if (pre != post)
+            {
+            incrementVersion_();
+            }
+        }
 
     @Override
-    CookieConsent cookieConsent;
+    CookieConsent cookieConsent.set(CookieConsent consent)
+        {
+        Boolean pre = usePersistentCookie_;
+        super(consent);
+        Boolean post = usePersistentCookie_;
+        if (pre != post)
+            {
+            incrementVersion_();
+            }
+        }
 
     @Override
     public/private String? userId;
