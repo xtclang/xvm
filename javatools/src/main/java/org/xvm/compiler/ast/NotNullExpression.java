@@ -4,12 +4,14 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.Label;
 
@@ -81,23 +83,45 @@ public class NotNullExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant type = expr.getImplicitType(ctx);
-        return type == null
-                ? null
-                : type.removeNullable();
+        TypeConstant[] atype = expr.getImplicitTypes(ctx);
+        switch (atype.length)
+            {
+            case 0:
+                return null;
+
+            case 1:
+                return atype[0].removeNullable();
+
+            default:
+                TypeConstant type0 = atype[0];
+                return type0.isA(pool().typeBoolean())
+                        ? atype[1]
+                        : type0.removeNullable();
+            }
         }
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
-        if (typeRequired != null && typeRequired.isTypeOfType())
+        if (typeRequired != null)
             {
-            TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
+            if (typeRequired.isTypeOfType())
+                {
+                TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
+                if (fit.isFit())
+                    {
+                    return fit;
+                    }
+                }
+
+            TypeFit fit = expr.testFitMulti(ctx, new TypeConstant[]{pool().typeBoolean(), typeRequired},
+                    fExhaustive, ErrorListener.BLACKHOLE);
             if (fit.isFit())
                 {
                 return fit;
                 }
             }
+
         return super.testFit(ctx, typeRequired, fExhaustive, errs);
         }
 
@@ -113,67 +137,89 @@ public class NotNullExpression
                 }
             }
 
-        TypeConstant typeRequest = typeRequired == null ? null : typeRequired.ensureNullable();
-        Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
+        // at this point, we have to make a decision: either this expression takes a "T?" and strips
+        // the null off and returnsn the T, or it takes a "conditional T" / "(Boolean, T)" and
+        // returns the T
+        ConstantPool   pool      = pool();
+        boolean        fCond     = false;
+        TypeConstant[] atypeCond = new TypeConstant[]{pool.typeBoolean(), pool.typeObject()};
+        Expression     exprNew;
+        if (expr.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit())
+            {
+            m_fCond = fCond = true;
+
+            if (typeRequired != null)
+                {
+                atypeCond[1] = typeRequired;
+                }
+            exprNew = expr.validateMulti(ctx, atypeCond, errs);
+            }
+        else
+            {
+            TypeConstant typeRequest = typeRequired == null ? null : typeRequired.ensureNullable();
+            exprNew = expr.validate(ctx, typeRequest, errs);
+            }
+
         if (exprNew == null)
             {
             return null;
             }
 
         expr = exprNew;
-
-        TypeConstant type = exprNew.getType();
+        TypeConstant typeResult = fCond ? exprNew.getTypes()[1] : exprNew.getType();
 
         // the second check is for not-nullable type that is still allowed to be assigned from null
         // (e.g. Object or Const)
-        if (!type.isNullable() && !pool().typeNull().isA(type.resolveConstraints()))
+        if (!fCond && !typeResult.isNullable() && !pool().typeNull().isA(typeResult.resolveConstraints()))
             {
             exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
             return replaceThisWith(exprNew);
             }
 
         AstNode parent = getParent();
-
         if (!parent.allowsShortCircuit(this))
             {
             exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
             return null;
             }
 
-        if (exprNew.isConstantNull())
+        if (!fCond && exprNew.isConstantNull())
             {
             exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
             }
 
         m_labelShort = parent.ensureShortCircuitLabel(this, ctx);
 
-        TypeConstant typeNotNull = type.removeNullable();
-
-        if (exprNew instanceof NameExpression exprName)
+        if (!fCond)
             {
-            if (exprName.left == null)
+            typeResult = typeResult.removeNullable();
+
+            if (exprNew instanceof NameExpression exprName)
                 {
-                String   sName = exprName.getName();
-                Argument arg   = ctx.getVar(sName);
-                if (arg instanceof Register)
+                if (exprName.left == null)
                     {
-                    TypeConstant typeCurr = arg.getType();
-
-                    if (!typeCurr.isA(typeNotNull))
+                    String   sName = exprName.getName();
+                    Argument arg   = ctx.getVar(sName);
+                    if (arg instanceof Register)
                         {
-                        assert typeNotNull.isA(typeCurr);
+                        TypeConstant typeCurr = arg.getType();
 
-                        Register regCurr = (Register) arg;
+                        if (!typeCurr.isA(typeResult))
+                            {
+                            assert typeResult.isA(typeCurr);
 
-                        // add the narrowing for this context and safe off the current register
-                        ctx.narrowLocalRegister(sName, regCurr, Branch.Always, typeNotNull);
-                        m_labelShort.addRestore(sName, regCurr);
+                            Register regCurr = (Register) arg;
+
+                            // add the narrowing for this context and save off the current register
+                            ctx.narrowLocalRegister(sName, regCurr, Branch.Always, typeResult);
+                            m_labelShort.addRestore(sName, regCurr);
+                            }
                         }
                     }
                 }
             }
 
-        return finishValidation(ctx, typeRequired, typeNotNull, TypeFit.Fit, null, errs);
+        return finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
         }
 
     @Override
@@ -183,25 +229,43 @@ public class NotNullExpression
         }
 
     @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return m_fCond;
+        }
+
+    @Override
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         TypeConstant typeExpr = getType();
-        if (isConstant() || pool().typeNull().isA(typeExpr.resolveConstraints()))
+        if (isConstant() || !m_fCond && pool().typeNull().isA(typeExpr.resolveConstraints()))
             {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = typeExpr.ensureNullable();
-        Assignable   var      = createTempVar(code, typeTemp, false);
-        generateAssignment(ctx, code, var, errs);
-        return var.getRegister().narrowType(typeExpr);
+        if (m_fCond)
+            {
+            Assignable   varCond = createTempVar(code, pool().typeBoolean(), true);
+            Assignable   varVal  = createTempVar(code, getType(), false);
+            Assignable[] LVals   = new Assignable[] {varCond, varVal};
+            expr.generateAssignments(ctx, code, LVals, errs);
+            code.add(new JumpFalse(varCond.getRegister(), m_labelShort));
+            return varVal.getRegister();
+            }
+        else
+            {
+            TypeConstant typeTemp = typeExpr.ensureNullable();
+            Assignable   var      = createTempVar(code, typeTemp, false);
+            generateAssignment(ctx, code, var, errs);
+            return var.getRegister().narrowType(typeExpr);
+            }
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isLocalArgument() ||
+        if (isConstant() || m_fCond || !LVal.isLocalArgument() ||
                 !pool().typeNull().isA(LVal.getType().resolveConstraints()))
             {
             super.generateAssignment(ctx, code, LVal, errs);
@@ -217,6 +281,7 @@ public class NotNullExpression
             }
         else
             {
+            // REVIEW GG is it possible that we are assigning a null directly to the resulting LVal?
             expr.generateAssignment(ctx, code, LVal, errs);
             code.add(new JumpNull(LVal.getLocalArgument(), m_labelShort));
             }
@@ -243,7 +308,11 @@ public class NotNullExpression
     protected Expression expr;
     protected Token      operator;
 
-    protected transient Label m_labelShort;
+    /**
+     * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
+     */
+    protected transient boolean m_fCond;
+    protected transient Label   m_labelShort;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
     }
