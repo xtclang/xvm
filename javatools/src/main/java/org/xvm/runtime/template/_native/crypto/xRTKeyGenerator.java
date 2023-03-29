@@ -1,15 +1,7 @@
 package org.xvm.runtime.template._native.crypto;
 
 
-import java.security.GeneralSecurityException;
-import java.security.SecureRandom;
-
-import java.util.Random;
-
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-
-import javax.crypto.spec.SecretKeySpec;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -17,7 +9,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.xService;
 
@@ -60,8 +51,7 @@ public class xRTKeyGenerator
         switch (method.getName())
             {
             case "generateSecret":
-                return invokeGenerateSecret(frame, (KeyGenHandle) ahArg[0],  (JavaLong) ahArg[1],
-                        aiReturn);
+                return invokeGenerateSecret(frame, (KeyGenHandle) ahArg[0], aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -69,30 +59,13 @@ public class xRTKeyGenerator
 
     /**
      * Native implementation of
-     *     "(Int keySize, Object secret) generateSecret(Object factory, Int seedSize)"
+     *     "(Int keySize, Object secret) generateSecret(Object factory)"
      */
-    private int invokeGenerateSecret(Frame frame, KeyGenHandle hKeyGen, JavaLong hSeedSize,
-                                     int[] aiReturn)
+    private int invokeGenerateSecret(Frame frame, KeyGenHandle hKeyGen, int[] aiReturn)
         {
-        SecretKeyFactory factory = hKeyGen.f_factory;
+        SecretKey key   = hKeyGen.f_generator.generateKey();
+        int       nSize = key.getEncoded().length;
 
-        try
-            {
-            byte[] abSeed = new byte[(int) hSeedSize.getValue()];
-            RANDOM.nextBytes(abSeed);
-
-            SecretKey key   = factory.generateSecret(new SecretKeySpec(abSeed, factory.getAlgorithm()));
-            int       nSize = key.getEncoded().length;
-
-            return frame.assignValues(aiReturn,
-                    xInt.makeHandle(nSize),
-                    new SecretHandle(key));
-            }
-        catch (GeneralSecurityException e)
-            {
-            return frame.raiseException(e.getMessage());
-            }
+        return frame.assignValues(aiReturn, xInt.makeHandle(nSize), new SecretHandle(key));
         }
-
-    private static final Random RANDOM = new SecureRandom();
     }

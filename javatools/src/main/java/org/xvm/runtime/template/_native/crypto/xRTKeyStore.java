@@ -174,7 +174,7 @@ public class xRTKeyStore
 
             ServiceContext  context  = f_container.createServiceContext("KeyStore");
             TypeComposition clzStore = getCanonicalClass(f_container);
-            ServiceHandle   hService = new KeyStoreHandle(clzStore, context, keyStore,
+            ServiceHandle   hService = new KeyStoreHandle(clzStore, context, keyStore, achPwd,
                                             keyManager, trustManager);
             context.setService(hService);
 
@@ -447,22 +447,23 @@ public class xRTKeyStore
             {
             if (keyStore.isKeyEntry(sName))
                 {
-                Key key = hStore.f_keyManager.getPrivateKey(hName.getStringValue());
-                if (!(key instanceof RSAPrivateKey privateKey))
+                Key key = hStore.f_keyStore.getKey(hName.getStringValue(), hStore.f_achPwd);
+                if (key == null)
                     {
-                    return frame.raiseException(xException.makeHandle(frame,
-                        "Unsupported private key type: " + key.getFormat()));
+                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
 
-                String sAlgorithm = privateKey.getAlgorithm();
-                int    cKeyBits   = privateKey.getModulus().bitLength();
+                String sAlgorithm = key.getAlgorithm();
+                int    cKeyBits   = key instanceof RSAPrivateKey privateKey
+                                        ? privateKey.getModulus().bitLength()
+                                        : key.getEncoded().length << 3;
 
                 List<ObjectHandle> list = new ArrayList<>(9);
                 list.add(xBoolean.TRUE);
                 list.add(xString.makeHandle(sAlgorithm));
                 list.add(xInt.makeHandle(cKeyBits >>> 3));
                 list.add(xArray.ensureEmptyByteArray());
-                list.add(new SecretHandle(privateKey));
+                list.add(new SecretHandle(key));
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
                 }
 
@@ -501,20 +502,26 @@ public class xRTKeyStore
     public static class KeyStoreHandle
                 extends ServiceHandle
         {
-        public KeyStoreHandle(TypeComposition clz, ServiceContext ctx, KeyStore keyStore,
-                              X509KeyManager keyManager, X509TrustManager trustManager)
-            {
-            super(clz, ctx);
-
-            f_keyStore     = keyStore;
-            f_keyManager   = keyManager;
-            f_trustManager = trustManager;
-            }
+        /**
+         * The key store password.
+         */
+        private final char[] f_achPwd;
 
         /**
          * The wrapped {@link KeyStore}.
          */
         public final KeyStore f_keyStore;
+
+        public KeyStoreHandle(TypeComposition clz, ServiceContext ctx, KeyStore keyStore, char[] achPwd,
+                              X509KeyManager keyManager, X509TrustManager trustManager)
+            {
+            super(clz, ctx);
+
+            f_keyStore     = keyStore;
+            f_achPwd       = achPwd;
+            f_keyManager   = keyManager;
+            f_trustManager = trustManager;
+            }
 
         /**
          * The underlying {@link KeyManager}.

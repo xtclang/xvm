@@ -47,11 +47,11 @@ service RTAlgorithms
             algorithms.add(&alg.maskAs(Algorithm));
             }
 
-        for ((String name, Int seedSize) : keyGenerators)
+        for (String name : keyGenerators)
             {
             (_, Object implementation) = getAlgorithmInfo(name, KeyGen);
 
-            Algorithm alg = new RTKeyGenerator(name, seedSize, implementation);
+            Algorithm alg = new RTKeyGenerator(name, implementation);
             algorithms.add(&alg.maskAs(Algorithm));
             }
 
@@ -124,12 +124,13 @@ service RTAlgorithms
         ];
 
     /**
-     * Supported key generation algorithms (name, seed size).
+     * Supported key generation algorithms.
      */
-    static Tuple<String, Int>[] keyGenerators =
+    static String[] keyGenerators =
         [
-        ("DES"   , 8),
-        ("DESede", 24),
+        "AES",
+        "DES",
+        "DESede",
         ];
 
     static Int[] AES_SIZES = [128 >> 3, 192 >> 3, 256 >> 3];

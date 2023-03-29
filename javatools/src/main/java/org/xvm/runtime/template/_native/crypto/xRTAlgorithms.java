@@ -8,10 +8,12 @@ import java.security.MessageDigest;
 import java.security.Signature;
 
 import java.security.spec.X509EncodedKeySpec;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKeyFactory;
 
 import javax.crypto.spec.DESKeySpec;
@@ -195,10 +197,10 @@ public class xRTAlgorithms
 
                 case 4: // KeyGenerator
                     {
-                    SecretKeyFactory factory = SecretKeyFactory.getInstance(sName);
+                    KeyGenerator generator = KeyGenerator.getInstance(sName);
 
                     nBlockSize = 0;
-                    hImpl      = new KeyGenHandle(factory);
+                    hImpl      = new KeyGenHandle(generator);
                     break;
                     }
 
@@ -367,17 +369,17 @@ public class xRTAlgorithms
     public static class KeyGenHandle
             extends ObjectHandle
         {
-        protected KeyGenHandle(SecretKeyFactory factory)
+        /**
+         * The wrapped {@link KeyGenerator}.
+         */
+        public final KeyGenerator f_generator;
+
+        protected KeyGenHandle(KeyGenerator generator)
             {
             super(xObject.INSTANCE.getCanonicalClass());
 
-            f_factory = factory;
+            f_generator = generator;
             }
-
-        /**
-         * The wrapped {@link SecretKeyFactory}.
-         */
-        public final SecretKeyFactory f_factory;
         }
 
     /**

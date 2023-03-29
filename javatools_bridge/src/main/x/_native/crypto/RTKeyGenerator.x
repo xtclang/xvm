@@ -7,14 +7,13 @@ import libcrypto.PrivateKey;
 /**
  * The native [KeyGenerator] [Algorithm] implementation.
  */
-service RTKeyGenerator(String name, Int seedSize)
+service RTKeyGenerator(String name)
         implements Algorithm, KeyGenerator
     {
-    construct(String name, Int seedSize, Object factory)
+    construct(String name, Object factory)
         {
-        this.name     = name;
-        this.seedSize = seedSize;
-        this.factory  = factory;
+        this.name    = name;
+        this.factory = factory;
         }
 
     /**
@@ -60,7 +59,7 @@ service RTKeyGenerator(String name, Int seedSize)
     @Override
     CryptoKey generateSecretKey(String name)
         {
-        (Int keySize, Object secret) = generateSecret(factory, seedSize );
+        (Int keySize, Object secret) = generateSecret(factory);
 
         CryptoKey key = new RTPrivateKey(name, this.name, keySize, secret);
         return &key.maskAs(PrivateKey);
@@ -78,5 +77,5 @@ service RTKeyGenerator(String name, Int seedSize)
 
     // ----- native methods ------------------------------------------------------------------------
 
-    private (Int keySize, Object secret) generateSecret(Object factory, Int seedSize) {TODO("Native");}
+    private (Int keySize, Object secret) generateSecret(Object factory) {TODO("Native");}
     }

@@ -1,3 +1,17 @@
+/**
+ * This test assumes that the keystore (test_store.p12) contains two keys:
+ *  - a public/private pair created by the command like:
+ *
+ *    keytool -genkeypair -alias test_pair -keyalg RSA -keysize 2048 -validity 365
+ *            -dname "cn=xqiz.it, ou=manual_test"\
+ *            -keystore src/main/x/resources/test_store.p12 -storepass password -storetype PKCS12\
+ *
+ *  - a symmetrical key created by the command like:
+ *
+ *    keytool -genseckey -alias test_sym -keyalg AES -keysize 256\
+ *            -keystore src/main/x/resources/test_store.p12 -storepass password
+ *
+ */
 module TestCrypto
     {
     @Inject Console console;
@@ -8,16 +22,18 @@ module TestCrypto
 
     void run(String[] args = ["password"])
         {
-        File   store   = File:./resources/test_store.p12;
-        String keyName = "test";
+        File   store    = File:./resources/test_store.p12;
+        String pairName = "test_pair";
+        String symName  = "test_sym";
 
         @Inject(opts=new KeyStore.Info(store.contents, args[0])) KeyStore keystore;
 
-        assert CryptoKey   privateKey := keystore.getKey(keyName);
-        assert Certificate cert       := keystore.getCertificate(keyName);
+        assert CryptoKey   privateKey := keystore.getKey(pairName);
+        assert Certificate cert       := keystore.getCertificate(pairName);
         assert CryptoKey   publicKey  := cert.containsKey();
+        assert CryptoKey   symKey     := keystore.getKey(symName);
 
-        KeyPair keyPair  = new KeyPair("test", publicKey, privateKey);
+        KeyPair keyPair = new KeyPair(pairName, publicKey, privateKey);
 
         @Inject Algorithms algorithms;
         @Inject Random random;
@@ -25,10 +41,12 @@ module TestCrypto
         testDecryptor(algorithms, "RSA", keyPair, SMALL_TEXT);
         testDecryptor(algorithms, "RSA/ECB/PKCS1Padding", keyPair, SMALL_TEXT);
 
+        testDecryptor(algorithms, "AES", symKey, BIG_TEXT);
+
         assert KeyGenerator desKeyGen := algorithms.keyGeneratorFor("DES");
-        CryptoKey desKey = desKeyGen.generateSecretKey("test-secret");
-        testDecryptor(algorithms, "DES", desKey, BIG_TEXT);
-        testDecryptor(algorithms, "DES/ECB/PKCS5Padding", desKey, BIG_TEXT);
+        CryptoKey tempKey = desKeyGen.generateSecretKey("test-temp");
+        testDecryptor(algorithms, "DES", tempKey, BIG_TEXT);
+        testDecryptor(algorithms, "DES/ECB/PKCS5Padding", tempKey, BIG_TEXT);
 
         testHasher(algorithms, "MD5",     BIG_TEXT);
         testHasher(algorithms, "SHA-1",   BIG_TEXT);
