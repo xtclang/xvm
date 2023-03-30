@@ -150,12 +150,6 @@ public interface ErrorListener
             }
 
         @Override
-        public ErrorListener branch(AstNode node)
-            {
-            return this;
-            }
-
-        @Override
         public ErrorListener merge()
             {
             return this;
