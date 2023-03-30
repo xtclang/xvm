@@ -29,6 +29,6 @@ interface RequestOut
         {
         // TODO CP remove any existing entry for this cookie name (or replace its value)
         // TODO validation of cookie name, validation of value
-        header.add(Header.COOKIE, $"{name}={value}");
+        header.add(Header.Cookie, $"{name}={value}");
         }
     }

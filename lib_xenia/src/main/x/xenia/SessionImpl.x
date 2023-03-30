@@ -16,9 +16,16 @@ import SessionCookie.CookieId;
 /**
  * An implementation of the `Session` interface.
  *
- * TODO CP
- * - doc why is it not concurrent
- * - doc why it must not do any I/O
+ * The Session implementation is a service because concurrent requests related to the same session
+ * can be processing concurrently, and the session represents mutable state managed by the
+ * application on behalf of (for the benefit of) the user. Despite the concurrent nature described
+ * here, the SessionImpl service itself is not explicitly concurrent, because the use of the session
+ * by various concurrent requests would almost certainly be more error prone if access to the
+ * session were not serialized (i.e. performed in some order). The alternative is chaos.
+ *
+ * The implementation also does not conduct any I/O. From a persistence perspective, for example,
+ * the session is a mostly-passive participant. The reasoning is simple: I/O operations have
+ * unpredictable latencies, and each session is a natural bottleneck in a concurrent system.
  */
 service SessionImpl
         implements Session
@@ -171,6 +178,11 @@ service SessionImpl
     @Lazy(() -> new HashMap())
     protected/private Map<String, Shareable> attributes_;
 
+    /**
+     * The linked list of current "in flight" events.
+     */
+    private InFlight_? currentInFlight_;
+
 
     // ----- inner types ---------------------------------------------------------------------------
 
@@ -220,6 +232,32 @@ service SessionImpl
         Corrupt,        // could not deserialize
         WrongCookieId,  // cookie was copied from one name to another (an attempted hack!)
         Unexpected,     // cookie should not have been sent
+        }
+
+    /**
+     * Possible session events.
+     */
+    enum Event_
+        {
+        SessionCreated,
+        SessionDestroyed,
+        SessionMergedFrom,
+        SessionForked,
+        SessionAuthenticated,
+        SessionDeauthenticated,
+        TlsChanged,
+        IPAddressChanged,
+        UserAgentChanged,
+        FingerprintChanged,
+        ProtocolViolated,
+        }
+
+    /**
+     * In flight event tracking.
+     */
+    private class InFlight_(Event_ event, InFlight_? next)
+        {
+        Boolean reached;
         }
 
 
@@ -302,13 +340,32 @@ service SessionImpl
     @Override
     void authenticate(String userId, Boolean exclusiveAgent = False, TrustLevel trustLevel = Highest)
         {
-        this.userId            = userId;
-        this.exclusiveAgent    = exclusiveAgent;
-        this.trustLevel        = trustLevel;
-        this.lastAuthenticated = clock.now;
+        if (   this.userId         != userId
+            || this.exclusiveAgent != exclusiveAgent
+            || this.trustLevel     != trustLevel
+           )
+            {
+            if (String oldUser ?= this.userId, oldUser != userId)
+                {
+                issueEvent_(SessionDeauthenticated, &sessionDeauthenticated(oldUser),
+                            () -> $|An exception in session {this.internalId_} occurred during a\
+                                   | deauthentication event for user {oldUser.quoted()}
+                           );
+                }
 
-        // reset failed attempt count since we succeeded in logging in
-        // TODO
+            this.userId            = userId;
+            this.exclusiveAgent    = exclusiveAgent;
+            this.trustLevel        = trustLevel;
+            this.lastAuthenticated = clock.now;
+
+            // reset failed attempt count since we succeeded in logging in
+            // TODO
+
+            issueEvent_(SessionAuthenticated, &sessionAuthenticated(userId),
+                        () -> $|An exception in session {this.internalId_} occurred during an\
+                               | authentication event for user {userId.quoted()}
+                       );
+            }
         }
 
     @Override
@@ -324,25 +381,27 @@ service SessionImpl
     @Override
     void deauthenticate()
         {
-        this.userId            = Null;
-        this.exclusiveAgent    = False;
-        this.trustLevel        = None;
-        this.lastAuthenticated = Null;
+        if (String oldUser ?= userId)
+            {
+            userId            = Null;
+            exclusiveAgent    = False;
+            trustLevel        = None;
+            lastAuthenticated = Null;
 
-        sessionDestroyed();
+            issueEvent_(SessionDeauthenticated, &sessionDeauthenticated(oldUser),
+                        () -> $|An exception in session {this.internalId_} occurred during a\
+                               | deauthentication event for user {oldUser.quoted()}
+                       );
+            }
         }
 
     @Override
     void destroy()
         {
-        try
-            {
-            sessionDestroyed();
-            }
-        catch (Exception e)
-            {
-            log($"An exception occurred destroying session {internalId_}: {e}");
-            }
+        issueEvent_(SessionDestroyed, &sessionDestroyed(),
+                    () -> $|An exception in session {this.internalId_} occurred during a\
+                           | session-destroyed event
+                   );
 
         manager_.unregisterSession(internalId_,
                                    sessionCookieInfos_[0]?.cookie : Null,
@@ -360,22 +419,73 @@ service SessionImpl
         //      idea: use a mixin with state that tracks whether each method has been invoked, and
         //      then records when it gets to this point, so we can determine when a call is made to
         //      a session event and it doesn't get to the end of the event chain
+        confirmReached_(SessionCreated);
         }
 
     @Override
-    void sessionDestroyed() {}
+    void sessionDestroyed()
+        {
+        confirmReached_(SessionDestroyed);
+        }
 
     @Override
-    void sessionMergedFrom(Session temp) {}
+    void sessionMergedFrom(Session temp)
+        {
+        confirmReached_(SessionMergedFrom);
+        }
 
     @Override
-    void sessionForked() {}
+    void sessionForked() // TODO needs to be called
+        {
+        confirmReached_(SessionForked);
+        }
 
     @Override
-    void sessionAuthenticated(String user) {}
+    void sessionAuthenticated(String user)
+        {
+        confirmReached_(SessionAuthenticated);
+        }
 
     @Override
-    void sessionDeauthenticated(String user) {}
+    void sessionDeauthenticated(String user)
+        {
+        confirmReached_(SessionDeauthenticated);
+        }
+
+    @Override
+    TrustLevel tlsChanged() // TODO needs to be called
+        {
+        confirmReached_(TlsChanged);
+        return super();
+        }
+
+    @Override
+    TrustLevel ipAddressChanged(IPAddress oldAddress, IPAddress newAddress)
+        {
+        confirmReached_(IPAddressChanged);
+        return super(oldAddress, newAddress);
+        }
+
+    @Override
+    TrustLevel userAgentChanged(String oldAgent, String newAgent)
+        {
+        confirmReached_(UserAgentChanged);
+        return super(oldAgent, newAgent);
+        }
+
+    @Override
+    TrustLevel fingerprintChanged() // TODO not called?
+        {
+        confirmReached_(FingerprintChanged);
+        return super();
+        }
+
+    @Override
+    TrustLevel protocolViolated() // TODO not called?
+        {
+        confirmReached_(ProtocolViolated);
+        return super();
+        }
 
     @Override
     Boolean anyEventsSince(Time time) = time < versionChanged_;
@@ -530,6 +640,50 @@ service SessionImpl
         }
 
     /**
+     * Check to see if the connection associated with the session has been modified.
+     *
+     * @param userAgent  a string indicating the user agent
+     * @param ipAddress  the address from which the user agent connection is established
+     *
+     * @return True iff the connection has been modified
+     */
+    Boolean updateConnection_(String userAgent, IPAddress ipAddress)
+        {
+        String    oldAgent   = this.userAgent;
+        IPAddress oldAddress = this.ipAddress;
+        if (userAgent == oldAgent && ipAddress == oldAddress)
+            {
+            return False;
+            }
+
+        TrustLevel oldTrust = this.trustLevel;
+        TrustLevel newTrust = oldTrust;
+
+        if (userAgent != oldAgent)
+            {
+            newTrust = issueEvent_(UserAgentChanged, None, &userAgentChanged(oldAgent, userAgent),
+                                   () -> $|An exception in session {this.internalId_} occurred during\
+                                          | a user agent change event from {oldAgent.quoted()} to\
+                                          | {userAgent.quoted()}
+                                  ).notGreaterThan(newTrust);
+            }
+
+        if (ipAddress != oldAddress)
+            {
+            newTrust = issueEvent_(IPAddressChanged, None, &ipAddressChanged(oldAddress, ipAddress),
+                                   () -> $|An exception in session {this.internalId_} occurred during\
+                                          | an IPAddress change event from {oldAddress} to {ipAddress}
+                                  ).notGreaterThan(newTrust);
+            }
+
+        this.userAgent  = userAgent;
+        this.ipAddress  = ipAddress;
+        this.trustLevel = newTrust;
+        incrementVersion_();
+        return True;
+        }
+
+    /**
      * Increment the session version as the result of a significant change to the session.
      *
      * @param newVersion  (optional) the suggested new version number
@@ -580,15 +734,6 @@ service SessionImpl
      */
     void merge_(SessionImpl temp)
         {
-        try
-            {
-            sessionMergedFrom(temp);
-            }
-        catch (Exception e)
-            {
-            log($"An exception occurred merging session {temp.internalId_} into {this.internalId_}: {e}");
-            }
-
         this.lastUse         = this.lastUse.notLessThan(temp.lastUse);
         this.exclusiveAgent |= temp.exclusiveAgent;
 
@@ -598,6 +743,9 @@ service SessionImpl
             {
             this.cookieConsent = temp.cookieConsent;
             }
+
+        issueEvent_(SessionMergedFrom, &sessionMergedFrom(temp),
+                () -> $"An exception occurred merging session {temp.internalId_} into {this.internalId_}");
 
         temp.destroy();
         }
@@ -662,6 +810,86 @@ service SessionImpl
             }
 
         return False;
+        }
+
+    /**
+     * Handle void event dispatch.
+     * TODO GG - can this be gotten rid of?
+     *
+     * @param event          which event is being issued
+     * @param handleEvent    the means to actually handle the event
+     * @param renderLogText  the means to generate the text to log on a failure
+     */
+    protected void issueEvent_(Event_ event, function void() handleEvent, function String() renderLogText)
+        {
+        Nullable _ = issueEvent_(event, Null, () -> {handleEvent(); return Null;}, renderLogText);
+        }
+
+    /**
+     * Wrapper around event dispatch to handle exceptions, logging, and ensuring that the events
+     * actually reach their destination.
+     *
+     * @param event          which event is being issued
+     * @param defaultResult  the value to return by default if the event does not complete
+     *                       successfully
+     * @param handleEvent    the means to actually handle the event
+     * @param renderLogText  the means to generate the text to log on a failure
+     *
+     * @return the event result
+     */
+    protected <Result> Result issueEvent_(Event_            event,
+                                          Result            defaultResult,
+                                          function Result() handleEvent,
+                                          function String() renderLogText,
+                                         )
+        {
+        Result result = defaultResult;
+
+        InFlight_ inFlight = new InFlight_(event, currentInFlight_);
+        currentInFlight_ = inFlight;
+
+        try
+            {
+            result = handleEvent();
+            if (!inFlight.reached && manager_.shouldReport(event))
+                {
+                log($|An override on the session {event} event handler did not call its "super" as\
+                     | required. This is an error with unknown side-effects, and must be corrected\
+                     | by the application developer. This error is likely to occur every time that\
+                     | the event occurs, and so this message will not be repeated.
+                   );
+                }
+            }
+        catch (Exception e)
+            {
+            log($"{renderLogText()}: {e}");
+            }
+
+        assert currentInFlight_ == inFlight;
+        currentInFlight_ = inFlight.next;
+
+        return result;
+        }
+
+    /**
+     * This method is used to confirm that event dispatching wasn't improperly terminated by someone
+     * forgetting to call "super".
+     *
+     * @param event  the event being confirmed as having executed correctly
+     */
+    private void confirmReached_(Event_ event)
+        {
+        // the event to confirm will always be the first in the linked list, but since developers
+        // do crazy things, be tolerant of unexpected things here
+        for (InFlight_? current = currentInFlight_; current != Null; current = current.next)
+            {
+            if (current.event == event)
+                {
+                current.reached = True;
+                return;
+                }
+            }
+        // no assertion
         }
 
     /**

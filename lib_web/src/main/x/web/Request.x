@@ -80,7 +80,7 @@ interface Request
      */
     Iterator<Tuple<String, String>> cookies()
         {
-        return header.valuesOf(Header.COOKIE, ';')
+        return header.valuesOf(Header.Cookie, ';')
                      .map(kv -> (kv.extract('=', 0, "???").trim(), kv.extract('=', 1).trim()));
         }
 
@@ -92,7 +92,7 @@ interface Request
      */
     conditional String getCookieValue(String name)
         {
-        for (String value : header.valuesOf(Header.COOKIE, ';'))
+        for (String value : header.valuesOf(Header.Cookie, ';'))
             {
             if (name == value.extract('=', 0, "???"))
                 {
@@ -105,7 +105,7 @@ interface Request
     @Override
     Iterator<String> cookieNames()
         {
-        return header.valuesOf(Header.COOKIE, ';')
+        return header.valuesOf(Header.Cookie, ';')
                      .map(kv -> kv.extract('=', 0, "???").trim());
         }
     }

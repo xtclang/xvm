@@ -13,10 +13,10 @@ interface ResponseOut
      */
     void addCookie(Cookie cookie)
         {
-        for (String value : header.valuesOf(Header.SET_COOKIE))
+        for (String value : header.valuesOf(Header.SetCookie))
             {
             // TODO parse name, and if it matches, delete the Cookie object
             }
-        header.add(Header.SET_COOKIE, cookie.toString());
+        header.add(Header.SetCookie, cookie.toString());
         }
     }

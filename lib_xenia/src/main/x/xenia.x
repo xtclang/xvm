@@ -121,7 +121,7 @@ module xenia.xtclang.org
      */
     static String extractUserAgent(HttpServer.RequestInfo requestInfo)
         {
-        if (String[] values := requestInfo.getHeaderValuesForName(web.Header.USER_AGENT))
+        if (String[] values := requestInfo.getHeaderValuesForName(web.Header.UserAgent))
             {
             return values[0];
             }

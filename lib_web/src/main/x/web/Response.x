@@ -17,7 +17,7 @@ interface Response
     @Override
     Iterator<String> cookieNames()
         {
-        return header.valuesOf(Header.SET_COOKIE, ';')
+        return header.valuesOf(Header.SetCookie, ';')
                      .map(kv -> kv.extract('=', 0, "???").trim());
         }
 
@@ -29,7 +29,7 @@ interface Response
      */
     conditional Cookie getCookie(String name)
         {
-        for (String value : header.valuesOf(Header.SET_COOKIE))
+        for (String value : header.valuesOf(Header.SetCookie))
             {
             // TODO CP parse name, and if it matches, build the Cookie object
             }

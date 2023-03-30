@@ -11,34 +11,34 @@ interface Header
     *
     * @see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
     */
-    static String ACCEPT                 = "Accept";
-    static String ACCEPT_CHARSET         = "Accept-Charset";
-    static String ACCEPT_ENCODING        = "Accept-Encoding";
-    static String ACCEPT_LANGUAGE        = "Accept-Language";
-    static String AUTHORIZATION          = "Authorization";
-    static String AUTHORIZATION_RESPONSE = "Authorization-Response";
-    static String CACHE_CONTROL          = "Cache-Control";
-    static String CONTENT_ENCODING       = "Content-Encoding";
-    static String CONTENT_LANGUAGE       = "Content-Language";
-    static String CONTENT_LENGTH         = "Content-Length";
-    static String CONTENT_LOCATION       = "Content-Location";
-    static String CONTENT_TYPE           = "Content-Type";
-    static String DATE                   = "Date";
-    static String ETAG                   = "ETag";
-    static String EXPIRES                = "Expires";
-    static String HOST                   = "Host";
-    static String IF_MATCH               = "If-Match";
-    static String IF_MODIFIED_SINCE      = "If-Modified-Since";
-    static String IF_NONE_MATCH          = "If-None-Match";
-    static String IF_RANGE               = "If-Range";
-    static String IF_UNMODIFIED_SINCE    = "If-Unmodified-Since";
-    static String LAST_MODIFIED          = "Last-Modified";
-    static String LOCATION               = "Location";
-    static String USER_AGENT             = "User-Agent";
-    static String VARY                   = "Vary";
-    static String WWW_AUTHENTICATE       = "WWW-Authenticate";
-    static String COOKIE                 = "Cookie";
-    static String SET_COOKIE             = "Set-Cookie";
+    static String Accept                 = "Accept";
+    static String AcceptCharset          = "Accept-Charset";
+    static String AcceptEncoding         = "Accept-Encoding";
+    static String AcceptLanguage         = "Accept-Language";
+    static String Authorization          = "Authorization";
+    static String AuthorizationResponse  = "Authorization-Response";
+    static String CacheControl           = "Cache-Control";
+    static String ContentEncoding        = "Content-Encoding";
+    static String ContentLanguage        = "Content-Language";
+    static String ContentLength          = "Content-Length";
+    static String ContentLocation        = "Content-Location";
+    static String ContentType            = "Content-Type";
+    static String Date                   = "Date";
+    static String ETag                   = "ETag";
+    static String Expires                = "Expires";
+    static String Host                   = "Host";
+    static String IfMatch                = "If-Match";
+    static String IfModifiedSince        = "If-Modified-Since";
+    static String IfNoneMatch            = "If-None-Match";
+    static String IfRange                = "If-Range";
+    static String IfUnmodifiedSince      = "If-Unmodified-Since";
+    static String LastModified           = "Last-Modified";
+    static String Location               = "Location";
+    static String UserAgent              = "User-Agent";
+    static String Vary                   = "Vary";
+    static String WWWAuthenticate        = "WWW-Authenticate";
+    static String Cookie                 = "Cookie";
+    static String SetCookie              = "Set-Cookie";
 
     /**
      * `True` if this `Header` is for a [Request]; `False` if it is for a [Response].
@@ -229,15 +229,15 @@ interface Header
         {
         return switch (name)
             {
-            case AUTHORIZATION:                 // comma delimited sub-values
-            case AUTHORIZATION_RESPONSE:        // comma delimited sub-values
-            case DATE:                          // unquoted date containing a comma
-            case EXPIRES:                       // unquoted date containing a comma
-            case IF_MODIFIED_SINCE:             // unquoted date containing a comma
-            case IF_RANGE:                      // unquoted date containing a comma
-            case IF_UNMODIFIED_SINCE:           // unquoted date containing a comma
-            case LAST_MODIFIED:                 // unquoted date containing a comma
-            case SET_COOKIE:                    // unquoted date containing a comma
+            case Authorization:                 // comma delimited sub-values
+            case AuthorizationResponse:        // comma delimited sub-values
+            case Date:                          // unquoted date containing a comma
+            case Expires:                       // unquoted date containing a comma
+            case IfModifiedSince:             // unquoted date containing a comma
+            case IfRange:                      // unquoted date containing a comma
+            case IfUnmodifiedSince:           // unquoted date containing a comma
+            case LastModified:                 // unquoted date containing a comma
+            case SetCookie:                    // unquoted date containing a comma
             // REVIEW: maybe: "Warning" - contains date (but in quotes)
                 True;
 

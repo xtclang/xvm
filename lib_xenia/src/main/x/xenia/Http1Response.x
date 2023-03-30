@@ -33,9 +33,9 @@ const Http1Response
         if (Body body ?= response.body)
             {
             bytes = body.bytes;
-            headerNames  += Header.CONTENT_TYPE;
+            headerNames  += Header.ContentType;
             headerValues += body.mediaType.text;
-            headerNames  += Header.CONTENT_LENGTH;
+            headerNames  += Header.ContentLength;
             headerValues += bytes.size.toString();
             }
 

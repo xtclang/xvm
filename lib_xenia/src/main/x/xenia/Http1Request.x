@@ -33,7 +33,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
             this.hasBody = True;
             this.bytes   = bytes;
 
-            assert String[] contentTypes := info.getHeaderValuesForName(Header.CONTENT_TYPE);
+            assert String[] contentTypes := info.getHeaderValuesForName(Header.ContentType);
             assert mediaType := MediaType.of(contentTypes[0]);
             }
         else
@@ -125,7 +125,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     AcceptList accepts.get()
         {
         String accept = "";
-        Loop: for (String add : valuesOf(Header.ACCEPT))
+        Loop: for (String add : valuesOf(Header.Accept))
             {
             add = add.trim();
             if (add != "")

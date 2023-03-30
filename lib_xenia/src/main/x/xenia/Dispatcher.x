@@ -219,7 +219,7 @@ service Dispatcher(Catalog        catalog,
                     {
                     response = new SimpleResponse(PermanentRedirect);
 
-                    response.header.put(Header.LOCATION, requestInfo.convertToTlsUrl());
+                    response.header.put(Header.Location, requestInfo.convertToTlsUrl());
                     break ProcessRequest;
                     }
 
@@ -232,12 +232,14 @@ service Dispatcher(Catalog        catalog,
                     response = new SimpleResponse(result);
                     for (CookieId cookieId : CookieId.from(eraseCookies))
                         {
-                        response.header.add(Header.SET_COOKIE, cookieId.eraser);
+                        response.header.add(Header.SetCookie, cookieId.eraser);
                         }
                     break ProcessRequest;
                     }
 
+                // check for any IP address and/or user agent change in the connection
                 SessionImpl session = result;
+                redirect |= session.updateConnection_(extractUserAgent(requestInfo), requestInfo.getClientAddress());
                 if (redirect)
                     {
                     Int|HttpStatus redirectResult = session.prepareRedirect_(requestInfo);
@@ -259,20 +261,20 @@ service Dispatcher(Catalog        catalog,
                             if ((SessionCookie cookie, Time? sent, Time? verified)
                                     := session.getCookie_(cookieId), verified == Null)
                                 {
-                                header.add(Header.SET_COOKIE, cookie.toString());
+                                header.add(Header.SetCookie, cookie.toString());
                                 session.cookieSent_(cookie);
                                 }
                             }
                         else if (eraseCookies & cookieId.mask != 0)
                             {
-                            header.add(Header.SET_COOKIE, cookieId.eraser);
+                            header.add(Header.SetCookie, cookieId.eraser);
                             }
                         }
 
                     // come back to verify that the user agent received and subsequently sent the
                     // cookies
                     Uri newUri = new Uri(path=$"{catalog.services[0].path}/session/{redirectId}");
-                    header.put(Header.LOCATION, newUri.toString());
+                    header.put(Header.Location, newUri.toString());
                     break ProcessRequest;
                     }
 
@@ -365,7 +367,7 @@ service Dispatcher(Catalog        catalog,
      */
     private SessionImpl? getSessionOrNull(HttpServer httpServer, RequestContext context)
         {
-        if (String[] cookies := httpServer.getHeaderValuesForName(context, Header.COOKIE))
+        if (String[] cookies := httpServer.getHeaderValuesForName(context, Header.Cookie))
             {
             for (String cookieHeader : cookies)
                 {
@@ -617,7 +619,7 @@ service Dispatcher(Catalog        catalog,
         Int     failures = 0;
         Boolean tls      = requestInfo.tls;
 
-        if (String[] cookies := requestInfo.getHeaderValuesForName(Header.COOKIE))
+        if (String[] cookies := requestInfo.getHeaderValuesForName(Header.Cookie))
             {
             for (String cookieHeader : cookies)
                 {

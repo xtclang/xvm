@@ -4,6 +4,7 @@ import web.HttpStatus;
 import web.codecs.Base64Format;
 
 import HttpServer.RequestInfo;
+import SessionImpl.Event_;
 import SessionStore.IOResult;
 
 
@@ -145,6 +146,11 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      */
     @Unassigned
     private Decryptor cookieDecryptor;
+
+    /**
+     * Tracks whether event dispatching failures have already been logged, per event.
+     */
+    private Boolean[] reported = new Boolean[Event_.count];
 
 
     // ----- cookie encoding support ---------------------------------------------------------------
@@ -436,5 +442,26 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
         sessionByCookie.remove(tlsCookie?.text);
         sessionByCookie.remove(consentCookie?.text);
         store.erase^(id);
+        }
+
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * Determine if an event that failed to be dispatched/super'd correctly should be reported.
+     *
+     * @param event  the event identity
+     *
+     * @return True iff the event has not previously been reported
+     */
+    Boolean shouldReport(Event_ event)
+        {
+        if (reported[event.ordinal])
+            {
+            return False;
+            }
+
+        reported[event.ordinal] = True;
+        return True;
         }
     }

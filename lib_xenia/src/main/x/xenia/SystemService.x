@@ -210,7 +210,7 @@ service SystemService
                     if ((SessionCookie resendCookie, Time? sent, Time? verified)
                             := session.getCookie_(cookieId), verified == Null)
                         {
-                        header.add(Header.SET_COOKIE, resendCookie.toString());
+                        header.add(Header.SetCookie, resendCookie.toString());
                         session.cookieSent_(resendCookie);
                         }
                     }
@@ -218,7 +218,7 @@ service SystemService
                 // come back to verify that the user agent received and subsequently sent the
                 // cookies
                 Uri newUri = new Uri(path=$"{catalog.services[0].path}/session/{redirect}");
-                header.put(Header.LOCATION, newUri.toString());
+                header.put(Header.Location, newUri.toString());
                 return response;
                 }
 
@@ -226,7 +226,7 @@ service SystemService
             if (Uri uri := session.claimRedirect_(redirect))
                 {
                 ResponseOut response = new SimpleResponse(TemporaryRedirect);
-                response.header.put(Header.LOCATION, uri.toString());
+                response.header.put(Header.Location, uri.toString());
                 return response;
                 }
             }
