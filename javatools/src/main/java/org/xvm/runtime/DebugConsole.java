@@ -757,34 +757,36 @@ public class DebugConsole
                             }
                         sb.append(";\n}; return r__.toString();};\n}");
 
-                        EvalCompiler    compiler = new EvalCompiler(frame, sb.toString());
-                        MethodStructure lambda   = compiler.createLambda(frame.poolContext().typeString());
-                        if (lambda == null)
+                        if (performEval(frame, iPC, sb.toString(), writer) == Op.R_CALL)
                             {
-                            for (ErrorInfo err : compiler.getErrors())
-                                {
-                                writer.println(err.getMessageText());
-                                }
+                            return Op.R_CALL;
                             }
-                        else
-                            {
-                            Frame.Continuation continuation = frameCaller ->
-                                {
-                                ExceptionHandle hEx = frameCaller.clearException();
-                                if (hEx == null)
-                                    {
-                                    writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
-                                    }
-                                else
-                                    {
-                                    writer.println("\"Eval\" threw an exception " + hEx);
-                                    writer.println(frameCaller.getStackTrace());
-                                    }
-                                return iPC;
-                                };
+                        continue; // NextCommand
+                        }
 
-                            ObjectHandle[] ahArgs = getArguments(frame, lambda, compiler.getArgs());
-                            return resolveEvalArgs(frame, lambda, ahArgs, continuation);
+                    case "EM", "EVAL_MULTI":
+                        {
+                        if (cArgs < 1)
+                            {
+                            break;
+                            }
+
+                        if (m_frameFocus != frame || frame.isNative())
+                            {
+                            writer.println("The \"eval\" command is only supported at the top frame.");
+                            continue; // NextCommand
+                            }
+
+                        StringBuilder sb = new StringBuilder("{\nreturn {Tuple r__ = {\nreturn");
+                        for (int i = 1; i < cArgs + 1; i++)
+                            {
+                            sb.append(' ').append(asParts[i]);
+                            }
+                        sb.append(";\n}; return r__.size == 1 ? r__[0].toString() : r__.toString();};\n}");
+
+                        if (performEval(frame, iPC, sb.toString(), writer) == Op.R_CALL)
+                            {
+                            return Op.R_CALL;
                             }
                         continue; // NextCommand
                         }
@@ -1032,7 +1034,42 @@ public class DebugConsole
         }
 
     /**
-     * Process the "eval" command.
+     * Compile and run the "eval" command.
+     */
+    private int performEval(Frame frame, int iPC, String sEval, PrintWriter writer)
+        {
+        EvalCompiler    compiler = new EvalCompiler(frame, sEval);
+        MethodStructure lambda   = compiler.createLambda(frame.poolContext().typeString());
+        if (lambda == null)
+            {
+            for (ErrorInfo err : compiler.getErrors())
+                {
+                writer.println(err.getMessageText());
+                }
+            return Op.R_NEXT;
+            }
+
+        Frame.Continuation continuation = frameCaller ->
+            {
+            ExceptionHandle hEx = frameCaller.clearException();
+            if (hEx == null)
+                {
+                writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
+                }
+            else
+                {
+                writer.println("\"Eval\" threw an exception " + hEx);
+                writer.println(frameCaller.getStackTrace());
+                }
+            return iPC;
+            };
+
+        ObjectHandle[] ahArgs = getArguments(frame, lambda, compiler.getArgs());
+        return resolveEvalArgs(frame, lambda, ahArgs, continuation);
+        }
+
+    /**
+     * Resolve the "eval" command arguments and run the eval lambda.
      */
     private int resolveEvalArgs(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg,
                                 Frame.Continuation continuation)
@@ -2090,6 +2127,7 @@ public class DebugConsole
              X <var#>                 Expand (or contract) the specified variable number
              V <var#>                 Toggle the view mode (output format) for the specified variable number
              E <expr>                 Evaluate the specified expression
+             EM <expr>                Evaluate the specified expression that produces multiple (or conditional) results
              WE <expr>                Add a "watch" for the specified expression
              WO <var#>                Add a watch on the specified referent (the object itself)
              WR <var#>                Add a watch on the specified reference (the property or variable)
