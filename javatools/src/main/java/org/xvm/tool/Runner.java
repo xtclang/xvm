@@ -11,6 +11,7 @@ import java.util.List;
 import org.xvm.api.Connector;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -61,7 +62,18 @@ public class Runner
         ModuleRepository repo = configureLibraryRepo(options().getModulePath());
         checkErrors();
 
-        File            fileModule = options().getTarget();
+        if (options().isShowVersion())
+            {
+            ModuleStructure core = repo.loadModule(Constants.ECSTASY_MODULE);
+            out("Ecstasy Runtime Environment " + core.getVersion().getVersion());
+            }
+
+        File fileModule = options().getTarget();
+        if (fileModule == null)
+            {
+            return;
+            }
+
         File            fileDir    = fileModule.getAbsoluteFile().getParentFile();
         String          sModule    = fileModule.getName();
         boolean         fExtension = explicitModuleFile(sModule);
@@ -258,11 +270,20 @@ public class Runner
             {
             super();
 
-            addOption("L",      Form.Repo  , true , "Module path; a \"" + File.pathSeparator
+            addOption("version", Form.Name  , false, "Displays the Ecstasy runtime version");
+            addOption("L",       Form.Repo  , true , "Module path; a \"" + File.pathSeparator
                                                   + "\"-delimited list of file and/or directory names");
-            addOption("M",      Form.String, false, "Method name; defaults to \"run\"");
-            addOption(Trailing, Form.File  , false, "Module file name (.xtc) to execute");
-            addOption(ArgV,     Form.AsIs  , true , "Arguments to pass to the method");
+            addOption("M",       Form.String, false, "Method name; defaults to \"run\"");
+            addOption(Trailing,  Form.File  , false, "Module file name (.xtc) to execute");
+            addOption(ArgV,      Form.AsIs  , true , "Arguments to pass to the method");
+            }
+
+        /**
+         * @return true if a "show version" option has been specified
+         */
+        boolean isShowVersion()
+            {
+            return specified("version");
             }
 
         /**
@@ -313,7 +334,7 @@ public class Runner
             // name is a module name or file name, and must potentially find the real module name
             // in the source code, and so on), so the logic is performed by the process() method
             File fileModule = getTarget();
-            if (fileModule == null)
+            if (fileModule == null && !isShowVersion())
                 {
                 log(Severity.ERROR, "Module name or module file name must be specified");
                 }

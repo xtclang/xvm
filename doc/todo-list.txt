@@ -55,10 +55,6 @@
 
 - GG: enum ClassCompositions without type parameters could be made into CanonicalCompositions
 
-- GG: add eval command history for the debugger
-
-- GG: add "-version" option to xec command
-
 - consider allowing comparison between T and T?; for example making Null always "Lesser"
 
 - add a periodic re-schedule to Timer API
