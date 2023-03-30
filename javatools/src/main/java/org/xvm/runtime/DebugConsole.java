@@ -68,10 +68,10 @@ import static org.xvm.util.Handy.NO_ARGS;
 public class DebugConsole
         implements Debugger
     {
-    private DebugConsole()
-        {
-        loadBreakpoints();
-        }
+    /**
+     * The command history.
+     */
+    private List<String> m_listHistory;
 
     @Override
     public synchronized int activate(Frame frame, int iPC)
@@ -247,6 +247,12 @@ public class DebugConsole
             }
         }
 
+    private DebugConsole()
+        {
+        loadBreakpoints();
+        loadHistory();
+        }
+
     /**
      * Allow interactive debugger commands.
      *
@@ -298,739 +304,27 @@ public class DebugConsole
                     sCommand = sDedup;
                     }
 
-                String[] asParts = parseDelimitedString(sCommand, ' ');
-                int      cArgs   = asParts.length - 1;
-                if (cArgs < 0)
+                int iResult = processCommand(frame, iPC, writer, sCommand);
+                switch (iResult)
                     {
-                    continue;
-                    }
-
-                switch (asParts[0].toUpperCase())
-                    {
-                    case "B":
-                        if (cArgs != 0)
-                            {
-                            break;
-                            }
-
-                        writer.println(renderBreakpoints());
+                    case Op.R_REPEAT:
                         continue; // NextCommand
 
-                    case "B+":
-                        switch (cArgs)
-                            {
-                            case 0:
-                                if (iPC >= 0)
-                                    {
-                                    BreakPoint bp = makeBreakPointPC(frame, iPC);
-                                    if (bp != null)
-                                        {
-                                        addBP(bp);
-                                        continue; // NextCommand
-                                        }
-                                    }
-                                break; // the command is not allowed
-
-                            case 1:
-                                int nLine = parseNonNegative(asParts[1]);
-                                if (nLine > 0)
-                                    {
-                                    addBP(makeBreakPointLine(frame, nLine, false));
-                                    continue; // NextCommand
-                                    }
-                                break;  // invalid break point
-
-                            case 2:
-                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
-                                if (bp != null)
-                                    {
-                                    addBP(bp);
-                                    continue; // NextCommand
-                                    }
-                                break;  // invalid break point
-                            }
-                        break;
-
-                    case "B-":
-                        switch (cArgs)
-                            {
-                            case 0:
-                                // "B-" remove the current line from the list of breakpoints
-                                if (iPC >= 0)
-                                    {
-                                    BreakPoint bp = makeBreakPointPC(frame, iPC);
-                                    if (bp != null)
-                                        {
-                                        removeBP(bp);
-                                        continue; // NextCommand
-                                        }
-                                    }
-                                break; // the command is not allowed
-
-                            case 1:
-                                // "B- *"  (nuke all breakpoints)
-                                if (asParts[1].equals("*"))
-                                    {
-                                    m_fBreakOnAllThrows = false;
-                                    m_setLineBreaks     = null;
-                                    m_setThrowBreaks    = null;
-                                    saveBreakpoints();
-                                    continue; // NextCommand
-                                    }
-                                // "B- 3"  (# is from the previously displayed list of breakpoints)
-                                else if (m_aBreaks != null)
-                                    {
-                                    int n = parseNonNegative(asParts[1]);
-                                    if (n >= 0 && n < m_aBreaks.length)
-                                        {
-                                        removeBP(m_aBreaks[n]);
-                                        continue;  // NextCommand
-                                        }
-                                    }
-                                break; // invalid command
-
-                            case 2:
-                                // "B- MyClass 123"  (class name and line number)
-                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
-                                if (bp != null)
-                                    {
-                                    removeBP(bp);
-                                    continue; // NextCommand
-                                    }
-                                break; // invalid break point
-                            }
-                        break;
-
-                    case "BC":
-                        {
-                        BreakPoint bp = null;
-                        switch (cArgs)
-                            {
-                            case 0:
-                                break; // invalid; args are missing
-
-                            case 1:
-                                bp = makeBreakPointPC(frame, iPC);
-                                bp.condition = asParts[1];
-                                break;
-
-                            case 2:
-                                int nLine = parseNonNegative(asParts[1]);
-                                if (nLine > 0)
-                                    {
-                                    bp = makeBreakPointLine(frame, nLine, false);
-                                    bp.condition = asParts[2];
-                                    }
-                                break;
-
-                            default:
-                                bp = parseBreakPoint(asParts[1], asParts[2], false);
-                                if (bp != null)
-                                    {
-                                    StringBuilder sb = new StringBuilder();
-                                    for (int i = 3; i < cArgs + 1; i++)
-                                        {
-                                        sb.append(asParts[i]).append(' ');
-                                        }
-                                    bp.condition = sb.toString();
-                                    }
-                                break;
-                            }
-                        if (bp == null)
-                            {
-                            break; // invalid command
-                            }
-                        addBP(bp);
+                    case Op.R_EXCEPTION:
+                        writer.println("Invalid command: " + sCommand);
                         continue; // NextCommand
-                        }
-
-                    case "BE+":
-                        if (cArgs == 1)
-                            {
-                            addBP(new BreakPoint(asParts[1]));
-                            continue; // NextCommand
-                            }
-                        break; // invalid command
-
-                    case "BE-":
-                        if (cArgs == 1)
-                            {
-                            removeBP(new BreakPoint(asParts[1]));
-                            continue; // NextCommand
-                            }
-                        break; // invalid command
-
-                    case "BT":
-                        switch (cArgs)
-                            {
-                            case 0:
-                                if (iPC >= 0)
-                                    {
-                                    BreakPoint bp = makeBreakPointPC(frame, iPC);
-                                    if (bp != null)
-                                        {
-                                        BreakPoint bpExists = findBP(bp);
-                                        if (bpExists == null)
-                                            {
-                                            addBP(bp);
-                                            }
-                                        else
-                                            {
-                                            toggleBP(bpExists);
-                                            }
-                                        continue; // NextCommand
-                                        }
-                                    }
-                                 break; // invalid command
-
-                            case 1:
-                                if (asParts[1].equals("*"))
-                                    {
-                                    BreakPoint[] aBP = allBreakpoints();
-                                    if (Arrays.stream(aBP).allMatch(BreakPoint::isEnabled))
-                                        {
-                                        Arrays.stream(aBP).forEach(BreakPoint::disable);
-                                        m_fBreakOnAllThrows = false;
-                                        }
-                                    else
-                                        {
-                                        Arrays.stream(aBP).forEach(BreakPoint::enable);
-                                        m_fBreakOnAllThrows =
-                                            Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
-                                        }
-                                    saveBreakpoints();
-                                    continue; // NextCommand
-                                    }
-                                // "BT 3"  (# is from the previously displayed list of breakpoints)
-                                else if (m_aBreaks != null)
-                                    {
-                                    int n = parseNonNegative(asParts[1]);
-                                    if (n >= 0 && n < m_aBreaks.length)
-                                        {
-                                        BreakPoint bp = m_aBreaks[n];
-                                        if (bp.isEnabled())
-                                            {
-                                            bp.disable();
-                                            }
-                                        else
-                                            {
-                                            bp.enable();
-                                            }
-                                        continue; // NextCommand
-                                        }
-                                    }
-                                else
-                                    {
-                                    toggleBP(new BreakPoint(asParts[1]));
-                                    continue; // NextCommand
-                                    }
-                                break;
-
-                            case 2:
-                                {
-                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
-                                if (bp != null)
-                                    {
-                                    toggleBP(bp);
-                                    continue; // NextCommand
-                                    }
-                                }
-                                break;
-                            }
-                        break;
-
-                    case "F":
-                        int iFrame = cArgs == 0 ? 0 : parseNonNegative(asParts[1]);
-                        Frame.StackFrame[] aFrames = m_aFrames;
-                        int                cFrames = aFrames == null ? 0 : aFrames.length;
-                        if (iFrame >= 0 && iFrame < cFrames)
-                            {
-                            m_frameFocus = aFrames[iFrame].frame;
-                            }
-
-                        writer.println(renderDebugger());
-                        continue; // NextCommand
-
-                    case "?": case "H": case "HELP":
-                        writer.println(renderHelp());
-                        continue; // NextCommand
-
-                    case "N":
-                    case "S":
-                        m_stepMode = StepMode.StepOver;
-                        int cSteps = cArgs == 0 ? 0 : parseNonNegative(asParts[1]);
-                        if (cSteps > 0)
-                            {
-                            m_cSteps = cSteps;
-                            }
-                        break NextCommand;
-
-                    case "I":
-                    case "S+":
-                        m_stepMode = StepMode.StepInto;
-                        break NextCommand;
-
-                    case "O":
-                    case "S-":
-                        m_stepMode = StepMode.StepOut;
-                        break NextCommand;
-
-                    case "SL":
-                        switch (cArgs)
-                            {
-                            case 0:
-                                if (iPC >= 0)
-                                    {
-                                    int nLine = frame.f_function.calculateLineNumber(iPC);
-                                    if (nLine > 0)
-                                        {
-                                        addBP(makeBreakPointLine(frame, nLine, true));
-                                        m_stepMode = StepMode.None;
-                                        break NextCommand;
-                                        }
-                                    }
-                                break; // the command is not allowed
-
-                            case 1:
-                                int nLine = parseNonNegative(asParts[1]);
-                                if (nLine > 0)
-                                    {
-                                    addBP(makeBreakPointLine(frame, nLine, true));
-                                    m_stepMode = StepMode.None;
-                                    break NextCommand;
-                                    }
-                                break;  // invalid break point
-
-                            case 2:
-                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], true);
-                                if (bp != null)
-                                    {
-                                    addBP(bp);
-                                    m_stepMode = StepMode.None;
-                                    break NextCommand;
-                                    }
-                                break;  // invalid break point
-                            }
-                        break NextCommand;
-
-                    case "R":
-                        m_stepMode = StepMode.None;
-                        break NextCommand;
-
-                    case "VC":
-                        m_viewMode = ViewMode.Console;
-                        writer.println(renderConsole());
-                        continue; // NextCommand
-
-                    case "VD":
-                        m_viewMode = ViewMode.Frames;
-                        writer.println(renderDebugger());
-                        continue; // NextCommand
-
-                    case "VF":
-                        m_viewMode = ViewMode.Services;
-                        writer.println(renderServices());
-                        continue; // NextCommand
-
-                    case "VS":
-                        switch (cArgs)
-                            {
-                            case 0:
-                                writer.println("Current debugger text width=" + m_cWidth +
-                                               " characters, height= " + m_cHeight + " lines.");
-                                continue; // NextCommand
-
-                            case 2:
-                                {
-                                int n = parseNonNegative(asParts[2]);
-                                if (n >= 10 && n < 1000)
-                                    {
-                                    writer.println("Altering debugger text height from " + m_cHeight +
-                                                   " to " + n + " lines.");
-                                    m_cHeight = n;
-                                    prefs.putInt("screen-height", n);
-                                    }
-                                else
-                                    {
-                                    writer.println("Illegal text height: " + asParts[2]);
-                                    continue; // NextCommand
-                                    }
-                                }
-                                // fall through
-                            case 1:
-                                {
-                                int n = parseNonNegative(asParts[1]);
-                                if (n >= 40 && n < 1000)
-                                    {
-                                    writer.println("Altering debugger text width from " + m_cWidth +
-                                                   " to " + n + " characters.");
-                                    m_cWidth = n;
-                                    prefs.putInt("screen-width", n);
-                                    }
-                                else
-                                    {
-                                    writer.println("Illegal text width: " + asParts[1]);
-                                    }
-                                continue; // NextCommand
-                                }
-                            }
-                        break;
-
-                    case "X":
-                        if (cArgs >= 1)
-                            {
-                            VarDisplay[] aVars    = m_aVars;
-                            boolean      fRepaint = false;
-                            for (int i = 0; i < cArgs; ++i)
-                                {
-                                int iVar = parseNonNegative(asParts[i+1]);
-                                if (iVar >= 0 && iVar < aVars.length)
-                                    {
-                                    VarDisplay var = aVars[iVar];
-                                    if (var.canExpand)
-                                        {
-                                        Map<String, Integer> mapExpand = ensureExpandMap(iVar);
-                                        if (var.isArray)
-                                            {
-                                            if (var.name.equals("..."))
-                                                {
-                                                // find the parent array
-                                                int arrayLevel = var.indent - 1;
-                                                do
-                                                    {
-                                                    var = aVars[--iVar];
-                                                    }
-                                                while (var.indent > arrayLevel);
-
-                                                int cShow = mapExpand.getOrDefault(var.path, 0);
-                                                cShow = (cShow + 1) * 10;
-                                                mapExpand.put(var.path, cShow);
-                                                }
-                                            else
-                                                {
-                                                mapExpand.put(var.path, var.expanded ? 0 : 10);
-                                                }
-                                            }
-                                        else
-                                            {
-                                            mapExpand.put(var.path, var.expanded ? 0 : 1);
-                                            }
-                                        fRepaint = true;
-                                        }
-                                    else
-                                        {
-                                        writer.println("Cannot expand or contract \"" + var.name + '\"');
-                                        }
-                                    }
-
-                                if (fRepaint)
-                                    {
-                                    writer.println(renderDebugger());
-                                    }
-                                continue NextCommand;
-                                }
-                            }
-                        break;
-
-                    case "V":
-                        // TODO toggle between native vs. toString() (and possibly a third, type-specific format for some types)
-                        writer.println("View format has not been implemented.");
-                        continue; // NextCommand
-
-                    case "E", "EVAL":
-                        {
-                        if (cArgs < 1)
-                            {
-                            break;
-                            }
-
-                        if (m_frameFocus != frame || frame.isNative())
-                            {
-                            writer.println("The \"eval\" command is only supported at the top frame.");
-                            continue; // NextCommand
-                            }
-
-                        StringBuilder sb = new StringBuilder("{\nreturn {Object r__ = {\nreturn");
-                        for (int i = 1; i < cArgs + 1; i++)
-                            {
-                            sb.append(' ').append(asParts[i]);
-                            }
-                        sb.append(";\n}; return r__.toString();};\n}");
-
-                        if (performEval(frame, iPC, sb.toString(), writer) == Op.R_CALL)
-                            {
-                            return Op.R_CALL;
-                            }
-                        continue; // NextCommand
-                        }
-
-                    case "EM", "EVAL_MULTI":
-                        {
-                        if (cArgs < 1)
-                            {
-                            break;
-                            }
-
-                        if (m_frameFocus != frame || frame.isNative())
-                            {
-                            writer.println("The \"eval\" command is only supported at the top frame.");
-                            continue; // NextCommand
-                            }
-
-                        StringBuilder sb = new StringBuilder("{\nreturn {Tuple r__ = {\nreturn");
-                        for (int i = 1; i < cArgs + 1; i++)
-                            {
-                            sb.append(' ').append(asParts[i]);
-                            }
-                        sb.append(";\n}; return r__.size == 1 ? r__[0].toString() : r__.toString();};\n}");
-
-                        if (performEval(frame, iPC, sb.toString(), writer) == Op.R_CALL)
-                            {
-                            return Op.R_CALL;
-                            }
-                        continue; // NextCommand
-                        }
-
-                    case "WE":
-                        // TODO watch eval <expr>
-                        writer.println("Watch Eval has not been implemented.");
-                        continue; // NextCommand
-
-                    case "WO":
-                        if (cArgs >= 1)
-                            {
-                            VarDisplay[] aVars    = m_aVars;
-                            boolean      fRepaint = false;
-                            for (int i = 0; i < cArgs; ++i)
-                                {
-                                int iVar = parseNonNegative(asParts[i+1]);
-                                if (iVar >= 0 && iVar < aVars.length)
-                                    {
-                                    // verify that the referent is available
-                                    VarDisplay var = aVars[iVar];
-                                    if (var.hVar == null)
-                                        {
-                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") does not have a referent to Watch");
-                                        continue;
-                                        }
-
-                                    // verify that it is not already a watched object
-                                    Watch watch = var.watch;
-                                    if (watch != null && watch.form == Watch.OBJ)
-                                        {
-                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already a Watched Object");
-                                        continue;
-                                        }
-
-                                    // create the watch
-                                    String sName = var.path;
-                                    if (sName.startsWith("watch:"))
-                                        {
-                                        sName = sName.substring("watch:".length());
-                                        }
-                                    watch = new Watch("watch:" + sName, sName, var.hVar);
-                                    getGlobalStash().ensureWatchList().add(watch);
-                                    fRepaint = true;
-                                    }
-                                else
-                                    {
-                                    writer.println("Var #" + iVar + " does not exist");
-                                    }
-                                }
-
-                            if (fRepaint)
-                                {
-                                writer.println(renderDebugger());
-                                }
-                            continue; // NextCommand
-                            }
-                        break;
-
-                    case "WR":
-                        if (cArgs >= 1)
-                            {
-                            VarDisplay[] aVars    = m_aVars;
-                            boolean      fRepaint = false;
-                            for (int i = 0; i < cArgs; ++i)
-                                {
-                                int iVar = parseNonNegative(asParts[i+1]);
-                                if (iVar >= 0 && iVar < aVars.length)
-                                    {
-                                    // verify that it is not already a watch
-                                    VarDisplay var = aVars[iVar];
-                                    Watch watch = var.watch;
-                                    if (watch != null)
-                                        {
-                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already a Watch");
-                                        continue;
-                                        }
-
-                                    // figure out if it is a variable, property, or element
-                                    boolean fGlobal;
-                                    if (var.indent == 0)
-                                        {
-                                        // it's a variable (since it's not a watch)
-                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already displayed in the current frame");
-                                        continue;
-                                        }
-                                    else if (var.name.startsWith("["))
-                                        {
-                                        // it's an array element
-                                        VarDisplay parent = aVars[findParentNode(iVar)];
-                                        int        index  = Integer.valueOf(var.name.substring(1, var.name.length()-1));
-                                        watch   = new Watch("watch:" + var.path, var.path, parent.hVar, index);
-                                        fGlobal = false;
-                                        }
-                                    else if (var.name.startsWith("."))
-                                        {
-                                        // it's "...", i.e. the unexpanded portion of an array
-                                        writer.println("Var #" + iVar + " is not Watchable");
-                                        continue;
-                                        }
-                                    else
-                                        {
-                                        // it must be a property
-                                        VarDisplay parent = aVars[findParentNode(iVar)];
-                                        watch   = new Watch("watch:" + var.path, var.path, parent.hVar, var.name);
-                                        fGlobal = true;
-                                        }
-
-                                    (fGlobal ? getGlobalStash() : getFrameStash()).ensureWatchList().add(watch);
-                                    fRepaint = true;
-                                    }
-                                else
-                                    {
-                                    writer.println("Var #" + iVar + " does not exist");
-                                    }
-                                }
-
-                            if (fRepaint)
-                                {
-                                writer.println(renderDebugger());
-                                }
-                        continue; // NextCommand
-                            }
-                        break;
-
-                    case "W-":
-                        if (cArgs >= 1)
-                            {
-                            VarDisplay[] aVars    = m_aVars;
-                            boolean      fRepaint = false;
-                            for (int i = 0; i < cArgs; ++i)
-                                {
-                                int iVar = parseNonNegative(asParts[i+1]);
-                                if (iVar >= 0 && iVar < aVars.length)
-                                    {
-                                    // verify that the var is a watch
-                                    VarDisplay var   = aVars[iVar];
-                                    Watch      watch = var.watch;
-                                    if (watch == null)
-                                        {
-                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is not a Watch");
-                                        continue;
-                                        }
-
-                                    getFrameStash().ensureWatchList().remove(watch);
-                                    getGlobalStash().ensureWatchList().remove(watch);
-                                    fRepaint = true;
-                                    }
-                                else
-                                    {
-                                    writer.println("Var #" + iVar + " does not exist");
-                                    }
-                                }
-
-                            if (fRepaint)
-                                {
-                                writer.println(renderDebugger());
-                                }
-                            continue; // NextCommand
-                            }
-                        break;
-
-                    case "D":
-                        if (cArgs >= 1)
-                            {
-                            VarDisplay[] aVars = m_aVars;
-                            int iVar = parseNonNegative(asParts[1]);
-                            if (iVar >= 0 && iVar < aVars.length)
-                                {
-                                ObjectHandle hVar = aVars[iVar].hVar;
-                                if (cArgs >= 2)
-                                    {
-                                    String sProp = asParts[2];
-                                    try
-                                        {
-                                        hVar = ((GenericHandle) hVar).getField(frame, sProp);
-                                        }
-                                    catch (Throwable e)
-                                        {
-                                        writer.println("Invalid property: " + sProp);
-                                        continue; // NextCommand
-                                        }
-                                    }
-
-                                StringBuilder sb = new StringBuilder();
-
-                                renderVar(hVar, false, sb, "   +");
-                                writer.println(sb);
-                                continue; // NextCommand
-                                }
-                            }
-                        break;
-
-                    case "DS":
-                        if (cArgs >= 1)
-                            {
-                            VarDisplay[] aVars = m_aVars;
-                            int iVar = parseNonNegative(asParts[1]);
-                            if (iVar >= 0 && iVar < aVars.length)
-                                {
-                                ObjectHandle hVar = aVars[iVar].hVar;
-                                if (hVar != null)
-                                    {
-                                    if (cArgs >= 2)
-                                        {
-                                        String sProp = asParts[2];
-                                        try
-                                            {
-                                            hVar = ((GenericHandle) hVar).getField(frame, sProp);
-                                            }
-                                        catch (Throwable e)
-                                            {
-                                            writer.println("Invalid property: " + sProp);
-                                            continue; // NextCommand
-                                            }
-                                        }
-                                    }
-
-                                if (hVar == null)
-                                    {
-                                    writer.println("<unassigned>");
-                                    }
-                                else if (callToString(frame, frame.clearException(), hVar, writer) == Op.R_CALL)
-                                    {
-                                    return Op.R_CALL;
-                                    }
-                                continue; // NextCommand
-                                }
-                            }
-                        break;
 
                     default:
-                        writer.println("Unknown command: \"" + sCommand + "\"; enter '?' for help");
-                        continue; // NextCommand
+                        iPC = iResult;
+                        break NextCommand;
                     }
-
-                writer.println("Invalid command: " + sCommand);
                 }
             catch (IOException ignored) {}
             }
 
         frame.f_context.setDebuggerActive(
             m_setLineBreaks != null || m_setThrowBreaks != null || m_stepMode != StepMode.None);
-        return iPC >= 0 ? iPC + 1 : iPC;
+        return iPC;
         }
 
     /**
@@ -1360,6 +654,797 @@ public class DebugConsole
         prefs.put("break-points", breakpointsToString(m_setLineBreaks));
         prefs.put("break-throws", breakpointsToString(m_setThrowBreaks));
         prefs.putBoolean("break-any-exception", m_fBreakOnAllThrows);
+        }
+
+    /**
+     * Process the next command.
+     *
+     * @return Op.R_REPEAT if the command has been processed and the next command should be entered
+     *         Op.R_EXCEPTION if the command was invalid and a generic error should be reported
+     *         any other value is used to exit the debugger
+     */
+    private int processCommand(Frame frame, int iPC, PrintWriter writer, String sCommand)
+        {
+        String[] asParts = parseDelimitedString(sCommand, ' ');
+        int      cArgs   = asParts.length - 1;
+        if (cArgs < 0)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        switch (asParts[0].toUpperCase())
+            {
+            case "B":
+                if (cArgs != 0)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+
+                writer.println(renderBreakpoints());
+                return Op.R_REPEAT;
+
+            case "B+":
+                switch (cArgs)
+                    {
+                    case 0:
+                        if (iPC >= 0)
+                            {
+                            BreakPoint bp = makeBreakPointPC(frame, iPC);
+                            if (bp != null)
+                                {
+                                addBP(bp);
+                                return Op.R_REPEAT;
+                                }
+                            }
+                        break;
+
+                    case 1:
+                        int nLine = parseNonNegative(asParts[1]);
+                        if (nLine > 0)
+                            {
+                            addBP(makeBreakPointLine(frame, nLine, false));
+                            return Op.R_REPEAT;
+                            }
+                        break;
+
+                    case 2:
+                        BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
+                        if (bp != null)
+                            {
+                            addBP(bp);
+                            return Op.R_REPEAT;
+                            }
+                        break;
+                    }
+                return Op.R_EXCEPTION; // invalid break-point
+
+            case "B-":
+                switch (cArgs)
+                    {
+                    case 0:
+                        // "B-" remove the current line from the list of breakpoints
+                        if (iPC >= 0)
+                            {
+                            BreakPoint bp = makeBreakPointPC(frame, iPC);
+                            if (bp != null)
+                                {
+                                removeBP(bp);
+                                return Op.R_REPEAT;
+                                }
+                            }
+                        break; // invalid break point
+
+                    case 1:
+                        // "B- *"  (nuke all breakpoints)
+                        if (asParts[1].equals("*"))
+                            {
+                            m_fBreakOnAllThrows = false;
+                            m_setLineBreaks     = null;
+                            m_setThrowBreaks    = null;
+                            saveBreakpoints();
+                            return Op.R_REPEAT;
+                            }
+                        // "B- 3"  (# is from the previously displayed list of breakpoints)
+                        else if (m_aBreaks != null)
+                            {
+                            int n = parseNonNegative(asParts[1]);
+                            if (n >= 0 && n < m_aBreaks.length)
+                                {
+                                removeBP(m_aBreaks[n]);
+                                return Op.R_REPEAT;
+                                }
+                            }
+                        break; // invalid command
+
+                    case 2:
+                        // "B- MyClass 123"  (class name and line number)
+                        BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
+                        if (bp != null)
+                            {
+                            removeBP(bp);
+                            return Op.R_REPEAT;
+                            }
+                        break; // invalid break point
+                    }
+                return Op.R_EXCEPTION;
+
+            case "BC":
+                {
+                BreakPoint bp = null;
+                switch (cArgs)
+                    {
+                    case 0:
+                        break; // invalid; args are missing
+
+                    case 1:
+                        bp = makeBreakPointPC(frame, iPC);
+                        bp.condition = asParts[1];
+                        break;
+
+                    case 2:
+                        int nLine = parseNonNegative(asParts[1]);
+                        if (nLine > 0)
+                            {
+                            bp = makeBreakPointLine(frame, nLine, false);
+                            bp.condition = asParts[2];
+                            }
+                        break;
+
+                    default:
+                        bp = parseBreakPoint(asParts[1], asParts[2], false);
+                        if (bp != null)
+                            {
+                            StringBuilder sb = new StringBuilder();
+                            for (int i = 3; i < cArgs + 1; i++)
+                                {
+                                sb.append(asParts[i]).append(' ');
+                                }
+                            bp.condition = sb.toString();
+                            }
+                        break;
+                    }
+                if (bp == null)
+                    {
+                    return Op.R_EXCEPTION; // invalid command
+                    }
+                addBP(bp);
+                return Op.R_REPEAT;
+                }
+
+            case "BE+":
+                if (cArgs == 1)
+                    {
+                    addBP(new BreakPoint(asParts[1]));
+                    return Op.R_REPEAT;
+                    }
+                return Op.R_EXCEPTION; // invalid command
+
+            case "BE-":
+                if (cArgs == 1)
+                    {
+                    removeBP(new BreakPoint(asParts[1]));
+                    return Op.R_REPEAT;
+                    }
+                return Op.R_EXCEPTION; // invalid command
+
+            case "BT":
+                switch (cArgs)
+                    {
+                    case 0:
+                        if (iPC >= 0)
+                            {
+                            BreakPoint bp = makeBreakPointPC(frame, iPC);
+                            if (bp != null)
+                                {
+                                BreakPoint bpExists = findBP(bp);
+                                if (bpExists == null)
+                                    {
+                                    addBP(bp);
+                                    }
+                                else
+                                    {
+                                    toggleBP(bpExists);
+                                    }
+                                return Op.R_REPEAT;
+                                }
+                            }
+                         break; // invalid command
+
+                    case 1:
+                        if (asParts[1].equals("*"))
+                            {
+                            BreakPoint[] aBP = allBreakpoints();
+                            if (Arrays.stream(aBP).allMatch(BreakPoint::isEnabled))
+                                {
+                                Arrays.stream(aBP).forEach(BreakPoint::disable);
+                                m_fBreakOnAllThrows = false;
+                                }
+                            else
+                                {
+                                Arrays.stream(aBP).forEach(BreakPoint::enable);
+                                m_fBreakOnAllThrows =
+                                    Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
+                                }
+                            saveBreakpoints();
+                            return Op.R_REPEAT;
+                            }
+                        // "BT 3"  (# is from the previously displayed list of breakpoints)
+                        else if (m_aBreaks != null)
+                            {
+                            int n = parseNonNegative(asParts[1]);
+                            if (n >= 0 && n < m_aBreaks.length)
+                                {
+                                BreakPoint bp = m_aBreaks[n];
+                                if (bp.isEnabled())
+                                    {
+                                    bp.disable();
+                                    }
+                                else
+                                    {
+                                    bp.enable();
+                                    }
+                                return Op.R_REPEAT;
+                                }
+                            }
+                        else
+                            {
+                            toggleBP(new BreakPoint(asParts[1]));
+                            return Op.R_REPEAT;
+                            }
+                        break;
+
+                    case 2:
+                        {
+                        BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], false);
+                        if (bp != null)
+                            {
+                            toggleBP(bp);
+                            return Op.R_REPEAT;
+                            }
+                        break;
+                        }
+                    }
+                return Op.R_EXCEPTION;
+
+            case "F":
+                int iFrame = cArgs == 0 ? 0 : parseNonNegative(asParts[1]);
+                Frame.StackFrame[] aFrames = m_aFrames;
+                int                cFrames = aFrames == null ? 0 : aFrames.length;
+                if (iFrame >= 0 && iFrame < cFrames)
+                    {
+                    m_frameFocus = aFrames[iFrame].frame;
+                    }
+
+                writer.println(renderDebugger());
+                return Op.R_REPEAT;
+
+            case "?": case "HELP":
+                writer.println(renderHelp());
+                return Op.R_REPEAT;
+
+            case "N":
+            case "S":
+                m_stepMode = StepMode.StepOver;
+                int cSteps = cArgs == 0 ? 0 : parseNonNegative(asParts[1]);
+                if (cSteps > 0)
+                    {
+                    m_cSteps = cSteps;
+                    }
+                return Op.R_NEXT;
+
+            case "I":
+            case "S+":
+                m_stepMode = StepMode.StepInto;
+                return Op.R_NEXT;
+
+            case "O":
+            case "S-":
+                m_stepMode = StepMode.StepOut;
+                return Op.R_NEXT;
+
+            case "SL":
+                switch (cArgs)
+                    {
+                    case 0:
+                        if (iPC >= 0)
+                            {
+                            int nLine = frame.f_function.calculateLineNumber(iPC);
+                            if (nLine > 0)
+                                {
+                                addBP(makeBreakPointLine(frame, nLine, true));
+                                m_stepMode = StepMode.None;
+                                return Op.R_NEXT;
+                                }
+                            }
+                        break; // invalid break point
+
+                    case 1:
+                        int nLine = parseNonNegative(asParts[1]);
+                        if (nLine > 0)
+                            {
+                            addBP(makeBreakPointLine(frame, nLine, true));
+                            m_stepMode = StepMode.None;
+                            return Op.R_NEXT;
+                            }
+                        break; // invalid break point
+
+                    case 2:
+                        BreakPoint bp = parseBreakPoint(asParts[1], asParts[2], true);
+                        if (bp != null)
+                            {
+                            addBP(bp);
+                            m_stepMode = StepMode.None;
+                            return Op.R_NEXT;
+                            }
+                        break; // invalid break point
+                    }
+                return Op.R_EXCEPTION;
+
+            case "R":
+                m_stepMode = StepMode.None;
+                return Op.R_NEXT;
+
+            case "VC":
+                m_viewMode = ViewMode.Console;
+                writer.println(renderConsole());
+                return Op.R_REPEAT;
+
+            case "VD":
+                m_viewMode = ViewMode.Frames;
+                writer.println(renderDebugger());
+                return Op.R_REPEAT;
+
+            case "VF":
+                m_viewMode = ViewMode.Services;
+                writer.println(renderServices());
+                return Op.R_REPEAT;
+
+            case "VS":
+                switch (cArgs)
+                    {
+                    case 0:
+                        writer.println("Current debugger text width=" + m_cWidth +
+                                       " characters, height= " + m_cHeight + " lines.");
+                        return Op.R_REPEAT;
+
+                    case 2:
+                        {
+                        int n = parseNonNegative(asParts[2]);
+                        if (n >= 10 && n < 1000)
+                            {
+                            writer.println("Altering debugger text height from " + m_cHeight +
+                                           " to " + n + " lines.");
+                            m_cHeight = n;
+                            prefs.putInt("screen-height", n);
+                            }
+                        else
+                            {
+                            writer.println("Illegal text height: " + asParts[2]);
+                            return Op.R_REPEAT;
+                            }
+                        }
+                        // fall through
+                    case 1:
+                        {
+                        int n = parseNonNegative(asParts[1]);
+                        if (n >= 40 && n < 1000)
+                            {
+                            writer.println("Altering debugger text width from " + m_cWidth +
+                                           " to " + n + " characters.");
+                            m_cWidth = n;
+                            prefs.putInt("screen-width", n);
+                            }
+                        else
+                            {
+                            writer.println("Illegal text width: " + asParts[1]);
+                            }
+                        return Op.R_REPEAT;
+                        }
+                    }
+                return Op.R_EXCEPTION;
+
+            case "X":
+                if (cArgs >= 1)
+                    {
+                    VarDisplay[] aVars    = m_aVars;
+                    boolean      fRepaint = false;
+                    for (int i = 0; i < cArgs; ++i)
+                        {
+                        int iVar = parseNonNegative(asParts[i+1]);
+                        if (iVar >= 0 && iVar < aVars.length)
+                            {
+                            VarDisplay var = aVars[iVar];
+                            if (var.canExpand)
+                                {
+                                Map<String, Integer> mapExpand = ensureExpandMap(iVar);
+                                if (var.isArray)
+                                    {
+                                    if (var.name.equals("..."))
+                                        {
+                                        // find the parent array
+                                        int arrayLevel = var.indent - 1;
+                                        do
+                                            {
+                                            var = aVars[--iVar];
+                                            }
+                                        while (var.indent > arrayLevel);
+
+                                        int cShow = mapExpand.getOrDefault(var.path, 0);
+                                        cShow = (cShow + 1) * 10;
+                                        mapExpand.put(var.path, cShow);
+                                        }
+                                    else
+                                        {
+                                        mapExpand.put(var.path, var.expanded ? 0 : 10);
+                                        }
+                                    }
+                                else
+                                    {
+                                    mapExpand.put(var.path, var.expanded ? 0 : 1);
+                                    }
+                                fRepaint = true;
+                                }
+                            else
+                                {
+                                writer.println("Cannot expand or contract \"" + var.name + '\"');
+                                }
+                            }
+
+                        if (fRepaint)
+                            {
+                            writer.println(renderDebugger());
+                            }
+                        }
+                    return Op.R_REPEAT;
+                    }
+                return Op.R_EXCEPTION;
+
+            case "V":
+                // TODO toggle between native vs. toString() (and possibly a third, type-specific format for some types)
+                writer.println("View format has not been implemented.");
+                return Op.R_REPEAT;
+
+            case "E", "EVAL":
+                {
+                if (cArgs < 1)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+
+                if (m_frameFocus != frame || frame.isNative())
+                    {
+                    writer.println("The \"eval\" command is only supported at the top frame.");
+                    return Op.R_EXCEPTION;
+                    }
+
+                StringBuilder sb = new StringBuilder("{\nreturn {Object r__ = {\nreturn");
+                for (int i = 1; i < cArgs + 1; i++)
+                    {
+                    sb.append(' ').append(asParts[i]);
+                    }
+                sb.append(";\n}; return r__.toString();};\n}");
+
+                if (performEval(frame, iPC, sb.toString(), writer) == Op.R_CALL)
+                    {
+                    updateHistory(sCommand);
+                    return Op.R_CALL;
+                    }
+                return Op.R_REPEAT; // an error has been reported
+                }
+
+            case "EM", "EVAL_MULTI":
+                {
+                if (cArgs < 1)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+
+                if (m_frameFocus != frame || frame.isNative())
+                    {
+                    writer.println("The \"eval\" command is only supported at the top frame.");
+                    return Op.R_EXCEPTION;
+                    }
+
+                StringBuilder sb = new StringBuilder("{\nreturn {Tuple r__ = {\nreturn");
+                for (int i = 1; i < cArgs + 1; i++)
+                    {
+                    sb.append(' ').append(asParts[i]);
+                    }
+                sb.append(";\n}; return r__.size == 1 ? r__[0].toString() : r__.toString();};\n}");
+
+                if (performEval(frame, iPC, sb.toString(), writer) == Op.R_CALL)
+                    {
+                    updateHistory(sCommand);
+                    return Op.R_CALL;
+                    }
+                return Op.R_REPEAT; // an error has been reported
+                }
+
+            case "WE":
+                // TODO watch eval <expr>
+                writer.println("Watch Eval has not been implemented.");
+                return Op.R_REPEAT;
+
+            case "WO":
+                if (cArgs >= 1)
+                    {
+                    VarDisplay[] aVars    = m_aVars;
+                    boolean      fRepaint = false;
+                    for (int i = 0; i < cArgs; ++i)
+                        {
+                        int iVar = parseNonNegative(asParts[i+1]);
+                        if (iVar >= 0 && iVar < aVars.length)
+                            {
+                            // verify that the referent is available
+                            VarDisplay var = aVars[iVar];
+                            if (var.hVar == null)
+                                {
+                                writer.println("Var #" + iVar + " (\"" + var.name + "\") does not have a referent to Watch");
+                                continue;
+                                }
+
+                            // verify that it is not already a watched object
+                            Watch watch = var.watch;
+                            if (watch != null && watch.form == Watch.OBJ)
+                                {
+                                writer.println("Var #" + iVar + " (\"" + var.name + "\") is already a Watched Object");
+                                continue;
+                                }
+
+                            // create the watch
+                            String sName = var.path;
+                            if (sName.startsWith("watch:"))
+                                {
+                                sName = sName.substring("watch:".length());
+                                }
+                            watch = new Watch("watch:" + sName, sName, var.hVar);
+                            getGlobalStash().ensureWatchList().add(watch);
+                            fRepaint = true;
+                            }
+                        else
+                            {
+                            writer.println("Var #" + iVar + " does not exist");
+                            }
+                        }
+
+                    if (fRepaint)
+                        {
+                        writer.println(renderDebugger());
+                        }
+                    return Op.R_REPEAT;
+                    }
+                return Op.R_EXCEPTION;
+
+            case "WR":
+                if (cArgs >= 1)
+                    {
+                    VarDisplay[] aVars    = m_aVars;
+                    boolean      fRepaint = false;
+                    for (int i = 0; i < cArgs; ++i)
+                        {
+                        int iVar = parseNonNegative(asParts[i+1]);
+                        if (iVar >= 0 && iVar < aVars.length)
+                            {
+                            // verify that it is not already a watch
+                            VarDisplay var = aVars[iVar];
+                            Watch watch = var.watch;
+                            if (watch != null)
+                                {
+                                writer.println("Var #" + iVar + " (\"" + var.name + "\") is already a Watch");
+                                continue;
+                                }
+
+                            // figure out if it is a variable, property, or element
+                            boolean fGlobal;
+                            if (var.indent == 0)
+                                {
+                                // it's a variable (since it's not a watch)
+                                writer.println("Var #" + iVar + " (\"" + var.name + "\") is already displayed in the current frame");
+                                continue;
+                                }
+                            else if (var.name.startsWith("["))
+                                {
+                                // it's an array element
+                                VarDisplay parent = aVars[findParentNode(iVar)];
+                                int        index  = Integer.valueOf(var.name.substring(1, var.name.length()-1));
+                                watch   = new Watch("watch:" + var.path, var.path, parent.hVar, index);
+                                fGlobal = false;
+                                }
+                            else if (var.name.startsWith("."))
+                                {
+                                // it's "...", i.e. the unexpanded portion of an array
+                                writer.println("Var #" + iVar + " is not Watchable");
+                                continue;
+                                }
+                            else
+                                {
+                                // it must be a property
+                                VarDisplay parent = aVars[findParentNode(iVar)];
+                                watch   = new Watch("watch:" + var.path, var.path, parent.hVar, var.name);
+                                fGlobal = true;
+                                }
+
+                            (fGlobal ? getGlobalStash() : getFrameStash()).ensureWatchList().add(watch);
+                            fRepaint = true;
+                            }
+                        else
+                            {
+                            writer.println("Var #" + iVar + " does not exist");
+                            }
+                        }
+
+                    if (fRepaint)
+                        {
+                        writer.println(renderDebugger());
+                        }
+                    return Op.R_REPEAT;
+                    }
+                return Op.R_EXCEPTION;
+
+            case "W-":
+                if (cArgs >= 1)
+                    {
+                    VarDisplay[] aVars    = m_aVars;
+                    boolean      fRepaint = false;
+                    for (int i = 0; i < cArgs; ++i)
+                        {
+                        int iVar = parseNonNegative(asParts[i+1]);
+                        if (iVar >= 0 && iVar < aVars.length)
+                            {
+                            // verify that the var is a watch
+                            VarDisplay var   = aVars[iVar];
+                            Watch      watch = var.watch;
+                            if (watch == null)
+                                {
+                                writer.println("Var #" + iVar + " (\"" + var.name + "\") is not a Watch");
+                                continue;
+                                }
+
+                            getFrameStash().ensureWatchList().remove(watch);
+                            getGlobalStash().ensureWatchList().remove(watch);
+                            fRepaint = true;
+                            }
+                        else
+                            {
+                            writer.println("Var #" + iVar + " does not exist");
+                            }
+                        }
+
+                    if (fRepaint)
+                        {
+                        writer.println(renderDebugger());
+                        }
+                    return Op.R_REPEAT;
+                    }
+                return Op.R_EXCEPTION;
+
+            case "D":
+                if (cArgs >= 1)
+                    {
+                    VarDisplay[] aVars = m_aVars;
+                    int iVar = parseNonNegative(asParts[1]);
+                    if (iVar >= 0 && iVar < aVars.length)
+                        {
+                        ObjectHandle hVar = aVars[iVar].hVar;
+                        if (cArgs >= 2)
+                            {
+                            String sProp = asParts[2];
+                            try
+                                {
+                                hVar = ((GenericHandle) hVar).getField(frame, sProp);
+                                }
+                            catch (Throwable e)
+                                {
+                                writer.println("Invalid property: " + sProp);
+                                return Op.R_REPEAT;
+                                }
+                            }
+
+                        StringBuilder sb = new StringBuilder();
+
+                        renderVar(hVar, false, sb, "   +");
+                        writer.println(sb);
+                        return Op.R_REPEAT;
+                        }
+                    }
+                return Op.R_EXCEPTION;
+
+            case "DS":
+                if (cArgs >= 1)
+                    {
+                    VarDisplay[] aVars = m_aVars;
+                    int iVar = parseNonNegative(asParts[1]);
+                    if (iVar >= 0 && iVar < aVars.length)
+                        {
+                        ObjectHandle hVar = aVars[iVar].hVar;
+                        if (hVar != null)
+                            {
+                            if (cArgs >= 2)
+                                {
+                                String sProp = asParts[2];
+                                try
+                                    {
+                                    hVar = ((GenericHandle) hVar).getField(frame, sProp);
+                                    }
+                                catch (Throwable e)
+                                    {
+                                    writer.println("Invalid property: " + sProp);
+                                    return Op.R_REPEAT;
+                                    }
+                                }
+                            }
+
+                        if (hVar == null)
+                            {
+                            writer.println("<unassigned>");
+                            }
+                        else if (callToString(frame, frame.clearException(), hVar, writer) == Op.R_CALL)
+                            {
+                            return Op.R_CALL;
+                            }
+                        return Op.R_REPEAT;
+                        }
+                    }
+                return Op.R_EXCEPTION;
+
+            case "H", "HISTORY":
+                {
+                List<String> listHistory = m_listHistory;
+                if (cArgs > 0)
+                    {
+                    int n = parseNonNegative(asParts[1]);
+                    if (n >= 0)
+                        {
+                        while (listHistory.size() > n)
+                            {
+                            listHistory.remove(n);
+                            }
+                        }
+                    }
+
+                int i = 0;
+                for (String sCmd : listHistory)
+                    {
+                    writer.println(i++ + ") " + sCmd);
+                    }
+                return Op.R_REPEAT;
+                }
+
+            case ".":
+                {
+                int n = cArgs > 0 ? parseNonNegative(asParts[1]) : 0;
+                if (n < 0 || n > m_listHistory.size())
+                    {
+                    return Op.R_EXCEPTION; // invalid command
+                    }
+                String sCmd = m_listHistory.get(n);
+                writer.println(sCmd);
+                return processCommand(frame, iPC, writer, sCmd);
+                }
+
+            default:
+                writer.println("Unknown command: \"" + sCommand + "\"; enter '?' for help");
+                return Op.R_REPEAT;
+            }
+        }
+
+    private void loadHistory()
+        {
+        List<String> list = new ArrayList<>();
+
+        String sHistory = prefs.get("history", "");
+        if (sHistory.length() > 0)
+            {
+            byte[] abHistory = Base64.getDecoder().decode(sHistory);
+            sHistory = new String(abHistory, StandardCharsets.UTF_8);
+            for (int ofStart = 0, ofEnd = sHistory.indexOf('\n');
+                 ofEnd > 0;
+                 ofStart = ofEnd + 1, ofEnd = sHistory.indexOf('\n', ofStart))
+                {
+                list.add(sHistory.substring(ofStart, ofEnd));
+                }
+            }
+        m_listHistory = list;
         }
 
     private Set<BreakPoint> stringToBreakpoints(String s)
@@ -2117,58 +2202,24 @@ public class DebugConsole
         return sb.toString();
         }
 
-    private String renderHelp()
+    private void updateHistory(String sCommand)
         {
-        return """
-            
-             Command                  Description
-             -------------------      ---------------------------------------------
-             F <frame#>               Switch to the specified Frame number
-             X <var#>                 Expand (or contract) the specified variable number
-             V <var#>                 Toggle the view mode (output format) for the specified variable number
-             E <expr>                 Evaluate the specified expression
-             EM <expr>                Evaluate the specified expression that produces multiple (or conditional) results
-             WE <expr>                Add a "watch" for the specified expression
-             WO <var#>                Add a watch on the specified referent (the object itself)
-             WR <var#>                Add a watch on the specified reference (the property or variable)
-             W- <var#>                Remove the specified watch
-             D <var#>                 Display the structure view of the specified variable number
-             DS <var#>                Display the "toString()" value of the specified variable number
-                                      
-             S  (or N)                Step over ("proceed to next line")
-             S  (or N) <count>        Repeatedly step over ("proceed to next line") <count> times
-             S+ (or I)                Step in
-             S- (or O)                Step out of frame
-             SL                       Step (run) to current line
-             SL <line>                Step (run) to specified line
-             SL <name> <line>         Step (run) to specified line
-             R                        Run to next breakpoint
-                                      
-             B+                       Add breakpoint for the current line
-             B-                       Remove breakpoint for the current line
-             BT                       Toggle breakpoint for the current line
-             B+ <line>                Add specified breakpoint
-             B+ <name> <line>         Add specified breakpoint
-             B- <name> <line>         Remove specified breakpoint
-             BC <cond>                Add conditional breakpoint for the current line
-             BC <line> <cond>         Add specified conditional breakpoint
-             BC <name> <line> <cond>  Add specified conditional breakpoint
-             BT <name> <line>         Toggle specified breakpoint
-             BE+ <exception>          Break on exception
-             BE- <exception>          Remove exception breakpoint
-             BE+ *                    Break on all exceptions
-             BE- *                    Remove the "all exception" breakpoint
-             B- *                     Clear all breakpoints
-             BT *                     Toggle all breakpoints (enable all iff all enabled; otherwise disable all)
-             B                        List current breakpoints
-             B- <breakpoint#>         Remove specified breakpoint (from the breakpoint list)
-             BT <breakpoint#>         Toggle specified breakpoint (from the breakpoint list)
-                                      
-             VC                       View Console
-             VD                       View Debugger
-             VF                       View Services and Fibers
-             VS <width> <height>      Set view width and optional height for debugger and console views
-             ?  (or HELP)             Display this help message""";
+        List<String> list = m_listHistory;
+        while (list.size() > 42)
+            {
+            list.remove(42);
+            }
+        list.remove(sCommand);
+        list.add(0, sCommand);
+
+        StringBuilder sbCommands = new StringBuilder();
+        for (String s : list)
+            {
+            sbCommands.append('\n').append(s);
+            }
+
+        byte[] abHistory = sbCommands.substring(1).getBytes(StandardCharsets.UTF_8);
+        prefs.put("history", Base64.getEncoder().encodeToString(abHistory));
         }
 
 
@@ -2749,6 +2800,67 @@ public class DebugConsole
      * The order that the breakpoints were last listed in.
      */
     private BreakPoint[] m_aBreaks;
+
+    private String renderHelp()
+        {
+        return """
+            
+             Command                  Description
+             -------------------      ---------------------------------------------
+             F <frame#>               Switch to the specified Frame number
+             X <var#>                 Expand (or contract) the specified variable number
+             V <var#>                 Toggle the view mode (output format) for the specified variable number
+             E <expr>                 Evaluate the specified expression
+             EM <expr>                Evaluate the specified expression that produces multiple (or conditional) results
+             WE <expr>                Add a "watch" for the specified expression
+             WO <var#>                Add a watch on the specified referent (the object itself)
+             WR <var#>                Add a watch on the specified reference (the property or variable)
+             W- <var#>                Remove the specified watch
+             D <var#>                 Display the structure view of the specified variable number
+             DS <var#>                Display the "toString()" value of the specified variable number
+                                      
+             S  (or N)                Step over ("proceed to next line")
+             S  (or N) <count>        Repeatedly step over ("proceed to next line") <count> times
+             S+ (or I)                Step in
+             S- (or O)                Step out of frame
+             SL                       Step (run) to current line
+             SL <line>                Step (run) to specified line
+             SL <name> <line>         Step (run) to specified line
+             R                        Run to next breakpoint
+                                      
+             B+                       Add breakpoint for the current line
+             B-                       Remove breakpoint for the current line
+             BT                       Toggle breakpoint for the current line
+             B+ <line>                Add specified breakpoint
+             B+ <name> <line>         Add specified breakpoint
+             B- <name> <line>         Remove specified breakpoint
+             BC <cond>                Add conditional breakpoint for the current line
+             BC <line> <cond>         Add specified conditional breakpoint
+             BC <name> <line> <cond>  Add specified conditional breakpoint
+             BT <name> <line>         Toggle specified breakpoint
+             BE+ <exception>          Break on exception
+             BE- <exception>          Remove exception breakpoint
+             BE+ *                    Break on all exceptions
+             BE- *                    Remove the "all exception" breakpoint
+             B- *                     Clear all breakpoints
+             BT *                     Toggle all breakpoints (enable all iff all enabled; otherwise disable all)
+             B                        List current breakpoints
+             B- <breakpoint#>         Remove specified breakpoint (from the breakpoint list)
+             BT <breakpoint#>         Toggle specified breakpoint (from the breakpoint list)
+                                      
+             VC                       View Console
+             VD                       View Debugger
+             VF                       View Services and Fibers
+             VS <width> <height>      Set view width and optional height for debugger and console views
+
+             H                        Display command history
+             H <count>                Purge command history
+             .                        Repeat the last command
+             . <number>               Repeat the specified command from the history list
+             
+             ?  (or HELP)             Display this help message
+             """;
+        }
 
     /**
      * The current step operation.
