@@ -1863,8 +1863,12 @@ public class NameExpression
             errsTemp.merge();
             if (arg == null && !errsTemp.hasSeriousErrors())
                 {
-                log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                        sName, ctx.getMethod().getIdentityConstant().getValueString());
+                MethodStructure  method = ctx.getMethod();
+                IdentityConstant idCtx  = method == null
+                        ? ctx.getThisClassId()
+                        : method.getIdentityConstant();
+
+                log(errs, Severity.ERROR, Compiler.NAME_MISSING, sName, idCtx.getValueString());
                 return null;
                 }
 
