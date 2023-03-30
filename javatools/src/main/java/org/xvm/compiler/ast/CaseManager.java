@@ -220,15 +220,57 @@ public class CaseManager<CookieType>
     // ----- operations ----------------------------------------------------------------------------
 
     /**
+     * Compute the arity of the switch (the number of values the condition is expected to produce).
+     *
+     * @param listNodes  all the nodes of the switch block
+     * @param errs       the error list to log to
+     *
+     * @return a positive arity or zero if an error has been reported
+     */
+    protected int computeArity(List<? extends AstNode> listNodes, ErrorListener errs)
+        {
+        int nArity = 0;
+        for (AstNode node : listNodes)
+            {
+            if (node instanceof CaseStatement stmtCase)
+                {
+                if (stmtCase.isDefault())
+                    {
+                    continue;
+                    }
+
+                for (Expression expr : stmtCase.getExpressions())
+                    {
+                    int n = expr instanceof TupleExpression exprTuple
+                            ? exprTuple.getExpressions().size()
+                            : 1;
+                    if (nArity == 0)
+                        {
+                        nArity = n;
+                        }
+                    else if (nArity != n)
+                        {
+                        expr.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_ILLEGAL_ARITY);
+                        return 0;
+                        }
+                    }
+                }
+            }
+        return nArity;
+        }
+
+    /**
      * Validate the condition value expressions.
      *
      * @param ctx       the validation context
      * @param listCond  the list of condition value expressions (mutable)
+     * @param nArity    the number of values the condition is expected to produce
      * @param errs      the error list to log to
      *
      * @return true iff the validation succeeded
      */
-    protected boolean validateCondition(Context ctx, List<AstNode> listCond, ErrorListener errs)
+    protected boolean validateCondition(Context ctx, List<AstNode> listCond, int nArity,
+                                        ErrorListener errs)
         {
         boolean      fValid     = true;
         ConstantPool pool       = pool();
@@ -316,8 +358,12 @@ public class CaseManager<CookieType>
                     }
                 else
                     {
-                    for (TypeConstant type : atype)
+                    // every condition could produce multiple results; ignore ones that exceeded
+                    // the switch arity
+                    for (int j = 0, iType = i; j < atype.length && iType < nArity; j++, iType++)
                         {
+                        TypeConstant type = atype[j];
+
                         // allow switching on formal types as soon as constraints are satisfied
                         if (type.isTypeOfType() && type.containsFormalType(true))
                             {
@@ -327,12 +373,12 @@ public class CaseManager<CookieType>
                         listTypes.add(type);
                         if (fIsSwitch)
                             {
-                            if (i >= 63)
+                            if (iType >= 63)
                                 {
                                 node.log(errs, Severity.ERROR, Compiler.SWITCH_OVERFLOW);
                                 fValid = false;
                                 }
-                            afIsSwitch |= 1L << i;
+                            afIsSwitch |= 1L << iType;
                             }
                         }
                     }
@@ -1369,7 +1415,9 @@ public class CaseManager<CookieType>
 
             // don't use stack
             Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, false, errs);
-            int cArgsAdd = aArgsAdd.length;
+
+            // ignore unused return values
+            int cArgsAdd = Math.min(aArgsAdd.length, aArgVal.length - ofArgVal);
             System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
             ofArgVal += cArgsAdd;
             }

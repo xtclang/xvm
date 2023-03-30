@@ -128,21 +128,27 @@ public class SwitchExpression
                 : atypeRequired;
 
         // the structure of the switch is determined using a case manager
-        CaseManager<Expression> mgr = new CaseManager<>(this);
+        List<AstNode>           listNodes = contents;
+        CaseManager<Expression> mgr       = new CaseManager<>(this);
         m_casemgr = mgr;
+
+        int nArity = mgr.computeArity(listNodes, errs);
+        if (nArity == 0)
+            {
+            return null; // an error must've been reported
+            }
 
         // create a new context in case there are short-circuiting conditions that result in
         // narrowing inferences (see comments in SwitchStatement.validateImpl)
         ctx = ctx.enter();
 
         // validate the switch condition
-        boolean fValid = mgr.validateCondition(ctx, cond, errs);
+        boolean fValid = mgr.validateCondition(ctx, cond, nArity, errs);
 
         Context ctxCase = ctx.enterIf();
 
         ConstantPool   pool      = pool();
         TypeCollector  collector = new TypeCollector(pool);
-        List<AstNode>  listNodes = contents;
         boolean        fInCase   = false;
         int            cExprs    = 0;
         int            cCases    = 0;    // number of cases preceding an expression

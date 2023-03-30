@@ -100,8 +100,15 @@ public class SwitchStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean                fValid = true;
-        CaseManager<CaseGroup> mgr    = new CaseManager<>(this);
+        boolean                fValid    = true;
+        CaseManager<CaseGroup> mgr       = new CaseManager<>(this);
+        List<Statement>        listStmts = block.stmts;
+        int                    nArity    = mgr.computeArity(listStmts, errs);
+
+        if (nArity == 0)
+            {
+            return null; // an error must've been reported
+            }
 
         m_listGroups = new ArrayList<>();
         m_casemgr    = mgr;
@@ -118,9 +125,8 @@ public class SwitchStatement
         // covered or there is a default)
         SwitchContext ctxSwitch = new SwitchContext(ctx, mgr);
 
-        fValid &= mgr.validateCondition(ctxSwitch, conds, errs);
+        fValid &= mgr.validateCondition(ctxSwitch, conds, nArity, errs);
 
-        List<Statement>  listStmts = block.stmts;
         int              cStmts    = listStmts.size();
         boolean          fInCase   = false;
         CaseBlockContext ctxBlock  = null;
