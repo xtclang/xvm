@@ -144,7 +144,7 @@ public class NotNullExpression
             }
 
         // at this point, we have to make a decision: either this expression takes a "T?" and strips
-        // the null off and returnsn the T, or it takes a "conditional T" / "(Boolean, T)" and
+        // the null off and returns the T, or it takes a "conditional T" / "(Boolean, T)" and
         // returns the T
         ConstantPool   pool      = pool();
         boolean        fCond     = false;
@@ -309,8 +309,8 @@ public class NotNullExpression
     /**
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
      */
-    protected transient boolean m_fCond;
-    protected transient Label   m_labelShort;
+    private transient boolean m_fCond;
+    private transient Label   m_labelShort;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
     }

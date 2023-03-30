@@ -11,6 +11,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpNotNull;
+import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -22,6 +23,11 @@ import org.xvm.util.Severity;
 /**
  * The "Elvis" expression, which is used to optionally substitute the value of the second expression
  * iff the value of the first expression is null.
+ *
+ * Experimental feature: Alternatively, this expression tests a "conditional" first expression (one
+ * that yields both a Boolean and at least one additional value), and substitutes the value of the
+ * second expression iff that first Boolean value yielded is False, and otherwise yields the second
+ * value from the first expression.
  *
  * <ul>
  * <li><tt>COND_ELSE:  "?:"</tt> - the "elvis" operator</li>
@@ -43,15 +49,30 @@ public class ElvisExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant type1 = expr1.getImplicitType(ctx);
+        TypeConstant   type1;
+        TypeConstant[] atype1 = expr1.getImplicitTypes(ctx);
+        switch (atype1.length)
+            {
+            case 0:
+                return null;
+
+            case 1:
+                type1 = atype1[0].removeNullable();
+                break;
+
+            default:
+                TypeConstant type0 = atype1[0];
+                type1 = type0.isA(pool().typeBoolean())
+                    ? atype1[1]
+                    : type0.removeNullable();
+                break;
+            }
+
         TypeConstant type2 = expr2.getImplicitType(ctx);
         if (type1 == null || type2 == null)
             {
             return null;
             }
-
-        // nulls in the first expression are eliminated by using the second expression
-        type1 = type1.removeNullable();
 
         TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
@@ -67,22 +88,55 @@ public class ElvisExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
-        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable(), fExhaustive, errs);
+        // first try the less likely (and more complicated) "conditional" use case
+        ErrorListener  errsTemp  = errs == null ? ErrorListener.BLACKHOLE : errs.branch(this);
+        TypeConstant[] atypeCond = new TypeConstant[]{pool().typeBoolean(), typeRequired};
+        TypeFit        fit       = expr1.testFitMulti(ctx, atypeCond, fExhaustive, errsTemp);
+        if (fit.isFit())
+            {
+            errsTemp.merge();
+            }
+        else
+            {
+            fit = expr1.testFit(ctx, typeRequired.ensureNullable(), fExhaustive, errs);
+            }
+
         if (fit.isFit())
             {
             fit = fit.combineWith(expr2.testFit(ctx, typeRequired, fExhaustive, errs));
             }
+
         return fit;
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool pool     = pool();
-        TypeFit      fit      = TypeFit.Fit;
-        TypeConstant type1Req = typeRequired == null ? null : typeRequired.ensureNullable();
-        Expression   expr1New = expr1.validate(ctx, type1Req, errs);
-        TypeConstant type1    = null;
+        // we need to make a quick decision: either the first expression is a "T?" and is tested
+        // for non-null, or the first expression is a "conditional T" / "(Boolean, T)" and the
+        // Boolean is tested for True
+        ConstantPool   pool      = pool();
+        TypeFit        fit       = TypeFit.Fit;
+        Expression     expr1New  = null;
+        TypeConstant   type1     = null;
+        boolean        fCond     = false;
+        TypeConstant[] atypeCond = new TypeConstant[]{pool.typeBoolean(), pool.typeObject()};
+        if (expr1.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit())
+            {
+            m_fCond = fCond = true;
+
+            if (typeRequired != null)
+                {
+                atypeCond[1] = typeRequired;
+                }
+            expr1New = expr1.validateMulti(ctx, atypeCond, errs);
+            }
+        else
+            {
+            TypeConstant type1Req = typeRequired == null ? null : typeRequired.ensureNullable();
+            expr1New = expr1.validate(ctx, type1Req, errs);
+            }
+
         if (expr1New == null)
             {
             fit = TypeFit.NoFit;
@@ -93,13 +147,15 @@ public class ElvisExpression
             type1 = expr1New.getType();
             }
 
-        TypeConstant type2Req = type1 == null ? null :
-                Op.selectCommonType(type1.removeNullable(), null, errs);
-
-        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req, false, null).isFit()))
+        TypeConstant type2Req = type1 == null
+                ? null
+                : Op.selectCommonType(type1.removeNullable(), null, errs);
+        if (typeRequired != null &&
+                (type2Req == null || !expr2.testFit(ctx, type2Req, false, null).isFit()))
             {
             type2Req = typeRequired;
             }
+
         Expression expr2New = expr2.validate(ctx, type2Req, errs);
         if (expr2New == null)
             {
@@ -115,22 +171,31 @@ public class ElvisExpression
             return finishValidation(ctx, typeRequired, null, fit, null, errs);
             }
 
-        if (type1.isOnlyNullable())
+        TypeConstant type1Non;
+        TypeConstant type2 = expr2New.getType();
+        if (fCond)
             {
-            expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_ONLY_NULLABLE);
-            return replaceThisWith(expr2New);
+            type1Non = expr1New.getTypes()[1];
+            }
+        else
+            {
+            if (type1.isOnlyNullable())
+                {
+                expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_ONLY_NULLABLE);
+                return replaceThisWith(expr2New);
+                }
+
+            // the second check is for not-nullable type that is still allowed to be assigned from
+            // null (e.g. Object or Const)
+            if (!type1.isNullable() && !pool.typeNull().isA(type1.resolveConstraints()))
+                {
+                expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
+                return replaceThisWith(expr1New);
+                }
+
+            type1Non = type1.removeNullable();
             }
 
-        // the second check is for not-nullable type that is still allowed to be assigned from null
-        // (e.g. Object or Const)
-        if (!type1.isNullable() && !pool.typeNull().isA(type1.resolveConstraints()))
-            {
-            expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
-            return replaceThisWith(expr1New);
-            }
-
-        TypeConstant type1Non   = type1.removeNullable();
-        TypeConstant type2      = expr2New.getType();
         TypeConstant typeResult = Op.selectCommonType(type1Non, type2, errs);
         if (typeResult == null)
             {
@@ -142,21 +207,45 @@ public class ElvisExpression
         Constant constVal = null;
         if (expr1New.isConstant())
             {
-            Constant const1 = expr1New.toConstant();
-            if (const1.equals(pool.valNull()))
+            if (fCond)
                 {
-                if (expr2New.isConstant())
+                Constant[] aconst1 = expr1New.toConstants();
+                if (aconst1[0] == pool().valTrue())
                     {
-                    constVal = expr2New.toConstant();
+                    constVal = aconst1[1];
+                    }
+                else if (aconst1[0] == pool().valFalse())
+                    {
+                    if (expr2New.isConstant())
+                        {
+                        constVal = expr2New.toConstant();
+                        }
                     }
                 }
             else
                 {
-                constVal = const1;
+                Constant const1 = expr1New.toConstant();
+                if (const1.equals(pool.valNull()))
+                    {
+                    if (expr2New.isConstant())
+                        {
+                        constVal = expr2New.toConstant();
+                        }
+                    }
+                else
+                    {
+                    constVal = const1;
+                    }
                 }
             }
 
         return finishValidation(ctx, typeRequired, typeResult, fit, constVal, errs);
+        }
+
+    @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return m_fCond && exprChild == expr1;
         }
 
     @Override
@@ -176,9 +265,23 @@ public class ElvisExpression
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = getType().ensureNullable();
-        Assignable   var      = createTempVar(code, typeTemp, false);
-        generateAssignment(ctx, code, var, errs);
+        if (m_fCond)
+            {
+            Label        labelEnd = getEndLabel();
+            Assignable   varCond  = createTempVar(code, pool().typeBoolean(), true);
+            Assignable   varVal   = createTempVar(code, getType(), false);
+            Assignable[] LVals    = new Assignable[] {varCond, varVal};
+            expr1.generateAssignments(ctx, code, LVals, errs);
+            code.add(new JumpTrue(varCond.getRegister(), labelEnd));
+            expr2.generateAssignment(ctx, code, varVal, errs);
+            code.add(labelEnd);
+            return varVal.getRegister();
+            }
+        else
+            {
+            TypeConstant typeTemp = getType().ensureNullable();
+            Assignable var = createTempVar(code, typeTemp, false);
+            generateAssignment(ctx, code, var, errs);
 
         /*  Alternatively, and particularly if there were a way to ask expr1 if it can provide us an
             argument at no cost, we could do something like:
@@ -197,21 +300,32 @@ public class ElvisExpression
             code.add(labelEnd);
         */
 
-        return var.getRegister();
+            return var.getRegister();
+            }
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isNormalVariable() || !pool().typeNull().isA(LVal.getType()))
+        if (isConstant() || !LVal.isNormalVariable() || !m_fCond && !pool().typeNull().isA(LVal.getType()))
             {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
         Label labelEnd = getEndLabel();
-        expr1.generateAssignment(ctx, code, LVal, errs);
-        code.add(new JumpNotNull(LVal.getLocalArgument(), labelEnd));
+        if (m_fCond)
+            {
+            Assignable   varCond = createTempVar(code, pool().typeBoolean(), true);
+            Assignable[] LVals   = new Assignable[] {varCond, LVal};
+            expr1.generateAssignments(ctx, code, LVals, errs);
+            code.add(new JumpTrue(varCond.getRegister(), labelEnd));
+            }
+        else
+            {
+            expr1.generateAssignment(ctx, code, LVal, errs);
+            code.add(new JumpNotNull(LVal.getLocalArgument(), labelEnd));
+            }
         expr2.generateAssignment(ctx, code, LVal, errs);
         code.add(labelEnd);
         }
@@ -229,5 +343,11 @@ public class ElvisExpression
     // ----- fields --------------------------------------------------------------------------------
 
     private static    int s_nCounter;
+
+    /**
+     * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
+     */
+    private transient boolean m_fCond;
+
     private transient Label m_labelEnd;
     }
