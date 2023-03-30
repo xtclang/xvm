@@ -504,13 +504,9 @@ service Dispatcher(Catalog        catalog,
             }
 
         // look up the session by each of the available cookies
-        SessionImpl? txtSession = Null;
-        SessionImpl? tlsSession = Null;
-        SessionImpl? conSession = Null;
-
-        txtSession := sessionManager.getSessionByCookie(txtTemp?);
-        tlsSession := sessionManager.getSessionByCookie(tlsTemp?);
-        conSession := sessionManager.getSessionByCookie(consent?);
+        SessionImpl? txtSession = sessionManager.getSessionByCookie(txtTemp?)? : Null;
+        SessionImpl? tlsSession = sessionManager.getSessionByCookie(tlsTemp?)? : Null;
+        SessionImpl? conSession = sessionManager.getSessionByCookie(consent?)? : Null;
 
         // common case: there's a persistent session that we found, but there was already a
         // temporary session created with a plain text cookie before the user agent connected over
