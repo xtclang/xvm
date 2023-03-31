@@ -413,12 +413,6 @@ service SessionImpl
     @Override
     void sessionCreated()
         {
-        // TODO on each of these events, the execution needs to reach this level, otherwise we need
-        //      to issue a warning to the developer (but just the first time)
-        //
-        //      idea: use a mixin with state that tracks whether each method has been invoked, and
-        //      then records when it gets to this point, so we can determine when a call is made to
-        //      a session event and it doesn't get to the end of the event chain
         confirmReached_(SessionCreated);
         }
 
