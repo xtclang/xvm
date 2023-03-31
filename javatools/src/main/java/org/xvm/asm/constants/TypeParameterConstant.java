@@ -127,7 +127,8 @@ public class TypeParameterConstant
         typeConstraint = typeConstraint.getParamType(0);
         if (typeConstraint.containsTypeParameter(true))
             {
-            return typeConstraint.resolveConstraints();
+            // retain the formal constraint; the caller may need to call "resolveConstraints()"
+            return m_typeConstraint = typeConstraint;
             }
 
         if (!typeConstraint.isParamsSpecified() && typeConstraint.isExplicitClassIdentity(true))

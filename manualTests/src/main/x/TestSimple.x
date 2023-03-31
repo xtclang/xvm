@@ -6,14 +6,16 @@ module TestSimple
         {
         }
 
-    Int test(Int id)
+    static <WideType, NarrowType extends WideType>
+            WideType[] copy(Iterable<NarrowType> iterable, Array.Mutability mutability)
         {
-        switch (id)
+        WideType[] result = new WideType[](iterable.size);
+
+        loop: for (NarrowType element : iterable)
             {
-            default:
-                break;
+            result[loop.count] = element; // this used to fail to compile
             }
 
-        return id;
+        return result.toArray(mutability, True);
         }
     }
