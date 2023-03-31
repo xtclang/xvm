@@ -256,7 +256,9 @@ public class CaseManager<CookieType>
                     }
                 }
             }
-        return nArity;
+
+        // if there was not a single non-default CaseStatement, assume the arity of one
+        return nArity == 0 ? 1 : nArity;
         }
 
     /**
