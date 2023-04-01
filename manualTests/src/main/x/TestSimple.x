@@ -4,18 +4,15 @@ module TestSimple
 
     void run()
         {
-        }
+        String[] words1 = ["hello", "world"];
+        String[] words2 = ["world", "hello"];
 
-    static <WideType, NarrowType extends WideType>
-            WideType[] copy(Iterable<NarrowType> iterable, Array.Mutability mutability)
-        {
-        WideType[] result = new WideType[](iterable.size);
+        Collection<Object> co1 = words1;
+        Collection<Object> co2 = words2;
+        assert co1 == co2; // this used to blow at run time
 
-        loop: for (NarrowType element : iterable)
-            {
-            result[loop.count] = element; // this used to fail to compile
-            }
-
-        return result.toArray(mutability, True);
+        Collection<String> cs1 = words1;
+        Collection<String> cs2 = words2;
+        assert cs1 == cs2;
         }
     }

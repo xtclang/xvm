@@ -1064,12 +1064,8 @@ interface Collection<Element>
         // this is text-book inefficiency; we're comparing two bags of non-Hashable values
         enum NonExistent {NotAValue}
         typedef (CompileType.Element | NonExistent) as Remnant;
-        Iterator<CompileType.Element> iter = collection1.iterator();
-        Remnant[] remnants = new Remnant[collection1.size](_ ->
-            {
-            assert val e := iter.next(); return e;
-            });
-        assert !iter.next();
+        Remnant[] remnants = new Array(Mutable, collection1);
+
         for (CompileType.Element value : collection2)
             {
             if (Int i := remnants.indexOf(value))

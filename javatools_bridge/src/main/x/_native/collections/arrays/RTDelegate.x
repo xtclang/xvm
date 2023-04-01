@@ -31,4 +31,16 @@ class RTDelegate<Element>
 
     @Override
     RTDelegate! reify(Mutability? mutability = Null);
+
+    /**
+     * Native constructor helper; fill the array from the Iterable source.
+     */
+    private static Array fillFromIterable(Array array, Iterable iterable, Mutability mutability)
+        {
+        loop: for (Object element : iterable)
+            {
+            array[loop.count] = element;
+            }
+        return array.reify(mutability);
+        }
     }
