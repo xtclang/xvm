@@ -778,7 +778,7 @@ public class NameExpression
             switch (getMeaning())
                 {
                 case Variable:
-                    if (type.containsGenericType(true))
+                    if (type.containsFormalType(true))
                         {
                         ctx.useFormalType(type, errs);
                         }
@@ -2205,7 +2205,6 @@ public class NameExpression
                         }
                     }
 
-                // TODO support or properties nested under something other than a class (need nested type infos?)
                 TypeInfo         infoLeft = getTypeInfo(ctx, typeLeft, errs);
                 IdentityConstant idChild  = infoLeft.findName(pool, sName);
                 if (idChild == null)

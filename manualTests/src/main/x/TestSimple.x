@@ -4,15 +4,18 @@ module TestSimple
 
     void run()
         {
-        String[] words1 = ["hello", "world"];
-        String[] words2 = ["world", "hello"];
+        String[] words = ["hello", "world"];
+        console.print(words.hashCode());
 
-        Collection<Object> co1 = words1;
-        Collection<Object> co2 = words2;
-        assert co1 == co2; // this used to blow at run time
+        test(words);
+        }
 
-        Collection<String> cs1 = words1;
-        Collection<String> cs2 = words2;
-        assert cs1 == cs2;
+    static <CompileType extends Array> void test(CompileType collection)
+        {
+        typedef CompileType.Element? as NType;
+
+        Iterator<CompileType.Element> iter = collection.iterator();
+        NType[] nts = new NType[collection.size](_ -> iter.take()); // this used to fail at run-time
+        assert !iter.next();
         }
     }

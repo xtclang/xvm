@@ -2557,11 +2557,12 @@ public class InvocationExpression
                     //  typeLeft is a type of "CompileType.Element" formal type child
 
                     assert typeLeft.isTypeOfType();
-                    TypeInfo      infoLeft = typeLeft.getParamType(0).ensureTypeInfo(errs);
-                    ErrorListener errsTemp = errs.branch(this);
+                    TypeConstant  typeFormal = typeLeft.getParamType(0);
+                    TypeInfo      infoLeft   = typeFormal.ensureTypeInfo(errs);
+                    ErrorListener errsTemp   = errs.branch(this);
 
-                    Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Function,
-                        false, atypeReturn, errsTemp);
+                    Argument arg = findCallable(ctx, typeFormal, infoLeft, sName, MethodKind.Function,
+                                                false, atypeReturn, errsTemp);
                     if (arg instanceof MethodConstant)
                         {
                         m_argMethod   = arg;

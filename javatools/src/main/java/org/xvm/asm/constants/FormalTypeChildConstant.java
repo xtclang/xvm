@@ -132,8 +132,24 @@ public class FormalTypeChildConstant
             FormalConstant idParent   = (FormalConstant) getParentConstant();
             TypeConstant   typeParent = idParent.resolve(resolver);
 
-            if (typeParent == null || typeParent.isFormalType())
+            if (typeParent == null)
                 {
+                return null;
+                }
+
+            if (typeParent.isFormalType())
+                {
+                FormalConstant idParentResolved = (FormalConstant) typeParent.getDefiningConstant();
+                if (idParentResolved != idParent)
+                    {
+                    switch (idParentResolved.getFormat())
+                        {
+                        case FormalTypeChild:
+                        case TypeParameter:
+                            return idParentResolved.getConstantPool().
+                                ensureFormalTypeChildConstant(idParentResolved, getName()).getType();
+                        }
+                    }
                 return null;
                 }
 

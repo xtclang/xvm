@@ -717,6 +717,8 @@ public class NamedTypeExpression
                     }
                 }
 
+            // there is no reason to look at the type parameters; the validation logic recurses
+            // into the underlying NameTypeExpression nodes
             if (type.containsFormalType(false))
                 {
                 // the type is either a simple formal (Element), a formal child (Element.Key),

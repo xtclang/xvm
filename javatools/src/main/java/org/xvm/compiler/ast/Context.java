@@ -2724,7 +2724,12 @@ public class Context
                         }
 
                     case FormalTypeChild:
-                        // TODO GG: add processing for formal type child
+                        {
+                        FormalConstant constParent = (FormalConstant) constFormal.getParentConstant();
+                        useFormalType(constParent.getType(), errs);
+                        break;
+                        }
+
                     case DynamicFormal:
                         break;
                     }

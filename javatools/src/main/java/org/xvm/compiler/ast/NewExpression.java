@@ -485,9 +485,9 @@ public class NewExpression
 
                     type.setTypeConstant(typeResult = typeInferred);
 
-                    // the inferred type can contain generic types that need to be registered
-                    // with the context (used to compute lambda captures)
-                    if (typeInferred.containsGenericType(true))
+                    // the inferred type can contain formal types that need to be registered with
+                    // the context (used to compute lambda captures)
+                    if (typeInferred.containsFormalType(true))
                         {
                         ctx.useFormalType(typeInferred, errs);
                         }
