@@ -168,8 +168,7 @@ service SystemService
 
         // the plain-text cookie is required; use the plain text cookie to find the session; the
         // absence of either the cookie or the session implies that we should create a new session
-        // TODO GG @Unassigned
-        SessionImpl? session; // note: assumed unassigned iff "action==New"
+        @Unassigned SessionImpl session; // note: assumed unassigned iff "action==New"
         Validate: if (txtTemp != Null, session := sessionManager.getSessionByCookie(txtTemp))
             {
             // validate the plaint text temporary cookie that we just used to look up the session
@@ -209,14 +208,12 @@ service SystemService
         else
             {
             // unable to locate the specified session, so attempt to create a new session
-            action  = New;
-            session = Null; // TODO remove
+            action = New;
             }
 
         switch (action)
             {
             case Confirm:
-                assert session != Null; // TODO remove
                 // handle the most common case in which the redirect was successful
                 ResponseOut response = new SimpleResponse(TemporaryRedirect);
                 response.header.put(Header.Location, session.claimRedirect_(redirect)?.toString() : "/");
@@ -226,7 +223,6 @@ service SystemService
                 // handle the (rare) case in which we need to repeat the redirect, but only if the
                 // actual session version is ahead of the version that this method was called to
                 // validate (otherwise, repeating the validation isn't going to change anything)
-                assert session != Null; // TODO remove
                 if (session.version_ > version)
                     {
                     break;
@@ -234,7 +230,6 @@ service SystemService
                 continue;
             case Split:
                 // protocol error: split the session
-                assert session != Null; // TODO remove
                 HttpStatus|SessionImpl result = session.split_(info);
                 if (result.is(HttpStatus))
                     {

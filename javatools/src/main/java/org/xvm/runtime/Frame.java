@@ -105,6 +105,7 @@ public class Frame
     public static final int TYPE_DYNAMIC    = 0x2;
 
     public static final int RESOLVED_TYPE   = 0x4;
+    public static final int FUTURE_HANDLE   = 0x8;
 
     /**
      * Construct a frame.
@@ -789,10 +790,8 @@ public class Frame
 
             if (info.isDynamicVar())
                 {
-                RefHandle hVar = (RefHandle) f_ahVar[nVar];
-                // TODO: consider moving the "transfer the referent" logic here (see xVar)
-                // TODO: check the "weak" assignment (here or inside)
-                return hVar.getVarSupport().setReferent(this, hVar, hValue);
+                RefHandle hDest = (RefHandle) f_ahVar[nVar];
+                return hDest.getVarSupport().setReferent(this, hDest, hValue);
                 }
 
             if (info.isFixedType())
@@ -1014,7 +1013,7 @@ public class Frame
                 }
             }
 
-        if (isDynamicVar(iReturn))
+        if (isFutureVar(iReturn))
             {
             return assignValue(iReturn, xFutureVar.makeHandle(cfResult));
             }
@@ -1182,20 +1181,28 @@ public class Frame
                 return Op.R_RETURN;
                 }
 
+            RefHandle hSrc = (RefHandle) hValue;
             if (framePrev.isDynamicVar(iReturn))
                 {
                 // dynamic -> dynamic
-                RefHandle hVar = (RefHandle) framePrev.f_ahVar[iReturn];
-                iResult = hVar.getVarSupport().setReferent(framePrev, hVar, hValue);
+                if (hSrc instanceof FutureHandle hFutureSrc)
+                    {
+                    RefHandle hDest = (RefHandle) framePrev.f_ahVar[iReturn];
+                    iResult = hDest instanceof FutureHandle
+                            ? hDest.getVarSupport().setReferent(framePrev, hDest, hSrc)
+                            : hFutureSrc.waitAndAssign(framePrev, iReturn);
+                    }
+                else
+                    {
+                    iResult = hSrc.getVarSupport().getReferent(framePrev, hSrc, iReturn);
+                    }
                 }
             else
                 {
                 // dynamic -> regular
-                RefHandle hRef = (RefHandle) hValue;
-
-                iResult = hRef instanceof FutureHandle hFuture
-                        ? hFuture.waitAndAssign(framePrev, iReturn)
-                        : hRef.getVarSupport().getReferent(framePrev, hRef, iReturn);
+                iResult = hSrc instanceof FutureHandle hFutureSrc
+                        ? hFutureSrc.waitAndAssign(framePrev, iReturn)
+                        : hSrc.getVarSupport().getReferent(framePrev, hSrc, iReturn);
                 }
             }
         else
@@ -1734,6 +1741,14 @@ public class Frame
         RefHandle hRef = (RefHandle) f_ahVar[nVar];
 
         return hRef.isAssigned(this) ? hRef : null;
+        }
+
+    /**
+     * @return true if the specified register holds a "FutureVar"
+     */
+    public boolean isFutureVar(int nVar)
+        {
+        return nVar >= 0 && getVarInfo(nVar).isFutureVar();
         }
 
     /**
@@ -2560,6 +2575,14 @@ public class Frame
         public boolean isDynamicVar()
             {
             return (m_nStyle & VAR_MASK) == VAR_DYNAMIC_REF;
+            }
+
+        /**
+         * @return iff the register holds a future var
+         */
+        public boolean isFutureVar()
+            {
+            return (m_nStyle & FUTURE_HANDLE) != 0;
             }
 
         public RefHandle getRef()

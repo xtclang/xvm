@@ -39,6 +39,8 @@ import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
 import org.xvm.runtime.template.numbers.xInt;
 
 import org.xvm.runtime.template.text.xString;
@@ -294,6 +296,10 @@ public class xRef
             fStack  = false;
             }
 
+        int nStyle = hRef instanceof FutureHandle
+                ? Frame.VAR_DYNAMIC_REF | Frame.FUTURE_HANDLE
+                : Frame.VAR_DYNAMIC_REF;
+
         switch (iResult)
             {
             case Op.R_NEXT:
@@ -307,8 +313,8 @@ public class xRef
                     }
                 else
                     {
-                    frame.introduceResolvedVar(iReturn, typeRef, sName,
-                        Frame.VAR_DYNAMIC_REF, fStack ? frame.popStack() : hRef);
+                    frame.introduceResolvedVar(iReturn, typeRef, sName, nStyle,
+                            fStack ? frame.popStack() : hRef);
                     }
                 return Op.R_NEXT;
                 }
@@ -326,8 +332,8 @@ public class xRef
                     {
                     frame.m_frameNext.addContinuation(frameCaller ->
                             {
-                            frameCaller.introduceResolvedVar(iReturn, typeRef, sName,
-                                Frame.VAR_DYNAMIC_REF, fStack ? frameCaller.popStack() : hRef);
+                            frameCaller.introduceResolvedVar(iReturn, typeRef, sName, nStyle,
+                                    fStack ? frameCaller.popStack() : hRef);
                             return Op.R_NEXT;
                             });
                     }

@@ -4,18 +4,20 @@ module TestSimple
 
     void run()
         {
-        String[] words = ["hello", "world"];
-        console.print(words.hashCode());
-
-        test(words);
+        @Custom Test t = new Test(); // that used to blow up at run-time
+        t.report(0);
         }
 
-    static <CompileType extends Array> void test(CompileType collection)
+    service Test
         {
-        typedef CompileType.Element? as NType;
+        void report(Int i)
+            {
+            console.print(i);
+            }
+        }
 
-        Iterator<CompileType.Element> iter = collection.iterator();
-        NType[] nts = new NType[collection.size](_ -> iter.take()); // this used to fail at run-time
-        assert !iter.next();
+    mixin Custom<Referent>
+            into Var<Referent>
+        {
         }
     }
