@@ -108,6 +108,12 @@ service SystemService
      * @return one of: an `HttpStatus` error code; a complete `Response`; or a new path to use in
      *         place of the passed `uriString`
      */
+    protected HttpStatus|ResponseOut validateSessionCookies(String      uriString,
+                                                            RequestInfo info,
+                                                            Int64       redirect,
+                                                            Int64       version,
+                                                           )
+        {
         enum Action {Confirm, Repeat, Split, New}
 
         static Action evaluate(SessionImpl session, CookieId cookieId, String cookieText)
@@ -145,13 +151,7 @@ service SystemService
                     return New;
                 }
             }
-    protected HttpStatus|ResponseOut validateSessionCookies(String      uriString,
-                                                            RequestInfo info,
-                                                            Int64       redirect,
-                                                            Int64       version,
-                                                           )
-        {
-        // TODO GG move those declarations ^ in here
+
         // find up to three session cookies that were passed in with the request
         (String? txtTemp, String? tlsTemp, String? consent, Int failures)
                 = Dispatcher.extractSessionCookies(info);

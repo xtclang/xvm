@@ -642,6 +642,20 @@ public abstract class IdentityConstant
         }
 
     /**
+     * @return true iff this constant is the specified parent itself, or a child of that parent or
+     *         any of its children (recursively)
+     */
+    public boolean isDescendant(IdentityConstant idAscendant)
+        {
+        if (this.equals(idAscendant))
+            {
+            return true;
+            }
+        IdentityConstant idParent = getParentConstant();
+        return idParent != null && idParent.isDescendant(idAscendant);
+        }
+
+    /**
      * If an identity constant can be embedded into assembly and referred to as a _value_ in that
      * assembly code, then at runtime, the code execution is responsible for turning the identity
      * constant into an object that corresponds to that identity; this method calculates the type

@@ -533,7 +533,7 @@ public class TerminalTypeConstant
                     else
                         {
                         IdentityConstant idParent = idClz.getParentConstant();
-                        if (idParent instanceof MethodConstant && idParent.equals(idMethod))
+                        if (idParent instanceof MethodConstant && idMethod.isDescendant(idParent))
                             {
                             // the class is defined inside of the method
                             access = Access.PRIVATE;

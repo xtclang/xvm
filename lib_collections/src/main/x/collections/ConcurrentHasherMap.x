@@ -735,7 +735,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             if (contains(key))
                 {
                 enum Exist {Not}
-                Result|Exist result = process(key, e -> e.exists ? compute(e) : Exist.Not);
+                Result|Exist result = process(key, e -> e.exists ? compute(e) : Not);
                 return result.is(Exist) ? False : (True, result);
                 }
             return False;
