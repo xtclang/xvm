@@ -376,6 +376,28 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
         }
 
     /**
+     * Instantiate a copy of the passed [SessionImpl] object.
+     *
+     * @param oldSession   the session to clone
+     * @param requestInfo  the request information
+     *
+     * @return a clone of the [SessionImpl] object, or the [HttpStatus] describing why the session
+     *         could not be cloned
+     */
+    HttpStatus|SessionImpl cloneSession(SessionImpl oldSession, RequestInfo requestInfo)
+        {
+        HttpStatus|SessionImpl result = createSession(requestInfo);
+        if (result.is(HttpStatus))
+            {
+            return result;
+            }
+
+        SessionImpl newSession = result;
+        newSession.cloneFrom_(oldSession);
+        return newSession;
+        }
+
+    /**
      * Generate a session ID.
      *
      * @return an unused session ID

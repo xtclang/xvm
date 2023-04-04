@@ -227,6 +227,8 @@ service Dispatcher(Catalog        catalog,
                 // be created and a redirect to verify the session's successful creation will occur,
                 // which will then redirect back to this same request
                 (HttpStatus|SessionImpl result, Boolean redirect, Int eraseCookies) = ensureSession(requestInfo);
+
+                // handle the error result (no session returned)
                 if (result.is(HttpStatus))
                     {
                     response = new SimpleResponse(result);
@@ -237,9 +239,18 @@ service Dispatcher(Catalog        catalog,
                     break ProcessRequest;
                     }
 
-                // check for any IP address and/or user agent change in the connection
                 SessionImpl session = result;
-                redirect |= session.updateConnection_(extractUserAgent(requestInfo), requestInfo.getClientAddress());
+
+                // if we're already redirecting, defer the version increment that comes from an IP
+                // address or user agent change; let's first verify that the user agent has the
+                // correct cookies for the current version of the session
+                if (!redirect)
+                    {
+                    // check for any IP address and/or user agent change in the connection
+                    redirect = session.updateConnection_(extractUserAgent(requestInfo),
+                            requestInfo.getClientAddress());
+                    }
+
                 if (redirect)
                     {
                     Int|HttpStatus redirectResult = session.prepareRedirect_(requestInfo);
@@ -273,7 +284,8 @@ service Dispatcher(Catalog        catalog,
 
                     // come back to verify that the user agent received and subsequently sent the
                     // cookies
-                    Uri newUri = new Uri(path=$"{catalog.services[0].path}/session/{redirectId}");
+                    Uri newUri = new Uri(path=
+                            $"{catalog.services[0].path}/session/{redirectId}/{session.version_}");
                     header.put(Header.Location, newUri.toString());
                     break ProcessRequest;
                     }
@@ -498,9 +510,30 @@ service Dispatcher(Catalog        catalog,
         // perform a "fast path" check: if all the present cookies point to the same session
         if ((SessionImpl session, Boolean redirect) := findSession(txtTemp, tlsTemp, consent))
             {
-            Byte desired = session.desiredCookies_(tls);
-            session.ensureCookies_(desired);
-            return session, redirect || desired != present, present & ~desired;
+            // check for split
+            if ((HttpStatus|SessionImpl result, _, eraseCookies)
+                    := replaceSession(requestInfo, session, present))
+                {
+                if (result.is(HttpStatus))
+                    {
+                    // failed to create a session, which is reported back as an error, and
+                    // we'll erase any non-persistent cookies (we don't erase the persistent
+                    // cookie because it may contain consent info)
+                    return result, False, eraseCookies;
+                    }
+
+                session  = result;
+                redirect = True;
+                }
+            else
+                {
+                Byte desired = session.desiredCookies_(tls);
+                session.ensureCookies_(desired);
+                redirect    |= desired != present;
+                eraseCookies = present & ~desired;
+                }
+
+            return session, redirect, eraseCookies;
             }
 
         // look up the session by each of the available cookies
@@ -519,13 +552,11 @@ service Dispatcher(Catalog        catalog,
                 case Correct:
                 case Older:
                 case Newer:
-                    // if the session specified by the plain text cookie is different from the session
-                    // specified by the persistent cookie, then it may have more recent information that we
-                    // want to retain (i.e. add to the session specified by the persistent cookie)
-                    if (txtSession?.internalId_ != conSession.internalId_)
-                        {
-                        conSession.merge_(txtSession);
-                        }
+                    // if the session specified by the plain text cookie is different from the
+                    // session specified by the persistent cookie, then it may have more recent
+                    // information that we want to retain (i.e. add to the session specified by
+                    // the persistent cookie)
+                    Boolean shouldMerge = txtSession?.internalId_ != conSession.internalId_ : False;
 
                     // there should NOT be a TLS cookie with a different ID from the persistent cookie,
                     // since they both go over TLS
@@ -534,12 +565,39 @@ service Dispatcher(Catalog        catalog,
                         suspectCookie(requestInfo, conSession, tlsTemp ?: assert, WrongSession);
                         }
 
-                    // treat this event as significant enough to warrant a new session version; this
-                    // helps to force the bifurcation of the session in the case of cookie theft
-                    conSession.incrementVersion_();
+                    // replace (split) the session if the session has been abandoned
+                    eraseCookies = CookieId.None;
+                    Boolean split = False;
+                    if ((HttpStatus|SessionImpl result, _, eraseCookies) := replaceSession(
+                            requestInfo, conSession, present))
+                        {
+                        if (result.is(HttpStatus))
+                            {
+                            // failed to create a session, which is reported back as an error, and
+                            // we'll erase any non-persistent cookies (we don't erase the persistent
+                            // cookie because it may contain consent info)
+                            return result, False, eraseCookies;
+                            }
+
+                        conSession = result /*TODO GG*/ .as(SessionImpl);
+                        split      = True;
+                        }
+
+                    if (shouldMerge)
+                        {
+                        conSession.merge_(txtSession?);
+                        }
+
+                    if (!split)
+                        {
+                        // treat this event as significant enough to warrant a new session version;
+                        // this helps to force the bifurcation of the session in the case of cookie
+                        // theft
+                        conSession.incrementVersion_();
+                        }
 
                     // redirect to make sure all cookies are up to date
-                    return conSession, True, CookieId.None;
+                    return conSession, True, eraseCookies;
                 }
             }
 
@@ -564,10 +622,23 @@ service Dispatcher(Catalog        catalog,
                 return result, False, present & CookieId.BothTemp;
                 }
 
+            SessionImpl session = result;
+            if ((result, _, eraseCookies) := replaceSession(requestInfo, session, present))
+                {
+                if (result.is(HttpStatus))
+                    {
+                    // failed to create a session, which is reported back as an error, and we'll erase
+                    // any non-persistent cookies (we don't erase the persistent cookie because it may
+                    // contain consent info)
+                    return result, False, eraseCookies;
+                    }
+
+                session = result;
+                }
+
             // don't lose previous consent information if there was any in the persistent cookie
             // (the "consent" variable holds the text content of the persistent cookie, and it
             // implies that the user agent had previously specified "exclusive agent" mode)
-            SessionImpl session = result;
             if (consent != Null)
                 {
                 try
@@ -592,8 +663,15 @@ service Dispatcher(Catalog        catalog,
         suspectCookie(requestInfo, tlsSession?, consent?, WrongSession);
 
         HttpStatus|SessionImpl result = createSession(requestInfo);
-        Byte desired = result.is(SessionImpl) ? result.desiredCookies_(tls) : CookieId.None;
-        return result, True, present & ~desired;
+        if (result.is(SessionImpl))
+            {
+            Byte desired = result.desiredCookies_(tls);
+            return result, True, present & ~desired;
+            }
+        else
+            {
+            return result, False, present;
+            }
         }
 
     /**
@@ -754,7 +832,7 @@ service Dispatcher(Catalog        catalog,
         }
 
     /**
-     * Using the request information, look up or create the session object.
+     * Using the request information, create a new session object.
      *
      * @param requestInfo  the incoming request
      *
@@ -773,6 +851,41 @@ service Dispatcher(Catalog        catalog,
         return session;
         }
 
+    /**
+     * Given the request information and a session, determine if that session needs to be replaced
+     * with a different session due to a previous split.
+     *
+     * @param requestInfo  the incoming request
+     * @param session      the session implied by that request
+     * @param present      the cookies that are present in the request
+     *
+     * @return               True iff the session needs to be replaced
+     * @return result        (conditional) the session object, or a `4xx`-range `HttpStatus` that
+     *                       indicates a failure
+     * @return redirect      (conditional) True indicates that redirection is required to update the
+     *                       session cookies
+     * @return eraseCookies  (conditional) a bit mask of the cookie ID ordinals to delete
+     */
+    private conditional (SessionImpl|HttpStatus result, Boolean redirect, Int eraseCookies)
+            replaceSession(RequestInfo requestInfo, SessionImpl session, Byte present)
+        {
+        // check if the session itself has been abandoned and needs to be replaced with a
+        // new session as the result of a session split
+        if (HttpStatus|SessionImpl result := session.isAbandoned_(requestInfo))
+            {
+            if (result.is(HttpStatus))
+                {
+                return True, result, False, CookieId.None;
+                }
+
+            // some cookies from the old session may need to be erased if they are not used
+            // by the new session
+            session = result;
+            return True, session, True, present & ~session.desiredCookies_(requestInfo.tls);
+            }
+
+        return False;
+        }
     /**
      * This method is invoked when a cookie is determined to be suspect.
      *

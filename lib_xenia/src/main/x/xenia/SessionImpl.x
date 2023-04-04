@@ -95,7 +95,7 @@ service SessionImpl
      * The current version of the session. Each time a significant change occurs to the user agent,
      * such as cookie consent, IP address change, etc., the version of the session is incremented.
      */
-    protected/private Int version_;
+    public/private Int version_;
 
     /**
      * The time at which the version was last incremented. Tracking this information allows for
@@ -119,11 +119,6 @@ service SessionImpl
     protected/private SessionCookieInfo_?[] sessionCookieInfos_ = new SessionCookieInfo_?[CookieId.count];
 
     /**
-     * A record of access to this session from a particular `IPAddress`.
-     */
-    protected static class AddressAccess_(IPAddress address, Time firstAccess, Time lastAccess);
-
-    /**
      * A limited history by `IPAddress` of access to this session.
      */
     protected/private CircularArray<AddressAccess_> recentAddresses_ = new CircularArray(8);
@@ -134,11 +129,16 @@ service SessionImpl
     protected/private Set<IPAddress> allAddresses_ = new HashSet();
 
     /**
-     * If the session has been destroyed, it may contain "forwarding addresses" for the user agent
-     * to follow.
-     * TODO - implement or remove
+     * When a session has to split, it is considered "abandoned" from that point forward, and all
+     * user agents should be forced to switch to new split sessions as soon as they come back with
+     * their next request.
      */
-    protected/private SessionRename_[] renamed_ = [];
+    protected/private Boolean abandoned_;
+
+    /**
+     * When a session has been split, it tracks the sessions that emerge as a result.
+     */
+    protected/private SessionSplit_[] splits_ = [];
 
     /**
      * A limited collection of recent requests that are held for debugging purposes and to allow a
@@ -187,6 +187,16 @@ service SessionImpl
     // ----- inner types ---------------------------------------------------------------------------
 
     /**
+     * The AttributeMap_ inner class is used to provide a service reference to the map of arbitrary
+     * session attributes.
+     */
+    class AttributeMap_
+            delegates Map<String, Shareable>(actualMap)
+        {
+        Map<String, Shareable> actualMap.get() = attributes_;
+        }
+
+    /**
      * Information about a SessionCookie related to this session.
      *
      * * The [cookie] property holds the cookie data itself.
@@ -205,10 +215,15 @@ service SessionImpl
         }
 
     /**
+     * A record of access to this session from a particular `IPAddress`.
+     */
+    protected static class AddressAccess_(IPAddress address, Time firstAccess, Time lastAccess);
+
+    /**
      * A record of session migration, in which a new session identity is created to represent this
      * session when something weird is detected that could indicate a security problem.
      */
-    protected static const SessionRename_(IPAddress address, Int version, String newId);
+    protected static const SessionSplit_(IPAddress address, Int oldVersion, Int newId);
 
     /**
      * Information about a system redirect.
@@ -429,7 +444,7 @@ service SessionImpl
         }
 
     @Override
-    void sessionForked() // TODO needs to be called
+    void sessionForked()
         {
         confirmReached_(SessionForked);
         }
@@ -447,7 +462,7 @@ service SessionImpl
         }
 
     @Override
-    TrustLevel tlsChanged() // TODO needs to be called
+    TrustLevel tlsChanged()
         {
         confirmReached_(TlsChanged);
         return super();
@@ -468,14 +483,14 @@ service SessionImpl
         }
 
     @Override
-    TrustLevel fingerprintChanged() // TODO not called?
+    TrustLevel fingerprintChanged()
         {
         confirmReached_(FingerprintChanged);
         return super();
         }
 
     @Override
-    TrustLevel protocolViolated() // TODO not called?
+    TrustLevel protocolViolated()
         {
         confirmReached_(ProtocolViolated);
         return super();
@@ -486,16 +501,6 @@ service SessionImpl
 
 
     // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * The AttributeMap_ inner class is used to provide a service reference to the map of arbitrary
-     * session attributes.
-     */
-    class AttributeMap_
-            delegates Map<String, Shareable>(actualMap)
-        {
-        Map<String, Shareable> actualMap.get() = attributes_;
-        }
 
     /**
      * Obtain the specified cookie information.
@@ -718,6 +723,85 @@ service SessionImpl
                 manager_.addSessionCookie(this, cookie);
                 }
             }
+        }
+
+    /**
+     * Check if the session needs to be replaced.
+     *
+     * @param requestInfo  the incoming request
+     *
+     * @return True iff this session is abandoned
+     * @return (conditional) the session object, or a `4xx`-range `HttpStatus` that indicates a
+     *         failure
+     */
+    conditional SessionImpl|HttpStatus isAbandoned_(RequestInfo requestInfo)
+        {
+        return abandoned_
+                ? (True, split_(requestInfo))
+                : False;
+        }
+
+    /**
+     * When a user agent cannot prove that it owns the session that it has a cookie for, it's
+     * possible that the cookie was stolen either by that user agent, or by a different user agent.
+     * Cookie theft can result in a stolen session; to reduce that impact, this method splits the
+     * session such that both the good user agent and the bad user agent retain the session (albeit
+     * two separate and subsequently diverging copies of the session), and reduces the trust level
+     * to force re-authentication.
+     *
+     * @param requestInfo  the incoming request
+     *
+     * @return (conditional) the session object, or a `4xx`-range `HttpStatus` that indicates a
+     *         failure
+     */
+    HttpStatus|SessionImpl split_(RequestInfo requestInfo)
+        {
+        if (!abandoned_)
+            {
+            // the first thing to do is to notify the session that an apparent theft was attempted;
+            // if desired, the application can strip information out of the session or take other
+            // actions appropriate to the level of concern
+            trustLevel = issueEvent_(ProtocolViolated, None, &protocolViolated(),
+                                     () -> $|An exception in session {this.internalId_} occurred\
+                                            | during the processing of a protocol violation event
+                                    ).notGreaterThan(trustLevel);
+
+            // mark the old session as being "damaged goods", so if its other owner ever shows back
+            // up, it will also abandon it, because if the cookie was indeed stolen, then the
+            // likelihood of repeated attacks is significant (so it's a good idea to completely
+            // abandon the old session id altogether)
+            abandoned_ = True;
+            }
+
+        // create the new session
+        HttpStatus|SessionImpl result = manager_.cloneSession(this, requestInfo);
+
+        if (result.is(SessionImpl))
+            {
+            // keep track of splits
+            this.splits_ += new SessionSplit_(requestInfo.getClientAddress(), version_, result.internalId_);
+
+            // create new cookies
+            result.ensureCookies_(desiredCookies_(requestInfo.tls));
+
+            // notify the new session that it was forked
+            result.issueEvent_(SessionForked, &sessionForked(),
+                               () -> $|An exception occurred in session {result.internalId_} during\
+                                      | the processing of a session-forked event
+                              );
+            }
+
+        return result;
+        }
+
+    /**
+     * Copy the contents of the passed session into this session.
+     *
+     * @param that  a session that this session is cloning
+     */
+    void cloneFrom_(SessionImpl that)
+        {
+        // TODO CP
         }
 
     /**
