@@ -389,8 +389,21 @@ public class Context
      */
     public void discard()
         {
+        Context ctxOuter = getOuterContext();
+        if (ctxOuter != null)
+            {
+            ctxOuter.unlink(this);
+            }
+
         m_fReachable = false;
         m_ctxOuter   = null;
+        }
+
+    /**
+     * A notification to the context that its nested context has been discarded.
+     */
+    protected void unlink(Context ctxDiscared)
+        {
         }
 
     /**
@@ -2069,6 +2082,19 @@ public class Context
                             }
                         }
                     }
+                }
+            }
+
+        @Override
+        protected void unlink(Context ctxDiscarded)
+            {
+            if (ctxDiscarded == m_ctxWhenTrue)
+                {
+                m_ctxWhenTrue = null;
+                }
+            if (ctxDiscarded == m_ctxWhenFalse)
+                {
+                m_ctxWhenFalse = null;
                 }
             }
 

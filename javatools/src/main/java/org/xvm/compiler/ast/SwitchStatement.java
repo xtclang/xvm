@@ -621,6 +621,19 @@ public class SwitchStatement
             ensureDefiniteAssignments().putAll(mapThis);
             }
 
+        @Override
+        protected void unlink(Context ctxDiscarded)
+            {
+            List<CaseBlockContext> list = f_listBlocks;
+            for (int i = list.size() - 1; i >= 0; i--)
+                {
+                if (list.get(i) == ctxDiscarded)
+                    {
+                    list.remove(i);
+                    }
+                }
+            }
+
         private final CaseManager            f_mgr;
         private final List<CaseBlockContext> f_listBlocks = new ArrayList<>();
         }

@@ -579,7 +579,7 @@ service Dispatcher(Catalog        catalog,
                             return result, False, eraseCookies;
                             }
 
-                        conSession = result /*TODO GG*/ .as(SessionImpl);
+                        conSession = result;
                         split      = True;
                         }
 

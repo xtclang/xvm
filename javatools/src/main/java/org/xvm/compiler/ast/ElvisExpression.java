@@ -121,6 +121,22 @@ public class ElvisExpression
         TypeConstant   type1     = null;
         boolean        fCond     = false;
         TypeConstant[] atypeCond = new TypeConstant[]{pool.typeBoolean(), pool.typeObject()};
+
+        // ElvisExpression is structurally equivalent to one of the following expression statements:
+        //      {
+        //      if (T result_ ?= [expr1]) {}
+        //      else {result_ = [expr2];}
+        //      return result_;
+        //      }
+        // or
+        //      {
+        //      if (T result_ := [expr1]) {}
+        //      else {result_ = [expr2];}
+        //      return result_;
+        //      }
+        //
+        ctx = ctx.enterIf();
+
         if (expr1.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit())
             {
             m_fCond = fCond = true;
@@ -156,6 +172,10 @@ public class ElvisExpression
             type2Req = typeRequired;
             }
 
+        ctx = ctx.enterFork(true);
+        ctx = ctx.exit();
+        ctx = ctx.enterFork(false);
+
         Expression expr2New = expr2.validate(ctx, type2Req, errs);
         if (expr2New == null)
             {
@@ -165,6 +185,8 @@ public class ElvisExpression
             {
             expr2 = expr2New;
             }
+        ctx = ctx.exit(); // else
+        ctx = ctx.exit(); // if
 
         if (!fit.isFit())
             {
