@@ -333,8 +333,10 @@ public class MethodInfo
 
             for (int iBase = 0; iBase < cBase; ++iBase)
                 {
-                // discard duplicates or abstract
-                if (bodyAdd.equals(aBase[iBase]) || bodyAdd.isAbstract())
+                // discard duplicates or an abstract replacing a non-abstract
+                MethodBody bodyBase = aBase[iBase];
+                if (bodyAdd.equals(bodyBase) ||
+                        (bodyAdd.isAbstract() && !bodyBase.isAbstract()))
                     {
                     continue NextLayer;
                     }

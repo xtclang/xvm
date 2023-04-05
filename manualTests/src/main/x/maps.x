@@ -121,6 +121,11 @@ module TestMaps
         map.put("1", "s1");
         assert map.getOrDefault(1, "?") == "i1";
         assert map.getOrDefault("1", "?") == "s1";
+
+        immutable Int[] array = [1, 2, 3];
+        Map<immutable Int[], Int> map2 = new HashMap();
+        map2.put(array, 0);
+        assert map2.get(array);
         }
 
     static void testFill100()
