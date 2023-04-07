@@ -394,6 +394,16 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
+            if (prop.isSimpleUnassigned() && prop.getGetter() != null)
+                {
+                // property marked as @Unassigned must not have a getter
+                AnnotationExpression exprAnno = annotations.get(0);
+                exprAnno.log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                        pool().clzUnassigned().getName(),
+                        prop.getIdentityConstant().getValueString());
+                return;
+                }
+
             ClassStructure clz      = prop.getContainingClass(false);
             String         sInvalid = clz.checkGenericTypeVisibility(type);
             if (sInvalid != null)

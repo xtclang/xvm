@@ -266,6 +266,16 @@ public class PropertyStructure
         }
 
     /**
+     * @return return true iff this property is marked as "Unassigned" and has no other annotations
+     */
+    public boolean isSimpleUnassigned()
+        {
+        Annotation[] aAnnos = getRefAnnotations();
+        return aAnnos.length == 1
+            && (aAnnos[0].getAnnotationClass()).equals(getConstantPool().clzUnassigned());
+        }
+
+    /**
      * @return true iff this property contains the specified Ref annotation
      */
     public boolean containsRefAnnotation(IdentityConstant idAnno)
@@ -336,11 +346,6 @@ public class PropertyStructure
                 : listRefAnno.toArray(Annotation.NO_ANNOTATIONS);
         }
 
-    public void indicateInitialValue()
-        {
-        m_constVal = new DeferredValueConstant(getConstantPool());
-        }
-
     /**
      * This is a temporary value that is used as a place-holder until the property's actual value is
      * available.
@@ -370,6 +375,15 @@ public class PropertyStructure
     public void setInitialValue(Constant constVal)
         {
         m_constVal = constVal;
+        }
+
+    /**
+     * Mark this property as having an initial value that is unknown at this time and which will be
+     * replaced with a real value later in the compilation cycle.
+     */
+    public void indicateInitialValue()
+        {
+        setInitialValue(new DeferredValueConstant(getConstantPool()));
         }
 
     /**
