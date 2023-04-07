@@ -527,6 +527,10 @@ class ListMap<Key, Value>
                 {
                 exists = True;
                 }
+            else
+                {
+                exists = False;
+                }
             }
 
         /**

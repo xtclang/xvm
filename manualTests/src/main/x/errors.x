@@ -157,4 +157,28 @@ module TestCompilerErrors
                 }
             }
         }
+
+    void testUnassigned()
+        {
+        @Custom Int i;
+
+        Int j = i; // should not compile - unassigned
+        }
+
+    mixin Custom<Referent>
+            into Var<Referent>
+        {
+        }
+
+    void testFinal(Boolean f)
+        {
+        @Final Int i;
+
+        if (f)
+            {
+            i = 1;
+            }
+
+        i = 2;  // should not compile - cannot be assigned to
+        }
     }

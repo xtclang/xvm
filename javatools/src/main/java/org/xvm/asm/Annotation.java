@@ -7,11 +7,16 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.Arrays;
+import java.util.Set;
 
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
@@ -184,6 +189,25 @@ public class Annotation
 
             m_aParams = aParams;
             }
+        }
+
+    /**
+     * @return true iff this annotation has an explicit getter
+     */
+    public boolean hasExplicitGetter()
+        {
+        ClassConstant       clzAnno  = (ClassConstant) getAnnotationClass();
+        TypeInfo            infoAnno = clzAnno.getType().ensureTypeInfo();
+        Set<MethodConstant> setImpls = infoAnno.findMethods("get", 0, MethodKind.Method);
+
+        if (setImpls.isEmpty())
+            {
+            return false;
+            }
+
+        MethodConstant idGet   = setImpls.iterator().next();
+        MethodInfo     infoGet = infoAnno.getMethodById(idGet);
+        return infoGet != null && !infoGet.getHead().isAbstract();
         }
 
 

@@ -2140,7 +2140,6 @@ service Client<Schema extends RootSchema>
                 }
 
             @Override
-            @Unassigned
             immutable Value value.get()
                 {
                 return assigned

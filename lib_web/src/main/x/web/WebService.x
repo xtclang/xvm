@@ -29,7 +29,6 @@ mixin WebService(String path)
      * The [WebApp] containing this `WebService`. If no `WebApp` is explicitly configured, then the
      * module containing the `WebService` is used.
      */
-    @Unassigned
     WebApp webApp
         {
         @Override

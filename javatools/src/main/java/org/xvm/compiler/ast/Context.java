@@ -900,8 +900,7 @@ public class Context
 
             if (!asn.isDefinitelyAssigned())
                 {
-                // DVar is always readable (TODO: ensure the "get" is overridden)
-                return arg instanceof Register reg && reg.isVar();
+                return arg instanceof Register reg && reg.isAllowedUnassigned();
                 }
 
             return !(arg instanceof Register reg) || reg.isReadable();
@@ -1009,7 +1008,12 @@ public class Context
         if (isVarDeclaredInThisScope(sName))
             {
             Argument arg = getVar(sName);
-            return arg instanceof Register reg && reg.isWritable();
+            if (arg instanceof Register reg && reg.isWritable())
+                {
+                return !reg.isMarkedFinal() ||
+                        getVarAssignment(sName).isDefinitelyUnassigned();
+                }
+            return false;
             }
 
         // we don't actually explicitly check for reserved names, but this has the effect of

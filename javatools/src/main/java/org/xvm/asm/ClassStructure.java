@@ -3176,13 +3176,13 @@ public class ClassStructure
 
         assert typeStruct.getAccess() == Access.STRUCT;
 
-        TypeInfo infoType = typeStruct.ensureTypeInfo();
+        TypeInfo infoStruct = typeStruct.ensureTypeInfo();
         for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet())
             {
             Object       nid      = entry.getKey();
             PropertyInfo infoProp = nid instanceof PropertyConstant idProp
-                    ? infoType.findProperty(idProp)
-                    : infoType.findPropertyByNid(nid);
+                    ? infoStruct.findProperty(idProp)
+                    : infoStruct.findPropertyByNid(nid);
 
             if (infoProp == null || infoProp.isInjected())
                 {
@@ -3205,7 +3205,7 @@ public class ClassStructure
                 }
             else
                 {
-                if (!infoProp.isImplicitlyUnassigned())
+                if (!infoProp.isImplicitlyAssigned())
                     {
                     constInit = infoProp.getType().getDefaultValue();
                     }

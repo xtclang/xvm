@@ -13,6 +13,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -192,19 +193,53 @@ public class VariableDeclarationStatement
                     m_reg.markEffectivelyFinal();
                     }
 
-                boolean      fVar    = exprAnnoType.isVar();
-                boolean      fConst  = true;
-                TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
+                boolean      fVar        = exprAnnoType.isVar();
+                boolean      fConst      = true;
+                boolean      fUnassigned = false;
+                boolean      fInflate    = false;
+                TypeConstant typeReg     = pool.ensureParameterizedTypeConstant(
                         fVar ? pool.typeVar() : pool.typeRef(), typeVar);
                 for (int i = cRefAnnos - 1; i >= 0; --i)
                     {
                     AnnotationExpression exprAnno = listRefAnnos.get(i);
 
-                    typeReg = pool.ensureAnnotatedTypeConstant(
-                            typeReg, exprAnno.ensureAnnotation(pool));
+                    Annotation    anno    = exprAnno.ensureAnnotation(pool);
+                    ClassConstant clzAnno = (ClassConstant) anno.getAnnotationClass();
+
+                    // don't inflate @Final or @Unassigned
+                    if (clzAnno.equals(pool.clzFinal()))
+                        {
+                        m_reg.markFinal();
+                        fInflate = true;
+                        }
+                    else if (clzAnno.equals(pool.clzUnassigned()))
+                        {
+                        fUnassigned = true;
+                        }
+                    else if (clzAnno.equals(pool.clzFuture()))
+                        {
+                        fUnassigned = true;
+                        fInflate    = true;
+                        }
+                    else
+                        {
+                        // if the mixin (into Ref) has a "get" implementation, it should be marked
+                        // as "allow unassigned"
+                        fUnassigned = anno.hasExplicitGetter();
+                        fInflate    = true;
+                        }
+                    typeReg = pool.ensureAnnotatedTypeConstant(typeReg, anno);
                     fConst &= exprAnno.isConstant();
                     }
-                m_reg.specifyRegType(typeReg);
+
+                if (fUnassigned)
+                    {
+                    m_reg.markAllowUnassigned();
+                    }
+                if (fInflate)
+                    {
+                    m_reg.specifyRegType(typeReg);
+                    }
                 m_fConstAnno = fConst;
                 }
             }

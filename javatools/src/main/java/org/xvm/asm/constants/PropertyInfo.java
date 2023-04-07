@@ -985,14 +985,9 @@ public class PropertyInfo
         }
 
     /**
-     * @return true iff the property contains any reference annotations except the "Inject"
+     * Cached "ImplicitlyAssigned" flag.
      */
-    public boolean isRefAnnotated()
-        {
-        // this is a bit blunt, but @Inject is a very special annotation that is incompatible with
-        // any other Ref annotations, so it is split out for its own special handling
-        return !isInjected() && getRefAnnotations().length > 0;
-        }
+    private Boolean m_FImplicitlyAssigned;
 
     /**
      * @return an array of the annotations that apply to the Ref/Var of the property
@@ -1122,14 +1117,15 @@ public class PropertyInfo
         }
 
     /**
-     * @return return true iff this property should not be implicitly initialized
+     * @return true iff the property contains any reference annotations except the "Inject"
      */
-    public boolean isImplicitlyUnassigned()
+    public boolean isRefAnnotated()
         {
-        ConstantPool pool = pool();
-        return containsRefAnnotation(pool.clzUnassigned())
-            || containsRefAnnotation(pool.clzLazy())
-            || containsRefAnnotation(pool.clzFuture());
+        // this is a bit blunt, but @Inject is a very special annotation that is incompatible with
+        // any other Ref annotations, so it is split out for its own special handling;
+        // also, let's optimize out a single "@Unassigned" annotation, which is used internally to
+        // mark native properties
+        return getRefAnnotations().length > 0 && !isInjected() && !isSimpleUnassigned();
         }
 
     /**
@@ -1540,6 +1536,38 @@ public class PropertyInfo
      * Cached "Injected" flag.
      */
     private Boolean m_FInjected;
+
+    /**
+     * Check if this property has any Ref annotations that explicitly implement the property getter
+     * and therefore doesn't have to be implicitly initialized.
+     *
+     * @return return true iff this property doesn't need to be implicitly initialized
+     */
+    public boolean isImplicitlyAssigned()
+        {
+        if (m_FImplicitlyAssigned != null)
+            {
+            return m_FImplicitlyAssigned;
+            }
+
+        ConstantPool pool = pool();
+        if (containsRefAnnotation(pool.clzFuture()) ||
+            containsRefAnnotation(pool.clzUnassigned()))
+            {
+            return m_FImplicitlyAssigned = true;
+            }
+
+        for (Annotation anno : getRefAnnotations())
+            {
+            if (anno.hasExplicitGetter())
+                {
+                return m_FImplicitlyAssigned = true;
+                }
+            }
+
+        // if the getter exists, consider the property implicitly assigned
+        return m_FImplicitlyAssigned = getHead().hasGetter();
+        }
 
     /**
      * Cached base ref type.

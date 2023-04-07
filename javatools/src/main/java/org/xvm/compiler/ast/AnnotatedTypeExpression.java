@@ -81,7 +81,7 @@ public class AnnotatedTypeExpression
         }
 
     /**
-     * @return true if this type expression represents an injected type
+     * @return true if this annotated type expression represents an injected var
      */
     public boolean isInjected()
         {
@@ -90,12 +90,13 @@ public class AnnotatedTypeExpression
         }
 
     /**
-     * @return true if this type expression represents a "final" type (@Injected or @Final)
+     * @return true if this annotated type expression contains the specified annotation
      */
-    public boolean isFinal()
+    public boolean contains(Constant clzAnno)
         {
-        return m_fFinal
-            || type instanceof AnnotatedTypeExpression exprType && exprType.isFinal();
+        Annotation anno = annotation.ensureAnnotation(pool());
+        return anno.getAnnotationClass().equals(clzAnno)
+            || type instanceof AnnotatedTypeExpression exprType && exprType.contains(clzAnno);
         }
 
     /**
@@ -252,12 +253,7 @@ public class AnnotatedTypeExpression
             Constant clzAnno = anno.getAnnotationClass();
             if (clzAnno.equals(pool.clzInject()))
                 {
-                // @Inject implies assignment & final
-                m_fFinal = m_fInjected = true;
-                }
-            else if (clzAnno.equals(pool.clzFinal()))
-                {
-                m_fFinal = true;
+                m_fInjected = true;
                 }
 
             if (exprTypeNew instanceof AnnotatedTypeExpression exprTypeNext)
@@ -267,7 +263,7 @@ public class AnnotatedTypeExpression
                     log(errs, Severity.ERROR, Compiler.ANNOTATED_INJECTION);
                     return null;
                     }
-                if (m_fFinal && exprTypeNext.isFinal())
+                if (exprTypeNext.contains(clzAnno))
                     {
                     log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
                         anno.getAnnotationType().getValueString());
@@ -452,7 +448,6 @@ public class AnnotatedTypeExpression
     private transient boolean m_fAnonInner;
     private transient boolean m_fVar;
     private transient boolean m_fInjected;
-    private transient boolean m_fFinal;
 
     // unresolved constant that may have been created by this expression
     private transient UnresolvedTypeConstant m_typeUnresolved;

@@ -648,13 +648,11 @@ public class ClassComposition
             TypeComposition clzRef = null;
             if (infoProp.isRefAnnotated()) // this doesn't include injected properties
                 {
-                if (infoProp.isCustomLogic())
+                if (!infoProp.isSimpleUnassigned())
                     {
-                    clzRef = ensurePropertyComposition(infoProp);
-                    }
-                else if (!infoProp.isSimpleUnassigned())
-                    {
-                    clzRef = f_template.f_container.resolveClass(infoProp.getBaseRefType());
+                    clzRef = infoProp.isCustomLogic()
+                            ? ensurePropertyComposition(infoProp)
+                            : f_template.f_container.resolveClass(infoProp.getBaseRefType());
                     }
 
                 if (clzRef != null && !infoProp.isNative())
@@ -704,7 +702,8 @@ public class ClassComposition
 
                 FieldInfo field = new FieldInfo(enid, nIndex++, type,
                         clzRef, infoProp.isInjected(), fTransient,
-                        infoProp.isSimpleUnassigned(), infoProp.isLazy());
+                        infoProp.isImplicitlyAssigned(),
+                        infoProp.isLazy());
                 mapFields.put(enid, field);
 
                 m_fHasSpecial |= fTransient | clzRef != null;

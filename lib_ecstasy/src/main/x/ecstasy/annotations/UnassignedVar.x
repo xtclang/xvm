@@ -8,4 +8,10 @@
 mixin UnassignedVar<Referent>
         into Var<Referent>
     {
+    @Override
+    Referent get()
+        {
+        assert assigned;
+        return super();
+        }
     }

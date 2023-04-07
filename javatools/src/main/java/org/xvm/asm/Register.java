@@ -198,10 +198,133 @@ public class Register
      */
     private final int f_nOrigIndex;
     /**
+     * The type of the value that will be held in the register.
+     */
+    private TypeConstant m_type;
+    /**
+     * The type of the register itself (typically null).
+     */
+    private TypeConstant m_typeReg;
+    /**
      * The register ID (>=0), or the pre-defined argument identifier in the range -1 to
      * {@link Op#CONSTANT_OFFSET).
      */
     private int m_iArg;
+
+    /**
+     * Determine if the specified argument index is for a pre-defined read-only register.
+     *
+     * @param iArg  the argument index
+     *
+     * @return true iff the index specifies a pre-defined argument that is in a read-only register
+     */
+    protected static boolean isPredefinedReadonly(int iArg)
+        {
+        switch (iArg)
+            {
+            case Op.A_DEFAULT:
+            case Op.A_PUBLIC:
+            case Op.A_PROTECTED:
+            case Op.A_PRIVATE:
+            case Op.A_THIS:
+            case Op.A_TARGET:
+            case Op.A_STRUCT:
+            case Op.A_CLASS:
+            case Op.A_SERVICE:
+            case Op.A_SUPER:
+            case Op.A_LABEL:
+                return true;
+
+            default:
+            case Op.A_STACK:
+            case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
+                return false;
+            }
+        }
+    /**
+     * Read-only flag.
+     */
+    private boolean m_fRO;
+
+    /**
+     * @return true iff the register represents "super" pre-defined argument
+     */
+    public boolean isSuper()
+        {
+        return m_iArg == Op.A_SUPER;
+        }
+
+    /**
+     * @return true iff the register represents "this:struct" pre-defined argument
+     */
+    public boolean isStruct()
+        {
+        return m_iArg == Op.A_STRUCT;
+        }
+
+    /**
+     * @return true iff the register represents a label
+     */
+    public boolean isLabel()
+        {
+        return m_iArg == Op.A_LABEL;
+        }
+    /**
+     * Effectively final flag (implicit).
+     */
+    private boolean m_fEffectivelyFinal;
+
+    /**
+     * Determine if this register is readable. This is equivalent to the Ref for the register
+     * supporting the get() operation.
+     *
+     * @return true iff this register is readable
+     */
+    public boolean isReadable()
+        {
+        return switch (m_iArg)
+            {
+            case Op.A_IGNORE, Op.A_IGNORE_ASYNC, Op.A_LABEL -> false;
+            default                                         -> true;
+            };
+        }
+
+    /**
+     * Determine if this register is writable. This is equivalent to the Ref for the register
+     * supporting the set() operation.
+     *
+     * @return true iff this register is writable
+     */
+    public boolean isWritable()
+        {
+        return !m_fRO;
+        }
+
+    /**
+     * Force the register to be treated as effectively final from this point forward.
+     */
+    public void markEffectivelyFinal()
+        {
+        m_fRO               = true;
+        m_fEffectivelyFinal = true;
+        }
+
+    /**
+     * @return true iff this register has been marked as being effectively final
+     */
+    public boolean isEffectivelyFinal()
+        {
+        return m_fEffectivelyFinal;
+        }
+    /**
+     * Explicitly "@Final" register (disallow set unless definitely unassigned).
+     */
+    private boolean m_fMarkedFinal;
+    /**
+     * Explicitly "@Unassigned" register (allow compiler access).
+     */
+    private boolean m_fMarkedUnassigned;
 
     /**
      * Construct a Register of the specified type.
@@ -261,16 +384,82 @@ public class Register
         }
 
     /**
-     * Determine if the specified argument index is for a pre-defined read-only register.
+     * @return true iff this is a normal (not D_VAR), readable and writable, local variable (and
+     *         not the stack)
+     */
+    public boolean isNormal()
+        {
+        return !isPredefined() && isReadable() && isWritable() && !isVar();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (this == obj)
+            {
+            return true;
+            }
+
+        if (obj instanceof Register that)
+            {
+            if (that instanceof ShadowRegister)
+                {
+                // ShadowRegister overrides "equals"
+                assert !(this instanceof ShadowRegister);
+                return false;
+                }
+
+            return this.m_iArg              == that.m_iArg
+                && this.m_fRO               == that.m_fRO
+                && this.m_fEffectivelyFinal == that.m_fEffectivelyFinal
+                && this.isInPlace()         == that.isInPlace()
+                && this.getType().equals(      that.getType());
+            }
+        return false;
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        if (m_type != null)
+            {
+            sb.append(m_type.getValueString())
+              .append(' ');
+            }
+
+        if (m_fEffectivelyFinal)
+            {
+            sb.append("@Final ");
+            }
+        else if (m_fRO)
+            {
+            sb.append("@RO ");
+            }
+
+        sb.append(getIdString());
+
+        return sb.toString();
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Determine if the specified argument index is for a pre-defined register.
      *
      * @param iArg  the argument index
      *
-     * @return true iff the index specifies a pre-defined argument that is in a read-only register
+     * @return true iff the index specifies a pre-defined argument
      */
-    protected static boolean isPredefinedReadonly(int iArg)
+    protected static boolean isPredefinedRegister(int iArg)
         {
         switch (iArg)
             {
+            case Op.A_STACK:
+            case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
             case Op.A_DEFAULT:
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
@@ -285,9 +474,10 @@ public class Register
                 return true;
 
             default:
-            case Op.A_STACK:
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
+                if (iArg < 0)
+                    {
+                    throw new IllegalArgumentException("illegal argument index: " + iArg);
+                    }
                 return false;
             }
         }
@@ -352,151 +542,12 @@ public class Register
         }
 
     /**
-     * @return true iff the register represents "super" pre-defined argument
-     */
-    public boolean isSuper()
-        {
-        return m_iArg == Op.A_SUPER;
-        }
-
-    /**
-     * @return true iff the register represents "this:struct" pre-defined argument
-     */
-    public boolean isStruct()
-        {
-        return m_iArg == Op.A_STRUCT;
-        }
-
-    /**
-     * @return true iff the register represents a label
-     */
-    public boolean isLabel()
-        {
-        return m_iArg == Op.A_LABEL;
-        }
-
-    /**
      * @return the argument index for the Register, which could be in the "unassigned" range
      */
     public int getIndex()
         {
         return m_iArg;
         }
-
-    /**
-     * Determine if this register is readable. This is equivalent to the Ref for the register
-     * supporting the get() operation.
-     *
-     * @return true iff this register is readable
-     */
-    public boolean isReadable()
-        {
-        return switch (m_iArg)
-            {
-            case Op.A_IGNORE, Op.A_IGNORE_ASYNC, Op.A_LABEL -> false;
-            default                                         -> true;
-            };
-        }
-
-    /**
-     * Determine if this register is writable. This is equivalent to the Ref for the register
-     * supporting the set() operation.
-     *
-     * @return true iff this register is writable
-     */
-    public boolean isWritable()
-        {
-        return !m_fRO;
-        }
-
-    /**
-     * Force the register to be treated as effectively final from this point forward.
-     */
-    public void markEffectivelyFinal()
-        {
-        m_fRO               = true;
-        m_fEffectivelyFinal = true;
-        }
-
-    /**
-     * @return true iff this register has been marked as being effectively final
-     */
-    public boolean isEffectivelyFinal()
-        {
-        return m_fEffectivelyFinal;
-        }
-
-    /**
-     * @return true iff this is a normal (not D_VAR), readable and writable, local variable (and
-     *         not the stack)
-     */
-    public boolean isNormal()
-        {
-        return !isPredefined() && isReadable() && isWritable() && !isVar();
-        }
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (this == obj)
-            {
-            return true;
-            }
-
-        if (obj instanceof Register that)
-            {
-            if (that instanceof ShadowRegister)
-                {
-                // ShadowRegister overrides "equals"
-                assert !(this instanceof ShadowRegister);
-                return false;
-                }
-
-            return this.m_iArg              == that.m_iArg
-                && this.m_fRO               == that.m_fRO
-                && this.m_fEffectivelyFinal == that.m_fEffectivelyFinal
-                && this.isInPlace()         == that.isInPlace()
-                && this.getType().equals(      that.getType());
-            }
-        return false;
-        }
-
-    @Override
-    public String toString()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        if (m_type != null)
-            {
-            sb.append(m_type.getValueString())
-              .append(' ');
-            }
-
-        if (m_fEffectivelyFinal)
-            {
-            sb.append("@Final ");
-            }
-        else if (m_fRO)
-            {
-            sb.append("@RO ");
-            }
-
-        sb.append(getIdString());
-
-        return sb.toString();
-        }
-
-    /**
-     * @return the original index for this register, which serves as an identity indicator during
-     *         the compilation (it's created as a unique one and unlike the index never changes)
-     */
-    public int getOriginalIndex()
-        {
-        return f_nOrigIndex;
-        }
-
-
-    // ----- helper methods ------------------------------------------------------------------------
 
     /**
      * Assign an argument index.
@@ -515,41 +566,8 @@ public class Register
         return m_iArg = iArg;
         }
 
-    /**
-     * Determine if the specified argument index is for a pre-defined register.
-     *
-     * @param iArg  the argument index
-     *
-     * @return true iff the index specifies a pre-defined argument
-     */
-    protected static boolean isPredefinedRegister(int iArg)
-        {
-        switch (iArg)
-            {
-            case Op.A_STACK:
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
-            case Op.A_DEFAULT:
-            case Op.A_PUBLIC:
-            case Op.A_PROTECTED:
-            case Op.A_PRIVATE:
-            case Op.A_THIS:
-            case Op.A_TARGET:
-            case Op.A_STRUCT:
-            case Op.A_CLASS:
-            case Op.A_SERVICE:
-            case Op.A_SUPER:
-            case Op.A_LABEL:
-                return true;
 
-            default:
-                if (iArg < 0)
-                    {
-                    throw new IllegalArgumentException("illegal argument index: " + iArg);
-                    }
-                return false;
-            }
-        }
+    // ----- inner classes -------------------------------------------------------------------------
 
     /**
      * Reset the register to an unknown index to allow for a re-run of the simulation that assigns
@@ -561,7 +579,88 @@ public class Register
         }
 
 
-    // ----- inner classes -------------------------------------------------------------------------
+    // ----- constants and fields ------------------------------------------------------------------
+
+    /**
+     * Register representing a default method argument.
+     */
+    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
+
+    /**
+     * Register representing an "async ignore" return.
+     */
+    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
+
+    /**
+     * @return the original index for this register, which serves as an identity indicator during
+     *         the compilation (it's created as a unique one and unlike the index never changes)
+     */
+    public int getOriginalIndex()
+        {
+        return f_nOrigIndex;
+        }
+
+    /**
+     * @return true iff the register is a pre-defined argument
+     */
+    public boolean isPredefined()
+        {
+        return m_iArg < 0;
+        }
+
+    /**
+     * Determine if this register has an "unknown" index. This is used to indicate a "next"
+     * index.
+     *
+     * @return true iff this register has an "unknown" index
+     */
+    public boolean isUnknown()
+        {
+        return m_iArg >= UNKNOWN;
+        }
+
+    /**
+     * Mark the register as "final", which disallows "set()" unless it's definitely unassigned
+     */
+    public void markFinal()
+        {
+        m_fMarkedFinal = true;
+        }
+
+    /**
+     * @return true iff this register has been explicitly marked as "final"
+     */
+    public boolean isMarkedFinal()
+        {
+        return m_fMarkedFinal;
+        }
+
+    /**
+     * Mark the register as "allowed to be unassigned", which overrides any access check by the
+     * compiler, but may throw an "Unassigned value" exception at run-time.
+     */
+    public void markAllowUnassigned()
+        {
+        m_fMarkedUnassigned = true;
+        }
+
+    /**
+     * @return true iff this register has been marked as "allow unassigned"
+     */
+    public boolean isAllowedUnassigned()
+        {
+        return m_fMarkedUnassigned;
+        }
+
+    /**
+     * @return a String that denotes the identity of the register, for debugging purposes
+     */
+    public String getIdString()
+        {
+        return m_iArg >= UNKNOWN
+                ? "#? (@" + System.identityHashCode(this) + ")"
+                : getIdString(m_iArg);
+        }
 
     /**
      * A register that represents the underlying (base) register, but overrides its type.
@@ -720,6 +819,30 @@ public class Register
             }
 
         @Override
+        public void markFinal()
+            {
+            Register.this.markFinal();
+            }
+
+        @Override
+        public boolean isMarkedFinal()
+            {
+            return Register.this.isMarkedFinal();
+            }
+
+        @Override
+        public void markAllowUnassigned()
+            {
+            Register.this.markAllowUnassigned();
+            }
+
+        @Override
+        public boolean isAllowedUnassigned()
+            {
+            return Register.this.isAllowedUnassigned();
+            }
+
+        @Override
         public boolean isNormal()
             {
             return Register.this.isNormal();
@@ -749,66 +872,4 @@ public class Register
          */
         protected boolean m_fInPlace = false;
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * Register representing a default method argument.
-     */
-    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
-
-    /**
-     * Register representing an "async ignore" return.
-     */
-    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
-
-    /**
-     * @return true iff the register is a pre-defined argument
-     */
-    public boolean isPredefined()
-        {
-        return m_iArg < 0;
-        }
-
-    /**
-     * The type of the value that will be held in the register.
-     */
-    private TypeConstant m_type;
-
-    /**
-     * The type of the register itself (typically null).
-     */
-    private TypeConstant m_typeReg;
-
-    /**
-     * Determine if this register has an "unknown" index. This is used to indicate a "next"
-     * index.
-     *
-     * @return true iff this register has an "unknown" index
-     */
-    public boolean isUnknown()
-        {
-        return m_iArg >= UNKNOWN;
-        }
-
-    /**
-     * @return a String that denotes the identity of the register, for debugging purposes
-     */
-    public String getIdString()
-        {
-        return m_iArg >= UNKNOWN
-                ? "#? (@" + System.identityHashCode(this) + ")"
-                : getIdString(m_iArg);
-        }
-
-    /**
-     * Read-only flag.
-     */
-    private boolean m_fRO;
-
-    /**
-     * Effectively final flag.
-     */
-    private boolean m_fEffectivelyFinal;
     }

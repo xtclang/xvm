@@ -79,7 +79,6 @@ class SimpleResponse
         }
 
     @Override
-    @Unassigned
     List<Entry> entries.get()
         {
         if (assigned)
