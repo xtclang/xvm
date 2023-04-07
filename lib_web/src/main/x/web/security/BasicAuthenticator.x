@@ -10,6 +10,7 @@ import ecstasy.collections.CaseInsensitive;
  * An implementation of the Authenticator interface for
  * [The 'Basic' HTTP Authentication Scheme](https://datatracker.ietf.org/doc/html/rfc7617).
  */
+@Concurrent
 service BasicAuthenticator(Realm realm)
         implements Authenticator
     {

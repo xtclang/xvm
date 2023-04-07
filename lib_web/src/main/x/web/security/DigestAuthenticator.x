@@ -15,6 +15,7 @@ import responses.SimpleResponse;
  * An implementation of the Authenticator interface for
  * [The 'Digest' HTTP Authentication Scheme](https://datatracker.ietf.org/doc/html/rfc7616).
  */
+@Concurrent
 service DigestAuthenticator(Realm realm)
         implements Authenticator
     {
