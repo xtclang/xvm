@@ -23,10 +23,46 @@ public class Register
         }
 
     /**
-     * An index threshold that represents an unknown or otherwise unassigned registers. Any index
-     * value above this threshold is considered "unassigned".
+     * Construct a Register of the specified type.
+     *
+     * @param type  the TypeConstant specifying the Register type
+     * @param iArg  the argument index, which is either a pre-defined argument index, or a register
+     *              ID
      */
-    public static final int UNKNOWN = 1_000_000_000;
+    public Register(TypeConstant type, int iArg)
+        {
+        if (type == null)
+            {
+            switch (iArg)
+                {
+                case Op.A_DEFAULT:
+                case Op.A_IGNORE:
+                case Op.A_IGNORE_ASYNC:
+                    break;
+                default:
+                    throw new IllegalArgumentException("type required");
+                }
+            }
+        else
+            {
+            type = type.resolveTypedefs();
+            }
+
+        validateIndex(iArg);
+
+        if (iArg == UNKNOWN)
+            {
+            iArg = ConstantPool.getCurrentPool().getUnassignedRegisterIndex();
+            }
+        else
+            {
+            m_fRO = isPredefinedReadonly(iArg);
+            }
+
+        m_type       = type;
+        m_iArg       = iArg;
+        f_nOrigIndex = iArg;
+        }
 
     /**
      * Mark this register as an in-place replacement of the original.
@@ -193,23 +229,49 @@ public class Register
         {
         return getType();
         }
+
     /**
-     * An original register index, which serves as its identity.
+     * @return the argument index for the Register, which could be in the "unassigned" range
      */
-    private final int f_nOrigIndex;
+    public int getIndex()
+        {
+        return m_iArg;
+        }
+
     /**
-     * The type of the value that will be held in the register.
+     * Assign an argument index.
+     *
+     * @param iArg a valid argument index
      */
-    private TypeConstant m_type;
+    public int assignIndex(int iArg)
+        {
+        if (m_iArg < UNKNOWN && m_iArg != iArg)
+            {
+            throw new IllegalStateException(
+                "index has already been assigned (old=" + m_iArg + ", new=" + iArg);
+            }
+
+        validateIndex(iArg);
+        return m_iArg = iArg;
+        }
+
     /**
-     * The type of the register itself (typically null).
+     * Reset the register to an unknown index to allow for a re-run of the simulation that assigns
+     * variable indexes.
      */
-    private TypeConstant m_typeReg;
+    public void resetIndex()
+        {
+        m_iArg = f_nOrigIndex;
+        }
+
     /**
-     * The register ID (>=0), or the pre-defined argument identifier in the range -1 to
-     * {@link Op#CONSTANT_OFFSET).
+     * @return the original index for this register, which serves as an identity indicator during
+     *         the compilation (it's created as a unique one and unlike the index never changes)
      */
-    private int m_iArg;
+    public int getOriginalIndex()
+        {
+        return f_nOrigIndex;
+        }
 
     /**
      * Determine if the specified argument index is for a pre-defined read-only register.
@@ -242,10 +304,14 @@ public class Register
                 return false;
             }
         }
+
     /**
-     * Read-only flag.
+     * @return true iff the register is a pre-defined argument
      */
-    private boolean m_fRO;
+    public boolean isPredefined()
+        {
+        return m_iArg < 0;
+        }
 
     /**
      * @return true iff the register represents "super" pre-defined argument
@@ -270,10 +336,17 @@ public class Register
         {
         return m_iArg == Op.A_LABEL;
         }
+
     /**
-     * Effectively final flag (implicit).
+     * Determine if this register has an "unknown" index. This is used to indicate a "next"
+     * index.
+     *
+     * @return true iff this register has an "unknown" index
      */
-    private boolean m_fEffectivelyFinal;
+    public boolean isUnknown()
+        {
+        return m_iArg >= UNKNOWN;
+        }
 
     /**
      * Determine if this register is readable. This is equivalent to the Ref for the register
@@ -317,71 +390,6 @@ public class Register
         {
         return m_fEffectivelyFinal;
         }
-    /**
-     * Explicitly "@Final" register (disallow set unless definitely unassigned).
-     */
-    private boolean m_fMarkedFinal;
-    /**
-     * Explicitly "@Unassigned" register (allow compiler access).
-     */
-    private boolean m_fMarkedUnassigned;
-
-    /**
-     * Construct a Register of the specified type.
-     *
-     * @param type  the TypeConstant specifying the Register type
-     * @param iArg  the argument index, which is either a pre-defined argument index, or a register
-     *              ID
-     */
-    public Register(TypeConstant type, int iArg)
-        {
-        if (type == null)
-            {
-            switch (iArg)
-                {
-                case Op.A_DEFAULT:
-                case Op.A_IGNORE:
-                case Op.A_IGNORE_ASYNC:
-                    break;
-                default:
-                    throw new IllegalArgumentException("type required");
-                }
-            }
-        else
-            {
-            type = type.resolveTypedefs();
-            }
-
-        validateIndex(iArg);
-
-        if (iArg == UNKNOWN)
-            {
-            iArg = ConstantPool.getCurrentPool().getUnassignedRegisterIndex();
-            }
-        else
-            {
-            m_fRO = isPredefinedReadonly(iArg);
-            }
-
-        m_type       = type;
-        m_iArg       = iArg;
-        f_nOrigIndex = iArg;
-        }
-
-    /**
-     * Verify that the specified argument index is valid.
-     *
-     * @param iReg  the argument index
-     *
-     * @throws IllegalArgumentException if the index is invalid
-     */
-    protected static void validateIndex(int iReg)
-        {
-        if (!(iReg >= 0 || iReg >= UNKNOWN || isPredefinedRegister(iReg)))
-            {
-            throw new IllegalArgumentException("invalid register ID: " + iReg);
-            }
-        }
 
     /**
      * @return true iff this is a normal (not D_VAR), readable and writable, local variable (and
@@ -390,6 +398,39 @@ public class Register
     public boolean isNormal()
         {
         return !isPredefined() && isReadable() && isWritable() && !isVar();
+        }
+
+    /**
+     * Mark the register as "final", which disallows "set()" unless it's definitely unassigned
+     */
+    public void markFinal()
+        {
+        m_fMarkedFinal = true;
+        }
+
+    /**
+     * @return true iff this register has been explicitly marked as "final"
+     */
+    public boolean isMarkedFinal()
+        {
+        return m_fMarkedFinal;
+        }
+
+    /**
+     * Mark the register as "allowed to be unassigned", which overrides any access check by the
+     * compiler, but may throw an "Unassigned value" exception at run-time.
+     */
+    public void markAllowUnassigned()
+        {
+        m_fMarkedUnassigned = true;
+        }
+
+    /**
+     * @return true iff this register has been marked as "allow unassigned"
+     */
+    public boolean isAllowedUnassigned()
+        {
+        return m_fMarkedUnassigned;
         }
 
     @Override
@@ -445,6 +486,31 @@ public class Register
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * @return a String that denotes the identity of the register, for debugging purposes
+     */
+    public String getIdString()
+        {
+        return m_iArg >= UNKNOWN
+                ? "#? (@" + System.identityHashCode(this) + ")"
+                : getIdString(m_iArg);
+        }
+
+    /**
+     * Verify that the specified argument index is valid.
+     *
+     * @param iReg  the argument index
+     *
+     * @throws IllegalArgumentException if the index is invalid
+     */
+    protected static void validateIndex(int iReg)
+        {
+        if (!(iReg >= 0 || iReg >= UNKNOWN || isPredefinedRegister(iReg)))
+            {
+            throw new IllegalArgumentException("invalid register ID: " + iReg);
+            }
+        }
 
     /**
      * Determine if the specified argument index is for a pre-defined register.
@@ -541,126 +607,8 @@ public class Register
             }
         }
 
-    /**
-     * @return the argument index for the Register, which could be in the "unassigned" range
-     */
-    public int getIndex()
-        {
-        return m_iArg;
-        }
-
-    /**
-     * Assign an argument index.
-     *
-     * @param iArg a valid argument index
-     */
-    public int assignIndex(int iArg)
-        {
-        if (m_iArg < UNKNOWN && m_iArg != iArg)
-            {
-            throw new IllegalStateException(
-                "index has already been assigned (old=" + m_iArg + ", new=" + iArg);
-            }
-
-        validateIndex(iArg);
-        return m_iArg = iArg;
-        }
-
 
     // ----- inner classes -------------------------------------------------------------------------
-
-    /**
-     * Reset the register to an unknown index to allow for a re-run of the simulation that assigns
-     * variable indexes.
-     */
-    public void resetIndex()
-        {
-        m_iArg = f_nOrigIndex;
-        }
-
-
-    // ----- constants and fields ------------------------------------------------------------------
-
-    /**
-     * Register representing a default method argument.
-     */
-    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
-
-    /**
-     * Register representing an "async ignore" return.
-     */
-    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
-
-    /**
-     * @return the original index for this register, which serves as an identity indicator during
-     *         the compilation (it's created as a unique one and unlike the index never changes)
-     */
-    public int getOriginalIndex()
-        {
-        return f_nOrigIndex;
-        }
-
-    /**
-     * @return true iff the register is a pre-defined argument
-     */
-    public boolean isPredefined()
-        {
-        return m_iArg < 0;
-        }
-
-    /**
-     * Determine if this register has an "unknown" index. This is used to indicate a "next"
-     * index.
-     *
-     * @return true iff this register has an "unknown" index
-     */
-    public boolean isUnknown()
-        {
-        return m_iArg >= UNKNOWN;
-        }
-
-    /**
-     * Mark the register as "final", which disallows "set()" unless it's definitely unassigned
-     */
-    public void markFinal()
-        {
-        m_fMarkedFinal = true;
-        }
-
-    /**
-     * @return true iff this register has been explicitly marked as "final"
-     */
-    public boolean isMarkedFinal()
-        {
-        return m_fMarkedFinal;
-        }
-
-    /**
-     * Mark the register as "allowed to be unassigned", which overrides any access check by the
-     * compiler, but may throw an "Unassigned value" exception at run-time.
-     */
-    public void markAllowUnassigned()
-        {
-        m_fMarkedUnassigned = true;
-        }
-
-    /**
-     * @return true iff this register has been marked as "allow unassigned"
-     */
-    public boolean isAllowedUnassigned()
-        {
-        return m_fMarkedUnassigned;
-        }
-
-    /**
-     * @return a String that denotes the identity of the register, for debugging purposes
-     */
-    public String getIdString()
-        {
-        return m_iArg >= UNKNOWN
-                ? "#? (@" + System.identityHashCode(this) + ")"
-                : getIdString(m_iArg);
-        }
 
     /**
      * A register that represents the underlying (base) register, but overrides its type.
@@ -872,4 +820,64 @@ public class Register
          */
         protected boolean m_fInPlace = false;
         }
+
+
+    // ----- constants and fields ------------------------------------------------------------------
+
+    /**
+     * Register representing a default method argument.
+     */
+    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
+
+    /**
+     * Register representing an "async ignore" return.
+     */
+    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
+
+    /**
+     * An index threshold that represents an unknown or otherwise unassigned registers. Any index
+     * value above this threshold is considered "unassigned".
+     */
+    public static final int UNKNOWN = 1_000_000_000;
+
+    /**
+     * The type of the value that will be held in the register.
+     */
+    private TypeConstant m_type;
+
+    /**
+     * The type of the register itself (typically null).
+     */
+    private TypeConstant m_typeReg;
+
+    /**
+     * The register ID (>=0), or the pre-defined argument identifier in the range -1 to
+     * {@link Op#CONSTANT_OFFSET).
+     */
+    private int m_iArg;
+
+    /**
+     * Read-only flag.
+     */
+    private boolean m_fRO;
+
+    /**
+     * An original register index, which serves as its identity.
+     */
+    private final int f_nOrigIndex;
+
+    /**
+     * Effectively final flag (implicit).
+     */
+    private boolean m_fEffectivelyFinal;
+
+    /**
+     * Explicitly "@Final" register (disallow set unless definitely unassigned).
+     */
+    private boolean m_fMarkedFinal;
+
+    /**
+     * Explicitly "@Unassigned" register (allow compiler access).
+     */
+    private boolean m_fMarkedUnassigned;
     }
