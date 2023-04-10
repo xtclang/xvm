@@ -580,144 +580,6 @@ public class NameExpression
         return calcFit(ctx, getImplicitType(ctx, typeRequired, errs), typeRequired);
         }
 
-    /**
-     * If the plan is None or BindTarget, and this expression represents a method or function,
-     * we may need to bind type parameters.
-     */
-    private ListMap<FormalConstant, TypeConstant> m_mapTypeParams;
-
-    @Override
-    public boolean isCompletable()
-        {
-        return left == null || left.isCompletable();
-        }
-
-    @Override
-    public boolean isConditionalResult()
-        {
-        return getValueCount() == 1 && isConstantFalse();
-        }
-
-    @Override
-    public boolean isShortCircuiting()
-        {
-        return left != null && left.isShortCircuiting();
-        }
-
-    @Override
-    public boolean isTraceworthy()
-        {
-        if (!isCompletable())
-            {
-            return false;
-            }
-
-        return switch (getMeaning())
-            {
-            case Variable,
-                 Property,
-                 FormalChildType -> true; // TODO - some of these are traceworthy, right?
-            case Reserved,
-                 Unknown,
-                 Method,
-                 Class,
-                 Type,
-                 Label           -> false;
-            };
-        }
-
-    @Override
-    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
-        {
-        switch (getMeaning())
-            {
-            case Variable:
-            case Property:
-            case FormalChildType:
-                // stop recursing further
-                return;
-            }
-        super.selectTraceableExpressions(mapExprs);
-        }
-
-    @Override
-    public boolean isAssignable(Context ctx)
-        {
-        if (m_fAssignable)
-            {
-            // determine assign-ability: only local variables and read/write properties are
-            // assignable:
-            //
-            // Name          method             specifies            "static" context /    specifies
-            // refers to     context            no-de-ref            identity mode         no-de-ref
-            // ------------  -----------------  -------------------  ------------------    -------------------
-            // Local var     T                  <- Var               T                     <- Var
-            // Property      T                  <- Ref/Var           PropertyConstant*[1]  PropertyConstant*
-            switch (getMeaning())
-                {
-                case Variable:
-                    return m_plan == Plan.None;
-
-                case Property:
-                    return m_plan == Plan.PropertyDeref;
-                }
-            }
-
-        return false;
-        }
-
-    @Override
-    public void requireAssignable(Context ctx, ErrorListener errs)
-        {
-        if (isAssignable(ctx))
-            {
-            if (left == null)
-                {
-                switch (getMeaning())
-                    {
-                    case Reserved:
-                    case Variable:
-                        // this is assignable
-                        return;
-
-                    case Property:
-                        // "this" is used only if the property is not a constant
-                        if (!((PropertyConstant) m_arg).getComponent().isStatic())
-                            {
-                            // there is a read of the implicit "this" variable
-                            ctx.requireThis(getStartPosition(), errs);
-                            }
-                        break;
-                    }
-                } // TODO else account for ".this"???
-            }
-        else
-            {
-            super.requireAssignable(ctx, errs);
-            }
-        }
-
-    @Override
-    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
-        {
-        if (isAssignable(ctx))
-            {
-            if (left == null)
-                {
-                switch (getMeaning())
-                    {
-                    case Reserved:
-                    case Variable:
-                        ctx.markVarWrite(getNameToken(), fCond, errs);
-                        break;
-
-                    case Property:
-                        break;
-                    }
-                }
-            }
-        }
-
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
@@ -987,6 +849,138 @@ public class NameExpression
         }
 
     @Override
+    public boolean isCompletable()
+        {
+        return left == null || left.isCompletable();
+        }
+
+    @Override
+    public boolean isConditionalResult()
+        {
+        return getValueCount() == 1 && isConstantFalse();
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        return left != null && left.isShortCircuiting();
+        }
+
+    @Override
+    public boolean isTraceworthy()
+        {
+        if (!isCompletable())
+            {
+            return false;
+            }
+
+        return switch (getMeaning())
+            {
+            case Variable,
+                 Property,
+                 FormalChildType -> true; // TODO - some of these are traceworthy, right?
+            case Reserved,
+                 Unknown,
+                 Method,
+                 Class,
+                 Type,
+                 Label           -> false;
+            };
+        }
+
+    @Override
+    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
+        {
+        switch (getMeaning())
+            {
+            case Variable:
+            case Property:
+            case FormalChildType:
+                // stop recursing further
+                return;
+            }
+        super.selectTraceableExpressions(mapExprs);
+        }
+
+    @Override
+    public boolean isAssignable(Context ctx)
+        {
+        if (m_fAssignable)
+            {
+            // determine assign-ability: only local variables and read/write properties are
+            // assignable:
+            //
+            // Name          method             specifies            "static" context /    specifies
+            // refers to     context            no-de-ref            identity mode         no-de-ref
+            // ------------  -----------------  -------------------  ------------------    -------------------
+            // Local var     T                  <- Var               T                     <- Var
+            // Property      T                  <- Ref/Var           PropertyConstant*[1]  PropertyConstant*
+            switch (getMeaning())
+                {
+                case Variable:
+                    return m_plan == Plan.None;
+
+                case Property:
+                    return m_plan == Plan.PropertyDeref;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
+    public void requireAssignable(Context ctx, ErrorListener errs)
+        {
+        if (isAssignable(ctx))
+            {
+            if (left == null)
+                {
+                switch (getMeaning())
+                    {
+                    case Reserved:
+                    case Variable:
+                        // this is assignable
+                        return;
+
+                    case Property:
+                        // "this" is used only if the property is not a constant
+                        if (!((PropertyConstant) m_arg).getComponent().isStatic())
+                            {
+                            // there is a read of the implicit "this" variable
+                            ctx.requireThis(getStartPosition(), errs);
+                            }
+                        break;
+                    }
+                } // TODO else account for ".this"???
+            }
+        else
+            {
+            super.requireAssignable(ctx, errs);
+            }
+        }
+
+    @Override
+    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
+        {
+        if (isAssignable(ctx))
+            {
+            if (left == null)
+                {
+                switch (getMeaning())
+                    {
+                    case Reserved:
+                    case Variable:
+                        ctx.markVarWrite(getNameToken(), fCond, errs);
+                        break;
+
+                    case Property:
+                        break;
+                    }
+                }
+            }
+        }
+
+    @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         // constants are processed by generateArgument() method
@@ -1167,211 +1161,6 @@ public class NameExpression
             }
 
         super.generateAssignment(ctx, code, LVal, errs);
-        }
-
-    /**
-     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified method.
-     *
-     * Note, that for every occurrence of an expression in the form of "T.m(a)" that requires
-     * production of a function that takes an argument "t" of the target type "T" at index zero,
-     * this method creates a new lambda performing the following transformation:
-     *      (t, a, ...) -> t.m(a, ...)
-     * REVIEW: how to avoid duplicates?
-     *
-     * @param clz       the containing class
-     * @param idMethod  the underlying method
-     *
-     * @return the BjarneLambda id
-     */
-    private MethodConstant createBjarneLambda(ClassStructure clz, MethodConstant idMethod)
-        {
-        ConstantPool         pool        = pool();
-        MultiMethodStructure mms         = clz.ensureMultiMethodStructure("->");
-        TypeConstant         typeLambda  = idMethod.getBjarneLambdaType();
-        TypeConstant[]       atypeParam  = pool.extractFunctionParams(typeLambda);
-        TypeConstant[]       atypeReturn = pool.extractFunctionReturns(typeLambda);
-
-        int cParams  = atypeParam.length;
-        int cReturns = atypeReturn.length;
-
-        assert cParams > 0;
-
-        org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[cParams];
-        for (int i = 0; i < cParams; i++)
-            {
-            aparamParam[i] = new org.xvm.asm.Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
-            }
-
-        org.xvm.asm.Parameter[] aparamReturn = new org.xvm.asm.Parameter[cReturns];
-        for (int i = 0; i < cReturns; i++)
-            {
-            aparamReturn[i] = new org.xvm.asm.Parameter(pool, atypeReturn[i], null, null, true, i, false);
-            }
-
-        MethodStructure lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
-
-        lambda.configureLambda(aparamParam, 0, aparamReturn);
-        lambda.setStatic(true);
-        lambda.getIdentityConstant().setSignature(
-                pool.ensureSignatureConstant("->", atypeParam, atypeReturn));
-
-        Code     code      = lambda.createCode();
-        Register regTarget = new Register(atypeParam[0], 0);
-        switch (cParams-1)
-            {
-            case 0:
-                {
-                switch (cReturns)
-                    {
-                    case 0:
-                        code.add(new Invoke_00(regTarget, idMethod));
-                        code.add(Return_0.INSTANCE);
-                        break;
-
-                    case 1:
-                        {
-                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
-                        code.add(new Invoke_01(regTarget, idMethod, regRet));
-                        code.add(new Return_1(regRet));
-                        break;
-                        }
-
-                    default:
-                        {
-                        Register[] aregRet = new Register[cReturns];
-                        for (int i = 0; i < cReturns; i++)
-                            {
-                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
-                            }
-                        code.add(new Invoke_0N(regTarget, idMethod, aregRet));
-                        code.add(new Return_N(aregRet));
-                        break;
-                        }
-                    }
-                break;
-                }
-
-            case 1:
-                {
-                Register regParam = new Register(atypeParam[1], 1);
-                switch (cReturns)
-                    {
-                    case 0:
-                        code.add(new Invoke_10(regTarget, idMethod, regParam));
-                        code.add(Return_0.INSTANCE);
-                        break;
-
-                    case 1:
-                        {
-                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
-                        code.add(new Invoke_11(regTarget, idMethod, regParam, regRet));
-                        code.add(new Return_1(regRet));
-                        break;
-                        }
-
-                    default:
-                        {
-                        Register[] aregRet = new Register[cReturns];
-                        for (int i = 0; i < cReturns; i++)
-                            {
-                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
-                            }
-                        code.add(new Invoke_1N(regTarget, idMethod, regParam, aregRet));
-                        code.add(new Return_N(aregRet));
-                        break;
-                        }
-                    }
-                break;
-                }
-
-            default:
-                {
-                Register[] aregParam = new Register[cParams];
-                for (int i = 1; i < cParams; i++)
-                    {
-                    aregParam[i] = new Register(atypeParam[i], i);
-                    }
-                switch (cReturns)
-                    {
-                    case 0:
-                        code.add(new Invoke_N0(regTarget, idMethod, aregParam));
-                        code.add(Return_0.INSTANCE);
-                        break;
-
-                    case 1:
-                        {
-                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
-                        code.add(new Invoke_N1(regTarget, idMethod, aregParam, regRet));
-                        code.add(new Return_1(regRet));
-                        break;
-                        }
-
-                    default:
-                        {
-                        Register[] aregRet = new Register[cReturns];
-                        for (int i = 0; i < cReturns; i++)
-                            {
-                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
-                            }
-                        code.add(new Invoke_NN(regTarget, idMethod, aregParam, aregRet));
-                        code.add(new Return_N(aregRet));
-                        break;
-                        }
-                    }
-                break;
-                }
-            }
-
-        code.registerConstants(pool);
-
-        return lambda.getIdentityConstant();
-        }
-
-    /**
-     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified property
-     * getter.
-     *
-     * Note, that for every occurrence of an expression in the form of "T.p" that requires
-     * production of a function that takes an argument "t" of the target type "T" at index zero,
-     * this method creates a new lambda performing the following transformation:
-     *      t -> t.p
-     * REVIEW: how to avoid duplicates?
-     *
-     * @param clz       the containing class
-     * @param idProp  the underlying property
-     *
-     * @return the BjarneLambda id
-     */
-    private MethodConstant createBjarneLambda(ClassStructure clz, PropertyConstant idProp)
-        {
-        ConstantPool         pool       = pool();
-        MultiMethodStructure mms        = clz.ensureMultiMethodStructure("->");
-        TypeConstant         typeParam  = idProp.getNamespace().getType();
-        TypeConstant         typeReturn = idProp.getType();
-
-        org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[]
-            {new org.xvm.asm.Parameter(pool, typeParam, "p", null, false, 0, false)};
-
-        org.xvm.asm.Parameter[] aparamReturn = new org.xvm.asm.Parameter[]
-            {new org.xvm.asm.Parameter(pool, typeReturn, null, null, true, 0, false)};
-
-        MethodStructure lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
-
-        lambda.configureLambda(aparamParam, 0, aparamReturn);
-        lambda.setStatic(true);
-        lambda.getIdentityConstant().setSignature(
-                pool.ensureSignatureConstant("->",
-                    new TypeConstant[]{typeParam}, new TypeConstant[]{typeReturn}));
-
-        Code     code      = lambda.createCode();
-        Register regTarget = new Register(typeParam, 0);
-        Register regRet    = new Register(typeReturn, Op.A_STACK);
-
-        code.add(new P_Get(idProp, regTarget, regRet));
-        code.add(new Return_1(regRet));
-        code.registerConstants(pool);
-
-        return lambda.getIdentityConstant();
         }
 
     @Override
@@ -1671,6 +1460,211 @@ public class NameExpression
         }
 
     /**
+     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified method.
+     *
+     * Note, that for every occurrence of an expression in the form of "T.m(a)" that requires
+     * production of a function that takes an argument "t" of the target type "T" at index zero,
+     * this method creates a new lambda performing the following transformation:
+     *      (t, a, ...) -> t.m(a, ...)
+     * REVIEW: how to avoid duplicates?
+     *
+     * @param clz       the containing class
+     * @param idMethod  the underlying method
+     *
+     * @return the BjarneLambda id
+     */
+    private MethodConstant createBjarneLambda(ClassStructure clz, MethodConstant idMethod)
+        {
+        ConstantPool         pool        = pool();
+        MultiMethodStructure mms         = clz.ensureMultiMethodStructure("->");
+        TypeConstant         typeLambda  = idMethod.getBjarneLambdaType();
+        TypeConstant[]       atypeParam  = pool.extractFunctionParams(typeLambda);
+        TypeConstant[]       atypeReturn = pool.extractFunctionReturns(typeLambda);
+
+        int cParams  = atypeParam.length;
+        int cReturns = atypeReturn.length;
+
+        assert cParams > 0;
+
+        org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[cParams];
+        for (int i = 0; i < cParams; i++)
+            {
+            aparamParam[i] = new org.xvm.asm.Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
+            }
+
+        org.xvm.asm.Parameter[] aparamReturn = new org.xvm.asm.Parameter[cReturns];
+        for (int i = 0; i < cReturns; i++)
+            {
+            aparamReturn[i] = new org.xvm.asm.Parameter(pool, atypeReturn[i], null, null, true, i, false);
+            }
+
+        MethodStructure lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
+
+        lambda.configureLambda(aparamParam, 0, aparamReturn);
+        lambda.setStatic(true);
+        lambda.getIdentityConstant().setSignature(
+                pool.ensureSignatureConstant("->", atypeParam, atypeReturn));
+
+        Code     code      = lambda.createCode();
+        Register regTarget = new Register(atypeParam[0], 0);
+        switch (cParams-1)
+            {
+            case 0:
+                {
+                switch (cReturns)
+                    {
+                    case 0:
+                        code.add(new Invoke_00(regTarget, idMethod));
+                        code.add(Return_0.INSTANCE);
+                        break;
+
+                    case 1:
+                        {
+                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        code.add(new Invoke_01(regTarget, idMethod, regRet));
+                        code.add(new Return_1(regRet));
+                        break;
+                        }
+
+                    default:
+                        {
+                        Register[] aregRet = new Register[cReturns];
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            }
+                        code.add(new Invoke_0N(regTarget, idMethod, aregRet));
+                        code.add(new Return_N(aregRet));
+                        break;
+                        }
+                    }
+                break;
+                }
+
+            case 1:
+                {
+                Register regParam = new Register(atypeParam[1], 1);
+                switch (cReturns)
+                    {
+                    case 0:
+                        code.add(new Invoke_10(regTarget, idMethod, regParam));
+                        code.add(Return_0.INSTANCE);
+                        break;
+
+                    case 1:
+                        {
+                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        code.add(new Invoke_11(regTarget, idMethod, regParam, regRet));
+                        code.add(new Return_1(regRet));
+                        break;
+                        }
+
+                    default:
+                        {
+                        Register[] aregRet = new Register[cReturns];
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            }
+                        code.add(new Invoke_1N(regTarget, idMethod, regParam, aregRet));
+                        code.add(new Return_N(aregRet));
+                        break;
+                        }
+                    }
+                break;
+                }
+
+            default:
+                {
+                Register[] aregParam = new Register[cParams];
+                for (int i = 1; i < cParams; i++)
+                    {
+                    aregParam[i] = new Register(atypeParam[i], i);
+                    }
+                switch (cReturns)
+                    {
+                    case 0:
+                        code.add(new Invoke_N0(regTarget, idMethod, aregParam));
+                        code.add(Return_0.INSTANCE);
+                        break;
+
+                    case 1:
+                        {
+                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        code.add(new Invoke_N1(regTarget, idMethod, aregParam, regRet));
+                        code.add(new Return_1(regRet));
+                        break;
+                        }
+
+                    default:
+                        {
+                        Register[] aregRet = new Register[cReturns];
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            }
+                        code.add(new Invoke_NN(regTarget, idMethod, aregParam, aregRet));
+                        code.add(new Return_N(aregRet));
+                        break;
+                        }
+                    }
+                break;
+                }
+            }
+
+        code.registerConstants(pool);
+
+        return lambda.getIdentityConstant();
+        }
+
+    /**
+     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified property
+     * getter.
+     *
+     * Note, that for every occurrence of an expression in the form of "T.p" that requires
+     * production of a function that takes an argument "t" of the target type "T" at index zero,
+     * this method creates a new lambda performing the following transformation:
+     *      t -> t.p
+     * REVIEW: how to avoid duplicates?
+     *
+     * @param clz       the containing class
+     * @param idProp  the underlying property
+     *
+     * @return the BjarneLambda id
+     */
+    private MethodConstant createBjarneLambda(ClassStructure clz, PropertyConstant idProp)
+        {
+        ConstantPool         pool       = pool();
+        MultiMethodStructure mms        = clz.ensureMultiMethodStructure("->");
+        TypeConstant         typeParam  = idProp.getNamespace().getType();
+        TypeConstant         typeReturn = idProp.getType();
+
+        org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[]
+            {new org.xvm.asm.Parameter(pool, typeParam, "p", null, false, 0, false)};
+
+        org.xvm.asm.Parameter[] aparamReturn = new org.xvm.asm.Parameter[]
+            {new org.xvm.asm.Parameter(pool, typeReturn, null, null, true, 0, false)};
+
+        MethodStructure lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
+
+        lambda.configureLambda(aparamParam, 0, aparamReturn);
+        lambda.setStatic(true);
+        lambda.getIdentityConstant().setSignature(
+                pool.ensureSignatureConstant("->",
+                    new TypeConstant[]{typeParam}, new TypeConstant[]{typeReturn}));
+
+        Code     code      = lambda.createCode();
+        Register regTarget = new Register(typeParam, 0);
+        Register regRet    = new Register(typeReturn, Op.A_STACK);
+
+        code.add(new P_Get(idProp, regTarget, regRet));
+        code.add(new Return_1(regRet));
+        code.registerConstants(pool);
+
+        return lambda.getIdentityConstant();
+        }
+
+    /**
      * Helper method to generate an argument for the property Ref target.
      */
     private Argument generateRefTarget(Context ctx, Code code,
@@ -1722,7 +1716,7 @@ public class NameExpression
                 TypeInfo infoThis = ctx.getThisType().ensureTypeInfo();
 
                 // first type goes on stack
-                Register regType = createRegister(pool().typeType(), i == 0);
+                Register regType = code.createRegister(pool().typeType(), i == 0);
                 code.add(new L_Get(infoThis.findProperty(sName).getIdentity(), regType));
 
                 aArgBind[i] = regType;
@@ -1739,6 +1733,68 @@ public class NameExpression
                 }
             }
         code.add(new FBind(argFnOrig, anBindIx, aArgBind, argFnResult));
+        }
+
+    @Override
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
+        {
+        if (isAssignable(ctx))
+            {
+            TargetInfo target = m_targetInfo;
+            Argument   arg    = m_arg;
+            if (arg instanceof Register reg)
+                {
+                assert target == null;
+                return new Assignable(reg);
+                }
+            if (arg instanceof PropertyConstant idProp)
+                {
+                Argument argTarget;
+                if (left == null)
+                    {
+                    ClassStructure clz = ctx.getThisClass();
+
+                    switch (m_propAccessPlan)
+                        {
+                        case SingletonParent:
+                            {
+                            IdentityConstant  idParent    = m_idSingletonParent;
+                            SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
+                            Register regTarget = code.createRegister(idParent.getType());
+                            code.add(new Var_I(regTarget, idSingleton));
+                            argTarget = regTarget;
+                            break;
+                            }
+
+                        case This:
+                            argTarget = new Register(clz.getFormalType(), Op.A_THIS);
+                            break;
+
+                        case Outer:
+                            for (int nDepth = target.getStepsOut(); --nDepth >= 0;)
+                                {
+                                clz = clz.getContainingClass();
+                                }
+                            argTarget = new Register(clz.getFormalType(), Op.A_STACK);
+                            code.add(new MoveThis(target.getStepsOut(), argTarget));
+                            break;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    argTarget = left.generateArgument(ctx, code, true, true, errs);
+                    }
+
+                return new Assignable(argTarget, idProp);
+                }
+
+            return super.generateAssignable(ctx, code, errs);
+            }
+
+        return null;
         }
 
 
@@ -2240,591 +2296,6 @@ public class NameExpression
 
         return m_arg;
         }
-
-    @Override
-    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
-        {
-        if (isAssignable(ctx))
-            {
-            TargetInfo target = m_targetInfo;
-            Argument   arg    = m_arg;
-            if (arg instanceof Register reg)
-                {
-                assert target == null;
-                return new Assignable(reg);
-                }
-            if (arg instanceof PropertyConstant idProp)
-                {
-                Argument argTarget;
-                if (left == null)
-                    {
-                    ClassStructure clz = ctx.getThisClass();
-
-                    switch (m_propAccessPlan)
-                        {
-                        case SingletonParent:
-                            {
-                            IdentityConstant  idParent    = m_idSingletonParent;
-                            SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
-                            Register regTarget = code.createRegister(idParent.getType());
-                            code.add(new Var_I(regTarget, idSingleton));
-                            argTarget = regTarget;
-                            break;
-                            }
-
-                        case This:
-                            argTarget = new Register(clz.getFormalType(), Op.A_THIS);
-                            break;
-
-                        case Outer:
-                            for (int nDepth = target.getStepsOut(); --nDepth >= 0;)
-                                {
-                                clz = clz.getContainingClass();
-                                }
-                            argTarget = new Register(clz.getFormalType(), Op.A_STACK);
-                            code.add(new MoveThis(target.getStepsOut(), argTarget));
-                            break;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                    }
-                else
-                    {
-                    argTarget = left.generateArgument(ctx, code, true, true, errs);
-                    }
-
-                return new Assignable(argTarget, idProp);
-                }
-
-            return super.generateAssignable(ctx, code, errs);
-            }
-
-        return null;
-        }
-
-    /**
-     * Resolve the property type into a dynamic type is possible.
-     *
-     * @param ctx          the context
-     * @param typeLeft     the type for the "left" expression
-     * @param typeProp     the original property type, which could be formal
-     * @param typeResolved the resolved property type as computed by the TypeInfo
-     *
-     * @return a resolved property type
-     */
-    private TypeConstant resolveDynamicType(Context ctx, TypeConstant typeLeft,
-                                            TypeConstant typeProp, TypeConstant typeResolved)
-        {
-        ConstantPool pool = pool();
-
-        CheckDynamic:
-        if (left instanceof NameExpression exprLeft &&
-                typeLeft.isSingleDefiningConstant() && !typeLeft.isFormalType())
-            {
-            if (exprLeft.isSuppressDeref())
-                {
-                // this is a Ref property access, e.g.: "&outer.assigned"
-                break CheckDynamic;
-                }
-
-            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-            if (!(argLeft instanceof Register regLeft))
-                {
-                break CheckDynamic;
-                }
-
-            if (regLeft.isPredefined())
-                {
-                break CheckDynamic;
-                }
-
-            MethodConstant   idMethod = ctx.getMethod().getIdentityConstant();
-            String           sName    = exprLeft.getName();
-            IdentityConstant idParent = (IdentityConstant) typeLeft.
-                    removeAutoNarrowing().getDefiningConstant();
-
-            if (typeProp.isGenericType())
-                {
-                FormalConstant idFormal =
-                        (FormalConstant) typeProp.getDefiningConstant();
-                if (!typeResolved.isGenericType() &&
-                        idFormal.getParentConstant().equals(idParent))
-                    {
-                    return pool.ensureDynamicFormal(
-                            idMethod, regLeft, idFormal, sName).getType();
-                    }
-                }
-            else if (typeProp.containsGenericType(true))
-                {
-                // if the property type contains a generic type and that
-                // generic type belongs to the left argument, replace it with
-                // a corresponding dynamic type
-                GenericTypeResolver resolver = new GenericTypeResolver()
-                    {
-                    @Override
-                    public TypeConstant resolveGenericType(String sFormalName)
-                        {
-                        return typeResolved.resolveGenericType(sFormalName);
-                        }
-
-                    @Override
-                    public TypeConstant resolveFormalType(FormalConstant idFormal)
-                        {
-                        return idFormal.getParentConstant().equals(idParent)
-                            ? pool.ensureDynamicFormal(
-                                idMethod, regLeft, idFormal, sName).getType()
-                            : resolveGenericType(idFormal.getName());
-                        }
-                    };
-
-                return typeProp.resolveGenerics(pool, resolver);
-                }
-            }
-        return typeResolved;
-        }
-
-    /**
-     * @return the meaning of the name (after resolveRawArgument has finished), or null if it cannot be
-     *         determined
-     */
-    protected Meaning getMeaning()
-        {
-        Argument arg = m_arg;
-        if (arg == null)
-            {
-            return Meaning.Unknown;
-            }
-
-        if (arg instanceof Register reg)
-            {
-            return reg.isPredefined()
-                    ? reg.isLabel()
-                            ? Meaning.Label
-                            : Meaning.Reserved
-                    : Meaning.Variable;
-            }
-
-        if (arg instanceof TargetInfo)
-            {
-            // this indicates an "outer this"
-            return Meaning.Reserved;
-            }
-
-        if (arg instanceof Constant constant)
-            {
-            switch (constant.getFormat())
-                {
-                    // class ID
-                case Module:
-                case Package:
-                    // relative ID
-                case ThisClass:
-                case ParentClass:
-                    return Meaning.Class;
-
-                case Class:
-                case DecoratedClass:
-                    return m_plan == Plan.TypeOfClass
-                            ? Meaning.Type
-                            : Meaning.Class;
-
-                case Property:
-                    return Meaning.Property;
-
-                case FormalTypeChild:
-                    return Meaning.FormalChildType;
-
-                case Method:
-                case MultiMethod:
-                    return Meaning.Method;
-
-                case Typedef:
-                    return Meaning.Type;
-                }
-            }
-
-        throw new IllegalStateException("arg=" + arg);
-        }
-
-    /**
-     * @return true iff this name represents a DVar register
-     */
-    public boolean isDynamicVar()
-        {
-        return m_arg instanceof Register reg && reg.isVar();
-        }
-
-    /**
-     * REVIEW: the "soft" concept is ugly; Cam to review
-     * @param fSoft  if true, allow this expression to return true if the name expression could
-     *               potentially represent a class identity (e.g. package or module)
-     *
-     * @return true iff the name expression could represent a class or property identity, because
-     *         either it is a simple name of a class or property, or because it augments an identity
-     *         mode name expression by adding the name of a class or property
-     */
-    protected boolean isIdentityMode(Context ctx, boolean fSoft)
-        {
-        // identity mode requires the left side to be absent or to be a name expression
-        if (left != null && !(left instanceof NameExpression))
-            {
-            return false;
-            }
-
-        switch (getMeaning())
-            {
-            case Class:
-            case Type:
-                {
-                // a class name can continue identity mode if no-de-ref is specified:
-                // Name        method             specifies            "static"            specifies
-                // refers to   context            no-de-ref            context             no-de-ref
-                // ---------   -----------------  -------------------  ------------------  -------------------
-                // Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
-                // - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
-                // Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
-
-                if (left != null)
-                    {
-                    // 1) the "left" NameExpression must be identity mode, and
-                    // 2) this NameExpression must NOT be ".this"
-                    if (!((NameExpression) left).isIdentityMode(ctx, true) || name.getValueText().equals("this"))
-                        {
-                        return false;
-                        }
-                    }
-
-                IdentityConstant id = getIdentity(ctx);
-                if (id instanceof TypedefConstant)
-                    {
-                    return false;
-                    }
-
-                if (fSoft)
-                    {
-                    if (id instanceof ModuleConstant || id instanceof PackageConstant)
-                        {
-                        return true;
-                        }
-                    }
-
-                return isSuppressDeref() || !((ClassStructure) id.getComponent()).isSingleton();
-                }
-
-            case Property:
-                {
-                // a non-constant-property name can be "identity mode" if at least one of the
-                // following is true:
-                //   1) there is no left and the context is static; or
-                //   2) there is a left, and it is in identity mode, but this is not a class attribute
-                //
-                // Name         method  specifies  "static" context /   specifies
-                // refers to    context no-de-ref  identity mode        no-de-ref
-                // ------------ ------- ---------- ------------------   -------------------
-                // Property     T       <- Ref/Var PropertyConstant*[1] PropertyConstant*
-                // - type param T       <- Ref     PropertyConstant*[1] PropertyConstant*
-                // Constant     T       <- Ref     T                    <- Ref
-                //
-                // *[1] must have a left-hand side in identity mode; otherwise it is an Error
-                PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
-
-                return !prop.isConstant() && !m_fClassAttribute && left != null
-                        && ((NameExpression) left).isIdentityMode(ctx, false);
-                }
-            }
-
-        return false;
-        }
-
-    /**
-     * This method is not currently used.
-     *
-     * @return true iff the specified register represents a type parameter
-     */
-    protected boolean isTypeParameter(Context ctx, Register reg)
-        {
-        return !reg.isUnknown() && ctx.getMethod().isTypeParameter(reg.getIndex());
-        }
-
-    /**
-     * @return the class or property identity that the name expression indicates, iff the name
-     *         expression is "identity mode"
-     */
-    protected IdentityConstant getIdentity(Context ctx)
-        {
-        return m_arg instanceof IdentityConstant id
-                ? id
-                : ((TypeConstant) m_arg).getSingleUnderlyingClass(true);
-        }
-
-    /**
-     * @return  the PseudoConstant representing the relationship of the parent class that this name
-     *          expression refers to vis-a-vis the class containing the method for which the passed
-     *          context exists
-     */
-    protected PseudoConstant getRelativeIdentity(TypeConstant typeFrom, IdentityConstant idTarget)
-        {
-        // verify that we can "walk up the line" starting from the specified type
-        if (!typeFrom.isExplicitClassIdentity(true))
-            {
-            return null;
-            }
-        Component component = typeFrom.getSingleUnderlyingClass(true).getComponent();
-        if (!(component instanceof ClassStructure clzFrom))
-            {
-            return null;
-            }
-
-        ConstantPool   pool       = pool();
-        PseudoConstant idVirtPath = null;
-        int            cDepth     = 0;
-        while (clzFrom != null)
-            {
-            IdentityConstant idFrom = clzFrom.getIdentityConstant();
-            idVirtPath = idVirtPath == null
-                    ? pool.ensureThisClassConstant(idFrom)
-                    : pool.ensureParentClassConstant(idVirtPath);
-
-            if (idFrom.equals(idTarget) ||
-                    (cDepth > 0 && clzFrom.hasContribution(idTarget, true)))
-                {
-                // found it!
-                return idVirtPath;
-                }
-
-            if (clzFrom.isTopLevel() || clzFrom.isStatic())
-                {
-                // can't ".this" beyond the outermost class, and can't ".this" from a static child
-                return null;
-                }
-
-            clzFrom = clzFrom.getContainingClass();
-            cDepth++;
-            }
-
-        return null;
-        }
-
-    protected PropertyAccess calculatePropertyAccess(boolean fRef)
-        {
-        if (m_propAccessPlan != null)
-            {
-            return m_propAccessPlan;
-            }
-
-        if (left == null)
-            {
-            return PropertyAccess.This;
-            }
-
-        if (left instanceof NameExpression exprLeft)
-            {
-            // check that "this" is not "OuterThis"
-            if (exprLeft.getName().equals("this") &&
-                    (fRef || exprLeft.m_plan == Plan.None))
-                {
-                return PropertyAccess.This;
-                }
-            }
-        return PropertyAccess.Left;
-        }
-
-
-    /**
-     * Narrow the type of the variable represented by this expression for the specified context branch.
-     * <p/>
-     * Note: This can only be used during the validate() stage after this name expression
-     *       has been validated.
-     *
-     * @param ctx         the context
-     * @param branch      the branch
-     * @param typeNarrow  the narrowing type
-     */
-    public void narrowType(Context ctx, Branch branch, TypeConstant typeNarrow)
-        {
-        if (typeNarrow != null)
-            {
-            assert isValidated();
-
-            Argument arg = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-
-            if (left != null)
-                {
-                if (arg instanceof FormalTypeChildConstant constFormal)
-                    {
-                    // e.g.: CompileType.Element
-                    ctx.replaceGenericType(constFormal, branch, typeNarrow);
-                    }
-
-                // TODO: to allow an expression "a.b.c" to be narrowed, all parents have to be immutable
-                return;
-                }
-
-            // we are only concerned with registers and type parameters;
-            // properties and constants are ignored
-            String sName = getName();
-            if (arg instanceof Register reg)
-                {
-                ctx.narrowLocalRegister(sName, reg, branch, typeNarrow);
-                }
-            else
-                {
-                if (arg instanceof TargetInfo info)
-                    {
-                    IdentityConstant id = info.getId();
-                    if (id instanceof PropertyConstant idProp)
-                        {
-                        assert sName.equals(id.getName());
-
-                        // make sure the property hasn't been hidden by a local var
-                        if (ctx.getVar(sName) instanceof Register)
-                            {
-                            return;
-                            }
-
-                        if (idProp.isFormalType())
-                            {
-                            ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
-                            }
-                        else  // allow narrowing for immutable properties
-                            {
-                            TypeConstant     typeTarget = info.getTargetType();
-                            IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
-                            MethodStructure  method     = ctx.getMethod();
-                            if (idTarget.equals(ctx.getThisClassId()) &&
-                                    (method.isConstructor() || method.isValidator()))
-                                {
-                                // no property narrowing in the constructor
-                                }
-                            else if (typeTarget.isImmutable())
-                                {
-                                ctx.narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
-                                }
-                            }
-                        }
-                    else if (id instanceof IdentityConstant)
-                        {
-                        // narrow the "outer this"
-                        ctx.replaceArgument("this", branch, new TargetInfo(info, typeNarrow));
-                        }
-                    }
-                else if (arg instanceof PropertyConstant idProp)
-                    {
-                    assert sName.equals(idProp.getName());
-
-                    // make sure the property hasn't been hidden by a local var
-                    if (ctx.getVar(sName) instanceof Register)
-                        {
-                        return;
-                        }
-
-                    if (idProp.isFormalType())
-                        {
-                        assert typeNarrow.isTypeOfType();
-
-                        TargetInfo info = new TargetInfo(sName, idProp, true, idProp.getNamespace().getType(), 0);
-                        ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
-                        }
-                    else // allow narrowing for immutable properties
-                        {
-                        MethodStructure method = ctx.getMethod();
-                        if (method.isConstructor() || method.isValidator())
-                            {
-                            // no property narrowing in the constructor
-                            }
-                        else if (ctx.getThisClass().isConst())
-                            {
-                            TargetInfo info = new TargetInfo(sName, idProp, true, ctx.getThisType(), 0);
-                            ctx.narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
-                            }
-                        }
-                    }
-                else if (arg instanceof TypeParameterConstant constTypeParam)
-                    {
-                    ctx.replaceGenericType(constTypeParam, branch, typeNarrow);
-                    }
-                }
-            }
-        }
-
-
-    // ----- debugging assistance ------------------------------------------------------------------
-
-    @Override
-    public String toString()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        if (left != null)
-            {
-            if (left instanceof NameExpression)
-                {
-                sb.append(left);
-                }
-            else
-                {
-                sb.append('(').append(left).append(')');
-                }
-            sb.append('.');
-            }
-
-        if (amp != null)
-            {
-            sb.append('&');
-            }
-
-        sb.append(name.getValueText());
-
-        if (params != null)
-            {
-            sb.append('<');
-            boolean first = true;
-            for (Expression param : params)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(param);
-                }
-            sb.append('>');
-            }
-
-        return sb.toString();
-        }
-
-    @Override
-    public String getDumpDesc()
-        {
-        return toString();
-        }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    protected Expression           left;
-    protected Token                amp;
-    protected Token                name;
-    protected List<TypeExpression> params;
-    protected long                 lEndPos;
-
-    /**
-     * Represents the category of argument that the expression yields.
-     */
-    enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class, Type, Label}
-
-    /**
-     * Represents the necessary argument/assignable transformation that the expression will have to
-     * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
-     * assignment.
-     */
-    enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, PropertySelf,
-               TypeOfClass, TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget, BjarneLambda}
 
     /**
      * Determine how to transform a "raw" argument into the argument that this expression would
