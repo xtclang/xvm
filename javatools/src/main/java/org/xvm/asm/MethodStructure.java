@@ -779,8 +779,8 @@ public class MethodStructure
      *
      * @return true iff there is a conflict, in which case the mapping is removed
      */
-    private static boolean checkConflict(TypeConstant typeResult, FormalConstant constFormal, boolean fParam,
-                                         Map<FormalConstant, TypeConstant> mapTypeParams)
+    private static boolean checkConflict(TypeConstant typeResult, String sFormalName,
+                                         boolean fParam, Map<String, TypeConstant> mapTypeParams)
         {
         if (typeResult != null)
             {
@@ -791,7 +791,7 @@ public class MethodStructure
                 typeResult = info.getExtends();
                 }
 
-            TypeConstant typePrev = mapTypeParams.get(constFormal);
+            TypeConstant typePrev = mapTypeParams.get(sFormalName);
             if (typePrev != null)
                 {
                 if (fParam ? typeResult.isA(typePrev) : typePrev.isA(typeResult))
@@ -812,12 +812,12 @@ public class MethodStructure
                         {
                         // different arguments cause the formal type to resolve into
                         // incompatible types
-                        mapTypeParams.remove(constFormal);
+                        mapTypeParams.remove(sFormalName);
                         return true;
                         }
                     }
                 }
-            mapTypeParams.put(constFormal, typeResult);
+            mapTypeParams.put(sFormalName, typeResult);
             }
         return false;
         }
