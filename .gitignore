@@ -25,6 +25,7 @@
 # User specific tool settings
 #############################
 *.ipr
+*.iml
 *.iws
 *.swp
 

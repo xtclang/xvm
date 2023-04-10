@@ -1,5 +1,15 @@
 rootProject.name = "xvm"
 
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral {
+            content {
+                excludeGroup("org.xtclang.xvm")
+            }
+        }
+    }
+}
+
 include(":javatools_utils")     // produces javatools_utils.jar for org.xvm.utils package
 include(":javatools_unicode")   // produces data files -> :lib_ecstasy/resources, only on request
 include(":javatools")           // produces javatools.jar
