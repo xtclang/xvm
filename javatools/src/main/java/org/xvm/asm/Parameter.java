@@ -362,10 +362,11 @@ public class Parameter
      * Obtain the register that de-references the implicitly de-referenced register.
      *
      * @param regVar  the implicitly de-referenced register
+     * @param method  the containing method
      *
      * @return the register representing the de-reference of the passed register
      */
-    public Register deref(Register regVar)
+    public Register deref(Register regVar, MethodStructure method)
         {
         assert isImplicitDeref();
 
@@ -373,7 +374,7 @@ public class Parameter
             {
             TypeConstant typeVar = getType();
             TypeConstant typeVal = typeVar.getParamType(0);
-            Register     reg     = new Register(typeVal);
+            Register     reg     = new Register(typeVal, method);
             reg.specifyRegType(typeVar);
 
             m_regDeref = reg;

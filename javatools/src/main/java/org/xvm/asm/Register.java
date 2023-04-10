@@ -13,55 +13,32 @@ public class Register
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a Register of the specified type.
-     *
-     * @param type  the TypeConstant specifying the Register type
+     * An original register index, which is either equal to the actual index (if assigned from the
+     * outset) or an offset relative to the UNKNOWN value used to compute {@link #getId() the unique id}.
      */
-    public Register(TypeConstant type)
-        {
-        this(type, UNKNOWN);
-        }
+    private final int f_nOrigIndex;
 
     /**
-     * Construct a Register of the specified type.
+     * Construct an unknown Register of the specified type.
      *
-     * @param type  the TypeConstant specifying the Register type
-     * @param iArg  the argument index, which is either a pre-defined argument index, or a register
-     *              ID
+     * @param type    the TypeConstant specifying the Register type
+     * @param method  the enclosing method
      */
-    public Register(TypeConstant type, int iArg)
+    public Register(TypeConstant type, MethodStructure method)
         {
         if (type == null)
             {
-            switch (iArg)
-                {
-                case Op.A_DEFAULT:
-                case Op.A_IGNORE:
-                case Op.A_IGNORE_ASYNC:
-                    break;
-                default:
-                    throw new IllegalArgumentException("type required");
-                }
+            throw new IllegalArgumentException("type required");
             }
         else
             {
             type = type.resolveTypedefs();
             }
 
-        validateIndex(iArg);
-
-        if (iArg == UNKNOWN)
-            {
-            iArg = ConstantPool.getCurrentPool().getUnassignedRegisterIndex();
-            }
-        else
-            {
-            m_fRO = isPredefinedReadonly(iArg);
-            }
-
+        m_fRO        = false;
         m_type       = type;
-        m_iArg       = iArg;
-        f_nOrigIndex = iArg;
+        m_iArg       = UNKNOWN + (method == null ? 0 : method.getUnassignedRegisterIndex());
+        f_nOrigIndex = m_iArg;
         }
 
     /**
@@ -179,38 +156,52 @@ public class Register
         }
 
     /**
-     * Create a register that is collocated with this register, but narrows its type.
-     * <p/>
-     * To be technically correct, there are scenarios when typeNarrowed is actually wider than
-     * the original type. Imagine a following Ecstasy code:
-     *   <pre><code>
-     *   Element el = ...;
-     *   Consumer<Element> consumer1 = new Consumer(Element>();
-     *   if (Element.is(Type<Int>))
-     *       {
-     *       Consumer<Element> consumer2 = new Consumer(Element);
-     *       }
-     *   </code></pre>
+     * Construct a Register of the specified type.
      *
-     * In the enclosed "if" context it's known that the Element is an Int, which makes
-     * consumer2 not assignable to (not narrower than) consumer1, but in effect wider.
-     *
-     * @param typeNarrowed  the new register type
-     *
-     * @return a shadow of the original register reflecting the new type
+     * @param type  the TypeConstant specifying the Register type
+     * @param iArg  the argument index, which is either a pre-defined argument index, or a register
+     *              ID
      */
-    public Register narrowType(TypeConstant typeNarrowed)
+    public Register(TypeConstant type, int iArg)
         {
-        // even when the types are the same, the shadow carries "not-in-place" flag
-        return new ShadowRegister(typeNarrowed);
+        if (type == null)
+            {
+            switch (iArg)
+                {
+                case Op.A_DEFAULT:
+                case Op.A_IGNORE:
+                case Op.A_IGNORE_ASYNC:
+                    break;
+                default:
+                    throw new IllegalArgumentException("type required");
+                }
+            }
+        else
+            {
+            type = type.resolveTypedefs();
+            }
+
+        validateIndex(iArg);
+
+        m_fRO        = isPredefinedReadonly(iArg);
+        m_type       = type;
+        m_iArg       = iArg;
+        f_nOrigIndex = iArg;
         }
 
     /**
-     * Create a shadow register that has the same type as the original register.
+     * Verify that the specified argument index is valid.
+     *
+     * @param iReg  the argument index
+     *
+     * @throws IllegalArgumentException if the index is invalid
      */
-    public Register restoreType()
+    protected static void validateIndex(int iReg)
         {
-        return new ShadowRegister(getOriginalType());
+        if (!(0 <= iReg || iReg < UNKNOWN || isPredefinedRegister(iReg)))
+            {
+            throw new IllegalArgumentException("invalid register ID: " + iReg);
+            }
         }
 
     /**
@@ -265,12 +256,30 @@ public class Register
         }
 
     /**
-     * @return the original index for this register, which serves as an identity indicator during
-     *         the compilation (it's created as a unique one and unlike the index never changes)
+     * Create a register that is collocated with this register, but narrows its type.
+     * <p/>
+     * To be technically correct, there are scenarios when typeNarrowed is actually wider than
+     * the original type. Imagine a following Ecstasy code:
+     *   <pre><code>
+     *   Element el = ...;
+     *   Consumer<Element> consumer1 = new Consumer(Element>();
+     *   if (Element.is(Type<Int>))
+     *       {
+     *       Consumer<Element> consumer2 = new Consumer(Element);
+     *       }
+     *   </code></pre>
+     *
+     * In the enclosed "if" context it's known that the Element is an Int, which makes
+     * consumer2 not assignable to (not narrower than) consumer1, but in effect wider.
+     *
+     * @param typeNarrowed  the new register type
+     *
+     * @return a shadow of the original register reflecting the new type
      */
-    public int getOriginalIndex()
+    public Register narrowType(TypeConstant typeNarrowed)
         {
-        return f_nOrigIndex;
+        // even when the types are the same, the shadow carries "not-in-place" flag
+        return new ShadowRegister(typeNarrowed, f_nOrigIndex);
         }
 
     /**
@@ -498,18 +507,11 @@ public class Register
         }
 
     /**
-     * Verify that the specified argument index is valid.
-     *
-     * @param iReg  the argument index
-     *
-     * @throws IllegalArgumentException if the index is invalid
+     * Create a shadow register that has the same type as the original register.
      */
-    protected static void validateIndex(int iReg)
+    public Register restoreType()
         {
-        if (!(iReg >= 0 || iReg >= UNKNOWN || isPredefinedRegister(iReg)))
-            {
-            throw new IllegalArgumentException("invalid register ID: " + iReg);
-            }
+        return new ShadowRegister(getOriginalType(), f_nOrigIndex);
         }
 
     /**
@@ -611,6 +613,57 @@ public class Register
     // ----- inner classes -------------------------------------------------------------------------
 
     /**
+     * @return the unique id for this register which is used to differentiate registers with the
+     *         same index, but within different scopes inside of a single method
+     */
+    public int getId()
+        {
+        assert f_nOrigIndex == m_iArg || f_nOrigIndex >= UNKNOWN;
+
+        return f_nOrigIndex < UNKNOWN ? f_nOrigIndex : f_nOrigIndex - UNKNOWN;
+        }
+
+
+    // ----- constants and fields ------------------------------------------------------------------
+
+    /**
+     * Register representing a default method argument.
+     */
+    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
+
+    /**
+     * Register representing an "async ignore" return.
+     */
+    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
+
+    /**
+     * An index threshold that represents an unknown or otherwise unassigned registers. Any index
+     * value above this threshold is considered "unassigned".
+     */
+    public static final int UNKNOWN = 1_000_000_000;
+
+    /**
+     * The type of the value that will be held in the register.
+     */
+    private TypeConstant m_type;
+
+    /**
+     * The type of the register itself (typically null).
+     */
+    private TypeConstant m_typeReg;
+
+    /**
+     * The register ID (>=0), or the pre-defined argument identifier in the range -1 to
+     * {@link Op#CONSTANT_OFFSET).
+     */
+    private int m_iArg;
+
+    /**
+     * Read-only flag.
+     */
+    private boolean m_fRO;
+
+    /**
      * A register that represents the underlying (base) register, but overrides its type.
      */
     private class ShadowRegister
@@ -620,10 +673,11 @@ public class Register
          * Create a ShadowRegister of the specified type.
          *
          * @param typeNew  the overriding type
+         * @param iArg     the original index
          */
-        protected ShadowRegister(TypeConstant typeNew)
+        protected ShadowRegister(TypeConstant typeNew, int iArg)
             {
-            super(typeNew);
+            super(typeNew, iArg);
             }
 
         @Override
@@ -820,51 +874,6 @@ public class Register
          */
         protected boolean m_fInPlace = false;
         }
-
-
-    // ----- constants and fields ------------------------------------------------------------------
-
-    /**
-     * Register representing a default method argument.
-     */
-    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
-
-    /**
-     * Register representing an "async ignore" return.
-     */
-    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
-
-    /**
-     * An index threshold that represents an unknown or otherwise unassigned registers. Any index
-     * value above this threshold is considered "unassigned".
-     */
-    public static final int UNKNOWN = 1_000_000_000;
-
-    /**
-     * The type of the value that will be held in the register.
-     */
-    private TypeConstant m_type;
-
-    /**
-     * The type of the register itself (typically null).
-     */
-    private TypeConstant m_typeReg;
-
-    /**
-     * The register ID (>=0), or the pre-defined argument identifier in the range -1 to
-     * {@link Op#CONSTANT_OFFSET).
-     */
-    private int m_iArg;
-
-    /**
-     * Read-only flag.
-     */
-    private boolean m_fRO;
-
-    /**
-     * An original register index, which serves as its identity.
-     */
-    private final int f_nOrigIndex;
 
     /**
      * Effectively final flag (implicit).

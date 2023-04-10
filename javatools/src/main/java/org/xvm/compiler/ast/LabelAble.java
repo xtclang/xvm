@@ -21,9 +21,10 @@ public interface LabelAble
     /**
      * Obtain the register for the variable of the specified name which is exposed via a label.
      *
+     * @param ctx    the context
      * @param sName  the variable name
      *
      * @return the corresponding register
      */
-    Register getLabelVar(String sName);
+    Register getLabelVar(Context ctx, String sName);
     }

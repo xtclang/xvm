@@ -31,30 +31,6 @@ public class Var_MN
         extends OpVar
     {
     /**
-     * Construct a VAR_MN op for the specified type, name and arguments.
-     *
-     * @param constType  the variable type
-     * @param constName  the name constant
-     * @param aArgVal    the key arguments
-     * @param aArgVal    the value argument
-     */
-    public Var_MN(TypeConstant constType, StringConstant constName, Argument[] aArgKey, Argument[] aArgVal)
-        {
-        super(constType);
-
-        if (constName == null || aArgKey == null || aArgVal == null)
-            {
-            throw new IllegalArgumentException("name, keys and values required");
-            }
-
-        assert aArgKey.length == aArgVal.length;
-
-        m_constName = constName;
-        m_aArgKey   = aArgKey;
-        m_aArgVal   = aArgVal;
-        }
-
-    /**
      * Construct a VAR_MN op for the specified register, name and arguments.
      *
      * @param reg        the register

@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
@@ -384,8 +385,9 @@ public class ListExpression
             return toConstant();
             }
 
-        code.add(new Var_S(getType(), collectArguments(ctx, code, errs)));
-        return code.lastRegister();
+        Register reg = code.createRegister(getType());
+        code.add(new Var_S(reg, collectArguments(ctx, code, errs)));
+        return reg;
         }
 
     /**

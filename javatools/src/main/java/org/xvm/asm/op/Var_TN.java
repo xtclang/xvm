@@ -11,7 +11,6 @@ import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -31,26 +30,6 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Var_TN
         extends OpVar
     {
-    /**
-     * Construct a VAR_TN op for the specified type, name and arguments.
-     *
-     * @param constType the variable type
-     * @param constName  the name constant
-     * @param aArgValue  the value arguments
-     */
-    public Var_TN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
-        {
-        super(constType);
-
-        if (constName == null || aArgValue == null)
-            {
-            throw new IllegalArgumentException("name and values required");
-            }
-
-        m_constName = constName;
-        m_aArgValue = aArgValue;
-        }
-
     /**
      * Construct a VAR_TN op for the specified register, name and arguments.
      *

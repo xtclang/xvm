@@ -99,7 +99,7 @@ public class TryStatement
         }
 
     @Override
-    public Register getLabelVar(String sName)
+    public Register getLabelVar(Context ctx, String sName)
         {
         assert hasLabelVar(sName);
 
@@ -110,7 +110,7 @@ public class TryStatement
             Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(),
                     Id.IDENTIFIER, sLabel + '.' + sName);
 
-            m_regFinallyException = reg = new Register(pool().typeException१());
+            m_regFinallyException = reg = ctx.createRegister(pool().typeException१());
             m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
             }
 
@@ -339,7 +339,7 @@ public class TryStatement
             for (int i = 0; i < c; ++i)
                 {
                 fCompletes = resources.get(i).completes(ctx, fCompletes, code, errs);
-                FinallyStart opFinally = new FinallyStart(new Register(pool.typeException१()));
+                FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
                 aFinallyClose[i] = opFinally;
                 code.add(new GuardAll(opFinally));
                 }
@@ -351,7 +351,7 @@ public class TryStatement
         if (catchall != null)
             {
             Register regFinallyException = m_regFinallyException == null
-                    ? new Register(pool.typeException१())
+                    ? code.createRegister(pool.typeException१())
                     : m_regFinallyException;
             opFinallyBlock = new FinallyStart(regFinallyException);
             labelCatchEnd  = new Label();
@@ -434,7 +434,7 @@ public class TryStatement
                 code.add(aFinallyClose[i]);
                 Register regException = code.lastRegister();
 
-                Register       regCatch  = new Register(pool.typeException());
+                Register       regCatch  = code.createRegister(pool.typeException());
                 StringConstant constName = pool.ensureStringConstant("(close-exception)");
                 CatchStart     opCatch   = new CatchStart(regCatch, constName);
                 code.add(new GuardStart(new CatchStart[] {opCatch}));

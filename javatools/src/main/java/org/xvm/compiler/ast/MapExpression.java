@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
@@ -426,10 +427,11 @@ public class MapExpression
             return toConstant();
             }
 
-        code.add(new Var_M(getType(),
+        Register reg = code.createRegister(getType());
+        code.add(new Var_M(reg,
                 collectArguments(ctx, code, true, errs),
                 collectArguments(ctx, code, false, errs)));
-        return code.lastRegister();
+        return reg;
         }
 
     /**

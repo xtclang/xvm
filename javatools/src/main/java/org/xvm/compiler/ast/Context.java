@@ -1775,6 +1775,16 @@ public class Context
         return regTemp;
         }
 
+    /**
+     * Produce a regular (not on stack) register.
+     *
+     * @param type  the type of the register
+     */
+    public Register createRegister(TypeConstant type)
+        {
+        return new Register(type, getMethod());
+        }
+
     @Override
     public String toString()
         {

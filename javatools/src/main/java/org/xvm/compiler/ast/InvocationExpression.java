@@ -1253,9 +1253,10 @@ public class InvocationExpression
                 {
                 for (int i = 0; i < cRVals; i++)
                     {
-                    code.add(new Var_D(atype[i]));
+                    Register reg = code.createRegister(atype[i]);
+                    code.add(new Var_D(reg));
 
-                    aLVal[i] = new Assignable(code.lastRegister());
+                    aLVal[i] = new Assignable(reg);
                     }
 
                 generateAssignments(ctx, code, aLVal, errs);
@@ -1263,7 +1264,7 @@ public class InvocationExpression
                 Argument[] aargResult = new Argument[cRVals];
                 for (int i = 0; i < cRVals; i++)
                     {
-                    Register regVar = createRegister(atype[i], false);
+                    Register regVar = code.createRegister(atype[i]);
 
                     code.add(new MoveVar(aLVal[i].getRegister(), regVar));
                     aargResult[i] = regVar;
@@ -1279,7 +1280,7 @@ public class InvocationExpression
 
                 for (int i = 0; i < cRVals; i++)
                     {
-                    Register reg = createRegister(pool.ensureFutureVar(atype[i]), false);
+                    Register reg = code.createRegister(pool.ensureFutureVar(atype[i]));
 
                     code.add(new Var_D(reg));
 
@@ -1578,7 +1579,7 @@ public class InvocationExpression
                             {
                             // the method gets bound to become a function; do this and drop through
                             // to the function handling
-                            argFn = new Register(idMethod.getSignature().asFunctionType());
+                            argFn = code.createRegister(idMethod.getSignature().asFunctionType());
                             code.add(new MBind(argTarget, idMethod, argFn));
                             }
                         }
@@ -1609,7 +1610,7 @@ public class InvocationExpression
                             {
                             MethodConstant idMethod = (MethodConstant) prop.getInitialValue();
 
-                            argFn = new Register(idMethod.getSignature().asFunctionType());
+                            argFn = code.createRegister(idMethod.getSignature().asFunctionType());
                             code.add(new MBind(argTarget, idMethod, argFn));
                             }
                         else
@@ -1653,7 +1654,7 @@ public class InvocationExpression
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
             typeFn = m_idConvert.getRawReturns()[0];
-            Register regFn = createRegister(typeFn, true);
+            Register regFn = new Register(typeFn, Op.A_STACK);
             code.add(new Invoke_01(argFn, m_idConvert, regFn));
             argFn = regFn;
             }
@@ -1910,7 +1911,7 @@ public class InvocationExpression
                 }
             else
                 {
-                Register regFn = new Register(getType());
+                Register regFn = code.createRegister(getType());
                 code.add(new FBind(argFn, aiArg, aArg, regFn));
                 lval.assign(regFn, code, errs);
                 }
@@ -1936,7 +1937,7 @@ public class InvocationExpression
 
                 if (cStepsOut > 0)
                     {
-                    argTarget = createRegister(typeTarget, fTargetOnStack);
+                    argTarget = code.createRegister(typeTarget, fTargetOnStack);
                     code.add(new MoveThis(m_targetInfo.getStepsOut(), argTarget));
                     }
                 else

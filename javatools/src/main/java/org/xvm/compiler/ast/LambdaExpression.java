@@ -1500,7 +1500,7 @@ public class LambdaExpression
                 String       sName = asParams[i];
                 if (sName != null && !sName.equals(Id.ANY.TEXT) && type != null)
                     {
-                    Register     reg          = new Register(type);
+                    Register     reg          = createRegister(type);
                     TypeConstant typeNarrowed = ctxOuter.resolveFormalType(type);
                     if (typeNarrowed != type)
                         {

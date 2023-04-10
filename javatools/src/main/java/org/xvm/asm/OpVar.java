@@ -25,16 +25,6 @@ public abstract class OpVar
         extends Op
     {
     /**
-     * Construct a variable that will hold the specified type.
-     *
-     * @param constType  the variable type
-     */
-    protected OpVar(TypeConstant constType)
-        {
-        this(new Register(constType));
-        }
-
-    /**
      * Construct a variable that corresponds to the specified register.
      *
      * @param reg  the register for the variable

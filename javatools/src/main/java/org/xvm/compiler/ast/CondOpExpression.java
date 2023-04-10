@@ -204,7 +204,7 @@ public class CondOpExpression
             case UorU:
             case UandU:
                 Label      labelEnd  = new Label();
-                Register   regAccum  = new Register(getType());
+                Register   regAccum  = code.createRegister(getType());
                 Assignable LValAccum = new Assignable(regAccum);
 
                 code.add(new Var(regAccum));

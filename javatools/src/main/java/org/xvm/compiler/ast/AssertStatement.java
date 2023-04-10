@@ -364,7 +364,7 @@ public class AssertStatement
                 assert constNew != null;
 
                 // throw new {sThrow}(message, null)
-                Argument argEx  = new Register(constEx.getType());
+                Argument argEx  = code.createRegister(constEx.getType());
                 Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
                 code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
                 code.add(new Throw(argEx));
@@ -510,7 +510,7 @@ public class AssertStatement
             {
             // throw new {sThrow}(message, null)
             code.add(labelMessage);
-            Argument argEx  = new Register(constEx.getType());
+            Argument argEx  = code.createRegister(constEx.getType());
             Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
             code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
             code.add(new Throw(argEx));

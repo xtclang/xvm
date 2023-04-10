@@ -34,26 +34,6 @@ public class Var_SN
         extends OpVar
     {
     /**
-     * Construct a VAR_SN op for the specified type, name and arguments.
-     *
-     * @param constType the variable type
-     * @param constName  the name constant
-     * @param aArgValue  the value arguments
-     */
-    public Var_SN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
-        {
-        super(constType);
-
-        if (constName == null || aArgValue == null)
-            {
-            throw new IllegalArgumentException("name and values required");
-            }
-
-        m_constName = constName;
-        m_aArgValue = aArgValue;
-        }
-
-    /**
      * Construct a VAR_SN op for the specified register, name and arguments.
      *
      * @param reg        the register

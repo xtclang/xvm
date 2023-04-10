@@ -144,7 +144,7 @@ public class WhileStatement
         }
 
     @Override
-    public Register getLabelVar(String sName)
+    public Register getLabelVar(Context ctx, String sName)
         {
         assert hasLabelVar(sName);
 
@@ -159,7 +159,7 @@ public class WhileStatement
             String sLabel = ((LabeledStatement) getParent()).getName();
             Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
 
-            reg = new Register(fFirst ? pool().typeBoolean() : pool().typeInt());
+            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt());
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             if (fFirst)

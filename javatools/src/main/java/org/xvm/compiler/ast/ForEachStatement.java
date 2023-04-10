@@ -226,7 +226,7 @@ public class ForEachStatement
         }
 
     @Override
-    public Register getLabelVar(String sName)
+    public Register getLabelVar(Context ctx, String sName)
         {
         assert hasLabelVar(sName);
 
@@ -260,7 +260,7 @@ public class ForEachStatement
                 default              -> throw new IllegalStateException();
                 };
 
-            reg = new Register(type);
+            reg = ctx.createRegister(type);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             switch (sName)
@@ -715,8 +715,8 @@ public class ForEachStatement
         ConstantPool pool     = pool();
         TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), getElementType());
 
-        code.add(new Var(typeIter));
-        Register regIter = code.lastRegister();
+        Register regIter = code.createRegister(typeIter);
+        code.add(new Var(regIter));
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regIter), errs);
 
         return emitAnyIterator(ctx, fReachable, code, regIter, errs);
@@ -758,8 +758,8 @@ public class ForEachStatement
         // JMP Repeat                       ; loop
         // Exit:
 
-        code.add(new Var(pool.typeBoolean()));
-        Register regCond = code.lastRegister();
+        Register regCond = code.createRegister(pool.typeBoolean());
+        code.add(new Var(regCond));
 
         Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
         boolean    fTempVal = !lvalVal.isLocalArgument();
@@ -886,17 +886,17 @@ public class ForEachStatement
         // JMP Repeat                       ; loop
         // Exit:
 
-        Assignable LVal = m_exprLValue.generateAssignable(ctx, code, errs);
-        code.add(new Var_IN(typeSeq,
+        Assignable LVal   = m_exprLValue.generateAssignable(ctx, code, errs);
+        Register   regVal = code.createRegister(typeSeq);
+        code.add(new Var_IN(regVal,
                 pool.ensureStringConstant(getLoopPrefix() + "current"), range.getEffectiveFirst()));
-        Register regVal = code.lastRegister();
 
         Register regLast = m_regLast;
         if (regLast == null)
             {
-            code.add(new Var_N(pool.typeBoolean(),
+            regLast = code.createRegister(pool.typeBoolean());
+            code.add(new Var_N(regLast,
                     pool.ensureStringConstant(getLoopPrefix() + "last")));
-            regLast = code.lastRegister();
             }
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
@@ -941,16 +941,16 @@ public class ForEachStatement
 
         assert idFirst != null && idLast != null && idDescend != null;
 
-        code.add(new Var(typeSeq));
-        Register regFirstValue = code.lastRegister();
+        Register regFirstValue = code.createRegister(typeSeq);
+        code.add(new Var(regFirstValue));
         code.add(new P_Get(idFirst, argRange, regFirstValue));
 
-        code.add(new Var(typeSeq));
-        Register regLastValue = code.lastRegister();
+        Register regLastValue = code.createRegister(typeSeq);
+        code.add(new Var(regLastValue));
         code.add(new P_Get(idLast, argRange, regLastValue));
 
-        code.add(new Var(pool.typeBoolean()));
-        Register regDescend = code.lastRegister();
+        Register regDescend = code.createRegister(pool.typeBoolean());
+        code.add(new Var(regDescend));
         code.add(new P_Get(idDescend, argRange, regDescend));
 
         // check if the interval is empty
@@ -982,16 +982,16 @@ public class ForEachStatement
 
         Assignable LVal = m_exprLValue.generateAssignable(ctx, code, errs);
 
-        code.add(new Var_IN(typeSeq,
+        Register regVal = code.createRegister(typeSeq);
+        code.add(new Var_IN(regVal,
                 pool.ensureStringConstant(getLoopPrefix() + "current"), regFirstValue));
-        Register regVal = code.lastRegister();
 
         Register regLast = m_regLast;
         if (regLast == null)
             {
-            code.add(new Var_N(pool.typeBoolean(),
+            regLast = code.createRegister(pool.typeBoolean());
+            code.add(new Var_N(regLast,
                     pool.ensureStringConstant(getLoopPrefix() + "last")));
-            regLast = code.lastRegister();
             }
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
@@ -1060,16 +1060,16 @@ public class ForEachStatement
         Register regCount = m_regCount;
         if (regCount == null)
             {
-            code.add(new Var_IN(pool.typeInt(),
+            regCount = code.createRegister(pool.typeInt());
+            code.add(new Var_IN(regCount,
                     pool.ensureStringConstant(getLoopPrefix() + "count"), pool.val0()));
-            regCount = code.lastRegister();
             }
 
-        code.add((new Var(pool.typeInt())));
-        Register regEnd = code.lastRegister();
+        Register regEnd = code.createRegister(pool.typeInt());
+        code.add((new Var(regEnd)));
 
-        code.add(new Var(typeSeq));
-        Register regSeq = code.lastRegister();
+        Register regSeq = code.createRegister(typeSeq);
+        code.add(new Var(regSeq));
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
 
         code.add(new P_Get(idSize, regSeq, regEnd));
@@ -1087,8 +1087,9 @@ public class ForEachStatement
 
             alvalVal = m_exprLValue.generateAssignables(ctx, code, errs);
 
-            code.add(new Var(typeElem));
-            argVal = code.lastRegister();
+            Register regElem = code.createRegister(typeElem);
+            code.add(new Var(regElem));
+            argVal = regElem;
             }
         else
             {
@@ -1102,9 +1103,8 @@ public class ForEachStatement
         Register regLast = m_regLast;
         if (regLast == null)
             {
-            code.add(new Var_N(pool.typeBoolean(),
-                    pool.ensureStringConstant(getLoopPrefix() + "last")));
-            regLast = code.lastRegister();
+            regLast = code.createRegister(pool.typeBoolean());
+            code.add(new Var_N(regLast, pool.ensureStringConstant(getLoopPrefix() + "last")));
             }
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
@@ -1135,7 +1135,7 @@ public class ForEachStatement
                     }
                 else
                     {
-                    Register regTemp = new Register(lval.getType());
+                    Register regTemp = code.createRegister(lval.getType());
                     code.add(new Var(regTemp));
                     code.add(new I_Get(argVal, index, regTemp));
                     lvalVal.assign(regTemp, code, errs);
@@ -1230,12 +1230,12 @@ public class ForEachStatement
 
             Register regSet = new Register(typeAble, Op.A_STACK);
             code.add(new P_Get(idEntries, argMap, regSet));
-            code.add(new Var(typeIter));
-            Register regIter = code.lastRegister();
+            Register regIter = code.createRegister(typeIter);
+            code.add(new Var(regIter));
             code.add(new Invoke_01(regSet, idIterator, regIter));
 
-            code.add(new Var(pool.typeBoolean()));
-            Register regCond = code.lastRegister();
+            Register regCond = code.createRegister(pool.typeBoolean());
+            code.add(new Var(regCond));
 
             code.add(labelRepeat);
 
@@ -1243,8 +1243,8 @@ public class ForEachStatement
             if (regEntry == null)
                 {
                 // the "entry" label is not used; create a temp var
-                code.add(new Var_N(typeEntry, pool.ensureStringConstant(getLoopPrefix() + "entry")));
-                regEntry = code.lastRegister();
+                regEntry = code.createRegister(typeEntry);
+                code.add(new Var_N(regEntry, pool.ensureStringConstant(getLoopPrefix() + "entry")));
                 }
 
             code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regEntry}));
@@ -1323,12 +1323,13 @@ public class ForEachStatement
             PropertyConstant idKeys = infoMap.findProperty("keys").getIdentity();
             Register         regSet = new Register(typeAble, Op.A_STACK);
             code.add(new P_Get(idKeys, argMap, regSet));
-            code.add(new Var(typeIter));
-            Register regIter = code.lastRegister();
+
+            Register regIter = code.createRegister(typeIter);
+            code.add(new Var(regIter));
             code.add(new Invoke_01(regSet, idIterator, regIter));
 
-            code.add(new Var(pool.typeBoolean()));
-            Register regCond = code.lastRegister();
+            Register regCond = code.createRegister(pool.typeBoolean());
+            code.add(new Var(regCond));
 
             code.add(labelRepeat);
 
@@ -1390,8 +1391,8 @@ public class ForEachStatement
         TypeConstant typeAble    = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeElement);
         TypeConstant typeIter    = pool.ensureParameterizedTypeConstant(pool.typeIterator(), getElementType());
 
-        code.add(new Var(typeIter));
-        Register regIter = code.lastRegister();
+        Register regIter = code.createRegister(typeIter);
+        code.add(new Var(regIter));
 
         Argument       argAble    = m_exprRValue.generateArgument(ctx, code, true, true, errs);
         TypeInfo       infoAble   = typeAble.ensureTypeInfo(errs);

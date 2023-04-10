@@ -405,7 +405,7 @@ public class StatementBlock
                             String     sName  = param.getName();
                             Register   regVar = (Register) ctx.getVar(sName);
                             Assignment asnVar = ctx.getVarAssignment(sName);
-                            Register   regVal = param.deref(regVar);
+                            Register   regVal = param.deref(regVar, method);
 
                             ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
                             ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment                    }
@@ -471,7 +471,7 @@ public class StatementBlock
                     if (param.isImplicitDeref())
                         {
                         Register regVar = (Register) ctx.getVar(param.getName());
-                        Register regVal = param.deref(regVar);
+                        Register regVal = param.deref(regVar, method);
                         code.add(new Var_C(regVal, regVar));
                         }
                     }
@@ -896,7 +896,7 @@ public class StatementBlock
 
                     TypeConstant type   = exprNew.getCaptureType(sName);
                     boolean      fFinal = exprNew.isCaptureFinal(sName);
-                    Register     reg    = new Register(type);
+                    Register     reg    = createRegister(type);
                     mapByName.put(sName, reg);
                     ensureCaptureVars().put(sName, reg);
 
@@ -1101,7 +1101,7 @@ public class StatementBlock
                                 {
                                 // we are responsible for capturing a variable for code inside an
                                 // anonymous inner class
-                                Register reg = new Register(argCapture.getType());
+                                Register reg = createRegister(argCapture.getType());
                                 super.registerVar(name, reg, errs);
                                 ensureDefiniteAssignments().put(sName, ctx.getVarAssignment(sName));
                                 ensureCaptureContexts().put(sName, ctx);

@@ -30,28 +30,6 @@ public class Var_M
         extends OpVar
     {
     /**
-     * Construct a VAR_M op for the specified type and arguments.
-     *
-     * @param constType  the variable type
-     * @param aArgVal    the key arguments
-     * @param aArgVal    the value argument
-     */
-    public Var_M(TypeConstant constType, Argument[] aArgKey, Argument[] aArgVal)
-        {
-        super(constType);
-
-        if (aArgKey == null || aArgVal == null)
-            {
-            throw new IllegalArgumentException("name, keys and values required");
-            }
-
-        assert aArgKey.length == aArgVal.length;
-
-        m_aArgKey = aArgKey;
-        m_aArgVal = aArgVal;
-        }
-
-    /**
      * Construct a VAR_M op for the specified register and arguments.
      *
      * @param reg      the register

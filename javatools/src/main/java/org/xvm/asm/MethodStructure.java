@@ -751,6 +751,98 @@ public class MethodStructure
     // ----- compiler support ----------------------------------------------------------------------
 
     /**
+     * Next value for an index of a not-yet-assigned register.
+     */
+    private transient int m_nNextUnassignedIndex;
+
+    /**
+     * Collect a list of unresolved type parameter names. Used for error reporting only.
+     */
+    public List<String> collectUnresolvedTypeParameters(Set<String> setResolved)
+        {
+        int          cTypeParams    = getTypeParamCount();
+        List<String> listUnresolved = new ArrayList<>(cTypeParams);
+
+        for (int iT = 0; iT < cTypeParams; iT++)
+            {
+            String sName = getParam(iT).getName();
+            if (!setResolved.contains(sName))
+                {
+                listUnresolved.add(sName);
+                }
+            }
+        return listUnresolved;
+        }
+
+    /**
+     * Put the resolved formal type in the specified map and ensure that there is no conflict.
+     *
+     * @return true iff there is a conflict, in which case the mapping is removed
+     */
+    private static boolean checkConflict(TypeConstant typeResult, FormalConstant constFormal, boolean fParam,
+                                         Map<FormalConstant, TypeConstant> mapTypeParams)
+        {
+        if (typeResult != null)
+            {
+            // downgrade enum value types to their base type (e.g. True -> Boolean)
+            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            if (info.getFormat() == Format.ENUMVALUE)
+                {
+                typeResult = info.getExtends();
+                }
+
+            TypeConstant typePrev = mapTypeParams.get(constFormal);
+            if (typePrev != null)
+                {
+                if (fParam ? typeResult.isA(typePrev) : typePrev.isA(typeResult))
+                    {
+                    // the old parameter type is wider or the old return type is narrower; keep it
+                    return false;
+                    }
+
+                if (fParam ? typePrev.isA(typeResult) : typeResult.isA(typePrev))
+                    {
+                    // the new parameter type is wider or the old return type is narrower; use it instead
+                    }
+                else
+                    {
+                    // the type are not compatible; use the common type (TODO: consider union?)
+                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
+                    if (typeResult == null)
+                        {
+                        // different arguments cause the formal type to resolve into
+                        // incompatible types
+                        mapTypeParams.remove(constFormal);
+                        return true;
+                        }
+                    }
+                }
+            mapTypeParams.put(constFormal, typeResult);
+            }
+        return false;
+        }
+
+    /**
+     * Determine the number of steps to get to the "outer this" from this method.
+     *
+     * @return the number of steps
+     */
+    public int getThisSteps()
+        {
+        int cSteps = 0;
+        Component parent = getParent().getParent();
+        while (!(parent instanceof ClassStructure))
+            {
+            if (parent instanceof PropertyStructure prop && prop.isRefAnnotated())
+                {
+                ++cSteps;
+                }
+            parent = parent.getParent();
+            }
+        return cSteps;
+        }
+
+    /**
      * Given arrays of actual argument types and return types, return a ListMap with the actual
      * (resolved) type parameters types.
      * <p/>
@@ -894,93 +986,6 @@ public class MethodStructure
                 }
             }
         return mapTypeParams;
-        }
-
-    /**
-     * Collect a list of unresolved type parameter names. Used for error reporting only.
-     */
-    public List<String> collectUnresolvedTypeParameters(Set<String> setResolved)
-        {
-        int          cTypeParams    = getTypeParamCount();
-        List<String> listUnresolved = new ArrayList<>(cTypeParams);
-
-        for (int iT = 0; iT < cTypeParams; iT++)
-            {
-            String sName = getParam(iT).getName();
-            if (!setResolved.contains(sName))
-                {
-                listUnresolved.add(sName);
-                }
-            }
-        return listUnresolved;
-        }
-
-    /**
-     * Put the resolved formal type in the specified map and ensure that there is no conflict.
-     *
-     * @return true iff there is a conflict, in which case the mapping is removed
-     */
-    private static boolean checkConflict(TypeConstant typeResult, String sFormalName,
-                                         boolean fParam, Map<String, TypeConstant> mapTypeParams)
-        {
-        if (typeResult != null)
-            {
-            // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.BLACKHOLE);
-            if (info.getFormat() == Format.ENUMVALUE)
-                {
-                typeResult = info.getExtends();
-                }
-
-            TypeConstant typePrev = mapTypeParams.get(sFormalName);
-            if (typePrev != null)
-                {
-                if (fParam ? typeResult.isA(typePrev) : typePrev.isA(typeResult))
-                    {
-                    // the old parameter type is wider or the old return type is narrower; keep it
-                    return false;
-                    }
-
-                if (fParam ? typePrev.isA(typeResult) : typeResult.isA(typePrev))
-                    {
-                    // the new parameter type is wider or the old return type is narrower; use it instead
-                    }
-                else
-                    {
-                    // the type are not compatible; use the common type (TODO: consider union?)
-                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
-                    if (typeResult == null)
-                        {
-                        // different arguments cause the formal type to resolve into
-                        // incompatible types
-                        mapTypeParams.remove(sFormalName);
-                        return true;
-                        }
-                    }
-                }
-            mapTypeParams.put(sFormalName, typeResult);
-            }
-        return false;
-        }
-
-    /**
-     * Determine the number of steps to get to the "outer this" from this method.
-     *
-     * @return the number of steps
-     */
-    public int getThisSteps()
-        {
-        int cSteps = 0;
-        Component parent = getParent().getParent();
-        while (!(parent instanceof ClassStructure))
-            {
-            if (parent instanceof PropertyStructure prop && prop.isRefAnnotated())
-                {
-                ++cSteps;
-                }
-            parent = parent.getParent();
-            }
-        return cSteps;
         }
 
 
@@ -2117,705 +2122,12 @@ public class MethodStructure
     // ----- inner class: Code ---------------------------------------------------------------------
 
     /**
-     * The Code class represents the op codes that make up a method's behavior.
+     * @return a unique (for this pool) value to be used as an original index for not-yet-assigned
+     *         registers
      */
-    public static class Code
+    public synchronized int getUnassignedRegisterIndex()
         {
-        // ----- constructors -----------------------------------------------------------------
-
-        /**
-         * Construct a Code object. This disassembles the bytes of code from the MethodStructure if
-         * it was itself disassembled; otherwise this starts empty and allows ops to be added.
-         */
-        Code(MethodStructure method)
-            {
-            assert method != null;
-            f_method = method;
-
-            byte[] abOps = method.m_abOps;
-            if (abOps != null)
-                {
-                Op[] aop;
-                Constant[] aconst = method.getLocalConstants();
-                try
-                    {
-                    aop = abOps.length == 0
-                            ? Op.NO_OPS
-                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), aconst);
-                    }
-                catch (IOException e)
-                    {
-                    throw new RuntimeException(e);
-                    }
-                m_aop = aop;
-
-                // now that the ops have been read in, introduce them to the whole of the body of
-                // code and the constants
-                addressAndSimulateOps();
-                for (int i = 0, c = aop.length; i < c; ++i)
-                    {
-                    // TODO ops that can jump need to implement this method and resolve their address to an op
-                    //      (otherwise code read from disk will break when we eliminate dead & redundant code)
-                    aop[i].resolveCode(this, aconst);
-                    }
-                }
-            }
-
-        Code(MethodStructure method, Code wrappee)
-            {
-            assert method != null;
-            assert wrappee != null;
-
-            f_method = method;
-            }
-
-        // ----- Code methods -----------------------------------------------------------------
-
-        /**
-         * Obtain the op at the specified index.
-         * <p/>
-         * This method is intended to support implementation of the {@link Op#resolveCode
-         * Op.resolveCode()} method.
-         *
-         * @param i  the index (absolute address) of the Op to obtain
-         *
-         * @return the specified op
-         */
-        public Op get(int i)
-            {
-            return m_aop[i];
-            }
-
-        /**
-         * Update the "current" line number from the corresponding source code.
-         *
-         * @param nLine  the new line number
-         */
-        public void updateLineNumber(int nLine)
-            {
-            m_nCurLine = nLine;
-            }
-
-        /**
-         * Add the specified op to the end of the code.
-         *
-         * @param op  the Op to add
-         *
-         * @return this
-         */
-        public Code add(Op op)
-            {
-            ensureAppending();
-
-            int nLineDelta = m_nCurLine - m_nPrevLine;
-            if (nLineDelta != 0 && !op.isEnter())
-                {
-                m_nPrevLine = m_nCurLine;
-                add(new Nop(nLineDelta));
-                }
-
-            ArrayList<Op> listOps = m_listOps;
-            if (m_fTrailingPrefix)
-                {
-                // get the last op and append this op to it
-                ((Prefix) listOps.get(listOps.size()-1)).append(op);
-                }
-            else
-                {
-                listOps.add(op);
-                }
-
-            m_fTrailingPrefix = op instanceof Prefix;
-            m_mapIndex        = null;
-
-            return this;
-            }
-
-        /**
-         * @return the register created by the last-added op
-         */
-        public Register lastRegister()
-            {
-            List<Op> list = m_listOps;
-            if (!list.isEmpty())
-                {
-                Op op;
-                do
-                    {
-                    op = list.get(list.size() - 1);
-                    while (op instanceof Op.Prefix opPrefix)
-                        {
-                        op = opPrefix.getNextOp();
-                        }
-                    }
-                while (op == null);
-
-                if (op instanceof OpVar opVar)
-                    {
-                    return opVar.getRegister();
-                    }
-
-                throw new IllegalStateException("op=" + op);
-                }
-
-            throw new IllegalStateException("no ops");
-            }
-
-        /**
-         * @return the last added Op for this Code
-         */
-        public Op getLastOp()
-            {
-            List<Op> listOps = m_listOps;
-            Op       opLast  = listOps.isEmpty() ? null : listOps.get(listOps.size() - 1);
-
-            if (m_fTrailingPrefix)
-                {
-                do
-                    {
-                    Op opNext = ((Op.Prefix) opLast).getNextOp();
-                    if (opNext == null)
-                        {
-                        break;
-                        }
-                    opLast = opNext;
-                    }
-                while (opLast instanceof Op.Prefix);
-                }
-            return opLast;
-            }
-
-        /**
-         * @return true iff any of the op codes refer to the "super"
-         */
-        public boolean usesSuper()
-            {
-            Op[] aop = ensureOps();
-            if (aop != null)
-                {
-                for (Op op : aop)
-                    {
-                    if (op.usesSuper())
-                        {
-                        return true;
-                        }
-                    }
-                }
-            return false;
-            }
-
-        /**
-         * @return the array of Ops that make up the Code
-         */
-        public Op[] getAssembledOps()
-            {
-            return ensureOps();
-            }
-
-        /**
-         * @return true iff there are any ops in the code
-         */
-        public boolean hasOps()
-            {
-            return m_listOps != null && !m_listOps.isEmpty()
-                || f_method.m_abOps != null && f_method.m_abOps.length > 0;
-            }
-
-        /**
-         * @return true iff the code can be optimized out
-         */
-        public boolean isNoOp()
-            {
-            Op[] aOp = ensureOps();
-            switch (aOp.length)
-                {
-                case 0:
-                    return true;
-
-                case 1:
-                    return aOp[0].getOpCode() == Op.OP_RETURN_0;
-
-                case 2:
-                    if (aOp[1].getOpCode() == Op.OP_RETURN_0)
-                        {
-                        Op op0 = aOp[0];
-                        return op0 instanceof Nop
-                            || op0 instanceof Construct_0 opCtor0
-                                && opCtor0.isNoOp(f_method.getLocalConstants());
-                        }
-                    // fall through
-                default:
-                    return false;
-                }
-            }
-
-        /**
-         * Create a clone of this code that will exist on the specified method structure.
-         *
-         * @param method  the method structure to graft a clone onto
-         *
-         * @return the new Code clone
-         */
-        Code cloneOnto(MethodStructure method)
-            {
-            Code that = new Code(method, this);
-
-            if (this.m_listOps != null)
-                {
-                // this isn't 100% correct, since a few ops are mutable in theory, but unless the
-                // clone is made in the middle of code being added (which is not a supported time
-                // at which to be calling clone), then this should be fine; (otherwise we'd have to
-                // individually clone every single op)
-                that.m_listOps = new ArrayList<>(this.m_listOps);
-                }
-
-            that.m_mapIndex        = this.m_mapIndex;
-            that.m_fTrailingPrefix = this.m_fTrailingPrefix;
-            that.m_aop             = this.m_aop;
-            that.m_nPrevLine       = this.m_nPrevLine;
-            that.m_nCurLine        = this.m_nCurLine;
-
-            return that;
-            }
-
-        // ----- helpers for building Ops -----------------------------------------------------
-
-        /**
-         * @return the enclosing MethodStructure
-         */
-        public MethodStructure getMethodStructure()
-            {
-            return f_method;
-            }
-
-        /**
-         * @return a Code instance that pretends to be this but ignores any attempt to add ops
-         */
-        public Code blackhole()
-            {
-            Code hole = m_hole;
-            if (hole == null)
-                {
-                m_hole = hole = new BlackHole(this);
-                }
-
-            return hole;
-            }
-
-        // ----- Object methods ---------------------------------------------------------------
-
-        @Override
-        public String toString()
-            {
-            if (m_listOps == null && m_aop == null)
-                {
-                return "native";
-                }
-
-            Op[]          aOp = m_aop == null ? m_listOps.toArray(Op.NO_OPS) : m_aop;
-            StringBuilder sb  = new StringBuilder();
-
-            int i = 0;
-            for (Op op : aOp)
-                {
-                sb.append("\n[")
-                  .append(i++)
-                  .append("] ")
-                  .append(op.toString());
-                }
-
-            return sb.substring(1);
-            }
-
-        // ----- read-only wrapper ------------------------------------------------------------
-
-        /**
-         * An implementation of Code that delegates most functionality to a "real" Code object, but
-         * silently ignores any attempt to actually change the code.
-         */
-        static class BlackHole
-                extends Code
-            {
-            BlackHole(Code wrappee)
-                {
-                super(wrappee.f_method, wrappee);
-                f_wrappee = wrappee;
-                }
-
-            @Override
-            public Code add(Op op)
-                {
-                return this;
-                }
-
-            @Override
-            public Register lastRegister()
-                {
-                return new Register(getMethodStructure().getConstantPool().typeObject());
-                }
-
-            @Override
-            public boolean usesSuper()
-                {
-                return false;
-                }
-
-            @Override
-            public Op[] getAssembledOps()
-                {
-                throw new IllegalStateException();
-                }
-
-            @Override
-            public Code blackhole()
-                {
-                return this;
-                }
-
-            @Override
-            public String toString()
-                {
-                return "<blackhole>";
-                }
-
-            Code f_wrappee;
-            }
-
-        // ----- internal ---------------------------------------------------------------------
-
-        protected void ensureAppending()
-            {
-            if (f_method.m_abOps != null)
-                {
-                throw new IllegalStateException("not appendable");
-                }
-
-            if (m_listOps == null)
-                {
-                m_listOps = new ArrayList<>();
-                }
-            }
-
-        protected ConstantRegistry ensureConstantRegistry(ConstantPool pool)
-            {
-            ConstantRegistry registry;
-            if (f_method.m_abOps == null)
-                {
-                f_method.m_registry = registry = new ConstantRegistry(pool);
-
-                Op[] aop = ensureOps();
-                for (Op op : aop)
-                    {
-                    op.registerConstants(registry);
-                    }
-                }
-            else
-                {
-                registry = f_method.m_registry;
-                assert registry != null;
-                }
-
-            return registry;
-            }
-
-        /**
-         * Walk through all the code paths, determining what code is reachable versus unreachable,
-         * and eliminate the unreachable code.
-         *
-         * @return true iff any changes occurred
-         */
-        private boolean eliminateDeadCode()
-            {
-            // first, mark all the ops with their locations
-            addressAndSimulateOps();
-
-            // "color" the graph of reachable ops
-            Op[] aop = ensureOps();
-            follow(0);
-
-            // scan through it sequentially, compacting to eliminate any unreachable ops
-            int cOld = aop.length;
-            int cNew = 0;
-            for (int iOld = 0; iOld < cOld; ++iOld)
-                {
-                Op op = aop[iOld];
-                if (!op.isDiscardable())
-                    {
-                    if (cNew < iOld)
-                        {
-                        aop[cNew] = op;
-                        }
-                    ++cNew;
-                    }
-                }
-
-            if (cNew == cOld)
-                {
-                return false;
-                }
-
-            Op[] aopNew = new Op[cNew];
-            System.arraycopy(aop, 0, aopNew, 0, cNew);
-            m_aop = aopNew;
-            return true;
-            }
-
-        private void follow(int iPC)
-            {
-            Op[] aop = m_aop;
-            Op   op  = aop[iPC];
-            if (op.isReachable())
-                {
-                return;
-                }
-
-            List<Integer> listBranches = new ArrayList<>();
-            do
-                {
-                op.markReachable(aop);
-
-                if (op.branches(aop, listBranches))
-                    {
-                    for (int cJmp : listBranches)
-                        {
-                        follow(iPC + cJmp);
-                        }
-                    listBranches.clear();
-                    }
-
-                if (!op.advances())
-                    {
-                    return;
-                    }
-
-                try
-                    {
-                    op = aop[++iPC];
-                    }
-                catch (ArrayIndexOutOfBoundsException e)
-                    {
-                    throw new IllegalStateException("illegal op-code: " + this);
-                    }
-                }
-            while (!op.isReachable());
-            }
-
-        /**
-         * Address and simulate ops, eliminate dead code and after that register the ops with a
-         * method constant registry.
-         */
-        public void registerConstants(ConstantPool pool)
-            {
-            if (f_method.m_abOps == null)
-                {
-                // it is possible that the elimination of dead code makes it possible to find new
-                // redundant code, and vice versa
-                do
-                    {
-                    eliminateDeadCode();
-                    }
-                while (eliminateRedundantCode());
-                // note that the last call to eliminateRedundantCode() did not modify the code, so
-                // each op will already have been stamped with the correct address and scope depth
-
-                try
-                    {
-                    ensureAssembled(pool);
-                    }
-                catch (RuntimeException e)
-                    {
-                    throw new IllegalStateException("Fail to register constants: " + f_method, e);
-                    }
-                }
-            }
-
-        /**
-         * Walk over the code, determining what ops are redundant (have no net effect), and
-         * eliminate that redundant code.
-         *
-         * @return true iff any changes occurred
-         */
-        private boolean eliminateRedundantCode()
-            {
-            // first, mark all the ops with their locations, and determine which enter/exit pairs
-            // are redundant
-            addressAndSimulateOps();
-
-            // next, scan for additional redundant ops
-            Op[]    aop  = ensureOps();
-            boolean fMod = false;
-            for (Op op : aop)
-                {
-                fMod |= op.checkRedundant(aop);
-                }
-
-            if (!fMod)
-                {
-                return false;
-                }
-
-            // next, scan through sequentially, keeping the remaining non-redundant ops
-            int    cOld     = aop.length;
-            int    cNew     = 0;
-            Prefix opPrefix = null;
-            for (int iOld = 0; iOld < cOld; ++iOld)
-                {
-                Op op = aop[iOld];
-                if (op.isRedundant())
-                    {
-                    if (opPrefix == null)
-                        {
-                        opPrefix = op.convertToPrefix();
-                        }
-                    else
-                        {
-                        opPrefix.append(op.convertToPrefix());
-                        }
-                    }
-                else
-                    {
-                    if (cNew < iOld)
-                        {
-                        if (opPrefix == null)
-                            {
-                            aop[cNew] = op;
-                            }
-                        else
-                            {
-                            aop[cNew] = opPrefix.append(op);
-                            opPrefix  = null;
-                            }
-                        }
-                    ++cNew;
-                    }
-                }
-
-            // there was redundant code; we should have seen code shrinkage
-            assert cNew != cOld;
-
-            Op[] aopNew = new Op[cNew];
-            System.arraycopy(aop, 0, aopNew, 0, cNew);
-            m_aop = aopNew;
-            return true;
-            }
-
-        /**
-         * Mark all the ops with their locations and scope depth.
-         */
-        private void addressAndSimulateOps()
-            {
-            Op[] aop = ensureOps();
-            for (Op op : aop)
-                {
-                op.resetSimulation();
-                }
-
-            Scope scope = f_method.createInitialScope();
-            for (int i = 0, c = aop.length; i < c; ++i)
-                {
-                Op op = aop[i];
-                op.initInfo(i, scope.getCurDepth(), scope.getGuardDepth(), scope.getGuardAllDepth());
-                op.simulate(scope);
-                }
-
-            for (Op op : aop)
-                {
-                op.resolveAddresses(aop);
-                }
-
-            f_method.m_cVars   = scope.getMaxVars();
-            f_method.m_cScopes = scope.getMaxDepth();
-            }
-
-        protected synchronized void ensureAssembled(ConstantPool pool)
-            {
-            if (f_method.m_abOps == null)
-                {
-                // populate the local constant registry
-                ConstantRegistry registry = ensureConstantRegistry(pool);
-
-                // assemble the ops into bytes
-                ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
-                DataOutputStream      outData  = new DataOutputStream(outBytes);
-                try
-                    {
-                    Op[] aOp = ensureOps();
-
-                    writePackedLong(outData, aOp.length);
-                    for (Op op : aOp)
-                        {
-                        op.write(outData, registry);
-                        }
-                    }
-                catch (IOException e)
-                    {
-                    throw new IllegalStateException(e);
-                    }
-
-                f_method.m_abOps       = outBytes.toByteArray();
-                f_method.m_aconstLocal = registry.getConstantArray();
-                f_method.m_registry    = null;
-                f_method.markModified();
-                }
-            }
-
-        private Op[] ensureOps()
-            {
-            Op[] aop = m_aop;
-            if (aop == null)
-                {
-                if (m_listOps == null)
-                    {
-                    throw new UnsupportedOperationException("Method \""
-                            + f_method.getIdentityConstant().getPathString()
-                            + "\" is neither native nor compiled");
-                    }
-                m_aop = aop = m_listOps.toArray(Op.NO_OPS);
-                }
-            return aop;
-            }
-
-        // ----- fields -----------------------------------------------------------------------
-
-        /**
-         * The containing method.
-         */
-        protected final MethodStructure f_method;
-
-        /**
-         * List of ops being assembled.
-         */
-        private ArrayList<Op> m_listOps;
-
-        /**
-         * Lookup of op address by op.
-         */
-        private IdentityHashMap<Op, Integer> m_mapIndex;
-
-        /**
-         * True iff the last op added was a prefix.
-         */
-        private boolean m_fTrailingPrefix;
-
-        /**
-         * The array of ops.
-         */
-        private Op[] m_aop;
-
-        /**
-         * A coding black hole.
-         */
-        private Code m_hole;
-
-        /**
-         * Previously advanced-to line number.
-         */
-        private int m_nPrevLine;
-
-        /**
-         * Current line number.
-         */
-        private int m_nCurLine;
+        return m_nNextUnassignedIndex++;
         }
 
 
@@ -3266,6 +2578,733 @@ public class MethodStructure
      * constructor that has a "finally" block.
      */
     private transient MethodStructure m_structFinally;
+
+    /**
+     * The Code class represents the op codes that make up a method's behavior.
+     */
+    public static class Code
+        {
+        // ----- constructors -----------------------------------------------------------------
+
+        /**
+         * Construct a Code object. This disassembles the bytes of code from the MethodStructure if
+         * it was itself disassembled; otherwise this starts empty and allows ops to be added.
+         */
+        Code(MethodStructure method)
+            {
+            assert method != null;
+            f_method = method;
+
+            byte[] abOps = method.m_abOps;
+            if (abOps != null)
+                {
+                Op[] aop;
+                Constant[] aconst = method.getLocalConstants();
+                try
+                    {
+                    aop = abOps.length == 0
+                            ? Op.NO_OPS
+                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), aconst);
+                    }
+                catch (IOException e)
+                    {
+                    throw new RuntimeException(e);
+                    }
+                m_aop = aop;
+
+                // now that the ops have been read in, introduce them to the whole of the body of
+                // code and the constants
+                addressAndSimulateOps();
+                for (int i = 0, c = aop.length; i < c; ++i)
+                    {
+                    // TODO ops that can jump need to implement this method and resolve their address to an op
+                    //      (otherwise code read from disk will break when we eliminate dead & redundant code)
+                    aop[i].resolveCode(this, aconst);
+                    }
+                }
+            }
+
+        Code(MethodStructure method, Code wrappee)
+            {
+            assert method != null;
+            assert wrappee != null;
+
+            f_method = method;
+            }
+
+        // ----- Code methods -----------------------------------------------------------------
+
+        /**
+         * Obtain the op at the specified index.
+         * <p/>
+         * This method is intended to support implementation of the {@link Op#resolveCode
+         * Op.resolveCode()} method.
+         *
+         * @param i  the index (absolute address) of the Op to obtain
+         *
+         * @return the specified op
+         */
+        public Op get(int i)
+            {
+            return m_aop[i];
+            }
+
+        /**
+         * Update the "current" line number from the corresponding source code.
+         *
+         * @param nLine  the new line number
+         */
+        public void updateLineNumber(int nLine)
+            {
+            m_nCurLine = nLine;
+            }
+
+        /**
+         * Add the specified op to the end of the code.
+         *
+         * @param op  the Op to add
+         *
+         * @return this
+         */
+        public Code add(Op op)
+            {
+            ensureAppending();
+
+            int nLineDelta = m_nCurLine - m_nPrevLine;
+            if (nLineDelta != 0 && !op.isEnter())
+                {
+                m_nPrevLine = m_nCurLine;
+                add(new Nop(nLineDelta));
+                }
+
+            ArrayList<Op> listOps = m_listOps;
+            if (m_fTrailingPrefix)
+                {
+                // get the last op and append this op to it
+                ((Prefix) listOps.get(listOps.size()-1)).append(op);
+                }
+            else
+                {
+                listOps.add(op);
+                }
+
+            m_fTrailingPrefix = op instanceof Prefix;
+            m_mapIndex        = null;
+
+            return this;
+            }
+
+        /**
+         * Produce a regular (not on stack) register.
+         *
+         * @param type  the type of the register
+         */
+        public Register createRegister(TypeConstant type)
+            {
+            return new Register(type, getMethodStructure());
+            }
+
+        /**
+         * Produce a register.
+         *
+         * @param type       the type of the register
+         * @param fUsedOnce  true iff the value will be used once and only once (such that the local
+         *                   stack can be utilized for storage)
+         */
+        public Register createRegister(TypeConstant type, boolean fUsedOnce)
+            {
+            return fUsedOnce
+                    ? new Register(type, Op.A_STACK)
+                    : new Register(type, getMethodStructure());
+            }
+
+        /**
+         * @return the register created by the last-added op
+         */
+        public Register lastRegister()
+            {
+            List<Op> list = m_listOps;
+            if (!list.isEmpty())
+                {
+                Op op;
+                do
+                    {
+                    op = list.get(list.size() - 1);
+                    while (op instanceof Op.Prefix opPrefix)
+                        {
+                        op = opPrefix.getNextOp();
+                        }
+                    }
+                while (op == null);
+
+                if (op instanceof OpVar opVar)
+                    {
+                    return opVar.getRegister();
+                    }
+
+                throw new IllegalStateException("op=" + op);
+                }
+
+            throw new IllegalStateException("no ops");
+            }
+
+        /**
+         * @return the last added Op for this Code
+         */
+        public Op getLastOp()
+            {
+            List<Op> listOps = m_listOps;
+            Op       opLast  = listOps.isEmpty() ? null : listOps.get(listOps.size() - 1);
+
+            if (m_fTrailingPrefix)
+                {
+                do
+                    {
+                    Op opNext = ((Op.Prefix) opLast).getNextOp();
+                    if (opNext == null)
+                        {
+                        break;
+                        }
+                    opLast = opNext;
+                    }
+                while (opLast instanceof Op.Prefix);
+                }
+            return opLast;
+            }
+
+        /**
+         * @return true iff any of the op codes refer to the "super"
+         */
+        public boolean usesSuper()
+            {
+            Op[] aop = ensureOps();
+            if (aop != null)
+                {
+                for (Op op : aop)
+                    {
+                    if (op.usesSuper())
+                        {
+                        return true;
+                        }
+                    }
+                }
+            return false;
+            }
+
+        /**
+         * @return the array of Ops that make up the Code
+         */
+        public Op[] getAssembledOps()
+            {
+            return ensureOps();
+            }
+
+        /**
+         * @return true iff there are any ops in the code
+         */
+        public boolean hasOps()
+            {
+            return m_listOps != null && !m_listOps.isEmpty()
+                || f_method.m_abOps != null && f_method.m_abOps.length > 0;
+            }
+
+        /**
+         * @return true iff the code can be optimized out
+         */
+        public boolean isNoOp()
+            {
+            Op[] aOp = ensureOps();
+            switch (aOp.length)
+                {
+                case 0:
+                    return true;
+
+                case 1:
+                    return aOp[0].getOpCode() == Op.OP_RETURN_0;
+
+                case 2:
+                    if (aOp[1].getOpCode() == Op.OP_RETURN_0)
+                        {
+                        Op op0 = aOp[0];
+                        return op0 instanceof Nop
+                            || op0 instanceof Construct_0 opCtor0
+                                && opCtor0.isNoOp(f_method.getLocalConstants());
+                        }
+                    // fall through
+                default:
+                    return false;
+                }
+            }
+
+        /**
+         * Create a clone of this code that will exist on the specified method structure.
+         *
+         * @param method  the method structure to graft a clone onto
+         *
+         * @return the new Code clone
+         */
+        Code cloneOnto(MethodStructure method)
+            {
+            Code that = new Code(method, this);
+
+            if (this.m_listOps != null)
+                {
+                // this isn't 100% correct, since a few ops are mutable in theory, but unless the
+                // clone is made in the middle of code being added (which is not a supported time
+                // at which to be calling clone), then this should be fine; (otherwise we'd have to
+                // individually clone every single op)
+                that.m_listOps = new ArrayList<>(this.m_listOps);
+                }
+
+            that.m_mapIndex        = this.m_mapIndex;
+            that.m_fTrailingPrefix = this.m_fTrailingPrefix;
+            that.m_aop             = this.m_aop;
+            that.m_nPrevLine       = this.m_nPrevLine;
+            that.m_nCurLine        = this.m_nCurLine;
+
+            return that;
+            }
+
+        // ----- helpers for building Ops -----------------------------------------------------
+
+        /**
+         * @return the enclosing MethodStructure
+         */
+        public MethodStructure getMethodStructure()
+            {
+            return f_method;
+            }
+
+        /**
+         * @return a Code instance that pretends to be this but ignores any attempt to add ops
+         */
+        public Code blackhole()
+            {
+            Code hole = m_hole;
+            if (hole == null)
+                {
+                m_hole = hole = new BlackHole(this);
+                }
+
+            return hole;
+            }
+
+        // ----- Object methods ---------------------------------------------------------------
+
+        @Override
+        public String toString()
+            {
+            if (m_listOps == null && m_aop == null)
+                {
+                return "native";
+                }
+
+            Op[]          aOp = m_aop == null ? m_listOps.toArray(Op.NO_OPS) : m_aop;
+            StringBuilder sb  = new StringBuilder();
+
+            int i = 0;
+            for (Op op : aOp)
+                {
+                sb.append("\n[")
+                  .append(i++)
+                  .append("] ")
+                  .append(op.toString());
+                }
+
+            return sb.substring(1);
+            }
+
+        // ----- read-only wrapper ------------------------------------------------------------
+
+        /**
+         * An implementation of Code that delegates most functionality to a "real" Code object, but
+         * silently ignores any attempt to actually change the code.
+         */
+        static class BlackHole
+                extends Code
+            {
+            BlackHole(Code wrappee)
+                {
+                super(wrappee.f_method, wrappee);
+                f_wrappee = wrappee;
+                }
+
+            @Override
+            public Code add(Op op)
+                {
+                return this;
+                }
+
+            @Override
+            public Register lastRegister()
+                {
+                MethodStructure method = getMethodStructure();
+                return new Register(method.getConstantPool().typeObject(), method);
+                }
+
+            @Override
+            public boolean usesSuper()
+                {
+                return false;
+                }
+
+            @Override
+            public Op[] getAssembledOps()
+                {
+                throw new IllegalStateException();
+                }
+
+            @Override
+            public Code blackhole()
+                {
+                return this;
+                }
+
+            @Override
+            public String toString()
+                {
+                return "<blackhole>";
+                }
+
+            Code f_wrappee;
+            }
+
+        // ----- internal ---------------------------------------------------------------------
+
+        protected void ensureAppending()
+            {
+            if (f_method.m_abOps != null)
+                {
+                throw new IllegalStateException("not appendable");
+                }
+
+            if (m_listOps == null)
+                {
+                m_listOps = new ArrayList<>();
+                }
+            }
+
+        protected ConstantRegistry ensureConstantRegistry(ConstantPool pool)
+            {
+            ConstantRegistry registry;
+            if (f_method.m_abOps == null)
+                {
+                f_method.m_registry = registry = new ConstantRegistry(pool);
+
+                Op[] aop = ensureOps();
+                for (Op op : aop)
+                    {
+                    op.registerConstants(registry);
+                    }
+                }
+            else
+                {
+                registry = f_method.m_registry;
+                assert registry != null;
+                }
+
+            return registry;
+            }
+
+        /**
+         * Walk through all the code paths, determining what code is reachable versus unreachable,
+         * and eliminate the unreachable code.
+         *
+         * @return true iff any changes occurred
+         */
+        private boolean eliminateDeadCode()
+            {
+            // first, mark all the ops with their locations
+            addressAndSimulateOps();
+
+            // "color" the graph of reachable ops
+            Op[] aop = ensureOps();
+            follow(0);
+
+            // scan through it sequentially, compacting to eliminate any unreachable ops
+            int cOld = aop.length;
+            int cNew = 0;
+            for (int iOld = 0; iOld < cOld; ++iOld)
+                {
+                Op op = aop[iOld];
+                if (!op.isDiscardable())
+                    {
+                    if (cNew < iOld)
+                        {
+                        aop[cNew] = op;
+                        }
+                    ++cNew;
+                    }
+                }
+
+            if (cNew == cOld)
+                {
+                return false;
+                }
+
+            Op[] aopNew = new Op[cNew];
+            System.arraycopy(aop, 0, aopNew, 0, cNew);
+            m_aop = aopNew;
+            return true;
+            }
+
+        private void follow(int iPC)
+            {
+            Op[] aop = m_aop;
+            Op   op  = aop[iPC];
+            if (op.isReachable())
+                {
+                return;
+                }
+
+            List<Integer> listBranches = new ArrayList<>();
+            do
+                {
+                op.markReachable(aop);
+
+                if (op.branches(aop, listBranches))
+                    {
+                    for (int cJmp : listBranches)
+                        {
+                        follow(iPC + cJmp);
+                        }
+                    listBranches.clear();
+                    }
+
+                if (!op.advances())
+                    {
+                    return;
+                    }
+
+                try
+                    {
+                    op = aop[++iPC];
+                    }
+                catch (ArrayIndexOutOfBoundsException e)
+                    {
+                    throw new IllegalStateException("illegal op-code: " + this);
+                    }
+                }
+            while (!op.isReachable());
+            }
+
+        /**
+         * Address and simulate ops, eliminate dead code and after that register the ops with a
+         * method constant registry.
+         */
+        public void registerConstants(ConstantPool pool)
+            {
+            if (f_method.m_abOps == null)
+                {
+                // it is possible that the elimination of dead code makes it possible to find new
+                // redundant code, and vice versa
+                do
+                    {
+                    eliminateDeadCode();
+                    }
+                while (eliminateRedundantCode());
+                // note that the last call to eliminateRedundantCode() did not modify the code, so
+                // each op will already have been stamped with the correct address and scope depth
+
+                try
+                    {
+                    ensureAssembled(pool);
+                    }
+                catch (RuntimeException e)
+                    {
+                    throw new IllegalStateException("Fail to register constants: " + f_method, e);
+                    }
+                }
+            }
+
+        /**
+         * Walk over the code, determining what ops are redundant (have no net effect), and
+         * eliminate that redundant code.
+         *
+         * @return true iff any changes occurred
+         */
+        private boolean eliminateRedundantCode()
+            {
+            // first, mark all the ops with their locations, and determine which enter/exit pairs
+            // are redundant
+            addressAndSimulateOps();
+
+            // next, scan for additional redundant ops
+            Op[]    aop  = ensureOps();
+            boolean fMod = false;
+            for (Op op : aop)
+                {
+                fMod |= op.checkRedundant(aop);
+                }
+
+            if (!fMod)
+                {
+                return false;
+                }
+
+            // next, scan through sequentially, keeping the remaining non-redundant ops
+            int    cOld     = aop.length;
+            int    cNew     = 0;
+            Prefix opPrefix = null;
+            for (int iOld = 0; iOld < cOld; ++iOld)
+                {
+                Op op = aop[iOld];
+                if (op.isRedundant())
+                    {
+                    if (opPrefix == null)
+                        {
+                        opPrefix = op.convertToPrefix();
+                        }
+                    else
+                        {
+                        opPrefix.append(op.convertToPrefix());
+                        }
+                    }
+                else
+                    {
+                    if (cNew < iOld)
+                        {
+                        if (opPrefix == null)
+                            {
+                            aop[cNew] = op;
+                            }
+                        else
+                            {
+                            aop[cNew] = opPrefix.append(op);
+                            opPrefix  = null;
+                            }
+                        }
+                    ++cNew;
+                    }
+                }
+
+            // there was redundant code; we should have seen code shrinkage
+            assert cNew != cOld;
+
+            Op[] aopNew = new Op[cNew];
+            System.arraycopy(aop, 0, aopNew, 0, cNew);
+            m_aop = aopNew;
+            return true;
+            }
+
+        /**
+         * Mark all the ops with their locations and scope depth.
+         */
+        private void addressAndSimulateOps()
+            {
+            Op[] aop = ensureOps();
+            for (Op op : aop)
+                {
+                op.resetSimulation();
+                }
+
+            Scope scope = f_method.createInitialScope();
+            for (int i = 0, c = aop.length; i < c; ++i)
+                {
+                Op op = aop[i];
+                op.initInfo(i, scope.getCurDepth(), scope.getGuardDepth(), scope.getGuardAllDepth());
+                op.simulate(scope);
+                }
+
+            for (Op op : aop)
+                {
+                op.resolveAddresses(aop);
+                }
+
+            f_method.m_cVars   = scope.getMaxVars();
+            f_method.m_cScopes = scope.getMaxDepth();
+            }
+
+        protected synchronized void ensureAssembled(ConstantPool pool)
+            {
+            if (f_method.m_abOps == null)
+                {
+                // populate the local constant registry
+                ConstantRegistry registry = ensureConstantRegistry(pool);
+
+                // assemble the ops into bytes
+                ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+                DataOutputStream      outData  = new DataOutputStream(outBytes);
+                try
+                    {
+                    Op[] aOp = ensureOps();
+
+                    writePackedLong(outData, aOp.length);
+                    for (Op op : aOp)
+                        {
+                        op.write(outData, registry);
+                        }
+                    }
+                catch (IOException e)
+                    {
+                    throw new IllegalStateException(e);
+                    }
+
+                f_method.m_abOps       = outBytes.toByteArray();
+                f_method.m_aconstLocal = registry.getConstantArray();
+                f_method.m_registry    = null;
+                f_method.markModified();
+                }
+            }
+
+        private Op[] ensureOps()
+            {
+            Op[] aop = m_aop;
+            if (aop == null)
+                {
+                if (m_listOps == null)
+                    {
+                    throw new UnsupportedOperationException("Method \""
+                            + f_method.getIdentityConstant().getPathString()
+                            + "\" is neither native nor compiled");
+                    }
+                m_aop = aop = m_listOps.toArray(Op.NO_OPS);
+                }
+            return aop;
+            }
+
+        // ----- fields -----------------------------------------------------------------------
+
+        /**
+         * The containing method.
+         */
+        protected final MethodStructure f_method;
+
+        /**
+         * List of ops being assembled.
+         */
+        private ArrayList<Op> m_listOps;
+
+        /**
+         * Lookup of op address by op.
+         */
+        private IdentityHashMap<Op, Integer> m_mapIndex;
+
+        /**
+         * True iff the last op added was a prefix.
+         */
+        private boolean m_fTrailingPrefix;
+
+        /**
+         * The array of ops.
+         */
+        private Op[] m_aop;
+
+        /**
+         * A coding black hole.
+         */
+        private Code m_hole;
+
+        /**
+         * Previously advanced-to line number.
+         */
+        private int m_nPrevLine;
+
+        /**
+         * Current line number.
+         */
+        private int m_nCurLine;
+        }
 
     /**
      * The source code of the method.

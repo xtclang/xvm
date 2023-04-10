@@ -11,7 +11,6 @@ import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -27,26 +26,6 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Var_IN
         extends OpVar
     {
-    /**
-     * Construct a VAR_IN op for the specified type, name and argument.
-     *
-     * @param constType  the variable type
-     * @param constName  the name constant
-     * @param argValue   the value argument
-     */
-    public Var_IN(TypeConstant constType, StringConstant constName, Argument argValue)
-        {
-        super(constType);
-
-        if (argValue == null || constName == null)
-            {
-            throw new IllegalArgumentException("name and value required");
-            }
-
-        m_constName = constName;
-        m_argValue  = argValue;
-        }
-
     /**
      * Construct a VAR_IN op for the specified register, name and argument.
      *

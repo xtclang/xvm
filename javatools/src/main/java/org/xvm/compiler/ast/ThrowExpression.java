@@ -386,7 +386,7 @@ public class ThrowExpression
             }
         else
             {
-            Argument argEx  = new Register(constEx.getType());
+            Argument argEx  = code.createRegister(constEx.getType());
             Argument argMsg = message.generateArgument(ctx, code, false, false, errs);
             code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
             code.add(new Throw(argEx));

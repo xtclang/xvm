@@ -53,22 +53,9 @@ public class DynamicFormalConstant
         }
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool  the ConstantPool that will contain this Constant
-     * @param in    the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
+     * The register unique id within the enclosing method (not used during the compilation).
      */
-    public DynamicFormalConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool, format, in);
-
-        m_nReg    = in.readUnsignedShort();
-        m_iType   = readMagnitude(in);
-        m_iFormal = readMagnitude(in);
-        }
+    protected int m_nRegId;
 
     @Override
     protected void resolveConstants()
@@ -172,42 +159,23 @@ public class DynamicFormalConstant
                                    || m_constFormal.containsUnresolved());
         }
 
-    @Override
-    protected int compareDetails(Constant obj)
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool  the ConstantPool that will contain this Constant
+     * @param in    the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public DynamicFormalConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
         {
-        if (!(obj instanceof DynamicFormalConstant that))
-            {
-            return -1;
-            }
+        super(pool, format, in);
 
-        int n = super.compareDetails(that);
-        if (n != 0)
-            {
-            return n;
-            }
-
-        n = this.m_constFormal.compareDetails(that.m_constFormal);
-        if (n != 0)
-            {
-            return n;
-            }
-
-        n = this.m_typeReg.compareTo(that.m_typeReg);
-        if (n != 0)
-            {
-            return n;
-            }
-
-        if (this.m_reg == null)
-            {
-            return that.m_reg == null
-                ? this.m_nReg - that.m_nReg
-                : -1;
-            }
-
-        return that.m_reg == null
-            ? 1
-            : this.m_reg.getOriginalIndex() - that.m_reg.getOriginalIndex();
+        m_nReg    = in.readUnsignedShort();
+        m_nRegId  = in.readUnsignedShort();
+        m_iType   = readMagnitude(in);
+        m_iFormal = readMagnitude(in);
         }
 
     @Override
@@ -238,16 +206,41 @@ public class DynamicFormalConstant
         }
 
     @Override
-    protected void assemble(DataOutput out)
-            throws IOException
+    protected int compareDetails(Constant obj)
         {
-        super.assemble(out);
+        if (!(obj instanceof DynamicFormalConstant that))
+            {
+            return -1;
+            }
 
-        assert !m_reg.isUnknown();
+        int n = super.compareDetails(that);
+        if (n != 0)
+            {
+            return n;
+            }
 
-        out.writeShort(m_reg.getIndex());
-        writePackedLong(out, m_typeReg.getPosition());
-        writePackedLong(out, m_constFormal.getPosition());
+        n = this.m_constFormal.compareDetails(that.m_constFormal);
+        if (n != 0)
+            {
+            return n;
+            }
+
+        n = this.m_typeReg.compareTo(that.m_typeReg);
+        if (n != 0)
+            {
+            return n;
+            }
+
+        if (this.m_reg == null)
+            {
+            return that.m_reg == null
+                ? (this.m_nReg - that.m_nReg) | (this.m_nRegId - that.m_nRegId)
+                : -1;
+            }
+
+        return that.m_reg == null
+            ? 1
+            : this.m_reg == that.m_reg ? 0 : -1;
         }
 
 
@@ -288,6 +281,20 @@ public class DynamicFormalConstant
      * The register index.
      */
     protected final int m_nReg;
+
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        super.assemble(out);
+
+        assert !m_reg.isUnknown();
+
+        out.writeShort(m_reg.getIndex());
+        out.writeShort(m_reg.getId());
+        writePackedLong(out, m_typeReg.getPosition());
+        writePackedLong(out, m_constFormal.getPosition());
+        }
 
     /**
      * The register (used only during compilation).

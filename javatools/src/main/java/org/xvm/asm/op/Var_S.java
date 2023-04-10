@@ -30,24 +30,6 @@ public class Var_S
         extends OpVar
     {
     /**
-     * Construct a VAR_S op for the specified type and arguments.
-     *
-     * @param constType the variable type
-     * @param aArgValue  the value argument
-     */
-    public Var_S(TypeConstant constType, Argument[] aArgValue)
-        {
-        super(constType);
-
-        if (aArgValue == null)
-            {
-            throw new IllegalArgumentException("values required");
-            }
-
-        m_aArgValue = aArgValue;
-        }
-
-    /**
      * Construct a VAR_S op for the specified register and arguments.
      *
      * @param reg        the register

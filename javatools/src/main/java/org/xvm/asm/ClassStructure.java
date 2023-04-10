@@ -3329,7 +3329,7 @@ public class ClassStructure
             Code             code       = methodDelegate.createCode();
             PropertyConstant idDelegate = prop.getIdentityConstant();
 
-            Register regTarget = new Register(propTarget.getType());
+            Register regTarget = code.createRegister(propTarget.getType());
             code.add(new L_Get(propTarget.getIdentityConstant(), regTarget));
 
             if (fGet)
@@ -3398,14 +3398,14 @@ public class ClassStructure
                 {
                 Constant constValue = infoDelegate.getInitialValue();
 
-                code.add(new Var_I(typeDelegate, constValue == null
+                regProp = code.createRegister(typeDelegate);
+                code.add(new Var_I(regProp, constValue == null
                         ? pool.ensureSingletonConstConstant(infoDelegate.getIdentity())
                         : constValue));
-                regProp = code.lastRegister();
                 }
             else
                 {
-                regProp = new Register(typeDelegate);
+                regProp = code.createRegister(typeDelegate);
                 code.add(new L_Get(infoDelegate.getIdentity(), regProp));
                 }
 
@@ -3414,8 +3414,8 @@ public class ClassStructure
                 case 0:
                     if (fAtomic)
                         {
-                        code.add(new Var_D(pool.ensureFutureVar(pool.typeTuple())));
-                        Register regReturn = code.lastRegister();
+                        Register regReturn = code.createRegister(pool.typeTuple());
+                        code.add(new Var_D(regReturn));
 
                         switch (cParams)
                             {
@@ -3459,8 +3459,8 @@ public class ClassStructure
                     Register     regReturn;
                     if (fAtomic)
                         {
-                        code.add(new Var_D(pool.ensureFutureVar(typeReturn)));
-                        regReturn = code.lastRegister();
+                        regReturn = code.createRegister(typeReturn);
+                        code.add(new Var_D(regReturn));
                         }
                     else
                         {
@@ -3494,12 +3494,13 @@ public class ClassStructure
                         TypeConstant typeReturn = aReturns[i].getType();
                         if (fAtomic)
                             {
-                            code.add(new Var_D(pool.ensureFutureVar(typeReturn)));
-                            aregReturn[i] = code.lastRegister();
+                            Register regReturn = code.createRegister(typeReturn);
+                            code.add(new Var_D(regReturn));
+                            aregReturn[i] = regReturn;
                             }
                         else
                             {
-                            aregReturn[i] = new Register(typeReturn);
+                            aregReturn[i] = code.createRegister(typeReturn);
                             }
                         }
 

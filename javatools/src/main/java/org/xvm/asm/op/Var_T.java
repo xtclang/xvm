@@ -10,8 +10,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -27,24 +25,6 @@ import org.xvm.runtime.template.collections.xTuple;
 public class Var_T
         extends OpVar
     {
-    /**
-     * Construct a VAR_T op for the specified Tuple type and arguments.
-     *
-     * @param constType  the Tuple type
-     * @param aArgValue  the value argument
-     */
-    public Var_T(TypeConstant constType, Argument[] aArgValue)
-        {
-        super(constType);
-
-        if (aArgValue == null)
-            {
-            throw new IllegalArgumentException("values required");
-            }
-
-        m_aArgValue = aArgValue;
-        }
-
     /**
      * Construct a VAR_T op for the specified register and arguments.
      *

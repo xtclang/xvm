@@ -867,7 +867,7 @@ public class AssignmentStatement
                             // are conditional; need to generate the conditional check ourselves
                             for (int i = 1; i < cAll; i++)
                                 {
-                                LValsAll[i] = lvalueExpr.new Assignable(new Register(LVals[i-1].getType()));
+                                LValsAll[i] = lvalueExpr.new Assignable(code.createRegister(LVals[i-1].getType()));
                                 }
                             rvalue.generateAssignments(ctx, code, LValsAll, errs);
 

@@ -6,6 +6,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -73,8 +74,9 @@ public class PackExpression
         assert args != null && args.length == 1;
 
         // generate the tuple value
-        code.add(new Var_T(getType(), args));
-        return code.lastRegister();
+        Register reg = code.createRegister(getType());
+        code.add(new Var_T(reg, args));
+        return reg;
         }
 
 

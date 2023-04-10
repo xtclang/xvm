@@ -109,7 +109,7 @@ public class AsExpression
 
         if (m_fCastRequired || !argBefore.getType().equals(type))
             {
-            Argument argAfter = createRegister(type, fUsedOnce);
+            Argument argAfter = code.createRegister(type, fUsedOnce);
 
             code.add(new MoveCast(argBefore, argAfter, type));
             return argAfter;

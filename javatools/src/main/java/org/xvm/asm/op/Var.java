@@ -8,8 +8,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 
 
@@ -19,16 +17,6 @@ import org.xvm.runtime.Frame;
 public class Var
         extends OpVar
     {
-    /**
-     * Construct a VAR op for the specified type.
-     *
-     * @param constType  the variable type
-     */
-    public Var(TypeConstant constType)
-        {
-        super(constType);
-        }
-
     /**
      * Construct a VAR op for the specified register.
      *

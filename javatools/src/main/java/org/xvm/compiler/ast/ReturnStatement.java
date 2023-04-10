@@ -11,8 +11,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
@@ -413,11 +413,11 @@ public class ReturnStatement
                             if (m_fFutureReturn)
                                 {
                                 // create an intermediate dynamic var
-                                code.add(new Var_D(pool.ensureFutureVar(argRet.getType().getParamType(0))));
-
-                                Argument argFuture = code.lastRegister();
-                                code.add(new Move(argRet, argFuture));
-                                code.add(new Return_1(argFuture));
+                                Register regFuture = code.createRegister(
+                                        pool.ensureFutureVar(argRet.getType().getParamType(0)));
+                                code.add(new Var_D(regFuture));
+                                code.add(new Move(argRet, regFuture));
+                                code.add(new Return_1(regFuture));
                                 }
                             else
                                 {

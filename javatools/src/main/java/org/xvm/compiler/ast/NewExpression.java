@@ -1103,7 +1103,7 @@ public class NewExpression
                         }
                     else
                         {
-                        argOuter = createRegister(typeTarget.getParentType(), true);
+                        argOuter = new Register(typeTarget.getParentType(), Op.A_STACK);
                         code.add(new MoveThis(m_nParentSteps, argOuter));
                         }
                     }
@@ -1120,14 +1120,14 @@ public class NewExpression
                     {
                     Register regThis = new Register(ctx.getThisType(), Op.A_TARGET);
 
-                    regType = createRegister(pool().typeType(), true);
+                    regType = new Register(pool().typeType(), Op.A_STACK);
                     code.add(new MoveType(regThis, regType));
                     }
                 else
                     {
                     if (typeTarget.isGenericType())
                         {
-                        regType = createRegister(pool().typeType(), true);
+                        regType = new Register(pool().typeType(), Op.A_STACK);
                         code.add(new L_Get(m_idFormal, regType));
                         }
                     else
@@ -1270,7 +1270,7 @@ public class NewExpression
                     }
                 else
                     {
-                    regArg = new Register(exprArg.getType());
+                    regArg = code.createRegister(exprArg.getType());
                     code.add(new Var(regArg));
                     code.add(new Move(argArg, regArg));
                     }

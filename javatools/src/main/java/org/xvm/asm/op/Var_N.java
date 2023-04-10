@@ -10,7 +10,6 @@ import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 
@@ -24,24 +23,6 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Var_N
         extends OpVar
     {
-    /**
-     * Construct a VAR_N op for the specified type and name.
-     *
-     * @param constType  the variable type
-     * @param constName  the name constant
-     */
-    public Var_N(TypeConstant constType, StringConstant constName)
-        {
-        super(constType);
-
-        if (constName == null)
-            {
-            throw new IllegalArgumentException("name required");
-            }
-
-        m_constName = constName;
-        }
-
     /**
      * Construct a VAR_N op for the specified register and name.
      *

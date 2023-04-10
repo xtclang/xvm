@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -517,8 +518,9 @@ public class TupleExpression
             }
 
         // generate the tuple itself, and return it as an argument
-        code.add(new Var_T(getType(), collectArguments(ctx, code, errs)));
-        return new Argument[] {code.lastRegister()};
+        Register reg = code.createRegister(getType());
+        code.add(new Var_T(reg, collectArguments(ctx, code, errs)));
+        return new Argument[] {reg};
         }
 
     /**

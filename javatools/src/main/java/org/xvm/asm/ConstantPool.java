@@ -2438,31 +2438,25 @@ public class ConstantPool
     public TypeConstant      typeBinary()        {TypeConstant      c = m_typeBinary;        if (c == null) {m_typeBinary        = c = ensureImmutableTypeConstant(typeByteArray()                     );} return c;}
     public TypeConstant      typeException१()    {TypeConstant      c = m_typeException१;    if (c == null) {m_typeException१    = c = ensureNullableTypeConstant(typeException()                       );} return c;}
     public TypeConstant      typeString१()       {TypeConstant      c = m_typeString१;       if (c == null) {m_typeString१       = c = ensureNullableTypeConstant(typeString()                          );} return c;}
+
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
     public IntConstant       val1()              {IntConstant       c = m_val1;              if (c == null) {m_val1              = c = ensureIntConstant(1)                                             ;} return c;}
-    /**
-     * Next value for an index of a not-yet-assigned register.
-     */
-    private transient int m_nNextUnassignedIndex = Register.UNKNOWN;
 
     public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse()                         );} return c;}
-
     public SingletonConstant valTrue()           {SingletonConstant c = m_valTrue;           if (c == null) {m_valTrue           = c = ensureSingletonConstConstant(clzTrue()                          );} return c;}
-
     public SingletonConstant valLesser()         {SingletonConstant c = m_valLesser;         if (c == null) {m_valLesser         = c = ensureSingletonConstConstant(clzLesser()                        );} return c;}
-
     public SingletonConstant valEqual()          {SingletonConstant c = m_valEqual;          if (c == null) {m_valEqual          = c = ensureSingletonConstConstant(clzEqual()                         );} return c;}
-
     public SingletonConstant valGreater()        {SingletonConstant c = m_valGreater;        if (c == null) {m_valGreater        = c = ensureSingletonConstConstant(clzGreater()                       );} return c;}
+
     public RegisterConstant  valDefault()        {RegisterConstant  c = m_valDefault;        if (c == null) {m_valDefault        = c = new RegisterConstant(this, Register.DEFAULT)                     ;} return c;}
+
     public SignatureConstant sigToString()       {SignatureConstant c = m_sigToString;       if (c == null) {m_sigToString       = c = getSignature("Object",    "toString",  0)                        ;} return c;}
     public SignatureConstant sigEquals()         {SignatureConstant c = m_sigEquals;         if (c == null) {m_sigEquals         = c = getSignature("Object",    "equals",    3)                        ;} return c;}
     public SignatureConstant sigCompare()        {SignatureConstant c = m_sigCompare;        if (c == null) {m_sigCompare        = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
+    public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
 
 
     // ---- internal class helpers -----------------------------------------------------------------
-
-    public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
 
     protected ClassConstant  clzClass()         {return (ClassConstant) getImplicitlyImportedIdentity("Class"                    );}
     protected ClassConstant  clzParameter()     {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"                );}
@@ -4332,15 +4326,6 @@ public class ConstantPool
      * NakedRef is a fundamental formal type that comes from the "_native" module,
      */
     private transient TypeConstant m_typeNakedRef;
-
-    /**
-     * @return a unique (for this pool) value to be used as an original index for not-yet-assigned
-     *         registers
-     */
-    public synchronized int getUnassignedRegisterIndex()
-        {
-        return m_nNextUnassignedIndex++;
-        }
 
     /**
      * A cache of TypeInfo for parameterized NakedRef types.

@@ -207,9 +207,9 @@ public class ConvertExpression
         int          iVal      = m_iVal;
         Assignable[] aLValTemp = aLVal.clone();
 
-        code.add(new Var(getUnderlyingExpression().getTypes()[iVal]));
+        Register regTemp = code.createRegister(getUnderlyingExpression().getTypes()[iVal]);
+        code.add(new Var(regTemp));
 
-        Register regTemp = code.lastRegister();
         aLValTemp[iVal] = new Assignable(regTemp);
 
         // create a temporary to hold the Boolean result for a conditional call, if necessary
@@ -225,8 +225,8 @@ public class ConvertExpression
                 }
             else
                 {
-                code.add(new Var(pool().typeBoolean()));
-                regCond = code.lastRegister();
+                regCond = code.createRegister(pool().typeBoolean());
+                code.add(new Var(regCond));
                 aLValTemp[0] = new Assignable(regCond);
                 }
             }

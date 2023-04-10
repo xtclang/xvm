@@ -1723,24 +1723,10 @@ public abstract class Expression
             }
         else
             {
-            reg = new Register(type);
+            reg = code.createRegister(type);
             code.add(new Var(reg));
             }
         return new Assignable(reg);
-        }
-
-    /**
-     * Produce a register.
-     *
-     * @param type       the type of the register
-     * @param fUsedOnce  true iff the value will be used once and only once (such that the local
-     *                   stack can be utilized for storage)
-     */
-    protected Register createRegister(TypeConstant type, boolean fUsedOnce)
-        {
-        return fUsedOnce
-                ? new Register(type, Op.A_STACK)
-                : new Register(type);
         }
 
     /**
@@ -2139,7 +2125,7 @@ public abstract class Expression
         {
         if (arg instanceof Register reg && reg.isVar())
             {
-            Register regTemp = createRegister(arg.getType(), false);
+            Register regTemp = code.createRegister(arg.getType());
             code.add(new Var_I(regTemp, reg));
             arg = regTemp;
             }
@@ -2587,8 +2573,9 @@ public abstract class Expression
                         return reg;
                         }
 
-                    code.add(new Var_I(getType(), getProperty()));
-                    return code.lastRegister();
+                    Register reg = code.createRegister(getType());
+                    code.add(new Var_I(reg, getProperty()));
+                    return reg;
                     }
 
                 case TargetProp:
@@ -2600,8 +2587,8 @@ public abstract class Expression
                         }
                     else
                         {
-                        code.add(new Var(getType()));
-                        reg = code.lastRegister();
+                        reg = code.createRegister(getType());
+                        code.add(new Var(reg));
                         }
                     code.add(new P_Get(getProperty(), getTarget(), reg));
                     return reg;
@@ -2616,8 +2603,8 @@ public abstract class Expression
                         }
                     else
                         {
-                        code.add(new Var(getType()));
-                        reg = code.lastRegister();
+                        reg = code.createRegister(getType());
+                        code.add(new Var(reg));
                         }
                     code.add(new I_Get(getArray(), getIndex(), reg));
                     return reg;
@@ -2736,7 +2723,7 @@ public abstract class Expression
                                 return null;
                                 }
 
-                            Register regResult = createRegister(argTarget.getType(), fUsedOnce);
+                            Register regResult = code.createRegister(argTarget.getType(), fUsedOnce);
                             code.add(seq.isInc()
                                     ? new IP_PreInc(argTarget, regResult)
                                     : new IP_PreDec(argTarget, regResult));
