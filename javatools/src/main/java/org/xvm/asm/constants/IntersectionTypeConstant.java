@@ -657,16 +657,14 @@ public class IntersectionTypeConstant
         // since Enum values cannot be extended, an Enum value type cannot be combined with any
         // other type and an intersection with a formal type doesn't actually narrow that Enum value type;
         // this obviously applies to Nullable
-        if (typeRight.isExplicitClassIdentity(false) &&
-            typeRight.getExplicitClassFormat() == Component.Format.ENUMVALUE
-                || typeRight.isOnlyNullable())
+        if (isEnumValue(typeRight))
             {
-            if (thisLeft2.isFormalType())
+            if (isEnumValue(thisLeft1) && thisLeft2.isFormalType())
                 {
                 // Nullable + Element <= Nullable (if Element's constraint is trivial)
                 return rel1.worseOf(typeRight.calculateRelation(thisLeft2.resolveConstraints()));
                 }
-            if (thisLeft1.isFormalType())
+            if (thisLeft1.isFormalType() && isEnumValue(thisLeft2))
                 {
                 // Element + Lesser <= Lesser (if Element's constraint is trivial)
                 return rel2.worseOf(typeRight.calculateRelation(thisLeft1.resolveConstraints()));
@@ -674,6 +672,16 @@ public class IntersectionTypeConstant
             }
 
         return rel1.worseOf(rel2);
+        }
+
+    /**
+     * @return true iff the type represents an Enum value
+     */
+    private boolean isEnumValue(TypeConstant typeRight)
+        {
+        return typeRight.isExplicitClassIdentity(false) &&
+               typeRight.getExplicitClassFormat() == Component.Format.ENUMVALUE
+               || typeRight.isOnlyNullable();
         }
 
     @Override
