@@ -3414,7 +3414,7 @@ public class ClassStructure
                 case 0:
                     if (fAtomic)
                         {
-                        Register regReturn = code.createRegister(pool.typeTuple());
+                        Register regReturn = code.createRegister(pool.ensureFutureVar(pool.typeTuple()));
                         code.add(new Var_D(regReturn));
 
                         switch (cParams)
@@ -3459,7 +3459,7 @@ public class ClassStructure
                     Register     regReturn;
                     if (fAtomic)
                         {
-                        regReturn = code.createRegister(typeReturn);
+                        regReturn = code.createRegister(pool.ensureFutureVar(typeReturn));
                         code.add(new Var_D(regReturn));
                         }
                     else
@@ -3494,7 +3494,7 @@ public class ClassStructure
                         TypeConstant typeReturn = aReturns[i].getType();
                         if (fAtomic)
                             {
-                            Register regReturn = code.createRegister(typeReturn);
+                            Register regReturn = code.createRegister(pool.ensureFutureVar(typeReturn));
                             code.add(new Var_D(regReturn));
                             aregReturn[i] = regReturn;
                             }
