@@ -8,6 +8,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import java.util.stream.Collectors;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -1697,7 +1699,7 @@ public class NameExpression
 
     private void bindTypeParameters(Context ctx, Code code, Argument argFnOrig, Argument argFnResult)
         {
-        List<Map.Entry<String, TypeConstant>> list = m_mapTypeParams.asList();
+        List<Map.Entry<FormalConstant, TypeConstant>> list = m_mapTypeParams.asList();
 
         int        cParams  = list.size();
         int[]      anBindIx = new int[cParams];
@@ -1705,10 +1707,10 @@ public class NameExpression
 
         for (int i = 0; i < cParams; i++)
             {
-            Map.Entry<String, TypeConstant> entry = list.get(i);
+            Map.Entry<FormalConstant, TypeConstant> entry = list.get(i);
 
-            String       sName = entry.getKey();
-            TypeConstant type  = entry.getValue();
+            FormalConstant constFormal = entry.getKey();
+            TypeConstant   type        = entry.getValue();
 
             anBindIx[i] = i;
             if (type.isGenericType())
@@ -1717,13 +1719,13 @@ public class NameExpression
 
                 // first type goes on stack
                 Register regType = code.createRegister(pool().typeType(), i == 0);
-                code.add(new L_Get(infoThis.findProperty(sName).getIdentity(), regType));
+                code.add(new L_Get(infoThis.findProperty(constFormal.getName()).getIdentity(), regType));
 
                 aArgBind[i] = regType;
                 }
             else if (type.isTypeParameter())
                 {
-                int iReg = ((TypeParameterConstant) type.getDefiningConstant()).getRegister();
+                int iReg = ((TypeParameterConstant) constFormal).getRegister();
                 aArgBind[i] = new Register(type, iReg);
                 }
             else
@@ -2848,18 +2850,19 @@ public class NameExpression
                             return null;
                             }
 
-                        ListMap<String, TypeConstant> mapTypeParams = resolveTypeParameters(
+                        ListMap<FormalConstant, TypeConstant> mapTypeParams = resolveTypeParameters(
                                 method, atypeArgs, TypeConstant.NO_TYPES, false);
 
                         if (mapTypeParams.size() < cTypeParams)
                             {
                             log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
-                                    method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+                                    method.collectUnresolvedTypeParameters(mapTypeParams.keySet().
+                                        stream().map(NamedConstant::getName).collect(Collectors.toSet())));
                             return null;
                             }
 
                         // resolve the function signature against all the types we know by now
-                        typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
+                        typeFn          = typeFn.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
                         m_mapTypeParams = mapTypeParams;
                         }
                     }
@@ -3409,7 +3412,7 @@ public class NameExpression
      * If the plan is None or BindTarget, and this expression represents a method or function,
      * we may need to bind type parameters.
      */
-    private ListMap<String, TypeConstant> m_mapTypeParams;
+    private ListMap<FormalConstant, TypeConstant> m_mapTypeParams;
 
     /**
      * Cached validation info: The optional TargetInfo that provides context for the initial name,

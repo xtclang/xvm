@@ -386,14 +386,8 @@ public class xConst
 
             case "hashCode":
                 {
-                Container container = frame.f_context.f_container;
-                xConst    template  = this;
-                if (template == INSTANCE)
-                    {
-                    TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) container.getTemplate(hType.getDataType());
-                    }
-                return template.buildHashCode(frame, getCanonicalClass(container), ahArg[1], iReturn);
+                TypeHandle hType = (TypeHandle) ahArg[0];
+                return callHashCode(frame, hType.getDataType(), ahArg[1], iReturn);
                 }
             }
 
@@ -418,8 +412,28 @@ public class xConst
                     (ClassComposition) clazz, iReturn).doNext(frame);
         }
 
-    // build the hashValue and assign it to the specified register
-    // returns R_NEXT, R_CALL or R_EXCEPTION
+    /**
+     * Compute the hash code of the specified object handle that belongs to the specified type.
+     *
+     * @param frame    the current frame
+     * @param type     the type to use for the hash computation
+     * @param hValue   the value
+     * @param iReturn  the register id to place an Int64 result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public int callHashCode(Frame frame, TypeConstant type, ObjectHandle hValue, int iReturn)
+        {
+        return this == INSTANCE
+            ? type.callHashCode(frame, hValue, iReturn)
+            : buildHashCode(frame, getCanonicalClass(frame.f_context.f_container), hValue, iReturn);
+        }
+
+    /**
+     * Build the hash value for the specified const handle and assign it to the specified register.
+     *
+     * @return R_NEXT, R_CALL or R_EXCEPTION
+     */
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         GenericHandle hConst = (GenericHandle) hTarget;

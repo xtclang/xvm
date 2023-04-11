@@ -686,6 +686,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn)
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
     public MethodInfo findFunctionInfo(SignatureConstant sig)
         {
         throw new UnsupportedOperationException();

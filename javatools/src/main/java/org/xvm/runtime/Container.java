@@ -273,7 +273,7 @@ public abstract class Container
         ClassTemplate template = f_mapTemplatesByType.get(type);
         if (template == null)
             {
-            if (type.isSingleDefiningConstant())
+            if (type.isSingleUnderlyingClass(true))
                 {
                 // make sure we don't hold on other pool's constants
                 type = (TypeConstant) getConstantPool().register(type);

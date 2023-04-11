@@ -19,12 +19,15 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import java.util.stream.Collectors;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -33,6 +36,7 @@ import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -1286,7 +1290,7 @@ public abstract class AstNode
                 {
                 atypeArgs = transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
-                ListMap<String, TypeConstant> mapTypeParams =
+                ListMap<FormalConstant, TypeConstant> mapTypeParams =
                         resolveTypeParameters(method, atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
@@ -1294,7 +1298,7 @@ public abstract class AstNode
                     // incompatible types
                     continue;
                     }
-                sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
+                sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
                 }
 
             TypeConstant[] atypeParam = sigMethod.getRawParams();
@@ -1370,19 +1374,21 @@ public abstract class AstNode
             if (fit.isFit() && cTypeParams > 0)
                 {
                 // re-resolve the type parameters since we could have narrowed some
-                ListMap<String, TypeConstant> mapTypeParams =
+                ListMap<FormalConstant, TypeConstant> mapTypeParams =
                         resolveTypeParameters(method, atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
                     // incompatible types
                     log(errsTemp, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
-                            method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+                            method.collectUnresolvedTypeParameters(mapTypeParams.keySet().
+                                stream().map(NamedConstant::getName).collect(Collectors.toSet())));
+
                     fit = TypeFit.NoFit;
                     }
                 else
                     {
-                    sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
+                    sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
                     }
                 }
 
@@ -1472,7 +1478,7 @@ public abstract class AstNode
      * A trivial wrapper around {@link MethodStructure#resolveTypeParameters} call that allows
      * subclasses to override it.
      */
-    protected ListMap<String, TypeConstant> resolveTypeParameters(MethodStructure method,
+    protected ListMap<FormalConstant, TypeConstant> resolveTypeParameters(MethodStructure method,
             TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAlowFormal)
         {
         return method.resolveTypeParameters(null, atypeArgs, atypeReturn, fAlowFormal);

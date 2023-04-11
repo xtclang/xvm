@@ -4,20 +4,28 @@ module TestSimple
 
     void run()
         {
-        @Custom Test t = new Test(); // that used to blow up at run-time
-        t.report(0);
+        String[] words = ["hello", "world"];
+        console.print($"{words.hashCode()=}");
+
+        test(words);
         }
 
-    service Test
+    static <CompileType extends Array> void test(CompileType collection)
         {
-        void report(Int i)
+        typedef CompileType.Element? as NType;
+
+        NType[] nts = new Array<NType>(Fixed, collection);
+
+        console.print($"before: {nts==collection.as(NType[])=}");
+
+        nts[0] = Null;
+
+        console.print($"after: {nts==collection.as(NType[])=}");
+
+        if (CompileType.Element.is(Type<Hashable>))
             {
-            console.print(i);
+            Int64 hash = nts.hashCode(); // this used to blow up at run-time
+            console.print(hash);
             }
-        }
-
-    mixin Custom<Referent>
-            into Var<Referent>
-        {
         }
     }

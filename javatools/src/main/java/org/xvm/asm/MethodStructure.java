@@ -23,6 +23,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FrameDependentConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -31,6 +32,7 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
@@ -779,8 +781,8 @@ public class MethodStructure
      *
      * @return true iff there is a conflict, in which case the mapping is removed
      */
-    private static boolean checkConflict(TypeConstant typeResult, String sFormalName,
-                                         boolean fParam, Map<String, TypeConstant> mapTypeParams)
+    private static boolean checkConflict(TypeConstant typeResult, FormalConstant constFormal,
+                                         boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams)
         {
         if (typeResult != null)
             {
@@ -791,7 +793,7 @@ public class MethodStructure
                 typeResult = info.getExtends();
                 }
 
-            TypeConstant typePrev = mapTypeParams.get(sFormalName);
+            TypeConstant typePrev = mapTypeParams.get(constFormal);
             if (typePrev != null)
                 {
                 if (fParam ? typeResult.isA(typePrev) : typePrev.isA(typeResult))
@@ -812,12 +814,12 @@ public class MethodStructure
                         {
                         // different arguments cause the formal type to resolve into
                         // incompatible types
-                        mapTypeParams.remove(sFormalName);
+                        mapTypeParams.remove(constFormal);
                         return true;
                         }
                     }
                 }
-            mapTypeParams.put(sFormalName, typeResult);
+            mapTypeParams.put(constFormal, typeResult);
             }
         return false;
         }
@@ -857,13 +859,13 @@ public class MethodStructure
      * @param fAllowFormal if false, all type parameters must be fully resolved; otherwise place a
      *                     corresponding {@link PendingTypeConstant} to the resolution map
      * @return a ListMap of the resolved types in the natural order, keyed by the names; conflicting
-     *         types will be not in the map
+     * types will be not in the map
      */
-    public ListMap<String, TypeConstant> resolveTypeParameters(TypeConstant typeTarget,
+    public ListMap<FormalConstant, TypeConstant> resolveTypeParameters(TypeConstant typeTarget,
                 TypeConstant[] atypeArgs, TypeConstant[] atypeReturns, boolean fAllowFormal)
         {
-        int                           cTypeParams   = getTypeParamCount();
-        ListMap<String, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
+        int                                   cTypeParams   = getTypeParamCount();
+        ListMap<FormalConstant, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
 
         TypeConstant[] atypeMethodParams  = getParamTypes();
         TypeConstant[] atypeMethodReturns = getReturnTypes();
@@ -879,6 +881,8 @@ public class MethodStructure
             {
             Parameter param = getParam(iT);
             String    sName = param.getName(); // type parameter name (formal)
+
+            TypeParameterConstant constParam = param.asTypeParameterConstant(getIdentityConstant());
 
             TypeConstant typeRequired = null;
             if (typeTarget != null && this.isFunction())
@@ -911,7 +915,7 @@ public class MethodStructure
 
                         if (typeRequired == null)
                             {
-                            if (checkConflict(typeResolved, sName, true, mapTypeParams))
+                            if (checkConflict(typeResolved, constParam, true, mapTypeParams))
                                 {
                                 continue NextParameter;
                                 }
@@ -920,11 +924,11 @@ public class MethodStructure
                             {
                             if (typeResolved.isA(typeRequired))
                                 {
-                                mapTypeParams.put(sName, typeRequired);
+                                mapTypeParams.put(constParam, typeRequired);
                                 }
                             else
                                 {
-                                mapTypeParams.remove(sName);
+                                mapTypeParams.remove(constParam);
                                 continue NextParameter;
                                 }
                             }
@@ -956,7 +960,7 @@ public class MethodStructure
 
                         if (typeRequired == null)
                             {
-                            if (checkConflict(typeResolved, sName, false, mapTypeParams))
+                            if (checkConflict(typeResolved, constParam, false, mapTypeParams))
                                 {
                                 continue NextParameter;
                                 }
@@ -965,11 +969,11 @@ public class MethodStructure
                             {
                             if (typeResolved.isA(typeRequired))
                                 {
-                                mapTypeParams.put(sName, typeRequired);
+                                mapTypeParams.put(constParam, typeRequired);
                                 }
                             else
                                 {
-                                mapTypeParams.remove(sName);
+                                mapTypeParams.remove(constParam);
                                 continue NextParameter;
                                 }
                             }
@@ -977,12 +981,12 @@ public class MethodStructure
                     }
                 }
 
-            if (!mapTypeParams.containsKey(sName) && fAllowFormal)
+            if (!mapTypeParams.containsKey(constParam) && fAllowFormal)
                 {
                 // no extra knowledge; assume that anything goes
                 TypeConstant typeConstraint = param.getType().resolveConstraints().getParamType(0);
                 TypeConstant typePending    = new PendingTypeConstant(getConstantPool(), typeConstraint);
-                mapTypeParams.put(sName, typePending);
+                mapTypeParams.put(constParam, typePending);
                 }
             }
         return mapTypeParams;

@@ -919,16 +919,16 @@ public class UnionTypeConstant
         TypeConstant typeV1 = hValue1.getType();
         TypeConstant typeV2 = hValue2.getType();
 
-        TypeConstant type = m_constType1;
-        if (typeV1.isA(type) && typeV2.isA(type))
+        TypeConstant type1 = m_constType1;
+        if (typeV1.isA(type1) && typeV2.isA(type1))
             {
-            return type.callEquals(frame, hValue1, hValue2, iReturn);
+            return type1.callEquals(frame, hValue1, hValue2, iReturn);
             }
 
-        type = m_constType2;
-        if (typeV1.isA(type) && typeV2.isA(type))
+        TypeConstant type2 = m_constType2;
+        if (typeV1.isA(type2) && typeV2.isA(type2))
             {
-            return type.callEquals(frame, hValue1, hValue2, iReturn);
+            return type2.callEquals(frame, hValue1, hValue2, iReturn);
             }
 
         assert !typeV1.equals(typeV2);
@@ -941,20 +941,40 @@ public class UnionTypeConstant
         TypeConstant typeV1 = hValue1.getType();
         TypeConstant typeV2 = hValue2.getType();
 
-        TypeConstant type = m_constType1;
-        if (typeV1.isA(type) && typeV2.isA(type))
+        TypeConstant type1 = m_constType1;
+        if (typeV1.isA(type1) && typeV2.isA(type1))
             {
-            return type.callCompare(frame, hValue1, hValue2, iReturn);
+            return type1.callCompare(frame, hValue1, hValue2, iReturn);
             }
 
-        type = m_constType2;
-        if (typeV1.isA(type) && typeV2.isA(type))
+        TypeConstant type2 = m_constType2;
+        if (typeV1.isA(type2) && typeV2.isA(type2))
             {
-            return type.callCompare(frame, hValue1, hValue2, iReturn);
+            return type2.callCompare(frame, hValue1, hValue2, iReturn);
             }
 
         assert !typeV1.equals(typeV2);
         return frame.assignValue(iReturn, xOrdered.makeHandle(typeV1.compareTo(typeV2)));
+        }
+
+    @Override
+    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn)
+        {
+        TypeConstant typeV = hValue.getType();
+
+        TypeConstant type1 = m_constType1;
+        if (typeV.isA(type1))
+            {
+            return type1.callHashCode(frame, hValue, iReturn);
+            }
+
+        TypeConstant type2 = m_constType2;
+        if (typeV.isA(type2))
+            {
+            return type2.callHashCode(frame, hValue, iReturn);
+            }
+
+        return frame.raiseException("Invalid value type " + typeV.getValueString());
         }
 
     @Override

@@ -681,6 +681,13 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn)
+        {
+        // use just the underlying type
+        return m_constType.callHashCode(frame, hValue, iReturn);
+        }
+
+    @Override
     public MethodInfo findFunctionInfo(SignatureConstant sig)
         {
         // identical to IntersectionTypeConstant implementation

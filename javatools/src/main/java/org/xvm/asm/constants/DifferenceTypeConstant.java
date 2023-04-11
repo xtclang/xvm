@@ -546,6 +546,13 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn)
+        {
+        // disregard what the second type thinks
+        return m_constType1.callHashCode(frame, hValue, iReturn);
+        }
+
+    @Override
     public MethodInfo findFunctionInfo(SignatureConstant sig)
         {
         return m_constType1.findFunctionInfo(sig);

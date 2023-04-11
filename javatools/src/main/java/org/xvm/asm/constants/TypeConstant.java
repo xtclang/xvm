@@ -59,6 +59,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template._native.reflect.xRTType;
@@ -6996,6 +6997,21 @@ public abstract class TypeConstant
                     clz1.getType().getValueString() + " and " +
                     clz2.getType().getValueString())
                 : clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
+        }
+
+    /**
+     * Call "hashCode" function for the object handle that belongs to this type.
+     *
+     * @param frame    the frame
+     * @param hValue   the value handle
+     * @param iReturn  the return register
+     *
+     * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
+     */
+    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn)
+        {
+        xConst template = (xConst) frame.f_context.f_container.getTemplate(this);
+        return template.callHashCode(frame, this, hValue, iReturn);
         }
 
     /**

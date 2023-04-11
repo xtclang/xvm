@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import java.util.stream.Collectors;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -31,6 +33,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -889,7 +892,7 @@ public class InvocationExpression
                     return null;
                     }
 
-                Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
+                Map<FormalConstant, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
                 if (cTypeParams > 0)
                     {
                     transformTypeArguments(ctx, method, listArgs, atypeArgs);
@@ -903,7 +906,8 @@ public class InvocationExpression
                     if (mapTypeParams.size() < cTypeParams)
                         {
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
-                                method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+                            method.collectUnresolvedTypeParameters(mapTypeParams.keySet().
+                                stream().map(NamedConstant::getName).collect(Collectors.toSet())));
                         return null;
                         }
 
@@ -929,7 +933,8 @@ public class InvocationExpression
                         //   <T1 extends Base, T2 extends T1> foo(T1 v1, T2 v2) {...}
                         if (typeConstraint.containsTypeParameter(true))
                             {
-                            typeConstraint = typeConstraint.resolveGenerics(pool, mapTypeParams::get);
+                            typeConstraint = typeConstraint.resolveGenerics(pool,
+                                                GenericTypeResolver.of(mapTypeParams));
                             }
 
                         if (!typeArg.isA(typeConstraint))
@@ -958,7 +963,8 @@ public class InvocationExpression
                         }
                     if (!mapTypeParams.isEmpty())
                         {
-                        sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
+                        sigMethod = sigMethod.resolveGenericTypes(pool,
+                                        GenericTypeResolver.of(mapTypeParams));
                         }
                     atypeResult = sigMethod.getRawReturns();
 
@@ -1010,7 +1016,7 @@ public class InvocationExpression
 
                     if (!mapTypeParams.isEmpty())
                         {
-                        typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
+                        typeFn = typeFn.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
                         }
 
                     atypeResult = new TypeConstant[] {typeFn};
@@ -3067,7 +3073,7 @@ public class InvocationExpression
         }
 
     @Override
-    protected ListMap<String, TypeConstant> resolveTypeParameters(MethodStructure method,
+    protected ListMap<FormalConstant, TypeConstant> resolveTypeParameters(MethodStructure method,
             TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAllowFormal)
         {
         return method.resolveTypeParameters(m_typeTarget, atypeArgs, atypeReturn, fAllowFormal);
@@ -3091,16 +3097,17 @@ public class InvocationExpression
 
         transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
-        Map<String, TypeConstant> mapTypeParams =
+        Map<FormalConstant, TypeConstant> mapTypeParams =
                 resolveTypeParameters(method, atypeArgs, atypeReturn, true);
 
         if (mapTypeParams.size() == method.getTypeParamCount())
             {
-            return mapTypeParams::get;
+            return GenericTypeResolver.of(mapTypeParams);
             }
 
         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
-                method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+                method.collectUnresolvedTypeParameters(mapTypeParams.keySet().
+                    stream().map(NamedConstant::getName).collect(Collectors.toSet())));
         return null;
         }
 

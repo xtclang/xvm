@@ -382,6 +382,9 @@ public abstract class Utils
 
     // ----- comparison support --------------------------------------------------------------------
 
+    /**
+     * Perform sequential equality check on two values of specified types.
+     */
     public static int callEqualsSequence(Frame frame, TypeConstant type1, TypeConstant type2,
                                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -408,6 +411,9 @@ public abstract class Utils
             }
         }
 
+    /**
+     * Completion of the callEquals implementation.
+     */
     protected static int completeEquals(Frame frame, TypeConstant type2,
                                         ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -417,6 +423,9 @@ public abstract class Utils
             : type2.callEquals(frame, hValue1, hValue2, iReturn);
         }
 
+    /**
+     * Perform sequential comparison check on two values of specified types.
+     */
     public static int callCompareSequence(Frame frame, TypeConstant type1, TypeConstant type2,
                                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -447,7 +456,7 @@ public abstract class Utils
      * Completion of the callCompare implementation.
      */
     protected static int completeCompare(Frame frame, TypeConstant type2,
-                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+                                        ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         ObjectHandle hResult = frame.popStack();
         return hResult != xOrdered.EQUAL
