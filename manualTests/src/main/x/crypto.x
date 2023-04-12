@@ -4,7 +4,7 @@
  *
  *    keytool -genkeypair -alias test_pair -keyalg RSA -keysize 2048 -validity 365
  *            -dname "cn=xqiz.it, ou=manual_test"\
- *            -keystore src/main/x/resources/test_store.p12 -storepass password -storetype PKCS12\
+ *            -keystore src/main/x/resources/test_store.p12 -storetype PKCS12 -storepass password
  *
  *  - a symmetrical key created by the command like:
  *
@@ -28,12 +28,8 @@ module TestCrypto
 
         @Inject(opts=new KeyStore.Info(store.contents, args[0])) KeyStore keystore;
 
-        assert CryptoKey   privateKey := keystore.getKey(pairName);
-        assert Certificate cert       := keystore.getCertificate(pairName);
-        assert CryptoKey   publicKey  := cert.containsKey();
-        assert CryptoKey   symKey     := keystore.getKey(symName);
-
-        KeyPair keyPair = new KeyPair(pairName, publicKey, privateKey);
+        assert CryptoKey keyPair := keystore.getKey(pairName);
+        assert CryptoKey symKey  := keystore.getKey(symName);
 
         @Inject Algorithms algorithms;
         @Inject Random random;
@@ -57,6 +53,10 @@ module TestCrypto
         testSigner(algorithms, "SHA256withRSA", keyPair, BIG_TEXT);
 
         // manual key creation
+        assert keyPair.is(KeyPair);
+        CryptoKey publicKey  = keyPair.publicKey;
+        CryptoKey privateKey = keyPair.privateKey;
+
         assert Byte[] publicBytes := publicKey.isVisible();
         PublicKey publicKeyM = new PublicKey("test-copy", "RSA", publicKey.size, publicBytes);
         KeyPair keyPairM = new KeyPair("test-copy", publicKeyM, privateKey);
