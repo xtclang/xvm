@@ -8,6 +8,7 @@ class MapSet<Element>
         implements Duplicable
         implements Set<Element>
         incorporates conditional MapSetFreezer<Element extends Shareable>
+        incorporates conditional SetHasher<Element extends Hashable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
