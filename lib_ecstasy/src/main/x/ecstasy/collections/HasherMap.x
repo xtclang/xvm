@@ -1530,6 +1530,8 @@ class HasherMap<Key, Value>
     static <CompileType extends HasherMap> Boolean equals(CompileType value1, CompileType value2)
         {
         return Map.equals(value1, value2);
+        // TODO GG (is <> necessary here?)
+        // return Map<CompileType.Key, CompileType.Value>.equals(value1, value2);
         }
 
 
