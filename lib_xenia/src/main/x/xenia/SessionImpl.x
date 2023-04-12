@@ -350,14 +350,22 @@ service SessionImpl
     TrustLevel trustLevel;
 
     @Override
+    immutable Set<String> roles;
+
+    @Override
     public/private String sessionId;
 
     @Override
-    void authenticate(String userId, Boolean exclusiveAgent = False, TrustLevel trustLevel = Highest)
+    void authenticate(String      userId,
+                      Boolean     exclusiveAgent = False,
+                      TrustLevel  trustLevel     = Highest,
+                      Set<String> roles          = [],
+                     )
         {
         if (   this.userId         != userId
             || this.exclusiveAgent != exclusiveAgent
             || this.trustLevel     != trustLevel
+            || this.roles          != roles
            )
             {
             if (String oldUser ?= this.userId, oldUser != userId)
@@ -371,6 +379,9 @@ service SessionImpl
             this.userId            = userId;
             this.exclusiveAgent    = exclusiveAgent;
             this.trustLevel        = trustLevel;
+            this.roles             = roles.is(immutable) ? roles :
+                                     roles.is(Freezable) ? roles.freeze() :
+                                     new HashSet(roles).freeze(True);
             this.lastAuthenticated = clock.now;
 
             // reset failed attempt count since we succeeded in logging in

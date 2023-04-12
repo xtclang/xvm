@@ -106,7 +106,7 @@ service DigestAuthenticator(Realm realm)
                         // "validating" the password hash that we just got from the realm when we
                         // looked up the hashed user id; in other words,  this is not "validating"
                         // anything; it's just looking up a plain text user name
-                        else if (!(user := realm.validateHash(userId, pwdHash, hasher)))
+                        else if (!(user := realm.authenticateHash(userId, pwdHash, hasher)))
                             {
                             // somehow, when we went to look up the user name for the password hash
                             // that the realm just gave us, the user hash/password hash combination

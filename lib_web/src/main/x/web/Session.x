@@ -329,6 +329,11 @@ interface Session
     TrustLevel trustLevel;
 
     /**
+     * The set of roles associated with the user associated with this session.
+     */
+    immutable Set<String> roles;
+
+    /**
      * This is a `String` representation of the _internal_ identity of the `Session` itself.
      *
      * There is no guarantee that the session identity will be constant for the lifetime of the
@@ -363,8 +368,13 @@ interface Session
      *                        authentication scheme could specify a lower trust level by default
      *                        until additional steps (like a second factor authentication) are
      *                        performed
+     * @param roles           (optional) a set of roles that area associated with the user
      */
-    void authenticate(String userId, Boolean exclusiveAgent = False, TrustLevel trustLevel = Highest);
+    void authenticate(String      userId,
+                      Boolean     exclusiveAgent = False,
+                      TrustLevel  trustLevel     = Highest,
+                      Set<String> roles          = [],
+                     );
 
     /**
      * This method is invoked when an authentication attempt is made, but fails; for example, when

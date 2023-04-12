@@ -14,14 +14,17 @@ const FixedRealm
      *
      * @param realmName  the human readable name of the realm
      * @param userPwds   the user names and passwords, in plain text form
+     * @param userRoles  (optional) the user names and roles, in plain text form
      * @param hashers    (optional) the [hashing algorithms](Signer) to support, which allow a
      *                   client to never send either a user name or password in plain text, and
      *                   which simultaneously allow the server to store the user names and passwords
      *                   in a cryptographically secure digest form
      */
-    construct(String              realmName,
-              Map<String, String> userPwds,
-              Signer[]            hashers = [])
+    construct(String                realmName,
+              Map<String, String>   userPwds,
+              Map<String, String[]> userRoles = [],
+              Signer[]              hashers   = [],
+             )
         {
         // select a default signer; use the weakest of the signers by default (which should be at
         // the very end of the list)
@@ -42,10 +45,11 @@ const FixedRealm
             }
 
         // hash the passwords (and possibly the user names)
-        Int                            userCount   = userPwds.size;
-        Int                            hasherCount = hashers.size;
-        HashMap<String, Hash|Hash[]>   pwdsByUser  = new HashMap(userCount);
-        HashMap<Hash, String|String[]> usersByHash = new HashMap(userCount * hasherCount);
+        Int                              userCount   = userPwds.size;
+        Int                              hasherCount = hashers.size;
+        HashMap<String, Hash|Hash[]>     pwdsByUser  = new HashMap(userCount);
+        HashMap<String, HashSet<String>> rolesByUser = new HashMap(userRoles.size);
+        HashMap<Hash, String|String[]>   usersByHash = new HashMap(userCount * hasherCount);
 
         static Boolean addUser(HashMap<Hash, String|String[]>.Entry entry, String user)
             {
@@ -87,10 +91,26 @@ const FixedRealm
                 }
             }
 
+        // build the lookup from user to roles
+        Map<HashSet<String>, HashSet<String>> intern = new HashMap();
+        for ((String user, String[] roles) : userRoles)
+            {
+            if (pwdsByUser.contains(user) && !roles.empty)
+                {
+                HashSet<String> roleSet = new HashSet(roles).freeze(True);
+                if (!(roleSet := intern.get(roleSet)))
+                    {
+                    intern.put(roleSet, roleSet);
+                    }
+                rolesByUser.put(user, new HashSet<String>(roles));
+                }
+            }
+
         this.name          = realmName;
         this.hashers       = hashers;
         this.defaultHasher = defaultHasher;
         this.pwdsByUser    = pwdsByUser.freeze(True);
+        this.rolesByUser   = rolesByUser.freeze(True);
         this.usersByHash   = usersByHash.freeze(True);
         }
 
@@ -106,6 +126,11 @@ const FixedRealm
     protected/private immutable Map<String, Hash|Hash[]> pwdsByUser;
 
     /**
+     * For each user, a list of roles for that user.
+     */
+    protected/private immutable Map<String, Set<String>> rolesByUser;
+
+    /**
      * For each user hash, there is typically one user name; in the rare case that a  a For each [hashing algorithm](Signer) provided to this FixedRealm (or the default MD5 if none
      * was provided), a map of user hash to password hash is held.
      */
@@ -115,9 +140,28 @@ const FixedRealm
     // ----- Realm interface -----------------------------------------------------------------------
 
     @Override
-    Boolean validate(String user, String password)
+    conditional Set<String> validUser(String user)
         {
-        return validateHash(user, passwordHash(user, name, password, defaultHasher), defaultHasher);
+        if (pwdsByUser.contains(user))
+            {
+            // TODO GG return rolesByUser.get(user) ?: [];
+            if (Set<String> roles := rolesByUser.get(user))
+                {
+                return True, roles;
+                }
+            return True, [];
+            }
+        return False;
+        }
+
+    @Override
+    conditional Set<String> authenticate(String user, String password)
+        {
+        if ((_, Set<String> roles) := authenticateHash(user, passwordHash(user, name, password, defaultHasher), defaultHasher))
+            {
+            return True, roles;
+            }
+        return False;
         }
 
     @Override
@@ -161,32 +205,32 @@ const FixedRealm
         }
 
     @Override
-    conditional String validateHash(UserId user, Hash password, Signer hasher)
+    conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher)
         {
-        if (user.is(String))
+        if (userId.is(String))
             {
-            if (Hash|Hash[] pwdHashes := pwdsByUser.get(user))
+            if (Hash|Hash[] pwdHashes := pwdsByUser.get(userId))
                 {
-                Hash pwdHash = pwdHashes.is(Hash) ? pwdHashes : pwdHashes[hashIndex(hasher)];
-                return password == pwdHash, user;
+                Hash checkHash = pwdHashes.is(Hash) ? pwdHashes : pwdHashes[hashIndex(hasher)];
+                return pwdHash == checkHash, userId, rolesByUser.get(userId) ?: [];
                 }
 
             return False;
             }
 
         // look up the user by the user hash
-        if (String|String[] plainTextUsers := usersByHash.get(user))
+        if (String|String[] plainTextUsers := usersByHash.get(userId))
             {
             if (plainTextUsers.is(String))
                 {
-                return validateHash(plainTextUsers, password, hasher);
+                return authenticateHash(plainTextUsers, pwdHash, hasher);
                 }
 
             for (String plainTextUser : plainTextUsers)
                 {
-                if (validateHash(plainTextUser, password, hasher))
+                if ((_, Set<String> roles) := authenticateHash(plainTextUser, pwdHash, hasher))
                     {
-                    return True, plainTextUser;
+                    return True, plainTextUser, roles;
                     }
                 }
             }

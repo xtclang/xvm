@@ -34,7 +34,7 @@ service BasicAuthenticator(Realm realm)
                     {
                     String user = auth[0 ..< colon];
                     String pwd  = auth[colon >..< auth.size];
-                    if (realm.validate(user, pwd))
+                    if (realm.authenticate(user, pwd))
                         {
                         session.authenticate(user);
                         return True;

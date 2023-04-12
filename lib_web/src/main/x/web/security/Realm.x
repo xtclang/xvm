@@ -23,15 +23,28 @@ interface Realm
     @RO String name;
 
     /**
-     * Validate the passed user name and password.
+     * Verify that the passed user name is valid, for example that the account is not disabled, and
+     * obtain the roles associated with the user.
+     *
+     * @param user      the user's identity, as provided by the client
+     * @param password  the user's password, as provided by the client
+     *
+     * @return True iff the user identity is verified to exist, and is active (e.g. can log in)
+     * @return (conditional) the role names associated with the user, if any, otherwise `[]`
+     */
+    conditional Set<String> validUser(String user);
+
+    /**
+     * Authenticate the passed user name and password.
      *
      * @param user      the user's identity, as provided by the client
      * @param password  the user's password, as provided by the client
      *
      * @return True iff the user identity is verified to exist, and the provided password is
      *         correct for that user
+     * @return (conditional) the role names associated with the user, if any, otherwise `[]`
      */
-    Boolean validate(String user, String password);
+    conditional Set<String> authenticate(String user, String password);
 
     /**
      * A realm may support user id and password hashes directly, which allows the realm to not store
@@ -88,7 +101,7 @@ interface Realm
     Hash[] hashesFor(UserId userId, Signer hasher);
 
     /**
-     * Validate the passed user name, which may be hashed, and password, which is hashed.
+     * Authenticate the passed user name, which may be hashed, and password, which is hashed.
      *
      * The forms of the hashes are specified by the
      * [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616)
@@ -108,8 +121,9 @@ interface Realm
      * @return True iff the user identity is verified to exist, and the provided password is
      *         correct for that user
      * @return (conditional) the user identity in plain text
+     * @return (conditional) the role names associated with the user, if any, otherwise `[]`
      */
-    conditional String validateHash(UserId userId, Hash pwdHash, Signer hasher)
+    conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher)
         {
         TODO User identity and password hashing are not supported by this Realm
         }
