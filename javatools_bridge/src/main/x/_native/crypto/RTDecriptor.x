@@ -11,7 +11,7 @@ service RTDecryptor
         extends RTEncryptor
         implements Decryptor
     {
-    construct(Algorithm algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey privateKey, Object cipher)
+    construct(String algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey privateKey, Object cipher)
         {
         construct RTEncryptor(algorithm, blockSize, publicKey, privateKey, cipher);
         }
@@ -59,7 +59,7 @@ service RTDecryptor
     @Override
     String toString()
         {
-        return $"{algorithm.name.quoted()} decryptor";
+        return $"{algorithm.quoted()} decryptor";
         }
 
 

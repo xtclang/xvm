@@ -5,9 +5,9 @@ interface Encryptor
         extends Closeable
     {
     /**
-     * The algorithm implemented by this `Encryptor`.
+     * The algorithm name implemented by this `Encryptor`.
      */
-    @RO Algorithm algorithm;
+    @RO String algorithm;
 
     /**
      * The public key used by the `Encryptor` algorithm, if the `Encryptor` has a public key. A

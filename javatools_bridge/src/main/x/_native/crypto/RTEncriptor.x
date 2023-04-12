@@ -7,10 +7,10 @@ import libcrypto.Encryptor;
 /**
  * The native [Encryptor] implementation.
  */
-service RTEncryptor(Algorithm algorithm, Int blockSize)
+service RTEncryptor(String algorithm, Int blockSize)
         implements Encryptor
     {
-    construct(Algorithm algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey? privateKey, Object cipher)
+    construct(String algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey? privateKey, Object cipher)
         {
         this.algorithm  = algorithm;
         this.blockSize  = blockSize;
@@ -93,7 +93,7 @@ service RTEncryptor(Algorithm algorithm, Int blockSize)
     @Override
     String toString()
         {
-        return $"{algorithm.name.quoted()} encryptor";
+        return $"{algorithm.quoted()} encryptor";
         }
 
 

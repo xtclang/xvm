@@ -58,7 +58,7 @@ service RTServer
                 BinaryInput createInputDecryptor(BinaryInput  source, Annotations? annotations=Null) = TODO
 
                 @Override
-                Algorithm algorithm.get() = TODO
+                String algorithm.get() = TODO
 
                 @Override
                 @RO CryptoKey? publicKey;

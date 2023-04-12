@@ -66,7 +66,7 @@ service RTEncryptionAlgorithm(String name, Int blockSize)
                 // asymmetrical encryptor
                 assert keyForm == Pair as $"Invalid key form for {this}";
                 assert Algorithms.validSize(keySize, key.size) as $"Invalid key size for {this}";
-                Encryptor encryptor = new RTEncryptor(this, blockSize, key, Null, cipher);
+                Encryptor encryptor = new RTEncryptor(name, blockSize, key, Null, cipher);
                 return &encryptor.maskAs(Encryptor);
 
             case Pair:
@@ -75,14 +75,14 @@ service RTEncryptionAlgorithm(String name, Int blockSize)
                 assert key.is(KeyPair) as "Key must be a KeyPair";
                 assert Algorithms.validSize(keySize, key.privateKey.size) as $"Invalid key size for {this}";
 
-                Decryptor decryptor = new RTDecryptor(this, blockSize, key.publicKey, key.privateKey, cipher);
+                Decryptor decryptor = new RTDecryptor(name, blockSize, key.publicKey, key.privateKey, cipher);
                 return &decryptor.maskAs(Decryptor);
 
             case Secret:
                 // symmetrical decryptor
                 assert keyForm == Secret as $"Invalid key form for {this}";
                 assert Algorithms.validSize(keySize, key.size) as $"Invalid key size for {this}";
-                Decryptor decryptor = new RTDecryptor(this, blockSize, Null, key, cipher);
+                Decryptor decryptor = new RTDecryptor(name, blockSize, Null, key, cipher);
                 return &decryptor.maskAs(Decryptor);
             }
         }
