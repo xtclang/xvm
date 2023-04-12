@@ -9,6 +9,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import java.security.cert.Certificate;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.net.ssl.KeyManager;
@@ -55,6 +57,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -408,16 +411,16 @@ public class xRTKeyStore
         String   sName    = hName.getStringValue();
         try
             {
-            boolean fPublic  = keyStore.isCertificateEntry(sName);
             boolean fPrivate = keyStore.isKeyEntry(sName);
 
             if (fPrivate)
                 {
-                return frame.assignValues(aiReturn, xBoolean.TRUE, fPublic
+                boolean fSecret = keyStore.getCertificate(sName) == null;
+                return frame.assignValues(aiReturn, xBoolean.TRUE, fSecret
                         ? xInt.makeHandle(0)   // Secret
                         : xInt.makeHandle(2)); // Pair
                 }
-            if (fPublic)
+            if (keyStore.isCertificateEntry(sName))
                 {
                 return frame.assignValues(aiReturn, xBoolean.TRUE, xInt.makeHandle(1)); // Public
                 }
@@ -432,9 +435,10 @@ public class xRTKeyStore
     /**
      * Native implementation of
      *     "conditional (String  algorithm,
-     *                  Int     size,
-     *                  Byte[]  bytes, // only for public key
-     *                  Object  secret
+     *                   Int     size,
+     *                   Object  secretHandle
+     *                   Object  publicHandle
+     *                   Byte[]  publicBytes
      *                  )
      *         getKeyInfo(String name)"
      */
@@ -453,8 +457,17 @@ public class xRTKeyStore
                     return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
 
-                String sAlgorithm = key.getAlgorithm();
-                int    cKeyBits   = key instanceof RSAPrivateKey privateKey
+                String      sAlgorithm = key.getAlgorithm();
+                PublicKey   publicKey  = null;
+                byte[]      abPublic   = null;
+                Certificate cert       = keyStore.getCertificate(hName.getStringValue());
+                if (cert != null)
+                    {
+                    publicKey = cert.getPublicKey();
+                    abPublic  = publicKey.getEncoded();
+                    }
+
+                int cKeyBits = key instanceof RSAPrivateKey privateKey
                                         ? privateKey.getModulus().bitLength()
                                         : key.getEncoded().length << 3;
 
@@ -462,26 +475,17 @@ public class xRTKeyStore
                 list.add(xBoolean.TRUE);
                 list.add(xString.makeHandle(sAlgorithm));
                 list.add(xInt.makeHandle(cKeyBits >>> 3));
-                list.add(xArray.ensureEmptyByteArray());
                 list.add(new SecretHandle(key));
-                return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
-                }
-
-            if (keyStore.isCertificateEntry(sName))
-                {
-                Certificate cert = keyStore.getCertificate(hName.getStringValue());
-
-                PublicKey publicKey  = cert.getPublicKey();
-                String    sAlgorithm = publicKey.getAlgorithm();
-                int       cKeyBits   = getPublicKeyLength(publicKey);
-                byte[]    abPublic   = publicKey.getEncoded();
-
-                List<ObjectHandle> list = new ArrayList<>(9);
-                list.add(xBoolean.TRUE);
-                list.add(xString.makeHandle(sAlgorithm));
-                list.add(xInt.makeHandle(cKeyBits >>> 3));
-                list.add(xArray.makeByteArrayHandle(abPublic, Mutability.Constant));
-                list.add(new SecretHandle(publicKey));
+                if (publicKey == null)
+                    {
+                    list.add(xNullable.NULL);
+                    list.add(xArray.ensureEmptyByteArray());
+                    }
+                else
+                    {
+                    list.add(new SecretHandle(publicKey));
+                    list.add(xArray.makeByteArrayHandle(abPublic, Mutability.Constant));
+                    }
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
                 }
 
@@ -493,6 +497,28 @@ public class xRTKeyStore
             }
         }
 
+    /**
+     * Find a public/private key pair that could be used to encrypt tls communications.
+     *
+     * @return the alias for the first (in the order of iteration) PrivateKey; null if none is found
+     */
+    public String findTlsKey(KeyStoreHandle hKeystore)
+                throws GeneralSecurityException
+        {
+        KeyStore keystore = hKeystore.f_keyStore;
+        for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();)
+            {
+            String sName = it.nextElement();
+            if (keystore.isKeyEntry(sName) &&
+                    keystore.getKey(sName, hKeystore.f_achPwd) instanceof PrivateKey &&
+                    keystore.getCertificate(sName) != null)
+                {
+                return sName;
+                }
+            }
+        return null;
+        }
+
 
     // ----- handle --------------------------------------------------------------------------------
 
@@ -502,16 +528,6 @@ public class xRTKeyStore
     public static class KeyStoreHandle
                 extends ServiceHandle
         {
-        /**
-         * The key store password.
-         */
-        private final char[] f_achPwd;
-
-        /**
-         * The wrapped {@link KeyStore}.
-         */
-        public final KeyStore f_keyStore;
-
         public KeyStoreHandle(TypeComposition clz, ServiceContext ctx, KeyStore keyStore, char[] achPwd,
                               X509KeyManager keyManager, X509TrustManager trustManager)
             {
@@ -522,6 +538,16 @@ public class xRTKeyStore
             f_keyManager   = keyManager;
             f_trustManager = trustManager;
             }
+
+        /**
+         * The wrapped {@link KeyStore}.
+         */
+        public final KeyStore f_keyStore;
+
+        /**
+         * The key store password.
+         */
+        private final char[] f_achPwd;
 
         /**
          * The underlying {@link KeyManager}.

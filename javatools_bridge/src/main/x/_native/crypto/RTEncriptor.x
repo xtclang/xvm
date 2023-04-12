@@ -38,9 +38,9 @@ service RTEncryptor(Algorithm algorithm, Int blockSize)
         Object secret;
         if (CryptoKey publicKey ?= this.publicKey)
             {
-            if (publicKey := &publicKey.revealAs(RTPublicKey))
+            if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey))
                 {
-                secret = publicKey.as(RTPublicKey).secret;
+                secret = key.secret;
                 }
             else if (Byte[] rawKey := publicKey.isVisible())
                 {
@@ -55,9 +55,9 @@ service RTEncryptor(Algorithm algorithm, Int blockSize)
             {
             assert CryptoKey privateKey ?= this.privateKey;
 
-            if (privateKey := &privateKey.revealAs(RTPrivateKey))
+            if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey))
                 {
-                secret = privateKey.as(RTPrivateKey).secret;
+                secret = key.secret;
                 }
             else if (Byte[] rawKey := privateKey.isVisible())
                 {

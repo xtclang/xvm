@@ -61,7 +61,7 @@ service RTAlgorithms
 
     // ----- native methods ------------------------------------------------------------------------
 
-    (Int blockSize, Int formId, Int keySize, Object implementation)
+    static (Int blockSize, Int formId, Int keySize, Object implementation)
         getAlgorithmInfo(String name, AlgorithmMethod method) {TODO("Native");}
 
 

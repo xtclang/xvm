@@ -11,7 +11,7 @@ service RTDecryptor
         extends RTEncryptor
         implements Decryptor
     {
-    construct(Algorithm algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey? privateKey, Object cipher)
+    construct(Algorithm algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey privateKey, Object cipher)
         {
         construct RTEncryptor(algorithm, blockSize, publicKey, privateKey, cipher);
         }
@@ -22,9 +22,9 @@ service RTDecryptor
         assert CryptoKey privateKey ?= this.privateKey;
 
         Object secret;
-        if (privateKey := &privateKey.revealAs(RTPrivateKey))
+        if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey))
             {
-            secret = privateKey.as(RTPrivateKey).secret;
+            secret = key.secret;
             }
         else if (Byte[] rawKey := privateKey.isVisible())
             {

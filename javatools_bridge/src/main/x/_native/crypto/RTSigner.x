@@ -29,12 +29,11 @@ service RTSigner
     @Override
     Signature sign(Byte[] data)
         {
-        CryptoKey privateKey = this.privateKey;
-        Object    secret;
+        Object secret;
 
-        if (privateKey := &privateKey.revealAs(RTPrivateKey))
+        if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey))
             {
-            secret = privateKey.as(RTPrivateKey).secret;
+            secret = key.secret;
             }
         else if (Byte[] rawKey := privateKey.isVisible())
             {

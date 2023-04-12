@@ -38,9 +38,9 @@ service RTVerifier
     Boolean verify(Digest signature, Byte[] data)
         {
         Object secret;
-        if (publicKey := &publicKey.revealAs(RTPublicKey))
+        if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey))
             {
-            secret = publicKey.as(RTPublicKey).secret;
+            secret = key.secret;
             }
         else if (Byte[] rawKey := publicKey.isVisible())
             {

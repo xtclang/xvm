@@ -3,6 +3,7 @@ import libcrypto.Certificate.KeyUsage;
 import libcrypto.CryptoKey;
 import libcrypto.KeyForm;
 import libcrypto.KeyStore;
+import libcrypto.KeyPair;
 import libcrypto.PublicKey;
 import libcrypto.PrivateKey;
 import libcrypto.Signature;
@@ -43,19 +44,21 @@ service RTKeyStore
 
         if ((String  algorithm,
              Int     size,
-             Byte[]  bytes,
-             Object  secret) := getKeyInfo(name))
+             Object  secretHandle,
+             Object? publicHandle,
+             Byte[]  publicBytes) := getKeyInfo(name))
             {
             CryptoKey key;
-            if (bytes.size > 0)
+            if (publicHandle == Null)
                 {
-                key = new RTPublicKey(name, algorithm, size, bytes, secret);
-                key = &key.maskAs(PublicKey);
+                key = new RTPrivateKey(name, algorithm, size, secretHandle);
+                key = &key.maskAs(PrivateKey);
                 }
             else
                 {
-                key = new RTPrivateKey(name, algorithm, size, secret);
-                key = &key.maskAs(PrivateKey);
+                CryptoKey privateKey = new RTPrivateKey(name, algorithm, size, secretHandle);
+                CryptoKey publicKey  = new RTPublicKey (name, algorithm, size, publicBytes, publicHandle);
+                key = new KeyPair(name, &publicKey.maskAs(PublicKey), &privateKey.maskAs(PrivateKey));
                 }
             keyCache.put(name, key);
             return True, key;
@@ -174,10 +177,15 @@ service RTKeyStore
      */
     private conditional Int isKey(String name) {TODO("Native");}
 
+    /**
+     * @return True iff the name represents a key
+     * #return (conditional) the key info
+     */
     private conditional (String  algorithm,
                          Int     size,
-                         Byte[]  bytes, // only for public key
-                         Object  secret
+                         Object  secretHandle,
+                         Object? publicHandle,  // Null for symmetrical key
+                         Byte[]  publicBytes    // not empty for public/private pair
                          )
         getKeyInfo(String name) {TODO("Native");}
 
