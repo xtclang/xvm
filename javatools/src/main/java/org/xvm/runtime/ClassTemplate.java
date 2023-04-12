@@ -1977,7 +1977,7 @@ public abstract class ClassTemplate
                                 {
                                 sigBest = sig;
                                 }
-                            else
+                            else if (!sigBest.equals(sig))
                                 {
                                 // We know that the compiler didn't see any ambiguity, which means
                                 // it's caused now by the argument actual type. Consider an example:
