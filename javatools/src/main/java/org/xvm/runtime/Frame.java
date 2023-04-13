@@ -28,6 +28,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.NativeFutureHandle;
 import org.xvm.runtime.ServiceContext.Synchronicity;
@@ -1525,7 +1526,18 @@ public class Frame
                 f_function.getParam(iArg).getName() + '"').getException();
             }
 
-        return f_ahVar[iArg] = getConstHandle(constValue);
+        ObjectHandle hValue = getConstHandle(constValue);
+        if (hValue instanceof DeferredCallHandle hDeferred &&
+                !(hDeferred instanceof DeferredSingletonHandle))
+            {
+            hDeferred.addContinuation(frameCaller ->
+                {
+                f_ahVar[iArg] = frameCaller.peekStack();
+                return Op.R_NEXT;
+                });
+            return hDeferred;
+            }
+        return f_ahVar[iArg] = hValue;
         }
 
     /**

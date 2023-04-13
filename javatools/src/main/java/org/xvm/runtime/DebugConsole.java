@@ -1378,6 +1378,10 @@ public class DebugConsole
                             {
                             writer.println("<unassigned>");
                             }
+                        else if (hVar == ObjectHandle.DEFAULT)
+                            {
+                            writer.println("<default>");
+                            }
                         else if (callToString(frame, frame.clearException(), hVar, writer) == Op.R_CALL)
                             {
                             return Op.R_CALL;
