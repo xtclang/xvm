@@ -68,6 +68,7 @@ service SessionImpl
         structure.userAgent       = extractUserAgent(requestInfo);
         structure.cookieConsent   = None;
         structure.trustLevel      = None;
+        structure.roles           = [];
         structure.internalId_     = sessionId;
         structure.sessionId       = idToString_(sessionId);
         structure.prevTLS_        = requestInfo.tls;
