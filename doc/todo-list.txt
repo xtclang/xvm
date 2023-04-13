@@ -1,6 +1,4 @@
-- xConst "equals", "compare" and "hashCode" native implementations assert if the target type is
-  relational, which could happen if we create a container of a relations type
-  (e.g. Array<String|Nullable>) and call hashCode() or equals() on it
+- CP: consider removing Cloneable and CollectionCloner
 
 - GG: for(;;) loop does not correctly compute reachability - see IntNumber.calculateStringSize()
 
