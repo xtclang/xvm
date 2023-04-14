@@ -63,11 +63,6 @@ tasks.test {
     maxHeapSize = "1G"
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
 dependencies {
     implementation("org.xtclang.xvm:javatools_utils:")
 

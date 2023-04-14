@@ -1,195 +1,46 @@
+import groovy.transform.CompileStatic
 import org.jetbrains.gradle.ext.*
-import org.jetbrains.gradle.ext.Application
-import org.jetbrains.gradle.ext.ShortenCommandLine.*
-import org.xvm.BuildHelpers
-//import org.jetbrains.gradle.ext.SerializationUtil.prettyPrintJSON
 
 /*
  * Main build file for the XVM project, producing the XDK.
+ *
+ * Gradle best practice is to put only accessing, not mutating state outside the buildSrc directory.
+ * We are gradually migrating over mutating logic common to several parts of the build to buildSrc.
+ * There are a few issues with the Kotlin DSL for Gradle and buildSrc, but we can work around most
+ * of the existing ones. We would prefer the Kotlin DSL language for our build before Groovy, because
+ * Jetbrains and third party developers encourage Kotlin DSL to be the new standard.
  */
 
-/*
-* TODO root level settings.gradle.kts:
-* for (project in rootProject.children) {
-*    project.apply {
-*        projectDir = file("subprojects/$name")
-*        buildFileName = "$name.gradle.kts"
-*        require(projectDir.isDirectory) { "Project '${project.path} must have a $projectDir directory" }
-*        require(buildFile.isFile) { "Project '${project.path} must have a $buildFile build script" }
-*    }
-* }
-*/
+group = "org.xvm"
+version = "0.4.3"
 
 plugins {
     id("java-library")
     id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.7" apply true
+    id("kotlin-common-conventions")
 }
 
+/**
+ * Best practice way of specifying Java runtime for subprojects. No subproject that applies the IntellIJ
+ */
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
 }
 
-group = "org.xvm"
-version = "0.4.3"
-
-val manualTestDir = java.io.File(rootDir, "manualTests")
+val manualTestsDir = rootDir.absolutePath + "/manualTests"
 
 // TODO move this to the xtc plugin configuration or something.
-
 val enablePreview = false
 
-// Display all Java warnings, warnings as error?
-val pedantic = false
-
-defaultTasks("clean", "build")
-
-subprojects.forEach {
-    println("subproject: $it")
-    // todo print dependencies.
-    println("** " + it.configurations)
-}
-
-// .editorconfig replaces the Code Style xml file import
-//
-
-/* Example how the IDEA plugin extends the idea plugin that is to be replaced
-
-def extend(Project project) {
-    def ideaModel = project.extensions.findByName('idea') as IdeaModel
-    if (!ideaModel) { return }
+/**
+ * Set the default behavior for Gradle running with no task name to clean and re-resolve and display the
+ * available tasks.
  */
+defaultTasks("clean", "tasks")
 
-/*
-If you simply want to load a Gradle project into IntelliJ IDEA, then use the IDE’s
-       import facility. You do not need to apply this plugin to import your project into NOTE IDEA,
-       although if you do, the import will take account of any extra IDEA configuration you have that doesn’t
-        directly modify the generated files — see the
-       Configuration section for more details.
-
-       idea (module file generation for project), openIdea, cleanIdea,
-       cleanIdeaWorkspace (clean does not depend on this to avoid wiping e.g. .idea
-       ideaProject, ideaModule, ideaWorkspace (idea depends on these)
-        */
-
-// TODO: WHY DOES CODE STYLE IN KTS SCRIPTS REFUSE TO BREAK LINES. EditorConfig seems right?
-
-//runConfigurations
-/*val ProjectSettings.runConfigurations: RunConfigurationContainer
-    get() = (this as ExtensionAware).the()
-
-fun ProjectSettings.runConfigurations(configure: RunConfigurationContainer.() -> Unit) {
-    configure(this.runConfigurations)
-}*/
-
-
-idea {
-    module {
-        inheritOutputDirs = true
-        println("Path variables: " + pathVariables)
-        println(project.name + " project has module flag $inheritOutputDirs")
-    }
-
-    // Configurations needed:
-    //   clean build, release and debug + breakpoint, simple app
-    //   run tests?
-    //   run and debug build with breakpoints?
-    project {
-        // TODO set example breakpoint
-        // TODO - a way to execute a RunConfiguration to the breakpoint?
-
-        /*
-        interface ExtensionAware
-        Objects that can be extended at runtime with other objects.
-
-        // Extensions are just plain objects, there is no interface/type class MyExtension { String foo MyExtension(String foo) { this.foo = foo } } // Add new extensions via the extension container project.extensions.create('custom', MyExtension, "bar") // («name», «type», «constructor args», …) // extensions appear as properties on the target object by the given name assert project.custom instanceof MyExtension assert project.custom.foo == "bar" // also via a namespace method project.custom { assert foo == "bar" foo = "other" } assert project.custom.foo == "other" // Extensions added with the extension container's create method are themselves extensible assert project.custom instanceof ExtensionAware project.custom.extensions.create("nested", MyExtension, "baz") assert project.custom.nested.foo == "baz" // All extension aware objects have a special “ext” extension of type ExtraPropertiesExtension assert project.hasProperty("myProperty") == false project.ext.myProperty = "myValue" // Properties added to the “ext” extension are promoted to the owning object assert project.myProperty == "myValue"
-        Many Gradle objects are extension aware. This includes; projects, tasks, configurations, dependencies etc.
-        For more on adding & creating extensions, see ExtensionContainer.
-
-        Could also do extensionaware inline in the script. Probably good for various XTC tasks
-        idea {
-            project {
-                (this as ExtensionAware)
-                 configure<ProjectSettings> {
-                    doNotDetectFrameworks("android", "web")
-         */
-        settings {
-            runConfigurations {
-                val app = create("MyApp", Application::class).apply {
-                    mainClass = "org.xvm.runtime.TestConnector"
-                    moduleName = "xvm.javatools.test"
-                    String mainClass - class to run
-                            String workingDirectory - working directory
-                            String jvmArgs - jvm arguments string
-                    String moduleName - name of Idea module to collect runtime classpath
-                            String programParameters - program arguments string
-                    Map<String, String> envs - environment variables map
-                }
-                println(app)
-                //prettyPrintJSON(app)
-            }
-
-            /*
-            withIDEADir {
-                File ideDir ->
-                println("heja")
-            }
-
-            withIDEAFileXml("vcs.xml") {
-                XmlProvider p ->
-                p.asNode().component
-                    .find { it.@ name == 'VcsDirectoryMappings' }
-                    .mapping.@ vcs = 'Git'
-            }*/
-
-            compiler {
-                processHeapSize = 2048 // Gradle daemon max heap size, default is 700
-                autoShowFirstErrorInEditor = true
-                enableAutomake = false
-                parallelCompilation = true
-                rebuildModuleOnDependencyChange = true
-                javac {
-                    javacAdditionalOptions = "-encoding UTF-8 -deprecation -Xlint:all"
-                    generateDeprecationWarnings = true
-                }
-
-                /*            runConfigurations {
-                                                // TODO: Run build task java_tools before, or at least be a dependency
-                                                "HelloWorld"(org.jetbrains.gradle.ext.Application) {
-
-                                                }
-                                           }
-                            //settings.generateImlFiles*/
-                delegateActions {
-                    // Always delegate "Build and Run" and "Test" actions from Gradle to IntelliJ.
-                    delegateBuildRunToGradle = false
-                    testRunner = ActionDelegationConfig.TestRunner.PLATFORM
-                    defaultTasks("clean", "build")
-                }
-                encodings {
-                    // This takes care of encodings in the IntelliJ compilers, but we need to fix the Gradle ones too.
-                    encoding = "UTF-8"
-                }/* Project level settings *//*                compiler
-                                groovyCompiler
-                                copyright
-                                runConfigurations
-                                doNotDetectFrameworks
-                                taskTriggers
-                                delegateActions
-                                ideArtifacts
-                                encodings*/
-            }
-        }
-        workspace {
-
-        }
-    }
-}
-
-// DO not do this or subproject.
-// Add tasks and stuff to all subprojects.
-allprojects {
+allprojects { // TODO: Should subprojects be enough here. That may also be considered bad Gradle practice. Revisit later.
     configurations.all {
         resolutionStrategy.dependencySubstitution {
             substitute(module("org.xtclang.xvm:javatools_utils")).using(project(":javatools_utils"))
@@ -199,78 +50,274 @@ allprojects {
     }
 
     tasks.withType<JavaCompile>().configureEach {
-// TODO all these options and similar ones should live in various global
-//  configurations in buildSrc
+        // TODO all these options and similar ones should live in various global
+        //  configurations in buildSrc
         options.encoding = "UTF-8"
-//        options.warnings = true
-        options.debug()
-//        options.debugOptions()
-//        val op
-// TODO for --add-exports or similar things that may be needed to reach preview JDK code,
-//  we need to do options.isFork = true && options.forkOptions.executale = "javac"
-//  This is because for any non standard options, e.g. -XDignore.symbol.file, we need to fork.
-        options.compilerArgs = listOf("-Xlint:all", "-deprecation", "-Xmaxwarns", "10000")
-        if (enablePreview) {
-            options.compilerArgs.add("--enable-preview")
-        }
-        doLast {
-            println(name + " running for " + project.name)
-        }
     }
 }
 
-//A project is essentially a collection of Task objects.Each task performs some basic piece of work, such as compiling
-//classes, or running unit tests, or zipping up a WAR file . You add tasks to a project using one of the create ()
-//methods on TaskContainer, such as TaskContainer.create(java.lang.String).You can locate existing tasks using one of
-//the lookup methods on TaskContainer, such as TaskCollection.getByName(java.lang.String)
-// We must ensure gradle builds use the same config as the one in the idea section, and gradle
-// needs to tell javac stuff like flags, use java 19 etc... Reuse these in idea config.
+/**
+ * This is an extension method for all projects, to help us parse boolean properties from Strings.
+ *
+ * TODO:
+ *   This should go into the buildSrc tree, following best practice, but currently it only resolves
+ *   if it uses the Groovy DSL. We will move this when the issue is fixed, as the build.gradle files
+ *   should only contain bare bones accessing logic, and no mutating logic,  extensions to the
+ *   Gradle model types or any logic that is reused by several modules in the XVM project.
+ */
+fun Project.getBooleanProperty(name: String, default: Boolean = false): Boolean {
+    return if (project.hasProperty(name)) project.property(name).toString().toBoolean() else default
+}
 
+fun Project.setBooleanProperty(name: String, default: Boolean = true): Boolean {
+    project.setProperty(name, default)
+    assert(project.hasProperty(name))
+    return project.getBooleanProperty(name)
+}
 
-//tasks.forEach {
-//}
+var tt = getTasksByName("gitClean", true)
+println("TT $tt")
+tasks.forEach{ t->
+    println("TASK IN ROOT: " + t.name)
+}
 
 /*
-tasks.register("build") {
-    group       = "Build"
-    description = "Build all projects"
-
-    dependsOn(project("xdk:").tasks["build"])
+var gitCleanTask = tasks.register("gitClean", Gitcleaner::class) {
+    dryRun = false // default is true
+    println(inputs)
+    doLast {
+        println("gitCleanTask (dry run: $dryRun)")
+    }
 }
 */
 
-// Example of a task wrapper to logic elsewhere.
-// TODO: This is probably how to subclass flavors of an XtcCompileTask for
-//  xdk JavaExec->Task.
-
-task("extendedBuildSrcTestTask") {
-    doLast {
-        println(project.name)
-        BuildHelpers.sayHello()
-    }
-}
-
-// TODO: Why does this file not resolve project extension methods in the buildSrc dir. This seems wrong?
-
-tasks.create("extendedBuildSrcTestTask2", org.xvm.XvmTask::class) {
-    doLast {
-        println("We have executed xvm task.")
-    }
-}
-
-
-task("gitClean") {
+/**
+ * Full clean and rebuild of the project, including getting rid of any persistent IDE
+ * configuration.
+ */
+/*
+task("rebuild") {
     group = "other"
-    description = "Runs git clean, recursively from the repo root. Default is dry run."
-
+    description = "Fully clean and delete all generated files, dependencies, cached data, and rebuild."
     doLast {
-        exec {
-            val dryRun = !"false".equals((project.findProperty("gitCleanDryRun") ?: "true").toString(), ignoreCase = true)
-            logger.lifecycle("Running gitClean task...")
-            if (dryRun) {
-                logger.warn("WARNING: gitClean is in dry run mode. To explicitly run gitClean, use '-PgitCleanDryRun=false'.")
+        ex
+    }
+    d
+    // gitClean dryRunFalse, clean, rm -fr .idea, build
+}*/
+
+/**
+ * Augment any Gradle wrapper upgrade to use DistributionType.ALL, to ensure optimum debuggability.
+ * To create more compact environments, we can remove this or change it to BIN. The ALL field bundles
+ * the Gradle source code and documentation, and all major IDEs can make use of it, when debugging
+ * or developing build system logic, to get an environment where all parts of the Gradle API
+ * autocomplete, plug into intelligent suggestions in an IDE, and so on.
+ */
+tasks.wrapper {
+    distributionType = Wrapper.DistributionType.ALL
+}
+
+/**
+ * The config "idea" represents all changes to settings that IntelliJ needs to build, run and debug
+ * XTC code. It also provides sample configurations for a debuggable HelloWorld.x program with a
+ * breakpoint, as well as a configuration that can be used to debug and/or test§ the build process
+ * with breakpoints.
+ *
+ * The goal with this configuration is to make it unnecessary to ever manually change or add
+ * settings in IntelliJ for a fully configured "get started immediately" dev environment for XTC.
+ * This will soon be complemented by a complete language plugin for XTC, which will ingrate
+ * IntelliJ with XTC development. This should include IntelliJ debugger support, language analysis,
+ * and a dependency for requesting and installing the correct XDK binary artifact from a repository.
+ * When complete, a new potential XTC developer need only create a new Gradle project and add the XVM
+ * as a dependency to the xtc-language-plugin (the language plugin will also provide an auto generate
+ * templates for both the Gradle build file and the needed XDK dependency). Futhermore, the XTC
+ * compiler, and most of the stuff in Java tools will also be integrated with the IDE. For example,
+ * lazy compilation requests for new source code, if it has not been built, just like Java in
+ * IntelliJ works today.
+ *
+ * It should now be possible to add a simple .x suffixed source code snippet to the project, modify the
+ * already imported Run/Debug Configuration to execute the file. write a small ".x" source code file
+ * and add it to the project in the .idea directory. Right now, the current master branch shouldn't
+ * need any more configuration than what is given below. The configuration also provides a
+ * simple HelloWorld.x program and a breakpoint, so that just by executing it in Debug Mode will
+ * bootstrap the system and leave the user in the debugger at the predefined breakpoint.
+ *
+ * The IDEA andIDEA.ext plugin have predefined sections:
+ *    + module settings (extended by ext plugin)
+ *    + project settings (extended by ext plugin)
+ *    + workspace settings (likely not needed with .idea directory format, and handover to IntelliJ with the ext plugin)
+ *
+ */
+idea {
+    /**
+     * IdeaModule configuration:
+     *
+     *   + inheritOutputDirs (make sure output directories for compiling module will be located below output directory for project,
+     *       otherwise they will be available through getOutputDir() and getTestOutputDir(). Set this property to 'true' to make
+     *       IntelliJ use the same output paths as Gradle does, to avoid confusion mixing two different build styles, the one
+     *       when handling the build over to IntelliJ being different and contains "out" directories as default. There were
+     *       issues here in the past, but now, it should be OK to end up with a project with some modules compiled by Gradle,
+     *       and others by IntelliJ. The output will look the same. If there are any glitches, they likely stem from artifact
+     *       caching, configuration caching, or similar things. We have not seen that this is an issue. Especially since we
+     *       tend to work on one module at a time in the IDE, with the rest being already compiled, or start out with Gradle
+     *       dependencies being initialized, so that the entire project is rebuilt by Gradle or IntelliJ anyway. At least if
+     *       we start out with a "./gradlew clean".
+     *   + "packagePrefix": allows configuring package prefixes for module source directories
+     *   + "facets": allows configuring module facets (only supported for Spring right now)
+     *
+     */
+    module {
+        inheritOutputDirs = true
+
+        println("Path variables: $pathVariables")
+        println(project.name + " project has module flag $inheritOutputDirs")
+    }
+
+    project {
+        settings {
+            runConfigurations {
+                /**
+                 * Test run harness with a hello world example.
+                 *
+                 * Application config options:
+                 *    + java version (from toolchain of current project)
+                 *    + jvm flags: -ea -DNoDEBUG=1 -Dxvm.parallelism=1
+                 *    + main class: org.xvm.runtime.TestConnector
+                 *    + working directory: (for this example, a manual test: rootProjectDir/manualTests
+                 *    + jvm args: src/main/x/HelloWorld.x
+                 *    + module: (-cp) xvm.javatools.test
+                 *    + shortenCommandLine: (read command line arguments of different types from files)
+                 *    + includeProvidedDependencies: (maven style include dependencies for scope in app)
+                 *
+                 *    In the IDE:
+                 *      + Prebuild task: "1. Run Gradle task 'xvm.javatools: build'
+                 *      + Open run/debug window when started.
+                 *
+                 *    TODO: Would be cool to add a breakpoint at the println so we can demo the debug
+                 *      configuration with one click on Run/Debug this config. Can be done with XML
+                 *      transforms built into the plugin.
+                 */
+                create("HelloWorld", org.jetbrains.gradle.ext.Application::class) {
+                    moduleName = "xvm.javatools.test"
+                    workingDirectory = manualTestsDir
+                    jvmArgs = "-ea -Dfile.encoding=UTF-8 -DNoDEBUG=1 -Dxvm.parallelism=1"
+                    mainClass = "org.xvm.runtime.TestConnector"
+                    programParameters = "src/main/x/HelloWorld.x"
+                    //envs = System.getenv() // TODO not strictly necessary
+                    println("module name: " + project.idea.module.name)
+                }
+
+                /**
+                 * Run and debug the Gradle tasks for clean, build for the root project
+                 * (also set as the default tasks in the root project).
+                 *
+                 * Gradle Task config options:
+                 *    + "projectPath": absolute path to project directory with the task to execute
+                 *    + "taskNames": list of Gradle tasks names to execute
+                 *    + "scriptParameters": Gradle scripts flags, e.g. log level and warning detail
+                 *    + "jvmArgs": Gradle JVM args (should automatically be taken from rootProject/gradle.properties)
+                 *    + "envs": String->String map of environment variables.
+                 *
+                 * In the IDE:
+                 *    + Open run/debug tool window when started
+                 *    + Enable Gradle Script debugging
+                 *    + Debug forked tasks in the same process
+                 */
+                create("XtcDebugGradleBuild", org.jetbrains.gradle.ext.Gradle::class) {
+                    taskNames = listOf("clean", "build")
+                    projectPath = rootProject.path
+                    scriptParameters = "--info --warning-mode=all"
+                    jvmArgs = "-Dfile.encoding=UTF-8"
+                    //envs = System.getenv() // TODO not strictly necessary
+                }
             }
-            commandLine("git", "clean", if (dryRun) "-nfxd" else "-fxd", "-e", ".idea")
+
+            /**
+             * IDEA Compiler settings for the Gradle build task / daemon or single executions,
+             * and other settings we typically use to make a Gradle build faster.
+             */
+            compiler {
+                processHeapSize = 1024 // Gradle daemon max heap size, default is 700
+                autoShowFirstErrorInEditor = true
+                enableAutomake = false
+                parallelCompilation = true
+                rebuildModuleOnDependencyChange = true
+                javac {
+                    javacAdditionalOptions = "-encoding UTF-8 -deprecation" // TODO: -Xlint:all"
+                    generateDeprecationWarnings = true
+                }
+
+                /**
+                 * Always delegate "Build and Run" from Gradle to IDEA
+                 * Always use the same mechanism as the build to run every test (in this case IDEA too).
+                 */
+                delegateActions {
+                    delegateBuildRunToGradle = false
+                    testRunner = ActionDelegationConfig.TestRunner.PLATFORM
+                }
+
+                /**
+                 * This takes care of encodings in the IntelliJ compilers, but we need to fix the Gradle ones too.
+                 * We currenly pass it to all JVM and Javac execution sites, which may be unnecessary. This will be
+                 * addressed later, as there is no harm except larger changes keeping them here for now.
+                 *
+                 *   + encoding: (name of encoding, e.g. "UTF-8" or "Windows-1251"
+                 *   + bomPolicy: org.jetbrains.gradle.ext.EncodingConfigation.BomPolicy enum
+                 *   + properties: map of encoding behaviors, e.g. "encoding => '<System Default>" and "transparentAsciiConversion => false"
+                 *   + mapping: map of module names, recursively from module name if there are submodules, to encoding names
+                 */
+                encodings {
+                    encoding = "UTF-8"
+                }
+
+                /**
+                 * Here we put hooks used to manipulate the raw XML generated into the .idea directory by IntelliJ
+                 * before or after it is written. This can be used to change things that should go in the configs,
+                 * but that don't yet have abstraction in the "idea.ext" plugin.
+                 */
+                withIDEADir {
+                    assert(this is File)
+                    println("Callback withIDEADir executed with: ${this.absolutePath}")
+                    println("Modify XML here.")
+                }
+
+                /**
+                 * .idea directory per-config-file manipulation logic. In Kotlin, the best way to use this is
+                 * to go through the w3c.dom framework to manipulate XML configs. In Groovy, there are better
+                 * suited groovy.util.Node methods to manipulate the XML information.
+                 *
+                 * In all DSLs, the XmlProvider sent to this callback by IntelliJ points to an XML file whose
+                 * relativePath is relative to the ".idea" config directory
+                 *
+                 * We can use it to modify values in the IntelliJ config files that aren't explicitly modelled by
+                 * the "idea.ext" plugin, for example, adding a breakpoint to a certain line number in a certain file.
+                 * The "idea.ext" plugin will likely be more complete in the future, but we already have pretty much
+                 * all the support we need to set up a starting state from scratch.
+                 */
+                /*
+                withIDEAFileXml(".idea/vcs.xml") {
+                    val moduleRoot = asElement() // this is an org.w3c.dom.Element, preferred in the Kotlin DSL. Otherwise use asNode() (groovy.util.Node)
+                    val doc = moduleRoot.ownerDocument
+
+                    println("ModuleRoot: $moduleRoot")
+                    println("ownerDocument: $doc")
+                    // groovy example: asNode().component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'Git'
+                }
+                 */
+            }
         }
     }
 }
+
+tasks.register<org.xvm.XvmTask>("JavaTask") {
+    doLast {
+        print("Test2")
+    }
+}
+
+tasks.register<org.xvm.CheckStuff>("KotlinTask") {
+    doLast {
+        println("Test")
+    }
+}
+
