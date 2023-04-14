@@ -171,7 +171,7 @@ service SystemService
         @Unassigned SessionImpl session; // note: assumed unassigned iff "action==New"
         Validate: if (txtTemp != Null, session := sessionManager.getSessionByCookie(txtTemp))
             {
-            // validate the plaint text temporary cookie that we just used to look up the session
+            // validate the plain text temporary cookie that we just used to look up the session
             action = evaluate(session, PlainText, txtTemp);
 
             // validate the temporary TLS cookie
@@ -254,6 +254,9 @@ service SystemService
         ResponseOut response = new SimpleResponse(TemporaryRedirect);
         Header      header   = response.header;
         Byte        desired  = session.desiredCookies_(tls);
+
+        session.ensureCookies_(desired);
+
         for (CookieId cookieId : CookieId.from(desired))
             {
             if ((SessionCookie resendCookie, Time? sent, Time? verified)

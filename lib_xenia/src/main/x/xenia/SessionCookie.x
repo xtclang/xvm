@@ -124,7 +124,7 @@ const SessionCookie
 
         // check if this is the consent cookie (it will have some plain text up front)
         String? plain = Null;
-        if (Int div := text.lastIndexOf('/'))
+        if (Int div := text.lastIndexOf(ConsentSeparator))
             {
             plain = text[0 ..< div];
             text  = text.substring(div+1);
@@ -239,7 +239,7 @@ const SessionCookie
         }
 
 
-    // ----- properties ----------------------------------------------------------------------------
+    // ----- CookieId enumeration ------------------------------------------------------------------
 
     /**
      * CookieId identifies which of the three possible cookies a session cookie is.
@@ -398,15 +398,18 @@ const SessionCookie
     @Lazy String text.calc()
         {
         // render the portion to encrypt that contains the session ID etc.
-        StringBuffer buf = new StringBuffer();
-
         String raw = $|{sessionId},{cookieId.ordinal},{knownCookies},{consent},\
                       |{encodeTime(expires)},{lastIp},{encodeTime(created)},{version},{salt}
                      ;
-        manager.encryptCookie(raw).appendTo(buf);
-
-        return buf.toString();
+        return manager.encryptCookie(raw);
         }
+
+    /**
+     * The consent cookie begins with the consent information in plain text, followed by this
+     * character (which must not be in the Base64 character set), followed by the encrypted cookie
+     * data.
+     */
+    static Char ConsentSeparator = ':';
 
 
     // ----- internal helpers ----------------------------------------------------------------------
@@ -472,7 +475,7 @@ const SessionCookie
      */
     static String textFromCookie(String cookie)
         {
-        if (Int div := cookie.lastIndexOf('/'))
+        if (Int div := cookie.lastIndexOf(ConsentSeparator))
             {
             return cookie.substring(div+1);
             }
@@ -519,7 +522,7 @@ const SessionCookie
         if (cookieId.persistent)
             {
             consent.appendTo(buf)
-                   .add('/');
+                   .add(ConsentSeparator);
             }
 
         text.appendTo(buf);
