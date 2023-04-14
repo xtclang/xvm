@@ -1,3 +1,5 @@
+import libcrypto.Algorithm;
+import libcrypto.CryptoKey;
 import libcrypto.Decryptor;
 import libcrypto.KeyStore;
 
@@ -19,6 +21,12 @@ service RTServer
     @Override
     UInt16 tlsPort;
 
+    /**
+     * Decryptor used to encrypt/decrypt cookies.
+     */
+    @Unassigned
+    Decryptor cookieDecryptor;
+
     @Override
     void configure(String hostName, KeyStore keystore,
                    UInt16 httpPort = 80, UInt16 httpsPort = 443,
@@ -29,6 +37,40 @@ service RTServer
         this.hostName  = hostName;
         this.plainPort = httpPort;
         this.tlsPort   = httpsPort;
+
+        CryptoKey secretKey;
+        findKey:
+        if (cookieKey == Null)
+            {
+            for (String keyName : keystore.keyNames)
+                {
+                if (CryptoKey key := keystore.getKey(keyName), key.form == Secret)
+                    {
+                    secretKey = key;
+                    break findKey;
+                    }
+                }
+            throw new IllegalState("The key store is missing a cookie encryption key");
+            }
+        else
+            {
+            assert secretKey := keystore.getKey(cookieKey)
+                    as $|Key is missing "{cookieKey}"
+                       ;
+            assert secretKey.form == Secret
+                    as $|Key "{cookieKey}" must be a symmetrical secret key
+                       ;
+            }
+
+        import crypto.RTAlgorithms;
+        import crypto.RTEncryptionAlgorithm;
+
+        String algName                 = secretKey.algorithm;
+        (Int blockSize, Object cipher) = RTAlgorithms.getAlgorithmInfo(algName, SymmetricCipher);
+
+        Algorithm algorithm  = new RTEncryptionAlgorithm(algName, blockSize, secretKey.size, Secret, cipher);
+        Decryptor decryptor  = algorithm.allocate(secretKey).as(Decryptor);
+        this.cookieDecryptor = &decryptor.maskAs(Decryptor);
         }
 
     @Override
@@ -36,51 +78,7 @@ service RTServer
         {
         if (svc.is(DecryptorDependent))
             {
-            // TEMPORARY!!
-            import libcrypto.Algorithm;
-            import libcrypto.Annotations;
-            import libcrypto.CryptoKey;
-            import libcrypto.Encryptor;
-
-            Decryptor decryptor = new Decryptor()
-                {
-                @Override
-                CryptoKey? privateKey;
-
-                @Override
-                Byte[] decrypt(Byte[] bytes)
-                    {
-                    return bytes;
-                    }
-
-                @Override
-                (Int bytesRead, Int bytesWritten) decrypt(BinaryInput source, BinaryOutput destination) = TODO
-
-                @Override
-                BinaryInput createInputDecryptor(BinaryInput  source, Annotations? annotations=Null) = TODO
-
-                @Override
-                String algorithm.get() = TODO
-
-                @Override
-                @RO CryptoKey? publicKey;
-
-                @Override
-                Byte[] encrypt(Byte[] data)
-                    {
-                    return data;
-                    }
-
-                @Override
-                (Int bytesRead, Int bytesWritten) encrypt(BinaryInput source, BinaryOutput destination) = TODO
-
-                @Override
-                BinaryOutput createOutputEncryptor(BinaryOutput destination, Annotations? annotations=Null) = TODO
-
-                @Override
-                void close(Exception? cause = Null) {}
-                };
-            svc.configureEncryption(decryptor.makeImmutable());
+            svc.configureEncryption(cookieDecryptor);
             }
         }
 
