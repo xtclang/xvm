@@ -16,6 +16,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import java.security.GeneralSecurityException;
+import java.security.KeyStoreException;
 import java.security.Principal;
 import java.security.PrivateKey;
 
@@ -67,6 +68,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.StringArrayHandle;
 
+import org.xvm.runtime.template._native.crypto.xRTKeyStore;
 import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -232,10 +234,9 @@ public class xRTServer
 
     // ----- native implementations ----------------------------------------------------------------
 
-
     /**
-     * Implementation of "configureImpl(String hostName, KeyStore keystore,
-     *                                UInt16 httpPort = 80, UInt16 httpsPort = 443)" method.
+     * Implementation of "void configureImpl(String hostName, KeyStore keystore,
+     *                          UInt16 httpPort, UInt16 httpsPort, String? tlsKey)" method.
      */
     private int invokeConfigure(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
@@ -244,16 +245,17 @@ public class xRTServer
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
             }
 
-        String         sHost      = ((StringHandle)   ahArg[0]).getStringValue();
-        KeyStoreHandle hKeystore  = (KeyStoreHandle)  ahArg[1];
-        int            nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
-        int            nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
-        String         sAlias     = null; // TODO add to the configure API
+        String         sHost       = ((StringHandle)   ahArg[0]).getStringValue();
+        KeyStoreHandle hKeystore   = (KeyStoreHandle)  ahArg[1];
+        int            nHttpPort   = (int) ((JavaLong) ahArg[2]).getValue();
+        int            nHttpsPort  = (int) ((JavaLong) ahArg[3]).getValue();
+        String         sTlsKey     = ahArg[4] instanceof StringHandle hS ? hS.getStringValue() : null;
+
         try
             {
             HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sHost, nHttpPort));
             HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sHost, nHttpsPort),
-                                                            hKeystore, sAlias);
+                                                            hKeystore, sTlsKey);
             hServer.configure(httpServer, httpsServer);
             return Op.R_NEXT;
             }
@@ -270,22 +272,27 @@ public class xRTServer
         return HttpServer.create(addr, 0);
         }
 
-    private HttpsServer createHttpsServer(InetSocketAddress addr, KeyStoreHandle hKeystore, String sAlias)
+    private HttpsServer createHttpsServer(InetSocketAddress addr, KeyStoreHandle hKeystore,
+                                          String sTlsKey)
             throws IOException, GeneralSecurityException
         {
         KeyManager[] aKeyManagers;
-        if (sAlias == null)
+        if (sTlsKey == null)
             {
+            if (xRTKeyStore.INSTANCE.findTlsKey(hKeystore) == null)
+                {
+                throw new KeyStoreException("Tls key is missing at the keystore");
+                }
             aKeyManagers = new KeyManager[] {hKeystore.f_keyManager};
             }
         else
             {
-            if (!hKeystore.f_keyStore.isKeyEntry(sAlias))
+            if (!hKeystore.f_keyStore.isKeyEntry(sTlsKey))
                 {
-                throw new IllegalArgumentException("Invalid alias: " + sAlias);
+                throw new IllegalArgumentException("Invalid alias: " + sTlsKey);
                 }
 
-            aKeyManagers = new KeyManager[] {new SimpleKeyManager(hKeystore.f_keyManager, sAlias, sAlias)};
+            aKeyManagers = new KeyManager[] {new SimpleKeyManager(hKeystore.f_keyManager, sTlsKey, sTlsKey)};
             }
 
         TrustManager[] aTrustManagers = new TrustManager[] {hKeystore.f_trustManager};

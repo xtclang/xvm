@@ -2,8 +2,14 @@
  * To run this module, create a self-signed certificate using the following command
  * (assuming "xvm/manualTests" is the current directory):
  *
- *    keytool -genkeypair -keyalg RSA -alias hello -keystore data/hello/https.p12\
- *            -storetype PKCS12 -storepass password -validity 365 -keysize 2048 -dname cn=xqiz.it
+ *    keytool -genkeypair -alias hello_tls -keyalg RSA -keysize 2048 -validity 365\
+ *            -dname "cn=xqiz.it, ou=hello"\
+ *            -keystore src/main/x/webTests/resources/hello/https.p12 -storetype PKCS12 -storepass password
+ *
+ * Create a symmetric key used to encrypt the cookies:
+ *
+ *    keytool -genseckey -alias hello_cookies -keyalg AES -keysize 256\
+ *            -keystore src/main/x/webTests/resources/hello/https.p12 -storetype PKCS12 -storepass password
  *
  * Then start the server by the command:
  *
@@ -30,7 +36,7 @@ module Hello
         @Inject Console console;
         @Inject Directory curDir;
 
-        File   store = /resources/hello/https.p12; // include a self-signed certificate for HTTPS
+        File   store = /resources/hello/https.p12;
         String password;
         if (args.size == 0)
             {

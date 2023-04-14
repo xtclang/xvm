@@ -20,9 +20,11 @@ service RTServer
     UInt16 tlsPort;
 
     @Override
-    void configure(String hostName, KeyStore keystore, UInt16 httpPort = 80, UInt16 httpsPort = 443)
+    void configure(String hostName, KeyStore keystore,
+                   UInt16 httpPort = 80, UInt16 httpsPort = 443,
+                   String? tlsKey = Null, String? cookieKey  = Null)
         {
-        configureImpl(hostName, keystore, httpPort, httpsPort);
+        configureImpl(hostName, keystore, httpPort, httpsPort, tlsKey);
 
         this.hostName  = hostName;
         this.plainPort = httpPort;
@@ -85,7 +87,8 @@ service RTServer
     /**
      * Native implementation of "configure" that runs on the service context.
      */
-    private void configureImpl(String hostName, KeyStore keystore, UInt16 httpPort, UInt16 httpsPort)
+    private void configureImpl(String hostName, KeyStore keystore,
+                               UInt16 httpPort, UInt16 httpsPort, String? tlsKey)
         {TODO("Native");}
 
     @Override
@@ -178,8 +181,12 @@ service RTServer
          * @param keystore   the KeyStore to use for tls certificates and encryption
          * @param httpPort   the port for plain text (insecure) communications
          * @param httpsPort  the port for encrypted (tls) communications
+         * @param tlsKey     the name of the public/private key pair in the keystore to use for tls
+         * @param cookieKey  the name of the secret key in the keystore to use for cookie encryption
          */
-        void configure(String hostName, KeyStore keystore, UInt16 httpPort = 80, UInt16 httpsPort = 443);
+        void configure(String hostName, KeyStore keystore,
+                       UInt16 httpPort = 80, UInt16 httpsPort = 443,
+                       String? tlsKey = Null, String? cookieKey  = Null);
 
         /**
          * Configure a naturally implemented service.
