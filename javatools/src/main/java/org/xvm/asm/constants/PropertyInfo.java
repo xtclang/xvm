@@ -655,9 +655,22 @@ public class PropertyInfo
 
         if (typeParent != null && hasField())
             {
+            // The reason we are doing this is to cover scenarios such as one in String.x:
+            //     immutable Char[] toCharArray()
+            //        {
+            //        return chars;
+            //        }
+            // The property "chars" is declared as "Char[]", String itself is a "const", therefore
+            // the "chars" type is an "immutable Char[]".
+            //
+            // Clearly, we cannot assume the immutability if the type is an interface and could be
+            // represented by a service at run-time.
+
             ConstantPool pool = typeParent.getConstantPool();
             if (typeParent.getAccess() != Access.STRUCT && typeParent.isImmutable()
-                    && !typeProp.isImmutable() && !typeProp.isA(pool.typeService()))
+                    && typeProp.isSingleUnderlyingClass(false)
+                    && !typeProp.isImmutable()
+                    && !typeProp.isA(pool.typeService()))
                 {
                 typeProp = typeProp.freeze();
                 }

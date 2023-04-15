@@ -4,18 +4,38 @@ module TestSimple
 
     void run()
         {
-        new Test();
+        new TestConst(new TestSvc()).test();
+        new TestConst2(new TestSvc()).test();
         }
 
-    class Test
+    interface TestIface
         {
-        construct(Map<String, String[]> userRoles = [])
+        Int value();
+        }
+
+    service TestSvc
+            implements TestIface
+        {
+        @Override
+        Int value()
             {
-            Int s = userRoles.size;
-            for ((String user, String[] roles) : userRoles) // this used to blow up at run-time
-                {
-                console.print(user);
-                }
+            return 42;
+            }
+        }
+
+    const TestConst(TestIface svc)
+        {
+        void test()
+            {
+            assert svc.value() == 42; // this used to assert at run-time
+            }
+        }
+
+    const TestConst2(TestIface? svc)
+        {
+        void test()
+            {
+            assert svc?.value() == 42;  // this used to assert at run-time
             }
         }
     }
