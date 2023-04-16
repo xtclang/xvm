@@ -1,3 +1,5 @@
+import java.nio.file.Paths
+
 /**
  * Best practice is to use this file, the root buildSrc build file,
  * and the rest of the buildSrc source tree contain:
@@ -19,5 +21,3 @@ repositories {
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10")
 }
-
-val buildSrcTesting = "TESTING"

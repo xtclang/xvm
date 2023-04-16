@@ -26,8 +26,6 @@ public class XmlHelpers {
     }
 
     public static void xmlVisitDomNode(Node node, int level) {
-        System.out.println("XmlVisitDomNode.Name:" + node.getNodeName());
-        System.out.println("XmlVisitDomNode.Value:" + node.getNodeValue());
         final NodeList list = node.getChildNodes();
         for (int i = 0, length = list.getLength(); i < length; i++) {
             final Node childNode = list.item(i);

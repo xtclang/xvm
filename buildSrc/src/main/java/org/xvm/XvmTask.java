@@ -15,18 +15,8 @@ import java.util.function.Function;
  */
 public class XvmTask extends DefaultTask {
 
-    private final Set<Function<? super DefaultTask, ?>> getters =
-        Set.of(
-            DefaultTask::getName,
-            DefaultTask::getDescription,
-            DefaultTask::getState,
-            DefaultTask::getExtensions,
-            DefaultTask::getGroup);
-
     @TaskAction
     public void run() {
-        // TODO: This is just a test task, call some getters on itself and dump the contents.
-        System.out.println("Executing task " + getPath() + "!");
-        getters.forEach(getter -> System.out.println(getter.apply(this)));
+        getLogger().lifecycle("Performing task action for " + getName());
     }
 }

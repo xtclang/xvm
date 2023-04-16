@@ -1,7 +1,9 @@
-import groovy.transform.CompileStatic
 import org.jetbrains.gradle.ext.*
+import org.xvm.CleanIdeTask
+import org.xvm.CleanGitTask
+import java.nio.file.Paths
 
-/*
+/**
  * Main build file for the XVM project, producing the XDK.
  *
  * Gradle best practice is to put only accessing, not mutating state outside the buildSrc directory.
@@ -16,12 +18,15 @@ version = "0.4.3"
 
 plugins {
     id("java-library")
-    id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.7" apply true
     id("kotlin-common-conventions")
+    id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.7"
 }
 
-/**
+/*
  * Best practice way of specifying Java runtime for subprojects. No subproject that applies the IntellIJ
+ * We could also specify an exact JDK distribution URL per version, and forbid the build to use any other
+ * auto-detection / auto download mechanisms. This is a good step towards bit identical builds. The
+ * toolchain plugin will cache any downloaded JDK just as it does with all other dependent artifacts.
  */
 java {
     toolchain {
@@ -29,18 +34,24 @@ java {
     }
 }
 
-val manualTestsDir = rootDir.absolutePath + "/manualTests"
-
-// TODO move this to the xtc plugin configuration or something.
-val enablePreview = false
-
-/**
+/*
  * Set the default behavior for Gradle running with no task name to clean and re-resolve and display the
  * available tasks.
  */
 defaultTasks("clean", "tasks")
 
+/*
+ * Constants used by the build, e.g. paths (versions should be handled in a version catalog)
+ */
+val manualTestsDir = Paths.get(rootProject.projectDir.absolutePath, "manualTests").toAbsolutePath().toString()
+
+/*
+ * Mechanisms that are applied to all projects, including the root project. We should avoid
+ * putting logic in here, favoring more modular ways, wherever possible.
+ */
 allprojects { // TODO: Should subprojects be enough here. That may also be considered bad Gradle practice. Revisit later.
+    apply(plugin="org.jetbrains.gradle.plugin.idea-ext")
+
     configurations.all {
         resolutionStrategy.dependencySubstitution {
             substitute(module("org.xtclang.xvm:javatools_utils")).using(project(":javatools_utils"))
@@ -50,63 +61,12 @@ allprojects { // TODO: Should subprojects be enough here. That may also be consi
     }
 
     tasks.withType<JavaCompile>().configureEach {
-        // TODO all these options and similar ones should live in various global
-        //  configurations in buildSrc
         options.encoding = "UTF-8"
+        // TODO: -Xlint:all in pedantic mode
     }
-}
-
-/**
- * This is an extension method for all projects, to help us parse boolean properties from Strings.
- *
- * TODO:
- *   This should go into the buildSrc tree, following best practice, but currently it only resolves
- *   if it uses the Groovy DSL. We will move this when the issue is fixed, as the build.gradle files
- *   should only contain bare bones accessing logic, and no mutating logic,  extensions to the
- *   Gradle model types or any logic that is reused by several modules in the XVM project.
- */
-fun Project.getBooleanProperty(name: String, default: Boolean = false): Boolean {
-    return if (project.hasProperty(name)) project.property(name).toString().toBoolean() else default
-}
-
-fun Project.setBooleanProperty(name: String, default: Boolean = true): Boolean {
-    project.setProperty(name, default)
-    assert(project.hasProperty(name))
-    return project.getBooleanProperty(name)
-}
-
-var tt = getTasksByName("gitClean", true)
-println("TT $tt")
-tasks.forEach{ t->
-    println("TASK IN ROOT: " + t.name)
 }
 
 /*
-var gitCleanTask = tasks.register("gitClean", Gitcleaner::class) {
-    dryRun = false // default is true
-    println(inputs)
-    doLast {
-        println("gitCleanTask (dry run: $dryRun)")
-    }
-}
-*/
-
-/**
- * Full clean and rebuild of the project, including getting rid of any persistent IDE
- * configuration.
- */
-/*
-task("rebuild") {
-    group = "other"
-    description = "Fully clean and delete all generated files, dependencies, cached data, and rebuild."
-    doLast {
-        ex
-    }
-    d
-    // gitClean dryRunFalse, clean, rm -fr .idea, build
-}*/
-
-/**
  * Augment any Gradle wrapper upgrade to use DistributionType.ALL, to ensure optimum debuggability.
  * To create more compact environments, we can remove this or change it to BIN. The ALL field bundles
  * the Gradle source code and documentation, and all major IDEs can make use of it, when debugging
@@ -117,7 +77,7 @@ tasks.wrapper {
     distributionType = Wrapper.DistributionType.ALL
 }
 
-/**
+/*
  * The config "idea" represents all changes to settings that IntelliJ needs to build, run and debug
  * XTC code. It also provides sample configurations for a debuggable HelloWorld.x program with a
  * breakpoint, as well as a configuration that can be used to debug and/or test§ the build process
@@ -168,15 +128,13 @@ idea {
      */
     module {
         inheritOutputDirs = true
-
-        println("Path variables: $pathVariables")
-        println(project.name + " project has module flag $inheritOutputDirs")
+        println("idea.module.inheritOutputDirs=$inheritOutputDirs (Gradle and IntelliJ should now use the same build directories.)")
     }
 
     project {
         settings {
             runConfigurations {
-                /**
+                /*
                  * Test run harness with a hello world example.
                  *
                  * Application config options:
@@ -203,11 +161,9 @@ idea {
                     jvmArgs = "-ea -Dfile.encoding=UTF-8 -DNoDEBUG=1 -Dxvm.parallelism=1"
                     mainClass = "org.xvm.runtime.TestConnector"
                     programParameters = "src/main/x/HelloWorld.x"
-                    //envs = System.getenv() // TODO not strictly necessary
-                    println("module name: " + project.idea.module.name)
                 }
 
-                /**
+                /*
                  * Run and debug the Gradle tasks for clean, build for the root project
                  * (also set as the default tasks in the root project).
                  *
@@ -223,27 +179,26 @@ idea {
                  *    + Enable Gradle Script debugging
                  *    + Debug forked tasks in the same process
                  */
-                create("XtcDebugGradleBuild", org.jetbrains.gradle.ext.Gradle::class) {
+                create("GradleBuild", org.jetbrains.gradle.ext.Gradle::class) {
                     taskNames = listOf("clean", "build")
                     projectPath = rootProject.path
                     scriptParameters = "--info --warning-mode=all"
                     jvmArgs = "-Dfile.encoding=UTF-8"
-                    //envs = System.getenv() // TODO not strictly necessary
                 }
             }
 
-            /**
+            /*
              * IDEA Compiler settings for the Gradle build task / daemon or single executions,
              * and other settings we typically use to make a Gradle build faster.
              */
             compiler {
                 processHeapSize = 1024 // Gradle daemon max heap size, default is 700
                 autoShowFirstErrorInEditor = true
-                enableAutomake = false
+                enableAutomake = true
                 parallelCompilation = true
                 rebuildModuleOnDependencyChange = true
                 javac {
-                    javacAdditionalOptions = "-encoding UTF-8 -deprecation" // TODO: -Xlint:all"
+                    javacAdditionalOptions = "-encoding UTF-8 -deprecation" // TODO: -Xlint:all in pedantic mode
                     generateDeprecationWarnings = true
                 }
 
@@ -256,7 +211,7 @@ idea {
                     testRunner = ActionDelegationConfig.TestRunner.PLATFORM
                 }
 
-                /**
+                /*
                  * This takes care of encodings in the IntelliJ compilers, but we need to fix the Gradle ones too.
                  * We currenly pass it to all JVM and Javac execution sites, which may be unnecessary. This will be
                  * addressed later, as there is no harm except larger changes keeping them here for now.
@@ -270,7 +225,7 @@ idea {
                     encoding = "UTF-8"
                 }
 
-                /**
+                /*
                  * Here we put hooks used to manipulate the raw XML generated into the .idea directory by IntelliJ
                  * before or after it is written. This can be used to change things that should go in the configs,
                  * but that don't yet have abstraction in the "idea.ext" plugin.
@@ -281,7 +236,7 @@ idea {
                     println("Modify XML here.")
                 }
 
-                /**
+                /*
                  * .idea directory per-config-file manipulation logic. In Kotlin, the best way to use this is
                  * to go through the w3c.dom framework to manipulate XML configs. In Groovy, there are better
                  * suited groovy.util.Node methods to manipulate the XML information.
@@ -309,15 +264,41 @@ idea {
     }
 }
 
-tasks.register<org.xvm.XvmTask>("JavaTask") {
+/*
+ * Add tasks that clean the IDE config/state, and files not under source control.
+ * Also add a full rebuild task, similar to the script in project.rootDir/bin/clean.sh
+ */
+tasks.register<CleanIdeTask>("cleanIde") {
     doLast {
-        print("Test2")
+        println("Finished cleaning IDE config and state.")
     }
 }
 
-tasks.register<org.xvm.CheckStuff>("KotlinTask") {
+tasks.register<CleanGitTask>("cleanGit") {
     doLast {
-        println("Test")
+        println("Finished cleaning files not under source control")
     }
 }
 
+val cleanTask: Task = tasks["clean"]
+val buildTask: Task = tasks["build"]
+val cleanDeleteGitTask = tasks.register<CleanIdeTask>("cleanGitDelete") {
+    delete = true
+}
+val cleanDeleteIdeTask = tasks.register<CleanIdeTask>("cleanIdeDelete") {
+    delete = true
+}
+
+val cleanAllTask = tasks.register("cleanAll") {
+    dependsOn(cleanDeleteGitTask, cleanDeleteIdeTask, cleanTask)
+    doLast {
+        println("Finished cleaning files not under source control and IDE state.")
+    }
+}
+
+tasks.register("rebuildAll") {
+    dependsOn(cleanAllTask, buildTask)
+    doLast {
+        println("Finished rebuild.")
+    }
+}
