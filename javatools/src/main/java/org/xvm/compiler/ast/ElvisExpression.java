@@ -117,10 +117,10 @@ public class ElvisExpression
         // Boolean is tested for True
         ConstantPool   pool      = pool();
         TypeFit        fit       = TypeFit.Fit;
-        Expression     expr1New  = null;
-        TypeConstant   type1     = null;
         boolean        fCond     = false;
         TypeConstant[] atypeCond = new TypeConstant[]{pool.typeBoolean(), pool.typeObject()};
+        TypeConstant   type1     = null;
+        Expression     expr1New;
 
         // ElvisExpression is structurally equivalent to one of the following expression statements:
         //      {
@@ -160,7 +160,7 @@ public class ElvisExpression
         else
             {
             expr1 = expr1New;
-            type1 = expr1New.getType();
+            type1 = fCond ? expr1New.getTypes()[1] : expr1New.getType();
             }
 
         TypeConstant type2Req = type1 == null
@@ -197,7 +197,7 @@ public class ElvisExpression
         TypeConstant type2 = expr2New.getType();
         if (fCond)
             {
-            type1Non = expr1New.getTypes()[1];
+            type1Non = type1;
             }
         else
             {
