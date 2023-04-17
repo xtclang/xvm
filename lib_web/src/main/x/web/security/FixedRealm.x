@@ -131,8 +131,9 @@ const FixedRealm
     protected/private immutable Map<String, Set<String>> rolesByUser;
 
     /**
-     * For each user hash, there is typically one user name; in the rare case that a  a For each [hashing algorithm](Signer) provided to this FixedRealm (or the default MD5 if none
-     * was provided), a map of user hash to password hash is held.
+     * For each user hash, there is typically only one user name; in the rare case that the hashes
+     * collide for each [hashing algorithm](Signer) provided to this realm (or the default MD5
+     * if none was provided), a map of user hash to user(s) is held.
      */
     protected/private immutable Map<Hash, String|String[]> usersByHash;
 
@@ -142,22 +143,16 @@ const FixedRealm
     @Override
     conditional Set<String> validUser(String user)
         {
-        if (pwdsByUser.contains(user))
-            {
-            // TODO GG return rolesByUser.get(user) ?: [];
-            if (Set<String> roles := rolesByUser.get(user))
-                {
-                return True, roles;
-                }
-            return True, [];
-            }
-        return False;
+        return pwdsByUser.contains(user)
+                ? rolesByUser.get(user)
+                : False;
         }
 
     @Override
     conditional Set<String> authenticate(String user, String password)
         {
-        if ((_, Set<String> roles) := authenticateHash(user, passwordHash(user, name, password, defaultHasher), defaultHasher))
+        Hash hash = passwordHash(user, name, password, defaultHasher);
+        if ((_, Set<String> roles) := authenticateHash(user, hash, defaultHasher))
             {
             return True, roles;
             }
