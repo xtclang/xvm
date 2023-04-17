@@ -15,6 +15,6 @@ module HelloWorld
         {
         @Inject Console console;
         assert:debug;
-        console.println("Hello, world!");
+        console.print("Hello, world!");
         }
     }

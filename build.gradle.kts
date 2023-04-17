@@ -34,6 +34,18 @@ java {
     }
 }
 
+// TODO: sometimes when importing a project, it starts building it before the gradle delegation to IDEA has been
+// read. This means that we will start generating some gradle classes in out folders, and others in the shared
+// build folders. Likely the idea task needs to have a dependency, or we could clean project before it's applied.
+// It's a configuration, however, so it's a bit tricky.
+
+// Could replace the IDE state plugin deletion with something like this if it resolves faster than
+// having to build the plugins, which is what I suspect gets in the way.
+//task customCleanUp(type:Delete) {
+//    delete "your_folder", "your_file"
+//}
+// tasks.clean.dependsOn(tasks.customCleanUp)
+
 /*
  * Set the default behavior for Gradle running with no task name to clean and re-resolve and display the
  * available tasks.
@@ -44,9 +56,6 @@ defaultTasks("clean", "tasks")
  * Constants used by the build, e.g. paths (versions should be handled in a version catalog)
  */
 val manualTestsDir = Paths.get(rootProject.projectDir.absolutePath, "manualTests").toAbsolutePath().toString()
-
-val cleanTask: Task = tasks["clean"]
-val buildTask: Task = tasks["build"]
 
 /*
  * Mechanisms that are applied to all projects, including the root project. We should avoid
@@ -139,6 +148,8 @@ tasks.wrapper {
  * under the idea.config.path/workspace.
  */
 idea {
+    //TODO: pathVariables =
+
     /**
      * IdeaModule configuration:
      *
@@ -159,11 +170,46 @@ idea {
     module {
         inheritOutputDirs = true
         println("idea.module.inheritOutputDirs=$inheritOutputDirs (Gradle and IntelliJ should now use the same build directories.)")
+
+        // Here we should automatically configure javatools/main and javatools/test
+        //   main:
+        //     Paths->Use module comple output path->Output path: javatools/out ... -> build?
+        //     Module -> project sdk 17 -> javatools/build/resources/main (added as classes)
+        //   test:
+        //     Paths->Test output path = javatools/build/classes/java/test
+        //     Modlue -> project sdk 17 -> javatools/build/resources/main
+
     }
 
     project {
         settings {
+            taskTriggers {
+                afterSync(":javatools:build") // force build of javatools before updating Idea config.
+            }
             runConfigurations {
+                /*
+                 * Run and debug the Gradle tasks for clean, build for the root project
+                 * (also set as the default tasks in the root project).
+                 *
+                 * Gradle Task config options:
+                 *    + "projectPath": absolute path to project directory with the task to execute
+                 *    + "taskNames": list of Gradle tasks names to execute
+                 *    + "scriptParameters": Gradle scripts flags, e.g. log level and warning detail
+                 *    + "jvmArgs": Gradle JVM args (should automatically be taken from rootProject/gradle.properties)
+                 *    + "envs": String->String map of environment variables.
+                 *
+                 * In the IDE:
+                 *    + Open run/debug tool window when started
+                 *    + Enable Gradle Script debugging
+                 *    + Debug forked tasks in the same process
+                 */
+                create("GradleBuild", org.jetbrains.gradle.ext.Gradle::class) {
+                    taskNames = listOf("clean", "build")
+                    projectPath = rootProject.path
+                    scriptParameters = "--info --warning-mode=all"
+                    jvmArgs = "-Dfile.encoding=UTF-8"
+                }
+
                 /*
                  * Test run harness with a hello world example.
                  *
@@ -191,32 +237,7 @@ idea {
                     jvmArgs = "-ea -Dfile.encoding=UTF-8 -DNoDEBUG=1 -Dxvm.parallelism=1"
                     mainClass = "org.xvm.runtime.TestConnector"
                     programParameters = "src/main/x/HelloWorld.x"
-                    includeProvidedDependencies
-                    //val beforeRunTask = beforeRun.create<GradleTask>("xvm.javatools:build")
-                    //println("beforeRunTask $beforeRunTask")
-                }
-
-                /*
-                 * Run and debug the Gradle tasks for clean, build for the root project
-                 * (also set as the default tasks in the root project).
-                 *
-                 * Gradle Task config options:
-                 *    + "projectPath": absolute path to project directory with the task to execute
-                 *    + "taskNames": list of Gradle tasks names to execute
-                 *    + "scriptParameters": Gradle scripts flags, e.g. log level and warning detail
-                 *    + "jvmArgs": Gradle JVM args (should automatically be taken from rootProject/gradle.properties)
-                 *    + "envs": String->String map of environment variables.
-                 *
-                 * In the IDE:
-                 *    + Open run/debug tool window when started
-                 *    + Enable Gradle Script debugging
-                 *    + Debug forked tasks in the same process
-                 */
-                create("GradleBuild", org.jetbrains.gradle.ext.Gradle::class) {
-                    taskNames = listOf("clean", "build")
-                    projectPath = rootProject.path
-                    scriptParameters = "--info --warning-mode=all"
-                    jvmArgs = "-Dfile.encoding=UTF-8"
+                    includeProvidedDependencies = false
                 }
             }
 
@@ -283,16 +304,14 @@ idea {
                  * The "idea.ext" plugin will likely be more complete in the future, but we already have pretty much
                  * all the support we need to set up a starting state from scratch.
                  */
-                /*
-                withIDEAFileXml(".idea/vcs.xml") {
+                /*withIDEAFileXml("vcs.xml") {
                     val moduleRoot = asElement() // this is an org.w3c.dom.Element, preferred in the Kotlin DSL. Otherwise use asNode() (groovy.util.Node)
                     val doc = moduleRoot.ownerDocument
 
                     println("ModuleRoot: $moduleRoot")
                     println("ownerDocument: $doc")
                     // groovy example: asNode().component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'Git'
-                }
-                 */
+                }*/
             }
         }
     }
@@ -316,7 +335,7 @@ tasks.register<CleanGitTask>("cleanGit") {
     }
 }
 
-val cleanDeleteGitTask = tasks.register<CleanIdeTask>("cleanGitDelete") {
+val cleanDeleteGitTask = tasks.register<CleanGitTask>("cleanGitDelete") {
     delete = true
 
 }
@@ -324,16 +343,49 @@ val cleanDeleteIdeTask = tasks.register<CleanIdeTask>("cleanIdeDelete") {
     delete = true
 }
 
-val cleanAllTask = tasks.register("cleanAll") {
-    dependsOn(cleanDeleteGitTask, cleanDeleteIdeTask, cleanTask)
+
+/*val newGitClean = tasks.register<Delete>("newGitClean") {
+
+}
+
+val newIdeClean = tasks.register<Delete>("newIdeClean") {
+    doFirst { // before the inherited task action
+
+    }
+    doLast {
+        fileTree(projectDir).matches {
+            include("**ipr", "**iws", "**iml", ".idea", "out")
+        }
+    }
+}
+
+val cleanAllTask = tasks.register<Delete>("cleanAll") {
+    dependsOn(cleanDeleteGitTask, cleanDeleteIdeTask, tasks.clean)
     doLast {
         println("Finished cleaning files not under source control and IDE state.")
     }
 }
 
 tasks.register("rebuildAll") {
-    dependsOn(cleanAllTask, buildTask)
+    dependsOn(cleanAllTask, tasks.build)
     doLast {
         println("Finished rebuild.")
     }
 }
+*/
+
+//beforeRun(create("BuildJavaTools", org.jetbrains.gradle.ext.Application::class) {
+//})
+// TODO Default configuration?
+//beforeRun.create<GradleTask>(":javatools:build")
+//enabled = true
+//                        tasks = "build"
+
+// This is what the javatools prerequisite adds to the workspace file.
+// Guess we need to patch that manually
+//       <method v="2">
+//        <option name="Gradle.BeforeRunTask" enabled="true" tasks="build" externalProjectPath="$PROJECT_DIR$/javatools" vmOptions="" scriptParameters="" />
+//      </method>
+
+//val beforeRunTask = beforeRun.create<GradleTask>("xvm.javatools:build")
+//println("beforeRunTask $beforeRunTask")
