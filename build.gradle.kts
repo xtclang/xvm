@@ -45,6 +45,9 @@ defaultTasks("clean", "tasks")
  */
 val manualTestsDir = Paths.get(rootProject.projectDir.absolutePath, "manualTests").toAbsolutePath().toString()
 
+val cleanTask: Task = tasks["clean"]
+val buildTask: Task = tasks["build"]
+
 /*
  * Mechanisms that are applied to all projects, including the root project. We should avoid
  * putting logic in here, favoring more modular ways, wherever possible.
@@ -107,6 +110,33 @@ tasks.wrapper {
  *    + project settings (extended by ext plugin)
  *    + workspace settings (likely not needed with .idea directory format, and handover to IntelliJ with the ext plugin)
  *
+ * We might have to handle raw XML to do things like setting predefined breakpoints and so on.
+ * Most of the time, it's enough to mess around with the xml files in the .idea folder. However, some of the
+ * state, which seems it should belong there, is derived from other places in the file system. As there is
+ * no clear boundary, it is confusing. Here are the system paths that IntelliJ also uses to recreate
+ *
+ * (where "2022.2" is replaced by the version number of the IntelliJ being used.
+ *
+ * Windows:
+ *     Configuration (idea.config.path): %APPDATA%\JetBrains\IntelliJIdea2022.2
+ *     Plugins (idea.plugins.path): %APPDATA%\JetBrains\IntelliJIdea2022.2\plugins
+ *     System (idea.system.path): %LOCALAPPDATA%\JetBrains\IntelliJIdea2022.2
+ *     Logs (idea.log.path): %LOCALAPPDATA%\JetBrains\IntelliJIdea2022.2\log
+ *
+ * macOS:
+ *     Configuration (idea.config.path): ~/Library/Application Support/JetBrains/IntelliJIdea2022.2
+ *     Plugins (idea.plugins.path): ~/Library/Application Support/JetBrains/IntelliJIdea2022.2/plugins
+ *     System (idea.system.path): ~/Library/Caches/JetBrains/IntelliJIdea2022.2
+ *     Logs (idea.log.path): ~/Library/Logs/JetBrains/IntelliJIdea2022.2
+ *
+ * Linux:
+ *     Configuration (idea.config.path): ~/.config/JetBrains/IntelliJIdea2022.2
+ *     Plugins (idea.plugins.path): ~/.local/share/JetBrains/IntelliJIdea2022.2
+ *     System (idea.system.path): ~/.cache/JetBrains/IntelliJIdea2022.2
+ *     Logs (idea.log.path): ~/.cache/JetBrains/IntelliJIdea2022.2/log
+ *
+ * Workspaces that cache runConfiguration and similar items end up with hash values
+ * under the idea.config.path/workspace.
  */
 idea {
     /**
@@ -161,6 +191,9 @@ idea {
                     jvmArgs = "-ea -Dfile.encoding=UTF-8 -DNoDEBUG=1 -Dxvm.parallelism=1"
                     mainClass = "org.xvm.runtime.TestConnector"
                     programParameters = "src/main/x/HelloWorld.x"
+                    includeProvidedDependencies
+                    //val beforeRunTask = beforeRun.create<GradleTask>("xvm.javatools:build")
+                    //println("beforeRunTask $beforeRunTask")
                 }
 
                 /*
@@ -200,6 +233,7 @@ idea {
                 javac {
                     javacAdditionalOptions = "-encoding UTF-8 -deprecation" // TODO: -Xlint:all in pedantic mode
                     generateDeprecationWarnings = true
+
                 }
 
                 /**
@@ -264,6 +298,8 @@ idea {
     }
 }
 
+println("Module name from config: " + project.idea.module.name)
+
 /*
  * Add tasks that clean the IDE config/state, and files not under source control.
  * Also add a full rebuild task, similar to the script in project.rootDir/bin/clean.sh
@@ -280,10 +316,9 @@ tasks.register<CleanGitTask>("cleanGit") {
     }
 }
 
-val cleanTask: Task = tasks["clean"]
-val buildTask: Task = tasks["build"]
 val cleanDeleteGitTask = tasks.register<CleanIdeTask>("cleanGitDelete") {
     delete = true
+
 }
 val cleanDeleteIdeTask = tasks.register<CleanIdeTask>("cleanIdeDelete") {
     delete = true
