@@ -224,9 +224,18 @@ public class DebugConsole
                         {
                         return;
                         }
-                    // apparently, there was no op to step at; engage the debugger now
-                    // TODO GG: disallow a natural processing (e.g. "DS" command)
-                    enterCommand(frame, frame.m_iPC, true);
+
+                    if (frame.f_fiber.isAssociated(m_frame.f_fiber))
+                        {
+                        // apparently, there was no op to step at; engage the debugger now
+                        // TODO GG: disallow a natural processing (e.g. "DS" command) or change
+                        //          the API to allow it (return the Op.R_* value)
+                        PrintWriter writer = xTerminalConsole.CONSOLE_OUT;
+                        writer.println("*** Warning: 'DS' and 'E' commands are not supported " +
+                                        "here and may cause an unpredictable behavior");
+
+                        enterCommand(frame, frame.m_iPC, true);
+                        }
                     break;
 
                 default:
