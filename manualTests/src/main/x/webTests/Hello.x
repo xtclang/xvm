@@ -96,11 +96,18 @@ module Hello
                 return "secure";
                 }
 
+            @Get("user")
+            @Produces(Text)
+            String getUser(Session session)
+                {
+                return session.userId ?: "";
+                }
+
             @LoginRequired
             @Get("l")
-            String logMeIn(Session session)
+            ResponseOut logMeIn(Session session)
                 {
-                return $"logged in as {session.userId}";
+                return hello();
                 }
 
             @Get("d")
