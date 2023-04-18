@@ -737,7 +737,7 @@ public class ForStatement
             code.add(new Exit());
             }
 
-        return fCompletes;
+        return !fAlwaysTrue && fCompletes;
         }
 
 

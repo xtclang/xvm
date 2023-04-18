@@ -140,6 +140,5 @@
                 return index + 1;
                 }
             }
-        assert;
         }
     }
