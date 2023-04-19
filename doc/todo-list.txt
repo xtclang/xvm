@@ -42,9 +42,6 @@
 
 - CP: need to implement "persistent" mutators for HasherMap
 
-- GG: should this compile?
-    if (ParamType body := request.attributes.getAttribute(HttpAttributes.BODY))
-
 - how to move ecstasy.mgmt package to a separate module? FileTemplate depends on ModuleRepository...
 
 - GG: enum ClassCompositions without type parameters could be made into CanonicalCompositions
@@ -58,8 +55,6 @@
 - compiler to report on ambiguous type parameter name across a virtual child and its parent(s)
 
 - add deadlock detection
-
-- the last case in the switch should not allow "continue"
 
 - would be nice if we could figure out how to compute the inferred types for regular cases and the
     residual type for the "default" switch case, e.g.:

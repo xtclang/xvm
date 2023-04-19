@@ -4,25 +4,33 @@ module TestSimple
 
     void run()
         {
-        console.print(new Base().value);
-        console.print(new Derived().value); // used to blow at run time
+        console.print(test(2));
         }
 
-    class Base
+    String test(Int i)
         {
-        @Lazy Int value.calc()
+        loop:
+        for (Int j : 0..i)
             {
-            return 1;
+            switch (i)
+                {
+                default:
+                    return "other";
+                case 0:
+                    return "zero";
+                case 1:
+                    return "small";
+                case 2:
+                    if (j > 0)
+                        {
+                        continue; // used to be allowed
+                        }
+                    else
+                        {
+                        continue loop;
+                        }
+                }
             }
-        }
-
-    class Derived
-            extends Base
-        {
-        @Override
-        @Lazy Int value.calc()
-            {
-            return 2;
-            }
+        return "weird";
         }
     }

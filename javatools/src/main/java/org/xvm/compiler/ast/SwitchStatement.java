@@ -234,14 +234,23 @@ public class SwitchStatement
         // close any last block
         if (ctxBlock != null)
             {
-            assert group != null;
-            group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
-            group.labelContinueTo = m_labelContinue;
-
-            if (ctxBlock.isReachable())
+            if (m_labelContinue == null)
                 {
-                errs.log(Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED, null,
-                        getSource(), getEndPosition(), getEndPosition());
+                assert group != null;
+                group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
+                group.labelContinueTo = null;
+
+                if (ctxBlock.isReachable())
+                    {
+                    listStmts.get(group.iFirstCase).
+                        log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
+                    fValid = false;
+                    }
+                }
+            else
+                {
+                m_listContinues.get(0).getKey().
+                    log(errs, Severity.ERROR, Compiler.SWITCH_CONTINUE_NOT_EXPECTED);
                 fValid = false;
                 }
 

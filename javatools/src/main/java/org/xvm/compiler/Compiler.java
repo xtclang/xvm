@@ -893,7 +893,7 @@ public class Compiler
      */
     public static final String SWITCH_CASE_EXPECTED               = "COMPILER-79";
     /**
-     * A "switch" expression cannot end with a "case" statement.
+     * A "switch" cannot end with a "case" statement.
      */
     public static final String SWITCH_CASE_DANGLING               = "COMPILER-80";
     /**
@@ -1049,8 +1049,8 @@ public class Compiler
      */
     public static final String SWITCH_CASE_ILLEGAL_ARITY          = "COMPILER-116";
     /**
-     * Each "case" group in a "switch" must end with a break or continue (or other non-completing
-     * statement).
+     * Expected either a "break" (to exit the switch) or "continue" (to fall through); a block within
+     * a "switch" statement must not complete normally.
      */
     public static final String SWITCH_BREAK_OR_CONTINUE_EXPECTED  = "COMPILER-117";
     /**
@@ -1350,6 +1350,10 @@ public class Compiler
      * Property {0} collides with a property of the same name but different type on {1}.
      */
     public static final String PROPERTY_TYPE_COLLISION             = "COMPILER-190";
+    /**
+     * A "switch" cannot end with a "continue" statement.
+     */
+    public static final String SWITCH_CONTINUE_NOT_EXPECTED        = "COMPILER-191";
     /**
      * {0} is not yet implemented.
      */
