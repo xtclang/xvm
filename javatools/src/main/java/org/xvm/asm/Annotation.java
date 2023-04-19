@@ -316,6 +316,7 @@ public class Annotation
         return sb.toString();
         }
 
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override

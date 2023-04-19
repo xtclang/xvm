@@ -1033,13 +1033,19 @@ public class PropertyInfo
                             {
                             list = new ArrayList<>();
                             Collections.addAll(list, aAnnos);
-                            Collections.addAll(list, aAdd);
                             }
                         }
 
                     if (list != null)
                         {
-                        Collections.addAll(list, aAdd);
+                        // don't add duplicates
+                        for (Annotation anno : aAdd)
+                            {
+                            if (!list.contains(anno))
+                                {
+                                list.add(anno);
+                                }
+                            }
                         }
                     }
                 }

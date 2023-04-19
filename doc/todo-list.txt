@@ -80,13 +80,6 @@
 - consider not needing the ^ for a return of a tail-call invocation (except in a try block?)
     "return foo();" should be equivalent to "return foo^();"
 
-- consider an automatic conversion from FutureVar<T> to T, for example, instead of (Channel.x):
-        @Future Int result = write(buffer);
-        &result.thenDo(() -> written(buffer));
-        return result;
-  one could simply write:
-    return write^(buffer).thenDo(() -> written(buffer));
-
 - GG: rewrite removeAccess() and removeImmutable(); it blows on virtual children now
 
 - CP: consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
@@ -103,8 +96,6 @@
         {
         TODO("native");
         }
-
-- GG: override of @Lazy property with a different @Lazy blows
 
 - consider adding a V_GET opcode that would combine the functionality of L_GET and MOVE_THIS for
   dynamically inflated (via & ref) or non-inflated properties; it would eliminate the need for
