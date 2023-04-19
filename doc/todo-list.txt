@@ -38,14 +38,6 @@
 
 - GG: implement timeout for IO operations (interrupt IO executor threads)
 
-- enum should validate that none of the declared properties step on the existing Enum properties
-  for example, the following should not compile
-
-    enum CookieId(String name, Boolean tlsOnly)
-        {
-        PlainText("xplaintext", False),
-        }
-
 - CP: change TxManager.NO_TX to Int64.MinValue or -1
 
 - CP: need to implement "persistent" mutators for HasherMap

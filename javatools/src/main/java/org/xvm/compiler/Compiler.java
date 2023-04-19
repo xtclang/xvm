@@ -1336,12 +1336,20 @@ public class Compiler
     /**
      * The evaluating expression {0} of type {1} can never match type {2}.
      */
-    public static final String TYPE_MATCHES_NEVER                = "COMPILER-187";
+    public static final String TYPE_MATCHES_NEVER                  = "COMPILER-187";
     /**
      * The specified arguments for the constructor of the contribution are unused because an
      * explicit constructor is present.
      */
-    public static final String CONTRIBUTION_PARAMS_UNEXPECTED    = "COMPILER-188";
+    public static final String CONTRIBUTION_PARAMS_UNEXPECTED      = "COMPILER-188";
+    /**
+     * Property {0} is reserved and cannot be overridden.
+     */
+    public static final String PROPERTY_NAME_RESERVED              = "COMPILER-189";
+    /**
+     * Property {0} collides with a property of the same name but different type on {1}.
+     */
+    public static final String PROPERTY_TYPE_COLLISION             = "COMPILER-190";
     /**
      * {0} is not yet implemented.
      */

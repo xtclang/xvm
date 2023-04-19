@@ -2264,15 +2264,36 @@ public class TypeCompositionStatement
             }
 
         // adjust synthetic properties created during registerStructures() phase if necessary
-        ConstantPool    pool       = pool();
-        ClassStructure  component  = (ClassStructure) getComponent();
-        ClassStructure  clzSuper   = component.getSuper();
-        List<Parameter> listParams = constructorParams;
-        if (component.getFormat() != Format.INTERFACE && listParams != null && clzSuper != null)
+        ConstantPool    pool           = pool();
+        ClassStructure  component      = (ClassStructure) getComponent();
+        ClassStructure  clzSuper       = component.getSuper();
+        boolean         fAllowOverride = true;
+        List<Parameter> listParams     = constructorParams;
+
+        switch (component.getFormat())
             {
-            TypeConstant   typeSuper = pool.ensureAccessTypeConstant(
+            case INTERFACE:
+                clzSuper = null; // skip the check
+                break;
+
+            case ENUM:
+                clzSuper       = (ClassStructure) pool.clzEnum().getComponent();
+                fAllowOverride = false;
+                break;
+
+            case SERVICE:
+                if (clzSuper == null)
+                    {
+                    clzSuper = (ClassStructure) pool.clzService().getComponent();
+                    }
+                break;
+            }
+
+        if (clzSuper != null && listParams != null)
+            {
+            TypeConstant typeSuper = pool.ensureAccessTypeConstant(
                                         clzSuper.getFormalType(), Access.PROTECTED);
-            TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
+            TypeInfo     infoSuper = typeSuper.ensureTypeInfo(errs);
 
             Map<String, Component> mapChildren = component.ensureChildByNameMap();
             boolean                fInvalidate = false;
@@ -2295,6 +2316,11 @@ public class TypeCompositionStatement
                     continue;
                     }
 
+                if (!fAllowOverride)
+                    {
+                    param.log(errs, Severity.ERROR, Compiler.PROPERTY_NAME_RESERVED, sProp);
+                    }
+
                 if (!infoProp.isVar() && !infoProp.isAbstract())
                     {
                     // the setter for the super's property is not reachable, mark the synthetic one
@@ -2309,7 +2335,8 @@ public class TypeCompositionStatement
                 // ensure the type equivalency, which slightly more lax than equality
                 if (!typeBase.isA(typeThis) || !typeThis.isA(typeBase))
                     {
-                    param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeBase, typeThis);
+                    param.log(errs, Severity.ERROR, Compiler.PROPERTY_TYPE_COLLISION,
+                            sProp, clzSuper.getName());
                     }
                 }
 
