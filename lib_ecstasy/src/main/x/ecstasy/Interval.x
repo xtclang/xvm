@@ -227,14 +227,21 @@ mixin Interval<Element extends immutable Sequential>
     @Override
     Boolean adjoins(Interval that)
         {
-        return switch (that.lowerBound <=> this.upperBound, that.upperBound <=> this.lowerBound)
+        try
             {
-            case (Greater, _      ): that.effectiveLowerBound.prevValue() <= this.effectiveUpperBound; // TODO handle OutOfBounds
-            case (_      , Lesser ): that.effectiveUpperBound.nextValue() >= this.effectiveLowerBound; // TODO handle OutOfBounds
-            case (Lesser , Greater): True;                                       // between bounds
-            case (Lesser , Equal  ): !this.lowerExclusive | !that.upperExclusive;// at lower bound
-            case (Equal  , Greater): !this.upperExclusive | !that.lowerExclusive;// at upper bound
-            case (Equal  , Equal  ): True;                                       // zero length!
-            };
+            return switch (that.lowerBound <=> this.upperBound, that.upperBound <=> this.lowerBound)
+                {
+                case (Greater, _      ): that.effectiveLowerBound.prevValue() <= this.effectiveUpperBound;
+                case (_      , Lesser ): that.effectiveUpperBound.nextValue() >= this.effectiveLowerBound;
+                case (Lesser , Greater): True;                                       // between bounds
+                case (Lesser , Equal  ): !this.lowerExclusive | !that.upperExclusive;// at lower bound
+                case (Equal  , Greater): !this.upperExclusive | !that.lowerExclusive;// at upper bound
+                case (Equal  , Equal  ): True;                                       // zero length!
+                };
+            }
+        catch (OutOfBounds _)
+            {
+            return False;
+            }
         }
     }
