@@ -116,7 +116,7 @@ const Int16
     @Op("+")
     Int16 add(Int16! n)
         {
-        TODO return new Int16(bitAdd(bits, n.bits));
+        return this + n;
         }
 
     @Override

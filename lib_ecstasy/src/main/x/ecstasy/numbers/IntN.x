@@ -94,7 +94,7 @@ const IntN
     @Op("+")
     IntN add(IntN! n)
         {
-        TODO return new IntN(bitAdd(bits, n.bits));
+        return this + n;
         }
 
     @Override

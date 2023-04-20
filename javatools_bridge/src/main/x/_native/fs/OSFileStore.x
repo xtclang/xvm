@@ -124,17 +124,12 @@ class OSFileStore
     // ----- native --------------------------------------------------------------------------------
 
     OSDirectory dirFor(String pathString)
-        {
-        TODO native
-        }
+        { TODO("native"); }
 
     OSFile fileFor(String pathString)
-        {
-        TODO native
-        }
+        { TODO("native"); }
 
-    OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr, Path destPath, String destStr, Boolean move)
-        {
-        TODO native
-        }
+    OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr,
+                                          Path destPath, String destStr, Boolean move)
+        { TODO("native"); }
     }

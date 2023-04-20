@@ -116,7 +116,7 @@ const Int64
     @Op("+")
     Int64 add(Int64! n)
         {
-        TODO return new Int64(bitAdd(bits, n.bits));
+        return this + n;
         }
 
     @Override
