@@ -3511,7 +3511,10 @@ public class ConstantPool
 
         if (cLP > cRP || cLR > cRR)
             {
-            return Relation.INCOMPATIBLE;
+            // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
+            return cRR == 0 && cLR == 1 && typeRP.isTuple() && typeRR.getParamsCount() == 0
+                    ? Relation.IS_A
+                    : Relation.INCOMPATIBLE;
             }
 
         // functions do not produce, so we cannot have "weak" relations

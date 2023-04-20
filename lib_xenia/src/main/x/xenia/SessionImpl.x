@@ -159,6 +159,11 @@ service SessionImpl
     static protected Int MaxRedirects_ = 8;
 
     /**
+     * The value representing a "default result" for "void" event handlers.
+     */
+    static Tuple<> Void = Tuple:();
+
+    /**
      * Internal recording of events related to the session, maintained for security and debugging
      * purposes. This information will be pruned to prevent unlimited size growth.
      */
@@ -371,7 +376,7 @@ service SessionImpl
             {
             if (String oldUser ?= this.userId, oldUser != userId)
                 {
-                issueEvent_(SessionDeauthenticated, &sessionDeauthenticated(oldUser),
+                issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldUser),
                             () -> $|An exception in session {this.internalId_} occurred during a\
                                    | deauthentication event for user {oldUser.quoted()}
                            );
@@ -388,7 +393,7 @@ service SessionImpl
             // reset failed attempt count since we succeeded in logging in
             // TODO
 
-            issueEvent_(SessionAuthenticated, &sessionAuthenticated(userId),
+            issueEvent_(SessionAuthenticated, Void, &sessionAuthenticated(userId),
                         () -> $|An exception in session {this.internalId_} occurred during an\
                                | authentication event for user {userId.quoted()}
                        );
@@ -415,7 +420,7 @@ service SessionImpl
             trustLevel        = None;
             lastAuthenticated = Null;
 
-            issueEvent_(SessionDeauthenticated, &sessionDeauthenticated(oldUser),
+            issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldUser),
                         () -> $|An exception in session {this.internalId_} occurred during a\
                                | deauthentication event for user {oldUser.quoted()}
                        );
@@ -425,7 +430,7 @@ service SessionImpl
     @Override
     void destroy()
         {
-        issueEvent_(SessionDestroyed, &sessionDestroyed(),
+        issueEvent_(SessionDestroyed, Void, &sessionDestroyed(),
                     () -> $|An exception in session {this.internalId_} occurred during a\
                            | session-destroyed event
                    );
@@ -797,7 +802,7 @@ service SessionImpl
             result.ensureCookies_(desiredCookies_(requestInfo.tls));
 
             // notify the new session that it was forked
-            result.issueEvent_(SessionForked, &sessionForked(),
+            result.issueEvent_(SessionForked, Void, &sessionForked(),
                                () -> $|An exception occurred in session {result.internalId_} during\
                                       | the processing of a session-forked event
                               );
@@ -834,7 +839,7 @@ service SessionImpl
             this.cookieConsent = temp.cookieConsent;
             }
 
-        issueEvent_(SessionMergedFrom, &sessionMergedFrom(temp),
+        issueEvent_(SessionMergedFrom, Void, &sessionMergedFrom(temp),
                 () -> $"An exception occurred merging session {temp.internalId_} into {this.internalId_}");
 
         temp.destroy();
@@ -900,19 +905,6 @@ service SessionImpl
             }
 
         return False;
-        }
-
-    /**
-     * Handle void event dispatch.
-     * TODO GG - can this be gotten rid of?
-     *
-     * @param event          which event is being issued
-     * @param handleEvent    the means to actually handle the event
-     * @param renderLogText  the means to generate the text to log on a failure
-     */
-    protected void issueEvent_(Event_ event, function void() handleEvent, function String() renderLogText)
-        {
-        Nullable _ = issueEvent_(event, Null, () -> {handleEvent(); return Null;}, renderLogText);
         }
 
     /**

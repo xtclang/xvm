@@ -1698,7 +1698,8 @@ public abstract class AstNode
             // - a "void" method return is allowed to be assigned to an empty Tuple
             //    void f() {...}
             //    Tuple v = f();
-            if (fCall && cMethodReturns == 0 && cReturns == 1 && isVoid(atypeReturn))
+            // (also see ConstantPool.checkFunctionOrMethodCompatibility)
+            if (cMethodReturns == 0 && cReturns == 1 && isVoid(atypeReturn))
                 {
                 return TypeFit.Pack;
                 }
