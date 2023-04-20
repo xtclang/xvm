@@ -16,7 +16,7 @@ const Schema
     /**
      * Construct a schema for a specified set of Mappings.
      *
-     * @param mappings          pass a sequence of `Mapping` objects to use to read and write
+     * @param schemaMappings    pass a sequence of `Mapping` objects to use to read and write
      *                          various Ecstasy types; order defines precedence of selection in
      *                          cases of ties
      * @param version           pass a `Version` to use for the schema, otherwise one is calculated
@@ -37,7 +37,7 @@ const Schema
      * @param storeRemainders   pass `True` to collect and store any metadata and unread properties
      *                          together as a means of supporting forward version compatibility
      */
-    construct(Mapping[]   mappings         = [],
+    construct(Mapping[]   schemaMappings   = [],
               Version?    version          = Null,
               Boolean     randomAccess     = False,
               Boolean     enableMetadata   = False,
@@ -49,7 +49,7 @@ const Schema
               Boolean     retainNulls      = False,
               Boolean     storeRemainders  = False)
         {
-        import json.mappings.*;
+        import mappings.*;
 
         // verify that the type system is the TypeSystem that includes this class, or a TypeSystem
         // that derives from the TypeSystem that includes this class
@@ -80,11 +80,12 @@ const Schema
         // build indexes for the provided mappings
         ListMap<Type, Mapping> mappingByType   = new ListMap();
         HashMap<String, Type>  typeByName      = new HashMap();
-        Mapping[]              defaultMappings = json.mappings.DEFAULT_MAPPINGS;  // TODO CP why didn't this resolve without qualified name?
-                                                                                  // TODO CP ... and why didn't explicit import work either?
+        Mapping[]              defaultMappings = mappings.DEFAULT_MAPPINGS;
 
-        mappings = mappings.empty ? defaultMappings : (new Mapping[]) + mappings + defaultMappings;
-        for (Mapping mapping : mappings)
+        schemaMappings = schemaMappings.empty
+                ? defaultMappings
+                : (new Mapping[]) + schemaMappings + defaultMappings;
+        for (Mapping mapping : schemaMappings)
             {
             mappingByType.putIfAbsent(mapping.Serializable, mapping);
             typeByName.putIfAbsent(mapping.typeName, mapping.Serializable);
