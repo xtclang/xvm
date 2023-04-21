@@ -1,8 +1,5 @@
 /**
  * A mapping for an immutable Map object.
- *
- * TODO GG: if Key is String and Value is Doc we could optimize the json representation as a
- *          regular json object
  */
 const MapMapping<Key, Value>
         (Mapping<Key> keyMapping, Mapping<Value> valueMapping)
@@ -42,25 +39,36 @@ const MapMapping<Key, Value>
 
         using (FieldInput mapInput = in.openObject())
             {
-            using (ElementInput entriesInput = mapInput.openArray("e"))
+            if (Key.is(Type<String>))
                 {
-                while (entriesInput.canRead)
+                while (String name := mapInput.nextName())
                     {
-                    using (FieldInput entryInput = entriesInput.openObject())
+                    Value value = mapInput.readUsing(name, valueMapping);
+                    map.put(name.as(Key), value.as(Value));
+                    }
+                }
+            else
+                {
+                using (ElementInput entriesInput = mapInput.openArray("e"))
+                    {
+                    while (entriesInput.canRead)
                         {
-                        Key   key;
-                        Value value;
-
-                        using (ElementInput keyInput = entryInput.openField("k"))
+                        using (FieldInput entryInput = entriesInput.openObject())
                             {
-                            key = keyInput.readUsing(keyMapping);
-                            }
+                            Key   key;
+                            Value value;
 
-                        using (ElementInput valueInput = entryInput.openField("v"))
-                            {
-                            value = valueInput.readUsing(valueMapping);
+                            using (ElementInput keyInput = entryInput.openField("k"))
+                                {
+                                key = keyInput.readUsing(keyMapping);
+                                }
+
+                            using (ElementInput valueInput = entryInput.openField("v"))
+                                {
+                                value = valueInput.readUsing(valueMapping);
+                                }
+                            map.put(key, value);
                             }
-                        map.put(key, value);
                         }
                     }
                 }
@@ -75,14 +83,24 @@ const MapMapping<Key, Value>
 
         using (FieldOutput mapOutput = out.openObject())
             {
-            using (ElementOutput entriesOutput = mapOutput.openArray("e"))
+            if (Key.is(Type<String>))
                 {
                 for ((Key key, Value value) : map.as(Map<Key, Value>))
                     {
-                    using (FieldOutput entryOutput = entriesOutput.openObject())
+                    mapOutput.addUsing(valueMapping, key, value);
+                    }
+                }
+            else
+                {
+                using (ElementOutput entriesOutput = mapOutput.openArray("e"))
+                    {
+                    for ((Key key, Value value) : map.as(Map<Key, Value>))
                         {
-                        entryOutput.addUsing(keyMapping,   "k", key);
-                        entryOutput.addUsing(valueMapping, "v", value);
+                        using (FieldOutput entryOutput = entriesOutput.openObject())
+                            {
+                            entryOutput.addUsing(keyMapping,   "k", key);
+                            entryOutput.addUsing(valueMapping, "v", value);
+                            }
                         }
                     }
                 }
