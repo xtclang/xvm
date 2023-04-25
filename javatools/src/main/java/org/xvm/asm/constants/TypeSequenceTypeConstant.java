@@ -249,38 +249,35 @@ public class TypeSequenceTypeConstant
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
         // the formal type sequence is a sequence of types, a Tuple of types
-        if (typeLeft.isExplicitClassIdentity(true))
+        if (typeLeft.isTuple())
             {
-            ConstantPool     pool  = getConstantPool();
-            IdentityConstant idClz = typeLeft.getSingleUnderlyingClass(true);
-            if (idClz.equals(pool.clzList()))
+            for (int i = 0, c = typeLeft.getParamsCount(); i < c; i++)
                 {
-                switch (typeLeft.getParamsCount())
+                if (!typeLeft.getParamType(i).isTypeOfType())
                     {
-                    case 0:
-                        // List list = ElementTypes;
-                        return Relation.IS_A;
-
-                    case 1:
-                        if (pool.typeType().isA(typeLeft.getParamType(0)))
-                            {
-                            // List<Type<Object, Object>> list = ElementTypes;
-                            return Relation.IS_A;
-                            }
-                        break;
+                    return Relation.INCOMPATIBLE;
                     }
                 }
-            else if (idClz.equals(pool.clzTuple()))
-                {
-                for (int i = 0, c = typeLeft.getParamsCount(); i < c; i++)
-                    {
-                    if (!typeLeft.getParamType(i).isTypeOfType())
-                        {
-                        return Relation.INCOMPATIBLE;
-                        }
-                    }
 
-                return Relation.IS_A;
+            return Relation.IS_A;
+            }
+
+        ConstantPool pool = getConstantPool();
+        if (typeLeft.isA(pool.typeList()))
+            {
+            switch (typeLeft.getParamsCount())
+                {
+                case 0:
+                    // List list = ElementTypes;
+                    return Relation.IS_A;
+
+                case 1:
+                    if (pool.typeType().isA(typeLeft.getParamType(0)))
+                        {
+                        // List<Type<Object, Object>> list = ElementTypes;
+                        return Relation.IS_A;
+                        }
+                    break;
                 }
             }
         return Relation.INCOMPATIBLE;
@@ -290,20 +287,16 @@ public class TypeSequenceTypeConstant
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
         // the formal type sequence is assignable from a tuple, a sequence or an array of types
-        ConstantPool pool = getConstantPool();
         if (typeRight.isTuple())
             {
             return Relation.IS_A;
             }
 
-        if (typeRight.isExplicitClassIdentity(true))
+        ConstantPool pool = getConstantPool();
+        if (typeRight.isA(pool.typeList()) &&
+                typeRight.getParamType(0).equals(pool.typeType()))
             {
-            IdentityConstant idClz = typeRight.getSingleUnderlyingClass(true);
-            if ((idClz.equals(pool.clzArray()) || idClz.equals(pool.clzList())) &&
-                    typeRight.getParamType(0).equals(pool.typeType()))
-                {
-                return Relation.IS_A;
-                }
+            return Relation.IS_A;
             }
 
         return Relation.INCOMPATIBLE;
