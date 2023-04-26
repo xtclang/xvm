@@ -6190,6 +6190,13 @@ public abstract class TypeConstant
                 : Relation.INCOMPATIBLE;
             }
 
+        if (typeRight.isTypeOfType() && typeRight.getParamType(0).isTuple() &&
+                typeLeft.isA(pool.ensureListType(pool.typeType())))
+            {
+            // Type<TurtleType> is assignable to List<Type>
+            return Relation.IS_A;
+            }
+
         return null;
         }
 

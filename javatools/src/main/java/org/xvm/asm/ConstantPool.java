@@ -1636,6 +1636,18 @@ public class ConstantPool
         }
 
     /**
+     * Obtain a TypeConstant for a parameterized List.
+     *
+     * @param typeElement  the element type of the List
+     *
+     * @return the List type
+     */
+    public TypeConstant ensureListType(TypeConstant typeElement)
+        {
+        return ensureParameterizedTypeConstant(typeList(), typeElement);
+        }
+
+    /**
      * Obtain a TypeConstant for a parameterized Set
      *
      * @param typeElement  the element type of the Set

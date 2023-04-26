@@ -2,35 +2,22 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        console.print(test(2));
-        }
+        TestTurtle<<Int, String>> turtle = new TestTurtle<<Int, String>>();
+        console.print($"{turtle.getType(1)=}");
 
-    String test(Int i)
-        {
-        loop:
-        for (Int j : 0..i)
+        Tuple<String, Int> tuple = ("a", 1);
+        List<Type> types = &tuple.actualType;
+        console.print($"{types[1]=}");
+
+        class TestTurtle<TurtleTypes extends Tuple<TurtleTypes>>
             {
-            switch (i)
+            Type getType(Int index)
                 {
-                default:
-                    return "other";
-                case 0:
-                    return "zero";
-                case 1:
-                    return "small";
-                case 2:
-                    if (j > 0)
-                        {
-                        continue; // used to be allowed
-                        }
-                    else
-                        {
-                        continue loop;
-                        }
+                List<Type> types = TurtleTypes; // this used to "warn" at run-time
+                return types[index];
                 }
             }
-        return "weird";
         }
     }

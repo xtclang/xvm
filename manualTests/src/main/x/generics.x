@@ -118,15 +118,14 @@ module TestGenerics
     void testTurtleType()
         {
         TestTurtle<<Int, String>> turtle = new TestTurtle<<Int, String>>();
-        console.print($"turtle.getType(0)={turtle.getType(0)}");
+        console.print($"{turtle.getType(0)=}");
 
         class TestTurtle<TurtleTypes extends Tuple<TurtleTypes>>
             {
             Type getType(Int index)
                 {
-                // TODO GG: the following line generates "suspicious assignment"
-                // List<Type> types = TurtleTypes;
-                return TurtleTypes[index];
+                List<Type> types = TurtleTypes;
+                return types[index];
                 }
             }
         }
