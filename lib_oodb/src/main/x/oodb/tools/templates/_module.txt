@@ -48,7 +48,7 @@ module %appName%_jsondb%qualifier%
     @Lazy json_.Schema jsonSchema.calc()
         {
         return new json_.Schema(
-                mappings         = [], // TODO use dbTypes?
+                schemaMappings   = [], // TODO use dbTypes?
                 version          = dbVersion,
                 randomAccess     = True,
                 enableMetadata   = True,
