@@ -1648,6 +1648,18 @@ public class ConstantPool
         }
 
     /**
+     * Obtain a TypeConstant for an Int-indexed type.
+     *
+     * @param typeElement  the element type of the indexed type
+     *
+     * @return the indexed type
+     */
+    public TypeConstant ensureIndexedType(TypeConstant typeElement)
+        {
+        return ensureParameterizedTypeConstant(typeIndexed(), typeInt(), typeElement);
+        }
+
+    /**
      * Obtain a TypeConstant for a parameterized Set
      *
      * @param typeElement  the element type of the Set

@@ -6191,9 +6191,9 @@ public abstract class TypeConstant
             }
 
         if (typeRight.isTypeOfType() && typeRight.getParamType(0).isTuple() &&
-                typeLeft.isA(pool.ensureListType(pool.typeType())))
+                pool.ensureIndexedType(pool.typeType()).isA(typeLeft))
             {
-            // Type<TurtleType> is assignable to List<Type>
+            // Type<TurtleType> is assignable to UniformIndexed<Int, Type>
             return Relation.IS_A;
             }
 

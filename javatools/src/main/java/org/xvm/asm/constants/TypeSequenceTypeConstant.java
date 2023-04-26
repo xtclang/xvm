@@ -248,7 +248,7 @@ public class TypeSequenceTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        // the formal type sequence is a sequence of types, a Tuple of types
+        // the formal type sequence is a sequence (UniformIndexed) of types, a Tuple of types
         if (typeLeft.isTuple())
             {
             for (int i = 0, c = typeLeft.getParamsCount(); i < c; i++)
@@ -263,24 +263,9 @@ public class TypeSequenceTypeConstant
             }
 
         ConstantPool pool = getConstantPool();
-        if (typeLeft.isA(pool.typeList()))
-            {
-            switch (typeLeft.getParamsCount())
-                {
-                case 0:
-                    // List list = ElementTypes;
-                    return Relation.IS_A;
-
-                case 1:
-                    if (pool.typeType().isA(typeLeft.getParamType(0)))
-                        {
-                        // List<Type<Object, Object>> list = ElementTypes;
-                        return Relation.IS_A;
-                        }
-                    break;
-                }
-            }
-        return Relation.INCOMPATIBLE;
+        return pool.ensureIndexedType(pool.typeType()).isA(typeLeft)
+                ? Relation.IS_A
+                : Relation.INCOMPATIBLE;
         }
 
     @Override
@@ -293,13 +278,9 @@ public class TypeSequenceTypeConstant
             }
 
         ConstantPool pool = getConstantPool();
-        if (typeRight.isA(pool.typeList()) &&
-                typeRight.getParamType(0).equals(pool.typeType()))
-            {
-            return Relation.IS_A;
-            }
-
-        return Relation.INCOMPATIBLE;
+        return typeRight.isA(pool.ensureIndexedType(pool.typeType()))
+                ? Relation.IS_A
+                : Relation.INCOMPATIBLE;
         }
 
     @Override

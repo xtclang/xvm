@@ -49,8 +49,10 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      */
     Boolean consumesFormalType(String typeName)
         {
-        paramLoop: for (Type paramType : ParamTypes)
+        paramLoop: for (Int index : 0 ..< ParamTypes.size)
             {
+            Type paramType = ParamTypes[index];
+
             if (String[] names := formalParamNames(paramLoop.count))
                 {
                 if (names.contains(typeName))
@@ -67,8 +69,10 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                 }
             }
 
-        returnLoop: for (Type returnType : ReturnTypes)
+        returnLoop: for (Int index : 0 ..< ReturnTypes.size)
             {
+            Type returnType = ParamTypes[index];
+
             if (String[] names := formalReturnNames(returnLoop.count))
                 {
                 // may produce, but doesn't consume
@@ -95,8 +99,10 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      */
     Boolean producesFormalType(String typeName)
         {
-        returnLoop: for (Type returnType : ReturnTypes)
+        returnLoop: for (Int index : 0 ..< ReturnTypes.size)
             {
+            Type returnType = ParamTypes[index];
+
             if (String[] names := formalReturnNames(returnLoop.count))
                 {
                 if (names.contains(typeName))
@@ -113,8 +119,10 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                 }
             }
 
-        paramLoop: for (Type paramType : ParamTypes)
+        paramLoop: for (Int index : 0 ..< ParamTypes.size)
             {
+            Type paramType = ParamTypes[index];
+
             if (String[] names := formalParamNames(paramLoop.count))
                 {
                 // may produce, but doesn't consume
@@ -169,20 +177,22 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
             return False;
             }
 
-        Iterator<Type> iterR1 = that.ReturnTypes.iterator();
-        for (Type typeR2 : this.ReturnTypes)
-             {
-             assert Type typeR1 := iterR1.next();
+        for (Int index : 0 ..< ReturnTypes.size)
+            {
+            Type typeR2 = this.ReturnTypes[index];
+            Type typeR1 = that.ReturnTypes[index];
+
              if (!typeR2.isA(typeR1))
                  {
                  return False;
                  }
              }
 
-        Iterator<Type> iterP1 = that.ParamTypes.iterator();
-        loop: for (Type typeP2 : this.ParamTypes)
+        loop: for (Int index : 0 ..< ParamTypes.size)
             {
-            assert Type typeP1 := iterP1.next();
+            Type typeP2 = this.ParamTypes[index];
+            Type typeP1 = that.ParamTypes[index];
+
             if (typeP1.isA(typeP2))
                 {
                 continue;

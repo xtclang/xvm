@@ -12,6 +12,18 @@
   optionally depends on; this will allow "upToDate" computation in the Launcher.java to figure out
   whether a rebuild of the module is required
 
+- GG: add the following method to Tuple
+        /**
+         * Obtain a `List` view of this Tuple. Note, that the type check will be performed only
+         * during element extraction, not when this call is made.
+         *
+         * @param  the type of the element in the list
+         *
+         * @return the list view
+         */
+        <ElementType> List<ElementType> asList(Type<ElementType> elementType = Object)
+
+
 - CP: BinaryInput:
     - readBytes() methods need to return the number of bytes read
     - would be nice to have an "eof" indicator

@@ -124,7 +124,7 @@ module TestGenerics
             {
             Type getType(Int index)
                 {
-                List<Type> types = TurtleTypes;
+                UniformIndexed<Int, Type> types = TurtleTypes;
                 return types[index];
                 }
             }
