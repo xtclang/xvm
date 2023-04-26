@@ -2330,8 +2330,8 @@ public class TypeCompositionStatement
                     fInvalidate = true;
                     }
 
-                TypeConstant typeBase = infoProp.getType().removeAccess();
                 TypeConstant typeThis = prop.getType().resolveTypedefs();
+                TypeConstant typeBase = infoProp.getType().removeAccess().resolveGenerics(pool, typeThis);
                 // ensure the type equivalency, which slightly more lax than equality
                 if (!typeBase.isA(typeThis) || !typeThis.isA(typeBase))
                     {
