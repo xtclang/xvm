@@ -299,13 +299,13 @@ public class Compiler
      */
     protected void resolveNames(org.xvm.compiler.Compiler[] compilers)
         {
-        int cTries = 0;
+        int cTriesLeft = 0x3F;
         do
             {
             boolean fDone = true;
             for (var compiler : compilers)
                 {
-                fDone &= compiler.resolveNames();
+                fDone &= compiler.resolveNames(cTriesLeft == 1);
 
                 if (compiler.isAbortDesired())
                     {
@@ -317,7 +317,7 @@ public class Compiler
                 return;
                 }
             }
-        while (++cTries < 0x3F);
+        while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
         for (var compiler : compilers)
@@ -333,13 +333,13 @@ public class Compiler
      */
     protected void validateExpressions(org.xvm.compiler.Compiler[] compilers)
         {
-        int cTries = 0;
+        int cTriesLeft = 0x3F;
         do
             {
             boolean fDone = true;
             for (var compiler : compilers)
                 {
-                fDone &= compiler.validateExpressions();
+                fDone &= compiler.validateExpressions(cTriesLeft == 1);
 
                 if (compiler.isAbortDesired())
                     {
@@ -351,7 +351,7 @@ public class Compiler
                 return;
                 }
             }
-        while (++cTries < 0x3F);
+        while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
         for (var compiler : compilers)
@@ -367,7 +367,7 @@ public class Compiler
      */
     protected void generateCode(org.xvm.compiler.Compiler[] compilers)
         {
-        int cTries = 0;
+        int cTriesLeft = 0x3F;
         do
             {
             boolean fDone = true;
@@ -375,7 +375,7 @@ public class Compiler
                 {
                 try
                     {
-                    fDone &= compiler.generateCode();
+                    fDone &= compiler.generateCode(cTriesLeft == 1);
 
                     if (compiler.isAbortDesired())
                         {
@@ -396,7 +396,7 @@ public class Compiler
                 return;
                 }
             }
-        while (++cTries < 0x3F);
+        while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
         for (var compiler : compilers)

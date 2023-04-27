@@ -188,9 +188,12 @@ public class Compiler
      * <p/>
      * The caller is responsible for calling this method until it returns true.
      *
+     * @param  fLastAttempt  true iff this is the last attempt to resolve names; any deferral will be
+     *                       reported as an error
+     *
      * @return true iff the pass is complete; false indicates that this method MUST be called again
      */
-    public boolean resolveNames()
+    public boolean resolveNames(boolean fLastAttempt)
         {
         validateCompiler();
         ensureReached(Stage.Registered);
@@ -212,6 +215,11 @@ public class Compiler
                 m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, m_errs);
                 }
 
+            if (fLastAttempt)
+                {
+                m_mgr.markLastAttempt();
+                }
+
             if (m_mgr.processComplete())
                 {
                 setStage(Stage.Resolved);
@@ -231,9 +239,11 @@ public class Compiler
      * <p/>
      * The caller is responsible for calling this method until it returns true.
      *
+     * @param  fLastAttempt  true iff this is the last attempt to validate expressions; any deferral
+     *                       will be reported as an error
      * @return true iff the pass is complete; false indicates that this method MUST be called again
      */
-    public boolean validateExpressions()
+    public boolean validateExpressions(boolean fLastAttempt)
         {
         validateCompiler();
         ensureReached(Stage.Resolved);
@@ -255,6 +265,11 @@ public class Compiler
                 m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
                 }
 
+            if (fLastAttempt)
+                {
+                m_mgr.markLastAttempt();
+                }
+
             if (m_mgr.processComplete())
                 {
                 setStage(Stage.Validated);
@@ -274,9 +289,11 @@ public class Compiler
      * <p/>
      * The caller is responsible for calling this method until it returns true.
      *
+     * @param  fLastAttempt  true iff this is the last attempt to generate code; any deferral will be
+     *                       reported as an error
      * @return true iff the pass is complete; false indicates that this method MUST be called again
      */
-    public boolean generateCode()
+    public boolean generateCode(boolean fLastAttempt)
         {
         validateCompiler();
         ensureReached(Stage.Validated);
@@ -296,6 +313,11 @@ public class Compiler
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Emitting);
                 m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, m_errs);
+                }
+
+            if (fLastAttempt)
+                {
+                m_mgr.markLastAttempt();
                 }
 
             if (m_mgr.processComplete())

@@ -422,9 +422,17 @@ public class PropertyDeclarationStatement
                     stmtInit.introduceParentage();
 
                     ErrorListener errsTmp = errs.branch(this);
-                    if (!(new StageMgr(stmtInit, Stage.Resolved, errsTmp).fastForward(3)))
+                    if (!(new StageMgr(stmtInit, Stage.Resolved, errsTmp).fastForward(3)) ||
+                            errsTmp.hasSeriousErrors())
                         {
-                        mgr.requestRevisit();
+                        if (mgr.isLastAttempt())
+                            {
+                            errsTmp.merge();
+                            }
+                        else
+                            {
+                            mgr.requestRevisit();
+                            }
                         return;
                         }
                     errsTmp.merge();
@@ -457,7 +465,14 @@ public class PropertyDeclarationStatement
                         {
                         stmtClone.discardInitializer(methodInit);
                         stmtInit.discard(true);
-                        mgr.requestRevisit();
+                        if (mgr.isLastAttempt())
+                            {
+                            errsTmp.merge();
+                            }
+                        else
+                            {
+                            mgr.requestRevisit();
+                            }
                         return;
                         }
                     errsTmp.merge();
@@ -477,16 +492,16 @@ public class PropertyDeclarationStatement
                         Constant constValue = exprTest.toConstant();
                         if (constValue.containsUnresolved())
                             {
-                            if (m_cDeferred++ <= 0x30) // see Compiler.validateExpressions
-                                {
-                                stmtClone.discardInitializer(methodInit);
-                                stmtInit.discard(true);
-                                mgr.requestRevisit();
-                                }
-                            else
+                            stmtClone.discardInitializer(methodInit);
+                            stmtInit.discard(true);
+                            if (mgr.isLastAttempt())
                                 {
                                 log(errs, Severity.ERROR, Compiler.CIRCULAR_INITIALIZER,
                                         prop.getName());
+                                }
+                            else
+                                {
+                                mgr.requestRevisit();
                                 }
                             return;
                             }
@@ -781,11 +796,6 @@ public class PropertyDeclarationStatement
      * Indicates that this property declaration is "synthetic".
      */
     protected transient boolean m_fSynthetic;
-
-    /**
-     * The counter for initial value resolution deferrals.
-     */
-    private transient int m_cDeferred;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
             "condition", "annotations", "type", "value", "body", "initializer", "assignment");

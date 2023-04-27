@@ -94,7 +94,6 @@ public class StageMgr
                     return true;
                     }
                 }
-            ++m_cIters;
             }
 
         return m_listRevisit == null;
@@ -115,11 +114,12 @@ public class StageMgr
         assert listSingle.size() == 1;
         try
             {
+            int cIters = 0;
             m_target = Stage.Registered;
-            while (!fDone && m_cIters < cMaxIters)
+            while (!fDone && cIters < cMaxIters)
                 {
                 m_listRevisit = listSingle;
-                while (!processComplete() && m_cIters < cMaxIters)
+                while (!processComplete() && ++cIters < cMaxIters)
                     {
                     }
 
@@ -144,11 +144,21 @@ public class StageMgr
         }
 
     /**
-     * @return the number of processing iterations so far by this Stage Manager
+     * @return true iff the manager is on its last attempt to perform the required action; any
+     *         deferral will be reported as an error
      */
-    public int getIterations()
+    public boolean isLastAttempt()
         {
-        return m_cIters;
+        return m_fLastAttempt;
+        }
+
+    /**
+     * Indicate that the manager is on its last attempt to perform the required action; any deferral
+     * will be reported as an error.
+     */
+    public void markLastAttempt()
+        {
+        m_fLastAttempt = true;
         }
 
     /**
@@ -157,14 +167,6 @@ public class StageMgr
     public ErrorListener getErrorListener()
         {
         return m_errs;
-        }
-
-    /**
-     * @return this Stage Manager's target Stage
-     */
-    public Stage getTargetStage()
-        {
-        return m_target;
         }
 
     /**
@@ -480,9 +482,9 @@ public class StageMgr
     private List<AstNode> m_listRevisit;
 
     /**
-     * Count of iterations that this Stage Manager has already performed.
+     * Last attempt flag.
      */
-    private int m_cIters;
+    private boolean m_fLastAttempt;
 
     /**
      * Error list to log processing errors to.

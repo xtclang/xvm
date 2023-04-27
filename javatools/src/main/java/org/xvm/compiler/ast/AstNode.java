@@ -846,9 +846,9 @@ public abstract class AstNode
             {
             Stage    stageNext = stageOldest.nextTarget();
             StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp);
-            while (!mgrKids.processComplete())
+            for (int cTries = 0; !mgrKids.processComplete(); cTries++)
                 {
-                if (errsTemp.isAbortDesired() || mgrKids.getIterations() > 20)
+                if (errsTemp.isAbortDesired() || cTries > 20)
                     {
                     mgrKids.logDeferredAsErrors(errsTemp);
                     errsTemp.merge();
@@ -1479,9 +1479,9 @@ public abstract class AstNode
      * subclasses to override it.
      */
     protected ListMap<FormalConstant, TypeConstant> resolveTypeParameters(MethodStructure method,
-            TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAlowFormal)
+            TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAllowFormal)
         {
-        return method.resolveTypeParameters(null, atypeArgs, atypeReturn, fAlowFormal);
+        return method.resolveTypeParameters(null, atypeArgs, atypeReturn, fAllowFormal);
         }
 
     /**
