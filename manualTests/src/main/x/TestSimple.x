@@ -4,20 +4,22 @@ module TestSimple
 
     void run()
         {
-        TestTurtle<<Int, String>> turtle = new TestTurtle<<Int, String>>();
-        console.print($"{turtle.getType(1)=}");
+        }
 
-        Tuple<String, Int> tuple = ("a", 1);
-        UniformIndexed<Int, Type> types = &tuple.actualType;
-        console.print($"{types[1]=}");
+    class Test
+        {
+        // used to fail to compile (a small reproducer of the actual failure at Time.x that Marcus ran into)
+        static Int128 GREGORIAN_OFFSET = Date1.GREGORIAN_OFFSET * TimeOfDay1.PICOS_PER_DAY;
+        }
 
-        class TestTurtle<TurtleTypes extends Tuple<TurtleTypes>>
-            {
-            Type getType(Int index)
-                {
-                UniformIndexed<Int, Type> types = TurtleTypes;
-                return types[index];
-                }
-            }
+    const Date1(Int32 epochDay)
+            implements Sequential
+        {
+        static IntLiteral GREGORIAN_OFFSET  = 0;
+        }
+
+    const TimeOfDay1(UInt64 picos)
+        {
+        static IntLiteral PICOS_PER_DAY     = 0;
         }
     }

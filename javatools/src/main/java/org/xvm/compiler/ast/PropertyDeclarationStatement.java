@@ -420,11 +420,14 @@ public class PropertyDeclarationStatement
                     AssignmentStatement stmtInit = adopt(new AssignmentStatement(
                                 new NameExpression(name), tokAsn, value));
                     stmtInit.introduceParentage();
-                    if (!(new StageMgr(stmtInit, Stage.Resolved, errs).fastForward(3)))
+
+                    ErrorListener errsTmp = errs.branch(this);
+                    if (!(new StageMgr(stmtInit, Stage.Resolved, errsTmp).fastForward(3)))
                         {
                         mgr.requestRevisit();
                         return;
                         }
+                    errsTmp.merge();
 
                     // the assignment statement takes the place of the initial value
                     assignment = stmtInit;
@@ -448,13 +451,16 @@ public class PropertyDeclarationStatement
                     // if it could be discarded and replaced with a constant
                     // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
                     // must be ready to resolve the corresponding names (e.g. see NewExpression)
-                    if (!(new StageMgr(stmtInit, Stage.Emitted, errs).fastForward(10)))
+                    ErrorListener errsTmp = errs.branch(this);
+                    if (!(new StageMgr(stmtInit, Stage.Emitted, errsTmp).fastForward(10)) ||
+                            errsTmp.hasSeriousErrors())
                         {
                         stmtClone.discardInitializer(methodInit);
                         stmtInit.discard(true);
                         mgr.requestRevisit();
                         return;
                         }
+                    errsTmp.merge();
 
                     // if in the process of compiling the initializer, it became obvious that the
                     // result was a constant value, then just take that constant value and discard
