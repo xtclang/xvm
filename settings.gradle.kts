@@ -16,6 +16,7 @@ include(":lib_oodb")            // produces oodb.xtc
 include(":lib_imdb")            // produces imdb.xtc
 include(":lib_jsondb")          // produces jsondb.xtc
 include(":lib_web")             // produces web.xtc
+include(":lib_webauth")         // produces webauth.xtc
 include(":lib_xenia")           // produces xenia.xtc
 
 // TODO(":wiki")

@@ -18,6 +18,7 @@ val oodb          = project(":lib_oodb")
 val imdb          = project(":lib_imdb")
 val jsondb        = project(":lib_jsondb")
 val web           = project(":lib_web")
+val webauth       = project(":lib_webauth")
 val xenia         = project(":lib_xenia")
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
@@ -34,6 +35,7 @@ val oodbMain        = "${oodb.projectDir}/src/main"
 val imdbMain        = "${imdb.projectDir}/src/main"
 val jsondbMain      = "${jsondb.projectDir}/src/main"
 val webMain         = "${web.projectDir}/src/main"
+val webauthMain     = "${webauth.projectDir}/src/main"
 val xeniaMain       = "${xenia.projectDir}/src/main"
 
 val xdkDir          = "$buildDir/xdk"
@@ -94,8 +96,8 @@ val copyJavatools = tasks.register<Copy>("copyJavatools") {
 }
 
 val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
-    group       = "Build"
-    description = "Build ecstasy.xtc and javatools_turtle.xtc modules"
+    group          = "Build"
+    description    = "Build ecstasy.xtc and javatools_turtle.xtc modules"
 
     dependsOn(javatools.tasks["build"])
     dependsOn(copyJavatools)
@@ -117,8 +119,8 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
 }
 
 val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
-    group       = "Build"
-    description = "Build aggregate.xtc module"
+    group            = "Build"
+    description      = "Build aggregate.xtc module"
 
     dependsOn(javatools.tasks["build"])
 
@@ -136,8 +138,8 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
 }
 
 val compileCollections = tasks.register<JavaExec>("compileCollections") {
-    group       = "Build"
-    description = "Build collections.xtc module"
+    group              = "Build"
+    description        = "Build collections.xtc module"
 
     dependsOn(javatools.tasks["build"])
 
@@ -155,8 +157,8 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
 }
 
 val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
-    group       = "Build"
-    description = "Build crypto.xtc module"
+    group         = "Build"
+    description   = "Build crypto.xtc module"
 
     dependsOn(javatools.tasks["build"])
 
@@ -173,7 +175,7 @@ val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
-val compileNet = tasks.register<JavaExec>("compileNet") {
+val compileNet  = tasks.register<JavaExec>("compileNet") {
     group       = "Build"
     description = "Build net.xtc module"
 
@@ -252,8 +254,8 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
 }
 
 val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
-    group       = "Build"
-    description = "Build jsondb.xtc module"
+    group         = "Build"
+    description   = "Build jsondb.xtc module"
 
     dependsOn(javatools.tasks["build"])
 
@@ -271,7 +273,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
-val compileWeb = tasks.register<JavaExec>("compileWeb") {
+val compileWeb  = tasks.register<JavaExec>("compileWeb") {
     group       = "Execution"
     description = "Build web.xtc module"
 
@@ -291,13 +293,33 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
-val compileXenia = tasks.register<JavaExec>("compileXenia") {
-    group       = "Execution"
-    description = "Build xenia.xtc module"
+val compileWebauth = tasks.register<JavaExec>("compileWebauth") {
+    group          = "Execution"
+    description    = "Build webauth.xtc module"
 
     dependsOn(javatools.tasks["build"])
 
-    shouldRunAfter(compileNet, compileJson)
+    shouldRunAfter(compileOODB, compileWeb)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "-L", "$libDir",
+         "$webauthMain/x/webauth.x")
+    mainClass.set("org.xvm.tool.Compiler")
+}
+
+val compileXenia = tasks.register<JavaExec>("compileXenia") {
+    group        = "Execution"
+    description  = "Build xenia.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileWeb, compileWebauth)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -441,6 +463,15 @@ val build = tasks.register("build") {
 
     if (webSrc > webDest) {
         dependsOn(compileWeb)
+        }
+
+    // compile webauth.xtclang.org
+    val webauthSrc = fileTree(webauthMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val webauthDest = file("$libDir/webauth.xtc").lastModified()
+
+    if (webauthSrc > webauthDest) {
+        dependsOn(compileWebauth)
         }
 
     // compile xenia.xtclang.org
