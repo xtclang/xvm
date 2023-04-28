@@ -104,18 +104,6 @@ public class CanonicalizedTypeComposition
         }
 
     @Override
-    public boolean isConst()
-        {
-        return f_clzOrigin.isConst();
-        }
-
-    @Override
-    public boolean isVirtualChild()
-        {
-        return f_clzOrigin.isVirtualChild();
-        }
-
-    @Override
     public CallChain getMethodCallChain(Object nidMethod)
         {
         CallChain chain = super.getMethodCallChain(nidMethod);

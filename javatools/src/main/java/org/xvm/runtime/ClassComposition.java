@@ -268,19 +268,6 @@ public class ClassComposition
         }
 
     @Override
-    public boolean isConst()
-        {
-        return ((ClassStructure) f_typeInception.
-                getSingleUnderlyingClass(false).getComponent()).isConst();
-        }
-
-    @Override
-    public boolean isVirtualChild()
-        {
-        return f_typeInception.isVirtualChild();
-        }
-
-    @Override
     public MethodStructure ensureAutoInitializer()
         {
         if (m_mapFields.isEmpty())
@@ -549,14 +536,6 @@ public class ClassComposition
 
 
     // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * @return the inception type (private access)
-     */
-    protected TypeConstant getStructType()
-        {
-        return f_typeStructure;
-        }
 
     /**
      * @return true iff this TypeComposition represents an inception class

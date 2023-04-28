@@ -348,8 +348,8 @@ public class ClassStructure
                     parent = parent.getParent();
                     format = parent.getFormat();
                     }
-                // neither a top-level class nor a local class inside a method are considered child
-                // classes
+                // neither a top-level class nor a local class inside a method are considered
+                // virtual children
                 return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
                 }
 

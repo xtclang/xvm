@@ -149,9 +149,9 @@ public abstract class Container
         {
         // TODO: add a container level fair scheduling queue and submit the service there. The
         // container should then follow a similar pattern and push processing of its fair scheduling
-        // queue to its parent container which eventually pushes to the runtime. Thus there is a
-        // hierarchy of fairness. For now though we just skip over all of this and push the processing
-        // directly to the top level runtime.
+        // queue to its parent container which eventually pushes to the runtime. Thus, there is a
+        // hierarchy of fairness. For now though we just skip over all of this and push the
+        // processing directly to the top level runtime.
 
         f_pendingWorkCount.incrementAndGet();
         f_runtime.submitService(() ->
@@ -336,7 +336,7 @@ public abstract class Container
                 case MIXIN:
                 case CLASS:
                 case INTERFACE:
-                    temp = structClass.isVirtualChild()
+                    temp = structClass.isInstanceChild()
                         ? new Child(this,   structClass, false)
                         : new xObject(this, structClass, false);
                     break;

@@ -17,7 +17,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
- * Native functionality for virtual child classes.
+ * Native functionality for instance child classes.
  */
 public class Child
         extends xObject
@@ -26,7 +26,7 @@ public class Child
         {
         super(container, structure, false);
 
-        assert structure.isVirtualChild();
+        assert structure.isInstanceChild();
         }
 
     @Override

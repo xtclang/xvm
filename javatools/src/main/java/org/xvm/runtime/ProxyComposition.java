@@ -33,14 +33,6 @@ public class ProxyComposition
         return (ClassComposition) f_clzOrigin;
         }
 
-    /**
-     * @return true iff this class represents an instance inner class
-     */
-    public boolean isInstanceChild()
-        {
-        return false;
-        }
-
     @Override
     public OpSupport getSupport()
         {
@@ -114,7 +106,7 @@ public class ProxyComposition
         }
 
     @Override
-    public boolean isVirtualChild()
+    public boolean isInstanceChild()
         {
         return false;
         }

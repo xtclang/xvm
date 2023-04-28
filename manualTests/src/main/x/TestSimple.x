@@ -4,22 +4,61 @@ module TestSimple
 
     void run()
         {
+        Test svc = new Test();
+
+        console.print(svc.test0().foo());
+        console.print(svc.test1().foo());
+        console.print(svc.test2().foo());
         }
 
-    class Test
+    interface Iface
         {
-        // used to fail to compile (a small reproducer of the actual failure at Time.x that Marcus ran into)
-        static Int128 GREGORIAN_OFFSET = Date1.GREGORIAN_OFFSET * TimeOfDay1.PICOS_PER_DAY;
+        Int foo();
         }
 
-    const Date1(Int32 epochDay)
-            implements Sequential
+    service Test
         {
-        static IntLiteral GREGORIAN_OFFSET  = 0;
-        }
+        class Child
+                implements Iface
+            {
+            @Override
+            Int foo()
+                {
+                return 0;
+                }
+            }
 
-    const TimeOfDay1(UInt64 picos)
-        {
-        static IntLiteral PICOS_PER_DAY     = 0;
+        Iface test0()
+            {
+            return new Child();
+            }
+
+        Iface test1()
+            {
+            return new Child1(); // this used to fail at run-time
+
+            class Child1
+                    implements Iface
+                {
+                @Override
+                Int foo()
+                    {
+                    return 1;
+                    }
+                }
+            }
+
+        Iface test2()
+            {
+            Iface iface = new Iface() // this used to fail at run-time
+                {
+                @Override
+                Int foo()
+                    {
+                    return 2;
+                    }
+                };
+            return iface;
+            }
         }
     }

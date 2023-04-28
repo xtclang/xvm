@@ -37,12 +37,6 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public boolean isInstanceChild()
-        {
-        return f_clzOrigin.isInstanceChild();
-        }
-
-    @Override
     public OpSupport getSupport()
         {
         return f_clzOrigin.getSupport();

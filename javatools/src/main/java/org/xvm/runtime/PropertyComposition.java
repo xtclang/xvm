@@ -168,7 +168,7 @@ public class PropertyComposition
         }
 
     @Override
-    public boolean isVirtualChild()
+    public boolean isInstanceChild()
         {
         return false;
         }

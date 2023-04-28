@@ -95,12 +95,10 @@ public interface TypeComposition
     /**
      * @return true iff the inception type represents a const
      */
-    boolean isConst();
-
-    /**
-     * @return true iff the inception type represents a virtual child
-     */
-    boolean isVirtualChild();
+    default boolean isConst()
+        {
+        return getTemplate().getStructure().isConst();
+        }
 
     /**
      * @return true iff this TypeComposition represents an instance inner class
