@@ -3782,6 +3782,11 @@ public class ConstantPool
         GenericTypeResolver resolver =
                 sFormalName -> sFormalName.equals("Referent") ? typeReferent : null;
 
+        if (m_typeNakedRef == null)
+            {
+            throw new IllegalStateException("Mack module (javatools_turtle) is missing");
+            }
+
         TypeInfo info = m_typeNakedRef.ensureTypeInfo();
 
         Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
