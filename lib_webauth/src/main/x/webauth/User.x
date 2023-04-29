@@ -11,8 +11,8 @@
  *   IPInfo[]       recentIPs = [],
  *   contact info etc.
  *
- * @param userName        the unique name (or email address, etc.) used as a user login identity
  * @param userId          the unique internal user identity
+ * @param userName        the unique name (or email address, etc.) used as a user login identity
  * @param userHashes      the cryptographic digests of the user name
  * @param passwordHashes  the cryptographic digests of the user password
  * @param roleIds         the role identities that have been assigned to the user
@@ -76,7 +76,9 @@ const User
      *                        login identity
      * @param userHashes      (optional) the cryptographic digests of the user name
      * @param passwordHashes  (optional) the cryptographic digests of the user password
-     * @param roles           (optional) the role identities that have been assigned to the user
+     * @param roles           (optional) the new role identities to use for the user
+     * @param addRoleIds      (optional) the roles identities to add to the user
+     * @param removeRoleIds   (optional) the role identities to remove from the user
      * @param enabled         (optional) True indicates that the User is active (can log in); False
      *                                   disables the account
      */
