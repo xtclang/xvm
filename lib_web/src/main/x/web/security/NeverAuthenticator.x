@@ -1,6 +1,5 @@
 /**
- * An implementation of the Authenticator interface for
- * [The 'Basic' HTTP Authentication Scheme](https://datatracker.ietf.org/doc/html/rfc7617).
+ * An implementation of the Authenticator interface that rejects all authentication attempts.
  */
 service NeverAuthenticator
         implements Authenticator
