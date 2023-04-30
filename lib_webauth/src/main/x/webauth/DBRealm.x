@@ -115,11 +115,18 @@ const DBRealm
 
                 // create the user records
                 Users users = authSchema.users;
+                ListMap<String, String> initUserNoPass = new ListMap(cfg.initUserPass.size);
                 for ((String userName, String password) : cfg.initUserPass)
                     {
                     assert users.createUser(this, userName, password,
                             initUserRoles.getOrDefault(userName, []));
                     }
+
+                // store the configuration (but remove the passwords), and specify that the database
+                // has now been configured (so we don't repeat the db configuration the next time)
+                initUserNoPass.entries.forEach(e -> {e.value = "???";});
+                authSchema.config.set(cfg.with(initUserPass = initUserNoPass,
+                                               configured   = True));
                 }
             }
         }
@@ -172,12 +179,6 @@ const DBRealm
     @Override
     Hash[] hashesFor(UserId userId, Signer hasher)
         {
-        Int hashIndex;
-        if (!(hashIndex := this.hashIndex(hasher)))
-            {
-            return [];
-            }
-
         if (userId.is(String))
             {
             Hash? hash = Null;
@@ -215,7 +216,8 @@ const DBRealm
         {
         conditional (String, Set<String>) authenticateUser(User user, Hash pwdHash, Signer hasher)
             {
-            if (Hash actualHash := user.passwordHashes.hashFor(hasher),
+            if (user.enabled,
+                    Hash actualHash := user.passwordHashes.hashFor(hasher),
                     pwdHash == actualHash)
                 {
                 return True, user.userName, loadUserRoles(user) ?: assert;
@@ -251,9 +253,13 @@ const DBRealm
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * TODO
+     * Obtain a hasher (a [Signer]) by the name of the hashing algorithm.
+     *
+     * @param algorithm  one of: "SHA-512-256", "SHA-256", "MD5"
+     *
+     * @return the requested hasher
      */
-    static Signer hasherByName(String algorithm)
+    static protected Signer hasherByName(String algorithm)
         {
         @Inject crypto.Algorithms algorithms;
         return algorithms.hasherFor(algorithm)?;
@@ -261,49 +267,12 @@ const DBRealm
         }
 
     /**
-     * Obtain the index within the values (arrays of hashed passwords) stored in `pwdsByUser` that
-     * corresponds to a particular [hasher](Signer).
+     * Load the specified user from the database.
      *
-     * @param hasher  the [hasher](Signer) that indicates which digested passwords to hash or verify
+     * @param userName  the name of the user to load
      *
-     * @return the index within the arrays of hashed passwords stored as the values of the
-     *         `pwdsByUser` map
-     */
-    protected conditional Int hashIndex(Signer hasher)
-        {
-        Loop: for (Signer? eachHasher : supportedHashers)
-            {
-            if (eachHasher.as(Object) == hasher.as(Object))
-                {
-                return True, Loop.count;
-                }
-            }
-
-        return switch (hasher.algorithm.name)
-            {
-            case "SHA-512-256": (True, 0);
-            case "SHA-256"    : (True, 1);
-            case "MD5"        : (True, 2);
-            default           : False;
-            };
-        }
-
-    /**
-     * TODO
-     */
-    static Hash? extractHash(HashInfo hashes, Int index)
-        {
-        return switch (index)
-            {
-            case 0: hashes.md5;
-            case 1: hashes.sha256;
-            case 2: hashes.sha512_256;
-            default: assert;
-            };
-        }
-
-    /**
-     * TODO
+     * @return True iff the user was found and loaded
+     * @return (conditional) the user
      */
     protected conditional User loadUserByName(String userName)
         {
@@ -314,7 +283,13 @@ const DBRealm
         }
 
     /**
-     * TODO
+     * Load any users from the database that have the specified user hash. (Some authentication
+     * mechanisms do not send plain text user names over the wire, and instead send a hashed user
+     * name.)
+     *
+     * @param hash  the user hash
+     *
+     * @return the users corresponding to the specified hash
      */
     protected User[] loadUsersByHash(Hash hash)
         {
@@ -325,7 +300,12 @@ const DBRealm
         }
 
     /**
-     * TODO
+     * Given a user name or user object, obtain a set of role names that correspond to that user.
+     *
+     * @param user  a user name or a `User` object
+     *
+     * @return True iff the specified user exists
+     * @return (conditional) a set of role names for the user
      */
     protected conditional Set<String> loadUserRoles(User|String user)
         {
