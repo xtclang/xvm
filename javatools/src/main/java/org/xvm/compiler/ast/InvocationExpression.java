@@ -2113,7 +2113,7 @@ public class InvocationExpression
                     }
                 else if (sName.equals("super"))
                     {
-                    log(errs, Severity.ERROR, Compiler.NON_VIRTUAL_SUPER);
+                    log(errs, Severity.ERROR, Compiler.NO_SUPER);
                     }
                 else
                     {
@@ -2173,7 +2173,7 @@ public class InvocationExpression
                                         findContribution(Component.Composition.Extends);
                                 if (contribExtends == null || ctx.isFunction())
                                     {
-                                    exprName.log(errs, Severity.ERROR, Compiler.NO_SUPER);
+                                    exprName.log(errs, Severity.ERROR, Compiler.NON_VIRTUAL_SUPER);
                                     return null;
                                     }
 

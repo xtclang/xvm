@@ -3895,6 +3895,7 @@ public abstract class TypeConstant
             {
             MethodConstant    idContrib     = entry.getKey();
             MethodInfo        methodContrib = entry.getValue();
+            MethodBody        bodyContrib   = methodContrib.getHead();
             SignatureConstant sigContrib    = methodContrib.getSignature();
 
             // the method is not virtual if it is a function, if it is private, or if it is
@@ -3951,7 +3952,7 @@ public abstract class TypeConstant
                                 collectConstructors(methodContrib, mapMethods);
                         if (listMatches.isEmpty())
                             {
-                            if (fSelf && methodContrib.getHead().isOverride())
+                            if (fSelf && bodyContrib.isOverride())
                                 {
                                 MethodConstant id = methodContrib.getIdentity();
                                 id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
@@ -3973,8 +3974,7 @@ public abstract class TypeConstant
                                         continue;
                                         }
 
-                                    MethodBody bodyHead = methodContrib.getHead();
-                                    if (!bodyHead.isOverride())
+                                    if (!bodyContrib.isOverride())
                                         {
                                         // the constructor is not marked as "@Override", which makes
                                         // it non-virtual, and it can only be called explicitly
@@ -4074,7 +4074,7 @@ public abstract class TypeConstant
 
             if (fAnnoMixin)
                 {
-                if (methodContrib.getHead().getImplementation() == Implementation.Implicit)
+                if (bodyContrib.getImplementation() == Implementation.Implicit)
                     {
                     // this was added synthetically by "asInto" processing; ignore
                     continue;
@@ -4091,7 +4091,7 @@ public abstract class TypeConstant
                     methodContrib, nidContrib, mapVirtMethods);
 
             if (methodContrib.getTail().isOverride() ||
-                    fAnnoMixin && methodContrib.getHead().isOverride())
+                    fAnnoMixin && bodyContrib.isOverride())
                 {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
@@ -4166,7 +4166,7 @@ public abstract class TypeConstant
                         SignatureConstant sigBest = selectBest(aSig);
                         if (sigBest == null)
                             {
-                            if (methodContrib.getHead().usesSuper())
+                            if (bodyContrib.usesSuper())
                                 {
                                 log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
                                         methodContrib.getIdentity().getPathString());
