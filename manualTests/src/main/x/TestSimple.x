@@ -4,19 +4,13 @@ module TestSimple
 
     void run()
         {
-        Test svc = new Test();
         }
 
-    interface Iface
+    mixin Mix into Test
         {
-        Int foo();
         }
 
-    service Test
+    class Test incorporates Mix // this used to assert while building the TypeInfo
         {
-        Int foo()
-            {
-            return super(); // used to report "non virtual super"
-            }
         }
     }

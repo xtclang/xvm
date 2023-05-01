@@ -1677,8 +1677,8 @@ public abstract class TypeConstant
                                     setInvalidate.add(typeDeferred);
                                     }
                                 errsTemp.merge();
-                                typeDeferred.setTypeInfo(infoDeferred);
                                 }
+                            typeDeferred.setTypeInfo(infoDeferred);
                             }
                         }
                     }
