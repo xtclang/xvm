@@ -1451,20 +1451,20 @@ public class Context
         Argument argOld = map.get(sName);
         if (argOld != null)
             {
-            if (argOld instanceof Register regOld)
-                {
-                TypeConstant typeOld = argOld.getType();
-                TypeConstant typeNew = argNew.getType();
+            TypeConstant typeOld = argOld.getType();
+            TypeConstant typeNew = argNew.getType();
 
-                TypeConstant typeJoin = typeNew.union(pool(), typeOld);
-                if (!typeJoin.equals(typeOld))
+            TypeConstant typeJoin = typeNew.union(pool(), typeOld);
+            if (!typeJoin.equals(typeOld))
+                {
+                if (argOld instanceof Register regOld)
                     {
                     map.put(sName, regOld.narrowType(typeJoin));
                     }
-                }
-            else
-                {
-                map.remove(sName);
+                else
+                    {
+                    map.remove(sName);
+                    }
                 }
             }
         }
