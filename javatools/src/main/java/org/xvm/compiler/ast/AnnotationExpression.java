@@ -261,7 +261,7 @@ public class AnnotationExpression
                 }
             }
 
-        TypeInfo infoAnno = typeAnno.ensureTypeInfo(errs);
+        TypeInfo infoAnno = typeAnno.ensureTypeInfo(errsTemp);
 
         // find a matching constructor on the annotation class
         MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno, "construct",
