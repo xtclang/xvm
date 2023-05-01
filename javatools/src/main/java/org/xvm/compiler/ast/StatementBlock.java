@@ -804,9 +804,15 @@ public class StatementBlock
 
                 case "super":
                     {
+                    MethodStructure method = getMethod();
+                    if (!method.isSuperAllowed())
+                        {
+                        return false;
+                        }
+
                     // if the current method is a property accessor, the containing property itself
                     // may have private access
-                    MethodConstant idMethod   = getMethod().getIdentityConstant();
+                    MethodConstant idMethod   = method.getIdentityConstant();
                     Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                     TypeConstant   typeCtx    = pool().ensureAccessTypeConstant(getThisClass().getFormalType(), access);
                     TypeInfo       info       = typeCtx.ensureTypeInfo();
@@ -1291,18 +1297,22 @@ public class StatementBlock
                 case "super":
                     {
                     // see isReservedNameReadable()
-                    MethodStructure   method      = getMethod();
-                    MethodConstant    idMethod    = method.getIdentityConstant();
-                    Access            access      = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
-                    TypeConstant      typeCtx     = pool.ensureAccessTypeConstant(typeThis, access);
-                    TypeInfo          infoType    = typeCtx.ensureTypeInfo();
-                    MethodInfo        infoMethod  = infoType.getMethodById(idMethod);
-                    SignatureConstant sigSuper    = infoMethod == null ? null : infoMethod.getSuper(infoType);
+                    MethodStructure method = getMethod();
+                    if (!method.isSuperAllowed())
+                        {
+                        return null;
+                        }
+
+                    MethodConstant    idMethod   = method.getIdentityConstant();
+                    Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                    TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
+                    TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                    MethodInfo        infoMethod = infoType.getMethodById(idMethod);
+                    SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 
                     if (sigSuper == null)
                         {
                         if (method.isConstructor()
-                                && method.findAnnotation(pool.clzOverride()) != null
                                 && getThisClass().containsAnnotation(pool.clzOverride()))
                             {
                             // an "@Override" virtual child may not have a compile-time super;

@@ -1283,6 +1283,16 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff this method is allowed to call super
+     */
+    public boolean isSuperAllowed()
+        {
+        // Note: "get" and "set" do not require "@Override"
+        return findAnnotation(getConstantPool().clzOverride()) != null ||
+                (isPotentialGetter() || isPotentialSetter());
+        }
+
+    /**
      * @return true iff this method contains a call to its super
      */
     public boolean usesSuper()
