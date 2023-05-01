@@ -36,8 +36,8 @@ const DBRealm
                 {
                 assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
                                         | locations within the database:\
-                                        | {pathStr.quoted()} and {path.as(String).quoted()}
-                                       ; // TODO GG get rid of .as(String)
+                                        | {pathStr.quoted()} and {path.quoted()}
+                                       ;
                 path       = pathStr;
                 authSchema = schema;
                 }
