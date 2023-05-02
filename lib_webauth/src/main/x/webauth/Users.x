@@ -78,7 +78,7 @@ mixin Users
 
         // look up the role names and convert them to role IDs
         Int[]      roleIds;
-        String[]   roleNames = [roleName.is(String)?] : roleName.as(String[]); // TODO GG as should not be required
+        String[]   roleNames = [roleName.is(String)?] : roleName;
         AuthSchema schema    = dbParent.as(AuthSchema);
         if (Role[] roleList := schema.roles.findByNames(roleNames))
             {
