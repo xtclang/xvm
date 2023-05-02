@@ -332,8 +332,7 @@ const DBRealm
                 if (Role role := roles.get(roleId))
                     {
                     roleNames += role.roleName;
-                    // TODO GG roleNames += role.altNames;
-                    roleNames.addAll(role.altNames);
+                    roleNames += role.altNames;
                     }
                 }
             return True, roleNames.freeze(True);

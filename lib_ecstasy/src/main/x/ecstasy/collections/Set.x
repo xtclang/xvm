@@ -7,24 +7,6 @@ interface Set<Element>
         extends Collection<Element>
     {
     /**
-     * The "union" operator.
-     */
-    @Override
-    @Op("|") Set addAll(Iterable<Element> values);
-
-    /**
-     * The "relative complement" operator.
-     */
-    @Override
-    @Op("-") Set removeAll(Iterable<Element> values);
-
-    /**
-     * The "intersection" operator.
-     */
-    @Override
-    @Op("&") Set retainAll(Iterable<Element> values);
-
-    /**
      * The "symmetric difference" operator determines the elements that are present in only this
      * set or the other set, but not both.
      *
@@ -74,7 +56,7 @@ interface Set<Element>
             }
 
         result -= remove?;
-        result |= add?;
+        result += add?;
         return result;
         }
 
