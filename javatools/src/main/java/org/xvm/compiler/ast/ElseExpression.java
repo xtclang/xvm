@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Map;
+
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -112,6 +115,7 @@ public class ElseExpression
             }
 
         ctx = ctx.enterFork(false);
+        ctx.replaceArguments(m_mapElse);
 
         Expression expr2New = expr2.validateMulti(ctx, atype2Req, errs);
 
@@ -193,6 +197,9 @@ public class ElseExpression
             return super.ensureShortCircuitLabel(nodeOrigin, ctxOrigin);
             }
 
+        // merge the type assumptions for the "else" branch
+        m_mapElse = ctxOrigin.mergeNarrowedElseTypes(m_mapElse);
+
         // generate a "grounding" target label for the "left side child expression"
         Label label = m_labelElse;
         if (label == null)
@@ -234,8 +241,9 @@ public class ElseExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static    int     m_nCounter;
-    private transient int     m_nLabel;
-    private transient Label   m_labelElse;
-    private transient boolean m_fCondFalse;
+    private static    int                   m_nCounter;
+    private transient int                   m_nLabel;
+    private transient Label                 m_labelElse;
+    private transient Map<String, Argument> m_mapElse;
+    private transient boolean               m_fCondFalse;
     }

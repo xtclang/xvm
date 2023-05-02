@@ -402,7 +402,7 @@ public class Context
     /**
      * A notification to the context that its nested context has been discarded.
      */
-    protected void unlink(Context ctxDiscared)
+    protected void unlink(Context ctxDiscarded)
         {
         }
 
@@ -547,6 +547,48 @@ public class Context
                     }
                 }
             }
+        }
+
+    /**
+     * Collect the narrowed arguments from the "else" branch of the assert expression and merge
+     * them with the previously collected map of narrowed arguments.
+     *
+     * @param map (optional) map of previously collected arguments
+     *
+     * @return the merged map
+     */
+    protected Map<String, Argument> mergeNarrowedElseTypes(Map<String, Argument> map)
+        {
+        Map<String, Argument> mapThis = getNarrowingMap(false);
+        if (map == null || map.isEmpty())
+            {
+            return mapThis.isEmpty() ? null : new HashMap<>(mapThis);
+            }
+
+        map.keySet().retainAll(mapThis.keySet()); // only keep common arguments
+        for (Map.Entry<String, Argument> entry : map.entrySet())
+            {
+            String   sName   = entry.getKey();
+            Argument argPrev = entry.getValue();
+            Argument argThis = mapThis.get(sName);
+
+            TypeConstant typePrev = argPrev.getType();
+            TypeConstant typeThis = argThis.getType();
+
+            TypeConstant typeJoin = typeThis.union(pool(), typePrev);
+            if (!typeJoin.equals(typePrev))
+                {
+                if (argPrev instanceof Register regPrev)
+                    {
+                    map.put(sName, regPrev.narrowType(typeJoin));
+                    }
+                else
+                    {
+                    map.remove(sName);
+                    }
+                }
+            }
+        return map;
         }
 
     /**
@@ -1362,6 +1404,20 @@ public class Context
         else
             {
             ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, argNew);
+            }
+        }
+
+    /**
+     * Replace the existing arguments with the specified one for the "Always" branch.
+     */
+    protected void replaceArguments(Map<String, Argument> mapArgs)
+        {
+        if (mapArgs != null)
+            {
+            for (Map.Entry<String, Argument> entry : mapArgs.entrySet())
+                {
+                replaceArgument(entry.getKey(), Context.Branch.Always, entry.getValue());
+                }
             }
         }
 

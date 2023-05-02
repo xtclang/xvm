@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,7 +13,6 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -297,7 +295,7 @@ public class AssertStatement
 
                 if (exprMessage != null)
                     {
-                    mapMessageArgs = ((AssertContext) ctx).mergeMessageContext(mapMessageArgs);
+                    mapMessageArgs = ctx.mergeNarrowedElseTypes(mapMessageArgs);
                     }
                 ctx = ctx.exit();
                 }
@@ -306,13 +304,7 @@ public class AssertStatement
         if (exprMessage != null)
             {
             Context ctxMsg = ctx.enter();
-            if (mapMessageArgs != null)
-                {
-                for (Map.Entry<String, Argument> entry : mapMessageArgs.entrySet())
-                    {
-                    ctxMsg.replaceArgument(entry.getKey(), Context.Branch.Always, entry.getValue());
-                    }
-                }
+            ctxMsg.replaceArguments(mapMessageArgs);
 
             Expression exprNew = exprMessage.validate(ctxMsg, pool().typeString(), errs);
             if (exprNew != exprMessage)
@@ -647,48 +639,6 @@ public class AssertStatement
                 {
                 getOuterContext().replaceGenericType(constFormal, Branch.Always, typeNarrowed);
                 }
-            }
-
-        /**
-         * Collect the narrowed arguments from the "else" branch of the assert expression and merge
-         * them with the previously collected map of narrowed arguments.
-         *
-         * @param map  (optional) map of previously collected arguments
-         *
-         * @return the merged map
-         */
-        protected Map<String, Argument> mergeMessageContext(Map<String, Argument> map)
-            {
-            Map<String, Argument> mapThis = getNarrowingMap(false);
-            if (map == null || map.isEmpty())
-                {
-                return mapThis.isEmpty() ? null : new HashMap<>(mapThis);
-                }
-
-            map.keySet().retainAll(mapThis.keySet()); // only keep common arguments
-            for (Map.Entry<String, Argument> entry : map.entrySet())
-                {
-                String   sName   = entry.getKey();
-                Argument argPrev = entry.getValue();
-                Argument argThis = mapThis.get(sName);
-
-                TypeConstant typePrev = argPrev.getType();
-                TypeConstant typeThis = argThis.getType();
-
-                TypeConstant typeJoin = typeThis.union(pool(), typePrev);
-                if (!typeJoin.equals(typePrev))
-                    {
-                    if (argPrev instanceof Register regPrev)
-                        {
-                        map.put(sName, regPrev.narrowType(typeJoin));
-                        }
-                    else
-                        {
-                        map.remove(sName);
-                        }
-                    }
-                }
-            return map;
             }
         }
 

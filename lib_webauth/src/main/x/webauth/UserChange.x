@@ -38,7 +38,6 @@ const UserChange
     Boolean appliesTo(Int userId)
         {
         Int|Int[] userIds = this.userId;
-        return userIds.is(Int[])?.contains(userId) : userIds.as(Int) == userId; // TODO GG should not need .as(Int)
+        return userIds.is(Int[])?.contains(userId) : userIds == userId;
         }
     }
-
