@@ -983,9 +983,8 @@ public class NamedTypeExpression
                     if (m_exprDynamic != null && ctx != null)
                         {
                         TypeConstant type = m_exprDynamic.getImplicitType(ctx);
-                        if (type != null)
+                        if (type != null && type.isTypeOfType())
                             {
-                            assert type.isTypeOfType();
                             return type.getParamType(0);
                             }
                         }

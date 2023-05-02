@@ -319,7 +319,7 @@ const DBRealm
                     }
                 }
 
-            Int[] roleIds = user.roleIds; // TODO GG add to end: [] (asserts at NTE #988)
+            Int[] roleIds = user.roleIds;
             if (roleIds.empty)
                 {
                 return True, [];
