@@ -16,12 +16,9 @@ const DBRealm
      * Construct a `DBRealm` from plain text user names and passwords, using an optional list
      * of [hashing algorithms](Signer).
      *
-     * @param realmName  the human readable name of the realm
-     * @param userPwds   the user names and passwords, in plain text form
-     * @param hashers    (optional) the [hashing algorithms](Signer) to support, which allow a
-     *                   client to never send either a user name or password in plain text, and
-     *                   which simultaneously allow the server to store the user names and passwords
-     *                   in a cryptographically secure digest form
+     * @param realmName       the human readable name of the realm
+     * @param connectionName  (optional) the name of the injected database (in case there are more
+     *                        than one) to look for the AuthSchema
      */
     construct(String realmName, String? connectionName=Null)
         {
