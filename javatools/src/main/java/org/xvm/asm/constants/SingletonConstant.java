@@ -19,7 +19,8 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a singleton instance of a const class as a constant value.
+ * Represent a singleton instance of a const (including enum, package, module) or service class as a
+ * constant value.
  */
 public class SingletonConstant
         extends ValueConstant
