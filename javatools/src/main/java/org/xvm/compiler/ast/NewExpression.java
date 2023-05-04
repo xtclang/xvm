@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -25,14 +24,11 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -42,7 +38,6 @@ import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -668,10 +663,10 @@ public class NewExpression
 
         // for a regular or virtual child construction, the target type must be new-able
         if ((plan == Plan.Regular || plan == Plan.Child) &&
-                !infoTarget.isNewable(errsTemp))
+                !infoTarget.isNewable(false, errsTemp))
             {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
-            reportNotNewable(sTarget, infoTarget, null, errsTemp);
+            infoTarget.reportNotNewable(sTarget, null, false, errsTemp);
             errsTemp.merge();
             return null;
             }
@@ -928,123 +923,6 @@ public class NewExpression
                 }
             }
         return null;
-        }
-
-    /**
-     * Report one or more reasons why the specified type is "not newable".
-     *
-     * @param sType       the name of the type that is being new'd
-     * @param infoTarget  the target type info
-     * @param sChild      (optional) a child name
-     * @param errs        the error listener
-     */
-    private void reportNotNewable(String sType, TypeInfo infoTarget, String sChild, ErrorListener errs)
-        {
-        if (!infoTarget.isClass())
-            {
-            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, infoTarget.getType().getValueString());
-            return;
-            }
-
-        if (infoTarget.isExplicitlyAbstract())
-            {
-            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE, infoTarget.getType().getValueString());
-            return;
-            }
-
-        if (infoTarget.isSingleton())
-            {
-            log(errs, Severity.ERROR, Compiler.NEW_SINGLETON_TYPE, infoTarget.getType().getValueString());
-            return;
-            }
-
-        final int[] aiCount = new int[] {1}; // limit reporting to a small number of errors
-
-        infoTarget.getProperties().values().stream()
-                .filter(PropertyInfo::isExplicitlyAbstract)
-                .forEach(info ->
-                    {
-                    if (--aiCount[0] >= 0)
-                        {
-                        if (sChild == null)
-                            {
-                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_PROPERTY,
-                                sType, info.getName());
-                            }
-                        else
-                            {
-                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_PROPERTY,
-                                sType, sChild, info.getName());
-                            }
-                        }
-                    });
-        if (aiCount[0] <= 0)
-            {
-            return;
-            }
-
-        infoTarget.getMethods().entrySet().stream()
-                .filter(entry -> entry.getValue().isAbstract())
-                .forEach(entry ->
-                    {
-                    if (--aiCount[0] >= 0)
-                        {
-                        if (sChild == null)
-                            {
-                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_METHOD,
-                                sType, entry.getKey().getSignature().getValueString());
-                            }
-                        else
-                            {
-                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_METHOD,
-                                sType, sChild, entry.getKey().getSignature().getValueString());
-                            }
-                        }
-                    });
-        if (aiCount[0] <= 0)
-            {
-            return;
-            }
-
-        Set<MethodConstant> setConstruct = infoTarget.
-            findMethods("construct", -1, MethodKind.Constructor);
-        for (MethodConstant id : setConstruct)
-            {
-            MethodInfo infoMethod = infoTarget.getMethodById(id);
-            if (infoMethod.isUncoveredVirtualConstructor(infoTarget))
-                {
-                log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
-                    sType, infoMethod.getIdentity().getValueString());
-                return;
-                }
-            }
-
-        for (Map.Entry<String, ChildInfo> entry : infoTarget.getChildInfosByName().entrySet())
-            {
-            ChildInfo infoChild = entry.getValue();
-            if (infoChild.isVirtualClass())
-                {
-                // use the same child type computation logic as TypeInfo.isNewable()
-                String         sName     = entry.getKey();
-                ClassStructure clzChild  = (ClassStructure) infoChild.getIdentity().getComponent();
-                TypeConstant   typeChild = pool().ensureVirtualChildTypeConstant(
-                                                infoTarget.getType(), sName);
-                if (clzChild.isParameterized())
-                    {
-                    typeChild = pool().ensureParameterizedTypeConstant(typeChild,
-                        clzChild.getFormalType().getParamTypesArray());
-                    }
-
-                TypeInfo info = typeChild.ensureTypeInfo(errs);
-                if (!info.isExplicitlyAbstract() && info.isAbstract())
-                    {
-                    reportNotNewable(sType, info, sName, errs);
-                    break;
-                    }
-                }
-            }
-
-        assert errs.isSilent() || errs.hasSeriousErrors();
         }
 
     /**

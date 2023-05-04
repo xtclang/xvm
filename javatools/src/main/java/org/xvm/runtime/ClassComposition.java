@@ -329,7 +329,6 @@ public class ClassComposition
             IdentityConstant idParent = idNested.getIdentityConstant();
             if (idParent.getConstantPool() != pool)
                 {
-                // REVIEW GG: is this the correct conversion?
                 idParent = (IdentityConstant) pool.register(idParent);
                 nidMethod = idParent.appendNestedIdentity(pool, idNested);
                 }

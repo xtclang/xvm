@@ -1633,31 +1633,6 @@ public class TypeCompositionStatement
                 }
             }
 
-        // make sure the package import contribution is resolved
-        if (component.getFormat() == Format.PACKAGE)
-            {
-            for (CompositionNode composition : compositions)
-                {
-                if (composition instanceof Import importClause)
-                    {
-                    NamedTypeExpression exprInjector = importClause.injector;
-                    if (exprInjector != null)
-                        {
-// TODO GG remove
-//                      List<Parameter> listInject = importClause.injects;
-                        if (importClause.injector.getIdentityConstant().containsUnresolved())
-// TODO GG REVIEW I don't think that this is needed (because the types will get resolved at some point):
-                                // || listInject != null && listInject.stream().anyMatch(p ->
-                                // p.getType().ensureTypeConstant().containsUnresolved()))
-                            {
-                            mgr.requestRevisit();
-                            return;
-                            }
-                        }
-                    }
-                }
-            }
-
         // check for cyclical contributions and validate contribution types
         Contribution contribCyclical = component.hasCyclicalContribution();
         if (contribCyclical != null)
@@ -1763,10 +1738,16 @@ public class TypeCompositionStatement
 
                     // now that names have been resolved, if an injector and any injection list are
                     // specified, we can add them to the package import
-                    NamedTypeExpression exprInjector  = compImport.getInjector();
+                    NamedTypeExpression exprInjector = compImport.getInjector();
                     if (exprInjector != null)
                         {
                         Constant idInjector = exprInjector.getIdentityConstant();
+                        if (idInjector.containsUnresolved())
+                            {
+                            mgr.requestRevisit();
+                            return;
+                            }
+
                         if (idInjector.isClass()
                                 && idInjector instanceof IdentityConstant id
                                 && id.getComponent() instanceof ClassStructure clz
@@ -2324,10 +2305,24 @@ public class TypeCompositionStatement
         if (component instanceof PackageStructure pkg && pkg.isModuleImport())
             {
             SingletonConstant constInjector = pkg.getModuleInjector();
-            if (constInjector != null && !constInjector.getType().isA(
-                    pool().ensureEcstasyTypeConstant("mgmt.ResourceProvider")))
+            if (constInjector != null)
                 {
-                log(errs, Severity.ERROR, Compiler.INJECTOR_REQUIRED);
+                if (!constInjector.getType().isA(
+                        pool.ensureEcstasyTypeConstant("mgmt.ResourceProvider")))
+                    {
+                    log(errs, Severity.ERROR, Compiler.INJECTOR_REQUIRED);
+                    return;
+                    }
+
+                ErrorListener errsTemp     = errs.branch(this);
+                TypeInfo      infoInjector = constInjector.getType().ensureTypeInfo(errsTemp);
+                if (!infoInjector.isNewable(true, errsTemp))
+                    {
+                    String sTarget = infoInjector.getType().removeAccess().getValueString();
+                    infoInjector.reportNotNewable(sTarget, null, true, errsTemp);
+                    errsTemp.merge();
+                    return;
+                    }
                 }
             }
 

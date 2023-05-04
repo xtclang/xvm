@@ -620,7 +620,7 @@ public class xRTType
             }
 
         ObjectHandle[] ahFunctions;
-        if (infoTarget.isNewable(ErrorListener.BLACKHOLE))
+        if (infoTarget.isNewable(false, ErrorListener.BLACKHOLE))
             {
             ConstantPool    pool       = frame.poolContext();
             TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);

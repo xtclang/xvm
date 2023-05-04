@@ -2399,7 +2399,7 @@ public class ClassStructure
                     {
                     return relation;
                     }
-                // TODO explain
+                // TODO GG explain
                 break;
                 }
 
@@ -2501,7 +2501,7 @@ public class ClassStructure
                     }
 
                 case Import:
-                    // TODO GG REVIEW
+                    // import contribution doesn't play any role in the type relationship
                     break;
 
                 default:
@@ -3092,6 +3092,7 @@ public class ClassStructure
                 {
                 case Delegates:
                 case Implements:
+                case Import:
                     break;
 
                 case Into:
@@ -3113,10 +3114,6 @@ public class ClassStructure
                 case Extends:
                     // the identity constant for these contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
-                    break;
-
-                case Import:
-                    // TODO GG REVIEW
                     break;
 
                 default:

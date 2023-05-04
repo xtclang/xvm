@@ -28,7 +28,11 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.TypeConstant.Origin;
 
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Constants;
+
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 
 /**
@@ -560,6 +564,14 @@ public class TypeInfo
         }
 
     /**
+     * @return true if this type represents and instantiable singleton class
+     */
+    public boolean isInstantiableSingleton()
+        {
+        return isSingleton() && f_struct.findConstructor(TypeConstant.NO_TYPES) != null;
+        }
+
+    /**
      * @return true if this type represents a singleton instance of a class
      */
     public boolean isSynthetic()
@@ -598,9 +610,12 @@ public class TypeInfo
      * The actual check is always done at the parent's level, so for a parent class to be "newable",
      * all the virtual children have to be non-abstract.
      *
+     * @param fSingleton  if true, don't disallow singletons, but check for the default constructor
+     *                    instead
+     *
      * @return true iff this is a type that can be instantiated
      */
-    public boolean isNewable(ErrorListener errs)
+    public boolean isNewable(boolean fSingleton, ErrorListener errs)
         {
         if (isVirtualChildClass())
             {
@@ -609,7 +624,11 @@ public class TypeInfo
                 return false;
                 }
             }
-        else if (isAbstract() || isSingleton() || !isClass())
+        else if (fSingleton ? !isInstantiableSingleton() : isSingleton())
+            {
+            return false;
+            }
+        else if (isAbstract() || !isClass())
             {
             return false;
             }
@@ -645,6 +664,132 @@ public class TypeInfo
         TypeConstant typeStruct = pool().ensureAccessTypeConstant(f_type, Access.STRUCT);
         typeStruct.ensureTypeInfo(errs);
         return !errs.hasSeriousErrors();
+        }
+
+    /**
+     * Report one or more reasons why this type is "not newable".
+     *
+     * @param sTarget      the name of the type that is being new'd
+     * @param sChild      (optional) a child name
+     * @param fSingleton  if true, report an absence of the default constructor
+     * @param errs        the error listener
+     */
+    public void reportNotNewable(String sTarget, String sChild, boolean fSingleton,
+                                 ErrorListener errs)
+        {
+        TypeConstant type = getType();
+        if (!isClass())
+            {
+            type.log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, sTarget);
+            return;
+            }
+
+        if (isExplicitlyAbstract())
+            {
+            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE, sTarget);
+            return;
+            }
+
+        if (fSingleton)
+            {
+            if (!isInstantiableSingleton())
+                {
+                type.log(errs, Severity.ERROR, Compiler.DEFAULT_CONSTRUCTOR_REQUIRED, sTarget);
+                return;
+                }
+            }
+        else if (isSingleton())
+            {
+            type.log(errs, Severity.ERROR, Compiler.NEW_SINGLETON_TYPE, sTarget);
+            return;
+            }
+
+        final int[] aiCount = new int[] {1}; // limit reporting to a small number of errors
+
+        getProperties().values().stream()
+                .filter(PropertyInfo::isExplicitlyAbstract)
+                .forEach(info ->
+                    {
+                    if (--aiCount[0] >= 0)
+                        {
+                        if (sChild == null)
+                            {
+                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_PROPERTY,
+                                sTarget, info.getName());
+                            }
+                        else
+                            {
+                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_PROPERTY,
+                                sTarget, sChild, info.getName());
+                            }
+                        }
+                    });
+        if (aiCount[0] <= 0)
+            {
+            return;
+            }
+
+        getMethods().entrySet().stream()
+                .filter(entry -> entry.getValue().isAbstract())
+                .forEach(entry ->
+                    {
+                    if (--aiCount[0] >= 0)
+                        {
+                        if (sChild == null)
+                            {
+                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_METHOD,
+                                sTarget, entry.getKey().getSignature().getValueString());
+                            }
+                        else
+                            {
+                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_METHOD,
+                                sTarget, sChild, entry.getKey().getSignature().getValueString());
+                            }
+                        }
+                    });
+        if (aiCount[0] <= 0)
+            {
+            return;
+            }
+
+        Set<MethodConstant> setConstruct = findMethods("construct", -1, MethodKind.Constructor);
+        for (MethodConstant id : setConstruct)
+            {
+            MethodInfo infoMethod = getMethodById(id);
+            if (infoMethod.isUncoveredVirtualConstructor(this))
+                {
+                type.log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
+                    sTarget, infoMethod.getIdentity().getValueString());
+                return;
+                }
+            }
+
+        for (Entry<String, ChildInfo> entry : getChildInfosByName().entrySet())
+            {
+            ChildInfo infoChild = entry.getValue();
+            if (infoChild.isVirtualClass())
+                {
+                // use the same child type computation logic as TypeInfo.isNewable()
+                String         sName     = entry.getKey();
+                ClassStructure clzChild  = (ClassStructure) infoChild.getIdentity().getComponent();
+                TypeConstant   typeChild = pool().ensureVirtualChildTypeConstant(
+                                                getType(), sName);
+                if (clzChild.isParameterized())
+                    {
+                    typeChild = pool().ensureParameterizedTypeConstant(typeChild,
+                        clzChild.getFormalType().getParamTypesArray());
+                    }
+
+                TypeInfo info = typeChild.ensureTypeInfo(errs);
+                if (!info.isExplicitlyAbstract() && info.isAbstract())
+                    {
+                    info.reportNotNewable(sTarget, sName, false, errs);
+                    break;
+                    }
+                }
+            }
+
+        assert errs.isSilent() || errs.hasSeriousErrors();
         }
 
     /**

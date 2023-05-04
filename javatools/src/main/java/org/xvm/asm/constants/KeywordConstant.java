@@ -102,7 +102,6 @@ public class KeywordConstant
     @Override
     public boolean isClass()
         {
-        // REVIEW GG
         return true;
         }
 

@@ -2341,7 +2341,6 @@ public class NameExpression
 
             if (fSuppressDeref)
                 {
-                // assert !reg.isPredefined(); // REVIEW GG: see SoftVar.x
                 m_plan = Plan.RegisterRef;
                 return reg.ensureRegType(!m_fAssignable);
                 }
