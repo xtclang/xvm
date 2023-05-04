@@ -16,6 +16,9 @@ public interface Constants
     /**
      * The current major version of the XVM FileStructure. This is the newest
      * version that can be read and/or written by this implementation.
+     *
+     * By convention, version 0 is the pre-production version: The language and tool-chain are still
+     * in development.
      */
     int VERSION_MAJOR_CUR = 0;
 
@@ -23,8 +26,15 @@ public interface Constants
      * The current minor version of the XVM File structure. This is the newest
      * version that can be written by this implementation. (Newer minor versions
      * can be safely read.)
+     *
+     * By convention, as long as VERSION_MAJOR_CUR == 0, whenever a change is made to Ecstasy that
+     * changes the persistent structure of an ".xtc" file in a manner that isn't both forwards and
+     * backwards compatible, the minor version will be updated to the 8-digit ISO 8601 date (i.e.
+     * the date string with the "-" characters having been removed). The result is that an error
+     * will be displayed if there is a version mismatch, which should save some frustration -- since
+     * otherwise the resulting error(s) can be very hard to diagnose.
      */
-    int VERSION_MINOR_CUR = 0;
+    int VERSION_MINOR_CUR = 20230504;
 
 
     // ----- names ---------------------------------------------------------------------------------

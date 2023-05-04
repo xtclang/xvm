@@ -621,23 +621,31 @@ public class Parser
                 compositions.add(new CompositionNode.Into(exprCondition, keyword, parseExtendedTypeExpression()));
                 fAny = true;
                 }
-            else // not context sensitive keywords
+            else // not context-sensitive keywords
                 {
                 switch (peek().getId())
                     {
                     case IMPORT:
-                    case IMPORT_EMBED:
-                    case IMPORT_REQ:
-                    case IMPORT_WANT:
-                    case IMPORT_OPT:
                         {
-                                              keyword  = current();
+                        keyword = current();
+                        Token modifier = null;
+                        if (   (modifier = match(Id.EMBEDDED)) != null
+                            || (modifier = match(Id.REQUIRED)) != null
+                            || (modifier = match(Id.DESIRED)) != null
+                            || (modifier = match(Id.OPTIONAL)) != null) {}
+
                         List<Token>           names    = parseQualifiedName();
-                        NamedTypeExpression   module   = new NamedTypeExpression(null, names, null,
-                                null, null, names.get(names.size()-1).getEndPosition());
+                        NamedTypeExpression   module   = new ModuleTypeExpression(names);
                         List<VersionOverride> versions = parseVersionRequirement(false);
-                        compositions.add(new CompositionNode.Import(exprCondition, keyword, module,
-                                versions, prev().getEndPosition()));
+
+                        List<Parameter>     injects  = parseResourceList();
+                        NamedTypeExpression injector = null;
+                        if (match(Id.USING, (injects != null)) != null)
+                            {
+                            injector = parseNamedTypeExpression(null);
+                            }
+                        compositions.add(new CompositionNode.Import(exprCondition, keyword, modifier,
+                                module,versions, injects, injector, prev().getEndPosition()));
                         fAny = true;
                         }
                         break;
@@ -5412,6 +5420,56 @@ public class Parser
             }
         }
 
+
+    /**
+     * Parse a list of package injections, starting with the opening parenthesis.
+     *
+     * <p/><code><pre>
+     * ResourceList
+     *     "inject" "(" ResourceListContents-opt ")"
+     *
+     * ResourceListContents
+     *     Resources ","-opt
+     *
+     * Resources
+     *     Resource
+     *     Resources "," Resource
+     *
+     * Resource
+     *     TypeExpression ResourceFinish
+     *
+     * ResourceFinish
+     *     Name
+     *     "_"
+     * </pre></code>
+     *
+     * @return a list of Parameter objects, or  null if no "inject" clause is encountered
+     */
+    List<Parameter> parseResourceList()
+        {
+        if (match(Id.INJECT) == null)
+            {
+            return null;
+            }
+
+        List<Parameter> resources = new ArrayList<>();
+        expect(Id.L_PAREN);
+
+        // check for an empty list of resources
+        if (match(Id.R_PAREN) != null)
+            {
+            return resources;
+            }
+
+        do
+            {
+            TypeExpression type  = parseTypeExpression();
+            Token          name  = expectNameOrAny();
+            resources.add(new Parameter(type, name));
+            }
+        while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
+        return resources;
+        }
 
     /**
      * Parse a sequence of parameters, starting with the opening parenthesis.

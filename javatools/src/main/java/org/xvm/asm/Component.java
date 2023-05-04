@@ -32,6 +32,7 @@ import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -163,6 +164,8 @@ public abstract class Component
     Component(Component parent)
         {
         super(parent);
+        // TODO this constructor is not currently used, but there are fields that need to be copied
+        //      in order for it to be correct
         }
 
 
@@ -562,12 +565,12 @@ public abstract class Component
     /**
      * Add a module import contribution.
      *
-     * @param composition  the contribution type
-     * @param constModule  the contribution class
+     * @param constModule    the contribution class
      */
-    public void addImport(Composition composition, ModuleConstant constModule)
+    public void addImport(ModuleConstant constModule)
         {
-        addContribution(new Contribution(composition, constModule));
+        assert this instanceof PackageStructure;
+        addContribution(new Contribution(constModule));
         }
 
     /**
@@ -2793,29 +2796,11 @@ public abstract class Component
          */
         RebasesOnto,
         /**
-         * Represents that the package being composed represents an optional module.
+         * Represents that the package being composed represents an imported module.
          * <p/>
          * The constant is a ModuleConstant.
          */
-        ImportOptional,
-        /**
-         * Represents that the package being composed represents an optional-but-desired module.
-         * <p/>
-         * The constant is a ModuleConstant.
-         */
-        ImportDesired,
-        /**
-         * Represents that the package being composed represents a required module.
-         * <p/>
-         * The constant is a ModuleConstant.
-         */
-        ImportRequired,
-        /**
-         * Represents that the package being composed represents an embedded module.
-         * <p/>
-         * The constant is a ModuleConstant.
-         */
-        ImportEmbedded,
+        Import,
         /**
          * Synthetic (transient) composition indicating an equivalency.
          * <p/>
@@ -2860,8 +2845,8 @@ public abstract class Component
                 throws IOException
             {
             m_composition = Composition.valueOf(in.readUnsignedByte());
-            Constant constContrib = pool.getConstant(readIndex(in));
-            assert constContrib != null;
+            m_typeContrib = (TypeConstant) pool.getConstant(readIndex(in));
+            assert m_typeContrib != null;
 
             switch (m_composition)
                 {
@@ -2869,21 +2854,17 @@ public abstract class Component
                 case Implements:
                 case Into:
                 case RebasesOnto:
-                    m_typeContrib = (TypeConstant) constContrib;
                     break;
 
                 case Annotation:
-                    m_typeContrib = (TypeConstant) constContrib;
                     m_annotation  = (Annotation) pool.getConstant(readIndex(in));
                     break;
 
                 case Delegates:
-                    m_typeContrib = (TypeConstant) constContrib;
                     m_constProp   = (PropertyConstant) pool.getConstant(readIndex(in));
                     break;
 
                 case Incorporates:
-                    m_typeContrib = (TypeConstant) constContrib;
                     int cParams = readMagnitude(in);
                     if (cParams > 0)
                         {
@@ -2899,16 +2880,27 @@ public abstract class Component
                         }
                     break;
 
-                case ImportOptional:
-                case ImportDesired:
-                case ImportRequired:
-                case ImportEmbedded:
-                    m_constModule = (ModuleConstant) constContrib;
+                case Import:
+                    m_constInjector = (SingletonConstant) pool.getConstant(readIndex(in));
+                    if (m_constInjector != null)
+                        {
+                        int c = readIndex(in);
+                        if (c >= 0)
+                            {
+                            List<Injection> listInject = new ArrayList<>(c);
+                            for (int i = 0; i < c; ++i)
+                                {
+                                TypeConstant   type = (TypeConstant)   pool.getConstant(readIndex(in));
+                                StringConstant name = (StringConstant) pool.getConstant(readIndex(in));
+                                listInject.add(new Injection(type, name));
+                                }
+                            m_listInject = listInject;
+                            }
+                        }
                     break;
 
                 default:
                     throw new UnsupportedOperationException("composition=" + m_composition);
-
                 }
             }
 
@@ -2943,10 +2935,7 @@ public abstract class Component
                 case Delegates:
                     throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
 
-                case ImportOptional:
-                case ImportDesired:
-                case ImportRequired:
-                case ImportEmbedded:
+                case Import:
                     throw new IllegalArgumentException("imports uses the constructor with a ModuleConstant");
 
                 default:
@@ -2960,43 +2949,17 @@ public abstract class Component
         /**
          * Construct an import Contribution.
          *
-         * @param composition  specifies the type of composition; one of ImportOptional,
-         *                     ImportDesired, ImportRequired, or ImportEmbedded
-         * @param constModule  specifies the module being imported
+         * @param constModule    specifies the module being imported
          */
-        protected Contribution(Composition composition, ModuleConstant constModule)
+        protected Contribution(ModuleConstant constModule)
             {
-            assert composition != null && constModule != null;
-
-            switch (composition)
+            if (constModule == null)
                 {
-                case ImportOptional:
-                case ImportDesired:
-                case ImportRequired:
-                case ImportEmbedded:
-                    if (constModule == null)
-                        {
-                        throw new IllegalArgumentException("module is required");
-                        }
-                    break;
-
-                case Annotation:
-                case Extends:
-                case Implements:
-                case Into:
-                case Incorporates:
-                case RebasesOnto:
-                    throw new IllegalArgumentException(composition + " uses the constructor with a TypeConstant");
-
-                case Delegates:
-                    throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
-
-                default:
-                    throw new UnsupportedOperationException("composition=" + composition);
+                throw new IllegalArgumentException("module is required");
                 }
 
-            m_composition = composition;
-            m_constModule = constModule;
+            m_composition = Composition.Import;
+            m_typeContrib = constModule.getType();
             }
 
         /**
@@ -3082,7 +3045,53 @@ public abstract class Component
          */
         public ModuleConstant getModuleConstant()
             {
-            return m_constModule;
+            assert m_composition == Composition.Import;
+            return (ModuleConstant) getTypeConstant().getDefiningConstant();
+            }
+
+        /**
+         * Add an injector to a package that imports a module.
+         *
+         * @param constInjector  optional injector
+         * @param listInject     optional list of injections
+         */
+        void addInjector(SingletonConstant constInjector, List<Injection> listInject)
+            {
+            if (m_composition != Composition.Import)
+                {
+                throw new IllegalStateException("the contribution must be a package that imports a module");
+                }
+
+            if (m_constInjector != null)
+                {
+                throw new IllegalStateException("injector already added");
+                }
+
+            if (constInjector == null)
+                {
+                throw new IllegalArgumentException("missing injector");
+                }
+
+            m_constInjector = constInjector;
+            m_listInject    = listInject;
+            }
+
+        /**
+         * @return for a package that imports a module, get the injector that is used to override
+         *         the injections for that module, if any
+         */
+        public SingletonConstant getInjector()
+            {
+            return m_constInjector;
+            }
+
+        /**
+         * @return a list of specific injections specified to be handled by the injector; null
+         *         indicates that all injections are handled by the injector
+         */
+        public List<Injection> getInjections()
+            {
+            return m_listInject;
             }
 
         /**
@@ -3118,13 +3127,26 @@ public abstract class Component
             Map<StringConstant, TypeConstant> mapParams = m_mapParams;
             if (mapParams != null)
                 {
-                for (TypeConstant type : mapParams.values())
+                for (TypeConstant typeParam : mapParams.values())
                     {
-                    if (type != null && type.containsUnresolved())
+                    if (typeParam != null && typeParam.containsUnresolved())
                         {
                         return true;
                         }
                     }
+                }
+
+            SingletonConstant constInjector = m_constInjector;
+            if (constInjector != null && constInjector.containsUnresolved())
+                {
+                return true;
+                }
+
+            List<Injection> listInject = m_listInject;
+            if (listInject != null && listInject.stream().anyMatch(
+                    inj -> inj.getType().containsUnresolved()))
+                {
+                return true;
                 }
 
             return false;
@@ -3363,7 +3385,6 @@ public abstract class Component
          */
         protected void registerConstants(ConstantPool pool)
             {
-            m_constModule  = (ModuleConstant)   pool.register(m_constModule);
             m_typeContrib  = (TypeConstant)     pool.register(m_typeContrib);
             m_constProp    = (PropertyConstant) pool.register(m_constProp);
             m_annotation   = (Annotation)       pool.register(m_annotation);
@@ -3382,6 +3403,28 @@ public abstract class Component
                     }
                 m_mapParams = mapNew;
                 }
+
+            if (m_constInjector != null)
+                {
+                m_constInjector = (SingletonConstant) pool.register(m_constInjector);
+
+                List<Injection> listInject = m_listInject;
+                if (listInject != null)
+                    {
+                    for (int i = 0, c = listInject.size(); i < c; ++i)
+                        {
+                        Injection      oldInject = listInject.get(i);
+                        TypeConstant   oldType   = oldInject.getType();
+                        StringConstant oldName   = oldInject.getNameConstant();
+                        TypeConstant   newType   = (TypeConstant)   pool.register(oldType);
+                        StringConstant newName   = (StringConstant) pool.register(oldName);
+                        if (newType != oldType || newName != oldName)
+                            {
+                            listInject.set(i, new Injection(newType, newName));
+                            }
+                        }
+                    }
+                }
             }
 
         /**
@@ -3391,7 +3434,7 @@ public abstract class Component
                 throws IOException
             {
             out.writeByte(m_composition.ordinal());
-            writePackedLong(out, (m_typeContrib == null ? m_constModule : m_typeContrib).getPosition());
+            writePackedLong(out, m_typeContrib.getPosition());
 
             switch (m_composition)
                 {
@@ -3419,6 +3462,24 @@ public abstract class Component
 
                             writePackedLong(out, constName.getPosition());
                             writePackedLong(out, type == null ? 0 : type.getPosition());
+                            }
+                        }
+                    break;
+
+                case Import:
+                    writePackedLong(out, Constant.indexOf(m_constInjector));
+                    if (m_constInjector != null)
+                        {
+                        List<Injection> listInject = m_listInject;
+                        int c = listInject == null ? -1 : listInject.size();
+                        writePackedLong(out, c);
+                        if (c > 0)
+                            {
+                            for (Injection inject : listInject)
+                                {
+                                writePackedLong(out, Constant.indexOf(inject.getType()));
+                                writePackedLong(out, Constant.indexOf(inject.getNameConstant()));
+                                }
                             }
                         }
                     break;
@@ -3460,10 +3521,11 @@ public abstract class Component
                 }
 
             if (this.m_composition == that.m_composition
-                    && Handy.equals(this.m_constModule, that.m_constModule)
-                    && Handy.equals(this.m_typeContrib, that.m_typeContrib)
-                    && Handy.equals(this.m_constProp, that.m_constProp)
-                    && Handy.equals(this.m_annotation, that.m_annotation))
+                    && Handy.equals(this.m_typeContrib  , that.m_typeContrib  )
+                    && Handy.equals(this.m_constProp    , that.m_constProp    )
+                    && Handy.equals(this.m_annotation   , that.m_annotation   )
+                    && Handy.equals(this.m_constInjector, that.m_constInjector)
+                    && Handy.equals(this.m_listInject   , that.m_listInject   ))
                 {
                 ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
                 ListMap<StringConstant, TypeConstant> mapThat = that.m_mapParams;
@@ -3477,6 +3539,7 @@ public abstract class Component
                         && Handy.equals(mapThis.values().toArray(), mapThat.values().toArray());
                     }
                 }
+
             return false;
             }
 
@@ -3541,11 +3604,7 @@ public abstract class Component
                 }
             else
                 {
-                if (m_constModule != null)
-                    {
-                    sb.append(m_constModule.getDescription());
-                    }
-                else if (m_typeContrib != null)
+                if (m_typeContrib != null)
                     {
                     sb.append(m_typeContrib.resolveTypedefs().getDescription());
                     }
@@ -3592,11 +3651,6 @@ public abstract class Component
         private final Composition m_composition;
 
         /**
-         * Defines the module (ModuleConstant) that was used as part of the Contribution.
-         */
-        private ModuleConstant m_constModule;
-
-        /**
          * Defines the class (TypeConstant) that was used as part of the Contribution.
          */
         private TypeConstant m_typeContrib;
@@ -3616,6 +3670,106 @@ public abstract class Component
          * The name-to-type information for "incorporates conditional" constraints.
          */
         private ListMap<StringConstant, TypeConstant> m_mapParams;
+
+        /**
+         * For a package "Import", this is the optional injector (ResourceProvider) for the module.
+         */
+        private SingletonConstant m_constInjector;
+
+        /**
+         * For a package "Import", this is the optional list of injections handled by the injector
+         * for the module represented by the package.
+         */
+        private List<Injection> m_listInject;
+        }
+
+
+    // ----- inner class: Injection ----------------------------------------------------------------
+
+    /**
+     * Represents an injection specifier used in a "package..import..inject (x) using..." statement.
+     */
+    public static class Injection
+        {
+        /**
+         * Construct an Injection specifier.
+         *
+         * @param type  the type of the injection variable
+         * @param name  the name of the injection variable
+         */
+        public Injection(TypeConstant type, StringConstant name)
+            {
+            if (type == null)
+                {
+                throw new IllegalArgumentException("injection type is required");
+                }
+
+            this.type = type;
+            this.name = name;
+            }
+
+        /**
+         * @return the type of the injection variable; not null.
+         */
+        public TypeConstant getType()
+            {
+            return type;
+            }
+
+        /**
+         * @return the name of the injection variable; may be null to indicate "_".
+         */
+        public String getName()
+            {
+            StringConstant name = this.name;
+            return name == null
+                ? null
+                : name.getValue();
+            }
+
+        /**
+         * @return the constant containing the name of the injection variable, or null
+         */
+        public StringConstant getNameConstant()
+            {
+            return name;
+            }
+
+        @Override
+        public boolean equals(Object o)
+            {
+            if (o instanceof Injection that)
+                {
+                return this == that
+                        || Handy.equals(this.type, that.type)
+                        && Handy.equals(this.name, that.name);
+                }
+
+            return false;
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return Hash.of(type,
+                   Hash.of(name));
+            }
+
+        @Override
+        public String toString()
+            {
+            return type + " " + (name == null ? "_" : name);
+            }
+
+        /**
+         * The type of the injection variable; not null.
+         */
+        private final TypeConstant type;
+
+        /**
+         * The name of the injection variable; may be null to indicate "_".
+         */
+        private final StringConstant name;
         }
 
 
@@ -3762,13 +3916,13 @@ public abstract class Component
     private Map<String, Component> m_childByName;
 
     /**
-     * For XVM structures that can be modified, this flag tracks whether or not
-     * a modification has occurred.
+     * For XVM structures that can be modified, this flag tracks whether a modification has
+     * occurred.
      */
     private boolean m_fModified;
 
     /**
      * Recursion check for {@link #resolveContributedName}. Not thread-safe.
      */
-    private Boolean m_FVisited;
+    private transient Boolean m_FVisited;
     }

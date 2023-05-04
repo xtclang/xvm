@@ -453,15 +453,40 @@ public abstract class CompositionNode
 
     // ----- inner class: Import -------------------------------------------------------------------
 
+    /**
+     * Represents a module import on a package declaration.
+     */
     public static class Import
             extends CompositionNode
         {
-        public Import(Expression condition, Token keyword, NamedTypeExpression type,
-                      List<VersionOverride> vers, long lEndPos)
+        public Import(Expression condition, Token keyword, Token modifier, NamedTypeExpression type,
+                      List<VersionOverride> vers, List<Parameter> injects,
+                      NamedTypeExpression injector, long lEndPos)
             {
             super(condition, keyword, type);
-            this.vers    = vers;
-            this.lEndPos = lEndPos;
+            this.modifier = modifier;
+            this.vers     = vers;
+            this.injects  = injects;
+            this.injector = injector;
+            this.lEndPos  = lEndPos;
+            }
+
+        /**
+         * @return the modifier keyword, or null
+         */
+        public Token getModifier()
+            {
+            return modifier;
+            }
+
+        /**
+         * @return the implied modifier keyword as a token ID
+         */
+        public Token.Id getImplicitModifier()
+            {
+            return modifier == null
+                    ? Token.Id.REQUIRED
+                    : modifier.getId();
             }
 
         /**
@@ -512,6 +537,22 @@ public abstract class CompositionNode
             return list;
             }
 
+        /**
+         * @return the name of the singleton injector class
+         */
+        NamedTypeExpression getInjector()
+            {
+            return injector;
+            }
+
+        /**
+         * @return the types and names of injections that will get handled by the specified injector
+         */
+        List<Parameter> getSpecificInjections()
+            {
+            return injects;
+            }
+
         @Override
         public long getEndPosition()
             {
@@ -529,7 +570,16 @@ public abstract class CompositionNode
             {
             StringBuilder sb = new StringBuilder();
 
-            sb.append(toStartString());
+            sb.append(keyword.getId().TEXT)
+              .append(' ');
+
+            if (modifier != null)
+                {
+                sb.append(modifier.getId().TEXT)
+                  .append(' ');
+                }
+
+            sb.append(type);
 
             if (vers != null)
                 {
@@ -549,18 +599,66 @@ public abstract class CompositionNode
                     }
                 }
 
-            sb.append(toEndString());
+            if (injects != null)
+                {
+                sb.append("\n        ")
+                  .append(Token.Id.INJECT.TEXT)
+                  .append(' ')
+                  .append('(');
+
+                boolean first = true;
+                for (Parameter injection : injects)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(injection);
+                    }
+
+                sb.append(')');
+                }
+
+
+            if (injector != null)
+                {
+                sb.append("\n        ")
+                    .append(Token.Id.USING.TEXT)
+                    .append(' ')
+                    .append(injector);
+                }
+
             return sb.toString();
             }
+
+        /**
+         * The keyword modifier; could be null.
+         */
+        protected Token modifier;
 
         /**
          * The version overrides; could be null.
          */
         protected List<VersionOverride> vers;
-        protected long                  lEndPos;
+
+        /**
+         * The injection list; could be null.
+         */
+        protected List<Parameter> injects;
+
+        /**
+         * The injector specifier; could be null.
+         */
+        protected NamedTypeExpression injector;
+
+        protected long lEndPos;
 
         private static final Field[] CHILD_FIELDS =
-                fieldsForNames(Import.class, "condition", "type", "vers");
+                fieldsForNames(Import.class, "condition", "type", "vers", "injects", "injector");
         }
 
 

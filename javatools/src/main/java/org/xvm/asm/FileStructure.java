@@ -1042,8 +1042,8 @@ public class FileStructure
         // history of evolution of the Ecstasy language and the XVM specification), as versions will
         // initially be ascending-only, but at some point, only up-to-specific-minor-versions of
         // specific-major-versions are likely to be supported
-        m_nMajorVer = in.readUnsignedShort();
-        m_nMinorVer = in.readUnsignedShort();
+        m_nMajorVer = in.readInt();
+        m_nMinorVer = in.readInt();
         if (!isFileVersionSupported(m_nMajorVer, m_nMinorVer))
             {
             throw new IOException("unsupported version: " + m_nMajorVer + "." + m_nMinorVer);
@@ -1087,8 +1087,8 @@ public class FileStructure
             throws IOException
         {
         out.writeInt(FILE_MAGIC);
-        out.writeShort(VERSION_MAJOR_CUR);
-        out.writeShort(VERSION_MINOR_CUR);
+        out.writeInt(VERSION_MAJOR_CUR);
+        out.writeInt(VERSION_MINOR_CUR);
         m_pool.assemble(out);
         writePackedLong(out, getModule().getIdentityConstant().getPosition());
         assembleChildren(out);

@@ -2500,6 +2500,10 @@ public class ClassStructure
                     break;
                     }
 
+                case Import:
+                    // TODO GG REVIEW
+                    break;
+
                 default:
                     throw new IllegalStateException();
                 }
@@ -3109,6 +3113,10 @@ public class ClassStructure
                 case Extends:
                     // the identity constant for these contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
+                    break;
+
+                case Import:
+                    // TODO GG REVIEW
                     break;
 
                 default:

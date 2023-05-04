@@ -85,7 +85,7 @@ public class Parameter
         if (name != null)
             {
             sb.append(' ')
-              .append(name.getValue());
+              .append(name.getValueText());
             }
 
         if (value != null)

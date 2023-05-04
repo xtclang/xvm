@@ -139,19 +139,18 @@ Composition
     "delegates" AnyTypeExpression "(" Expression ")"
     "incorporates" IncorporatesFinish
     "into" AnyTypeExpression
-    ImportClause QualifiedName VersionRequirement-opt
+    "import" ImportModifier-opt QualifiedName VersionRequirement-opt ResourceProvider-opt
     "default" "(" Expression ")"
 
 IncorporatesFinish
     "conditional" QualifiedName TypeParameterList ArgumentList-opt
     TypeExpression ArgumentList-opt
 
-ImportClause
-    "import"
-    "import:embedded"
-    "import:required"
-    "import:desired"
-    "import:optional"
+ImportModifier
+    "embedded"
+    "required"
+    "desired"
+    "optional"
 
 VersionRequirement
     Version VersionOverrides-opt
@@ -174,6 +173,26 @@ Versions
 
 Version
     VersionLiteral
+
+ResourceProvider
+    ResourceList-opt "using" NamedTypeExpression
+
+ResourceList
+    "inject" "(" ResourceListContents-opt ")"
+
+ResourceListContents
+    Resources ","-opt
+
+Resources
+    Resource
+    Resources "," Resource
+
+Resource
+    TypeExpression ResourceFinish
+
+ResourceFinish
+    Name
+    "_"
 
 # note: EnumBody is only valid (and is not actually optional) for the "enum" category, but that
 # check can be deferred to a syntactic or semantic analysis phase

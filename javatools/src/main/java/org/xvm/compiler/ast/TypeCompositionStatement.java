@@ -21,6 +21,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Component.Injection;
 import org.xvm.asm.ComponentBifurcator;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -47,6 +48,7 @@ import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -1084,10 +1086,6 @@ public class TypeCompositionStatement
                     break;
 
                 case IMPORT:
-                case IMPORT_EMBED:
-                case IMPORT_REQ:
-                case IMPORT_WANT:
-                case IMPORT_OPT:
                     {
                     ++cImports;
                     // "import" not allowed (only used by packages)
@@ -1139,6 +1137,8 @@ public class TypeCompositionStatement
                         ((PackageStructure) component).setImportedModule(moduleImport);
                         }
 
+                    // incorporate version requirements into the package information where the
+                    // module is being mounted
                     List<Version>        listPrefer = compImport.getPreferVersionList();
                     VersionTree<Boolean> vtreeAllow = compImport.getAllowVersionTree();
                     if (moduleImport.isMainModule())
@@ -1156,21 +1156,20 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        switch (keyword)
+                        switch (compImport.getImplicitModifier())
                             {
-                            case IMPORT_OPT:
+                            case OPTIONAL:
                                 moduleImport.fingerprintOptional();
                                 break;
 
-                            case IMPORT_WANT:
+                            case DESIRED:
                                 moduleImport.fingerprintDesired();
                                 break;
 
-                            case IMPORT_EMBED:
+                            case EMBEDDED:
                                 // the embedding is performed much later, long after the fingerprint
                                 // is fully formed; for now, just mark the module import as required
-                            case IMPORT:
-                            case IMPORT_REQ:
+                            case REQUIRED:
                                 moduleImport.fingerprintRequired();
                                 break;
 
@@ -1180,6 +1179,9 @@ public class TypeCompositionStatement
 
                         // the imported module must always be imported with the same
                         // exact version override (or none)
+                        // TODO merge requirements instead of always making this an error, so that
+                        //      the same module can be imported by multiple modules within the
+                        //      dependency graph, each having their own version reqs
                         if (!listPrefer.isEmpty())
                             {
                             List<Version> listOld = moduleImport.getFingerprintVersionPrefs();
@@ -1205,6 +1207,12 @@ public class TypeCompositionStatement
                                 }
                             }
                         }
+
+                    // check package-local injection support
+                    // TODO need depth-from-root-module distance, so that if we import the same
+                    //      module more than once, we will only use the injection override from the
+                    //      outermost usage, and raise an error if multiple imports of the same
+                    //      module at the same depth-from-root-module occur with conflicting params
 
                     // if the package statement is subject to a condition (note that the import
                     // composition cannot be conditional itself), then the module must be marked
@@ -1623,12 +1631,30 @@ public class TypeCompositionStatement
                 mgr.requestRevisit();
                 return;
                 }
+            }
 
-            if (clz instanceof PackageStructure prop && prop.isModuleImport())
+        // make sure the package import contribution is resolved
+        if (component.getFormat() == Format.PACKAGE)
+            {
+            for (CompositionNode composition : compositions)
                 {
-                // the containing class may depend on this package import, but a module import
-                // itself does not depend on anything else
-                break;
+                if (composition instanceof Import importClause)
+                    {
+                    NamedTypeExpression exprInjector = importClause.injector;
+                    if (exprInjector != null)
+                        {
+// TODO GG remove
+//                      List<Parameter> listInject = importClause.injects;
+                        if (importClause.injector.getIdentityConstant().containsUnresolved())
+// TODO GG REVIEW I don't think that this is needed (because the types will get resolved at some point):
+                                // || listInject != null && listInject.stream().anyMatch(p ->
+                                // p.getType().ensureTypeConstant().containsUnresolved()))
+                            {
+                            mgr.requestRevisit();
+                            return;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1721,28 +1747,58 @@ public class TypeCompositionStatement
             {
             for (CompositionNode composition : compositions)
                 {
-                Token.Id keyword = composition.getKeyword().getId();
-                switch (keyword)
+                if (composition instanceof Import compImport)
                     {
-                    case IMPORT:
-                    case IMPORT_EMBED:
-                    case IMPORT_REQ:
-                    case IMPORT_WANT:
-                    case IMPORT_OPT:
-                        PackageStructure structPkg = (PackageStructure) component;
-                        ModuleStructure  structMod = structPkg == null ? null : structPkg.getImportedModule();
-                        ModuleStructure  structAct = structMod == null ? null : structMod.getFingerprintOrigin();
-                        if (structAct == null)
-                            {
-                            // this is obviously an error -- we can't compile without the module
-                            // being available
-                            Import              imp  = (Import) composition;
-                            NamedTypeExpression type = (NamedTypeExpression) imp.type;
-                            type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, type.getName());
-                            }
+                    PackageStructure structPkg = (PackageStructure) component;
+                    ModuleStructure  structMod = structPkg == null ? null : structPkg.getImportedModule();
+                    ModuleStructure  structAct = structMod == null ? null : structMod.getFingerprintOrigin();
+                    if (structAct == null)
+                        {
+                        // this is obviously an error -- we can't compile without the module
+                        // being available
+                        Import              imp  = compImport;
+                        NamedTypeExpression type = (NamedTypeExpression) imp.type;
+                        type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, type.getName());
+                        }
 
-                        fModuleImport = true;
-                        break;
+                    // now that names have been resolved, if an injector and any injection list are
+                    // specified, we can add them to the package import
+                    NamedTypeExpression exprInjector  = compImport.getInjector();
+                    if (exprInjector != null)
+                        {
+                        Constant idInjector = exprInjector.getIdentityConstant();
+                        if (idInjector.isClass()
+                                && idInjector instanceof IdentityConstant id
+                                && id.getComponent() instanceof ClassStructure clz
+                                && clz.isSingleton())
+                            {
+                            ConstantPool      pool          = pool();
+                            SingletonConstant constInjector = pool.ensureSingletonConstConstant(id);
+                            List<Injection>   listInject    = null;
+                            List<Parameter>   listParam     = compImport.getSpecificInjections();
+                            if (listParam != null)
+                                {
+                                listInject = new ArrayList<>(listParam.size());
+                                for (Parameter param : listParam)
+                                    {
+                                    TypeConstant   constType = param.getType().ensureTypeConstant();
+                                    String         sName     = param.getName();
+                                    StringConstant constName = sName == null
+                                            ? null
+                                            : pool.ensureStringConstant(sName);
+                                    listInject.add(new Injection(constType, constName));
+                                    }
+                                }
+                            structPkg.setImportedModuleInjector(constInjector, listInject);
+                            }
+                        else
+                            {
+                            exprInjector.log(errs, Severity.ERROR, Compiler.SINGLETON_REQUIRED);
+                            break;
+                            }
+                        }
+
+                    fModuleImport = true;
                     }
                 }
             compositions.clear(); // no longer of any use
@@ -2263,9 +2319,19 @@ public class TypeCompositionStatement
             return;
             }
 
+        ConstantPool   pool      = pool();
+        ClassStructure component = (ClassStructure) getComponent();
+        if (component instanceof PackageStructure pkg && pkg.isModuleImport())
+            {
+            SingletonConstant constInjector = pkg.getModuleInjector();
+            if (constInjector != null && !constInjector.getType().isA(
+                    pool().ensureEcstasyTypeConstant("mgmt.ResourceProvider")))
+                {
+                log(errs, Severity.ERROR, Compiler.INJECTOR_REQUIRED);
+                }
+            }
+
         // adjust synthetic properties created during registerStructures() phase if necessary
-        ConstantPool    pool           = pool();
-        ClassStructure  component      = (ClassStructure) getComponent();
         ClassStructure  clzSuper       = component.getSuper();
         boolean         fAllowOverride = true;
         List<Parameter> listParams     = constructorParams;

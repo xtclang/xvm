@@ -1377,6 +1377,14 @@ public class Compiler
      */
     public static final String SWITCH_CONTINUE_NOT_EXPECTED        = "COMPILER-191";
     /**
+     * Singleton type required.
+     */
+    public static final String SINGLETON_REQUIRED                  = "COMPILER-192";
+    /**
+     * The "using" clause must specify an implementation of the ResourceProvider interface.
+     */
+    public static final String INJECTOR_REQUIRED                  = "COMPILER-193";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
