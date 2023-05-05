@@ -103,7 +103,7 @@ public class xInjectedRef
             String       sResource    = hInjected.getResourceName();
             ObjectHandle hOpts        = hInjected.getField(frame, "opts");
 
-            hValue = frame.f_context.f_container.getInjectable(frame, sResource, typeResource, hOpts);
+            hValue = frame.getInjected(sResource, typeResource, hOpts);
             if (hValue == null)
                 {
                 return frame.raiseException("Unknown injectable resource \"" +

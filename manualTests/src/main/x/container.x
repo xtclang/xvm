@@ -6,6 +6,8 @@ module TestContainer
     import ecstasy.mgmt.*;
     import ecstasy.reflect.ModuleTemplate;
 
+    package contained import TestContained inject(Int value, String _) using SimpleResourceProvider;
+
     @Inject Console console;
 
     void run(Int depth=0)
@@ -19,7 +21,7 @@ module TestContainer
             {
             ModuleTemplate template = repository.getResolvedModule("TestContainer");
             Container container =
-                new Container(template, Lightweight, repository, new SimpleResourceProvider());
+                new Container(template, Lightweight, repository, SimpleResourceProvider);
 
             container.invoke("run", Tuple:(depth+1));
             }
@@ -31,10 +33,13 @@ module TestContainer
 
             Container container = new Container(template, Lightweight, repository, injector);
             container.invoke("run", Tuple:());
+
+            // run TestContained
+            contained.run();
             }
         }
 
-    service SimpleResourceProvider
+    static service SimpleResourceProvider
             extends BasicResourceProvider
         {
         @Override
@@ -44,6 +49,12 @@ module TestContainer
 
             switch (type, name)
                 {
+                case (String, _):
+                    return "hello";
+
+                case (Int, "value"):
+                    return Int:42;
+
                 case (Linker, "linker"):
                     @Inject Linker linker;
                     return linker;

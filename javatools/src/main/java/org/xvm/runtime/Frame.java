@@ -9,12 +9,14 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.Component.Injection;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -23,6 +25,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
@@ -1362,16 +1365,59 @@ public class Frame
         return f_context.f_container.ensureConstHandle(this, getConstant(iArg));
         }
 
+    /**
+     * @return the constant for the specified constant id
+     */
     public Constant getConstant(int iArg)
         {
         assert iArg <= Op.CONSTANT_OFFSET;
         return localConstants()[Op.CONSTANT_OFFSET - iArg];
         }
 
-    // return a string value of the specified StringConstant
+    /**
+     * @return a String value of the specified StringConstant
+     */
     public String getString(int iArg)
         {
         return ((StringConstant) getConstant(iArg)).getValue();
+        }
+
+    /**
+     * @return an injected resource for the specified name, type and optional argument
+     */
+    public ObjectHandle getInjected(String sName, TypeConstant type, ObjectHandle hOpts)
+        {
+        Container container = f_context.f_container;
+
+        if (f_function != null)
+            {
+            PackageStructure pkgImport = f_function.getImportedPackage(container.getModule());
+            if (pkgImport != null)
+                {
+                SingletonConstant constInjector = pkgImport.getModuleInjector();
+                if (constInjector != null)
+                    {
+                    List<Injection> listInject = pkgImport.getModuleInjections();
+                    boolean         fUse       = false;
+                    for (Injection inject : listInject)
+                        {
+                        String sInjectName = inject.getName();
+                        if (inject.getType().isA(type) &&
+                                sInjectName.equals("_") || sInjectName.equals(sName))
+                            {
+                            fUse = true;
+                            break;
+                            }
+                        }
+
+                    if (fUse)
+                        {
+                        return Utils.callGetResource(this, getConstHandle(constInjector), type, sName);
+                        }
+                    }
+                }
+            }
+        return container.getInjectable(this, sName, type, hOpts);
         }
 
     /**

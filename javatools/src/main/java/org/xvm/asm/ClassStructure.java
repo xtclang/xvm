@@ -1769,6 +1769,9 @@ public class ClassStructure
                     fCheck = true;
                     break;
 
+                case Import:
+                    continue;
+
                 default:
                     throw new IllegalStateException();
                 }

@@ -1612,6 +1612,20 @@ public abstract class Component
         }
 
     /**
+     * Check if this component belongs to the specified primary module and if not, find the package
+     * that imports the module this component belongs to.
+     *
+     * @return the importing package or null if this component belongs to the main module
+     */
+    public PackageStructure getImportedPackage(ModuleConstant idMainModule)
+        {
+        ModuleConstant idModule = getIdentityConstant().getModuleConstant();
+        return idModule.equals(idMainModule)
+                ? null
+                : idModule.getComponent().getImportedPackage(idMainModule);
+        }
+
+    /**
      * For all but the multi-method, this obtains a child by the specified name. (Unlike all other
      * components, the multi-method identifies its children by method signature information.)
      *

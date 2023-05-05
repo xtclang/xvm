@@ -65,9 +65,6 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
  */
 public abstract class Utils
     {
-    // assigned by initNative()
-    private static ClassTemplate     ANNOTATION_TEMPLATE;
-
     /**
      * Ensure that the specified array of arguments is of the specified size.
      *
@@ -176,6 +173,64 @@ public abstract class Utils
                     frame.poolContext().ensureSingletonConstConstant(idValue));
             }
         return hEnum;
+        }
+
+    /**
+     * Call "getResource" method on the specified injector instance.
+     *
+     * @return the handle representing the resource (can be deferred)
+     */
+    public static ObjectHandle callGetResource(Frame frame, ObjectHandle hInjector,
+                                               TypeConstant type, String sName)
+        {
+        int iResult;
+        if (Op.isDeferred(hInjector))
+            {
+            iResult = hInjector.proceed(frame, frameCaller ->
+                {
+                ObjectHandle hResource = Utils.callGetResource(frameCaller,
+                        frameCaller.popStack(), type, sName);
+                if (hResource instanceof DeferredCallHandle hDeferred)
+                    {
+                    return hDeferred.proceed(frameCaller, null);
+                    }
+                frameCaller.pushStack(hResource);
+                return Op.R_NEXT;
+                });
+            }
+        else
+            {
+            TypeComposition clazz = hInjector.getComposition();
+            CallChain       chain = clazz.getMethodCallChain(SIG_GET_RESOURCE);
+
+            if (chain.isEmpty())
+                {
+                return new DeferredCallHandle(xException.makeHandle(frame,
+                    "Missing method \"" + SIG_GET_RESOURCE.getValueString() +
+                    "\" on " + hInjector.getType().getValueString()));
+                }
+
+            ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
+            ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);;
+            ahArg[1] = xString.makeHandle(sName);;
+
+            iResult = chain.invoke(frame, hInjector, ahArg, Op.A_STACK);
+            }
+
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                return frame.popStack();
+
+            case Op.R_CALL:
+                return new DeferredCallHandle(frame.m_frameNext);
+
+            case Op.R_EXCEPTION:
+                return new DeferredCallHandle(frame.clearException());
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
@@ -1576,7 +1631,8 @@ public abstract class Utils
     public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
     public final static Predicate          ANY  = t -> true;
 
-    public static ClassStructure  CONST_HELPER;
+    public  static ClassStructure    CONST_HELPER;
+    private static ClassTemplate     ANNOTATION_TEMPLATE;
     private static ClassTemplate     RT_PARAMETER_TEMPLATE;
     private static MethodStructure   ANNOTATION_CONSTRUCT;
     private static MethodStructure   ANNOTATION_TEMPLATE_CONSTRUCT;
@@ -1587,6 +1643,7 @@ public abstract class Utils
     private static TypeConstant      ANNOTATION_ARRAY_TYPE;
     private static TypeConstant      ARGUMENT_ARRAY_TYPE;
     private static SignatureConstant SIG_FREEZE;
+    private static SignatureConstant SIG_GET_RESOURCE;
 
     /**
      * Collect necessary constants for future use.
@@ -1611,6 +1668,8 @@ public abstract class Utils
         CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
         STRING_VALUE_OF               = CONST_HELPER.findMethod("valueOf", 1);
         SIG_FREEZE                    = container.getClassStructure("Freezable").findMethod("freeze", 1).
+                                            getIdentityConstant().getSignature();
+        SIG_GET_RESOURCE              = container.getClassStructure("mgmt.ResourceProvider").findMethod("getResource", 2).
                                             getIdentityConstant().getSignature();
         }
 

@@ -290,7 +290,7 @@ public class ModuleStructure
     public void setFingerprintOrigin(ModuleStructure structModule)
         {
         assert isFingerprint();
-        moduleActual = structModule;
+        m_moduleActual = structModule;
         }
 
     /**
@@ -300,7 +300,7 @@ public class ModuleStructure
      */
     public ModuleStructure getFingerprintOrigin()
         {
-        return moduleActual;
+        return m_moduleActual;
         }
 
     /**
@@ -372,9 +372,9 @@ public class ModuleStructure
             return ResolutionResult.RESOLVED;
             }
 
-        return  moduleActual == null
+        return m_moduleActual == null
                 ? super.resolveName(sName, access, collector)
-                : moduleActual.resolveName(sName, access, collector);
+                : m_moduleActual.resolveName(sName, access, collector);
         }
 
     @Override
@@ -395,6 +395,26 @@ public class ModuleStructure
             }
 
         return that;
+        }
+
+    @Override
+    public PackageStructure getImportedPackage(ModuleConstant idMainModule)
+        {
+        PackageStructure pkg = m_pkgImport;
+        if (pkg == null)
+            {
+            assert !isMainModule();
+
+            ModuleStructure moduleMain = (ModuleStructure) idMainModule.getComponent();
+
+            String sPath = moduleMain.collectDependencies().get(getIdentityConstant());
+            assert sPath != null;
+
+            pkg = m_pkgImport = (PackageStructure) moduleMain.getChildByPath(sPath);
+
+            assert pkg.isModuleImport();
+            }
+        return pkg;
         }
 
 
@@ -688,5 +708,11 @@ public class ModuleStructure
      * If this is a fingerprint, during compilation this will hold the actual module from which the
      * fingerprint is being created.
      */
-    private transient ModuleStructure moduleActual;
+    private transient ModuleStructure m_moduleActual;
+
+    /**
+     * If this is an imported module, this will hold the package from the main module that imports
+     * this module.
+     */
+    private transient PackageStructure m_pkgImport;
     }

@@ -1004,8 +1004,7 @@ public abstract class ClassTemplate
                 getInjectedProperty(frameCaller, hThis, idProp, iReturn));
             }
 
-        ObjectHandle hValue = frame.f_context.f_container.getInjectable(
-                frame, sResource, prop.getType(), hOpts);
+        ObjectHandle hValue = frame.getInjected(sResource, prop.getType(), hOpts);
         if (hValue == null)
             {
             return frame.raiseException(
