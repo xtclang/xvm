@@ -21,7 +21,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
@@ -34,6 +36,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.NamedConstant;
+import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -2474,14 +2477,38 @@ public class InvocationExpression
                 Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
                         kind, false, atypeReturn, errsTemp);
 
-                if (arg == null && kind == MethodKind.Function &&
-                        findCallable(ctx, infoLeft.getType(), infoLeft, sName,
-                            MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null)
+                if (arg == null)
                     {
-                    exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
-                            sName, infoLeft.getType().getValueString());
-                    return null;
+                    if (kind == MethodKind.Function &&
+                            findCallable(ctx, infoLeft.getType(), infoLeft, sName,
+                                MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null)
+                        {
+                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
+                                sName, infoLeft.getType().getValueString());
+                        return null;
+                        }
+
+                    if (idLeft instanceof PackageConstant idPackage)
+                        {
+                        PackageStructure pkg = (PackageStructure) idPackage.getComponent();
+                        if (pkg.isModuleImport())
+                            {
+                            // a package that represents an imported module serves as a dual target:
+                            // it's a Package, but it can also be used to call the target module's
+                            // specific API
+                            ModuleStructure module = pkg.getImportedModule();
+                            if (module.isFingerprint())
+                                {
+                                module = module.getFingerprintOrigin();
+                                }
+                            typeLeft = module.getIdentityConstant().getType();
+                            infoLeft = typeLeft.ensureTypeInfo(errs);
+                            arg      = findCallable(ctx, typeLeft, infoLeft, sName,
+                                            kind, false, atypeReturn, errsTemp);
+                            }
+                        }
                     }
+
                 if (arg instanceof MethodConstant idMethod)
                     {
                     errsTemp.merge();

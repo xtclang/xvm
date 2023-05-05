@@ -2,10 +2,12 @@ module TestSimple
     {
     @Inject Console console;
 
-    package test import TestInjection;
+    package oodb import oodb.xtclang.org;
 
     void run()
         {
-        console.print("test");
+         // both lines used to fail at run time
+        console.print(oodb);
+        console.print(oodb.isInvalidName("hello"));
         }
     }

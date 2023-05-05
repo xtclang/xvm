@@ -1967,15 +1967,6 @@ public abstract class TypeConstant
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
 
-        if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
-            {
-            ModuleStructure module = pkg.getImportedModule();
-            module = module.isFingerprint() ? module.getFingerprintOrigin() : module;
-
-            return pool.ensureAccessTypeConstant(module.getCanonicalType(), Access.PRIVATE).
-                    buildTypeInfoImpl(errs);
-            }
-
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
         int cInvals = pool.getInvalidationCount();
 
@@ -2675,6 +2666,10 @@ public abstract class TypeConstant
 
                 case Implements:
                     processImplements(constId, typeContrib, struct, listProcess, errs);
+                    break;
+
+                case Import:
+                    // ignore
                     break;
 
                 default:
