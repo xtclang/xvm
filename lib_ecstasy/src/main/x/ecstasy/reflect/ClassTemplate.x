@@ -78,7 +78,11 @@ interface ClassTemplate
              * Incorporates - The `ingredient` specifies a `mixin` type that is incorporated into
              * the resulting mixin or class.
              */
-            Incorporates
+            Incorporates,
+            /**
+             * Imports - The `ingredient` specifies a `package` type that is a module import.
+             */
+            Imports,
             }
 
         /**

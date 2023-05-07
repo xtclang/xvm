@@ -383,6 +383,10 @@ public class xRTClassTemplate
                         }
                     break;
                     }
+                case Import:
+                    sAction = "Imports";
+                    break;
+
                 default:
                     throw new IllegalStateException();
                 }

@@ -75,10 +75,12 @@ public class xPackage
         {
         if (constant instanceof PackageConstant idPackage)
             {
-            Container       container   = frame.f_context.f_container;
-            TypeConstant    typePackage = idPackage.getType();
-            TypeComposition clazz       = container.getTemplate(idPackage).
-                                            ensureClass(container, typePackage, typePackage);
+            PackageStructure pkg     = (PackageStructure) idPackage.getComponent();
+            TypeConstant     typePkg = pkg.isModuleImport()
+                    ? pkg.getImportedModule().getIdentityConstant().getType()
+                    : idPackage.getType();
+
+            TypeComposition clazz = frame.f_context.f_container.resolveClass(typePkg);
             return createPackageHandle(frame, clazz);
             }
 
@@ -202,6 +204,11 @@ public class xPackage
     public int invokeIsModuleImport(Frame frame, PackageHandle hTarget, int[] aiReturn)
         {
         ClassStructure struct = hTarget.getStructure();
+        if (struct instanceof ModuleStructure module && !module.isMainModule())
+            {
+            return frame.assignValues(aiReturn, xBoolean.TRUE, hTarget);
+            }
+
         if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
             {
             ModuleStructure module        = pkg.getImportedModule();

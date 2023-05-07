@@ -11,7 +11,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -22,7 +21,6 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.reflect.xPackage.PackageHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -171,18 +169,6 @@ public abstract class OpInvocable extends Op
                     // this is likely an invocation on a dynamically created Ref for a non-inflated
                     // property; try to call the referent itself
                     chain = hRef.getReferentHolder().getComposition().getMethodCallChain(nid);
-                    }
-                else if (hTarget instanceof PackageHandle hPackage)
-                    {
-                    // if the package represents an imported module, look up for the module's method
-                    PackageStructure pkg = (PackageStructure) hPackage.getStructure();
-                    if (pkg.isModuleImport())
-                        {
-                        ModuleStructure module     = pkg.getImportedModule();
-                        TypeConstant    typeModule = module.getIdentityConstant().getType();
-                        TypeComposition clzModule  = context.f_container.resolveClass(typeModule);
-                        chain = clzModule.getMethodCallChain(nid);
-                        }
                     }
                 else
                     {
