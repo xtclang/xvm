@@ -2677,6 +2677,10 @@ public abstract class TypeConstant
                     processImplements(constId, typeContrib, struct, listProcess, errs);
                     break;
 
+                case Import:
+                    // ignore
+                    break;
+
                 default:
                     throw new IllegalStateException(constId.getPathString()
                             + ", contribution=" + contrib);
