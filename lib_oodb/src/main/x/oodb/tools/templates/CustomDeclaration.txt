@@ -1,8 +1,9 @@
+
         class %propertyTypeName%Impl_(DBObjectInfo_ info_, %propertyStoreType% store_)
                 extends %propertyBaseType%(info_, store_)
                 incorporates %propertyType%
             {
-            // ----- mixin methods ---------------------------------------------------------------------
+            // ----- mixin methods -----------------------------------------------------------------
 
 %CustomMethods%
             }

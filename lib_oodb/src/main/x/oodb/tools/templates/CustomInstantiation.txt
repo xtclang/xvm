@@ -1,3 +1,4 @@
+
                 case %propertyId%:
                     DBObjectInfo_ info = this.%appName%Client_.infoFor(%propertyId%);
                     %propertyStoreType% store =

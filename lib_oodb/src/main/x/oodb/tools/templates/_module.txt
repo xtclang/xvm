@@ -1,5 +1,5 @@
 module %appName%_jsondb%qualifier%
-        incorporates jsondb_.CatalogMetadata<%appSchema%_>
+        incorporates jsondb_.CatalogMetadata<RootSchema_>
     {
     package oodb_   import oodb.xtclang.org;
     package json_   import json.xtclang.org;
@@ -13,7 +13,7 @@ module %appName%_jsondb%qualifier%
 
     package %appName%_ import %appName%%qualifier%;
 
-    import %appName%_.%appSchema% as %appSchema%_;
+    import %appName%_.%appSchema% as RootSchema_;
 
     @Override
     @RO Module schemaModule.get()
@@ -59,14 +59,14 @@ module %appName%_jsondb%qualifier%
         }
 
     @Override
-    Catalog_<%appSchema%_> createCatalog(Directory dir, Boolean readOnly = False)
+    Catalog_<RootSchema_> createCatalog(Directory dir, Boolean readOnly = False)
         {
-        return new Catalog_<%appSchema%_>(dir, this, readOnly);
+        return new Catalog_<RootSchema_>(dir, this, readOnly);
         }
 
     @Override
-    Client_<%appSchema%_> createClient(
-            Catalog_<%appSchema%_> catalog,
+    Client_<RootSchema_> createClient(
+            Catalog_<RootSchema_>   catalog,
             Int                     clientId,
             DBUser_                 dbUser,
             Boolean                 readOnly      = False,
@@ -76,22 +76,15 @@ module %appName%_jsondb%qualifier%
         }
 
     service %appName%Client_
-                extends Client_<%appSchema%_>
+                extends Client_<RootSchema_>
         {
-        construct(Catalog_<%appSchema%_> catalog,
+        construct(Catalog_<RootSchema_>   catalog,
                   Int                     clientId,
                   DBUser_                 dbUser,
                   Boolean                 readOnly = False,
                   function void(Client_)? notifyOnClose = Null)
             {
             construct Client_(catalog, clientId, dbUser, readOnly, notifyOnClose);
-            }
-
-        @Override
-        class RootSchemaImpl(DBObjectInfo_ info_)
-                implements %appSchema%_
-            {
-%PropertyGetters% %SchemaMethods%
             }
 
         @Override
@@ -107,5 +100,6 @@ module %appName%_jsondb%qualifier%
             return super(id);
             }
 %CustomDeclarations%
+%RootSchema%
         }
     }

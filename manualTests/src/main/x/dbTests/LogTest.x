@@ -28,7 +28,7 @@ module LogTest
             for (Int i : 1..1000)
                 {
                 schema.logger.add(
-                    $"This is a message to test the log truncation policy: {schema.counter.next()}");
+                    $"This is a message to test the log truncation policy: {schema.counters.counter.next()}");
                 }
             }
 

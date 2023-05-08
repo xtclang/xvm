@@ -1,0 +1,9 @@
+
+        @Override
+        class RootSchemaImpl(DBObjectInfo_ info_)
+                implements RootSchema_
+            {
+%PropertyGetters%
+%SchemaMethods%
+            }
+%ChildSchemas%

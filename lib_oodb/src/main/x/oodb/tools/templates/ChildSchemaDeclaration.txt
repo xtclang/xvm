@@ -1,0 +1,7 @@
+
+        class %schemaName%Impl_(DBObjectInfo_ info_)
+                extends DBSchemaImpl(info_)
+                implements %schemaTypeName%
+            {
+%PropertyGetters% %SchemaMethods% %ChildSchemas%
+            }

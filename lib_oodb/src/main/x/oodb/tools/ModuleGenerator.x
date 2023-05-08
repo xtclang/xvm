@@ -37,6 +37,10 @@ class ModuleGenerator(String implName, String moduleName)
      * Generic templates.
      */
     protected String moduleSourceTemplate        = $./templates/_module.txt;
+    protected String rootSchemaSourceTemplate    = $./templates/RootSchemaDeclaration.txt;
+    protected String childSchemaSourceTemplate   = $./templates/ChildSchemaDeclaration.txt;
+    protected String schemaInfoTemplate          = $./templates/SchemaInfo.txt;
+    protected String schemaInstantiationTemplate = $./templates/SchemaInstantiation.txt;
     protected String propertyGetterTemplate      = $./templates/PropertyGetter.txt;
     protected String propertyInfoTemplate        = $./templates/PropertyInfo.txt;
     protected String customInstantiationTemplate = $./templates/CustomInstantiation.txt;
@@ -105,26 +109,83 @@ class ModuleGenerator(String implName, String moduleName)
 
     /**
      * Create module source file.
+     *
+     * @return True iff the source file has been successfully created
      */
     Boolean createModule(File sourceFile, String appName, String qualifier,
                          ModuleTemplate moduleTemplate, ClassTemplate appSchemaTemplate, Log errors)
         {
-        String appSchema = appSchemaTemplate.name;
+        if ((
+            Int    pid,
+            String propertyInfos,
+            String propertyTypes,
+            String customInstantiations,
+            String customDeclarations,
+            String childrenIds,
+            String rootSchemaSource
+            ) :=
+            createSchema(appName, moduleTemplate, appSchemaTemplate,
+                         rootSchemaSourceTemplate, "", 0, errors))
+            {
+            String appSchema    = appSchemaTemplate.name;
+            String moduleSource = moduleSourceTemplate
+                                    .replace("%appName%"             , appName)
+                                    .replace("%appSchema%"           , appSchema)
+                                    .replace("%qualifier%"           , qualifier)
+                                    .replace("%ChildrenIds%"         , childrenIds)
+                                    .replace("%PropertyInfos%"       , propertyInfos)
+                                    .replace("%PropertyTypes%"       , propertyTypes)
+                                    .replace("%CustomInstantiations%", customInstantiations)
+                                    .replace("%CustomDeclarations%"  , customDeclarations)
+                                    .replace("%RootSchema%"          , rootSchemaSource)
+                                    ;
+            sourceFile.create();
+            sourceFile.contents = moduleSource.utf8();
+            return True;
+            }
+        return False;
+        }
 
+    /**
+     * Generate a schema.
+     *
+     * @return True iff the schema contains any DB properties
+     */
+    conditional
+        (
+        Int    pid,
+        String propertyInfos,
+        String propertyTypes,
+        String customInstantiations,
+        String customDeclarations,
+        String childrenIds,
+        String schemaSource
+        )
+        createSchema(String         appName,
+                     ModuleTemplate moduleTemplate,
+                     ClassTemplate  schemaTemplate,
+                     String         schemaSourceTemplate,
+                     String         parentPath,
+                     Int            pid,
+                     Log            errors)
+        {
         Tuple<PropertyTemplate, DBCategory>[] dbProps;
-        if (!(dbProps := collectDBProps(appSchemaTemplate, errors)))
+        if (!(dbProps := collectDBProps(schemaTemplate, errors)))
             {
             return False;
             }
 
-        String childrenIds          = "";
+        String schemaName           = schemaTemplate.name;
+        String schemaParentId       = pid.toString();
         String propertyInfos        = "";
         String propertyTypes        = "";
         String propertyGetters      = "";
         String customInstantiations = "";
         String customDeclarations   = "";
+        String childrenIds          = "";
+        String childSchemas         = "";
 
-        Int pid = 0;
+        NextProperty:
         for (Tuple<PropertyTemplate, DBCategory> propInfo : dbProps)
             {
             PropertyTemplate property = propInfo[0];
@@ -137,6 +198,7 @@ class ModuleGenerator(String implName, String moduleName)
                    classTemplate.is(ClassTemplate);
 
             String propertyName  = property.name;
+            String propertyPath  = $"{parentPath}/{property.name}";
             String propertyType  = displayName(typeTemplate, appName);
             String propertyId    = (++pid).toString();
             String transactional = "True";
@@ -150,6 +212,48 @@ class ModuleGenerator(String implName, String moduleName)
             childrenIds += $"{propertyId},";
             switch (category)
                 {
+                case DBSchema:
+                    if ((
+                        pid,
+                        String schemaPropertyInfos,
+                        String schemaPropertyTypes,
+                        String schemaCustomInstantiations,
+                        String schemaCustomDeclarations,
+                        String schemaChildrenIds,
+                        String schemaSource
+                        ) :=
+                            createSchema(appName, moduleTemplate, classTemplate,
+                                         childSchemaSourceTemplate, propertyPath, pid, errors))
+                        {
+                        propertyInfos += schemaInfoTemplate
+                                .replace("%schemaName%"    , propertyName)
+                                .replace("%schemaPath%"    , propertyPath)
+                                .replace("%schemaId%"      , propertyId)
+                                .replace("%schemaParentId%", schemaParentId)
+                                .replace("%ChildrenIds%"   , schemaChildrenIds)
+                                ;
+
+                        propertyGetters += propertyGetterTemplate
+                                .replace("%appName%"     , appName)
+                                .replace("%propertyName%", propertyName)
+                                .replace("%propertyId%"  , propertyId)
+                                .replace("%propertyType%", propertyType)
+                                ;
+
+                        customInstantiations += schemaInstantiationTemplate
+                                .replace("%appName%"   , appName)
+                                .replace("%schemaName%", propertyTypeName)
+                                .replace("%schemaId%"  , propertyId)
+                                ;
+
+                        propertyInfos        += schemaPropertyInfos;
+                        propertyTypes        += schemaPropertyTypes;
+                        customInstantiations += schemaCustomInstantiations;
+                        customDeclarations   += schemaCustomDeclarations;
+                        childSchemas         += schemaSource;
+                        }
+                    continue NextProperty;
+
                 case DBMap:
                     TypeTemplate keyType;
                     TypeTemplate valueType;
@@ -268,9 +372,10 @@ class ModuleGenerator(String implName, String moduleName)
 
             propertyInfos += propertyInfoTemplate
                                 .replace("%propertyName%"      , propertyName)
+                                .replace("%propertyPath%"      , propertyPath)
                                 .replace("%propertyCategory%"  , category.name)
                                 .replace("%propertyId%"        , propertyId)
-                                .replace("%propertyParentId%"  , "0") // TODO
+                                .replace("%propertyParentId%"  , schemaParentId)
                                 .replace("%propertyType%"      , propertyType)
                                 .replace("%propertyTypeParams%", propertyTypeParams)
                                 .replace("%transactional%"     , transactional)
@@ -286,7 +391,17 @@ class ModuleGenerator(String implName, String moduleName)
 
             if (classTemplate.containingModule != moduleTemplate)
                 {
+                // this check assumes that the property type is either one of the eight basic DBObject
+                // types (DBSchema, DBCounter, DBValue, DBMap, DBList, DBQueue, DBProcessor, DBLog)
+                // or comes from the reflected module itself, in which case it must be a "custom"
+                // mixin into one of the basic DBObjects
                 continue;
+                }
+
+            if (classTemplate.format != Mixin)
+                {
+                errors.add($"Error: property '{propertyName}' customization '{classTemplate}' must be a mixin");
+                return False;
                 }
 
             String customMethods = createMethods(appName, classTemplate);
@@ -309,24 +424,18 @@ class ModuleGenerator(String implName, String moduleName)
                                     ;
             }
 
-        String schemaMethods = createMethods(appName, appSchemaTemplate);
+        String schemaMethods  = createMethods(appName, schemaTemplate);
 
-        String moduleSource = moduleSourceTemplate
-                                .replace("%appName%"             , appName)
-                                .replace("%appSchema%"           , appSchema)
-                                .replace("%qualifier%"           , qualifier)
-                                .replace("%ChildrenIds%"         , childrenIds)
-                                .replace("%PropertyInfos%"       , propertyInfos)
-                                .replace("%PropertyTypes%"       , propertyTypes)
-                                .replace("%PropertyGetters%"     , propertyGetters)
-                                .replace("%SchemaMethods%"       , schemaMethods)
-                                .replace("%CustomInstantiations%", customInstantiations)
-                                .replace("%CustomDeclarations%"  , customDeclarations)
+        String schemaTypeName = $"{appName}_.{schemaName}"; // TODO GG not quite right
+        String schemaSource   = schemaSourceTemplate
+                                .replace("%schemaName%"     , schemaName)
+                                .replace("%schemaTypeName%" , schemaTypeName)
+                                .replace("%PropertyGetters%", propertyGetters)
+                                .replace("%SchemaMethods%"  , schemaMethods)
+                                .replace("%ChildSchemas%"   , childSchemas)
                                 ;
-
-        sourceFile.create();
-        sourceFile.contents = moduleSource.utf8();
-        return True;
+        return True, pid, propertyInfos, propertyTypes,
+                     customInstantiations, customDeclarations, childrenIds, schemaSource;
         }
 
     String createMethods(String appName, ClassTemplate classTemplate)
