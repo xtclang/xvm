@@ -6879,9 +6879,13 @@ public abstract class TypeConstant
             if (prop instanceof PropertyStructure propDefault)
                 {
                 Constant constDefault = propDefault.getInitialValue();
-                if (isAnnotated() &&
-                        containsAnnotation(getConstantPool().clzUnchecked()) &&
-                        constDefault instanceof IntConstant constInt)
+                if (constDefault == null)
+                    {
+                    constDefault = getConstantPool().
+                            ensureSingletonConstConstant(prop.getIdentityConstant());
+                    }
+                else if (constDefault instanceof IntConstant constInt &&
+                         containsAnnotation(getConstantPool().clzUnchecked()))
                     {
                     constDefault = constInt.toUnchecked();
                     }
