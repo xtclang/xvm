@@ -392,7 +392,7 @@ public class xRTComponentTemplate
                 return xRTMethodTemplate.makeHandle((MethodStructure) component);
 
             case PROPERTY:
-                return xRTPropertyClassTemplate.makeHandle((PropertyStructure) component);
+                return xRTPropertyTemplate.makePropertyHandle((PropertyStructure) component);
 
             default:
                 throw new UnsupportedOperationException("unsupported format " + component.getFormat());

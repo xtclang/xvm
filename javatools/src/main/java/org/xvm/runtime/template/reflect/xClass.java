@@ -11,6 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
@@ -41,6 +42,7 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate;
+import org.xvm.runtime.template._native.reflect.xRTPropertyClassTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -213,7 +215,9 @@ public class xClass
             {
             Component component = id.getComponent();
             return frame.assignValue(iReturn,
-                    xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, component));
+                    component instanceof PropertyStructure prop
+                        ? xRTPropertyClassTemplate.makeHandle(prop)
+                        : xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, component));
             }
 
         throw new IllegalStateException();

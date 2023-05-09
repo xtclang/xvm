@@ -1443,19 +1443,16 @@ public class xRTType
 
     public static ObjectHandle makeArgumentHandle(Frame frame, Constant constArg)
         {
-        ObjectHandle hArg = frame.getConstHandle(constArg);
-        if (Op.isDeferred(hArg))
-            {
-            DeferredCallHandle hDeferred = (DeferredCallHandle) hArg;
-            hDeferred.addContinuation(frameCaller ->
-                {
-                ObjectHandle hValue = frameCaller.popStack();
-                return Utils.constructArgument(frameCaller, hValue.getType(), hValue, null);
-                });
-            return hDeferred;
-            }
+        ObjectHandle hArg    = frame.getConstHandle(constArg);
+        int          iResult = Op.isDeferred(hArg)
+            ? hArg.proceed(frame, frameCaller ->
+                    {
+                    ObjectHandle hValue = frameCaller.popStack();
+                    return Utils.constructArgument(frameCaller, hValue.getType(), hValue, null);
+                    })
+            : Utils.constructArgument(frame, hArg.getType(), hArg, null);
 
-        switch (Utils.constructArgument(frame, hArg.getType(), hArg, null))
+        switch (iResult)
             {
             case Op.R_NEXT:
                 return frame.popStack();
