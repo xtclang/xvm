@@ -712,9 +712,11 @@ public class NameExpression
                         if (id.isConstant())
                             {
                             PropertyStructure prop = (PropertyStructure) id.getComponent();
-                            constVal = prop.hasInitialValue()
-                                    ? prop.getInitialValue()
-                                    : pool.ensureSingletonConstConstant(id);
+                            constVal = prop.getInitialValue();
+                            if (constVal == null || constVal instanceof DeferredValueConstant)
+                                {
+                                constVal = pool.ensureSingletonConstConstant(id);
+                                }
                             }
                         break;
 

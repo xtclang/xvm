@@ -3401,7 +3401,12 @@ public abstract class Component
             {
             m_typeContrib  = (TypeConstant)     pool.register(m_typeContrib);
             m_constProp    = (PropertyConstant) pool.register(m_constProp);
-            m_annotation   = (Annotation)       pool.register(m_annotation);
+
+            if (m_annotation != null)
+                {
+                assert !m_annotation.containsUnresolved();
+                m_annotation = (Annotation) pool.register(m_annotation);
+                }
 
             ListMap<StringConstant, TypeConstant> mapOld = m_mapParams;
             if (mapOld != null)
