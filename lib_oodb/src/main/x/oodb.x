@@ -7,7 +7,7 @@ module oodb.xtclang.org
      * This mixin is used to mark a module as being a database module.
      */
     mixin Database
-            into Module
+            into module
         {
         }
 

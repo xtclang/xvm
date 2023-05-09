@@ -26,7 +26,7 @@ import oodb.Transaction;
  * binds the DDL to the `jsonDB` database implementation.
  */
 mixin CatalogMetadata<Schema extends RootSchema>
-        into Module
+        into module
     {
     /**
      * The "DDL" module that defines the database schema. This is the module provided by the

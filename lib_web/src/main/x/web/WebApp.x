@@ -16,7 +16,7 @@ import security.NeverAuthenticator;
  *      - can the package be annotated as "@Trusted" or something like that?
  */
 mixin WebApp
-        into Module
+        into module
     {
     /**
      * The registry for this WebApp.
