@@ -4738,7 +4738,7 @@ public abstract class TypeConstant
                 {
                 for (MethodStructure method : mms.methods())
                     {
-                    if (!method.isLambda())
+                    if (!method.isLambda() && !method.isConstructorFinalizer())
                         {
                         fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
                             mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
