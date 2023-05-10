@@ -530,6 +530,15 @@ public class MethodStructure
         }
 
     /**
+     * @return the number of arguments that must be specified for this method to be called not
+     *         counting the type parameters
+     */
+    public int getRequiredParamCount()
+        {
+        return getVisibleParamCount() - getDefaultParamCount();
+        }
+
+    /**
      * Get the Parameter structure that represents the i-th method parameter. The type parameters
      * come first, followed by the ordinary parameters.
      *

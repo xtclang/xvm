@@ -1218,8 +1218,7 @@ public abstract class AstNode
 
             int cTypeParams = method.getTypeParamCount();
             int cVisible    = method.getVisibleParamCount();
-            int cDefaults   = method.getDefaultParamCount();
-            int cRequired   = cVisible - cDefaults;
+            int cRequired   = method.getRequiredParamCount();
 
             if (cExprs > cVisible || fCall && cExprs < cRequired)
                 {

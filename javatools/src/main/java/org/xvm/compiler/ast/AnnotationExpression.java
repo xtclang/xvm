@@ -296,11 +296,11 @@ public class AnnotationExpression
             // construct the annotation
             TypeConstant[] atypeParams = idConstruct.getRawParams();
             int            cAll        = constructor.getParamCount();
-            int            cDefault    = constructor.getDefaultParamCount();
+            int            cRequired   = constructor.getRequiredParamCount();
             Constant[]     aconstArgs  = new Constant[cAll];
             boolean        fDefaults   = cArgs < cAll;
 
-            assert cArgs <= cAll && cArgs >= cAll - cDefault;
+            assert cArgs <= cAll && cArgs >= cRequired;
 
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {

@@ -1239,8 +1239,7 @@ public abstract class Utils
                             }
 
                         int cParamsAll      = constructMixin.getParamCount();
-                        int cParamsDefault  = constructMixin.getDefaultParamCount();
-                        int cParamsRequired = cParamsAll - cParamsDefault;
+                        int cParamsRequired = constructMixin.getRequiredParamCount();
                         if (cParamsRequired > cArgs)
                             {
                             return frameCaller.raiseException("Missing arguments for: " + idAnno
