@@ -308,7 +308,7 @@ public abstract class Constant
             }
         throw new UnsupportedOperationException("this=" + getClass().getSimpleName()
                 + ", op=" + op.TEXT
-                + that == null ? "" : ", that=" + that.getClass().getSimpleName());
+                + (that == null ? "" : ", that=" + that.getClass().getSimpleName()));
         }
 
     /**
