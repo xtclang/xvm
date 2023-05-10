@@ -709,9 +709,9 @@ public class NameExpression
                     {
                     case Singleton:
                     case PropertyDeref:
-                        if (id.isConstant())
+                        PropertyStructure prop = (PropertyStructure) id.getComponent();
+                        if (prop.isRuntimeConstant())
                             {
-                            PropertyStructure prop = (PropertyStructure) id.getComponent();
                             constVal = prop.getInitialValue();
                             if (constVal == null || constVal instanceof DeferredValueConstant)
                                 {
@@ -806,8 +806,11 @@ public class NameExpression
                         {
                         // we don't need "this" to access a property on a singleton unless it's
                         // within an initializer (to avoid a circular reference)
-                        if (idProp.getComponent().getParent() instanceof ClassStructure clzParent &&
-                                clzParent.isSingleton() && !ctx.getMethod().isPotentialInitializer())
+                        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                        MethodStructure   method = ctx.getMethod();
+                        if (prop.getParent() instanceof ClassStructure clzParent &&
+                                clzParent.isSingleton() &&
+                                (method == null || !method.isPotentialInitializer()))
                             {
                             m_propAccessPlan    = PropertyAccess.SingletonParent;
                             m_idSingletonParent = clzParent.getIdentityConstant();

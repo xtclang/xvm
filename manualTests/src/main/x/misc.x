@@ -229,12 +229,11 @@ module TestMisc
         console.print("We Have Lift-Off!!!");
         }
 
-    Int FOUR = 4;
-    void testSwitchStmt()
+    void testSwitchStmt(Int value=4)
         {
         console.print("\n** testSwitchStmt()");
 
-        switch (FOUR)
+        switch (value)
             {
             case 2, 3:
                 console.print("2 or 3");
@@ -242,7 +241,7 @@ module TestMisc
 
             case 4..5:
                 console.print("4");
-                if (FOUR == 4)
+                if (value == 4)
                     {
                     continue;
                     }

@@ -733,8 +733,6 @@ public abstract class Utils
         {
         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
 
-        assert prop.isStatic();
-
         if (prop.isInjected())
             {
             TypeConstant typeRef = frame.poolContext().ensureAnnotatedTypeConstant(
@@ -764,10 +762,15 @@ public abstract class Utils
         Constant constVal = prop.getInitialValue();
         if (constVal == null)
             {
-            // there must be an initializer
             MethodStructure methodInit = prop.getInitializer();
-            ObjectHandle[]  ahVar      = ensureSize(OBJECTS_NONE, methodInit.getMaxVars());
+            if (methodInit == null)
+                {
+                // should not happen; must be caught by the compiler
+                return frame.raiseException("Initializer is missing for " +
+                        prop.getIdentityConstant().getPathString());
+                }
 
+            ObjectHandle[] ahVar = ensureSize(OBJECTS_NONE, methodInit.getMaxVars());
             return frame.call1(methodInit, null, ahVar, Op.A_STACK);
             }
 

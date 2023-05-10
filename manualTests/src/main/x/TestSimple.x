@@ -1,8 +1,7 @@
 module TestSimple
     {
-    @Inject Console console;
-
-    package oodb import oodb.xtclang.org;
+    Boolean echo = True;
+    @Inject(opts=echo) Console console; // used to assert in the compiler
 
     void run()
         {
