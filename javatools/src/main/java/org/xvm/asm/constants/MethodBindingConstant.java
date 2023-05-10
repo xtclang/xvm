@@ -134,6 +134,12 @@ public class MethodBindingConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().typeMethod();
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         return !isHashCached() && m_idMethod.containsUnresolved();

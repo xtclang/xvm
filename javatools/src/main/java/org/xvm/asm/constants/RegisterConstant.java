@@ -122,6 +122,13 @@ public class RegisterConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        TypeConstant type = m_reg == null ? null : m_reg.getType();
+        return type == null ? getConstantPool().typeObject() : type;
+        }
+
+    @Override
     public String getValueString()
         {
         int nReg = getRegisterIndex();

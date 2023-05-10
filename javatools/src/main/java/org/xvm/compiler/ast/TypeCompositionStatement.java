@@ -1731,8 +1731,7 @@ public class TypeCompositionStatement
                         {
                         // this is obviously an error -- we can't compile without the module
                         // being available
-                        Import              imp  = compImport;
-                        NamedTypeExpression type = (NamedTypeExpression) imp.type;
+                        NamedTypeExpression type = (NamedTypeExpression) compImport.type;
                         type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, type.getName());
                         }
 
@@ -2437,7 +2436,6 @@ public class TypeCompositionStatement
             TypeConstant typeMixin = anno.getAnnotationType();
             if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                 {
-                // no need to do anything; an error will be reported later
                 findAnnotationExpression(anno, annotations).
                     log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_NOT_MIXIN,
                         anno.getValueString());
