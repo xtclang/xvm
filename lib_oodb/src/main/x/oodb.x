@@ -35,7 +35,7 @@ module oodb.xtclang.org
      * @param expiry  the duration of time to hold the log information for
      */
     mixin AutoExpire(Duration expiry)
-            into Property<DBLog>
+            into Property<DBSchema, DBLog>
         {
         }
 
@@ -45,7 +45,7 @@ module oodb.xtclang.org
      * @param sizeLimit  the size limit in bytes
      */
     mixin AutoTruncate(Int sizeLimit)
-            into Property<DBLog>
+            into Property<DBSchema, DBLog>
         {
         }
 

@@ -6,8 +6,10 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
@@ -21,8 +23,10 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -36,6 +40,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
@@ -412,6 +417,13 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
+            TypeConstant typeRef = prop.getIdentityConstant().getValueType(pool(), null);
+            if (!validateAnnotations(prop.getPropertyAnnotations(), typeRef, errs))
+                {
+                mgr.requestRevisit();
+                return;
+                }
+
             if (prop.hasInitialValue())
                 {
                 if (isInMethod() && !isStatic())
@@ -571,6 +583,107 @@ public class PropertyDeclarationStatement
                     }
                 }
             }
+        }
+
+    /**
+     * Validate the specified property annotations.
+     *
+     * Note: this method is similar to {@link TypeCompositionStatement#validateAnnotations} logic,
+     *       but differs in the way that it could force the node revisit.
+     *
+     * @param aAnno     the annotations
+     * @param typeProp  the annotated property type
+     * @param errs      the error listener
+     *
+     * @return false iff there were unresolved annotation parameters; true otherwise
+     *               (errors might have been reported)
+     */
+    private boolean validateAnnotations(Annotation[] aAnno, TypeConstant typeProp, ErrorListener errs)
+        {
+        ConstantPool pool = pool();
+
+        assert typeProp.isA(pool.typeProperty());
+
+        for (int iA = 0, c = aAnno.length; iA < c; iA++)
+            {
+            Annotation     anno    = aAnno[iA];
+            ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
+            ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+            if (clzAnno.getFormat() != Component.Format.MIXIN)
+                {
+                findAnnotationExpression(anno, annotations).
+                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_NOT_MIXIN,
+                        anno.getValueString());
+                break;
+                }
+
+            Constant[]      aParams = anno.getParams();
+            int             cParams = aParams.length;
+            MethodStructure ctor    = clzAnno.findMethod("construct", cParams);
+
+            if (ctor == null)
+                {
+                // an error will be reported by the AnnotationExpression
+                continue;
+                }
+
+            TypeConstant typeMixin;
+            if (clzAnno.isParameterized() && cParams > 0)
+                {
+                ListMap<String, TypeConstant> mapResolved = new ListMap<>();
+                for (Map.Entry<StringConstant, TypeConstant> entry : clzAnno.getTypeParamsAsList())
+                    {
+                    String sFormal = entry.getKey().getValue();
+
+                    mapResolved.put(sFormal, entry.getValue()); // prime with the constraint type
+
+                    for (int iP = 0; iP < cParams; iP++)
+                        {
+                        Constant constParam = aParams[iP];
+                        if (constParam.containsUnresolved())
+                            {
+                            return false;
+                            }
+                        TypeConstant typeFormal = ctor.getParam(iP).getType();
+                        TypeConstant typeActual   = constParam.getType();
+                        TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sFormal);
+                        if (typeResolved != null)
+                            {
+                            mapResolved.put(sFormal, typeResolved);
+                            }
+                        }
+                    }
+                typeMixin = clzAnno.getFormalType().resolveGenerics(pool, mapResolved::get);
+                }
+            else
+                {
+                typeMixin = clzAnno.getCanonicalType();
+                }
+
+            TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
+
+            if (!typeProp.isA(typeInto))
+                {
+                findAnnotationExpression(anno, annotations).
+                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_INCOMPATIBLE,
+                        typeProp.getValueString(), typeMixin.getValueString(), typeInto.getValueString());
+                break;
+                }
+
+            for (int iA2 = iA + 1; iA2 < c; iA2++)
+                {
+                Annotation   anno2      = aAnno[iA2];
+                TypeConstant typeMixin2 = anno2.getAnnotationType();
+                if (typeMixin2.equals(typeMixin))
+                    {
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_REDUNDANT,
+                            anno.getValueString());
+                    break;
+                    }
+                }
+            }
+        return true;
         }
 
     @Override

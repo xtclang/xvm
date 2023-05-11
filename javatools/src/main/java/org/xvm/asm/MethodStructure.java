@@ -868,7 +868,7 @@ public class MethodStructure
      * @param fAllowFormal if false, all type parameters must be fully resolved; otherwise place a
      *                     corresponding {@link PendingTypeConstant} to the resolution map
      * @return a ListMap of the resolved types in the natural order, keyed by the names; conflicting
-     * types will be not in the map
+     *         types will be not in the map
      */
     public ListMap<FormalConstant, TypeConstant> resolveTypeParameters(TypeConstant typeTarget,
                 TypeConstant[] atypeArgs, TypeConstant[] atypeReturns, boolean fAllowFormal)
@@ -1513,9 +1513,9 @@ public class MethodStructure
      * annotations. In that case, computation of default values for field-based properties requires
      * additional information that is kept on synthetic (shorthand) mixin constructors.
      *
-     * @param idSuper       the "super" constructor
-     * @param aconstSuper   the array of Constants that is passed to the super constructor; all
-     *                      non-constant arguments are represented by nulls
+     * @param idSuper      the "super" constructor
+     * @param aconstSuper  the array of Constants that is passed to the super constructor; all
+     *                     non-constant arguments are represented by nulls
      */
     public void setShorthandInitialization(MethodConstant idSuper, Constant[] aconstSuper)
         {

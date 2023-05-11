@@ -1,12 +1,27 @@
 module TestSimple
     {
-    Boolean echo = True;
-    @Inject(opts=echo) Console console; // used to assert in the compiler
+    @Inject Console console;
+
+    package oodb import oodb.xtclang.org;
 
     void run()
         {
-         // both lines used to fail at run time
-        console.print(oodb);
-        console.print(oodb.isInvalidName("hello"));
+        console.print();
+        }
+
+    interface AuthSchema
+            extends oodb.DBSchema
+        {
+        @RO
+        // @oodb.Initial("")                  // this used to compile
+        // @oodb.Initial(Point.OriginString)  // this used to compile
+        @oodb.Initial(Point.Origin)
+        oodb.DBValue<Point> config;
+        }
+
+    const Point(Int x, Int y)
+        {
+        static Point Origin = new Point(0, 0);
+        static String OriginString = "0,0";
         }
     }
