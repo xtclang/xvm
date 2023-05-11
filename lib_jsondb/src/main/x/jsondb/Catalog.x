@@ -569,22 +569,27 @@ service Catalog<Schema extends RootSchema>
                 {
                 case Root:
                 case Sys:          new SchemaStore(this, info);
+
 //                case Info:         TODO
 // TODO the following 3 maps might end up being custom, hard-wired, read-only implementations
 //                case Users:        new JsonMapStore<String, DBUser>(this, info, log);
 //                case Types:        new JsonMapStore<String, Type>(this, info, log);
-//                case Objects:      new JsonMapStore<String, DBObject>(this, info, log);
-//                case Schemas:      TODO
-//                case Counters:     TODO
-//                case Values:       TODO
-//                case Maps:         TODO
-//                case Lists:        TODO
-//                case Queues:       TODO
-//                case Processors:   TODO
-//                case Logs:         TODO
+
+                case Objects:
+                case Schemas:
+                case Counters:
+                case Values:
+                case Maps:
+                case Lists:
+                case Queues:
+                case Processors:
+                case Logs:
+                    assert;
+
 //                case Pending:      TODO new ListStore<Pending>();
 //                case Transactions: TODO new LogStore<DBTransaction>();
 //                case Errors:       TODO new LogStore<String>();
+
                 case TxCounter:    new JsonNtxCounterStore(this, info);
                 case PidCounter:   new JsonNtxCounterStore(this, info);
                 default:           assert as $"unsupported id={id}, BuiltIn={BuiltIn.byId(id)}, info={info}";
@@ -595,7 +600,7 @@ service Catalog<Schema extends RootSchema>
             switch (info.category)
                 {
                 case DBSchema:
-                    TODO
+                    assert;
 
                 case DBCounter:
                     return createCounterStore(info);

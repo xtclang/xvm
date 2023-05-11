@@ -2156,6 +2156,64 @@ service Client<Schema extends RootSchema>
         }
 
 
+    // ----- DBMap (for sys schema) ----------------------------------------------------------------
+
+    /**
+     * The DBMap implementation for the maps in the system schema.
+     */
+    class SysMapImpl<Value extends immutable Const>(DBObjectInfo info_, Int[] ids_)
+            extends DBObjectImpl(info_)
+            implements DBMap<String, Value>
+            incorporates KeySetBasedMap<String, Value>
+        {
+        @Lazy
+        Map<String, Int> pathToId_.calc()
+            {
+            if (empty)
+                {
+                return [];
+                }
+
+            HashMap<String, Int> map = new HashMap();
+            for (Int id : ids_)
+                {
+                DBObjectInfo info = infoFor(id);
+                map.put(info.path.toString(), id);
+                }
+            return map.freeze();
+            }
+
+        @Override
+        @RO Int size.get() = ids_.size;
+
+        @Override
+        @RO Boolean empty.get() = ids_.empty;
+
+        @Override
+        Boolean contains(Key key) = pathToId_.contains(key);
+
+        @Override
+        conditional Value get(Key key)
+            {
+            if (Int id := pathToId_.get(key))
+                {
+                return True, implFor(id).as(Value);
+                }
+
+            return False;
+            }
+
+        @Override
+        SysMapImpl put(Key key, Value value) = throw new ReadOnly();
+
+        @Override
+        SysMapImpl remove(Key key) = throw new ReadOnly();
+
+        @Override
+        public Set<Key> keys = pathToId_.keys;
+        }
+
+
     // ----- DBLog ---------------------------------------------------------------------------------
 
     /**

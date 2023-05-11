@@ -1,3 +1,5 @@
+import model.DBObjectInfo;
+
 /**
  * The system "sys" schema that is always present under the root schema.
  *
@@ -44,49 +46,49 @@ interface SystemSchema
     @RO DBMap<String, Type> types;
 
     /**
-     * A [DBMap] of path to [DBObject].
+     * A [DBMap] of path to a [DBObjectInfo] instance for each [DBObject].
      */
-    @RO DBMap<String, DBObject> objects;
+    @RO DBMap<String, DBObjectInfo> objects;
 
     /**
-     * A [DBMap] of path to [DBSchema].
+     * A Map of path to a [DBObjectInfo] instance for each [DBSchema].
      */
-    @RO DBMap<String, DBSchema> schemas;
+    @RO DBMap<String, DBObjectInfo> schemas;
 
     /**
-     * A [DBMap] of path to [DBCounter].
+     * A Map of path to a [DBObjectInfo] instance for each [DBCounter].
      */
-    @RO DBMap<String, DBCounter> counters;
+    @RO DBMap<String, DBObjectInfo> counters;
 
     /**
-     * A [DBMap] of path to [DBValue].
+     * A Map of path to a [DBObjectInfo] instance for each [DBValue].
      */
-    @RO DBMap<String, DBValue> values;
+    @RO DBMap<String, DBObjectInfo> values;
 
     /**
-     * A [DBMap] of path to [DBMap].
+     * A Map of path to a [DBObjectInfo] instance for each [DBMap].
      */
-    @RO DBMap<String, DBMap> maps;
+    @RO DBMap<String, DBObjectInfo> maps;
 
     /**
-     * A [DBMap] of path to [DBList].
+     * A Map of path to a [DBObjectInfo] instance for each [DBList].
      */
-    @RO DBMap<String, DBList> lists;
+    @RO DBMap<String, DBObjectInfo> lists;
 
     /**
-     * A [DBMap] of path to [DBQueue].
+     * A Map of path to a [DBObjectInfo] instance for each [DBQueue].
      */
-    @RO DBMap<String, DBQueue> queues;
+    @RO DBMap<String, DBObjectInfo> queues;
 
     /**
-     * A [DBMap] of path to [DBProcessor].
+     * A Map of path to a [DBObjectInfo] instance for each [DBProcessor].
      */
-    @RO DBMap<String, DBProcessor> processors;
+    @RO DBMap<String, DBObjectInfo> processors;
 
     /**
-     * A [DBMap] of path to [DBLog].
+     * A Map of path to a [DBObjectInfo] instance for each [DBLog].
      */
-    @RO DBMap<String, DBLog> logs;
+    @RO DBMap<String, DBObjectInfo> logs;
 
     /**
      * A [DBList] ordered by scheduled invocation date/time of [Pending](DBProcessor.Pending)
