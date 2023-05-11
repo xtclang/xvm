@@ -2,6 +2,8 @@ import crypto.Signer;
 
 import oodb.Connection;
 import oodb.DBSchema;
+import oodb.DBObject;
+import oodb.model.DBObjectInfo;
 
 import User.HashInfo;
 
@@ -26,17 +28,21 @@ const DBRealm
         @Inject(resourceName=connectionName) Connection dbc;
         String?     path       = Null;
         AuthSchema? authSchema = Null;
-        for ((String pathStr, DBSchema schema) : dbc.sys.schemas)
+        for ((String pathStr, DBObjectInfo info) : dbc.sys.schemas)
             {
             // find the AuthSchema; it must occur exactly-once
-            if (schema.is(AuthSchema))
+            if (info.category == DBSchema)
                 {
-                assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
-                                        | locations within the database:\
-                                        | {pathStr.quoted()} and {path.quoted()}
-                                       ;
-                path       = pathStr;
-                authSchema = schema;
+                assert DBObject schema ?= info.lookupUsing(dbc);
+                if (schema.is(AuthSchema))
+                    {
+                    assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
+                                            | locations within the database:\
+                                            | {pathStr.quoted()} and {path.quoted()}
+                                           ;
+                    path       = pathStr;
+                    authSchema = schema;
+                    }
                 }
             }
         assert path != Null && authSchema != Null as "The database does not contain an \"AuthSchema\"";
