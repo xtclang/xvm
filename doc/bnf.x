@@ -748,7 +748,7 @@ PostfixExpression
     PostfixExpression ArrayDims             # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
     PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
-    PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
+    PostfixExpression "." "&"-opt DotNameFinish
     PostfixExpression ".new" NewFinish
     PostfixExpression ".as" "(" AnyTypeExpression ")"
     PostfixExpression ".is" "(" AnyTypeExpression ")"
@@ -769,6 +769,10 @@ ArrayIndexes
 ExpressionList
     Expression
     ExpressionList "," Expression
+
+DotNameFinish
+    Name TypeParameterTypeList-opt
+    "default"
 
 NewFinish
     TypeExpression NewArguments AnonClassBody-opt
