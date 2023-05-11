@@ -58,4 +58,6 @@ const Configuration
                                  configured    = configured    ?: this.configured,
                                 );
         }
+
+    static Configuration DEFAULT = new Configuration([], configured=False); // TODO GG: remove
     }

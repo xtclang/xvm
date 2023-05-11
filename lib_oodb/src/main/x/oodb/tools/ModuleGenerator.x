@@ -149,7 +149,7 @@ class ModuleGenerator(String implName, String moduleName)
     /**
      * Generate a schema.
      *
-     * @return True iff the schema contains any DB properties
+     * @return True iff the schema was successfully created
      */
     conditional
         (
@@ -306,13 +306,18 @@ class ModuleGenerator(String implName, String moduleName)
 
                     if (initialValue == "Null")
                         {
-                        if (Const initial := property.hasInitialValue())
+                        if (Composition valueClassTemplate := valueType.fromClass(),
+                                        valueClassTemplate.is(ClassTemplate) &&
+                                        valueClassTemplate.hasDefault)
                             {
-                            initialValue = displayValue(initial);
+                            // TODO GG: TEMPORARY HACK!! should be $"{...}.default" instead
+                            initialValue = $"{displayName(valueClassTemplate, appName)}.DEFAULT";
                             }
                         else
                             {
-                            errors.add($"Error: Property \"{propertyName}\" must specify an initial value");
+                            errors.add($|Error: Property "{valueType} {propertyName}" must specify \
+                                        |an initial value
+                                      );
                             return False;
                             }
                         }
