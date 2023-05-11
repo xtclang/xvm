@@ -27,7 +27,7 @@ module %appName%_jsondb%qualifier%
         {
         return
             [
-            new DBObjectInfo_("", ROOT, DBSchema, 0, 0, [%ChildrenIds%], False),
+            new DBObjectInfo_(ROOT, DBSchema, 0, 0, [%ChildrenIds%], False),
 %PropertyInfos%
             ];
         }

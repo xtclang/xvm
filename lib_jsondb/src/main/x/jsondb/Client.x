@@ -1291,57 +1291,57 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBMap<String, DBObject> objects.get()
+        @RO DBMap<String, DBObjectInfo> objects.get()
             {
-            return implFor(BuiltIn.Objects.id).as(DBMap<String, DBObject>);
+            return implFor(BuiltIn.Objects.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBSchema> schemas.get()
+        @RO DBMap<String, DBObjectInfo> schemas.get()
             {
-            return implFor(BuiltIn.Schemas.id).as(DBMap<String, DBSchema>);
+            return implFor(BuiltIn.Schemas.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBCounter> counters.get()
+        @RO DBMap<String, DBObjectInfo> counters.get()
             {
-            return implFor(BuiltIn.Counters.id).as(DBMap<String, DBCounter>);
+            return implFor(BuiltIn.Counters.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBValue> values.get()
+        @RO DBMap<String, DBObjectInfo> values.get()
             {
-            return implFor(BuiltIn.Values.id).as(DBMap<String, DBValue>);
+            return implFor(BuiltIn.Values.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBMap> maps.get()
+        @RO DBMap<String, DBObjectInfo> maps.get()
             {
-            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBMap>);
+            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBList> lists.get()
+        @RO DBMap<String, DBObjectInfo> lists.get()
             {
-            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBList>);
+            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBQueue> queues.get()
+        @RO DBMap<String, DBObjectInfo> queues.get()
             {
-            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBQueue>);
+            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBProcessor> processors.get()
+        @RO DBMap<String, DBObjectInfo> processors.get()
             {
-            return implFor(BuiltIn.Processors.id).as(DBMap<String, DBProcessor>);
+            return implFor(BuiltIn.Processors.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBLog> logs.get()
+        @RO DBMap<String, DBObjectInfo> logs.get()
             {
-            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBLog>);
+            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override

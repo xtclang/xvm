@@ -1,4 +1,4 @@
-import oodb.DBObject.DBCategory as Category;
+import oodb.DBObject.DBCategory;
 import oodb.DBObject.Validator;
 import oodb.DBObject.Rectifier;
 import oodb.DBObject.Distributor;
@@ -15,9 +15,8 @@ import oodb.DBObject.Distributor;
  * enumerated in the [concreteClasses] property.
  */
 const DBObjectInfo(
-        String                        name,
         Path                          path,
-        Category                      category,
+        DBCategory                    category,
         Int                           id,
         Int                           parentId,
         Int[]                         childIds        = [],
@@ -30,8 +29,9 @@ const DBObjectInfo(
         LifeCycle                     lifeCycle       = Current,
         Map<String, immutable Object> options         = [],
         )
+        extends oodb.model.DBObjectInfo(
+            path, [], category, transactional, validators, rectifiers, distributors, lifeCycle)
     {
-    enum LifeCycle {Current, Deprecated, Removed}
 
     /**
      * A useful "name" for the DBObject.
@@ -188,7 +188,6 @@ const DBObjectInfo(
         {
         assert id != 0;
         return new DBObjectInfo(
-                name            = name,
                 path            = parent.path + name,
                 category        = category,
                 id              = id,
@@ -219,7 +218,6 @@ const DBObjectInfo(
             }
 
         return new DBObjectInfo(
-                name            = name,
                 path            = path,
                 category        = category,
                 id              = id,
@@ -267,7 +265,6 @@ const DBObjectInfo(
             }
 
         return new DBObjectInfo(
-                name            = name,
                 path            = path,
                 category        = category,
                 id              = id,
