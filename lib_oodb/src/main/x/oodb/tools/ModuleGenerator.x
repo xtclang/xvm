@@ -226,7 +226,6 @@ class ModuleGenerator(String implName, String moduleName)
                                          childSchemaSourceTemplate, propertyPath, pid, errors))
                         {
                         propertyInfos += schemaInfoTemplate
-                                .replace("%schemaName%"    , propertyName)
                                 .replace("%schemaPath%"    , propertyPath)
                                 .replace("%schemaId%"      , propertyId)
                                 .replace("%schemaParentId%", schemaParentId)
@@ -251,8 +250,9 @@ class ModuleGenerator(String implName, String moduleName)
                         customInstantiations += schemaCustomInstantiations;
                         customDeclarations   += schemaCustomDeclarations;
                         childSchemas         += schemaSource;
+                        continue NextProperty;
                         }
-                    continue NextProperty;
+                    return False;
 
                 case DBMap:
                     TypeTemplate keyType;
@@ -299,6 +299,8 @@ class ModuleGenerator(String implName, String moduleName)
                     String initialValue = "Null";
                     if (AnnotationTemplate annotation := property.findAnnotation("oodb.Initial"))
                         {
+                        // TODO GG: we assume here that "value.toString()" can be compiled back,
+                        //          which is only correct for few types
                         initialValue = displayValue(annotation.arguments[0].value);
                         }
 
@@ -371,7 +373,6 @@ class ModuleGenerator(String implName, String moduleName)
                 }
 
             propertyInfos += propertyInfoTemplate
-                                .replace("%propertyName%"      , propertyName)
                                 .replace("%propertyPath%"      , propertyPath)
                                 .replace("%propertyCategory%"  , category.name)
                                 .replace("%propertyId%"        , propertyId)
@@ -408,7 +409,6 @@ class ModuleGenerator(String implName, String moduleName)
 
             customInstantiations += customInstantiationTemplate
                                     .replace("%appName%"          , appName)
-                                    .replace("%propertyName%"     , propertyName)
                                     .replace("%propertyId%"       , propertyId)
                                     .replace("%propertyType%"     , propertyType)
                                     .replace("%propertyTypeName%" , propertyTypeName)
@@ -426,7 +426,7 @@ class ModuleGenerator(String implName, String moduleName)
 
         String schemaMethods  = createMethods(appName, schemaTemplate);
 
-        String schemaTypeName = $"{appName}_.{schemaName}"; // TODO GG not quite right
+        String schemaTypeName = displayName(schemaTemplate, appName);
         String schemaSource   = schemaSourceTemplate
                                 .replace("%schemaName%"     , schemaName)
                                 .replace("%schemaTypeName%" , schemaTypeName)
