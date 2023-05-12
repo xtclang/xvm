@@ -11,7 +11,7 @@ import json.ObjectOutputStream;
 import json.Parser;
 import json.Printer.printString;
 
-import model.DBObjectInfo;
+import model.DboInfo;
 import model.SysInfo;
 
 import oodb.DBClosed;
@@ -216,9 +216,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         } = Initial;
 
     /**
-     * The lazily cached DBObjectInfo for each user defined DBObject in the `Catalog`.
+     * The lazily cached DboInfo for each user defined DBObject in the `Catalog`.
      */
-    private DBObjectInfo?[] infos = new DBObjectInfo?[];
+    private DboInfo?[] infos = new DboInfo?[];
 
     /**
      * The ObjectStore for each user defined DBObject in the `Catalog`. These provide the I/O for
@@ -3014,7 +3014,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         ObjectStore[] repair = new ObjectStore[];
         for (Int dboId : replayByDboId.keys)
             {
-            DBObjectInfo info = catalog.infoFor(dboId);
+            DboInfo info = catalog.infoFor(dboId);
             if (info.lifeCycle != Removed)
                 {
                 // get the storage
@@ -3069,7 +3069,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // apply all transactions from the recovery range that it was enlisted in
         for ((Int dboId, SkiplistMap<Int, Token[]> seals) : replayByDboId)
             {
-            DBObjectInfo info = catalog.infoFor(dboId);
+            DboInfo info = catalog.infoFor(dboId);
             if (info.lifeCycle != Removed)
                 {
                 // get the storage
@@ -3454,13 +3454,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * Obtain the DBObjectInfo for the specified id.
+     * Obtain the DboInfo for the specified id.
      *
      * @param id  the internal object id
      *
-     * @return the DBObjectInfo for the specified id
+     * @return the DboInfo for the specified id
      */
-    protected DBObjectInfo infoFor(Int id)
+    protected DboInfo infoFor(Int id)
         {
         if (id < 0)
             {
@@ -3474,7 +3474,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return infos[id]?;
             }
 
-        DBObjectInfo info = catalog.infoFor(id);
+        DboInfo info = catalog.infoFor(id);
 
         // save off the ObjectStore (lazy cache)
         infos[id] = info;
@@ -3483,7 +3483,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * Obtain the DBObjectInfo for the specified id.
+     * Obtain the DboInfo for the specified id.
      *
      * @param id  the internal object id
      *

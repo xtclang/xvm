@@ -31,7 +31,9 @@ import oodb.SystemSchema;
 import oodb.Transaction.CommitResult;
 import oodb.Transaction.TxInfo;
 
-import model.DBObjectInfo;
+import oodb.DBObjectInfo as OOObjectInfo;
+
+import model.DboInfo;
 
 import storage.CounterStore;
 import storage.LogStore;
@@ -311,7 +313,7 @@ service Client<Schema extends RootSchema>
         if (tx == Null)
             {
             // create a transaction to represent the requested transaction ID
-            DBObjectInfo dboInfo = infoFor(0); // the root schema
+            DboInfo dboInfo = infoFor(0); // the root schema
             tx = new Transaction(dboInfo, txInfo, txId).as(Transaction + Schema);
             }
         else
@@ -615,14 +617,14 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * Obtain the DBObjectInfo for the specified id.
+     * Obtain the DboInfo for the specified id.
      *
      * @param id  the internal object id
      *
-     * @return the DBObjectInfo for the specified id
+     * @return the DboInfo for the specified id
      */
     @Concurrent
-    DBObjectInfo infoFor(Int id)
+    DboInfo infoFor(Int id)
         {
         return catalog.infoFor(id);
         }
@@ -670,7 +672,7 @@ service Client<Schema extends RootSchema>
         {
         if (id <= 0)
             {
-            DBObjectInfo info  = infoFor(id);
+            DboInfo info  = infoFor(id);
             return switch (BuiltIn.byId(info.id))
                 {
                 case Root:         new RootSchemaImpl(info);
@@ -694,7 +696,7 @@ service Client<Schema extends RootSchema>
                 };
             }
 
-        DBObjectInfo info = infoFor(id);
+        DboInfo info = infoFor(id);
         return switch (info.category)
             {
             case DBSchema:    new DBSchemaImpl(info);
@@ -709,7 +711,7 @@ service Client<Schema extends RootSchema>
         }
 
     @Concurrent
-    private DBMapImpl createDBMapImpl(DBObjectInfo info, MapStore store)
+    private DBMapImpl createDBMapImpl(DboInfo info, MapStore store)
         {
         assert Type keyType := info.typeParams.get("Key"),
                     keyType.is(Type<immutable Const>);
@@ -720,7 +722,7 @@ service Client<Schema extends RootSchema>
         }
 
     @Concurrent
-    private DBLogImpl createDBLogImpl(DBObjectInfo info, LogStore store)
+    private DBLogImpl createDBLogImpl(DboInfo info, LogStore store)
         {
         assert Type elementType := info.typeParams.get("Element"),
                     elementType.is(Type<immutable Const>);
@@ -729,7 +731,7 @@ service Client<Schema extends RootSchema>
         }
 
     @Concurrent
-    private DBProcessorImpl createDBProcessorImpl(DBObjectInfo info, ProcessorStore store)
+    private DBProcessorImpl createDBProcessorImpl(DboInfo info, ProcessorStore store)
         {
         assert Type messageType := info.typeParams.get("Message"),
                     messageType.is(Type<immutable Const>);
@@ -738,7 +740,7 @@ service Client<Schema extends RootSchema>
         }
 
     @Concurrent
-    private DBValueImpl createDBValueImpl(DBObjectInfo info, ValueStore store)
+    private DBValueImpl createDBValueImpl(DboInfo info, ValueStore store)
         {
         assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
@@ -747,11 +749,11 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * Obtain the DBObjectInfo for the specified id.
+     * Obtain the DboInfo for the specified id.
      *
      * @param id  the internal object id
      *
-     * @return the DBObjectInfo for the specified id
+     * @return the DboInfo for the specified id
      */
     @Concurrent
     ObjectStore storeFor(Int id)
@@ -896,10 +898,10 @@ service Client<Schema extends RootSchema>
     /**
      * The shared base implementation for all of the client DBObject representations.
      */
-    @Abstract class DBObjectImpl(DBObjectInfo info_)
+    @Abstract class DBObjectImpl(DboInfo info_)
             implements DBObject
         {
-        protected DBObjectInfo info_;
+        protected DboInfo info_;
 
         /**
          * Holds a deferred function in a linked list of deferred functions for this DBObjectImpl.
@@ -979,7 +981,7 @@ service Client<Schema extends RootSchema>
                 @Override
                 conditional DBObject get(String key)
                     {
-                    if (DBObjectInfo info := infos.get(key))
+                    if (DboInfo info := infos.get(key))
                         {
                         return True, implFor(info.id);
                         }
@@ -993,7 +995,7 @@ service Client<Schema extends RootSchema>
                     return infos.keys;
                     }
 
-                protected @Lazy Map<String, DBObjectInfo> infos.calc()
+                protected @Lazy Map<String, DboInfo> infos.calc()
                     {
                     Int[] childIds = info_.childIds;
                     Int   size     = childIds.size;
@@ -1002,7 +1004,7 @@ service Client<Schema extends RootSchema>
                         return [];
                         }
 
-                    ListMap<String, DBObjectInfo> infos = new ListMap(size);
+                    ListMap<String, DboInfo> infos = new ListMap(size);
                     childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
                     return infos.freeze();
                     }
@@ -1232,7 +1234,7 @@ service Client<Schema extends RootSchema>
     /**
      * The DBSchema DBObject implementation.
      */
-    class DBSchemaImpl(DBObjectInfo info_)
+    class DBSchemaImpl(DboInfo info_)
             extends DBObjectImpl(info_)
             implements DBSchema
         {
@@ -1251,7 +1253,7 @@ service Client<Schema extends RootSchema>
     /**
      * The RootSchema DBObject implementation.
      */
-    class RootSchemaImpl(DBObjectInfo info_)
+    class RootSchemaImpl(DboInfo info_)
             extends DBSchemaImpl(info_)
             implements RootSchema
         {
@@ -1268,7 +1270,7 @@ service Client<Schema extends RootSchema>
     /**
      * The SystemSchema DBObject implementation.
      */
-    class SystemSchemaImpl(DBObjectInfo info_)
+    class SystemSchemaImpl(DboInfo info_)
             extends DBSchemaImpl(info_)
             implements SystemSchema
         {
@@ -1291,57 +1293,57 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> objects.get()
+        @RO DBMap<String, OOObjectInfo> objects.get()
             {
-            return implFor(BuiltIn.Objects.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Objects.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> schemas.get()
+        @RO DBMap<String, OOObjectInfo> schemas.get()
             {
-            return implFor(BuiltIn.Schemas.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Schemas.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> counters.get()
+        @RO DBMap<String, OOObjectInfo> counters.get()
             {
-            return implFor(BuiltIn.Counters.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Counters.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> values.get()
+        @RO DBMap<String, OOObjectInfo> values.get()
             {
-            return implFor(BuiltIn.Values.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Values.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> maps.get()
+        @RO DBMap<String, OOObjectInfo> maps.get()
             {
-            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Maps.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> lists.get()
+        @RO DBMap<String, OOObjectInfo> lists.get()
             {
-            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Lists.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> queues.get()
+        @RO DBMap<String, OOObjectInfo> queues.get()
             {
-            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Queues.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> processors.get()
+        @RO DBMap<String, OOObjectInfo> processors.get()
             {
-            return implFor(BuiltIn.Processors.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Processors.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, DBObjectInfo> logs.get()
+        @RO DBMap<String, OOObjectInfo> logs.get()
             {
-            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBObjectInfo>);
+            return implFor(BuiltIn.Logs.id).as(DBMap<String, OOObjectInfo>);
             }
 
         @Override
@@ -1385,7 +1387,7 @@ service Client<Schema extends RootSchema>
     /**
      * The Connection API, for providing to a database client.
      */
-    class Connection(DBObjectInfo info_)
+    class Connection(DboInfo info_)
             extends RootSchemaImpl(info_)
             implements oodb.Connection<Schema>
         {
@@ -1439,11 +1441,11 @@ service Client<Schema extends RootSchema>
     /**
      * The Transaction API, for providing to a database client.
      */
-    class Transaction(DBObjectInfo info_, TxInfo txInfo)
+    class Transaction(DboInfo info_, TxInfo txInfo)
             extends RootSchemaImpl
             implements oodb.Transaction<Schema>
         {
-        construct(DBObjectInfo info_, TxInfo txInfo, Int? id=Null)
+        construct(DboInfo info_, TxInfo txInfo, Int? id=Null)
             {
             construct RootSchemaImpl(info_);
             this.txInfo = txInfo;
@@ -1761,7 +1763,7 @@ service Client<Schema extends RootSchema>
     /**
      * The DBValue implementation.
      */
-    class DBValueImpl<Value extends immutable Const>(DBObjectInfo info_, ValueStore<Value> store_)
+    class DBValueImpl<Value extends immutable Const>(DboInfo info_, ValueStore<Value> store_)
             extends DBObjectImpl(info_)
             implements DBValue<Value>
         {
@@ -1796,7 +1798,7 @@ service Client<Schema extends RootSchema>
             extends DBValueImpl<Int>
             implements DBCounter
         {
-        construct(DBObjectInfo info_, CounterStore store_)
+        construct(DboInfo info_, CounterStore store_)
             {
             construct DBValueImpl(info_, store_);
             }
@@ -1877,7 +1879,7 @@ service Client<Schema extends RootSchema>
      * The DBMap implementation.
      */
     class DBMapImpl<Key extends immutable Const, Value extends immutable Const>
-            (DBObjectInfo info_, MapStore<Key, Value> store_)
+            (DboInfo info_, MapStore<Key, Value> store_)
             extends DBObjectImpl(info_)
             implements DBMap<Key, Value>
             incorporates KeySetBasedMap<Key, Value>
@@ -2161,7 +2163,7 @@ service Client<Schema extends RootSchema>
     /**
      * The DBMap implementation for the maps in the system schema.
      */
-    class SysMapImpl<Value extends immutable Const>(DBObjectInfo info_, Int[] ids_)
+    class SysMapImpl<Value extends immutable Const>(DboInfo info_, Int[] ids_)
             extends DBObjectImpl(info_)
             implements DBMap<String, Value>
             incorporates KeySetBasedMap<String, Value>
@@ -2177,7 +2179,7 @@ service Client<Schema extends RootSchema>
             HashMap<String, Int> map = new HashMap();
             for (Int id : ids_)
                 {
-                DBObjectInfo info = infoFor(id);
+                DboInfo info = infoFor(id);
                 map.put(info.path.toString(), id);
                 }
             return map.freeze();
@@ -2219,7 +2221,7 @@ service Client<Schema extends RootSchema>
     /**
      * The DBLog implementation.
      */
-    class DBLogImpl<Value extends immutable Const>(DBObjectInfo info_, LogStore<Value> store_)
+    class DBLogImpl<Value extends immutable Const>(DboInfo info_, LogStore<Value> store_)
             extends DBObjectImpl(info_)
             implements DBLog<Value>
         {
@@ -2258,7 +2260,7 @@ service Client<Schema extends RootSchema>
     /**
      * The DBProcessor implementation.
      */
-    class DBProcessorImpl<Message extends immutable Const>(DBObjectInfo info_, ProcessorStore<Message> store_)
+    class DBProcessorImpl<Message extends immutable Const>(DboInfo info_, ProcessorStore<Message> store_)
             extends DBObjectImpl(info_)
             implements DBProcessor<Message>
         {

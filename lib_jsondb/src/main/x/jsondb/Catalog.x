@@ -1,4 +1,4 @@
-import model.DBObjectInfo;
+import model.DboInfo;
 import model.Lock;
 import model.SysInfo;
 
@@ -21,6 +21,7 @@ import oodb.Permission;
 import oodb.RootSchema;
 
 import oodb.model.User;
+import oodb.DBObjectInfo as OOObjectInfo;
 
 import storage.JsonCounterStore;
 import storage.JsonMapStore;
@@ -128,9 +129,9 @@ service Catalog<Schema extends RootSchema>
             }
 
         /**
-         * The DBObjectInfo for the built-in database object.
+         * The DboInfo for the built-in database object.
          */
-        DBObjectInfo info.get()
+        DboInfo info.get()
             {
             return SystemInfos[ordinal];
             }
@@ -149,13 +150,13 @@ service Catalog<Schema extends RootSchema>
             }
         }
 
-    static DBObjectInfo[] SystemInfos =
+    static DboInfo[] SystemInfos =
         [
-        new DBObjectInfo(ROOT,      DBSchema, BuiltIn.Root.id, BuiltIn.Root.id,
+        new DboInfo(ROOT,      DBSchema, BuiltIn.Root.id, BuiltIn.Root.id,
             [
             BuiltIn.Sys.id,
             ]),
-        new DBObjectInfo(Path:/sys, DBSchema, BuiltIn.Sys.id,  BuiltIn.Root.id,
+        new DboInfo(Path:/sys, DBSchema, BuiltIn.Sys.id,  BuiltIn.Root.id,
             [
             BuiltIn.Info.id,
             BuiltIn.Users.id,
@@ -174,23 +175,23 @@ service Catalog<Schema extends RootSchema>
             BuiltIn.Errors.id,
             ]),
 
-        new DBObjectInfo(Path:/sys/info,         DBValue,   BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=["Value"=DBInfo]),
-        new DBObjectInfo(Path:/sys/users,        DBMap,     BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBUser]),
-        new DBObjectInfo(Path:/sys/types,        DBMap,     BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=Type]),
-        new DBObjectInfo(Path:/sys/objects,      DBMap,     BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBObject]),
-        new DBObjectInfo(Path:/sys/schemas,      DBMap,     BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBSchema]),
-        new DBObjectInfo(Path:/sys/counters,     DBMap,     BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBCounter]),
-        new DBObjectInfo(Path:/sys/values,       DBMap,     BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBValue]),
-        new DBObjectInfo(Path:/sys/maps,         DBMap,     BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBMap]),
-        new DBObjectInfo(Path:/sys/lists,        DBMap,     BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBList]),
-        new DBObjectInfo(Path:/sys/queues,       DBMap,     BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBQueue]),
-        new DBObjectInfo(Path:/sys/processors,   DBMap,     BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBProcessor]),
-        new DBObjectInfo(Path:/sys/logs,         DBMap,     BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBLog]),
-        new DBObjectInfo(Path:/sys/pending,      DBList,    BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=["Element"=Pending]),
-        new DBObjectInfo(Path:/sys/transactions, DBLog,     BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=["Element"=DBTransaction]),
-        new DBObjectInfo(Path:/sys/errors,       DBLog,     BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=["Element"=String]),
-        new DBObjectInfo(Path:/sys/txCounter,    DBCounter, BuiltIn.TxCounter.id,    BuiltIn.Sys.id, transactional=False),
-        new DBObjectInfo(Path:/sys/pidCounter,   DBCounter, BuiltIn.PidCounter.id,   BuiltIn.Sys.id, transactional=False),
+        new DboInfo(Path:/sys/info,         DBValue,   BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=["Value"=DBInfo]),
+        new DboInfo(Path:/sys/users,        DBMap,     BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBUser]),
+        new DboInfo(Path:/sys/types,        DBMap,     BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=Type]),
+        new DboInfo(Path:/sys/objects,      DBMap,     BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBObject]),
+        new DboInfo(Path:/sys/schemas,      DBMap,     BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBSchema]),
+        new DboInfo(Path:/sys/counters,     DBMap,     BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBCounter]),
+        new DboInfo(Path:/sys/values,       DBMap,     BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBValue]),
+        new DboInfo(Path:/sys/maps,         DBMap,     BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBMap]),
+        new DboInfo(Path:/sys/lists,        DBMap,     BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBList]),
+        new DboInfo(Path:/sys/queues,       DBMap,     BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBQueue]),
+        new DboInfo(Path:/sys/processors,   DBMap,     BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBProcessor]),
+        new DboInfo(Path:/sys/logs,         DBMap,     BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBLog]),
+        new DboInfo(Path:/sys/pending,      DBList,    BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=["Element"=Pending]),
+        new DboInfo(Path:/sys/transactions, DBLog,     BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=["Element"=DBTransaction]),
+        new DboInfo(Path:/sys/errors,       DBLog,     BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=["Element"=String]),
+        new DboInfo(Path:/sys/txCounter,    DBCounter, BuiltIn.TxCounter.id,    BuiltIn.Sys.id, transactional=False),
+        new DboInfo(Path:/sys/pidCounter,   DBCounter, BuiltIn.PidCounter.id,   BuiltIn.Sys.id, transactional=False),
         ];
 
     /**
@@ -414,14 +415,14 @@ service Catalog<Schema extends RootSchema>
         }
 
     /**
-     * Obtain the DBObjectInfo for the specified id.
+     * Obtain the DboInfo for the specified id.
      *
      * @param id  the internal object id
      *
-     * @return the DBObjectInfo for the specified id
+     * @return the DboInfo for the specified id
      */
     @Concurrent
-    DBObjectInfo infoFor(Int id)
+    DboInfo infoFor(Int id)
         {
         if (id < 0)
             {
@@ -432,10 +433,10 @@ service Catalog<Schema extends RootSchema>
             {
             if (id == 0)
                 {
-                private DBObjectInfo? root = Null;
+                private DboInfo? root = Null;
                 return root?;
 
-                DBObjectInfo raw = metadata.dbObjectInfos[0];
+                DboInfo raw = metadata.dbObjectInfos[0];
                 Int          sys = BuiltIn.Sys.id;
                 if (!raw.childIds.contains(sys))
                     {
@@ -448,20 +449,20 @@ service Catalog<Schema extends RootSchema>
             return metadata.dbObjectInfos[id];
             }
 
-        TODO("create DBObjectInfo"); // TODO
+        TODO("create DboInfo"); // TODO
         }
 
     /**
-     * Obtain the DBObjectInfo for the specified name or path.
+     * Obtain the DboInfo for the specified name or path.
      *
      * @param path  the path from the root to the DBObject; "/" indicates the root
      *
-     * @return the DBObjectInfo for the specified path
+     * @return the DboInfo for the specified path
      */
     @Concurrent
-    DBObjectInfo infoFor(String path)
+    DboInfo infoFor(String path)
         {
-        DBObjectInfo current = infoFor(0); // ROOT
+        DboInfo current = infoFor(0); // ROOT
 
         NextPathSegment: for (String name : path.split('/'))
             {
@@ -472,7 +473,7 @@ service Catalog<Schema extends RootSchema>
 
             for (Int childId : current.childIds)
                 {
-                DBObjectInfo child = infoFor(childId);
+                DboInfo child = infoFor(childId);
                 if (child.name == name)
                     {
                     current = child;
@@ -480,7 +481,7 @@ service Catalog<Schema extends RootSchema>
                     }
                 }
 
-            assert:arg as $"Missing DBObjectInfo for {name.quoted()} in path {path.quoted()}";
+            assert:arg as $"Missing DboInfo for {name.quoted()} in path {path.quoted()}";
             }
 
         return current;
@@ -561,7 +562,7 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     protected ObjectStore createStore(Int id)
         {
-        DBObjectInfo info = infoFor(id);
+        DboInfo info = infoFor(id);
         if (id <= 0)
             {
             return switch (BuiltIn.byId(id))
@@ -626,7 +627,7 @@ service Catalog<Schema extends RootSchema>
         }
 
     @Concurrent
-    private ObjectStore createMapStore(DBObjectInfo info)
+    private ObjectStore createMapStore(DboInfo info)
         {
         assert Type keyType := info.typeParams.get("Key"),
                     keyType.is(Type<immutable Const>);
@@ -639,7 +640,7 @@ service Catalog<Schema extends RootSchema>
         }
 
     @Concurrent
-    private ObjectStore createCounterStore(DBObjectInfo info)
+    private ObjectStore createCounterStore(DboInfo info)
         {
         return info.transactional
                 ? new JsonCounterStore(this, info)
@@ -647,7 +648,7 @@ service Catalog<Schema extends RootSchema>
         }
 
     @Concurrent
-    private ObjectStore createValueStore(DBObjectInfo info)
+    private ObjectStore createValueStore(DboInfo info)
         {
         assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
@@ -660,7 +661,7 @@ service Catalog<Schema extends RootSchema>
         }
 
     @Concurrent
-    private ObjectStore createLogStore(DBObjectInfo info)
+    private ObjectStore createLogStore(DboInfo info)
         {
         assert Type elementType := info.typeParams.get("Element"),
                     elementType.is(Type<immutable Const>);
@@ -682,7 +683,7 @@ service Catalog<Schema extends RootSchema>
         }
 
     @Concurrent
-    private ObjectStore createProcessorStore(DBObjectInfo info)
+    private ObjectStore createProcessorStore(DboInfo info)
         {
         assert Type messageType := info.typeParams.get("Message"),
                     messageType.is(Type<immutable Const>);

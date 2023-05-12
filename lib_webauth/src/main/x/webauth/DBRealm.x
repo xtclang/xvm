@@ -3,7 +3,7 @@ import crypto.Signer;
 import oodb.Connection;
 import oodb.DBSchema;
 import oodb.DBObject;
-import oodb.model.DBObjectInfo;
+import oodb.DBObjectInfo;
 
 import User.HashInfo;
 

@@ -1,4 +1,4 @@
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import json.Lexer.Token;
 import json.Parser;
@@ -42,7 +42,7 @@ service JsonProcessorStore<Message extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DBObjectInfo     info,
+              DboInfo     info,
               Mapping<Message> messageMapping,
               )
         {

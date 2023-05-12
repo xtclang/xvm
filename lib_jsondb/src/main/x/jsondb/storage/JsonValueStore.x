@@ -5,7 +5,7 @@ import json.Mapping;
 import json.ObjectInputStream;
 import json.Parser;
 
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import TxManager.NO_TX;
 
@@ -31,7 +31,7 @@ service JsonValueStore<Value extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DBObjectInfo     info,
+              DboInfo     info,
               Mapping<Value>   valueMapping,
               Value            initial,
               )

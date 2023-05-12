@@ -3,6 +3,9 @@ import oodb.DBObject.Validator;
 import oodb.DBObject.Rectifier;
 import oodb.DBObject.Distributor;
 
+import oodb.DBObjectInfo.LifeCycle;
+
+
 /**
  * Persistent metadata information about a particular `DBObject`.
  *
@@ -14,7 +17,7 @@ import oodb.DBObject.Distributor;
  * [typeParams] property, and any additional class types that may occur are required to be
  * enumerated in the [concreteClasses] property.
  */
-const DBObjectInfo(
+const DboInfo(
         Path                          path,
         DBCategory                    category,
         Int                           id,
@@ -29,9 +32,14 @@ const DBObjectInfo(
         LifeCycle                     lifeCycle       = Current,
         Map<String, immutable Object> options         = [],
         )
-        extends oodb.model.DBObjectInfo(
-            path, [], category, transactional, validators, rectifiers, distributors, lifeCycle)
     {
+    /**
+     * Simple name of the DBObject.
+     */
+    String name.get()
+        {
+        return path == ROOT ? "" : path.name;
+        }
 
     /**
      * A useful "name" for the DBObject.
@@ -43,7 +51,7 @@ const DBObjectInfo(
         }
 
     /**
-     * Verify that the DBObjectInfo is valid.
+     * Verify that the DboInfo is valid.
      *
      * @return True if the check passes
      *
@@ -166,10 +174,10 @@ const DBObjectInfo(
         }
 
     /**
-     * Determine if the DBObjectInfo specifies a parent id. The DBObjectInfo with `id==0` does not
+     * Determine if the DboInfo specifies a parent id. The DboInfo with `id==0` does not
      * have a parent.
      *
-     * @return True iff the DBObjectInfo has a parent
+     * @return True iff the DboInfo has a parent
      * @return (conditional) the id of the parent
      */
     conditional Int hasParent()
@@ -178,16 +186,16 @@ const DBObjectInfo(
         }
 
     /**
-     * Create a copy of this DBObjectInfo with a new parent.
+     * Create a copy of this DboInfo with a new parent.
      *
      * @param parent  the new parent
      *
-     * @return the copy of this DBObjectInfo with the specified parent
+     * @return the copy of this DboInfo with the specified parent
      */
-    DBObjectInfo withParent(DBObjectInfo parent)
+    DboInfo withParent(DboInfo parent)
         {
         assert id != 0;
-        return new DBObjectInfo(
+        return new DboInfo(
                 path            = parent.path + name,
                 category        = category,
                 id              = id,
@@ -204,20 +212,20 @@ const DBObjectInfo(
         }
 
     /**
-     * Create a copy of this DBObjectInfo with a new child.
+     * Create a copy of this DboInfo with a new child.
      *
      * @param child  the new child
      *
-     * @return the copy of this DBObjectInfo with the specified child added
+     * @return the copy of this DboInfo with the specified child added
      */
-    DBObjectInfo withChild(DBObjectInfo child)
+    DboInfo withChild(DboInfo child)
         {
         if (childIds.contains(child.id))
             {
             return this;
             }
 
-        return new DBObjectInfo(
+        return new DboInfo(
                 path            = path,
                 category        = category,
                 id              = id,
@@ -234,13 +242,13 @@ const DBObjectInfo(
         }
 
     /**
-     * Create a copy of this DBObjectInfo with the specified new children.
+     * Create a copy of this DboInfo with the specified new children.
      *
      * @param addIds  the child ids to add as children
      *
-     * @return the copy of this DBObjectInfo with the specified children added
+     * @return the copy of this DboInfo with the specified children added
      */
-    DBObjectInfo withChildren(Int[] addIds)
+    DboInfo withChildren(Int[] addIds)
         {
         if (childIds.containsAll(addIds))
             {
@@ -264,7 +272,7 @@ const DBObjectInfo(
                 }
             }
 
-        return new DBObjectInfo(
+        return new DboInfo(
                 path            = path,
                 category        = category,
                 id              = id,

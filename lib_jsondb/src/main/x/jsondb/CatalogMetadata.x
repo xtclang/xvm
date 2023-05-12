@@ -1,7 +1,7 @@
 // TODO discuss how a developer writing the @Database module can provide user information (if at all)
 // TODO creation actions (to initially populate the database), upgrade actions, etc.
 
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import oodb.Connection;
 import oodb.DBUser;
@@ -49,7 +49,7 @@ mixin CatalogMetadata<Schema extends RootSchema>
     /**
      * The information about the objects that define the database schema.
      */
-    @Abstract @RO DBObjectInfo[] dbObjectInfos;
+    @Abstract @RO DboInfo[] dbObjectInfos;
 
     /**
      * The information about the types used in the database schema.

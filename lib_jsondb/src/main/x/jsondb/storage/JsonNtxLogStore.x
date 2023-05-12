@@ -1,4 +1,4 @@
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import json.Mapping;
 import json.ObjectOutputStream;
@@ -13,7 +13,7 @@ service JsonNtxLogStore<Element extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DBObjectInfo     info,
+              DboInfo     info,
               Mapping<Element> elementMapping,
               Duration         expiry,
               Int              truncateSize,

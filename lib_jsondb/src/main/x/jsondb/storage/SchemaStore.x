@@ -2,7 +2,7 @@ import json.Mapping;
 import json.Lexer;
 import json.Lexer.Token;
 
-import model.DBObjectInfo;
+import model.DboInfo;
 
 
 /**
@@ -13,7 +13,7 @@ service SchemaStore
         extends ObjectStore
     {
     construct(Catalog          catalog,
-              DBObjectInfo     info,
+              DboInfo     info,
              )
         {
         construct ObjectStore(catalog, info);

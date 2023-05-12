@@ -1,5 +1,3 @@
-import model.DBObjectInfo;
-
 /**
  * The system "sys" schema that is always present under the root schema.
  *

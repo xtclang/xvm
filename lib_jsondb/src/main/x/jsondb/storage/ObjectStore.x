@@ -4,7 +4,7 @@ import TxManager.NO_TX;
 import json.Doc;
 import json.Lexer.Token;
 
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import oodb.DBObject.DBCategory as Category;
 
@@ -36,7 +36,7 @@ import oodb.DBObject.DBCategory as Category;
  *
  * TODO background maintenance
  */
-service ObjectStore(Catalog catalog, DBObjectInfo info)
+service ObjectStore(Catalog catalog, DboInfo info)
         implements Hashable
         implements Closeable
     {
@@ -49,10 +49,10 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     public/private Catalog catalog;
 
     /**
-     * The DBObjectInfo that identifies the configuration of this ObjectStore. The information is
+     * The DboInfo that identifies the configuration of this ObjectStore. The information is
      * provided as part of instantiation, and never changes.
      */
-    public/private DBObjectInfo info;
+    public/private DboInfo info;
 
     /**
      * The transaction manager that this ObjectStore is being managed by. A reference to the

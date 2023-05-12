@@ -1,4 +1,4 @@
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import json.Mapping;
 
@@ -14,7 +14,7 @@ service JsonLogStoreBase<Element extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DBObjectInfo     info,
+              DboInfo     info,
               Mapping<Element> elementMapping,
               Duration         expiry,
               Int              truncateSize,

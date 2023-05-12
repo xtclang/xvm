@@ -1,4 +1,4 @@
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import json.mappings.IntNumberMapping;
 
@@ -7,7 +7,7 @@ import json.mappings.IntNumberMapping;
  * in concurrent transactions.
  */
 @Concurrent
-service JsonCounterStore(Catalog catalog, DBObjectInfo info)
+service JsonCounterStore(Catalog catalog, DboInfo info)
         extends JsonValueStore<Int>(catalog, info, JSON_MAPPING, 0)
         implements CounterStore
     {

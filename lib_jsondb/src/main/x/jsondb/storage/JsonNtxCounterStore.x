@@ -1,4 +1,4 @@
-import model.DBObjectInfo;
+import model.DboInfo;
 
 import json.Parser;
 
@@ -9,7 +9,7 @@ import TxManager.NO_TX;
  * Provides the low-level I/O for a non-transactional (i.e. extra-transactional) counter.
  */
 @Concurrent
-service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
+service JsonNtxCounterStore(Catalog catalog, DboInfo info)
         extends ObjectStore(catalog, info)
         implements CounterStore
     {
