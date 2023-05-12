@@ -241,13 +241,7 @@ public class MultipleLValueStatement
         {
         StringBuilder sb = new StringBuilder();
 
-        AstNode parent = getParent();
-        boolean fCond  = parent instanceof AssignmentStatement stmtAssign
-                            && stmtAssign.isForEachCondition();
-        if (!fCond)
-            {
-            sb.append('(');
-            }
+        sb.append('(');
 
         boolean first = true;
         for (AstNode node : LVals)
@@ -264,10 +258,7 @@ public class MultipleLValueStatement
             sb.append(node);
             }
 
-        if (!fCond)
-            {
-            sb.append(')');
-            }
+        sb.append(')');
 
         return sb.toString();
         }

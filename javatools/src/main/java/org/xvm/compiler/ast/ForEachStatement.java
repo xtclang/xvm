@@ -487,7 +487,15 @@ public class ForEachStatement
                             TypeConstant typeEl = getElementType();
                             if (m_fTupleLValue)
                                 {
-                                assert typeEl.isTuple();
+                                if (!typeEl.isTuple())
+                                    {
+                                    condLVal.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                                pool.typeTuple(), typeEl);
+                                    atypeRVals = null;
+                                    fValid     = false;
+                                    break;
+                                    }
+
                                 int cRVals = typeEl.getParamsCount();
                                 if (cLVals <= cRVals)
                                     {
