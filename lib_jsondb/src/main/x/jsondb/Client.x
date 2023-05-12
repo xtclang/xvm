@@ -17,6 +17,7 @@ import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBObjectInfo;
 import oodb.DBProcessor;
 import oodb.DBProcessor.Pending;
 import oodb.DBProcessor.Schedule;
@@ -30,8 +31,6 @@ import oodb.RootSchema;
 import oodb.SystemSchema;
 import oodb.Transaction.CommitResult;
 import oodb.Transaction.TxInfo;
-
-import oodb.DBObjectInfo as OOObjectInfo;
 
 import model.DboInfo;
 
@@ -681,7 +680,7 @@ service Client<Schema extends RootSchema>
                 case Users:        TODO new DBMap<String, DBUser>();
                 case Types:        TODO new DBMap<String, Type>();
                 case Objects:      TODO new DBMap<String, DBObject>();
-                case Schemas:      TODO new DBMap<String, DBSchema>();
+                case Schemas:      new SysMapImpl<DBInfo>(info, catalog);
                 case Counters:     TODO new DBMap<String, DBCounter>();
                 case Values:       TODO new DBMap<String, DBValue>();
                 case Maps:         TODO new DBMap<String, DBMap>();
@@ -713,10 +712,10 @@ service Client<Schema extends RootSchema>
     @Concurrent
     private DBMapImpl createDBMapImpl(DboInfo info, MapStore store)
         {
-        assert Type keyType := info.typeParams.get("Key"),
-                    keyType.is(Type<immutable Const>);
-        assert Type valType := info.typeParams.get("Value"),
-                    valType.is(Type<immutable Const>);
+        Type keyType = info.typeParams[0].type;
+        Type valType = info.typeParams[1].type;
+        assert keyType.is(Type<immutable Const>);
+        assert valType.is(Type<immutable Const>);
 
         return new DBMapImpl<keyType.DataType, valType.DataType>(info, store);
         }
@@ -724,8 +723,8 @@ service Client<Schema extends RootSchema>
     @Concurrent
     private DBLogImpl createDBLogImpl(DboInfo info, LogStore store)
         {
-        assert Type elementType := info.typeParams.get("Element"),
-                    elementType.is(Type<immutable Const>);
+        Type elementType = info.typeParams[0].type;
+        assert elementType.is(Type<immutable Const>);
 
         return new DBLogImpl<elementType.DataType>(info, store);
         }
@@ -733,8 +732,8 @@ service Client<Schema extends RootSchema>
     @Concurrent
     private DBProcessorImpl createDBProcessorImpl(DboInfo info, ProcessorStore store)
         {
-        assert Type messageType := info.typeParams.get("Message"),
-                    messageType.is(Type<immutable Const>);
+        Type messageType = info.typeParams[0].type;
+        assert messageType.is(Type<immutable Const>);
 
         return new DBProcessorImpl<messageType.DataType>(info, store);
         }
@@ -742,8 +741,8 @@ service Client<Schema extends RootSchema>
     @Concurrent
     private DBValueImpl createDBValueImpl(DboInfo info, ValueStore store)
         {
-        assert Type valueType := info.typeParams.get("Value"),
-                    valueType.is(Type<immutable Const>);
+        Type valueType = info.typeParams[0].type;
+        assert valueType.is(Type<immutable Const>);
 
         return new DBValueImpl<valueType.DataType>(info, store);
         }
@@ -1239,7 +1238,7 @@ service Client<Schema extends RootSchema>
             implements DBSchema
         {
         @Override
-        @RO DBSchema!? dbParent.get()
+        @RO DBSchema? dbParent.get()
             {
             return info_.id == 0
                     ? Null
@@ -1293,57 +1292,57 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> objects.get()
+        @RO DBMap<String, DBObjectInfo> objects.get()
             {
-            return implFor(BuiltIn.Objects.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Objects.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> schemas.get()
+        @RO DBMap<String, DBObjectInfo> schemas.get()
             {
-            return implFor(BuiltIn.Schemas.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Schemas.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> counters.get()
+        @RO DBMap<String, DBObjectInfo> counters.get()
             {
-            return implFor(BuiltIn.Counters.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Counters.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> values.get()
+        @RO DBMap<String, DBObjectInfo> values.get()
             {
-            return implFor(BuiltIn.Values.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Values.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> maps.get()
+        @RO DBMap<String, DBObjectInfo> maps.get()
             {
-            return implFor(BuiltIn.Maps.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> lists.get()
+        @RO DBMap<String, DBObjectInfo> lists.get()
             {
-            return implFor(BuiltIn.Lists.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> queues.get()
+        @RO DBMap<String, DBObjectInfo> queues.get()
             {
-            return implFor(BuiltIn.Queues.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> processors.get()
+        @RO DBMap<String, DBObjectInfo> processors.get()
             {
-            return implFor(BuiltIn.Processors.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Processors.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
-        @RO DBMap<String, OOObjectInfo> logs.get()
+        @RO DBMap<String, DBObjectInfo> logs.get()
             {
-            return implFor(BuiltIn.Logs.id).as(DBMap<String, OOObjectInfo>);
+            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBObjectInfo>);
             }
 
         @Override
@@ -2163,11 +2162,20 @@ service Client<Schema extends RootSchema>
     /**
      * The DBMap implementation for the maps in the system schema.
      */
-    class SysMapImpl<Value extends immutable Const>(DboInfo info_, Int[] ids_)
+    class SysMapImpl<Value extends immutable Const>(DboInfo info_, Catalog catalog)
             extends DBObjectImpl(info_)
             implements DBMap<String, Value>
             incorporates KeySetBasedMap<String, Value>
         {
+        @Lazy Int[] ids_.get()
+            {
+            DBCategory category = info_.category;
+            return catalog.metadata?.dbObjectInfos
+                    .filter(info -> info.category == category)
+                    .map(info -> info.id, new Int[])
+                    .as(Int[]) : assert;
+            }
+
         @Lazy
         Map<String, Int> pathToId_.calc()
             {

@@ -175,21 +175,21 @@ service Catalog<Schema extends RootSchema>
             BuiltIn.Errors.id,
             ]),
 
-        new DboInfo(Path:/sys/info,         DBValue,   BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=["Value"=DBInfo]),
-        new DboInfo(Path:/sys/users,        DBMap,     BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBUser]),
-        new DboInfo(Path:/sys/types,        DBMap,     BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=Type]),
-        new DboInfo(Path:/sys/objects,      DBMap,     BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBObject]),
-        new DboInfo(Path:/sys/schemas,      DBMap,     BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBSchema]),
-        new DboInfo(Path:/sys/counters,     DBMap,     BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBCounter]),
-        new DboInfo(Path:/sys/values,       DBMap,     BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBValue]),
-        new DboInfo(Path:/sys/maps,         DBMap,     BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBMap]),
-        new DboInfo(Path:/sys/lists,        DBMap,     BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBList]),
-        new DboInfo(Path:/sys/queues,       DBMap,     BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBQueue]),
-        new DboInfo(Path:/sys/processors,   DBMap,     BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBProcessor]),
-        new DboInfo(Path:/sys/logs,         DBMap,     BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=["Key"=String, "Value"=DBLog]),
-        new DboInfo(Path:/sys/pending,      DBList,    BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=["Element"=Pending]),
-        new DboInfo(Path:/sys/transactions, DBLog,     BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=["Element"=DBTransaction]),
-        new DboInfo(Path:/sys/errors,       DBLog,     BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=["Element"=String]),
+        new DboInfo(Path:/sys/info,         DBValue,   BuiltIn.Info.id,         BuiltIn.Sys.id, typeParamsTypes=["Value"=DBInfo]),
+        new DboInfo(Path:/sys/users,        DBMap,     BuiltIn.Users.id,        BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBUser]),
+        new DboInfo(Path:/sys/types,        DBMap,     BuiltIn.Types.id,        BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=Type]),
+        new DboInfo(Path:/sys/objects,      DBMap,     BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBObject]),
+        new DboInfo(Path:/sys/schemas,      DBMap,     BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBSchema]),
+        new DboInfo(Path:/sys/counters,     DBMap,     BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBCounter]),
+        new DboInfo(Path:/sys/values,       DBMap,     BuiltIn.Values.id,       BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBValue]),
+        new DboInfo(Path:/sys/maps,         DBMap,     BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBMap]),
+        new DboInfo(Path:/sys/lists,        DBMap,     BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBList]),
+        new DboInfo(Path:/sys/queues,       DBMap,     BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBQueue]),
+        new DboInfo(Path:/sys/processors,   DBMap,     BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBProcessor]),
+        new DboInfo(Path:/sys/logs,         DBMap,     BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBLog]),
+        new DboInfo(Path:/sys/pending,      DBList,    BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParamsTypes=["Element"=Pending]),
+        new DboInfo(Path:/sys/transactions, DBLog,     BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParamsTypes=["Element"=DBTransaction]),
+        new DboInfo(Path:/sys/errors,       DBLog,     BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParamsTypes=["Element"=String]),
         new DboInfo(Path:/sys/txCounter,    DBCounter, BuiltIn.TxCounter.id,    BuiltIn.Sys.id, transactional=False),
         new DboInfo(Path:/sys/pidCounter,   DBCounter, BuiltIn.PidCounter.id,   BuiltIn.Sys.id, transactional=False),
         ];
@@ -629,10 +629,11 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     private ObjectStore createMapStore(DboInfo info)
         {
-        assert Type keyType := info.typeParams.get("Key"),
-                    keyType.is(Type<immutable Const>);
-        assert Type valType := info.typeParams.get("Value"),
-                    valType.is(Type<immutable Const>);
+        Type keyType = info.typeParams[0].type;
+        Type valType = info.typeParams[1].type;
+
+        assert keyType.is(Type<immutable Const>);
+        assert valType.is(Type<immutable Const>);
 
         return new JsonMapStore<keyType.DataType, valType.DataType>(this, info,
                 jsonSchema.ensureMapping(keyType).as(Mapping<keyType.DataType>),
@@ -650,8 +651,8 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     private ObjectStore createValueStore(DboInfo info)
         {
-        assert Type valueType := info.typeParams.get("Value"),
-                    valueType.is(Type<immutable Const>);
+        Type valueType = info.typeParams[0].type;
+        assert valueType.is(Type<immutable Const>);
 
         assert Object initial := info.options.get("initial");
 
@@ -663,8 +664,8 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     private ObjectStore createLogStore(DboInfo info)
         {
-        assert Type elementType := info.typeParams.get("Element"),
-                    elementType.is(Type<immutable Const>);
+        Type elementType = info.typeParams[0].type;
+        assert elementType.is(Type<immutable Const>);
 
         Mapping<elementType.DataType> elementMapping =
                 jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>);
@@ -685,8 +686,8 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     private ObjectStore createProcessorStore(DboInfo info)
         {
-        assert Type messageType := info.typeParams.get("Message"),
-                    messageType.is(Type<immutable Const>);
+        Type messageType = info.typeParams[0].type;
+        assert messageType.is(Type<immutable Const>);
 
         return new JsonProcessorStore<messageType.DataType>(this, info,
                 jsonSchema.ensureMapping(messageType).as(Mapping<messageType.DataType>));

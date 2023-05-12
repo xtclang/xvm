@@ -1,4 +1,4 @@
 
             new DBObjectInfo_(Path:%propertyPath%, %propertyCategory%, %propertyId%, %propertyParentId%,
-                transactional=%transactional%, typeParams=Map<String, Type>:[%propertyTypeParams%],
+                transactional=%transactional%, typeParamsTypes=Map<String, Type>:[%propertyTypeParams%],
                 options=Map<String, immutable>:[%options%]),

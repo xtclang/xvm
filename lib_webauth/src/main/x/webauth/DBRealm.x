@@ -31,18 +31,15 @@ const DBRealm
         for ((String pathStr, DBObjectInfo info) : dbc.sys.schemas)
             {
             // find the AuthSchema; it must occur exactly-once
-            if (info.category == DBSchema)
+            assert DBObject schema ?= info.lookupUsing(dbc);
+            if (schema.is(AuthSchema))
                 {
-                assert DBObject schema ?= info.lookupUsing(dbc);
-                if (schema.is(AuthSchema))
-                    {
-                    assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
-                                            | locations within the database:\
-                                            | {pathStr.quoted()} and {path.quoted()}
-                                           ;
-                    path       = pathStr;
-                    authSchema = schema;
-                    }
+                assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
+                                        | locations within the database:\
+                                        | {pathStr.quoted()} and {path.quoted()}
+                                       ;
+                path       = pathStr;
+                authSchema = schema;
                 }
             }
         assert path != Null && authSchema != Null as "The database does not contain an \"AuthSchema\"";

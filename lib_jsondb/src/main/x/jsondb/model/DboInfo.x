@@ -3,7 +3,7 @@ import oodb.DBObject.Validator;
 import oodb.DBObject.Rectifier;
 import oodb.DBObject.Distributor;
 
-import oodb.DBObjectInfo.LifeCycle;
+import oodb.DBObjectInfo;
 
 
 /**
@@ -23,22 +23,66 @@ const DboInfo(
         Int                           id,
         Int                           parentId,
         Int[]                         childIds        = [],
+        String[]                      childNames      = [],
         Boolean                       transactional   = True,
         Validator[]                   validators      = [],
         Rectifier[]                   rectifiers      = [],
         Distributor[]                 distributors    = [],
-        Map<String, Type>             typeParams      = [],
-        Map<String, Class[]>          concreteClasses = [],
+        TypeParamInfo[]               typeParams      = [],
         LifeCycle                     lifeCycle       = Current,
         Map<String, immutable Object> options         = [],
         )
+        implements DBObjectInfo
     {
     /**
-     * Simple name of the DBObject.
+     * Helper constructor for the auto-generated code.
      */
-    String name.get()
+    construct(
+             Path                          path,
+             DBCategory                    category,
+             Int                           id,
+             Int                           parentId,
+             Int[]                         childIds        = [],
+             String[]                      childNames      = [],
+             Boolean                       transactional   = True,
+             Validator[]                   validators      = [],
+             Rectifier[]                   rectifiers      = [],
+             Distributor[]                 distributors    = [],
+             Map<String, Type>             typeParamsTypes = [],
+             Map<String, Class[]>          concreteClasses = [],
+             LifeCycle                     lifeCycle       = Current,
+             Map<String, immutable Object> options         = [],
+             )
         {
-        return path == ROOT ? "" : path.name;
+        TypeParamInfo[] typeParams = [];
+        if (typeParamsTypes.size > 0)
+            {
+            assert typeParamsTypes.keys.containsAll(concreteClasses.keys);
+
+            typeParams = new TypeParamInfo[];
+            for ((String name, Type type) : typeParamsTypes)
+                {
+                typeParams += new TypeParamInfo(name, type, concreteClasses.getOrDefault(name, []));
+                }
+            }
+        else
+            {
+            assert concreteClasses.empty;
+            }
+
+        this.path          = path;
+        this.category      = category;
+        this.id            = id;
+        this.parentId      = parentId;
+        this.childIds      = childIds;
+        this.childNames    = childNames;
+        this.transactional = transactional;
+        this.validators    = validators;
+        this.rectifiers    = rectifiers;
+        this.distributors  = distributors;
+        this.typeParams    = typeParams;
+        this.lifeCycle     = lifeCycle;
+        this.options       = options;
         }
 
     /**
@@ -126,8 +170,9 @@ const DboInfo(
             }
 
         // check type parameters
-        for ((String paramName, Type paramType) : typeParams)
+        for (TypeParamInfo typeParam : typeParams)
             {
+            String paramName = typeParam.name;
             switch (category)
                 {
                 case DBMap:
@@ -154,8 +199,9 @@ const DboInfo(
             // if paramType is not a concrete class, then there must be concreteClasses
             // specified, otherwise they are optional; furthermore, all concreteClasses must
             // be concrete classes, and must be "isA" of the param type
-            Class[]? classes = concreteClasses.getOrNull(paramName);
-            if (classes == Null || classes.empty)
+            Type    paramType = typeParam.type;
+            Class[] classes   = typeParam.concreteClasses;
+            if (classes.empty)
                 {
                 assert Class clz := paramType.fromClass(), !clz.abstract;
                 }
@@ -167,8 +213,6 @@ const DboInfo(
                     }
                 }
             }
-
-        assert typeParams.keys.containsAll(concreteClasses.keys);
 
         return True;
         }
@@ -196,18 +240,19 @@ const DboInfo(
         {
         assert id != 0;
         return new DboInfo(
-                path            = parent.path + name,
-                category        = category,
-                id              = id,
-                parentId        = parent.id,
-                childIds        = childIds,
-                transactional   = transactional,
-                validators      = validators,
-                rectifiers      = rectifiers,
-                distributors    = distributors,
-                typeParams      = typeParams,
-                concreteClasses = concreteClasses,
-                lifeCycle       = lifeCycle,
+                path          = parent.path + name,
+                category      = category,
+                id            = id,
+                parentId      = parent.id,
+                childIds      = childIds,
+                childNames    = childNames,
+                transactional = transactional,
+                validators    = validators,
+                rectifiers    = rectifiers,
+                distributors  = distributors,
+                typeParams    = typeParams,
+                lifeCycle     = lifeCycle,
+                options       = options,
                 );
         }
 
@@ -226,18 +271,19 @@ const DboInfo(
             }
 
         return new DboInfo(
-                path            = path,
-                category        = category,
-                id              = id,
-                parentId        = parentId,
-                childIds        = childIds + child.id,
-                transactional   = transactional,
-                validators      = validators,
-                rectifiers      = rectifiers,
-                distributors    = distributors,
-                typeParams      = typeParams,
-                concreteClasses = concreteClasses,
-                lifeCycle       = lifeCycle,
+                path          = path,
+                category      = category,
+                id            = id,
+                parentId      = parentId,
+                childIds      = childIds   + child.id,
+                childNames    = childNames + child.name,
+                transactional = transactional,
+                validators    = validators,
+                rectifiers    = rectifiers,
+                distributors  = distributors,
+                typeParams    = typeParams,
+                lifeCycle     = lifeCycle,
+                options       = options,
                 );
         }
 
@@ -248,43 +294,52 @@ const DboInfo(
      *
      * @return the copy of this DboInfo with the specified children added
      */
-    DboInfo withChildren(Int[] addIds)
+    DboInfo withChildren(Int[] addIds, String[] addNames)
         {
         if (childIds.containsAll(addIds))
             {
             return this;
             }
 
-        Int[] mergeIds;
+        Int[]    mergeIds;
+        String[] mergeNames;
         if (childIds.empty)
             {
-            mergeIds = addIds;
+            mergeIds   = addIds;
+            mergeNames = addNames;
             }
         else
             {
-            mergeIds = new Array<Int>(Mutable, childIds);
-            for (Int addId : addIds)
+            mergeIds   = new Array<Int>(Mutable, childIds);
+            mergeNames = new Array<String>(Mutable, childNames);
+            for (Int i : 0 ..< addIds.size)
                 {
+                Int addId = addIds[i];
                 if (!mergeIds.contains(addId))
                     {
-                    mergeIds.add(addId);
+                    String addName = addNames[i];
+                    assert !mergeNames.contains(addName);
+
+                    mergeIds   += addId;
+                    mergeNames += addName;
                     }
                 }
             }
 
         return new DboInfo(
-                path            = path,
-                category        = category,
-                id              = id,
-                parentId        = parentId,
-                childIds        = mergeIds,
-                transactional   = transactional,
-                validators      = validators,
-                rectifiers      = rectifiers,
-                distributors    = distributors,
-                typeParams      = typeParams,
-                concreteClasses = concreteClasses,
-                lifeCycle       = lifeCycle,
+                path          = path,
+                category      = category,
+                id            = id,
+                parentId      = parentId,
+                childIds      = mergeIds,
+                childNames    = mergeNames,
+                transactional = transactional,
+                validators    = validators,
+                rectifiers    = rectifiers,
+                distributors  = distributors,
+                typeParams    = typeParams,
+                lifeCycle     = lifeCycle,
+                options       = options,
                 );
         }
     }
