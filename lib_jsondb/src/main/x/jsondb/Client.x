@@ -2207,7 +2207,7 @@ service Client<Schema extends RootSchema>
             {
             if (Int id := pathToId_.get(key))
                 {
-                return True, implFor(id).as(Value);
+                return True, infoFor(id).as(Value);
                 }
 
             return False;
