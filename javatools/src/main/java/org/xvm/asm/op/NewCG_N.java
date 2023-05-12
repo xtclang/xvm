@@ -11,11 +11,11 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -117,26 +117,17 @@ public class NewCG_N
             return reportMissingConstructor(frame, hParent);
             }
 
-        TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
-        int             nReturn   = m_nRetValue;
-
-        if (frame.isNextRegister(nReturn))
-            {
-            frame.introduceResolvedVar(nReturn, clzTarget.getType());
-            }
+        TypeConstant typeChild = frame.resolveType(m_nTypeValue);
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, constructor.getMaxVars());
         if (anyDeferred(ahVar))
             {
             Frame.Continuation stepNext = frameCaller ->
-                clzTarget.getTemplate().
-                    construct(frameCaller, constructor, clzTarget, hParent, ahVar, nReturn);
+                constructChild(frameCaller, constructor, hParent, typeChild, ahVar);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
-
-        return clzTarget.getTemplate().
-            construct(frame, constructor, clzTarget, hParent, ahVar, nReturn);
+        return constructChild(frame, constructor, hParent, typeChild, ahVar);
         }
 
     @Override

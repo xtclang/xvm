@@ -494,21 +494,49 @@ public abstract class OpCallable extends Op
         return (ClassTemplate) frame.f_context.getOpInfo(this, Category.Template);
         }
 
+    /**
+     * Call a constructor for the virtual or inner child class.
+     */
     protected int constructChild(Frame frame, MethodStructure constructor,
-                                 ObjectHandle hParent, ObjectHandle[] ahVar)
+                                 ObjectHandle hParent, TypeConstant typeChild, ObjectHandle[] ahVar)
         {
+        ConstantPool    pool        = frame.poolContext();
         ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
         TypeConstant    typeParent  = hParent.getComposition().getInceptionType().removeAccess();
-        TypeConstant    typeChild   =
-              structChild.isVirtualChild()
-                ? frame.poolContext().ensureThisVirtualChildTypeConstant(
-                        typeParent, structChild.getName())
-            : structChild.isInnerChild()
-                ? frame.poolContext().ensureInnerChildTypeConstant(
-                        typeParent, (ClassConstant) structChild.getIdentityConstant())
-            : structChild.getCanonicalType();
-        TypeComposition clzTarget   = typeChild.ensureClass(frame);
+        TypeConstant    typeTarget;
 
+        if (structChild.isVirtualChild())
+            {
+            typeTarget = pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName());
+            if (typeChild != null)
+                {
+                // transfer the type parameters
+                if (typeChild.isParamsSpecified())
+                    {
+                    typeTarget = pool.ensureParameterizedTypeConstant(typeTarget,
+                                        typeChild.getParamTypesArray());
+                    }
+
+                // transfer the annotations
+                if (typeChild.isAnnotated())
+                    {
+                    typeTarget = typeTarget.adoptAnnotations(pool, typeChild);
+                    }
+                }
+            }
+        else if (typeChild == null)
+            {
+            typeTarget = structChild.isInnerChild()
+                    ? pool.ensureInnerChildTypeConstant(typeParent,
+                        (ClassConstant) structChild.getIdentityConstant())
+                    : structChild.getCanonicalType();
+            }
+        else
+            {
+            typeTarget = typeChild;
+            }
+
+        TypeComposition clzTarget = typeTarget.ensureClass(frame);
         if (frame.isNextRegister(m_nRetValue))
             {
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
@@ -518,7 +546,15 @@ public abstract class OpCallable extends Op
                 frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
-    // check if a register for the return value needs to be allocated
+    protected int constructChild(Frame frame, MethodStructure constructor,
+                                 ObjectHandle hParent, ObjectHandle[] ahVar)
+        {
+        return constructChild(frame, constructor, hParent, null, ahVar);
+        }
+
+    /**
+     * Allocate a register for the return value if necessary.
+     */
     protected void checkReturnRegister(Frame frame, MethodStructure method)
         {
         assert !isMultiReturn();
@@ -536,7 +572,9 @@ public abstract class OpCallable extends Op
             }
         }
 
-    // check if a register for the return Tuple value needs to be allocated
+    /**
+     * Allocate a register for the return Tuple value if necessary.
+     */
     protected void checkReturnTupleRegister(Frame frame, MethodStructure method)
         {
         assert !isMultiReturn();
@@ -553,7 +591,9 @@ public abstract class OpCallable extends Op
             }
         }
 
-    // check if any registers for the return values need to be allocated
+    /**
+     * Allocate registers for the return values if necessary.
+     */
     protected void checkReturnRegisters(Frame frame, MethodStructure method)
         {
         assert isMultiReturn();

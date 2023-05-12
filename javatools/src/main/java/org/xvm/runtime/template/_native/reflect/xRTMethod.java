@@ -81,17 +81,7 @@ public class xRTMethod
                                         pool.typeMethod(), typeTarget, typeP, typeR);
         if (typeActual.isAnnotated())
             {
-            TypeConstant typeBase = typeMethod;
-            Function<TypeConstant, TypeConstant> transformer = new Function<>()
-                {
-                public TypeConstant apply(TypeConstant type)
-                    {
-                    return type.isAnnotated()
-                        ? type.replaceUnderlying(pool, this)
-                        : typeBase;
-                    }
-                };
-            typeMethod = transformer.apply(typeActual);
+            typeMethod = typeMethod.adoptAnnotations(pool, typeActual);
             }
 
         return super.ensureClass(container, typeMethod);

@@ -2167,7 +2167,7 @@ service Client<Schema extends RootSchema>
             implements DBMap<String, Value>
             incorporates KeySetBasedMap<String, Value>
         {
-        @Lazy Int[] ids_.get()
+        @Lazy Int[] ids_.calc()
             {
             DBCategory category = info_.category;
             return catalog.metadata?.dbObjectInfos

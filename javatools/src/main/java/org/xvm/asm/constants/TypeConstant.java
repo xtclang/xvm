@@ -1108,6 +1108,32 @@ public abstract class TypeConstant
         }
 
     /**
+     * Create a semantically equivalent type that is annotated by the annotations of the specified
+     * type.
+     *
+     * @param pool      the ConstantPool to place a new constant into
+     * @param typeFrom  the type to adopt annotations from
+     *
+     * @return potentially new annotated type
+     */
+    public TypeConstant adoptAnnotations(ConstantPool pool, TypeConstant typeFrom)
+        {
+        assert !this.isAnnotated() && typeFrom.isAnnotated();
+
+        TypeConstant typeBase = this;
+        Function<TypeConstant, TypeConstant> transformer = new Function<>()
+            {
+            public TypeConstant apply(TypeConstant type)
+                {
+                return type.isAnnotated()
+                    ? type.replaceUnderlying(pool, this)
+                    : typeBase;
+                }
+            };
+        return transformer.apply(typeFrom);
+        }
+
+    /**
      * Create a semantically equivalent type that is parameterized by the parameters of the
      * specified type and normalized (the total number of parameters equal to the number of
      * formal parameters for the underlying terminal type, where missing parameters are assigned

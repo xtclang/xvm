@@ -11,11 +11,11 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -116,13 +116,7 @@ public class NewCG_1
             return reportMissingConstructor(frame, hParent);
             }
 
-        TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
-        int             nReturn   = m_nRetValue;
-
-        if (frame.isNextRegister(nReturn))
-            {
-            frame.introduceResolvedVar(nReturn, clzTarget.getType());
-            }
+        TypeConstant typeChild = frame.resolveType(m_nTypeValue);
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
         ahVar[0] = hArg;
@@ -131,11 +125,9 @@ public class NewCG_1
                 ? hArg.proceed(frame, frameCaller ->
                     {
                     ahVar[0] = frameCaller.popStack();
-                    return clzTarget.getTemplate().
-                        construct(frameCaller, constructor, clzTarget, hParent, ahVar, nReturn);
+                    return constructChild(frameCaller, constructor, hParent, typeChild, ahVar);
                     })
-                : clzTarget.getTemplate().
-                    construct(frame, constructor, clzTarget, hParent, ahVar, nReturn);
+                : constructChild(frame, constructor, hParent, typeChild, ahVar);
         }
 
     @Override
