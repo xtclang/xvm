@@ -2,26 +2,13 @@ module TestSimple
     {
     @Inject Console console;
 
-    package oodb import oodb.xtclang.org;
-
+    Point p;
     void run()
         {
-        console.print();
-        }
-
-    interface AuthSchema
-            extends oodb.DBSchema
-        {
-        @RO
-        // @oodb.Initial("")                  // this used to compile
-        // @oodb.Initial(Point.OriginString)  // this used to compile
-        @oodb.Initial(Point.Origin)
-        oodb.DBValue<Point> config;
+        console.print($"{p=}");
+        console.print($"{Point.default=}");
         }
 
     const Point(Int x, Int y)
-        {
-        static Point Origin = new Point(0, 0);
-        static String OriginString = "0,0";
-        }
+            default(new Point(0, 0));
     }

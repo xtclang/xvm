@@ -3427,20 +3427,16 @@ public class Parser
      *     PrimaryExpression
      *     PostfixExpression "++"
      *     PostfixExpression "--"
-     *     PostfixExpression ArgumentList
-     *     PostfixExpression ArrayDims
-     *     PostfixExpression "..."
-     *     PostfixExpression ArrayIndex
+     *     PostfixExpression "(" Arguments-opt ")"
+     *     PostfixExpression ArrayDims             # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
+     *     PostfixExpression ArrayIndexes
      *     PostfixExpression NoWhitespace "?"
-     *     PostfixExpression "." Name
-     *     PostfixExpression ".new" TypeExpression ArgumentList
-     *     PostfixExpression ".as" "(" TypeExpression ")"
+     *     PostfixExpression "." "&"-opt DotNameFinish
+     *     PostfixExpression ".new" NewFinish
+     *     PostfixExpression ".as" "(" AnyTypeExpression ")"
+     *     PostfixExpression ".is" "(" AnyTypeExpression ")"
      *
      * ArrayDims
-     *     ArrayDim
-     *     ArrayDims ArrayDim
-     *
-     * ArrayDim
      *     "[" DimIndicators-opt "]"
      *
      * DimIndicators
@@ -3450,12 +3446,24 @@ public class Parser
      * DimIndicator
      *     "?"
      *
-     * ArrayIndex
+     * ArrayIndexes
      *     "[" ExpressionList "]"
      *
      * ExpressionList
      *     Expression
      *     ExpressionList "," Expression
+     *
+     * DotNameFinish
+     *     Name TypeParameterTypeList-opt
+     *     "default"
+     *
+     * NewFinish
+     *     TypeExpression NewArguments AnonClassBody-opt
+     *     ArgumentList
+     *
+     * NewArguments
+     *     ArrayIndexes ArgumentList-opt
+     *     ArgumentList
      * </pre></code>
      *
      * @param fExtended  true to allow parsing of an extended type expression
@@ -3512,10 +3520,15 @@ public class Parser
                             }
 
                         case BIT_AND:
+                        case DEFAULT:
                         case IDENTIFIER:
                             {
-                            Token                noDeRef = match(Id.BIT_AND);
-                            Token                name    = expect(Id.IDENTIFIER);
+                            Token noDeRef = match(Id.BIT_AND);
+                            Token name    = match(Id.DEFAULT);
+                            if (name == null)
+                                {
+                                name = expect(Id.IDENTIFIER);
+                                }
                             long                 lEndPos = name.getEndPosition();
                             List<TypeExpression> params  = null;
 
