@@ -1,6 +1,6 @@
 
         @Override
-        class RootSchemaImpl(DBObjectInfo_ info_)
+        class RootSchemaImpl(DboInfo_ info_)
                 implements RootSchema_
             {
 %PropertyGetters%

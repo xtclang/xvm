@@ -122,6 +122,7 @@ class ModuleGenerator(String implName, String moduleName)
             String customInstantiations,
             String customDeclarations,
             String childrenIds,
+            String childrenNames,
             String rootSchemaSource
             ) :=
             createSchema(appName, moduleTemplate, appSchemaTemplate,
@@ -133,6 +134,7 @@ class ModuleGenerator(String implName, String moduleName)
                                     .replace("%appSchema%"           , appSchema)
                                     .replace("%qualifier%"           , qualifier)
                                     .replace("%ChildrenIds%"         , childrenIds)
+                                    .replace("%ChildrenNames%"       , childrenNames)
                                     .replace("%PropertyInfos%"       , propertyInfos)
                                     .replace("%PropertyTypes%"       , propertyTypes)
                                     .replace("%CustomInstantiations%", customInstantiations)
@@ -159,6 +161,7 @@ class ModuleGenerator(String implName, String moduleName)
         String customInstantiations,
         String customDeclarations,
         String childrenIds,
+        String childrenNames,
         String schemaSource
         )
         createSchema(String         appName,
@@ -183,6 +186,7 @@ class ModuleGenerator(String implName, String moduleName)
         String customInstantiations = "";
         String customDeclarations   = "";
         String childrenIds          = "";
+        String childrenNames        = "";
         String childSchemas         = "";
 
         NextProperty:
@@ -209,7 +213,8 @@ class ModuleGenerator(String implName, String moduleName)
             String propertyBaseType;
             String propertyTypeParams;
 
-            childrenIds += $"{propertyId},";
+            childrenIds   += $"{propertyId},";
+            childrenNames += $"\"{propertyName}\",";
             switch (category)
                 {
                 case DBSchema:
@@ -220,6 +225,7 @@ class ModuleGenerator(String implName, String moduleName)
                         String schemaCustomInstantiations,
                         String schemaCustomDeclarations,
                         String schemaChildrenIds,
+                        String schemaChildrenNames,
                         String schemaSource
                         ) :=
                             createSchema(appName, moduleTemplate, classTemplate,
@@ -230,6 +236,7 @@ class ModuleGenerator(String implName, String moduleName)
                                 .replace("%schemaId%"      , propertyId)
                                 .replace("%schemaParentId%", schemaParentId)
                                 .replace("%ChildrenIds%"   , schemaChildrenIds)
+                                .replace("%ChildrenNames%" , schemaChildrenNames)
                                 ;
 
                         propertyGetters += propertyGetterTemplate
@@ -440,7 +447,7 @@ class ModuleGenerator(String implName, String moduleName)
                                 .replace("%ChildSchemas%"   , childSchemas)
                                 ;
         return True, pid, propertyInfos, propertyTypes,
-                     customInstantiations, customDeclarations, childrenIds, schemaSource;
+                     customInstantiations, customDeclarations, childrenIds, childrenNames, schemaSource;
         }
 
     String createMethods(String appName, ClassTemplate classTemplate)

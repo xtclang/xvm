@@ -1,5 +1,5 @@
 
-        class %schemaName%Impl_(DBObjectInfo_ info_)
+        class %schemaName%Impl_(DboInfo_ info_)
                 extends DBSchemaImpl(info_)
                 implements %schemaTypeName%
             {

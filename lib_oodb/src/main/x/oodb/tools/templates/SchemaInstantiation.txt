@@ -1,4 +1,4 @@
 
                 case %schemaId%:
-                    DBObjectInfo_ info = this.%appName%Client_.infoFor(%schemaId%);
+                    DboInfo_ info = this.%appName%Client_.infoFor(%schemaId%);
                     return new %schemaName%Impl_(info);

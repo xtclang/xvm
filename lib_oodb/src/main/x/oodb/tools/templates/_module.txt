@@ -7,9 +7,9 @@ module %appName%_jsondb%qualifier%
 
     import oodb_.DBUser as DBUser_;
 
-    import jsondb_.Catalog            as Catalog_;
-    import jsondb_.Client             as Client_;
-    import jsondb_.model.DBObjectInfo as DBObjectInfo_;
+    import jsondb_.Catalog       as Catalog_;
+    import jsondb_.Client        as Client_;
+    import jsondb_.model.DboInfo as DboInfo_;
 
     package %appName%_ import %appName%%qualifier%;
 
@@ -23,11 +23,11 @@ module %appName%_jsondb%qualifier%
         }
 
     @Override
-    @Lazy immutable DBObjectInfo_[] dbObjectInfos.calc()
+    @Lazy immutable DboInfo_[] dbObjectInfos.calc()
         {
         return
             [
-            new DBObjectInfo_(ROOT, DBSchema, 0, 0, [%ChildrenIds%], False),
+            new DboInfo_(ROOT, DBSchema, 0, 0, [%ChildrenIds%], [%ChildrenNames%], False),
 %PropertyInfos%
             ];
         }
