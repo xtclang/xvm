@@ -317,8 +317,7 @@ class ModuleGenerator(String implName, String moduleName)
                                         valueClassTemplate.is(ClassTemplate) &&
                                         valueClassTemplate.hasDefault)
                             {
-                            // TODO GG: TEMPORARY HACK!! should be $"{...}.default" instead
-                            initialValue = $"{displayName(valueClassTemplate, appName)}.DEFAULT";
+                            initialValue = $"{displayName(valueClassTemplate, appName)}.default";
                             }
                         else
                             {
