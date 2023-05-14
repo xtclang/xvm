@@ -1505,6 +1505,10 @@ public abstract class Component
                 {
                 return null;
                 }
+            if (parent instanceof PackageStructure pkg && pkg.isModuleImport())
+                {
+                parent = pkg.getImportedModule();
+                }
             ofStart = ofEnd + 1;
             ofEnd   = sPath.indexOf('.', ofStart);
             }
