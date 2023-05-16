@@ -1101,8 +1101,11 @@ public abstract class TypeConstant
         TypeConstant typeNormalized = m_typeNormalized;
         if (typeNormalized == null)
             {
-            m_typeNormalized = typeNormalized =
-                    adoptParameters(getConstantPool(), (TypeConstant[]) null);
+            typeNormalized = adoptParameters(getConstantPool(), (TypeConstant[]) null);
+            if (!typeNormalized.containsUnresolved())
+                {
+                m_typeNormalized = typeNormalized;
+                }
             }
         return typeNormalized;
         }
