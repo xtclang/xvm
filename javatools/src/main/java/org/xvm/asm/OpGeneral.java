@@ -29,6 +29,7 @@ public abstract class OpGeneral
     protected OpGeneral(Argument argTarget, Argument argReturn)
         {
         assert(!isBinaryOp());
+        assert argTarget != null && argReturn != null;
 
         m_argTarget = argTarget;
         m_argReturn = argReturn;
@@ -44,6 +45,7 @@ public abstract class OpGeneral
     protected OpGeneral(Argument argTarget, Argument argValue, Argument argReturn)
         {
         assert(isBinaryOp());
+        assert argTarget != null && argValue != null && argReturn != null;
 
         m_argTarget = argTarget;
         m_argValue  = argValue;

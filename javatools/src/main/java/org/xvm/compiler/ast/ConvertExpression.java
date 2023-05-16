@@ -10,6 +10,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Invoke_01;
@@ -141,6 +142,29 @@ public class ConvertExpression
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         return this;
+        }
+
+    @Override
+    public boolean isConstant()
+        {
+        try
+            {
+            if (expr.isConstant())
+                {
+                Constant constant = expr.toConstant();
+                return constant != null && !(constant instanceof SingletonConstant);
+                }
+            }
+        catch (RuntimeException ignore) {}
+
+        return false;
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        Constant constant = expr.toConstant();
+        return constant == null ? null : constant.convertTo(getType());
         }
 
     @Override
