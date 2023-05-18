@@ -2222,6 +2222,16 @@ public abstract class Launcher
         }
 
     /**
+     * @return an array of files in the specified directory ordered by name
+     */
+    private File[] listFiles(File dir)
+        {
+        File[] aFile = dir.listFiles();
+        Arrays.sort(aFile, Comparator.comparing(File::getName));
+        return aFile;
+        }
+
+    /**
      * Flush errors from the specified nodes, and then check for errors globally.
      *
      * @param nodes  the nodes to flush
