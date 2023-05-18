@@ -713,7 +713,15 @@ public class NameExpression
                         if (prop.isRuntimeConstant())
                             {
                             constVal = prop.getInitialValue();
-                            if (constVal == null || constVal instanceof DeferredValueConstant)
+                            if (constVal instanceof DeferredValueConstant)
+                                {
+                                // this error is very unlikely to surface up; most commonly it
+                                // will simply force another cycle in the name resolution
+                                log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                                return null;
+                                }
+
+                            if (constVal == null)
                                 {
                                 constVal = pool.ensureSingletonConstConstant(id);
                                 }

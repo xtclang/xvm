@@ -145,29 +145,6 @@ public class ConvertExpression
         }
 
     @Override
-    public boolean isConstant()
-        {
-        try
-            {
-            if (expr.isConstant())
-                {
-                Constant constant = expr.toConstant();
-                return constant != null && !(constant instanceof SingletonConstant);
-                }
-            }
-        catch (RuntimeException ignore) {}
-
-        return false;
-        }
-
-    @Override
-    public Constant toConstant()
-        {
-        Constant constant = expr.toConstant();
-        return constant == null ? null : constant.convertTo(getType());
-        }
-
-    @Override
     public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
         expr.generateVoid(ctx, code, errs);
