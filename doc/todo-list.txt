@@ -1,3 +1,6 @@
+- GG: add support for runtime constants that cross the module line; may need to restore the removed
+      delegation logic in ConverterExpression
+
 - CP: consider removing Cloneable and CollectionCloner
 
 - CP: a content-type header for FormData has the following format:
