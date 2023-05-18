@@ -471,6 +471,12 @@ mixin BitArray<Element extends Bit>
         static class Translator(Bit[] bits)
                 implements ArrayDelegate<Boolean>
             {
+            @Override
+            construct(Translator that)
+                {
+                this.bits = that.bits.duplicate();
+                }
+
             private Bit[] bits;
 
             @Override
@@ -571,6 +577,12 @@ mixin BitArray<Element extends Bit>
         static class Translator(Bit[] bits)
                 implements ArrayDelegate<Nibble>
             {
+            @Override
+            construct(Translator that)
+                {
+                this.bits = that.bits.duplicate();
+                }
+
             private Bit[] bits;
 
             @Override
@@ -684,6 +696,12 @@ mixin BitArray<Element extends Bit>
         static class Translator(Bit[] bits)
                 implements ArrayDelegate<Byte>
             {
+            @Override
+            construct(Translator that)
+                {
+                this.bits = that.bits.duplicate();
+                }
+
             private Bit[] bits;
 
             @Override

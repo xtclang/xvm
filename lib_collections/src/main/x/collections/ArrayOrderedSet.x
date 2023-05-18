@@ -51,8 +51,7 @@ class ArrayOrderedSet<Element>
     @Override
     construct(ArrayOrderedSet that)
         {
-        // this.array   = that.array.duplicate(); // TODO CP
-        this.array   = that.array.clone();
+        this.array   = that.array.duplicate();
         this.compare = that.compare;
         }
 

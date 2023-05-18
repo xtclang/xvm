@@ -58,7 +58,6 @@ import ecstasy.numbers.Bitwise;
 class Array<Element>
         implements ArrayDelegate<Element>
         implements List<Element>
-        implements Cloneable
         implements Freezable
         implements Stringable
         incorporates conditional arrays.BitArray<Element extends Bit>
@@ -141,12 +140,27 @@ class Array<Element>
         construct Array(delegate, mutability);
         }
 
+    @Override
+    construct(Array that)
+        {
+        if (that.inPlace && !that.is(immutable))
+            {
+            // make a copy of the underlying data for the new array
+            construct Array(that.mutability, that);
+            }
+        else
+            {
+            // use the existing underlying data for the new array
+            construct Array(that.delegate, that.mutability);
+            }
+        }
+
     /**
      * Construct an array that delegates to some other data structure (such as an array).
      *
      * @param delegate  an ArrayDelegate object that allows this array to delegate its functionality
      */
-    private construct(ArrayDelegate<Element> delegate, Mutability mutability)
+    protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
         {
         this.delegate   = delegate;
         this.mutability = mutability;
@@ -167,6 +181,7 @@ class Array<Element>
      * representation of some other structure (such as another array).
      */
     private static interface ArrayDelegate<Element>
+            extends Duplicable
         {
         /**
          * The ArrayDelegate behaves in the manner defined by Array [Mutability].
@@ -289,6 +304,17 @@ class Array<Element>
      */
     @Override
     public/private Mutability mutability;
+
+
+    // ----- Duplicable interface ------------------------------------------------------------------
+
+    @Override
+    Array duplicate()
+        {
+        return this.inPlace && !this.is(immutable)
+                ? this.new(this)
+                : this;
+        }
 
 
     // ----- Freezable interface -------------------------------------------------------------------
@@ -875,6 +901,20 @@ class Array<Element>
                 implements ArrayDelegate<Element>
             {
             @Override
+            construct(SlicingDelegate that)
+                {
+                // we're not actually copying any data here, since this is just a view on an
+                // underlying array
+                construct SlicingDelegate(that.unsliced, that.indexes);
+                }
+
+            @Override
+            SlicingDelegate duplicate()
+                {
+                return this;
+                }
+
+            @Override
             Mutability mutability.get()
                 {
                 Mutability underlying = unsliced.mutability;
@@ -946,17 +986,6 @@ class Array<Element>
                         : indexes.effectiveLowerBound + index;
                 }
             }
-        }
-
-
-    // ----- Cloneable methods --------------------------------------------------------------------
-
-    @Override
-    Array clone()
-        {
-        return inPlace
-                ? new Array<Element>(mutability, this)
-                : this;
         }
 
 

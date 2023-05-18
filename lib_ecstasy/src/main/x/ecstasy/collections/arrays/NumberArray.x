@@ -460,8 +460,23 @@ mixin NumberArray<Element extends Number>
                 assert this.bitsPerNum := NumType.fixedBitLength();
                 }
 
+            @Override
+            construct(Translator that)
+                {
+                // this does not duplicate any underling content of the array; it's just duplicating
+                // the translator itself
+                this.nums       = that.nums;
+                this.bitsPerNum = that.bitsPerNum;
+                }
+
             private NumType[] nums;
             private Int bitsPerNum;
+
+            @Override
+            Translator duplicate()
+                {
+                return this;
+                }
 
             @Override
             Mutability mutability.get()

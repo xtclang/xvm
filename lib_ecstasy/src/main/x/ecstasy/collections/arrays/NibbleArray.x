@@ -26,6 +26,12 @@ mixin NibbleArray<Element extends Nibble>
         static class Translator(Nibble[] nibbles)
                 implements ArrayDelegate<Bit>
             {
+            @Override
+            construct(Translator that)
+                {
+                this.nibbles = that.nibbles.duplicate();
+                }
+
             private Nibble[] nibbles;
 
             @Override
@@ -133,6 +139,12 @@ mixin NibbleArray<Element extends Nibble>
         static class Translator(Nibble[] nibbles)
                 implements ArrayDelegate<Byte>
             {
+            @Override
+            construct(Translator that)
+                {
+                this.nibbles = that.nibbles.duplicate();
+                }
+
             private Nibble[] nibbles;
 
             @Override

@@ -449,8 +449,8 @@ class HasherMap<Key, Value>
         construct(ListNode that)
             {
             this.hash   = that.hash;
-            this.keys   = that.keys.clone();
-            this.values = that.values.clone();
+            this.keys   = that.keys.duplicate();
+            this.values = that.values.duplicate();
             }
 
         /**
@@ -617,7 +617,7 @@ class HasherMap<Key, Value>
         TreeNode duplicate(Boolean shallow=False)
             {
             return shallow
-                    ? new TreeNode(nodes.clone())
+                    ? new TreeNode(nodes.duplicate())
                     : super();
             }
 

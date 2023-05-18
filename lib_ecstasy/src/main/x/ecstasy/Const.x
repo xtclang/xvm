@@ -1,15 +1,9 @@
 interface Const
-        extends Cloneable
+        extends immutable Object
         extends collections.Hashable
         extends Orderable
         extends Stringable
     {
-    @Override
-    Const clone()
-        {
-        return this;
-        }
-
     /**
      * The default implementation of comparison for Const implementations is to compare each of
      * the fields.

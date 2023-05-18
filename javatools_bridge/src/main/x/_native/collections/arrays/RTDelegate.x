@@ -7,6 +7,16 @@ import ecstasy.collections.Array.Mutability;
 class RTDelegate<Element>
         implements ArrayDelegate<Element>
     {
+// TODO GG why doesn't it like this?
+//    @Override
+//    construct(RTDelegate<Element> that)
+//        {
+//        TODO();
+//        }
+
+//    @Override
+//    RTDelegate duplicate() = TODO();
+
     Element getElement(Int index);
 
     void setElement(Int index, Element value);

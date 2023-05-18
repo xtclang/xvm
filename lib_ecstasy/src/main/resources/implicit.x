@@ -3,7 +3,6 @@ import ecstasy.Assertion;
 import ecstasy.Boolean;
 import ecstasy.Boolean.True;
 import ecstasy.Boolean.False;
-import ecstasy.Cloneable;
 import ecstasy.Closeable;
 import ecstasy.ConcurrentModification;
 import ecstasy.Const;

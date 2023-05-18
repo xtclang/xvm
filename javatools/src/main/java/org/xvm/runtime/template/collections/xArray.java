@@ -86,8 +86,6 @@ public class xArray
             }
         }
 
-    private static MethodStructure FILL_FROM_ITERABLE;
-
     @Override
     public boolean isGenericHandle()
         {
@@ -175,7 +173,6 @@ public class xArray
             return frame.pushStack(createImmutableArray(clzArray, ahValue));
             }
         }
-    private static MethodStructure CREATE_LIST_SET;
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
@@ -830,7 +827,7 @@ public class xArray
     public enum Mutability {Constant, Persistent, Fixed, Mutable}
 
     // array of constructors
-    private static final MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
+    private static final MethodConstant[] CONSTRUCTORS = new MethodConstant[5];
 
     @Override
     public void initNative()
@@ -848,32 +845,41 @@ public class xArray
         for (MethodStructure method :
                 ((MultiMethodStructure) getStructure().getChild("construct")).methods())
             {
-            TypeConstant typeParam0 = method.getParam(0).getType();
+            if (method.getAccess() == Constants.Access.PUBLIC)
+                {
+                TypeConstant typeParam0 = method.getParam(0).getType();
 
-            if (method.getParamCount() == 1)
-                {
-                // 0) construct(Int capacity = 0)
-                CONSTRUCTORS[0] = method.getIdentityConstant();
-                }
-            else if (method.getAccess() == Constants.Access.PUBLIC)
-                {
-                // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
-                // must not be called
-                // 1) construct(Int size, Element | function Element (Int) supply)
-                // 2) construct(Mutability mutability, Element... elements)
-                if (typeParam0.equals(pool.typeInt()))
+                if (method.getParamCount() == 1)
                     {
-                    CONSTRUCTORS[1] = method.getIdentityConstant();
+                    if (typeParam0.equals(pool.typeInt()))
+                        {
+                        // 0) construct(Int capacity = 0)
+                        CONSTRUCTORS[0] = method.getIdentityConstant();
+                        }
+                    else
+                        {
+                        // 3) construct(Array that)
+                        CONSTRUCTORS[3] = method.getIdentityConstant();
+                        }
                     }
                 else
                     {
-                    CONSTRUCTORS[2] = method.getIdentityConstant();
+                    // 1) construct(Int size, Element | function Element (Int) supply)
+                    // 2) construct(Mutability mutability, Element... elements)
+                    if (typeParam0.equals(pool.typeInt()))
+                        {
+                        CONSTRUCTORS[1] = method.getIdentityConstant();
+                        }
+                    else
+                        {
+                        CONSTRUCTORS[2] = method.getIdentityConstant();
+                        }
                     }
                 }
             else
                 {
-                // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
-                CONSTRUCTORS[3] = method.getIdentityConstant();
+                // protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
+                CONSTRUCTORS[4] = method.getIdentityConstant();
                 }
             }
 
@@ -914,7 +920,7 @@ public class xArray
         {
         IdentityConstant idConstruct = constructor.getIdentityConstant();
         int              nScenario;
-        for (nScenario = 0; nScenario < 3; nScenario++)
+        for (nScenario = 0; nScenario < 4; nScenario++)
             {
             if (CONSTRUCTORS[nScenario].equals(idConstruct))
                 {
@@ -1007,7 +1013,7 @@ public class xArray
 
             case 2: // construct(Mutability mutability, Iterable<Element> elements)
                 {
-                // call Iterable.to<Element> naturally
+                // call RTDelegate.fillFromIterable() helper naturally
                 ObjectHandle hMutability = ahVar[0];
                 ObjectHandle hIterable   = ahVar[1];
 
@@ -1016,15 +1022,21 @@ public class xArray
                         : 0;
 
                 ArrayHandle    hArray = createEmptyArray(clzArray, cCapacity, Mutability.Mutable);
-                ObjectHandle[] ahVars = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
-                ahVars[0] = hArray;
-                ahVars[1] = hIterable;
-                ahVars[2] = hMutability;
+                ObjectHandle[] ahArg = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
+                ahArg[0] = hArray;
+                ahArg[1] = hIterable;
+                ahArg[2] = hMutability;
 
-                return frame.call1(FILL_FROM_ITERABLE, null, ahVars, iReturn);
+                return frame.call1(FILL_FROM_ITERABLE, null, ahArg, iReturn);
                 }
 
-            case 3: // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
+            case 3: // construct(Array that)
+                {
+                // call naturally
+                return frame.call1(constructor, null, ahVar, iReturn);
+                }
+
+            case 4: // protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
                 {
                 ObjectHandle hTarget = ahVar[0];
                 if (!(hTarget instanceof DelegateHandle hDelegate))
@@ -1056,8 +1068,11 @@ public class xArray
     private static TypeComposition BOOLEAN_ARRAY_CLZ;
     private static TypeComposition BYTE_ARRAY_CLZ;
     private static TypeComposition CHAR_ARRAY_CLZ;
-    private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 
+    private static MethodStructure CREATE_LIST_SET;
+    private static MethodStructure FILL_FROM_ITERABLE;
+
+    private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 
     private static ArrayHandle EMPTY_BYTE_ARRAY;
     }

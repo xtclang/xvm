@@ -235,6 +235,13 @@ mixin ByteArray<Element extends Byte>
             this.bytesPerNum = (bitsPerNum + 7) / 8;
             }
 
+        @Override
+        construct(Translator that)
+            {
+            this.bytes       = that.bytes.duplicate();
+            this.bytesPerNum = that.bytesPerNum;
+            }
+
         private Byte[] bytes;
         private Int bytesPerNum;
 
@@ -413,16 +420,30 @@ mixin ByteArray<Element extends Byte>
     @Override
     Byte[] asByteArray()
         {
-        // it is frustrating to have to create a new Byte[] when this is already a Byte[], but if
-        // we do not do so, then we cannot reify to guarantee a copy
-        return new Array<Byte>(this, mutability)
+        static class ReifiableArray
+                extends Array<Byte>
             {
+            construct(Byte[] bytes, Mutability mutability)
+                {
+                construct Array(bytes, mutability);
+                }
+
+            @Override
+            construct(ReifiableArray that)
+                {
+                construct Array(that);
+                }
+
             @Override
             Byte[] reify(Mutability? mutability = Null)
                 {
                 return new Array<Byte>(mutability ?: this.mutability, this);
                 }
-            };
+            }
+
+        // it is frustrating to have to create a new Byte[] when this is already a Byte[], but if
+        // we do not do so, then we cannot reify to guarantee a copy
+        return new ReifiableArray(this, mutability);
         }
 
     /**
