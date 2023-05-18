@@ -859,7 +859,7 @@ LambdaBody
 
 TodoFinish
     InputCharacter-not-"(" InputCharacters LineTerminator
-    NoWhitespace "(" Expression ")"
+    NoWhitespace "(" Expression-opt ")"
 
 Literal
     TypedNumericLiteral

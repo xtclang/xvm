@@ -4326,7 +4326,7 @@ public class Parser
      *
      * TodoFinish
      *     InputCharacter-not-"(" InputCharacters LineTerminator
-     *     "(" Expression ")"
+     *     NoWhitespace "(" Expression-opt ")"
      * </pre></code>
      *
      * @return a ThrowExpression for a T0D0
@@ -4335,12 +4335,17 @@ public class Parser
         {
         Expression message  = null;
         Token      keyword  = expect(Id.TODO);
+        Token      endToken = null;
         if (keyword.getValue() == null)
             {
             if (match(Id.L_PAREN) != null)
                 {
-                message = parseExpression();
-                expect(Id.R_PAREN);
+                endToken = match(Id.R_PAREN);
+                if (endToken == null)
+                    {
+                    message = parseExpression();
+                    endToken = expect(Id.R_PAREN);
+                    }
                 }
             }
         else
@@ -4353,7 +4358,7 @@ public class Parser
             putBack(new Token(keyword.getEndPosition(), keyword.getEndPosition(), Id.SEMICOLON));
             }
 
-        return new ThrowExpression(keyword, null, message);
+        return new ThrowExpression(keyword, null, message, endToken);
         }
 
     /**

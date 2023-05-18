@@ -1085,14 +1085,19 @@ public abstract class AstNode
                     mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
 
             // now choose the best match
+            boolean fArgsComplete = cArgs == 0 || listExprArgs.stream().allMatch(Expression::isCompletable);
             if (!setIs.isEmpty())
                 {
-                return chooseBest(setIs, typeTarget, errs);
+                return fArgsComplete
+                        ? chooseBest(setIs, typeTarget, errs)
+                        : setIs.iterator().next();
                 }
 
             if (!setConvert.isEmpty())
                 {
-                return chooseBest(setConvert, typeTarget, errs);
+                return fArgsComplete
+                        ? chooseBest(setConvert, typeTarget, errs)
+                        : setIs.iterator().next();
                 }
             }
 

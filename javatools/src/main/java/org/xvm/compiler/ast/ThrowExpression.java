@@ -39,9 +39,31 @@ public class ThrowExpression
 
     public ThrowExpression(Token keyword, Expression expr, Expression message)
         {
+        this(keyword, expr, message, null);
+        }
+
+    public ThrowExpression(Token keyword, Expression expr, Expression message, Token endToken)
+        {
         this.keyword = keyword;
         this.expr    = expr;
         this.message = message;
+
+        if (endToken != null)
+            {
+            lEndPos = endToken.getEndPosition();
+            }
+        else if (message != null)
+            {
+            lEndPos = message.getEndPosition();
+            }
+        else if (expr != null)
+            {
+            lEndPos = expr.getEndPosition();
+            }
+        else
+            {
+            lEndPos = keyword.getEndPosition();
+            }
         }
 
 
@@ -73,17 +95,7 @@ public class ThrowExpression
     @Override
     public long getEndPosition()
         {
-        if (message != null)
-            {
-            return message.getEndPosition();
-            }
-
-        if (expr != null)
-            {
-            return expr.getEndPosition();
-            }
-
-        return keyword.getEndPosition();
+        return lEndPos;
         }
 
     @Override
@@ -439,6 +451,7 @@ public class ThrowExpression
     protected Token      keyword;
     protected Expression expr;
     protected Expression message;
+    private   long       lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ThrowExpression.class, "expr", "message");
     }
