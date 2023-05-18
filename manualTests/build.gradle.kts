@@ -85,7 +85,7 @@ val compileOne = tasks.register<JavaExec>("compileOne") {
 
     classpath(javatoolsJar)
 
-    args("-verbose",
+    args("-verbose", "-rebuild",
          "-o", "$buildDir",
          "-L", "${xdk.buildDir}/xdk/lib",
          "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
