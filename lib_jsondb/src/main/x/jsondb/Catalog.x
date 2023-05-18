@@ -146,16 +146,15 @@ service Catalog<Schema extends RootSchema>
         static BuiltIn byId(Int id)
             {
             assert id <= 0 && id + BuiltIn.count > 0;
-            return BuiltIn.values[0-id];
+            return BuiltIn.values[-id];
             }
         }
 
     static DboInfo[] SystemInfos =
         [
-        new DboInfo(ROOT,      DBSchema, BuiltIn.Root.id, BuiltIn.Root.id,
-            [
-            BuiltIn.Sys.id,
-            ]),
+        new DboInfo(ROOT, DBSchema, BuiltIn.Root.id, BuiltIn.Root.id,
+            [BuiltIn.Sys.id], [BuiltIn.Sys.name], transactional = False),
+
         new DboInfo(Path:/sys, DBSchema, BuiltIn.Sys.id,  BuiltIn.Root.id,
             [
             BuiltIn.Info.id,
@@ -173,7 +172,29 @@ service Catalog<Schema extends RootSchema>
             BuiltIn.Pending.id,
             BuiltIn.Transactions.id,
             BuiltIn.Errors.id,
-            ]),
+            BuiltIn.TxCounter.id,
+            BuiltIn.PidCounter.id,
+            ],
+            [
+            BuiltIn.Info.name,
+            BuiltIn.Users.name,
+            BuiltIn.Types.name,
+            BuiltIn.Objects.name,
+            BuiltIn.Schemas.name,
+            BuiltIn.Counters.name,
+            BuiltIn.Values.name,
+            BuiltIn.Maps.name,
+            BuiltIn.Lists.name,
+            BuiltIn.Queues.name,
+            BuiltIn.Processors.name,
+            BuiltIn.Logs.name,
+            BuiltIn.Pending.name,
+            BuiltIn.Transactions.name,
+            BuiltIn.Errors.name,
+            BuiltIn.TxCounter.name,
+            BuiltIn.PidCounter.name,
+            ],
+            transactional = False),
 
         new DboInfo(Path:/sys/info,         DBValue,   BuiltIn.Info.id,         BuiltIn.Sys.id, typeParamsTypes=["Value"=DBInfo]),
         new DboInfo(Path:/sys/users,        DBMap,     BuiltIn.Users.id,        BuiltIn.Sys.id, typeParamsTypes=["Key"=String, "Value"=DBUser]),

@@ -1,4 +1,5 @@
 
+
         class %propertyTypeName%Impl_(DboInfo_ info_, %propertyStoreType% store_)
                 extends %propertyBaseType%(info_, store_)
                 incorporates %propertyType%

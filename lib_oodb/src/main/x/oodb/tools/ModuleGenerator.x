@@ -401,12 +401,12 @@ class ModuleGenerator(String implName, String moduleName)
                                 .replace("%propertyType%", propertyType)
                                 ;
 
-            if (classTemplate.containingModule != moduleTemplate)
+            if (classTemplate.containingModule.qualifiedName == oodb.qualifiedName)
                 {
-                // this check assumes that the property type is either one of the eight basic DBObject
+                // this check assumes that the property type is one of the eight basic DBObject
                 // types (DBSchema, DBCounter, DBValue, DBMap, DBList, DBQueue, DBProcessor, DBLog)
-                // or comes from the reflected module itself, in which case it must be a "custom"
-                // mixin into one of the basic DBObjects
+                // and doesn't come from the reflected module itself, in which case it must be a
+                //"custom" mixin into one of the basic DBObjects
                 continue;
                 }
 
@@ -455,26 +455,42 @@ class ModuleGenerator(String implName, String moduleName)
 
         for (MultiMethodTemplate multimethod : classTemplate.multimethods)
             {
-            String methodName = multimethod.name;
             for (MethodTemplate method : multimethod.children())
                 {
                 if (!method.isConstructor && !method.isStatic && method.access == Public)
                     {
-                    ParameterTemplate[] params  = method.parameters;
-                    ParameterTemplate[] returns = method.returns;
+                    String              methodName = multimethod.name;
+                    ParameterTemplate[] params     = method.parameters;
+                    ParameterTemplate[] returns    = method.returns;
+                    Int                 retCount   = returns.size;
 
-                    String retType = switch (returns.size)
+                    String retType;
+                    if (retCount == 0)
+                        {
+                        retType = "void";
+                        }
+                    else
+                        {
+                        StringBuffer buf = new StringBuffer();
+                        loop:
+                        for (Int i : 0 ..< retCount)
                             {
-                            case 0 : "void";
-                            case 1 : displayName(returns[0].type, appName);
-                            default: $|({{for (val r : returns)
-                                      |    {
-                                      |    $.addAll(displayName(r.type, appName));
-                                      |    $.add(',');
-                                      |    }
-                                      |}})
-                                     ;
-                            };
+                            ParameterTemplate ret = returns[i];
+                            if (ret.category == ConditionalReturn)
+                                {
+                                "conditional ".appendTo(buf);
+                                }
+                            else
+                                {
+                                displayName(ret.type, appName).appendTo(buf);
+                                }
+                            if (!loop.last)
+                                {
+                                ", ".append(buf);
+                                }
+                            }
+                        retType = buf.toString();
+                        }
 
                     String argDecl     = "";
                     String args        = "";
@@ -612,29 +628,57 @@ class ModuleGenerator(String implName, String moduleName)
      */
     String displayName(TypeTemplate type, String appName)
         {
-        assert Composition composition := type.fromClass();
-
-        String name = displayName(composition, appName);
-
-        if (TypeTemplate[] typeParams := type.parameterized())
+        switch (type.form)
             {
-            StringBuffer buf = new StringBuffer(name.size * typeParams.size);
-            buf.append(name)
-               .add('<');
+            case Class:
+                assert Composition composition := type.fromClass();
+                String name = displayName(composition, appName);
 
-            loop:
-            for (TypeTemplate typeParam : typeParams)
-                {
-                if (!loop.first)
+                if (TypeTemplate[] typeParams := type.parameterized())
                     {
-                    buf.append(", ");
+                    StringBuffer buf = new StringBuffer(name.size * typeParams.size);
+                    buf.append(name)
+                       .add('<');
+
+                    loop:
+                    for (TypeTemplate typeParam : typeParams)
+                        {
+                        if (!loop.first)
+                            {
+                            buf.append(", ");
+                            }
+                        buf.append(displayName(typeParam, appName));
+                        }
+                    buf.add('>');
+                    name = buf.toString();
                     }
-                buf.append(displayName(typeParam, appName));
-                }
-            buf.add('>');
-            name = buf.toString();
+                return name;
+
+            case Intersection:
+            case Union:
+            case Difference:
+                assert (TypeTemplate t1, TypeTemplate t2) := type.relational();
+                String op = switch (type.form)
+                        {
+                        case Union:        " | ";
+                        case Intersection: " + ";
+                        case Difference:   " - ";
+                        default: assert;
+                        };
+                return $"{displayName(t1, appName)}{op}{displayName(t2, appName)}";
+
+            case Immutable:
+                assert TypeTemplate t1 := type.modifying();
+                return $"immutable {displayName(t1, appName)}";
+
+            case Access:
+                assert val access := type.accessSpecified();
+                assert TypeTemplate t1 := type.modifying();
+                return $"{displayName(t1, appName)}:{access.keyword}";
+
+            default:
+                assert as $"Not implemented {type=} {type.form=}";
             }
-        return name;
         }
 
     /**

@@ -17,6 +17,7 @@ import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBObject.DBCategory;
 import oodb.DBObjectInfo;
 import oodb.DBProcessor;
 import oodb.DBProcessor.Pending;
@@ -680,7 +681,7 @@ service Client<Schema extends RootSchema>
                 case Users:        TODO new DBMap<String, DBUser>();
                 case Types:        TODO new DBMap<String, Type>();
                 case Objects:      TODO new DBMap<String, DBObject>();
-                case Schemas:      new SysMapImpl<DBInfo>(info, catalog);
+                case Schemas:      new SysMapImpl<DBObjectInfo>(info, DBSchema, catalog);
                 case Counters:     TODO new DBMap<String, DBCounter>();
                 case Values:       TODO new DBMap<String, DBValue>();
                 case Maps:         TODO new DBMap<String, DBMap>();
@@ -975,39 +976,87 @@ service Client<Schema extends RootSchema>
         @Concurrent
         @Lazy Map<String, DBObject> dbChildren.calc()
             {
-            return new Map()
+            return new DBObjectMap();
+//            return new Map()
+//                {
+//                @Override
+//                conditional DBObject get(String key)
+//                    {
+//                    if (DboInfo info := infos.get(key))
+//                        {
+//                        return True, implFor(info.id);
+//                        }
+//
+//                    return False;
+//                    }
+//
+//                @Override
+//                @Lazy Set<String> keys.calc()
+//                    {
+//                    return infos.keys;
+//                    }
+//
+//                protected @Lazy Map<String, DboInfo> infos.calc()
+//                    {
+//                    Int[] childIds = info_.childIds;
+//                    Int   size     = childIds.size;
+//                    if (size == 0)
+//                        {
+//                        return [];
+//                        }
+//
+//                    ListMap<String, DboInfo> infos = new ListMap(size);
+//                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
+//                    return infos.freeze();
+//                    }
+//                };
+            }
+
+        // TODO GG: remove and use the "inside the property" class
+        private class DBObjectMap
+                implements Map<String, DBObject>
+            {
+            construct()
                 {
-                @Override
-                conditional DBObject get(String key)
+                Int[] childIds = info_.childIds;
+                Int   size     = childIds.size;
+                if (size == 0)
                     {
-                    if (DboInfo info := infos.get(key))
-                        {
-                        return True, implFor(info.id);
-                        }
-
-                    return False;
+                    this.infos = [];
                     }
-
-                @Override
-                @Lazy Set<String> keys.calc()
+                else
                     {
-                    return infos.keys;
-                    }
-
-                protected @Lazy Map<String, DboInfo> infos.calc()
-                    {
-                    Int[] childIds = info_.childIds;
-                    Int   size     = childIds.size;
-                    if (size == 0)
-                        {
-                        return [];
-                        }
-
+                    Client client = this.Client; // TODO GG: this should not be needed
                     ListMap<String, DboInfo> infos = new ListMap(size);
-                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
-                    return infos.freeze();
+                    childIds.associate(i -> {val info = client.infoFor(i); return info.name, info;}, infos);
+                    this.infos = infos.freeze();
                     }
-                };
+                }
+
+            protected Map<String, DboInfo> infos;
+
+            @Override
+            conditional DBObject get(String key)
+                {
+                if (DboInfo info := infos.get(key))
+                    {
+                    return True, implFor(info.id);
+                    }
+
+                return False;
+                }
+
+            @Override
+            @Lazy Set<String> keys.calc()
+                {
+                return infos.keys;
+                }
+
+            @Override
+            Set<DBObject> values.get() = throw new UnsupportedOperation();
+
+            @Override
+            Set<Map<String, DBObject>.Entry> entries.get() = throw new UnsupportedOperation();
             }
 
         @Override
@@ -2162,14 +2211,14 @@ service Client<Schema extends RootSchema>
     /**
      * The DBMap implementation for the maps in the system schema.
      */
-    class SysMapImpl<Value extends immutable Const>(DboInfo info_, Catalog catalog)
-            extends DBObjectImpl(info_)
+    class SysMapImpl<Value extends immutable Const>(DboInfo info, DBCategory category, Catalog catalog)
+            extends DBObjectImpl(info)
             implements DBMap<String, Value>
             incorporates KeySetBasedMap<String, Value>
         {
         @Lazy Int[] ids_.calc()
             {
-            DBCategory category = info_.category;
+            DBCategory category = this.category;
             return catalog.metadata?.dbObjectInfos
                     .filter(info -> info.category == category)
                     .map(info -> info.id, new Int[])
@@ -2220,7 +2269,7 @@ service Client<Schema extends RootSchema>
         SysMapImpl remove(Key key) = throw new ReadOnly();
 
         @Override
-        public Set<Key> keys = pathToId_.keys;
+        Set<Key> keys.get() = pathToId_.keys;
         }
 
 
