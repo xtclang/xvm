@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -1799,7 +1800,7 @@ public abstract class Launcher
         suspendErrors();
         try
             {
-            for (File fileSrc : fileDir.listFiles())
+            for (File fileSrc : listFiles(fileDir))
                 {
                 if (fileSrc.isFile() && fileSrc.canRead() && fileSrc.getName().endsWith(".x"))
                     {
@@ -2179,7 +2180,7 @@ public abstract class Launcher
      */
     protected void buildSourceTree(DirNode nodeParent, File fileDir)
         {
-        for (File fileChild : nodeParent.file().listFiles())
+        for (File fileChild : listFiles(nodeParent.file()))
             {
             if (fileChild.isDirectory())
                 {
