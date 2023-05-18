@@ -1,6 +1,6 @@
 interface Const
         extends immutable Object
-        extends collections.Hashable
+        extends Hashable
         extends Orderable
         extends Stringable
     {
