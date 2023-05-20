@@ -2962,6 +2962,12 @@ public class ClassStructure
                         }
                     else if (method.isFunction())
                         {
+                        if (method.hasCode())
+                            {
+                            continue;
+                            }
+
+                        // funky interface scenario
                         if (!typeRight.containsSubstitutableMethod(sig,
                                 accessRight, true, Collections.EMPTY_LIST))
                             {
@@ -3065,8 +3071,7 @@ public class ClassStructure
                         {
                         if (fFunction)
                             {
-                            // functions must match exactly
-                            if (sigMethod.equals(signature))
+                            if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                                 {
                                 return true;
                                 }
