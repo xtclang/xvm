@@ -48,6 +48,7 @@ val bridgeLib       = "$javaDir/javatools_bridge.xtc"
 
 val distDir         = "$buildDir/dist"
 
+val seed            = "" // -seed=N to change the random seed, or blank ("") for no seed
 val xdkVersion      = rootProject.version
 var distName        = xdkVersion
 val isCI            = System.getenv("CI")
@@ -105,7 +106,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "$ecstasyMain/x/ecstasy.x",
          "$turtleMain/x/mack.x")
@@ -129,7 +130,7 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -148,7 +149,7 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -167,7 +168,7 @@ val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -186,7 +187,7 @@ val compileNet  = tasks.register<JavaExec>("compileNet") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -206,7 +207,7 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -225,7 +226,7 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -244,7 +245,7 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -264,7 +265,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -284,7 +285,7 @@ val compileWeb  = tasks.register<JavaExec>("compileWeb") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -304,7 +305,7 @@ val compileWebauth = tasks.register<JavaExec>("compileWebauth") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -324,7 +325,7 @@ val compileXenia = tasks.register<JavaExec>("compileXenia") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
@@ -344,7 +345,7 @@ val compileBridge = tasks.register<JavaExec>("compileBridge") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-o", "$libDir",
+    args("-o", "$libDir", "$seed",
          "-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",

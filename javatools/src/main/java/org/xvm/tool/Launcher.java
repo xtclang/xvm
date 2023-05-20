@@ -662,6 +662,14 @@ public abstract class Launcher
             }
 
         /**
+          * @return the seed for psuedo-random
+          */
+        public int seed()
+            {
+              return values().get("seed") instanceof Integer i ? i : 0;
+            }
+
+        /**
          * Parse the command line arguments into
          *
          * @param asArgs  the command line arguments to parse
@@ -2229,6 +2237,13 @@ public abstract class Launcher
         {
         File[] aFile = dir.listFiles();
         Arrays.sort(aFile, Comparator.comparing(File::getName));
+        // Psuedo random shuffle files, in an effort to trigger bugs
+        int seed = options().seed();
+        if( seed!=0 ) System.err.println("Compiling with seed="+seed);
+        for( int i=0; i<aFile.length; i++ ) {
+          int j = (i+seed)%aFile.length;
+          File tmp = aFile[i];  aFile[i] = aFile[j];  aFile[j] = tmp; // Swap i and j
+        }
         return aFile;
         }
 

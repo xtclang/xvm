@@ -77,6 +77,7 @@ import org.xvm.util.Severity;
  * <li>{@code -strict} - convert warnings to errors</li>
  * <li>{@code -nowarn} - suppress warnings</li>
  * <li>{@code -verbose} - provide information about the work being done by the compilation process</li>
+ * <li>{@code -seed=n} - set the random seed to n</li>
  * </ul>
  */
 public class Compiler
@@ -558,6 +559,7 @@ public class Compiler
             addOption("o",       Form.File,   false, "File or directory to write output to");
             addOption("qualify", Form.Name,   false, "Use full module name for the output file name");
             addOption("version", Form.String, false, "Use full module name for the output file name");
+            addOption("seed",    Form.Int,    false, "Set the internal compiler random seed for testing purposes");
             addOption(Trailing,  Form.File,   true , "Source file name(s) and/or module location(s) to"
                                                  + " compile");
             }
