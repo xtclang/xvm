@@ -182,7 +182,7 @@ public abstract class IdentityConstant
                     }
 
                 ClassStructure clzThat = (ClassStructure) idBaseThat.getComponent();
-                if (clzThat.hasContribution(idBaseThis, true))
+                if (clzThat.hasContribution(idBaseThis))
                     {
                     return true;
                     }

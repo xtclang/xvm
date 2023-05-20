@@ -3181,7 +3181,7 @@ public class NameExpression
                     : pool.ensureParentClassConstant(idVirtPath);
 
             if (idFrom.equals(idTarget) ||
-                    (cDepth > 0 && clzFrom.hasContribution(idTarget, true)))
+                    (cDepth > 0 && clzFrom.hasContribution(idTarget)))
                 {
                 // found it!
                 return idVirtPath;

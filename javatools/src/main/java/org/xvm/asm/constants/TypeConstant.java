@@ -3936,7 +3936,8 @@ public abstract class TypeConstant
             // however, the processing for property accessors is the same as for virtual methods
             if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay())
                 {
-                // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
+                // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides
+                //       with a function in the other)
                 // TODO we'll also have to check similar conditions below
 
                 boolean fKeep      = true;
@@ -7291,9 +7292,20 @@ public abstract class TypeConstant
 
             if (typeRight.isExplicitClassIdentity(true))
                 {
-                IdentityConstant idRight  = typeRight.getSingleUnderlyingClass(true);
-                ClassStructure   clzRight = (ClassStructure) idRight.getComponent();
+                IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
+                if (clzLeft.hasContribution(idRight))
+                    {
+                    // the left type is known to be not equal to the right, but contains the right
+                    // type as a contribution; even though the method/property set could be
+                    // identical, the interface designers clearly didn't mean the contributing
+                    // (right) interface be assignable to the containing (left) type;
+                    // for example: "Ref.Identity" extends "immutable Hashable", so even though
+                    // Ref.Identity interface doesn't add any features to Hashable interface, an
+                    // "immutable Hashable" type should not be assignable to Ref.Identity
+                    return false;
+                    }
 
+                ClassStructure clzRight = (ClassStructure) idRight.getComponent();
                 if (cParamsLeft > clzRight.getTypeParamCount())
                     {
                     return false;

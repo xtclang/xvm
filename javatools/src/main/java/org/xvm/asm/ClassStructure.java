@@ -1282,7 +1282,7 @@ public class ClassStructure
      *
      * @return true if this type has a contribution of the specified class
      */
-    public boolean hasContribution(IdentityConstant idClass, boolean fAllowInto)
+    public boolean hasContribution(IdentityConstant idClass)
         {
         if (idClass.equals(getConstantPool().clzObject()))
             {
@@ -1295,7 +1295,7 @@ public class ClassStructure
             return true;
             }
 
-        return findContributionImpl(idClass, fAllowInto) != null;
+        return findContributionImpl(idClass, true) != null;
         }
 
     /**
@@ -2921,7 +2921,7 @@ public class ClassStructure
                 else
                     {
                     // TODO: should we check the "Var" access?
-                    if (!prop.isRefAccessible(accessRight))
+                    if (!prop.isRefAccessible(accessRight) || prop.isStatic())
                         {
                         continue;
                         }
@@ -2962,6 +2962,12 @@ public class ClassStructure
                         }
                     else if (method.isFunction())
                         {
+                        if (method.hasCode())
+                            {
+                            continue;
+                            }
+
+                        // funky interface scenario
                         if (!typeRight.containsSubstitutableMethod(sig,
                                 accessRight, true, Collections.EMPTY_LIST))
                             {
@@ -2970,8 +2976,6 @@ public class ClassStructure
                         }
                     else
                         {
-                        sig = sig.removeAutoNarrowing();
-
                         if (!listLeft.isEmpty())
                             {
                             if (resolver == null)
@@ -3044,8 +3048,9 @@ public class ClassStructure
             if (child instanceof PropertyStructure prop)
                 {
                 // TODO: should we check the "Var" access?
-                if (prop.isRefAccessible(access) &&
-                    prop.isSubstitutableFor(pool, signature, listParams))
+                if (!prop.isStatic() &&
+                        prop.isRefAccessible(access) &&
+                        prop.isSubstitutableFor(pool, signature, listParams))
                     {
                     return true;
                     }
@@ -3066,16 +3071,14 @@ public class ClassStructure
                         {
                         if (fFunction)
                             {
-                            // functions must match exactly
-                            if (sigMethod.equals(signature))
+                            if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                                 {
                                 return true;
                                 }
                             }
                         else
                             {
-                            sigMethod = sigMethod.removeAutoNarrowing()
-                                                 .resolveGenericTypes(pool, resolver);
+                            sigMethod = sigMethod.resolveGenericTypes(pool, resolver);
                             if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                                 {
                                 return true;

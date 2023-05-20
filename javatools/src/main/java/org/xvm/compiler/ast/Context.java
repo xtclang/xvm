@@ -1769,7 +1769,7 @@ public class Context
                         }
 
                     ClassStructure clz = (ClassStructure) component;
-                    if (clz.hasContribution(idParent, true))
+                    if (clz.hasContribution(idParent))
                         {
                         return cSteps;
                         }
