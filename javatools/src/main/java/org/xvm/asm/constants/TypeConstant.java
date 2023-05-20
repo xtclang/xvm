@@ -3936,7 +3936,8 @@ public abstract class TypeConstant
             // however, the processing for property accessors is the same as for virtual methods
             if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay())
                 {
-                // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
+                // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides
+                //       with a function in the other)
                 // TODO we'll also have to check similar conditions below
 
                 boolean fKeep      = true;

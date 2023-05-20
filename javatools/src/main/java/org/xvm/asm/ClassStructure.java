@@ -2921,7 +2921,7 @@ public class ClassStructure
                 else
                     {
                     // TODO: should we check the "Var" access?
-                    if (!prop.isRefAccessible(accessRight))
+                    if (!prop.isRefAccessible(accessRight) || prop.isStatic())
                         {
                         continue;
                         }
@@ -2970,8 +2970,6 @@ public class ClassStructure
                         }
                     else
                         {
-                        sig = sig.removeAutoNarrowing();
-
                         if (!listLeft.isEmpty())
                             {
                             if (resolver == null)
@@ -3044,8 +3042,9 @@ public class ClassStructure
             if (child instanceof PropertyStructure prop)
                 {
                 // TODO: should we check the "Var" access?
-                if (prop.isRefAccessible(access) &&
-                    prop.isSubstitutableFor(pool, signature, listParams))
+                if (!prop.isStatic() &&
+                        prop.isRefAccessible(access) &&
+                        prop.isSubstitutableFor(pool, signature, listParams))
                     {
                     return true;
                     }
@@ -3074,8 +3073,7 @@ public class ClassStructure
                             }
                         else
                             {
-                            sigMethod = sigMethod.removeAutoNarrowing()
-                                                 .resolveGenericTypes(pool, resolver);
+                            sigMethod = sigMethod.resolveGenericTypes(pool, resolver);
                             if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                                 {
                                 return true;
