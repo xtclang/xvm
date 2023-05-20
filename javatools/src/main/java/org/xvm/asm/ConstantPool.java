@@ -1818,7 +1818,7 @@ public class ConstantPool
 
         TypeConstant typeParent;
         boolean      fCheckAuto;
-        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, true))
+        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent))
             {
             // we've reached the "top"
             typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();

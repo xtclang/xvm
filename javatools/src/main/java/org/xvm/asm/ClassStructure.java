@@ -1282,7 +1282,7 @@ public class ClassStructure
      *
      * @return true if this type has a contribution of the specified class
      */
-    public boolean hasContribution(IdentityConstant idClass, boolean fAllowInto)
+    public boolean hasContribution(IdentityConstant idClass)
         {
         if (idClass.equals(getConstantPool().clzObject()))
             {
@@ -1295,7 +1295,7 @@ public class ClassStructure
             return true;
             }
 
-        return findContributionImpl(idClass, fAllowInto) != null;
+        return findContributionImpl(idClass, true) != null;
         }
 
     /**
