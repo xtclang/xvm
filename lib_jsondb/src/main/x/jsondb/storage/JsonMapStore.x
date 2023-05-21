@@ -347,13 +347,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         else
                             {
                             // we have exhausted the history, so drain the remainder of the mods
-                            for (modEntry : modEntries)
+                            do
                                 {
                                 if (!modEntry.value.is(Deletion))
                                     {
                                     keys += modEntry.key;
                                     }
-                                }
+                                } while (modEntry := modEntries.next());
 
                             break NextKey;
                             }
