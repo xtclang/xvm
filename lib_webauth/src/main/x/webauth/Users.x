@@ -82,7 +82,7 @@ mixin Users
         AuthSchema schema    = dbParent.as(AuthSchema);
         if (Role[] roleList := schema.roles.findByNames(roleNames))
             {
-            roleIds = roleList.map(r -> r.roleId, new Int[roleList.size]).as(Int[]);
+            roleIds = roleList.map(r -> r.roleId, new Array<Int>(roleList.size)).as(Int[]);
             }
         else
             {
