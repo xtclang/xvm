@@ -1,6 +1,6 @@
 
             @Override
-            %retType% %name%(%argDecl%)
+            %retType% %name%(%argsDecl%)
                 {
                 using (this.%appName%Client_.ensureTransaction(this))
                     {

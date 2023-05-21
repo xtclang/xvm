@@ -21,9 +21,10 @@ interface ParameterTemplate
     TypeTemplate type;
 
     /**
-     * The default value, which may be Null, or Null if there is no default.
+     * The default value, which may be Null, or Null if there is no default. This should only be
+     * used if `Category == DefaultParameter`.
      */
-    Const? defaultValue;
+    Const defaultValue;
 
     /**
      * The Category enum.

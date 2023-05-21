@@ -449,6 +449,9 @@ class ModuleGenerator(String implName, String moduleName)
                      customInstantiations, customDeclarations, childrenIds, childrenNames, schemaSource;
         }
 
+    /**
+     * Create the routing logic for all custom methods.
+     */
     String createMethods(String appName, ClassTemplate classTemplate)
         {
         String customMethods = "";
@@ -492,50 +495,52 @@ class ModuleGenerator(String implName, String moduleName)
                         retType = buf.toString();
                         }
 
-                    String argDecl     = "";
-                    String args        = "";
-                    String argTypes    = "";
-                    String tupleValues = "";
+                    // internal helper function
+                    (String argName, String argDecl)
+                            createArgDeclaration(ParameterTemplate param, String appName)
+                        {
+                        String name = param.name? : assert;
+                        String type = displayName(param.type, appName);
+                        String dflt = param.category == DefaultParameter
+                                ? $" = {displayValue(param.defaultValue)}"
+                                : "";
+                        return (name, $"{type} {name}{dflt}");
+                        }
+
+                    String argsDecl = "";
+                    String args     = "";
                     switch (params.size)
                         {
                         case 0:
                             break;
 
                         case 1:
-                            args        = params[0].name? : assert;
-                            argTypes    = displayName(params[0].type, appName);
-                            argDecl     = $"{argTypes} {args}";
-                            tupleValues = "args[0]";
+                            (args, argsDecl) = createArgDeclaration(params[0], appName);
                             break;
 
                         default:
                             Loop:
                             for (ParameterTemplate param : params)
                                 {
-                                String name = param.name? : assert;
-                                String type = displayName(param.type, appName);
+                                (String name, String decl) = createArgDeclaration(param, appName);
 
                                 if (!Loop.first)
                                     {
-                                    argDecl     += ", ";
-                                    args        += ", ";
-                                    argTypes    += ", ";
-                                    tupleValues += ", ";
+                                    argsDecl += ", ";
+                                    args     += ", ";
                                     }
-                                argDecl     += $"{type} {name}";
-                                args        += name;
-                                argTypes    += type;
-                                tupleValues += $"args[{Loop.count}]";
+                                argsDecl += decl;
+                                args     += name;
                                 }
                             break;
                         }
 
                     customMethods += customMethodTemplate
-                                        .replace("%appName%", appName)
-                                        .replace("%name%"   , methodName)
-                                        .replace("%retType%", retType)
-                                        .replace("%argDecl%", argDecl)
-                                        .replace("%args%"   , args)
+                                        .replace("%appName%" , appName)
+                                        .replace("%name%"    , methodName)
+                                        .replace("%retType%" , retType)
+                                        .replace("%argsDecl%", argsDecl)
+                                        .replace("%args%"    , args)
                                         ;
                     }
                 }
