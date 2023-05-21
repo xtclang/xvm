@@ -75,10 +75,19 @@ mixin WebApp
         @Inject Authenticator? providedAuthenticator;
         return providedAuthenticator?;
 
-        // allow a module to implement the factory method createAuthenticator()
-        if (this.is(AuthenticatorFactory))
+        try
             {
-            return createAuthenticator();
+            // allow a module to implement the factory method createAuthenticator()
+            if (this.is(AuthenticatorFactory))
+                {
+                return createAuthenticator();
+                }
+            }
+        catch (Exception e)
+            {
+            // TODO this is temporary, we do need to expose a unified log API
+            @Inject Console console;
+            console.print($"An exception occurred while creating an Authenticator: {e}");
             }
 
         // disable authentication, since no authenticator was found
