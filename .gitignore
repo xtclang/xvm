@@ -58,3 +58,4 @@ prj/
 .idea/
 .gradle/
 !gradle-wrapper.jar
+TAGS
