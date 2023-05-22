@@ -105,6 +105,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 // the actual type could be narrower than the compile time provided SubType;
                 // make sure it is passed to "findMapping()" call
                 assert Type baseType := type.modifying();
+                assert baseType.is(Type<SubType-immutable>);
                 if (val underlying := schema.findMapping(baseType))
                     {
                     return True, new ImmutableMapping<SubType>(underlying.as(Mapping<SubType-immutable>));
