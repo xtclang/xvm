@@ -224,8 +224,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         switch (model)
             {
             case Empty:
-                return False;
-
             case Small:
                 // the entire MapStore is cached in the history map
                 if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId))
@@ -262,8 +260,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         switch (model)
             {
             case Empty:
-                assert; // we already checked size 0 above
-
             case Small:
                 // all the keys and values are in memory; just ship all the keys back in one array
                 Key[]   keys        = new Key[](size);
@@ -353,7 +349,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                     {
                                     keys += modEntry.key;
                                     }
-                                } while (modEntry := modEntries.next());
+                                }
+                            while (modEntry := modEntries.next());
 
                             break NextKey;
                             }
@@ -406,8 +403,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         switch (model)
             {
             case Empty:
-                return False;
-
             case Small:
                 // the entire MapStore is cached in the history map
                 if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId))
