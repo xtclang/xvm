@@ -1,5 +1,4 @@
-# Compiled source #
-###################
+# Compiled source
 *.com
 *.class
 *.dll
@@ -9,10 +8,7 @@
 *.dSYM
 *.xtc
 
-# Packages #
-############
-# it's better to unpack these files and commit the raw source
-# git has its own built in compression methods
+# Packages
 *.7z
 *.dmg
 *.gz
@@ -23,13 +19,14 @@
 *.zip
 
 # User specific tool settings
-#############################
-*.ipr
-*.iws
 *.swp
 
-# Logs and databases #
-######################
+# Emacs
+\#*#
+*~
+TAGS
+
+# Logs and databases
 *.log
 *.out
 *.tmp
@@ -37,8 +34,9 @@
 *.sql
 *.sqlite
 
-# OS generated files #
-######################
+# OS generated files
+
+# Mac
 .DS_Store
 .DS_Store?
 ._*
@@ -47,15 +45,21 @@
 ehthumbs.db
 Thumbs.db
 
-# build directory #
-###################
+# Build directories (Gradle)
 classes/
 build/
 
-# tooling and project files #
-#############################
+# Build directories (IntelliJ)
+out/
+
+# Tooling and project files
 prj/
 .idea/
 .gradle/
 !gradle-wrapper.jar
-TAGS
+
+# File-based project format IDEA (legacy)
+*.iml
+*.ipr
+*.iws
+
