@@ -29,7 +29,7 @@ java {
 }
 
 tasks.test {
-    useJUnit();
+    useJUnit()
     maxHeapSize = "1G"
 }
 
