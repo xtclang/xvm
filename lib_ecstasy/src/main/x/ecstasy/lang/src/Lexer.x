@@ -2704,6 +2704,120 @@ class Lexer
               }
 
         /**
+         * Attempt to "peel" a token off the front of this token.
+         *
+         * @param id     the token id to attempt to peel off of the front of this token
+         * @param lexer  the lexer that this token came from
+         *
+         * @return True iff the specified token id can be peeled
+         * @return (conditional) the peeled token
+         * @return (conditional) the remaining token
+         */
+        conditional (Token, Token) peel(Id peelId, Lexer lexer)
+            {
+            Id remainder;
+            switch (peelId, this.id)
+                {
+                case (CompareGT, ShiftAllAsn):      // peel > from >>>= is >>=
+                    remainder = ShiftRightAsn;
+                    break;
+
+                case (CompareGT, ShiftAll):         // peel > from >>> is >>
+                    remainder = ShiftRight;
+                    break;
+
+                case (CompareGT, ShiftRightAsn):    // peel > from >>= is >=
+                    remainder = CompareGTEQ;
+                    break;
+
+                case (CompareGT, ShiftRight):       // peel > from >> is >
+                    remainder = CompareGT;
+                    break;
+
+                case (CompareGT, CompareGTEQ):      // peel > from >= is =
+                    remainder = Asn;
+                    break;
+
+                case (CompareLT, ShiftLeftAsn):     // peel < from <<= is <=
+                    remainder = CompareLTEQ;
+                    break;
+
+                case (CompareLT, ShiftLeft):        // peel < from << is <
+                    remainder = CompareLT;
+                    break;
+
+                default:
+                    return False;
+                }
+
+            // calculate the exact text position where the token will be split
+            Reader       reader  = lexer.reader;
+            TextPosition current = reader.position;
+            reader.position = this.start;
+            reader.skip(1);
+            TextPosition middle = reader.position;
+            reader.position = current;
+
+            // return the peeled (and subsequent) tokens
+            return True,
+                    this.with(peelId, end=middle, spaceAfter=False),
+                    this.with(remainder, start=middle, spaceBefore=False);
+            }
+
+        /**
+         * Allow two tokens to be combined, if the two tokens are the result of a peel operation.
+         *
+         * @param that  the token following this token
+         *
+         * @return True iff the tokens can be annealed
+         * @return (conditional) the new token
+         */
+        conditional Token anneal(Token that)
+            {
+            if (this.end == that.start)
+                {
+                Id combined;
+                switch (this.id, that.id)
+                    {
+                    case (CompareGT, ShiftRightAsn):    // > anneal >>= is >>>=
+                        combined = ShiftAllAsn;
+                        break;
+
+                    case (CompareGT, ShiftRight):       // > anneal >> is >>>
+                        combined = ShiftAll;
+                        break;
+
+                    case (CompareGT, CompareGTEQ):      // > anneal >= is >>=
+                        combined = ShiftRightAsn;
+                        break;
+
+                    case (CompareGT, CompareGT):        // > anneal > is >>
+                        combined = ShiftRight;
+                        break;
+
+                    case (CompareGT, Asn):              // > anneal = is >=
+                        combined = CompareGTEQ;
+                        break;
+
+                    case (CompareLT, CompareLTEQ):      // < anneal <= is <<=
+                        combined = ShiftLeftAsn;
+                        break;
+
+                    case (CompareLT, CompareLT):        // < anneal < is <<
+                        combined = ShiftLeft;
+                        break;
+
+                    default:
+                        return False;
+                    }
+
+                return True, this.with(id=combined, end=that.end, spaceAfter=that.spaceAfter);
+                }
+
+            return False;
+            }
+
+        /**
          * @return the value's text, or if there is no value, then the token id's text
          */
         String valueText.get()

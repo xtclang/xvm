@@ -113,7 +113,7 @@ class Parser
         // return parseElseExpression();
 
         // note: this is all wrong (just temporary)
-        switch (peek().id)
+        switch (Id id = peek().id)
             {
             case LeftParen:
                 expect(LeftParen);
@@ -125,7 +125,7 @@ class Parser
                 return new UnaryExpression(expect(Sub), parseExpression());
 
             case LitChar..LitPath:
-                return new LiteralExpression(next());
+                return new LiteralExpression(expect(id));
 
             default:
                 // this is obviously temporary, and not correct in the general case
@@ -165,7 +165,7 @@ class Parser
         Token   keyword = expect(Import);
         Token[] names   = parseQualifiedName();
         Token?  alias   = Null;
-        if (match(As) != Null)
+        if (match(As))
             {
             alias = expect(Identifier);
             }
@@ -238,7 +238,7 @@ class Parser
             }
 
         Expression[] args = new Expression[];
-        Loop: while (match(close) == Null)
+        Loop: while (!match(close))
             {
             if (!Loop.first)
                 {
@@ -249,16 +249,16 @@ class Parser
             if (!array)
                 {
                 // special case where the parameter names are being specified with the arguments
-                if (Token name ?= match(Identifier))
+                if (Token name := match(Identifier))
                     {
-                    if (match(Asn) == Null)
+                    if (match(Asn))
                         {
-                        // oops, it wasn't a "name=value" argument
-                        putBack(name);
+                        label = name;
                         }
                     else
                         {
-                        label = name;
+                        // oops, it wasn't a "name=value" argument
+                        putBack(name);
                         }
                     }
                 }
@@ -319,12 +319,12 @@ class Parser
      */
     protected Parameter[] parseReturnList()
         {
-        if (match(Void) != Null)
+        if (match(Void))
             {
             return [];
             }
 
-        if (match(LeftParen) == Null)
+        if (!match(LeftParen))
             {
             return [new Parameter(parseTypeExpression())];
             }
@@ -332,9 +332,9 @@ class Parser
         Parameter[] returns = new Parameter[];
         do
             {
-            returns.add(new Parameter(parseTypeExpression(), match(Identifier) ?: match(Any)));
+            returns.add(new Parameter(parseTypeExpression(), match(Identifier) ?: match(Any) ?: Null));
             }
-        while (match(Comma) != Null);
+        while (match(Comma));
         expect(RightParen);
         return returns;
         }
@@ -475,7 +475,7 @@ class Parser
                     expect(LeftSquare);
                     Int dims    = 0;
                     Int indexes = 0;
-                    while (match(RightSquare) == Null)
+                    while (!match(RightSquare))
                         {
                         if (dims + indexes > 0)
                             {
@@ -483,7 +483,16 @@ class Parser
                             }
 
                         Token dim = peek(); // just for error reporting
-                        if (match(Condition) == Null)
+                        if (match(Condition))
+                            {
+                            if (dims == 0 && indexes > 0)
+                                {
+                                // just log the first one that deviates
+                                log(Error, AllOrNoDims, [], dim.start, dim.end);
+                                }
+                            ++dims;
+                            }
+                        else
                             {
                             parseExpression();
                             if (indexes == 0 && dims > 0)
@@ -493,17 +502,8 @@ class Parser
                                 }
                             ++indexes;
                             }
-                        else // we ate the "?"
-                            {
-                            if (dims == 0 && indexes > 0)
-                                {
-                                // just log the first one that deviates
-                                log(Error, AllOrNoDims, [], dim.start, dim.end);
-                                }
-                            ++dims;
-                            }
                         }
-                    type = new ArrayTypeExpression(type, dims + indexes, prev().end);
+                    type = new ArrayTypeExpression(type, dims + indexes, lastMatch().end);
 
                     // if there were only indexes, then we need to leave them in place because the
                     // type expression does not consume them
@@ -560,7 +560,7 @@ class Parser
     protected AnnotationExpression? parseAnnotation(Boolean required)
         {
         TextPosition start = peek().start;
-        if (match(At, required) == Null)
+        if (!match(At, required))
             {
             return Null;
             }
@@ -569,13 +569,13 @@ class Parser
         // name (and none of the other things that are normally allowed in a named type expression)
         Token[]?     moduleNames = Null;
         Token[]      names       = parseQualifiedName();
-        TextPosition end         = prev().end;
+        TextPosition end         = lastMatch().end;
         if (allowModuleNames && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
             {
             (moduleNames, names) = parseModuleQualifiedName(names);
             if (moduleNames != Null)
                 {
-                end = prev().end;
+                end = lastMatch().end;
                 }
             }
 
@@ -589,7 +589,7 @@ class Parser
             args = parseArgumentList(True, False, False);
             }
 
-        TextPosition endAnno = args == Null ? type.end : prev().end;
+        TextPosition endAnno = args == Null ? type.end : lastMatch().end;
         return new AnnotationExpression(type, args, start, endAnno);
         }
 
@@ -628,7 +628,7 @@ class Parser
             putBack(name);
             }
 
-        return new FunctionTypeExpression(func, returns, params?, prev().end) : assert;
+        return new FunctionTypeExpression(func, returns, params?, lastMatch().end) : assert;
         }
 
     /**
@@ -678,9 +678,8 @@ class Parser
 
             // TypeAccessModifier
             Token? access = Null;
-            if (peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
+            if (Token colon := match(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
                 {
-                Token colon = next();
                 switch (Id next = peek().id)
                     {
                     case Public:
@@ -701,8 +700,8 @@ class Parser
                 }
 
             // NoAutoNarrowModifier
-            Token? noNarrow = match(t -> t.id == BoolNot && !t.spaceBefore);
-            if (noNarrow != Null && parent != Null)
+            Token? noNarrow = Null;
+            if (noNarrow := match(t -> t.id == BoolNot && !t.spaceBefore), parent != Null)
                 {
                 log(Error, NoChildNonNarrow, [], noNarrow.start, noNarrow.end);
                 }
@@ -711,12 +710,12 @@ class Parser
             TypeExpression[]? params = parseTypeParameterTypeList();
 
             type = parent == Null
-                    ? new NamedTypeExpression(moduleNames, names, access, noNarrow, params, prev().end)
-                    : new ChildTypeExpression(parent, annotations, names, params, prev().end);
+                    ? new NamedTypeExpression(moduleNames, names, access, noNarrow, params, lastMatch().end)
+                    : new ChildTypeExpression(parent, annotations, names, params, lastMatch().end);
             moduleNames = Null;
             parent      = type;
             }
-        while (match(Dot) != Null);
+        while (match(Dot));
 
         return type;
         }
@@ -735,7 +734,7 @@ class Parser
         TypeExpression[] types = new TypeExpression[];
         Loop: while (True)
             {
-            if (!Loop.first && match(Comma) == Null)
+            if (!Loop.first && !match(Comma))
                 {
                 return types;
                 }
@@ -748,7 +747,7 @@ class Parser
                 {
                 Token            start = peek();
                 TypeExpression[] seq   = parseTypeParameterTypeList(required=True, noSequence=True) ?: assert;
-                Token            end   = prev();
+                Token            end   = lastMatch();
                 types.add(new TupleTypeExpression(seq, start.start, end.end));
                 }
             }
@@ -766,7 +765,7 @@ class Parser
      */
     protected TypeExpression[]? parseParameterTypeList(Boolean required = False)
         {
-        if (match(LeftParen, required) == Null)
+        if (!match(LeftParen, required))
             {
             return Null;
             }
@@ -800,12 +799,12 @@ class Parser
      */
     protected TypeExpression[]? parseTypeParameterTypeList(Boolean required = False, Boolean noSequence = False)
         {
-        if (match(CompareLT, required) == Null)
+        if (!match(CompareLT, required))
             {
             return Null;
             }
 
-        if (match(CompareGT) != Null)
+        if (match(CompareGT))
             {
             return [];
             }
@@ -841,7 +840,7 @@ class Parser
             {
             names.add(expect(Identifier));
             }
-        while (match(Dot) != Null);
+        while (match(Dot));
         return names;
         }
 
@@ -904,7 +903,7 @@ class Parser
                 {
                 localNames.add(expect(Identifier));
                 }
-            while (match(Dot) != Null);
+            while (match(Dot));
             }
 
         return moduleNames, localNames;
@@ -919,9 +918,9 @@ class Parser
     protected/private Token? nextToken;
 
     /**
-     * The token previously returned.
+     * The token most recently matched.
      */
-    protected/private Token? prevToken;
+    protected/private Token? matchedToken;
 
     /**
      * A token that has been "put back".
@@ -983,40 +982,6 @@ class Parser
         }
 
     /**
-     * Obtain the next token in the parse stream, and advance the parse stream.
-     *
-     * @return the next token in the parse stream
-     */
-    protected Token next()
-        {
-        return advance() ?: throw new ParseFailed("EOF");
-        }
-
-    /**
-     * Obtain the most recently _matched_ token from the parse stream.
-     *
-     * @return the most recent token returned from `match(...)`, or `expect(...)`
-     */
-    protected Token prev()
-        {
-        return prevToken ?: assert;
-        }
-
-    /**
-     * Place the specified token in the front of the parse stream. For each call to a method that
-     * takes a token from the stream, such as [advance()], [next()], `match(...)`, or `expect(...)`,
-     * it is possible to invoke this operation up to one time; an attempt to put back more than one
-     * token in a row will result in an exception.
-     *
-     * @token  the token to use as the next token in the parse stream
-     */
-    protected void putBack(Token token)
-        {
-        assert backToken == Null;
-        backToken = token;
-        }
-
-    /**
      * Without actually taking anything out of the token stream, obtain the next token.
      *
      * @return the next token in the token stream without actually taking it from the token stream
@@ -1025,7 +990,7 @@ class Parser
      */
     protected Token peek()
         {
-        return backToken ?: nextToken ?: lexer.eofToken ?: assert;
+        return backToken ?: nextToken ?: lexer.eofToken ?: throw new ParseFailed("Token stream exhausted");
         }
 
     /**
@@ -1067,66 +1032,8 @@ class Parser
         }
 
     /**
-     * Determine if the next token matches the specified token id, and return it if it does.
+     * Verify that the next token matches the specified token id, and return it. This method is a
      *
-     * @param id        the Id to match
-     * @param required  (optional) specify True if the next token **must** match the specified id
-     *
-     * @return the matching token, or `Null`
-     *
-     * @throws ParseFailed  iff `required` is specified, and either the next token does not match or
-     *                      there are no more tokens in the token stream
-     */
-    protected Token? match(Id id, Boolean required=False)
-        {
-        Token? token = backToken ?: nextToken;
-        if (token?.id == id)
-            {
-            advance();
-            prevToken = token;
-            return token;
-            }
-
-        if (required)
-            {
-            throw new ParseFailed($"{id} required, {token?.id.name : "EOF"} found");
-            }
-
-        return Null;
-        }
-
-    /**
-     * Determine if the next token matches some constraint, and return it if it does.
-     *
-     * @param matches   a function that indicates that a token meets the constraint
-     * @param required  (optional) specify True if the next token **must** match the specified
-     *                  constraint
-     *
-     * @return the matching token, or `Null`
-     *
-     * @throws ParseFailed  iff `required` is specified, and either the next token does not match or
-     *                      there are no more tokens in the token stream
-     */
-    protected Token? match(function Boolean(Token) matches, Boolean required=False)
-        {
-        Token? token = backToken ?: nextToken;
-        if (matches(token?))
-            {
-            advance();
-            prevToken = token;
-            return token;
-            }
-
-        if (required)
-            {
-            throw new ParseFailed($"matching token required, {token?.id.name : "EOF"} found");
-            }
-
-        return Null;
-        }
-
-    /**
-     * Verify that the next token matches the specified token id, and return it.
      *
      * @param id  the Id to match
      *
@@ -1155,6 +1062,137 @@ class Parser
         return match(matches, True) ?: assert;
         }
 
+    /**
+     * Determine if the next token matches the specified token id, and return it if it does.
+     *
+     * @param id        the Id to match
+     * @param required  (optional) specify True if the next token **must** match the specified id
+     *
+     * @return True iff the next token matches
+     * @return (conditional) the matching token
+     *
+     * @throws ParseFailed  iff `required` is specified, and either the next token does not match or
+     *                      there are no more tokens in the token stream
+     */
+    protected conditional Token match(Id id, Boolean required=False)
+        {
+        if (eof)
+            {
+            return required
+                    ? throw new ParseFailed($"{id} required, EOF found")
+                    : False;
+            }
+
+        Token token = peek();
+        if (token.id == id)
+            {
+            matchedToken = token;
+            advance();
+            return True, token;
+            }
+
+        // TODO GG - small error (pass parser instead of lexer) results in hard to read errors ...
+        //           maybe report one error, then make a guess at which method was trying to be called?
+        // if ((Token left, Token right) := token.peel(id, this))
+        if ((Token left, Token right) := token.peel(id, lexer))
+            {
+            matchedToken = left;
+            replaceNext(token, right);
+            return True, left;
+            }
+
+        return required
+                ? throw new ParseFailed($"{id} required, {token.id} found")
+                : False;
+        }
+
+    /**
+     * Determine if the next token matches some constraint, and return it if it does.
+     *
+     * @param matches   a function that indicates that a token meets the constraint
+     * @param required  (optional) specify True if the next token **must** match the specified
+     *                  constraint
+     *
+     * @return True iff the next token matches
+     * @return (conditional) the matching token
+     *
+     * @throws ParseFailed  iff `required` is specified, and either the next token does not match or
+     *                      there are no more tokens in the token stream
+     */
+    protected conditional Token match(function Boolean(Token) matches, Boolean required=False)
+        {
+        if (eof)
+            {
+            return required
+                    ? throw new ParseFailed("matching token required, EOF found")
+                    : False;
+            }
+
+        Token token = peek();
+        if (matches(token))
+            {
+            matchedToken = token;
+            advance();
+            return True, token;
+            }
+
+        return required
+                ? throw new ParseFailed($"matching token required, {token.id} found")
+                : False;
+        }
+
+    /**
+     * Obtain the most recently _matched_ token from the parse stream.
+     *
+     * @return the most recent token returned from `match(...)`, or `expect(...)`
+     */
+    protected Token lastMatch()
+        {
+        return matchedToken ?: assert;
+        }
+
+    /**
+     * Place the specified token in the front of the parse stream. For each call to a method that
+     * takes a token from the stream, such as [advance()], [next()], `match(...)`, or `expect(...)`,
+     * it is possible to invoke this operation up to one time; an attempt to put back more than one
+     * token in a row will result in an exception.
+     *
+     * @token  the token to use as the next token in the parse stream
+     */
+    protected void putBack(Token token)
+        {
+        Token next = peek();
+        if (Token beforePeel := token.anneal(next))
+            {
+            replaceNext(next, beforePeel);
+            }
+        else
+            {
+            assert backToken == Null;
+            backToken = token;
+            }
+        }
+
+    /**
+     * Replace the expected next token with the specified token.
+     *
+     * @param the exact token instance that must appear next in the token stream
+     * @param the token to replace the next token with
+     */
+    protected void replaceNext(Token expected, Token replacement)
+        {
+        if (backToken != Null)
+            {
+            assert &backToken == &expected;
+            backToken = replacement;
+            }
+        else
+            {
+            assert &nextToken == &expected;
+            nextToken = replacement;
+            }
+        }
+
 
     // ----- Markable methods ----------------------------------------------------------------------
 
@@ -1163,7 +1201,7 @@ class Parser
      */
     protected static const Mark(immutable Object lexerMark,
                                 Token?           nextToken,
-                                Token?           prevToken,
+                                Token?           matchedToken,
                                 Token?           backToken,
                                 Token?           prevDoc,
                                 Boolean          suppressRecovery);
@@ -1171,7 +1209,7 @@ class Parser
     @Override
     immutable Object mark()
         {
-        return new Mark(lexer.mark(), nextToken, prevToken, backToken, prevDoc, suppressRecovery);
+        return new Mark(lexer.mark(), nextToken, matchedToken, backToken, prevDoc, suppressRecovery);
         }
 
     @Override
@@ -1181,7 +1219,7 @@ class Parser
 
         lexer.restore(mark.lexerMark);
         nextToken        = mark.nextToken;
-        prevToken        = mark.prevToken;
+        matchedToken     = mark.matchedToken;
         backToken        = mark.backToken;
         prevDoc          = mark.prevDoc;
         suppressRecovery = mark.suppressRecovery;
