@@ -1,0 +1,26 @@
+#
+# Git config for local repo. This is not automatically added to your global and system
+# wide git config, for security reasons. To augmenst your global git configs with this
+# config, for the current repository only, execute the command:
+# "git config --local include.path ../.gitconfig" from the repository root.
+#
+# This config contains things that make it easier to work with the project and our development
+# flow, for example default pull mode is --rebase, to avoid creating and/or persisting
+# any unnecessary merges.
+#
+
+[core]
+    # Provide transparent auto conversion for newlines, regardless of platform.
+    autocrlf = input
+
+[status]
+    # Show all untracked file in the entire repository on git status
+    showUntrackedFiles = all
+
+[fetch]
+    # Do some non-intrusive cleanups of the local version of the world in .git, when fetching
+    prune = true
+
+[pull]
+    # Use "git pull --rebase" as default. Refresh against master early and often.
+    rebase = true
