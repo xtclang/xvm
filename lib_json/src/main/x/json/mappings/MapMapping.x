@@ -1,9 +1,9 @@
 /**
  * A mapping for an immutable Map object.
  */
-const MapMapping<Key, Value>
+const MapMapping<Key, Value, Serializable extends Map<Key, Value>>
         (Mapping<Key> keyMapping, Mapping<Value> valueMapping)
-        implements Mapping<Map<Key, Value>>
+        implements Mapping<Serializable>
     {
     /**
      * Construct the MapMapping.
@@ -23,23 +23,23 @@ const MapMapping<Key, Value>
         {
         Schema schema = in.schema;
 
-        Map<Key, Value> map;
+        Serializable map;
         if (schema.enableMetadata,
                 Doc typeName ?= in.peekMetadata(schema.typeKey),
                 typeName.is(String),
                 val typeMap     := schema.typeForName(typeName).is(Type<Map<Key, Value>>),
                 val constructor := typeMap.defaultConstructor())
             {
-            map = constructor();
+            map = constructor().as(Serializable);
             }
         else
             {
-            map = new ListMap();
+            map = new ListMap<Key, Value>().as(Serializable);
             }
 
         using (FieldInput mapInput = in.openObject())
             {
-            if (Key.is(Type<String>))
+            if (Key.DataType.is(Type<String>))
                 {
                 while (String name := mapInput.nextName())
                     {
@@ -83,18 +83,18 @@ const MapMapping<Key, Value>
 
         using (FieldOutput mapOutput = out.openObject())
             {
-            if (Key.is(Type<String>))
+            if (Key.DataType.is(Type<String>))
                 {
-                for ((Key key, Value value) : map.as(Map<Key, Value>))
+                for ((Key key, Value value) : map)
                     {
-                    mapOutput.addUsing(valueMapping, key, value);
+                    mapOutput.addUsing(valueMapping, key.as(String), value);
                     }
                 }
             else
                 {
                 using (ElementOutput entriesOutput = mapOutput.openArray("e"))
                     {
-                    for ((Key key, Value value) : map.as(Map<Key, Value>))
+                    for ((Key key, Value value) : map)
                         {
                         using (FieldOutput entryOutput = entriesOutput.openObject())
                             {
@@ -108,15 +108,17 @@ const MapMapping<Key, Value>
         }
 
     @Override
-    <SubType extends  Map<Key, Value>> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
+    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
         {
         if (SubType.Key != Key, SubType.Value != Value,
                 val narrowedKey   := schema.findMapping(SubType.Key),
                 val narrowedValue := schema.findMapping(SubType.Value),
                 &narrowedKey != &keyMapping, &narrowedValue != &valueMapping)
             {
-            return True, new MapMapping<SubType.Key, SubType.Value>(narrowedKey, narrowedValue)
-                    .as(Mapping<SubType>);
+            Type keyType   = SubType.Key;
+            Type valueType = SubType.Value;
+            return True, new @Narrowable MapMapping<keyType.DataType, valueType.DataType, SubType>
+                    (narrowedKey, narrowedValue).as(Mapping<SubType>);
             }
 
         return False;

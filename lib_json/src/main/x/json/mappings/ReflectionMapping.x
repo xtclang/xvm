@@ -133,7 +133,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     if (val keyMapping   := schema.findMapping(keyType),
                         val valueMapping := schema.findMapping(valueType))
                         {
-                        return True, new @Narrowable MapMapping<keyType.DataType, valueType.DataType>
+                        return True, new @Narrowable MapMapping<keyType.DataType, valueType.DataType, type.DataType>
                                 (keyMapping, valueMapping).as(Mapping<SubType>);
                         }
                     return False;

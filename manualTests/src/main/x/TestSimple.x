@@ -2,32 +2,63 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
-        {
-        val c1 = new Derived().createChild1();
-        console.print(&c1.actualType);
+    package json import json.xtclang.org;
 
-        val c2 = new Derived().createChild2();
-        console.print(&c2.actualType);
+    import ecstasy.io.CharArrayReader;
+
+    import json.Schema;
+    import json.ObjectInputStream;
+
+    typedef Int as Key;
+    typedef String as Value;
+
+    void run() {
+        Boolean[] bools = new Boolean[100];
+        bools[10] = True;
+        Schema schema = Schema.DEFAULT;
+
+//assert:debug;
+        Map<Key, Value> map = new ListMap();
+        testSer(schema, "map" , map);
+
+        // all these used to fail at run-time
+        testSer(schema, "mapL" , new ListMap<Key, Value>());
+        testSer(schema, "mapTL", new TestList(new ListMap<Key, Value>()));
+        testSer(schema, "mapTl", new TestMap(new ListMap<Key, Value>()));
+        testSer(schema, "mapTH", new TestHash(new HashMap<Key, Value>()));
+        testSer(schema, "mapTh", new TestMap(new HashMap<Key, Value>()));
+
+        // these are still failing
+//        testSer(schema, "mapLI", new ListMap<Key, Value>().freeze(True));
+//        testSer(schema, "mapH" , new HashMap<Key, Value>());
+//        testSer(schema, "mapHI", new HashMap<Key, Value>().freeze(True));
         }
 
-    service Base
-        {
-        class Child1{}
-
-        Child1 createChild1()
+    private <Ser> void testSer(Schema schema, String name, Ser val) {
+        try
             {
-            return new Child1();
-            }
+            StringBuffer buf = new StringBuffer();
+            schema.createObjectOutput(buf).write(val);
 
-        class Child2<Value>{}
+            String s = buf.toString();
+            console.print($"JSON {name} written out={s}");
 
-        Child2 createChild2()
-            {
-            return new Child2<String>(); // used to be compiled incorrectly
+            Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
+            console.print($"read {name} back in={&val2.actualType} {val2}");
             }
+        catch (Exception e) {
+            console.print($"*** {name} failed with {e}");
         }
-
-    service Derived
-            extends Base {}
     }
+
+    const TestList(ListMap<Key, Value> map);
+    const TestHash(HashMap<Key, Value> map);
+    const TestMap(Map<Key, Value> map)
+        {
+        @Override
+        String toString()
+            {
+            return $"{&map.actualType} {map}";
+            }
+        }
+}

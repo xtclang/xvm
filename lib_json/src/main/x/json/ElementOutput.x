@@ -78,7 +78,7 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     <Serializable> ElementOutput addObject(Serializable value)
         {
-        return addUsing(schema.ensureMapping(&value.actualType), value);
+        return addUsing(schema.ensureMapping(Serializable), value);
         }
 
     /**
