@@ -199,11 +199,14 @@ public class Token
         }
 
     /**
-     * Allow a token to be "peeled off" the front of this token, if possible.
+     * Allow a token to be "peeled off" the front of this token, if possible. This mutates this
+     * token, such that it is what remains after the returned token was peeled off.
      *
-     * @param id  the token to peel off of this token
+     * @param id      the token to peel off of this token
+     * @param source  the source from which this token was created, which is necessary in order to
+     *                calculate the exact position between any peeled-off token and this token
      *
-     * @return the new token
+     * @return the requested token that was peeled off of this token, if possible, otherwise null
      */
     public Token peel(Id id, Source source)
         {
