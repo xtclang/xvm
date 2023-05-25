@@ -1359,9 +1359,11 @@ public abstract class AstNode
 
                     log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
                             String.valueOf(i+1), method.getParam(i).getName(),
-                            method.getIdentityConstant().getValueString(),
-                            typeParam.getValueString(),
-                            typeExpr == null ? exprArg.toString() : typeExpr.getValueString());
+                            method.getIdentityConstant().getSignature().removeAutoNarrowing().getValueString(),
+                            typeParam.removeAutoNarrowing().getValueString(),
+                            typeExpr == null
+                                ? exprArg.toString()
+                                : typeExpr.removeAutoNarrowing().getValueString());
                     }
 
                 if (typeParam != null)

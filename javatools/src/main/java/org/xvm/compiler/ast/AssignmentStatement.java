@@ -656,15 +656,19 @@ public class AssignmentStatement
 
                     exprRightNew = exprRight.validateMulti(ctxRValue, atypeReq, errs);
 
-                    if (fValid)
+                    if (exprRightNew == null)
                         {
-                        merge(ctxRValue, ctxLValue);
+                        fValid = false;
                         }
-
-                    // conditional expressions can update the LVal type from the RVal type, but the
-                    // initial boolean is discarded
-                    if (exprRightNew != null)
+                    else
                         {
+                        // conditional expressions can update the LVal type from the RVal type,
+                        // but the initial boolean is discarded
+                        if (fValid)
+                            {
+                            merge(ctxRValue, ctxLValue);
+                            }
+
                         exprLeft.markAssignment(ctxRValue,
                             fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
 

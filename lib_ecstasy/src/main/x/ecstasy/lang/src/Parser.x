@@ -1091,9 +1091,6 @@ class Parser
             return True, token;
             }
 
-        // TODO GG - small error (pass parser instead of lexer) results in hard to read errors ...
-        //           maybe report one error, then make a guess at which method was trying to be called?
-        // if ((Token left, Token right) := token.peel(id, this))
         if ((Token left, Token right) := token.peel(id, lexer))
             {
             matchedToken = left;
