@@ -71,15 +71,17 @@ module TestNesting
                 }
             }
 
-        mixin M
+        mixin M into A
             {
+            @Override
             void foo()
                 {
                 console.print("PB.M.foo() this=" + this);
+                super();
                 }
             }
 
-        // TODO @M
+        @M
         class C extends A implements I   // C is for "child"
             {
             @Override
