@@ -22,9 +22,9 @@ service RTAlgorithms
         Algorithm[] algorithms = new Array<Algorithm>
                 (hashers.size + encryptions.size + signers.size + keyGenerators.size);
 
-        for ((String name, Int hashSize) : hashers)
+        for ((String name, String hasherName, Int hashSize) : hashers)
             {
-            (_, Object implementation) = getAlgorithmInfo(name, Hasher);
+            (_, Object implementation) = getAlgorithmInfo(hasherName, Hasher);
 
             Algorithm alg = new RTHasher(name, hashSize, implementation);
             algorithms.add(&alg.maskAs(Algorithm));
@@ -68,14 +68,20 @@ service RTAlgorithms
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * Supported hasher algorithms (name, hash size).
+     * Supported hasher algorithms (digest name, hash name, hash size).
+     *
+     * - The "digest name" is the name of the digest algorithm as defined by the
+     *   [RFC 7616 HTTP: Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616).
+     * - The "hash name" is the name of the hash algorithm as defined by the
+     *   [NIST PUB 180-4: Secure Hash Standard](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf)
      */
-    static Tuple<String, Int>[] hashers =
+    static Tuple<String, String, Int>[] hashers =
         [
-        ("MD5"    , 128 >> 3),
-        ("SHA-1"  , 160 >> 3),
-        ("SHA-256", 256 >> 3),
-        ("SHA-512", 512 >> 3),
+        ("MD5"        , "MD5"        , 128 >> 3),
+        ("SHA-1"      , "SHA-1"      , 160 >> 3),
+        ("SHA-256"    , "SHA-256"    , 256 >> 3),
+        ("SHA-512"    , "SHA-512"    , 512 >> 3),
+        ("SHA-512-256", "SHA-512/256", 512 >> 3),
         ];
 
     /**

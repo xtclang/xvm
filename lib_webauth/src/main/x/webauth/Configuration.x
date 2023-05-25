@@ -17,7 +17,7 @@ const Configuration
         Map<String,String[]> initRoleUsers = [],
         Boolean              useMD5        = True,
         Boolean              useSHA256     = True,
-        Boolean              useSHA512_256 = False, // TODO GG: add the algorithm
+        Boolean              useSHA512_256 = True,
         // TODO other config for 2FA, email verification, password requirements, etc.
         Boolean              configured    = True,
         )
