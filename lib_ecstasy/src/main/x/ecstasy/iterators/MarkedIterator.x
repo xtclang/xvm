@@ -90,7 +90,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
         {
         assert !closed;
         ++markCount;
-        return buffer.size;
+        return position;
         }
 
     @Override
