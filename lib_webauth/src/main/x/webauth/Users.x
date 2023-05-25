@@ -71,9 +71,9 @@ mixin Users
                 );
 
         HashInfo pwdHashes  = new HashInfo(creation,
-                md5?       .sign(userBytes).bytes : [],
-                sha256?    .sign(userBytes).bytes : [],
-                sha512_256?.sign(userBytes).bytes : [],
+                md5?       .sign(pwdBytes).bytes : [],
+                sha256?    .sign(pwdBytes).bytes : [],
+                sha512_256?.sign(pwdBytes).bytes : [],
                 );
 
         // look up the role names and convert them to role IDs
