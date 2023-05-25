@@ -37,7 +37,8 @@ mixin Users
             return False;
             }
 
-        // hash the user and passord data
+        // hash the user and password data; this is performing the same work as Realm.userHash()
+        // and Realm.passwordHash() for each of the (up to) three supported algorithms
         Hash userBytes  = $"{userName}:{realm.name}".utf8();
         Hash pwdBytes   = $"{userName}:{realm.name}:{password}".utf8();
 
