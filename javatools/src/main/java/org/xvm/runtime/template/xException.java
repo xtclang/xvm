@@ -151,8 +151,9 @@ public class xException
 
     public static ExceptionHandle mutableObject(Frame frame, TypeConstant type)
         {
-        return illegalArgument(frame, "Mutable object of type \" "
-                + type.removeAccess().getValueString()
+        type = type.removeAccess().
+                    resolveGenerics(frame.poolContext(), frame.getGenericsResolver(true));
+        return illegalArgument(frame, "Mutable object of type \" " + type.getValueString()
                 + "\" cannot be used for a service call");
         }
 
