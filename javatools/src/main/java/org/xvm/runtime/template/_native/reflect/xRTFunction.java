@@ -233,7 +233,7 @@ public class xRTFunction
                     ixPrev = ix;
                     if (fAdjust)
                         {
-                        ix--;
+                        ix -= i;
                         }
                     hFuncR = hFuncR.bind(frameCaller, ix, ahValue[i]);
                     }

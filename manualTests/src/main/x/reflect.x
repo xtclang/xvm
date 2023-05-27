@@ -375,23 +375,33 @@ module TestReflection
 
         console.print("\n** testBind");
 
-        function void (Int, String) log =
-            (i, v) -> console.print($"[{i}] {v}");
+        function void (Int, String, Boolean) log =
+            (i, v, f) -> console.print($"[{i}] {v} {f}");
 
-        Parameter<Int>    param0 = log.params[0].as(Parameter<Int>);
-        Parameter<String> param1 = log.params[1].as(Parameter<String>);
+        Parameter<Int>     param0 = log.params[0].as(Parameter<Int>);
+        Parameter<String>  param1 = log.params[1].as(Parameter<String>);
+        Parameter<Boolean> param2 = log.params[2].as(Parameter<Boolean>);
 
         // single bind
-        function void (Int) hello = log.bind(param1, "hello").as(function void (Int));
-        hello(0);
+        function void (Int, Boolean) hello = log.bind(param1, "hello").as(function void (Int, Boolean));
+        hello(0, True);
 
-        // multi bind
+        // multi partial bind
+        Map<Parameter, Object> paramsPartial = new ListMap();
+        paramsPartial.put(param0, 1);
+        paramsPartial.put(param1, "world");
+
+        function void (Boolean) fnPartial = log.bind(paramsPartial).as(function void (Boolean));
+        fnPartial(True);
+
+        // multi full bind
         Map<Parameter, Object> params = new ListMap();
         params.put(param0, 1);
         params.put(param1, "world");
+        params.put(param2, True);
 
-        function void () world = log.bind(params);
-        world();
+        function void () fn = log.bind(params);
+        fn();
         }
 
     void testChildTypes()
