@@ -61,8 +61,7 @@ class BindFuncAST extends AST {
       // Check for other exposed names being effectively final
       MethodPart lam = (MethodPart)((MethodCon)con._tcon).part();
       for( int i=1; i<_kids.length; i++ )
-        if( _kids[i] instanceof RegAST reg )
-          make_effectively_final(reg,lam);
+        make_effectively_final((RegAST)_kids[i],lam);
       return this;
     }
     
@@ -119,9 +118,6 @@ class BindFuncAST extends AST {
     if( ast instanceof DefRegAST def && def._reg==reg._reg ) {
       if( def._par instanceof ForRangeAST )
         return def._type instanceof XBase;
-      // TODO: Not correct, need some kind of final-field indication
-      if( def._par instanceof BlockAST && def._init!=null )
-        return false;
       // Not a parent ForRange, need to look more
       throw XEC.TODO();
     }
@@ -130,9 +126,8 @@ class BindFuncAST extends AST {
   
   @Override public SB jcode( SB sb ) {
     sb.p("( ");
-    if( _args != null )
-      for( String arg : _args )
-        sb.p(arg).p(",");
+    for( String arg : _args )
+      sb.p(arg).p(",");
     sb.unchar(1).p(") -> ");
     AST body = _kids[0];
     body.jcode(sb);

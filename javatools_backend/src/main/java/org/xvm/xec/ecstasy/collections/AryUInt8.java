@@ -2,9 +2,13 @@ package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.XEC;
 import org.xvm.util.SB;
+import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.xec.ecstasy.numbers.UInt8;
+import org.xvm.xec.ecstasy.text.Stringable;
 
 import static org.xvm.xec.ecstasy.collections.Array.Mutability.*;
 
@@ -22,9 +26,6 @@ public class AryUInt8 extends Array<UInt8> {
   public  AryUInt8(double x, byte... es) { this(Constant, es); }
   public  AryUInt8(Mutability mut, AryUInt8 as) { this(mut,as._es.clone()); }
   public  AryUInt8(AryUInt8 as) { this(as._mut,as._es.clone()); }
-
-  public static AryUInt8 construct() { return new AryUInt8(); }
-  public static AryUInt8 construct(Mutability mut, AryUInt8 as) { return new AryUInt8(mut,as); }
   
   // Fetch element; cannot specify an "unsigned" get at the java level
   public int at8(long idx) {
@@ -53,7 +54,9 @@ public class AryUInt8 extends Array<UInt8> {
   }
 
   /** Slice */
-  public AryUInt8 slice( AbstractRange r ) { throw XEC.TODO(); }
+  public AryUInt8 at( Range r ) {
+    throw XEC.TODO();
+  }
 
   public AryUInt8 addAll( AryUInt8 ls ) { throw XEC.TODO(); }
 
@@ -99,15 +102,10 @@ public class AryUInt8 extends Array<UInt8> {
   /** @return an iterator */
   @Override public Iterator<UInt8> iterator() { throw XEC.TODO(); }
 
-  // --- Freezable
-  @Override public AryUInt8 freeze(boolean inPlace) {
-    if( _mut==Mutability.Constant ) return this;
-    if( !inPlace ) return construct(Mutability.Constant,this);
-    _mut = Mutability.Constant;
-    return this;
-  }
-
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len*5; }
+  @Override public Appenderchar appendTo(Appenderchar ary) {
+    throw XEC.TODO();
+  }
 
 }

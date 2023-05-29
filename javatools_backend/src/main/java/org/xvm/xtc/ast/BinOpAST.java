@@ -1,12 +1,9 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
-import org.xvm.util.SB;
 import org.xvm.xtc.*;
+import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.BinOp;
-import org.xvm.xtc.cons.NumCon;
-import org.xvm.xtc.XCons;
-
 import java.util.HashMap;
 
 class BinOpAST extends AST {
@@ -34,60 +31,19 @@ class BinOpAST extends AST {
     _op1 = op1;
     _type = type;
   }
-  
-  private NumCon isTuple() {
-    // Tuple at fixed field offset is a NumCon.
-    // Something else (PropCon?) means get the collections' element type
-    return _kids[1] instanceof ConAST con && con._tcon instanceof NumCon num ? num : null;
-  }
 
   @Override XType _type() {
-    if( _op0.equals(".at(") ) {
-      // Tuple or Array
-      XType tk = _kids[0]._type;
-      if( tk.isAry()  )
-        return tk.e();
-      // Tuple at fixed field offset is a NumCon.
-      // Something else (PropCon?) means get the collections' element type
-      NumCon num = isTuple();
-      int idx = num==null ? 0 : (int)num._x;
-      return tk._xts[idx];
-    }
+    if( _op0.equals(".at(") )
+      return ((XClz)_kids[0]._type).e();
     return _type;
   }
 
   @Override AST prewrite() {
-    // Java primitive fetch instead of boxed fetch.
-    // ary_expr ".at(" idx ")"
-    // ary_expr.at8(idx) -- and the expression is primitive, not boxed
     if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG && !(_par instanceof InvokeAST && _par._kids[0]==this) ) {
+      _op0 = ".at8(";           // Use primitive 'at' instead of generic
       _type = _type.unbox();
-      if( _kids[0]._type == XCons.STRING ) {
-        _op0 = ".charAt((int)";
-      } else if( _kids[0]._type.isAry() ) {
-        _op0 = ".at8(";         // Use primitive 'at' instead of generic
-      } else if( isTuple()==null ) {
-        // Use generic at for generic collection
-        _op0 = ".getElement(";
-      } else {
-        // Tuple at fixed field offset
-        _op0 = "._f";           // Field load at fixed offset
-        _op1 = "";
-        castInt(1);             // Cast RHS constant to an int
-      }
       return this;
     }
-
-    if( _kids[0]._type == XCons.JINT128 ||_kids[0]._type == XCons.JUINT128 ) {
-      String op = switch( _op0 ) {
-      case "==" -> "eq";
-      case ">=" -> "ge";
-      default -> throw XEC.TODO();
-      };
-      return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
-    }
-
-    
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return do_range(_kids,XCons.RANGEII);
     if( _op0.equals("..<") ) return do_range(_kids,XCons.RANGEIE);
@@ -171,46 +127,41 @@ class BinOpAST extends AST {
 
   // Java precedence table
   private static final HashMap<String,Integer> PRECS = new HashMap<>(){{
-      put("._f",17); // Primitive tuple field loads
+      put("[" , 2);
       
-      put("[" ,16);
+      put("*" , 3);
+      put("/" , 3);
+      put("%" , 3);
+      
+      put("+" , 4);
+      put("-" , 4);
 
-      // java unary ops go here
-      
-      put("*" ,12);
-      put("/" ,12);
-      put("%" ,12);
-      
-      put("+" ,11);
-      put("-" ,11);
+      put("<<", 5);
+      put(">>", 5);
+      put(">>>", 5);
 
-      put("<<",10);
-      put(">>",10);
-      put(">>>",10);
+      put("<" , 6);
+      put(">" , 6);
+      put("<=", 6);
+      put(">=", 6);
+      
+      put("==", 7);
+      put("!=", 7);
+      
+      put("&" , 8);
+      put("^" , 9);
+      put("|" ,10);
 
-      put("<" , 9);
-      put(">" , 9);
-      put("<=", 9);
-      put(">=", 9);
+      put("&&" ,11);
+      put("||" ,12);
       
-      put("==", 8);
-      put("!=", 8);
-      
-      put("&" , 7);
-      put("^" , 6);
-      put("|" , 5);
-
-      put("&&" ,4);
-      put("||" ,3);
-      
-      put("?:" ,2);
-      
+      put("?:",13);
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);
     Integer ii1 = PRECS.get(ex);
     if( ii0==null ) { System.err.println("Missing \""+op+"\" from BinOpAST"); return true; }
     if( ii1==null ) { System.err.println("Missing \""+ex+"\" from BinOpAST"); return true; }
-    return ii0 > ii1;
+    return ii0 < ii1;
   }
 }

@@ -283,9 +283,6 @@ abstract public class Part {
   public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT   = 13;
   public static final int AUXILIARY_BIT    = 0x4000, AUXILIARY_SHIFT  = 14;
 
-  public boolean isStatic   () { return (_nFlags &    STATIC_BIT) != 0; }
   public boolean isSynthetic() { return (_nFlags & SYNTHETIC_BIT) != 0; }
-  public boolean isAuxiliary() { return (_nFlags & AUXILIARY_BIT) != 0; }
-  public boolean isPublic   () { return (_nFlags &   ACCESS_MASK) == ACCESS_PUBLIC; }
 
 }

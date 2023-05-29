@@ -15,8 +15,8 @@ class Basic {
         mutEmpty();
         mutFix();
         mutEmptyMutable();
-        mutConstInts();
-        mutDefaultInts();
+        mutImteralInts();
+        mutDefaultFixed();
         mutFixedInts();
         mutFixedStrings();
         mutFixedChars();
@@ -207,6 +207,7 @@ class Basic {
         String[] slice = array[1 ..< 4];
         assert slice[2] == "four";
     }
+
 
     // -----------------------------
 

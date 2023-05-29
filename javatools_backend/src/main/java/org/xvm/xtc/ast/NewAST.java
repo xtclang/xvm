@@ -1,34 +1,25 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.xtc.*;
-import org.xvm.xtc.cons.*;
+import org.xvm.xtc.cons.Const;
+import org.xvm.xtc.cons.ParamTCon;
+import org.xvm.xtc.cons.TermTCon;
 import org.xvm.util.SB;
-import org.xvm.util.S;
-
-import java.util.Arrays;
 
 class NewAST extends AST {
-  final boolean _isChild;
-  static NewAST make( ClzBuilder X, boolean isChild ) {
-    AST outer = isChild ? ast_term(X) : null;
-    Const type = X.con();
-    X.con();                    //  MethodCon
-    AST[] kids = X.kids();
-    if( isChild ) {
-      kids = Arrays.copyOf(kids,kids.length+1);
-      kids[kids.length-1] = outer;
-    }
-    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,isChild);
+  static NewAST make( ClzBuilder X ) {
+    return new NewAST(X, X.con(),X.con(),X.kids());
   }
-  // For internal constructors like auto-boxing
+  private NewAST( ClzBuilder X, Const type, Const meth, AST[] kids ) {
+    this(kids,(XClz)XType.xtype(type,true), X, type);
+  }
   NewAST( AST[] kids, XClz xt ) {
-    this(kids,xt,null,null,false);
+    this(kids,xt,null,null);
   }
-  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, boolean isChild ) {
+  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type  ) {
     super(kids_plus_clz(kids,xt,X,type));
-    _isChild = isChild;
     _type = xt;
-    if( xt.needs_import(true) )
+    if( xt.needs_import() )
       ClzBuilder.add_import(xt);
   }
 
@@ -38,17 +29,17 @@ class NewAST extends AST {
   // "new RegAST".
   private static AST[] kids_plus_clz(AST[] kids, XClz xt, ClzBuilder X, Const type) {
     // See if there are any type parameters needing adding
-    if( xt.noTypeParms(null,false) )
+    int nTypeParms = xt.nTypeParms();
+    if( nTypeParms == 0 || !xt._jparms )
       return kids;
 
     // Type parameters can be constants or can be function arguments passed in.
     // Function argument names are hidden in the ParamTCon.
-    ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((VirtDepTCon)type)._par;
-    int N = xt._xts.length;
-    assert ptc._parms.length==N;
-    AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+N];
-    if( kids!=null ) System.arraycopy(kids,0,kids2,N,kids.length);
-    for( int i=0; i<N; i++ ) {
+    ParamTCon ptc = (ParamTCon)type;
+    assert ptc._parms.length==nTypeParms;
+    AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+nTypeParms];
+    if( kids!=null ) System.arraycopy(kids,0,kids2,nTypeParms,kids.length);
+    for( int i=0; i<nTypeParms; i++ ) {
       if( ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
         // Type parameter comes from the method arguments.
         // Do a name lookup.
@@ -82,7 +73,7 @@ class NewAST extends AST {
   }
   
   
-  @Override void jpre ( SB sb ) { sb.p(((XClz)_type).clz_bare()).p(".construct("); }
+  @Override void jpre ( SB sb ) { _type.clz(sb.p("new ")).p("("); }
   @Override void jmid ( SB sb, int i ) { sb.p(", "); }
   @Override void jpost( SB sb ) {    
     if( _kids!=null )  sb.unchar(2);

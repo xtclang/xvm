@@ -20,8 +20,8 @@ class OrderAST extends AST {
         con._con.endsWith("compare") &&
         con._type instanceof XFun fun &&
         fun.nargs()==3 &&
-        (XCons.JLONG.isa(fun.arg(0)) ||
-         XCons.JCHAR.isa(fun.arg(0))) )
+        XCons.JLONG.isa(fun.arg(1)) &&
+        XCons.JLONG.isa(fun.arg(2)) ) 
       return new BinOpAST(_op,"",XCons.BOOL,call._kids[2],call._kids[3]);
     
     // Order < or > converts an Ordered to a Boolean

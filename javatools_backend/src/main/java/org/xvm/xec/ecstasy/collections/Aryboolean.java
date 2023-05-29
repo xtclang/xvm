@@ -21,7 +21,7 @@ public class Aryboolean extends Array<Boolean> {
   public boolean[] _es;
   private Aryboolean(Mutability mut, boolean[] es) { super(Boolean.GOLD,mut,es.length); _es = es; }
   public  Aryboolean(                       ) { this(Mutable , new boolean[ 0 ]); }
-  public  Aryboolean(long len               ) { this(Fixed   , new boolean[(int)len]); }
+  public  Aryboolean(int len                ) { this(Fixed   , new boolean[len]); }
   public  Aryboolean(double x, boolean... es) { this(Constant, es); }
   public  Aryboolean(Mutability mut, Aryboolean as) { this(mut,as._es.clone()); }
   public  Aryboolean(Aryboolean as) { this(as._mut,as); }
@@ -33,9 +33,6 @@ public class Aryboolean extends Array<Boolean> {
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.apply(i);
   }
-
-  public static Aryboolean construct(Mutability mut, Aryboolean as) { return new Aryboolean(mut,as); }
-  public static Aryboolean construct(long len) { return new Aryboolean(len); }
   
   // Fetch element
   public boolean at8(long idx) {
@@ -57,26 +54,23 @@ public class Aryboolean extends Array<Boolean> {
   // Add an element, doubling base array as needed
   @Override public Aryboolean add( Boolean c ) { return add(c==Boolean.TRUE); }
 
-  public void set(long idx, boolean e) {
+  public void setElement(long idx, boolean e) {
     if( !(0 <= idx && idx < _len) )
       throw new ArrayIndexOutOfBoundsException( idx+" >= "+_len );
     _es[(int)idx] = e;
   }
 
-  public void setElement(long idx, boolean e) { set(idx,e); }
-
   /** Slice */
-  public Aryboolean slice( AbstractRange r ) { throw XEC.TODO(); }
+  public Aryboolean at( Range r ) {
+    throw XEC.TODO();
+  }
   
   public Aryboolean delete(long idx) {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);
     return this;
   }
 
-  @Override public Aryboolean toArray(Mutability mut, boolean inPlace) {
-    return (Aryboolean)super.toArray(mut,inPlace);
-  }
-
+  private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p('[');
     for( int i=0; i<_len; i++ )
@@ -120,16 +114,9 @@ public class Aryboolean extends Array<Boolean> {
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
 
-
-  // --- Freezable
-  @Override public Aryboolean freeze(boolean inPlace) {
-    if( _mut==Mutability.Constant ) return this;
-    if( !inPlace ) return construct(Mutability.Constant,this);
-    _mut = Mutability.Constant;
-    return this;
-  }
-
-  
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
+  @Override public Appenderchar appendTo(Appenderchar ary) {
+    throw XEC.TODO();
+  }
 }

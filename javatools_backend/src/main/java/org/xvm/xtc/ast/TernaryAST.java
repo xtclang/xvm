@@ -11,8 +11,10 @@ class TernaryAST extends AST {
     XType s1 = _kids[1]._type;
     XType s2 = _kids[2]._type;
     if( s1==s2 ) return s1;
-    // Allow equals modulo boxing and nullable
-    assert s1.box().nullable()==s2.box().nullable();
+    // Allow equals modulo boxing
+    s1 = s1.box();
+    s2 = s2.box();
+    assert s1==s2;
     return s1;
   }
   

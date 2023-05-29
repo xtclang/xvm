@@ -3,8 +3,9 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Range;
 import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xrun.XRuntime;
 
@@ -27,17 +28,13 @@ public class Arylong extends Array<Int64> {
   public  Arylong(double x, long... es) { this(Constant, es); }
   public  Arylong(Mutability mut, Arylong as) { this(mut,as._es.clone()); }
   public  Arylong(Arylong as) { this(as._mut,as); }
-
+  
   public Arylong( long len, LongUnaryOperator fcn ) {
     this((int)len);
     if( _len != len ) throw XEC.TODO(); // Too Big
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.applyAsLong(i);
   }
-  public static Arylong construct(Mutability mut, Arylong as) { return new Arylong(mut,as); }
-  public static Arylong construct() { return new Arylong(); }
-  public static Arylong construct( long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
-  public static Arylong construct(long len) { return new Arylong((int)len); }
   
   
   // Fetch element
@@ -63,7 +60,7 @@ public class Arylong extends Array<Int64> {
   }
 
   /** Slice */
-  public Arylong slice( AbstractRange r ) {
+  public Arylong at( Range r ) {
     throw XEC.TODO();
   }
 
@@ -83,8 +80,8 @@ public class Arylong extends Array<Int64> {
     int idx = indexOf(e);
     return idx== -1 ? this : deleteUnordered(idx);
   }
-  public Arylong deleteUnordered(long idx) {
-    _es[(int)idx] = _es[--_len];
+  public Arylong deleteUnordered(int idx) {
+    _es[idx] = _es[--_len];
     return this;
   }
   
@@ -105,16 +102,8 @@ public class Arylong extends Array<Int64> {
     // --- Comparable
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
-
-  // --- Freezable
-  @Override public Arylong freeze(boolean inPlace) {
-    if( _mut==Constant ) return this;
-    if( !inPlace ) return construct(Constant,this);
-    _mut = Constant;
-    return this;
-  }
-
   
+  private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p("[  ");
     for( int i=0; i<_len; i++ )
@@ -144,4 +133,7 @@ public class Arylong extends Array<Int64> {
     return (int)(sum ^ (sum>>32));
   }
 
+  @Override public Appenderchar appendTo(Appenderchar ary) {
+    throw XEC.TODO();
+  }
 }

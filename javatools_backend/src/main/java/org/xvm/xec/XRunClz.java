@@ -1,6 +1,6 @@
 package org.xvm.xec;
 
-import org.xvm.xrun.Never;
+import org.xvm.xrun.*;
 import org.xvm.xec.ecstasy.collections.AryString;
 
 // Some kind of base class for a Java class that implements an XTC Module

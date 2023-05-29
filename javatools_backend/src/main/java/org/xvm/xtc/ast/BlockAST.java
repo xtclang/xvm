@@ -3,8 +3,6 @@ package org.xvm.xtc.ast;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 import org.xvm.util.Ary;
-
-import java.util.Arrays;
 import java.util.HashMap;
 
 public class BlockAST extends AST {
@@ -20,14 +18,6 @@ public class BlockAST extends AST {
   
   public BlockAST( AST... kids ) { super(kids); }
 
-  public BlockAST add(AST kid) {
-    BlockAST blk = new BlockAST(Arrays.copyOf(_kids,_kids.length+1));
-    blk._tmps  = _tmps  ;
-    blk._finals= _finals;
-    blk._kids[_kids.length] = kid;
-    return blk;
-  }
-  
   @Override XType _type() { return XCons.VOID; }
   
   HashMap<XType,Ary<String>> _tmps; // Temp names by type
@@ -41,7 +31,6 @@ public class BlockAST extends AST {
     return tmps.push(name);
   }
 
-  // Final versions of some register, to pass into lambdas.  Light name mangling.
   Ary<RegAST> _finals;
   String add_final(RegAST reg) {
     if( _finals==null ) _finals = new Ary<>(RegAST.class);

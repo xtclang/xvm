@@ -9,31 +9,32 @@ import java.math.BigInteger;
 /**
   Exploring XEC Constants
  */
-public class IntCon extends NumCon {
+public class IntCon extends TCon {
   public  final Format _f;
+  public  final long _x;          // Only valid if _big is null
   public  final BigInteger _big;  // If null, _x holds the value.  If not-null _x is 0.
   private static final BigInteger LONG_MIN = BigInteger.valueOf(Long.MIN_VALUE);
   private static final BigInteger LONG_MAX = BigInteger.valueOf(Long.MAX_VALUE);
+  
+  public IntCon( CPool X, Const.Format f ) {
+    _f = f;
 
-  private static BigInteger _tmp;
-  private static long parse( CPool X, Const.Format f ) {    
     int z = X.isize();          // Read the size; drop extra bits beyond size
-    long x;
     if( z == -1 ) {             // Size is Huge
-      x = 0;
-      _tmp = X.bigint(X.i32()); // Extra size read before BigInteger
+      _x = 0;
+      _big = X.bigint(X.i32()); // Extra size read before BigInteger
     } else if( z <= 9 ) {       // Size is Tiny to Large
       X.undo();                 // Push extra bits back
-      x = X.pack64();          // Do a normal packed read
-      _tmp = null;      
+      _x = X.pack64();          // Do a normal packed read
+      _big = null;      
     } else {                    // Size is modest Huge
       BigInteger big =  X.bigint(z-1); // Already read size, just do BigInteger
       if( LONG_MIN.compareTo(big) <= 0 && big.compareTo(LONG_MAX) <= 0 ) {
-        x = big.longValueExact();
-        _tmp = null;
+        _x = big.longValueExact();
+        _big = null;
       } else {
-        x = 0;
-        _tmp = big;
+        _x = 0;
+        _big = big;
       }
     }
 
@@ -53,29 +54,22 @@ public class IntCon extends NumCon {
     };
 
     // Sanity check size
-    if( _tmp==null ) {
+    if( _big==null ) {
       // Already fits in a long.  Sizes >= 8 will always work.
       // Sizes < 8 need a range check.
       if( c < 8 ) {
         long rng = 1L<<(c<<3);
-        if(  unsigned && x < 0 ) throw new IllegalArgumentException("illegal unsigned value: " + x);
-        if(  unsigned && x >= rng ) throw bad(c,x);
-        if( !unsigned && !(-(rng>>1) <= x && x < (rng>>1)) )
-          throw bad(c,x);
+        if(  unsigned && _x < 0 ) throw new IllegalArgumentException("illegal unsigned value: " + _x);
+        if(  unsigned && _x >= rng ) throw bad(c);
+        if( !unsigned && !(-(rng>>1) <= _x && _x < (rng>>1)) )
+          throw bad(c);
       }
     } else {
-      if(  unsigned && ((_tmp.bitLength()+7)>>3) > c ) throw bad(c,x);
-      if( !unsigned && (_tmp.bitLength()>>3) + 1 > c ) throw bad(c,x);
+      if(  unsigned && ((_big.bitLength()+7)>>3) > c ) throw bad(c);
+      if( !unsigned && (_big.bitLength()>>3) + 1 > c ) throw bad(c);
     }
-    return x;
   }
-  
-  public IntCon( CPool X, Const.Format f ) {
-    super(parse(X,f));
-    _f = f;
-    _big = _tmp;
-  }
-  private static IllegalArgumentException bad(int c, long x) {
-    return new IllegalArgumentException("value exceeds " + c + " bytes: " + (_tmp==null ? ""+x : _tmp.toString()));
+  private IllegalArgumentException bad(int c) {
+    return new IllegalArgumentException("value exceeds " + c + " bytes: " + (_big==null ? ""+_x : _big.toString()));
   }
 }

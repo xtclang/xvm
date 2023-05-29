@@ -17,6 +17,8 @@ class NarrowAST extends AST {
   
   private NarrowAST( AST[] kids, Const type ) {
     super(kids);
+    _type = XClz.XXTC;
+    if( type instanceof AccessTCon ) return;
     XType xt = XType.xtype(type,false);
     _type = xt.zero() ? xt.box() : xt;
   }

@@ -1,7 +1,6 @@
 package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.util.SB;
-import org.xvm.util.S;
 import org.xvm.xec.XTC;
 import org.xvm.xtc.*;
 
@@ -36,8 +35,8 @@ public interface Hashable extends org.xvm.xec.ecstasy.Comparable {
     sb.ip(    "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && prop.isField() ) {
-        any = true;
+      // TODO: Probably static not synthetic
+      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (p._nFlags & Part.STATIC_BIT)==0 && (any=true) ) {
         sb.p("x.").p(prop._name);
         XType xt = XType.xtype(prop._con,false);
         if( !xt.zero() )        // Numbers as themselves for hash

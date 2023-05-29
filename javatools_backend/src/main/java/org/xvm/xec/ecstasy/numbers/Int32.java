@@ -29,7 +29,7 @@ public class Int32 extends IntNumber {
   public final int _i;
   
   public Int32(String s) { this(Integer.valueOf(s)); }
-  public Int32(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
+  public Int32(org.xvm.xec.ecstasy.text.String s) { this(s._s); }
   public Int32( long i ) { _i = (int)i; if( _i != i ) throw XEC.TODO(); }
 
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
@@ -47,4 +47,7 @@ public class Int32 extends IntNumber {
 
   @Override public final String toString() { return ""+_i; }
   @Override public long estimateStringLength() { return (32 - Long.numberOfLeadingZeros(_i)); }
+  @Override public final Appenderchar appendTo(Appenderchar buf) {
+    return buf.appendTo(toString());
+  }
 }

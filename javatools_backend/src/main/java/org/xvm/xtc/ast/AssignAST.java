@@ -6,8 +6,6 @@ import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.AsnOp;
 import org.xvm.xtc.cons.MethodCon;
 
-import java.util.Arrays;
-
 class AssignAST extends AST {
   final AsnOp _op;
   final MethodCon _meth;
@@ -18,21 +16,10 @@ class AssignAST extends AST {
     AsnOp op = asgn ? AsnOp.Asn : AsnOp.OPS[X.u31()];
     kids[1] = ast_term(X);
     MethodCon meth = (MethodCon)X.con();
-    // Expecting Assign { DefRegAST no_name reg#n, from RegAST named }
-    if( op == AsnOp.Deref ) {
-      int idx = ((DefRegAST)kids[0])._reg;
-      X._locals.set(idx, ((RegAST)kids[1])._name);
-    }
-    
     return new AssignAST(op, meth, kids);
   }
   AssignAST( AST... kids ) { this(AsnOp.Asn,null,kids); }
-  private AssignAST( AsnOp op, MethodCon meth, AST... kids ) {
-    super(kids);
-    _op=op;
-    _meth=meth;
-    _name = kids[0] instanceof MultiAST || kids[0] instanceof BinOpAST ? null : kids[0].name();
-  }
+  private AssignAST( AsnOp op, MethodCon meth, AST... kids ) { super(kids); _op=op; _meth=meth; _name = kids[0].name(); }
 
 
   @Override XType _type() { return _kids[0]._type; }
@@ -48,23 +35,6 @@ class AssignAST extends AST {
     // Add/push element to array
     if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz && clz.unbox()== clz )
       return new AssignAST(AsnOp.Asn,_meth,_kids[0],new InvokeAST(_meth.name(),clz,_kids));
-
-    // Multi-returns from tuples.
-    //   XTC: (Int a, String b, Double c) = retTuple();
-    //  Java: { ...tmps...;  tmp = retTuple; a = tmp._f0; b = tmp._f1; c = tmp._f2; }
-    if( _kids[0] instanceof MultiAST m ) {
-      BlockAST blk = enclosing_block();
-      MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
-      System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
-      String tmp = blk.add_tmp(_kids[1]._type);
-      mm._kids[0] = new AssignAST(new RegAST(-1,tmp,_kids[1]._type),_kids[1]);
-      for( int i=0; i<m._kids.length; i++ ) {
-        AST kid = m._kids[i];
-        mm._kids[i+1] = new AssignAST(new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type),new ConAST(tmp+"._f"+i));
-      }
-      return mm;
-    }
-
     
     // Autobox into _kids[0] from Base in _kids[1]
     autobox(1,_kids[0]._type);
@@ -109,13 +79,12 @@ class AssignAST extends AST {
         _kids[0] = new RegAST(0,tmp,type);
       }
     }
-
     return this;
   }
   
   @Override public SB jcode( SB sb ) {
-    return switch( _op ) {
-    case AsnIfNotFalse, AsnIfNotNull -> {
+    switch( _op ) {
+    case AsnIfNotFalse, AsnIfNotNull: {
       // var := (true,val)  or  var ?= not_null;
       if( _cond_asgn!=null ) sb.ip("if( ");
       // Expression result is the boolean conditional value,
@@ -129,35 +98,22 @@ class AssignAST extends AST {
       // $t(tmp = expr()) && XRuntime.GET$COND() && $t(var = tmp)
       if( _cond_asgn != null )
         sb.p(") ").p(_cond_asgn).p(" = ").p(name);
-      yield sb;
+      break;
     }
       
-    case AsnIfWasFalse -> asnIf(sb,"!",""      ); // if(!var      ) var = e0;      
-    case AsnIfWasTrue  -> asnIf(sb,"" ,""      ); // if( var      ) var = e0;      
-    case AsnIfWasNull  -> asnIf(sb,"" ,"==null"); // if( var==null) var = e0;
-    // Converts? a "normal" thing into a "Var" thing.
-    // Nothing, because loads & stores are all $get and $set now
-    case Deref -> sb;
-
-    case Asn -> _kids[0] instanceof RegAST reg && reg._type.isVar()
-      // Assigning a Var uses "$set()"
-      ? _kids[1].jcode(sb.ip(reg._name).p(".$set(")).p(")")
-      : asn(sb);
+    case AsnIfWasFalse: return asnIf(sb,"!",""      ); // if(!var      ) var = e0;      
+    case AsnIfWasTrue : return asnIf(sb,"" ,""      ); // if( var      ) var = e0;      
+    case AsnIfWasNull : return asnIf(sb,"" ,"==null"); // if( var==null) var = e0;
       
-    case AddAsn -> asn(sb);
-    case SubAsn -> asn(sb);
-    case MulAsn -> asn(sb);
-    case DivAsn -> asn(sb);
-    case  OrAsn -> asn(sb);
-    default -> throw XEC.TODO();
-    };
+    default:
+      _kids[0].jcode(sb);
+      sb.p(" ").p(_op.text).p(" ");
+      _kids[1].jcode(sb);
+      break;
+    }
+    return sb;
   }
 
-  private SB asn(SB sb) {
-    _kids[0].jcode(sb).p(" ").p(_op.text).p(" ");
-    return _kids[1].jcode(sb);
-  }
-  
   private SB asnIf(SB sb, String pre, String post) {
     sb.ip("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
     return _kids[1].jcode(sb);

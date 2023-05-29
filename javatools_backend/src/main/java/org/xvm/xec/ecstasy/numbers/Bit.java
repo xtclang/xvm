@@ -25,4 +25,7 @@ public class Bit extends Const implements Sequential, IntConvertible {
 
   @Override public final String toString() { return _b ? "1" : "0"; }
   @Override public long estimateStringLength() { return 1; }
+  @Override public final Appenderchar appendTo(Appenderchar buf) {
+    return buf.appendTo(toString());
+  }
 }

@@ -1,21 +1,12 @@
 package org.xvm.xec.ecstasy.text;
 
-import org.xvm.XEC;
 import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.collections.Arychar;
-
-import static org.xvm.xec.ecstasy.collections.Array.Mutability.*;
 
 public class StringBuffer extends Arychar
   implements Appenderchar, Stringable
 {
 
-  public StringBuffer( ) {}
-  public StringBuffer(long estSize ) { super(Mutable,0, new char[(int)estSize]); }
-
-  public static StringBuffer construct(long estSize) { return new StringBuffer(estSize); }
-  public static StringBuffer construct() { return new StringBuffer(8); }
-  
   public StringBuffer add(char v) {
     return (StringBuffer)super.add(v);
   }
@@ -31,7 +22,6 @@ public class StringBuffer extends Arychar
       add(s.charAt(i));
     return this;
   }
-  public StringBuffer append( java.lang.String s) { return appendTo(s); }
 
   public StringBuffer appendTo(long x) { return appendTo(Long.toString(x)); }
 

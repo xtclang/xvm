@@ -31,9 +31,8 @@ public class MMethodPart extends Part {
     MethodPart meth = switch( _name ) {
     case "equals"   -> build(XCons.BOOL,"gold",tcon,"lhs",tcon,"rhs",tcon);
     case "hashCode" -> build(XCons.LONG,"gold",tcon);
-    case "compare"  -> build(XCons.ORDERED,"gold",tcon,"lhs",tcon,"rhs",tcon);
+    case "compare"  -> build(XCons.ORDERED,"lhs",tcon,"rhs",tcon);
     case "appendTo" -> build(XCons.APPENDERCHAR,new Parameter[]{new Parameter("buf",XCons.APPENDERCHAR)});
-    case "estimateStringLength" -> build(XCons.LONG);
     default -> throw XEC.TODO();
     };
     putkid(_name,meth);
@@ -58,7 +57,6 @@ public class MMethodPart extends Part {
       add("compare");
       add("construct");
       add("equals");
-      add("estimateStringLength");
       add("get");
       add("hashCode");
       add("set");

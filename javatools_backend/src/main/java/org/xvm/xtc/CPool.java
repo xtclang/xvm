@@ -5,6 +5,7 @@ import org.xvm.xtc.cons.*;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+
 /**
   Exploring XEC Constant Pool
  */
@@ -133,35 +134,40 @@ public class CPool {
   static public boolean isDigit(char c) { return '0'<=c && c<='9'; }
   
   public long pack64() {
-    // See org.xvm.util.PackedInteger readLong
-
-    // small format: 1 byte value -64..127
-    // Check bit 6 for clear; bit 7 is used for the sign and can be set.
+    // See org.xvm.util.PackedInteger;
+      
+    // Tiny: For a value in the range -64..63 (7 bits), the value can be
+    // encoded in one byte.  The least significant 7 bits of the value are
+    // shifted left by 1 bit, and the 0x1 bit is set to 1.  When reading in a
+    // packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.      
     int b = i8();               // Signed byte read
-    if( (b&0xC0) != 0x80 )
-      return b;
-
-    // medium format: 13 bit int, combines 5 bits + next byte (and sign extend)
-    if( (b & 0x20) == 0 ) {
-      b = b << 27 >> 19 | u8();
-      return b;
+    // xxxxxxx1
+    if( (b&1)!=0 ) return b>>1; // Tiny
+    
+    // Small: For a value in the range -4096..4095 (13 bits), the value can
+    // be encoded in two bytes. The first byte contains the value 0x2 (010)
+    // in the least significant 3 bits, and bits 8-12 of the integer in bits
+    // 3-7; the second byte contains bits 0-7 of the integer.
+    if( (b&2)!=0 ) {   // xxxxx?10
+      int x = ((b & 0xFFFFFFF8) << 5) | u8();
+      return (b&4)==0    // xxxxx?10
+        ?  x             // xxxxx010
+        : ((long) x <<8) | u8(); // xxxxx110
     }
 
-
-    // large format: trail mode: next x+1 (2-32) bytes
-    int size = 1 + (b & 0x1F);
-    if( size == 1 ) {
-      // huge format: the actual byte length comes next in the stream
-      long nestedSize = pack64();
-      if( nestedSize < 1 )  throw new IllegalArgumentException("huge integer length (" + nestedSize + " bytes) below minimum (1 bytes)");
-      if( nestedSize > 8 )  throw new IllegalArgumentException("huge integer length (" + nestedSize + " bytes) exceeds maximum (8 bytes)");
-      size = (int) nestedSize;
+    // Large format: 1-8 trailing bytes
+    if( (b&0xFF) != 0b11111100 ) { 
+      int c = ((b&0xFC)>>>2)+2-1;  // Count of bytes; minus one for the self byte
+      if( c>8 ) throw new IllegalArgumentException("# trailing bytes="+c);
+      long x = i8();            // First byte signed
+      for( int i=1; i<c; i++ )
+        x = (x<<8) | u8();      // Remaining bytes unsigned
+      return x;
     }
 
-    long x = i8();            // First byte signed
-    for( int i=1; i<size; i++ )
-      x = (x<<8) | u8();      // Remaining bytes unsigned
-    return x;
+    // Huge format.  IntCon sizes this large use the isize/bigint API and so
+    // don't call here.  In other cases, it's an error.
+    throw XEC.TODO();
   }
 
   // Return the number of packed bytes in this integer, advances the cursor 1
@@ -169,20 +175,17 @@ public class CPool {
   // get the actual size.
   public int isize() {
     int b = i8();               // Signed byte read
-    if( (b & 0xC0) != 0x80 )
-      return 1;                 // Small format
+    // Tiny: xxxxxxx1
+    if( (b&1)!=0 ) return 1;    // Tiny; 1 byte
 
-    if( (b & 0x20) == 0 )
-      return 2;                 // medium format
+    // Small/Medium: xxxxx?10
+    if( (b&2)!=0 ) return (b&4)==0 ? 2 : 3;
 
-    int cb = 1 + (b & 0x1F);
-    if (cb > 1) 
-      return 1 + cb;           // large format
+    // Large format: 1-8 trailing bytes
+    if( (b&0xFF) != 0b11111100 ) return ((b&0xFC)>>>2)+2;
 
-    //// huge format
-    //long sizeAndValue = unpackInt(ab, of+1); // pack64?
-    //return 1 + (int) (sizeAndValue >>> 32) + (int) sizeAndValue;
-    throw XEC.TODO();
+    // Huge format
+    return -1;
   }
 
   // Read a BigInteger

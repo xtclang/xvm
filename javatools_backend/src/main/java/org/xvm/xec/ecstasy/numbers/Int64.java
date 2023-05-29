@@ -29,12 +29,9 @@ public class Int64 extends IntNumber {
   public final long _i;
   
   public Int64(String s) { this(Long.valueOf(s)); }
-  public Int64(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
+  public Int64(org.xvm.xec.ecstasy.text.String s) { this(s._s); }
   public Int64( long i ) { _i = i; }
 
-  public static Int64 construct( String s ) { return new Int64(s); }
-  public static Int64 construct( long i ) { return new Int64(i); }
-  
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
 
   // All the XTC types here are guaranteed to be Int64
@@ -49,4 +46,7 @@ public class Int64 extends IntNumber {
 
   @Override public final String toString() { return ""+_i; }
   @Override public long estimateStringLength() { return (64 - Long.numberOfLeadingZeros(_i)); }
+  @Override public final Appenderchar appendTo(Appenderchar buf) {
+    return buf.appendTo(toString());
+  }
 }

@@ -34,7 +34,7 @@ public class CallAST extends AST {
   @Override XType _type() {
     if( _rets==null ) return XCons.VOID;
     if( _rets.length == 1 ) return _rets[0];
-    return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_rets));
+    throw XEC.TODO();
   }
 
   @Override AST prewrite() {
@@ -46,6 +46,7 @@ public class CallAST extends AST {
           if( con._con.endsWith(".equals"  ) ) return new BinOpAST("==","",XCons.BOOL,_kids[2],_kids[3]);
           if( con._con.endsWith(".compare" ) ) return new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
           if( con._con.endsWith(".hashCode") ) return _kids[2];
+          throw XEC.TODO();
         }
         // Hard force "funky dispatch" to Java primitive
         if( clz.isa(XCons.JSTRING) ) {
@@ -84,7 +85,7 @@ public class CallAST extends AST {
         }
       }
     }
-
+    
     return this;
   }
 

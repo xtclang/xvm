@@ -180,7 +180,7 @@ public class MethodPart extends MMethodPart {
   }
   
   public boolean is_empty_function() {
-    return _code.length==2 && _code[0]==1 && _code[1]==76;
+    return _code.length==2 && _code[0]==3 && _code[1]==76;
   }
 
   // Methods returning a conditional have to consume the conditional imm-

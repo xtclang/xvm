@@ -46,20 +46,19 @@ public final class SB {
   public SB di() { return di(2); }
 
   public SB nl( ) { return p(System.lineSeparator()); }
-  // Last printed a nl
   public boolean was_nl() {
     int len = _sb.length();
     String nl = System.lineSeparator();
+    if( len < nl.length() ) return false;
     int nlen = nl.length();
-    if( len < nlen ) return false;
     for( int i=0; i<nlen; i++ )
       if( _sb.charAt(len-nlen+i)!=nl.charAt(i) )
         return false;
     return true;
   }
-  
+
   // Delete last char.  Useful when doing string-joins and JSON printing and an
-  // extra separater char needs to be removed:
+  // extra seperater char needs to be removed:
   //
   //   sb.p('[');
   //   for( Foo foo : foos )
@@ -74,34 +73,27 @@ public final class SB {
   @Override public String toString() { return _sb.toString(); }
 
   // Escape an XTC string to be a compilable Java string
-  public SB quote( String s ) {
-    p('"');
+  public SB escape( String s ) {
     int len = s.length();
     for( int i=0; i<len; i++ ) {
-      switch( s.charAt(i) ) {
-      case '\\' -> p("\\");
-      case '\n' -> p("\\n");
-      case '"'  -> p("\\\"");
-      default   -> p(s.charAt(i));
-      }
+      char c = s.charAt(i);
+      if( c=='\n' ) p("\\n");
+      else p(c);
     }
-    p('"');
     return this;
   }
 
   // Replace all %0 with a
   public SB fmt( String fmt, String a ) {
-    assert fmt.contains( "%0" ) : "Looks like the extra string is never used in the format";
+    assert fmt.indexOf("%0")>=0: "Looks like the extra string is never used in the format";
     return p(fmt.replace("%0",a));
   }
   public SB ifmt( String fmt, String a ) { return i().fmt(fmt,a); }
   public SB ifmt( String fmt, long l   ) { return i().fmt(fmt,l); }
   public SB  fmt( String fmt, long l   ) { return     fmt(fmt,Long.toString(l)); }
   public SB  fmt( String fmt, String a, String b ) { return p(fmt.replace("%0",a).replace("%1",b)); }
-  public SB  fmt( String fmt, String a, String b, String c ) { return p(fmt.replace("%0",a).replace("%1",b).replace("%2",c)); }
   public SB  fmt( String fmt, String a, long l ) { return     fmt(fmt,a,Long.toString(l)); }
-  public SB ifmt( String fmt, String a, String b ) { return i().p(fmt.replace("%0",a).replace("%1",b)); }
+  public SB ifmt( String fmt, String a, String b ) { return p(fmt.replace("%0",a).replace("%1",b)); }
   public SB ifmt( String fmt, String a, long l ) { return i().fmt(fmt,a,Long.toString(l)); }
-  public SB ifmt( String fmt, long l, String a, String b ) { return i().fmt(fmt,Long.toString(l),a,b); }
   
 }

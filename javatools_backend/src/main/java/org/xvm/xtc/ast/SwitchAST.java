@@ -1,7 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
-import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Range;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
@@ -11,11 +11,7 @@ class SwitchAST extends AST {
 
   // Switch is an expression vs statement
   final boolean _expr;
-
-  // Conditional created new vars which need hoisting to a block:
-  // "switch( Char ch = str.charAt(i) ) { ..."
-  boolean _cond_defines;
-
+  
   // 64 bits mask for isa tests.  Beyond 64 requires a different presentation
   final long _isa;
   // Case values; these in turn might be tuples of values with different types
@@ -27,7 +23,7 @@ class SwitchAST extends AST {
   // Result types
   Const[] _rezs;
 
-  // How we encode this switch in Java
+  // 
   enum Flavor { ComplexTern, SimpleTern, IntRange, Pattern };
   final Flavor _flavor;
   
@@ -58,36 +54,36 @@ class SwitchAST extends AST {
     // a selection of ints and int ranges
     if( cond instanceof MultiAST ) {
       flavor = Flavor.ComplexTern;  // this is a multi-arm pattern match
+    } else if( cond._type==XCons.LONG ) {
+      flavor = Flavor.IntRange;
+      // This is single-ints, confirm all case arms are ints (or ranges)
+      for( Const c : cases )
+        if( !valid_range( c ) )
+          throw XEC.TODO();
     } else if( cases[0] instanceof EnumCon ) {
       flavor = Flavor.Pattern; // This is a series of singleton matches, e.g. Strings or Enums
     } else if( cases[0] instanceof SingleCon ) {
       flavor = Flavor.SimpleTern;
     } else {
-      flavor = Flavor.IntRange;
-      // This is single-ints, confirm all case arms are int-like (or ranges)
-      for( Const c : cases )
-        if( !valid_range( c ) )
-          throw XEC.TODO();
+      throw XEC.TODO();
     }
     
     // Parse result types
     Const[] rezs = expr ? X.consts() : null;
-    boolean cond_defines = nlocals != X.nlocals();
     X.pop_locals(nlocals);      // Pop scope-locals at end of scope
-    return new SwitchAST(X,flavor,kids,expr,isa,cases,rezs, cond_defines);
+    return new SwitchAST(flavor,kids,expr,isa,cases,rezs);
   }
   private static boolean valid_range( Const c ) {
-    return c == null || c instanceof IntCon || c instanceof CharCon || (c instanceof RangeCon rcon && valid_range(rcon._lo));
+    return c == null || c instanceof IntCon || (c instanceof RangeCon rcon && rcon._lo instanceof IntCon);
   }
   
-  private SwitchAST( ClzBuilder X, Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs, boolean cond_defines ) {
+  private SwitchAST( Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs ) {
     super(kids);
     _flavor = flavor;
     _expr = expr;
     _isa = isa;
     _cases = cases;
     _rezs = rezs;
-    _cond_defines = cond_defines;
 
     // Pre-cook the match parts.    
     // Each pattern match has the same count of arms
@@ -100,7 +96,7 @@ class SwitchAST extends AST {
         String[] arms = _armss[i] = new String[alen];
         Const[] cons = ((AryCon)cases[i]).cons();
         for( int j=0; j<alen; j++ )
-          arms[j] = cons[j] !=null ? XValue.val(X,cons[j]) : null;
+          arms[j] = cons[j] !=null ? XValue.val(cons[j]) : null;
       }
       break;
 
@@ -108,14 +104,14 @@ class SwitchAST extends AST {
       for( int i=0, j=0; i<clen-1; i++, j++ ) {
         String arm;
         if( _cases[j] instanceof RangeCon rcon ) {
-          long lo = AbstractRange.start(rcon); // Insert the range now
-          long hi = AbstractRange.end  (rcon);
+          long lo = Range.lo(rcon); // Insert the range now
+          long hi = Range.hi(rcon);
           SB sb = new SB();
           for( long k=lo; k<hi; k++ )
             sb.p(k).p(", ");
           arm = sb.unchar(2).toString();
         } else {
-          arm = ""+((NumCon)_cases[j])._x;
+          arm = ""+((IntCon)_cases[j])._x;
         }
         _armss[i] = new String[]{arm};
       }
@@ -125,7 +121,7 @@ class SwitchAST extends AST {
       for( int i=0; i<clen; i++ )
         // This might be an exact check, or might have a default.
         if( _cases[i] != null ) {
-          String arm = XValue.val(X,_cases[i]);
+          String arm = XValue.val(_cases[i]);
           // Enum arms must be the unqualified enum name.
           int idx = arm.lastIndexOf(".");
           if( idx >=0 ) arm = arm.substring(idx + 1);
@@ -136,7 +132,7 @@ class SwitchAST extends AST {
     case SimpleTern:
       // A list of singleton constants
       for( int i=0; i<clen-1; i++ )
-        _armss[i] = new String[]{XValue.val(X,cases[i])};
+        _armss[i] = new String[]{XValue.val(cases[i])};
       break;
       
     }
@@ -157,33 +153,13 @@ class SwitchAST extends AST {
         _tmps[i] = blk.add_tmp(kids[i]._type);
       break;
     case IntRange:
-      assert _kids[0]._type instanceof XBase && _kids[0]._type != XCons.STRING;
-      _tmps=null; break; // No temps
     case Pattern: _tmps=null; break; // No temps
     case SimpleTern:
       _tmps = new String[]{blk.add_tmp(_kids[0]._type)};
       break;
     }
-
-    if( _cond_defines )
-      hoist_defs(_kids[0],blk);
-    
     return this;
   }
-
-  // Hoist any DefRegAST into the Block
-  static void hoist_defs(AST ast, BlockAST blk) {
-    if( ast._kids == null ) return;
-    for( int i=0; i<ast._kids.length; i++ ) {
-      AST kid = ast._kids[i];
-      if( kid instanceof DefRegAST def ) {
-        ast._kids[i] = new RegAST(-1,def._name,def._type);
-        blk.add_tmp(def._type,def._name);
-      } else if( kid != null )
-        hoist_defs(kid,blk);
-    }
-  }
-
   
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
@@ -234,7 +210,7 @@ class SwitchAST extends AST {
     return asExpr(_kids[_armss.length],sb).di(); // And the expression continues on the next line
   }
 
-  // Encode kid as expr, otherwise it is a statement
+  // Encode kid as expr, it its a statement
   private static SB asExpr(AST kid, SB sb) {
     if( kid._type != XCons.VOID )
       return kid.jcode(sb);
@@ -284,9 +260,9 @@ class SwitchAST extends AST {
   // }
   private SB do_range( SB sb ) {
     String case_sep = _expr ? " -> " : ": ";
-    sb.p("switch( (int)(");
+    sb.p("switch( (int)");
     _kids[0].jcode(sb);
-    sb.p(") ) {").nl().ii();
+    sb.p(" ) {").nl().ii();
     // for each case label
     for( int i=0; i<_armss.length; ) {
       if( i < _armss.length-1 ) {

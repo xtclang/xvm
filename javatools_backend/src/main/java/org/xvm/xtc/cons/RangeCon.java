@@ -26,11 +26,16 @@ public class RangeCon extends Const {
     X.u31();
     X.u31();
   }
-  public long lo() { return ((NumCon)_lo)._x; }
-  public long hi() { return ((NumCon)_hi)._x; }
+  public long lo() { return ((IntCon)_lo)._x; }
+  public long hi() { return ((IntCon)_hi)._x; }
   @Override public void resolve( CPool X ) {
     if( _f == Format.Range ) X.u8();
     _lo = X.xget();
     _hi = X.xget();
   }
+  //@Override public Part link(XEC.ModRepo repo) {
+  //  if( _plo != null ) return _plo;
+  //  _hi.link(repo);
+  //  return (_plo = _lo.link(repo));
+  //}
 }

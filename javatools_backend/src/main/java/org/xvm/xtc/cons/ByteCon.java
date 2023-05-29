@@ -5,11 +5,12 @@ import org.xvm.xtc.CPool;
 /**
   Exploring XEC Constants
  */
-public class ByteCon extends NumCon {
+public class ByteCon extends TCon {
   final Format _f;
+  public final int _val;
   public ByteCon( CPool X, Format f ) {
-    super(isSigned(f) ? X.i8() : X.u8());
     _f = f;
+    _val = isSigned(f) ? X.i8() : X.u8();
   }
 
   /**

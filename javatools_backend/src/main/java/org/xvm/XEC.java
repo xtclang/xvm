@@ -6,8 +6,8 @@ import org.xvm.xtc.ModPart;
 import org.xvm.xtc.Part;
 import org.xvm.util.S;
 
-import java.io.File;
 import java.io.FileFilter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -122,7 +122,8 @@ public class XEC {
           load(file);
         return null;            // Null for directories
       } else {
-        FilePart file = new FilePart(f); // Parse the entire file, drops buffer after parsing
+        byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
+        FilePart file = new FilePart(buf,f.toString()); // Parse the entire file, drops buffer after parsing
         mod = file._mod;        // Extract main module
         put(mod._name,mod);     // Installed under module name
         put(f.toString(),mod);  // Installed under file   name

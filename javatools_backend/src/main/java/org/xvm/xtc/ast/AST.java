@@ -18,7 +18,6 @@ public abstract class AST {
 
   @Override public String toString() { return jcode(new SB() ).toString(); }
 
-
   // Use the _par parent to find nearest enclosing Block for tmps
   BlockAST enclosing_block() {
     AST ast = this;
@@ -39,7 +38,7 @@ public abstract class AST {
 
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }
-  
+
   // Auto-box/unblock Int64 (vs Long)
   void autobox( int basex, XType tbox) {
     if( tbox==XCons.VOID ) return;
@@ -49,29 +48,18 @@ public abstract class AST {
     // If base is a Base and subclasses any of the box hierarchy, needs a box
     if( tbase.is_jdk() &&
         (tbase.box().isa(tbox) ||
-         (tbox instanceof XClz xclz && xclz.iface())) ) {
+         (tbox instanceof XClz xclz && xclz._iface)) ) {
       _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbase.box());
 
+    } else if( tbase.is_jdk() && tbase!=XCons.NULL && tbox == XCons.INTLITERAL ) {
+      _kids[basex] = new NewAST(new AST[]{_kids[basex]},XCons.INTLITERAL);
+      
       // Reverse situation: the box is unboxed and boxing it subclasses the base.  Unbox the base.
     } else if( tbox.is_jdk() && tbox.box().isa(tbase) ) {
       _kids[basex] = new UniOpAST(new AST[]{_kids[basex]},null,"._i",tbox);
     }
   }
 
-  // Cast nth child from a long to an int
-  AST castInt(int n) {
-    AST kid = _kids[n];
-    // Update a long constant to an int in-place
-    if( kid instanceof ConAST con ) {
-      if( con._type == XCons.INT ) return this; // Already an int
-      assert con._type == XCons.LONG;
-      con._con = con._con.substring(0,con._con.length()-1);
-      con._type = XCons.INT;
-      return this;
-    }
-    throw XEC.TODO();
-  }
-  
   // Recursively walk the AST, setting the _type field.
   public final void type( ) {
     if( _kids != null )
@@ -170,25 +158,21 @@ public abstract class AST {
     case ContinueStmt -> ContinueAST.make(X);
     case ConvertExpr  ->     ConvAST.make(X);
     case DivRemExpr   ->   DivRemAST.make(X);
-    case DoWhileStmt  ->  DoWhileAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
     case Greater      ->    OrderAST.make(X,">");
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
-    case InvokeExpr   ->   InvokeAST.make(X,false);
-    case InvokeAsyncExpr-> InvokeAST.make(X,true );
+    case InvokeExpr   ->   InvokeAST.make(X);
     case Less         ->    OrderAST.make(X,"<");
     case MultiExpr    ->    MultiAST.make(X,true);
     case MultiStmt    ->    MultiAST.make(X,false);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
     case NarrowedExpr ->   NarrowAST.make(X);
     case NegExpr      ->    UniOpAST.make(X,"-",null);
-    case NewExpr      ->      NewAST.make(X,false);
-    case NewChildExpr ->      NewAST.make(X,true );
+    case NewExpr      ->      NewAST.make(X);
     case NotExpr      ->    UniOpAST.make(X,"!",null);
-    case None         ->     NoneAST.make(X);
     case NotNullExpr  ->    UniOpAST.make(X,"ELVIS",null);
     case OuterExpr    ->    OuterAST.make(X);
     case PostDecExpr  ->    UniOpAST.make(X,null,"--");
@@ -211,9 +195,7 @@ public abstract class AST {
     case TryCatchStmt -> TryCatchAST.make(X);
     case TupleExpr    ->     ListAST.make(X,true);
     case UnaryOpExpr  ->    UniOpAST.make(X);
-    case VarOfExpr    ->    UniOpAST.make(X,"&","");
     case WhileDoStmt  ->    WhileAST.make(X);
-    case UnpackExpr   ->    throw XEC.TODO();
     
     default -> throw XEC.TODO();
     };

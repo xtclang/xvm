@@ -1,6 +1,6 @@
 package org.xvm.xec.ecstasy.collections;
 
-public class TupleN extends Tuple0 {
+public class TupleN extends Tuple {
   public static final TupleN GOLD = new TupleN();
   TupleN() { super(0); _es=null; } // No arg constructor
   

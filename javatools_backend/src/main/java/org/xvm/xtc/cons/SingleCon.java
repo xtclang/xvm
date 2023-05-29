@@ -10,8 +10,8 @@ import org.xvm.xtc.Part;
 public class SingleCon extends PartCon {
   final Format _f;
   public SingleCon( CPool X, Format f ) {
-    X.u31();
     _f = f;
+    X.u31();
   }
   @Override public String name() { throw XEC.TODO(); }
   @Override public void resolve( CPool X ) { _par = (PartCon)X.xget(); }

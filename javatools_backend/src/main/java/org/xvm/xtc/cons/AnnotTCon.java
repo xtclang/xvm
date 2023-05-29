@@ -1,6 +1,8 @@
 package org.xvm.xtc.cons;
 
+import org.xvm.XEC;
 import org.xvm.xtc.CPool;
+import org.xvm.xtc.Part;
 import org.xvm.xtc.ClassPart;
 import org.xvm.util.SB;
 
@@ -24,6 +26,7 @@ public class AnnotTCon extends TCon implements ClzCon {
   }
   public TCon con() { return _con; } // Getter no setter
   @Override public ClassPart clz() {
-    return _clz==null ? (_clz = (ClassPart)_an.part()) : _clz;
+    if( _clz==null ) throw XEC.TODO();
+    return _clz;
   }
 }

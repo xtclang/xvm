@@ -3,8 +3,11 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.Appenderchar;
+import org.xvm.xec.ecstasy.Enum;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xrun.Never;
 import org.xvm.xrun.XRuntime;
 
@@ -28,9 +31,6 @@ public class AryXTC<E extends XTC> extends Array<E> {
   public  AryXTC(E... es        ) { this(es[0], Constant, Arrays.copyOfRange(es,1,es.length)); }
   public  AryXTC(E gold, Mutability mut, AryXTC<E> as) { this(gold,mut,as._es.clone()); }
   public  AryXTC(AryXTC<E> as) { this(as._gold,as._mut,as._es.clone()); }
-
-  public static <E extends XTC> AryXTC<E> construct(E gold) { return new AryXTC<>(gold); }
-
   
   public AryXTC(E gold, long len, LongFunction<E> fcn ) {
     this(gold,(int)len);
@@ -54,7 +54,9 @@ public class AryXTC<E extends XTC> extends Array<E> {
   }
 
   /** Slice */
-  public AryXTC<E> slice( AbstractRange r ) { throw XEC.TODO(); }
+  public AryXTC<E> at( Range r ) {
+    throw XEC.TODO();
+  }
   public AryXTC delete(long idx) {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);
     return this;
@@ -71,45 +73,27 @@ public class AryXTC<E extends XTC> extends Array<E> {
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
 
-  @Override public AryXTC<E> freeze( boolean inPlace ) {
-    if( _mut == Constant ) return this;
-    // TODO: no need for array clone on Persistent
-    AryXTC<E> ary = inPlace ? this : new AryXTC(_gold,Constant,_es);
-    ary._mut = Constant;
-    for( E e : ary._es )
-      if( e!=null )
-        e.freeze(inPlace);
-    return ary;
-  }
-
-  // Recusively used, optimistic
-  private static SB SBX = new SB();
   @Override public String toString() {
-    SB sb;
-    if( SBX==null ) sb = new SB();
-    else { sb=SBX; SBX=null; }
+    SB sb = SBX.p('[');
     for( int i=0; i<_len; i++ )
       sb.p(_es[i]==null ? "null" : _es[i].toString()).p(", ");
     String str = sb.unchar(2).p(']').toString();
-    sb.clear();
-    SBX=sb;                     // Free up for next call
+    SBX.clear();
     return str;
   }
 
-  public static <E extends XTC> boolean equals$AryXTC( AryXTC gold, Array<E> a0, Array<E> a1 ) {
-    if( a0 == a1 ) return true;
-    if( a0._len != a1._len ) return false;
-    for( int i=0; i<a0._len; i++ )
-      if( !gold._gold.equals(a0.at(i),a1.at(i)) )
-        return false;
-    return true;
+  public static boolean equals$AryXTC( XTC gold, Array a0, Array a1 ) {
+    throw XEC.TODO();
   }
   
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
-    return o instanceof AryXTC ary && equals$AryXTC(null,this,ary);
+    if( this==o ) return true;
+    return o instanceof AryXTC ary
+      && _len != ary._len
+      && Arrays.equals(_es,ary._es);
   }
   
   @Override public int hashCode( ) {

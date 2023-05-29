@@ -4,10 +4,6 @@ import org.xvm.XEC;
 import org.xvm.xtc.cons.ModCon;
 import org.xvm.xtc.cons.Const;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-
 /**
      DAG structure containment of components
  */
@@ -36,7 +32,7 @@ public class FilePart extends Part {
    * will be displayed if there is a version mismatch, which should save some frustration -- since
    * otherwise the resulting error(s) can be very hard to diagnose.
    */
-  static final int VERSION_MINOR_CUR = 2024_02_18;
+  static final int VERSION_MINOR_CUR = 2023_11_22;
   final int _minor;
 
   // Main module
@@ -51,10 +47,8 @@ public class FilePart extends Part {
   
 
   // Constructor parses byte array, builds FileComponent
-  public FilePart( File f ) throws IOException {
-    super(null,NFLAGS,null,f.toString(),null,null);
-
-    byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
+  public FilePart( byte[] buf, String name ) {
+    super(null,NFLAGS,null,name,null,null);
 
     // Constant pool and buffer parser
     CPool pool = new CPool(buf);

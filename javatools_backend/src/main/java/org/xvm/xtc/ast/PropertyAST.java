@@ -9,7 +9,7 @@ class PropertyAST extends AST {
   static PropertyAST make( ClzBuilder X ) {
     AST lhs = ast_term(X);
     Const tc = X.con();
-    String prop = XValue.val(X,tc);
+    String prop = XValue.val(tc);
     XType type = XType.xtype(tc,false);
     // Property is class-local, no need for class name
     if( lhs._type==X._tmod ) lhs = null;
@@ -29,16 +29,14 @@ class PropertyAST extends AST {
   
   @Override AST prewrite() {
     // Java strings do not have any properties, just rewrite to the java name
-    if( _prop.equals("size") || _prop.equals("size$get()")) {
-      if( _kids[0]._type == XCons.STRING || _kids[0]._type == XCons.STRINGN )
+    if( _prop.equals("size") ) {
+      if( _kids[0]._type == XCons.STRING )
         { _prop="length()"; _type=XCons.LONG; return this; }
-      if( _kids[0]._type.isAry() )
+      if( ((XClz)_kids[0]._type).is_ary() )
         { _prop="_len"    ; _type=XCons.LONG; return this; }
-    }
-    // Prop READS use prop$get, but assigns keep the plain name
-    if( _par instanceof AssignAST && _par._kids[0]==this ) {
-      assert _prop.endsWith("$get()");
-      _prop = _prop.substring(0,_prop.length()-6);
+    } else if( !(_par instanceof AssignAST) ) {
+      // Prop READS use prop$get, but assigns keep the plain name
+      _prop = _prop+"$get()";
     }
     return this;
   }

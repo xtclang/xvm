@@ -11,7 +11,7 @@ import org.xvm.util.SB;
  */
 public class AccessTCon extends TCon {
   private final Access _access;
-  public TCon _con;
+  TCon _con;
   ClassPart _clz;
   public AccessTCon( CPool X ) {
     X.u31();                    // Skip index for _con

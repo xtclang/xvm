@@ -3,11 +3,10 @@ package org.xvm.xec.ecstasy;
 import org.xvm.XEC;
 import org.xvm.util.Ary;
 import org.xvm.util.SB;
+import org.xvm.xrun.Never;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.xec.ecstasy.text.Stringable;
-import org.xvm.xrun.Never;
 import org.xvm.xtc.*;
 
 
@@ -57,11 +56,11 @@ public abstract class Const extends XTC
   }
   
   // --- Default Implementations ----------------------------------------------
+  // Default appendTo
+  @Override public Appenderchar appendTo(Appenderchar buf) {
+    return buf.appendTo(toString());
+  }
 
-  public final Mutability mutability$get() { return Mutability.Constant; }
-  public final int mutability$getOrd() { return Mutability.Constant.ordinal(); }
-
-  
   // Subclasses that use this must override
   @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
   
@@ -75,5 +74,4 @@ public abstract class Const extends XTC
     return gold.compare(s0,s1);
   }
 
-  @Override public Const freeze( boolean inPlace ) { assert mutability$get() == Mutability.Constant; return this; }
 }

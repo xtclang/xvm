@@ -27,11 +27,8 @@ class ForRangeAST extends AST {
   @Override AST prewrite() {
     // Primitive iterator?
     // Get a tmp
-    if( _kids[0]._type.primeq() ) {
-      if( _kids[1]._type instanceof XClz xclz )
-        ClzBuilder.add_import(xclz);
+    if( _kids[0]._type.primeq() )
       _tmp = enclosing_block().add_tmp(_kids[1]._type);
-    }
     return this;
   }
 
@@ -50,7 +47,7 @@ class ForRangeAST extends AST {
       _kids[1].jcode(sb).p(";").nl();
       DefRegAST def = (DefRegAST)_kids[0];
       def._type.clz(sb.i().p("for( "));
-      sb.fmt(" %0 = %1._start; %1.in(%0); %0 += %1._incr ) ",def._name,_tmp);
+      sb.fmt(" %0 = %1._lo; %0 < %1._hi; %0++ ) ",def._name,_tmp);
     }
     // Body
     _kids[2].jcode(sb);

@@ -3,8 +3,9 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Range;
 import org.xvm.xec.ecstasy.text.Char;
 import org.xvm.xrun.XRuntime;
 
@@ -21,12 +22,12 @@ public class Arychar extends Array<Char> {
   public static final Arychar EMPTY= new Arychar();
   
   public char[] _es;
-  protected Arychar(Mutability mut, int len, char[] es) { super(Char.GOLD,mut,len); _es = es; }
-  public    Arychar(                    ) { this(Mutable , 0  , new char[ 0 ]); }
-  public    Arychar(int len             ) { this(Fixed   , len, new char[len]); }
-  public    Arychar(Mutability mut, Arychar as) { this(mut, as._len, as._es.clone()); }
-  public    Arychar(double x, char... es) { this(Constant, es.length, es); }
-  public    Arychar(Arychar as) { this(as._mut,as); }
+  private Arychar(Mutability mut, char[] es) { super(Char.GOLD,mut,es.length); _es = es; }
+  public  Arychar(                    ) { this(Mutable , new char[ 0 ]); }
+  public  Arychar(int len             ) { this(Fixed   , new char[len]); }
+  public  Arychar(double x, char... es) { this(Constant, es); }
+  public  Arychar(Mutability mut, Arychar as) { this(mut    , as._es.clone()); }
+  public  Arychar(Arychar as) { this(as._mut,as); }
   
   public Arychar( long len, LongUnaryOperator fcn ) {
     this((int)len);
@@ -38,12 +39,6 @@ public class Arychar extends Array<Char> {
   public Arychar(String s) {
     this(s.length(), i -> s.charAt((int)i));
   }
-  
-  public static Arychar construct(Arychar as) { return new Arychar(as); }
-  public static Arychar construct() { return new Arychar(); }
-  public static Arychar construct( String s ) { return new Arychar(s); }
-  public static Arychar construct( long len, LongUnaryOperator fcn ) { return new Arychar(len,fcn); }
-  public static Arychar construct( Mutability mut, Arychar as) { return new Arychar(mut,as); }
   
   // Fetch element
   public char at8(long idx) {
@@ -60,7 +55,6 @@ public class Arychar extends Array<Char> {
     _es[_len++] = c;
     return this;
   }
-  public Arychar add( long x ) { return add((char)x); }
   // Add an element, doubling base array as needed
   @Override public Arychar add( Char c ) { return add(c._c); }
 
@@ -70,8 +64,11 @@ public class Arychar extends Array<Char> {
   }
 
   /** Slice */
-  public Arychar slice( AbstractRange r ) { throw XEC.TODO(); }
+  public Arychar at( Range r ) {
+    throw XEC.TODO();
+  }
 
+  private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p('[');
     for( int i=0; i<_len; i++ )
@@ -114,14 +111,9 @@ public class Arychar extends Array<Char> {
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
 
-  // --- Freezable
-  @Override public Arychar freeze(boolean inPlace) {
-    if( _mut==Mutability.Constant ) return this;
-    if( !inPlace ) return construct(Mutability.Constant,this);
-    _mut = Mutability.Constant;
-    return this;
-  }
-
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
+  @Override public Appenderchar appendTo(Appenderchar ary) {
+    throw XEC.TODO();
+  }
 }

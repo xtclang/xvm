@@ -14,7 +14,7 @@ public class FPLiteral extends Const {
   public final String _s;
   
   public FPLiteral(String s) { _s=s; }
-  public FPLiteral(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
+  public FPLiteral(org.xvm.xec.ecstasy.text.String s) { this(s._s); }
   public FPLiteral(double x) { _s=Double.toString(x); }
 
   public Dec64 toDec64() { return new Dec64(_s); }

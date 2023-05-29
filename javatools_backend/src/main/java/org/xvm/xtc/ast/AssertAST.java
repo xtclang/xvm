@@ -12,12 +12,7 @@ class AssertAST extends AST {
     return new AssertAST(new ConAST("XTC"), cond,intv,mesg);
   }
   private AssertAST( AST... kids ) { super(kids); }
-  @Override XType _type() {
-    // If I have a conditional child, I want the conditional from the child
-    if( _kids[1] != null && _kids[1]._cond )
-      _kids[1]._type = XCons.BOOL;
-    return XCons.VOID;
-  }
+  @Override XType _type() { return XCons.VOID; }
 
   @Override AST prewrite() {
     return new InvokeAST("xassert",(XType)null,_kids).do_type();

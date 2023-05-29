@@ -1,12 +1,11 @@
 package org.xvm.xrun;
 
-import org.xvm.XEC;
-import org.xvm.xec.XRunClz;
-import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.collections.AryString;
-import org.xvm.xtc.ClzBldSet;
-import org.xvm.xtc.JavaC;
 import org.xvm.xtc.ModPart;
+import org.xvm.xtc.ClzBldSet;
+import org.xvm.XEC;
+import org.xvm.xec.XTC;
+import org.xvm.xec.XRunClz;
+import org.xvm.xec.ecstasy.collections.AryString;
 
 import java.lang.reflect.Constructor;
 
@@ -18,7 +17,6 @@ public abstract class Container {
   final Container _par;         // Parent container
   final ModPart _mod;           // Main module
   public NativeConsole console() { return _par.console(); }
-  public NativeTimer timer() { return _par.timer(); }
   
   Container( Container par, ModPart mod ) {
     _par = par;
@@ -26,14 +24,14 @@ public abstract class Container {
   }
 
   
-  public Object invoke( String xrun, String[] args) {
+  public Object invoke(String xrun, String[] args) {
     // Build the java module class.
-    if( JavaC.XFM.klass(_mod)==null )
-      ClzBldSet.do_compile(_mod);
+    if( _mod._jclz==null )
+      ClzBldSet.do_compile(_mod,_mod);
     // Make an instanceof the Java version of the XTC module
     XTC jobj;
     try {
-      Constructor<XTC> con = JavaC.XFM.klass(_mod).getConstructor();
+      Constructor<XTC> con = _mod._jclz.getConstructor();
       jobj = con.newInstance();
     } catch( NoSuchMethodException nsme ) {
       throw XEC.TODO(); // No top-level run method?

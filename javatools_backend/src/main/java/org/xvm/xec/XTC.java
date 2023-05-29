@@ -52,23 +52,8 @@ public abstract class XTC {
   
   
   // Default mutability
-  public Mutability mutability$get() { return Mutability.Mutable; }
-  public int mutability$getOrd() { return Mutability.Mutable.ordinal(); }
+  public Mutability mutability$get() { return Mutability.Constant; }
 
-  // 'that' isa 'this' ?
-  // 'this.getClass().isInstance(that)'
-  public boolean isa(XTC that) {
-    // TODO CHECK IMM
-    return getClass().isInstance(this);
-  }
-  // Test immutable
-  public static boolean isa_ro(XTC that) { return that.mutability$get() == Mutability.Constant; }
-
-  public XTC freeze( boolean inPlace ) {
-    if( mutability$get() == Mutability.Constant ) return this;
-    throw XEC.TODO();
-  }
-  
   // Trace
   public static <X> X TRACE( X x ) { return x; }
   public static String TRACE(String x) { return x; }
@@ -79,11 +64,7 @@ public abstract class XTC {
   // Assert is always-on runtime test
   public static void xassert( boolean cond ) {
     if( !cond )
-      throw new IllegalState("");
-  }
-  public static void xassert( boolean cond, String msg ) {
-    if( !cond )
-      throw new IllegalState(msg);
+      throw new IllegalState();
   }
   public static void xassert( ) { xassert(false); }
 
@@ -127,32 +108,15 @@ public abstract class XTC {
       So I am Once Again, asking for a language change: make the XTC assert
       throw e.g. AssertionError instead of IllegalStateException.
   */
-
-  public static class Exception extends RuntimeException {
-    public Exception(String msg) {super(msg); }
-    public Exception() { }
-    public static Exception construct(String s) { return new Exception(s); }
-    public String message$get() { return getMessage(); };
-  }
-  
-
   // XTC IllegalState mapped to Java
-  public static class IllegalState extends Exception {
-    public IllegalState(String msg) {super(msg); }
-    public static IllegalState construct(String s) { return new IllegalState(s); }
-  }
+  public static class IllegalState extends RuntimeException {}
 
   // XTC IllegalArgument mapped to Java
-  public static class IllegalArgument extends Exception {
+  public static class IllegalArgument extends IllegalArgumentException {
     public IllegalArgument(String s) { super(s); }
-    public static IllegalArgument construct(String s) { return new IllegalArgument(s); }
   }
 
   // XTC ReadOnlyException mapped to Java
-  public static class ReadOnlyException extends Exception { }
-
-  public static class Unsupported extends Exception {}
+  public static class ReadOnlyException extends RuntimeException {}
   
-  // XTC NotImplemented mapped to Java
-  public static class NotImplemented extends Unsupported {}
 }

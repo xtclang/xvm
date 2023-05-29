@@ -5,6 +5,7 @@ import org.xvm.xtc.CPool;
 /**
   Exploring XEC Constants
  */
-public class CharCon extends NumCon {
-  public CharCon( CPool X ) { super(X.utf8Char()); }
+public class CharCon extends TCon {
+  public final int _ch;
+  public CharCon( CPool X ) { _ch = X.utf8Char(); }
 }

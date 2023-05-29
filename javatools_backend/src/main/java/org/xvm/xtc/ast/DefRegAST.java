@@ -3,7 +3,6 @@ package org.xvm.xtc.ast;
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
 import org.xvm.xtc.*;
-import org.xvm.util.S;
 import org.xvm.util.SB;
 
 class DefRegAST extends AST {
@@ -19,30 +18,21 @@ class DefRegAST extends AST {
   }
   private DefRegAST( ClzBuilder X, Const init, Const type, Const name ) {
     super(null);
-    
-    // Destination is read first and is type-aware, so read the destination type.
-    _type = XType.xtype(type,false);
-    if( _type instanceof XClz clz )
-      ClzBuilder.add_import(clz);
-    if( name==null ) _name = null;
-    else {
-      String s = ((StringCon)name)._str;
-      _name = S.eq(s,"_") ? "$ignore" : s;
-    }
-    
-    if( init instanceof AnnotTCon anno ) {
-      _init = XValue.val (X,anno);
-      _type = XType.xtype(anno,true);
-      
-    } else if( init != null ) {
-      throw XEC.TODO();
+    if( init!=null ) {
+      // Destination is read first and is type-aware, so read the destination type.
+      AnnotTCon anno = (AnnotTCon)init;
+      // TODO: Handle other kinds of typed args
+      TermTCon ttc = anno.con().is_generic();
+      if( ttc==null ) throw XEC.TODO();
+      _init = XValue.val(ttc);
     } else {
       _init = null;
     }
-
-    // At least FutureVar redefines the type so save the AST architected type
-    // till after annotation processing
-    _reg = X.define(_name,_type);
+    _type = XType.xtype(type,false);
+    _name = name==null ? null : ((StringCon)name)._str;
+    _reg = name==null ? -1 : X.define(_name,_type);
+    if( _type instanceof XClz clz )
+      ClzBuilder.add_import(clz);
   }
   DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
   

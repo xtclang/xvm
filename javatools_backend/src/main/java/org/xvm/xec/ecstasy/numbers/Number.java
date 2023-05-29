@@ -20,8 +20,7 @@ public abstract class Number extends Const implements Orderable {
     // Widening rules for Number equality
     throw XEC.TODO();
   }
-  public static boolean equals$Number( XTC gold, double n0, double n1 ) { return n0==n1; }
-  
+
   abstract Array<Bit> toBitArray(Array.Mutability mut);
 
 }
