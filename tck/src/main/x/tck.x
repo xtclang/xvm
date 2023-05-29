@@ -9,5 +9,11 @@ module tck.xtclang.org {
 //
 //        constructors.Medium m = new constructors.Medium();
 //        m.testFinalizerChain();
+        new array.Basic().run();
+        new array.Medium().run();
+        new comparison.Compare().run();
+        new comparison.Hash().run();
+        new operations.Basic().run();
+        new numbers.Decimals().run();
     }
 }

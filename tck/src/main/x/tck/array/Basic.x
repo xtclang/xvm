@@ -2,7 +2,38 @@
  * Very basic array tests.
  */
 class Basic {
-    
+
+    void run() {
+        emptyLiteral();
+        emptyFixed();
+        emptyMutable();
+        literalInts();
+        defaultFixed();
+        fixedInts();
+        fixedStrings();
+        fixedChars();
+        mutEmpty();
+        mutFix();
+        mutEmptyMutable();
+        mutImteralInts();
+        mutDefaultFixed();
+        mutFixedInts();
+        mutFixedStrings();
+        mutFixedChars();
+        addStrings();
+        clonedMutableChars();
+        clonedConstantBytes();
+        elementAccess();
+        deleteMutable();
+        deleteConstant();
+        slice();
+        mutClonedMutableChars();
+        mutClonedConstantBytes();
+        mutDeleteMutable();
+        mutDeleteConstant();
+        deleteUnordered();
+    }
+
     // -----------------------------
     // Create; set; get; size
     @Test
@@ -111,7 +142,7 @@ class Basic {
         assert array.mutability == Fixed;
     }
 
-    
+
     // -----------------------------
     // Plus add, delete, create allowing mutation
     @Test
@@ -177,7 +208,7 @@ class Basic {
         assert slice[2] == "four";
     }
 
-    
+
     // -----------------------------
 
     @Test
@@ -210,10 +241,10 @@ class Basic {
         array = array.delete(1);
         assert array.mutability == Constant;
     }
-    
+
     // -----------------------------
     // Remove, delete
-    
+
     @Test
     void deleteUnordered() {
         Int[] array = new Int[].addAll([7, 2, 5, 21, 13, 42]);

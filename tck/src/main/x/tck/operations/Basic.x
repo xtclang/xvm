@@ -3,12 +3,19 @@
  */
 class Basic {
 
+    void run() {
+        testAddInt();
+        testAddPoint();
+    }
+
+    @Test
     void testAddInt() {
         Point p = new Point(0, 0);
         p += 1;
         assert p.x == p.y == 1;
     }
 
+    @Test
     void testAddPoint() {
         Point p1 = new Point(1, 1);
         Point p2 = p1 + p1;
@@ -27,4 +34,3 @@ class Basic {
         }
     }
 }
-
