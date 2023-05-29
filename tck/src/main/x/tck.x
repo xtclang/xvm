@@ -18,5 +18,12 @@ module tck.xtclang.org {
 
 //        inner.Basic i = new inner.Basic();
 //        i.testCallChain();
+//        m.testFinalizerChain();
+        new array.Basic().run();
+        new array.Medium().run();
+        new comparison.Compare().run();
+        new comparison.Hash().run();
+        new operations.Basic().run();
+        new numbers.Decimals().run();
     }
 }

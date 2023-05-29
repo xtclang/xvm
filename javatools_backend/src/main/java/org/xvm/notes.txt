@@ -1,0 +1,148 @@
+
+Ignore packages for now?
+
+
+* org/xvm/XEC.java - entry point
+
+* org/xvm/xtc - Read an XTC file support classes; ClassPart, *Part, CPool,Version,VerTree
+* org/xvm/xtc/cons - "cons" things from XTC files
+* org/xvm/xtc/AST  - "AST"  things from XTC files
+
+* org/xvm/xtc/ClzBuilder, ModBuilder, Javac, XType, XValue,
+
+* org/xvm/xec - generated class strings act "as if" loaded from here
+* org/xvm/xec - runtime support classes (no ties with gen classes)
+* org/xvm/xec/XTC - base class for gen'd classes.
+  org/xvm/xec/??   - Common methods like TRACE, common enums... 
+* org/xvm/xec/XRunClz - Runnable XTC
+  org/xvm/xec/ecstasy/Iterable64 - extends XTC, implements Iterator<Long>
+  org/xvm/xec/ecstasy/collections/Array<E> - extends XTC, implements array list
+  org/xvm/xec/ecstasy/collections/Array64  - extends XTC, implements array list<long>
+
+
+*XTC Modules- 
+*- gen as org/xvm/xec/module.java, includes static init
+*- includes main & run
+*- which pass off to module/class run
+
+*XTC module+class Class-
+*- gen as org/xvm/xec/module.java
+
+XTC lower class
+ - gen as org/xvm/xec/module/CLASSNAME.java
+
+
+#So multiMethod example:
+#
+#org/xvm/xec/Main.java       - extends xec.XTC; import default; run() { new Main.Main().run(); }
+#org/xvm/xec/Main/Main.java  - extends Main;     import MLib.JLib; run() { console.log; call Lib.greeting(); }
+#org/xvm/xec/Lib.java        - extends xec.Xclz; import default;  empty_static;
+#org/xvm/xec/Lib/Lib.java    - extends Lib;      String greeting() {return "hello world"}
+
+* Simple 1-class modules can keep their short form:
+*   org/xvm/xec/Main.java
+*   org/xvm/xec/Lib.java
+
+
+* XType - intercepts Appendable<XXX>, TODO
+        -                      <Char> MAPS TO interface xec/ecstasy/Appendable$Char
+  TemplateAST
+  - DefReg of ecstasy/text/StringBuffer <<-->> NEW JAVA xec/ecstasy/text/StringBufffer.java
+  Every thing is either-
+  - prim base: sb.p(prim)
+  - else     : obj.appendTo(sb)  // Must call appendTo, so can be overridden by object
+
+
+---------------------------
+XTC Null is Java null.
+XTC objects have a constructor, an assert & a finally.
+XTC Obj construct sequence.
+
+- Alloc raw memory
+- Default init; Java 0s.  Maybe some XTC bits after this.
+- - Replace Java null ptrs with typed TombStone, to avoid null-vs-#uninit confusion
+- Constructs are called as user writes them; only called on child.
+- - Operate on C struct flavor of memory
+- - Can call any parent construct in any order, any number of times (0, 1 or many)
+- - Fields must check for #uninit before use
+- - - Int/Flt fields are pre-init/pre-zero
+- - - Check Tombstone on reads & throw
+- - Structs can escape, and be worked on by non-constructor methods & still must check #uninit
+- - Check for #uninit at exit
+- Call child assert, which auto-calls parent asserts
+- Call child finally, which auto-calls parent finally in pre-order
+
+Later Optimizations
+- XTC MAY be able to declare "no uses of #uninit"
+- XTC MAY be able to declare "no escapes"
+
+------------------
+
+Immutable
+- XTC objs can be declared immutable at any time, via e.g. reflection
+- Write to immutable objects must throw
+- Current strat:
+- - Set a immut bit.
+
+- - Test bit before EVERY write
+
+
+
+------------------
+class B {
+  String[] names;
+  construct() {
+    names = ["bob", "sue"]; // note: actually read from disk, not const pool value
+
+    this.foo(); // compiler error
+
+    // Cliff - TO DISCUSS
+    (struct B) s = this; // extends Struct
+    other.foo(s);  // Here foo tortures over time
+    s.names = ["sue"];
+  } finally {
+    // Cliff - TO DISCUSS when does this get run?
+    B b = this;
+    this.foo();
+  }
+
+  assert() {
+    // this gets called after the constructor before the finally
+  }
+
+  void foo() {...}
+}
+
+class D extends B {
+  construct() {
+    names = ["Cliff"];
+    if (...) {
+      construct B();
+    } else {
+      construct B(1,2,3);
+    }
+
+    // Cliff - TO DISCUSS
+    (struct D) s = this; // extends Struct, extends (struct B)
+  } finally {
+    // Cliff - TO DISCUSS when does this get run?
+    D d = this;
+  }
+
+  assert() {
+    // this gets called after the constructor before the finally
+  }
+}
+
+Call chain order -
+
+D.construct()
+  D.con1();
+  B.construct() // in-order as user writes
+  D.con2();
+D.assert
+  B.assert (pre/post either call)
+(cast struct D to XTC D; set immutable bit)
+D.finally
+  B.finally (pre-order call)
+
