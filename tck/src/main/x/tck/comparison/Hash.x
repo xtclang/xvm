@@ -5,6 +5,12 @@ import ecstasy.collections.NaturalHasher;
  * Tests for hashes.
  */
 class Hash {
+    
+    public void run() {
+        hashInt();
+        hashString();
+        hashConstants();
+    }
 
     @Test
     void hashInt() {

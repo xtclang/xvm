@@ -3,6 +3,37 @@
  */
 class Basic {
 
+    void run() {
+        emptyLiteral();
+        emptyFixed();
+        emptyMutable();
+        literalInts();
+        defaultFixed();
+        fixedInts();
+        fixedStrings();
+        fixedChars();
+        mutEmpty();
+        mutFix();
+        mutEmptyMutable();
+        mutImteralInts();
+        mutDefaultFixed();
+        mutFixedInts();
+        mutFixedStrings();
+        mutFixedChars();
+        addStrings();
+        clonedMutableChars();
+        clonedConstantBytes();
+        elementAccess();
+        deleteMutable();
+        deleteConstant();
+        slice();
+        mutClonedMutableChars();
+        mutClonedConstantBytes();
+        mutDeleteMutable();
+        mutDeleteConstant();
+        deleteUnordered();
+    }
+
     // -----------------------------
     // Create; set; get; size
     @Test
