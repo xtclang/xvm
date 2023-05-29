@@ -1,6 +1,7 @@
 package org.xvm.runtime.template;
 
 
+import java.util.Arrays;
 import java.util.Map;
 
 import org.xvm.asm.ConstantPool;
@@ -19,6 +20,9 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ProxyComposition;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.AsyncHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -112,7 +116,7 @@ public class Proxy
 
         return frame.f_context == hProxy.f_context
             ? hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, iReturn)
-            : makeAsyncHandle(hTarget, chain).call1(frame, hProxy, ahVar, iReturn);
+            : makeAsyncHandle(hProxy, chain).call1(frame, hProxy, ahVar, iReturn);
         }
 
     @Override
@@ -124,7 +128,7 @@ public class Proxy
 
         return frame.f_context == hProxy.f_context
             ? hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, iReturn)
-            : makeAsyncHandle(hTarget, chain).callT(frame, hProxy, ahVar, iReturn);
+            : makeAsyncHandle(hProxy, chain).callT(frame, hProxy, ahVar, iReturn);
         }
 
     @Override
@@ -136,7 +140,7 @@ public class Proxy
 
         return frame.f_context == hProxy.f_context
             ? hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, aiReturn)
-            : makeAsyncHandle(hTarget, chain).callN(frame, hProxy, ahVar, aiReturn);
+            : makeAsyncHandle(hProxy, chain).callN(frame, hProxy, ahVar, aiReturn);
         }
 
     @Override
@@ -218,6 +222,10 @@ public class Proxy
         return new ProxyHandle(clzProxy, ctx, hTarget);
         }
 
+    /**
+     * Create a function handle representing a native invocation against a proxy handle across
+     * service boundaries.
+     */
     private FunctionHandle makeAsyncNativeHandle(ObjectHandle hTarget, MethodStructure method)
         {
         return new AsyncHandle(INSTANCE.f_container, method)
@@ -230,14 +238,198 @@ public class Proxy
             };
         }
 
-    private FunctionHandle makeAsyncHandle(ObjectHandle hTarget, CallChain chain)
+    /**
+     * Create a function handle representing an invocation against a proxy handle across service
+     * boundaries.
+     */
+    private FunctionHandle makeAsyncHandle(ProxyHandle hProxy, CallChain chain)
         {
+        ObjectHandle hTarget = hProxy.f_hTarget;
+
         return new AsyncHandle(hTarget.getComposition().getContainer(), chain)
             {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
                 {
                 return hTarget;
+                }
+
+            @Override
+            protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+                {
+                assert hTarget.isService();
+
+                if (frame.f_context == hTarget.getService().f_context)
+                    {
+                    switch (super.call1Impl(frame, hTarget, ahVar, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return convertResult(frame, hProxy, iReturn);
+
+                        case Op.R_CALL:
+                            {
+                            Frame.Continuation stepNext = frameCaller ->
+                                convertResult(frameCaller, hProxy, iReturn);
+                            frame.m_frameNext.addContinuation(stepNext);
+                            return Op.R_CALL;
+                            }
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    return super.call1Impl(frame, hTarget, ahVar, iReturn);
+                    }
+                }
+
+            @Override
+            protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+                {
+                assert hTarget.isService();
+
+                if (frame.f_context == hTarget.getService().f_context)
+                    {
+                    switch (super.callTImpl(frame, hTarget, ahVar, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return convertTupleResult(frame, hProxy, iReturn);
+
+                        case Op.R_CALL:
+                            {
+                            Frame.Continuation stepNext = frameCaller ->
+                                convertTupleResult(frameCaller, hProxy, iReturn);
+                            frame.m_frameNext.addContinuation(stepNext);
+                            return Op.R_CALL;
+                            }
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    return super.callTImpl(frame, hTarget, ahVar, iReturn);
+                    }
+                }
+
+            @Override
+            protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+                {
+                assert hTarget.isService();
+
+                if (frame.f_context == hTarget.getService().f_context)
+                    {
+                    int[] aiStack = new int[aiReturn.length];
+                    Arrays.fill(aiStack, Op.A_STACK);
+
+                    switch (super.callNImpl(frame, hTarget, ahVar, aiStack))
+                        {
+                        case Op.R_NEXT:
+                            return convertResults(frame, hProxy, aiReturn);
+
+                        case Op.R_CALL:
+                            {
+                            Frame.Continuation stepNext = frameCaller ->
+                                convertResults(frameCaller, hProxy, aiReturn);
+                            frame.m_frameNext.addContinuation(stepNext);
+                            return Op.R_CALL;
+                            }
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    return super.callNImpl(frame, hTarget, ahVar, aiReturn);
+                    }
+                }
+
+            /**
+             * Convert the result of the proxy target call (on the frame's stack), replacing the
+             * target handle in the result (e.g.: "return this") with the proxy handle.
+             */
+            private int convertResult(Frame frame, ProxyHandle hProxy, int iReturn)
+                {
+                return frame.assignValue(iReturn, convertValue(hProxy, frame.popStack()));
+                }
+
+            /**
+             * Convert the Tuple result of the proxy target call (on the frame's stack), replacing the
+             * target handle in the result (e.g.: "return (this, this)") with the proxy handle.
+             */
+            private int convertTupleResult(Frame frame, ProxyHandle hProxy, int iReturn)
+                {
+                TupleHandle    hTuple     = (TupleHandle) frame.popStack();
+                ObjectHandle[] ahValueOld = hTuple.m_ahValue;
+                ObjectHandle[] ahValueNew = ahValueOld;
+
+                for (int i = 0, c = ahValueOld.length; i < c; i++)
+                    {
+                    ObjectHandle hValueOld = ahValueOld[i];
+                    ObjectHandle hValueNew = convertValue(hProxy, hValueOld);
+                    if (hValueNew != hValueOld)
+                        {
+                        if (ahValueNew == ahValueOld)
+                            {
+                            ahValueNew = ahValueOld.clone();
+                            }
+                        ahValueNew[i] = hValueNew;
+                        }
+                    }
+                if (ahValueNew != ahValueOld)
+                    {
+                    hTuple = xTuple.makeHandle(hTuple.getComposition(), ahValueNew);
+                    }
+                return frame.assignValue(iReturn, hTuple);
+                }
+
+            /**
+             * Convert the results of the proxy target call (on the frame's stack), replacing the
+             * target handle in the results (e.g.: "return True, this") with the proxy handle.
+             */
+            private int convertResults(Frame frame, ProxyHandle hProxy, int[] aiReturn)
+                {
+                int            cReturns = aiReturn.length;
+                ObjectHandle[] ahReturn = new ObjectHandle[cReturns];
+                for (int i = cReturns - 1; i >= 0; i--)
+                    {
+                    ObjectHandle hReturn = frame.popStack();
+                    if (hReturn == xBoolean.FALSE && i == cReturns &&
+                            frame.f_function.isConditionalReturn())
+                        {
+                        // conditional False
+                        return frame.assignValue(aiReturn[0], hReturn);
+                        }
+                    ahReturn[i] = convertValue(hProxy, hReturn);
+                    }
+                return frame.assignValues(aiReturn, ahReturn);
+                }
+
+            /**
+             * Given a proxy handle and a result of an invocation against its target, replace
+             * the instances of the target in the result with the proxy.
+             */
+            private ObjectHandle convertValue(ProxyHandle hProxy, ObjectHandle hResult)
+                {
+                ObjectHandle hTarget = hProxy.f_hTarget;
+                if (hResult == hTarget)
+                    {
+                    hResult = hProxy;
+                    }
+                // TODO scan the result's structure (e.g.: an array) and replace sub-elements
+                return hResult;
                 }
             };
         }

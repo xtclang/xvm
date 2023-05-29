@@ -1047,23 +1047,23 @@ public class ServiceContext
      *
      * @param frame   the current frame
      * @param ctxDst  the service context that the arguments are to be sent to
-     * @param method  (optional) the method that is to be called on the "destination" context
+     * @param atype   (optional) the declared type for the arguments, which, if specified, could be
+     *                used to proxy the values
      * @param ahArg   the actual arguments
      *
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
-                                   MethodStructure method, ObjectHandle[] ahArg)
+                                   TypeConstant[] atype, ObjectHandle[] ahArg)
         {
         // no need to check the container sharing unless we're crossing the container boundaries
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
 
-        return validatePassThroughArgs(frame, container,
-                method == null ? null : method.getParamTypes(), ahArg, ahArg.length, 0);
+        return validatePassThroughArgs(frame, container, atype, ahArg, ahArg.length, 0);
         }
 
     /**
-     * Same as the method above, but allows specifying the number of arguments and their proxy types.
+     * Same as the method above, but allows specifying the number of arguments.
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
                                    TypeConstant[] atype, ObjectHandle[] ahArg, int cArgs)
@@ -1099,7 +1099,8 @@ public class ServiceContext
                     }
 
                 switch (hArg.getTemplate().createProxyHandle(
-                            frame, this, hArg, atype == null ? null : atype[i]))
+                            frame, this, hArg,
+                            atype == null || atype.length == 0 ? null : atype[i]))
                     {
                     case Op.R_NEXT:
                         ahArg[i] = frame.popStack();
@@ -1183,15 +1184,19 @@ public class ServiceContext
     /**
      * Send an asynchronous Op-based message to this context with one return value.
      *
-     * @param frame  the caller's frame
+     * @param frame   the caller's frame
+     * @param op      the op to execute
+     * @param iReturn the register id to place the result into
+     * @param typeRet (optional) the expected type of the return value which, if specified, could
+     *                be used to return a proxy
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendOp1Request(Frame frame, Op op, int iReturn)
+    public int sendOp1Request(Frame frame, Op op, int iReturn, TypeConstant... typeRet)
         {
         assert iReturn != Op.A_IGNORE_ASYNC;
 
-        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1);
+        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1, typeRet);
 
         addRequest(request, frame.isDynamicVar(iReturn));
 
@@ -1324,12 +1329,14 @@ public class ServiceContext
                 }
             };
 
-        OpRequest                       request = new OpRequest(frame, opCall, cReturns);
-        CompletableFuture<ObjectHandle> future  = request.f_future;
+        TypeConstant[] atypeRet = cReturns == 0 ? TypeConstant.NO_TYPES : hFunction.getReturnTypes();
+        OpRequest      request  = new OpRequest(frame, opCall, cReturns, atypeRet);
 
         boolean fOverwhelmed = addRequest(request, fAsync);
 
-        Fiber fiber = frame.f_fiber;
+        Fiber                           fiber  = frame.f_fiber;
+        CompletableFuture<ObjectHandle> future = request.f_future;
+
         if (fHandleExceptions)
             {
             // in the case of an ignored return and underwhelmed queue - fire and forget
@@ -1388,8 +1395,9 @@ public class ServiceContext
                 }
             };
 
-        OpRequest                         request = new OpRequest(frame, opCall, cReturns);
-        CompletableFuture<ObjectHandle[]> future  = request.f_future;
+        TypeConstant[]                    atypeRet = hFunction.getReturnTypes();
+        OpRequest                         request  = new OpRequest(frame, opCall, cReturns, atypeRet);
+        CompletableFuture<ObjectHandle[]> future   = request.f_future;
 
         boolean fOverwhelmed = addRequest(request, false);
 
@@ -1448,7 +1456,7 @@ public class ServiceContext
                 }
             };
 
-        return sendOp1Request(frame, opGet, iReturn);
+        return sendOp1Request(frame, opGet, iReturn, idProp.getType());
         }
 
     /**
@@ -1662,6 +1670,123 @@ public class ServiceContext
         public Fiber m_fiber;
 
         /**
+         * Send the specified number of return values back to the caller.
+         */
+        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
+            {
+            ServiceContext ctxDst = fiberCaller.f_context;
+
+            switch (cReturns)
+                {
+                case 0:
+                    ctxDst.respond(new Response<ObjectHandle>(
+                            fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                    break;
+
+                case 1:
+                    {
+                    ObjectHandle    hReturn    = frame.f_ahVar[0];
+                    ExceptionHandle hException = frame.m_hException;
+
+                    ctxDst.respond(
+                            new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                    break;
+                    }
+
+                case -1: // tuple return
+                    {
+                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                    ExceptionHandle hException = frame.m_hException;
+                    TupleHandle     hTuple     = hException == null ? (TupleHandle) ahReturn[0] : null;
+
+                    ctxDst.respond(
+                            new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                    break;
+                    }
+
+                default:
+                    {
+                    assert cReturns > 1;
+                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                    ExceptionHandle hException = frame.m_hException;
+
+                    if (hException == null)
+                        {
+                        for (int i = 0, c = ahReturn.length; i < c; i++)
+                            {
+                            ObjectHandle hReturn = ahReturn[i];
+                            if (hReturn == null)
+                                {
+                                // this is only possible for a conditional return of "False"
+                                assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+
+                                // since "null" indicates a deferred future value, replace it with
+                                // the DEFAULT value (see Utils.GET_AND_RETURN)
+                                ahReturn[i] = ObjectHandle.DEFAULT;
+                                }
+                            }
+                        }
+                    ctxDst.respond(
+                            new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
+                    break;
+                    }
+                }
+            }
+        }
+
+    /**
+     * A cross-service Op based Request.
+     */
+    public static class OpRequest
+            extends Request
+        {
+        protected OpRequest(Frame frameCaller, Op op, int cReturns, TypeConstant... typeRet)
+            {
+            super(frameCaller);
+
+            f_op          = op;
+            f_atypeReturn = typeRet;
+            f_cReturns    = cReturns;
+            }
+
+        @Override
+        public Frame createFrame(ServiceContext context)
+            {
+            Op opCheck = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    return checkResponse(f_fiberCaller, frame, f_cReturns, 0);
+                    }
+                @Override
+                public String toString()
+                    {
+                    return "Check";
+                    }
+                };
+
+            Op opRespond = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    sendResponse(f_fiberCaller, frame, f_future, f_cReturns);
+                    return iPC + 1;
+                    }
+                @Override
+                public String toString()
+                    {
+                    return "Respond";
+                    }
+                };
+
+            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
+                        new Op[]{f_op, opCheck, opRespond, Return_0.INSTANCE});
+
+            m_fiber = frame0.f_fiber;
+            return frame0;
+            }
+
+        /**
          * Check the response values and call "freeze" or create proxies if necessary.
          */
         protected int checkResponse(Fiber fiberCaller, Frame frame, int cReturns, int index)
@@ -1677,7 +1802,8 @@ public class ServiceContext
                 case 1:
                     if (frame.m_hException == null)
                         {
-                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, null, frame.f_ahVar, 1);
+                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst,
+                                            f_atypeReturn, frame.f_ahVar, 1);
                         if (iResult == Op.R_EXCEPTION)
                             {
                             Arrays.fill(frame.f_ahVar, null);
@@ -1760,130 +1886,15 @@ public class ServiceContext
             return Op.R_NEXT;
             }
 
-        /**
-         * Send the specified number of return values back to the caller.
-         */
-        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
-            {
-            ServiceContext ctxDst = fiberCaller.f_context;
-
-            switch (cReturns)
-                {
-                case 0:
-                    ctxDst.respond(new Response<ObjectHandle>(
-                            fiberCaller, xTuple.H_VOID, frame.m_hException, future));
-                    break;
-
-                case 1:
-                    {
-                    ObjectHandle    hReturn    = frame.f_ahVar[0];
-                    ExceptionHandle hException = frame.m_hException;
-
-                    ctxDst.respond(
-                            new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
-                    break;
-                    }
-
-                case -1: // tuple return
-                    {
-                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                    ExceptionHandle hException = frame.m_hException;
-                    TupleHandle     hTuple     = hException == null ? (TupleHandle) ahReturn[0] : null;
-
-                    ctxDst.respond(
-                            new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
-                    break;
-                    }
-
-                default:
-                    {
-                    assert cReturns > 1;
-                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                    ExceptionHandle hException = frame.m_hException;
-
-                    if (hException == null)
-                        {
-                        for (int i = 0, c = ahReturn.length; i < c; i++)
-                            {
-                            ObjectHandle hReturn = ahReturn[i];
-                            if (hReturn == null)
-                                {
-                                // this is only possible for a conditional return of "False"
-                                assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
-
-                                // since "null" indicates a deferred future value, replace it with
-                                // the DEFAULT value (see Utils.GET_AND_RETURN)
-                                ahReturn[i] = ObjectHandle.DEFAULT;
-                                }
-                            }
-                        }
-                    ctxDst.respond(
-                            new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
-                    break;
-                    }
-                }
-            }
-        }
-
-    /**
-     * A cross-service Op based Request.
-     */
-    public static class OpRequest
-            extends Request
-        {
-        protected OpRequest(Frame frameCaller, Op op, int cReturns)
-            {
-            super(frameCaller);
-
-            f_op       = op;
-            f_cReturns = cReturns;
-            }
-
-        @Override
-        public Frame createFrame(ServiceContext context)
-            {
-            Op opCheck = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    return checkResponse(f_fiberCaller, frame, f_cReturns, 0);
-                    }
-                @Override
-                public String toString()
-                    {
-                    return "Check";
-                    }
-                };
-
-            Op opRespond = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    sendResponse(f_fiberCaller, frame, f_future, f_cReturns);
-                    return iPC + 1;
-                    }
-                @Override
-                public String toString()
-                    {
-                    return "Respond";
-                    }
-                };
-
-            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
-                        new Op[]{f_op, opCheck, opRespond, Return_0.INSTANCE});
-
-            m_fiber = frame0.f_fiber;
-            return frame0;
-            }
-
         @Override
         public String toString()
             {
             return f_op.toString();
             }
 
-        private final Op  f_op;
-        private final int f_cReturns;
+        private final Op             f_op;
+        private final int            f_cReturns;
+        private final TypeConstant[] f_atypeReturn;
         }
 
     /**

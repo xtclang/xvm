@@ -453,6 +453,12 @@ public class xRTSignature
             return typeFn.getConstantPool().extractFunctionParams(typeFn)[iArg];
             }
 
+        public TypeConstant[] getParamTypes()
+            {
+            TypeConstant typeFn = getType();
+            return typeFn.getConstantPool().extractFunctionParams(typeFn);
+            }
+
         public int getReturnCount()
             {
             MethodStructure method = getMethod();
@@ -468,6 +474,12 @@ public class xRTSignature
             {
             TypeConstant typeFn = getType();
             return typeFn.getConstantPool().extractFunctionReturns(typeFn)[iArg];
+            }
+
+        public TypeConstant[] getReturnTypes()
+            {
+            TypeConstant typeFn = getType();
+            return typeFn.getConstantPool().extractFunctionReturns(typeFn);
             }
 
         public int getVarCount()

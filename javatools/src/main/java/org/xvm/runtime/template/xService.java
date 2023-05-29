@@ -155,7 +155,7 @@ public class xService
         ServiceContext context    = frame.f_context;
         ServiceContext contextNew = context.f_container.createServiceContext(f_sName);
 
-        switch (context.validatePassThrough(frame, contextNew, constructor, ahArg))
+        switch (context.validatePassThrough(frame, contextNew, constructor.getParamTypes(), ahArg))
             {
             case Op.R_NEXT:
                 return contextNew.sendConstructRequest(

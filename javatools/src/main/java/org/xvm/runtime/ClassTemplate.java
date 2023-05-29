@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Function;
@@ -27,9 +26,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
@@ -471,16 +468,21 @@ public abstract class ClassTemplate
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
                                  TypeConstant typeProxy)
         {
+        ClassComposition clzTarget = (ClassComposition) hTarget.getComposition();
+        if (!hTarget.isMutable())
+            {
+            // the only reason we need to create a ProxyHandle for an immutable object is that its
+            // type is "foreign" - doesn't belong to the type system of the service we're about to
+            // pass it through; moreover even if "typeProxy" is known, there is no reason to widen
+            // the proxy to it, since the receiving service may need to cast it to a narrower
+            // type that is known within its type system; an example would be passing a module
+            // across the container lines that may know to cast it to the WebApp or CatalogMetadata
+            ProxyComposition clzProxy = new ProxyComposition(clzTarget, hTarget.getType());
+            return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
+            }
+
         if (typeProxy == null)
             {
-            if (!hTarget.isMutable())
-                {
-                ProxyComposition clzProxy = new ProxyComposition(
-                        (ClassComposition) hTarget.getComposition(), hTarget.getType());
-
-                return frame.assignValue(Op.A_STACK,
-                        Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
-                }
             return frame.raiseException(xException.mutableObject(frame, hTarget.getType()));
             }
 
@@ -488,46 +490,8 @@ public abstract class ClassTemplate
             {
             assert hTarget.getType().isA(typeProxy);
 
-            TypeInfo info = typeProxy.ensureTypeInfo();
-
-            // ensure the methods only use constants, services or proxy-able interfaces
-            for (Map.Entry<MethodConstant, MethodInfo> entry : info.getMethods().entrySet())
-                {
-                MethodConstant idMethod   = entry.getKey();
-                MethodInfo     infoMethod = entry.getValue();
-                if (idMethod.isTopLevel() && infoMethod.isVirtual() && !infoMethod.isCapped())
-                    {
-                    MethodBody      body   = infoMethod.getHead();
-                    MethodStructure method = body.getMethodStructure();
-                    for (int i = 0, c = method.getParamCount(); i < c; i++)
-                        {
-                        TypeConstant typeParam = method.getParam(i).getType();
-                        if (!typeParam.isProxyable())
-                            {
-                            return frame.raiseException(xException.mutableObject(frame, typeParam));
-                            }
-                        }
-                    }
-                }
-
-            for (Map.Entry<PropertyConstant, PropertyInfo> entry : info.getProperties().entrySet())
-                {
-                PropertyConstant idProp   = entry.getKey();
-                PropertyInfo     infoProp = entry.getValue();
-                if (idProp.isTopLevel() && infoProp.isVirtual())
-                    {
-                    if (!infoProp.getType().isProxyable())
-                        {
-                        return frame.raiseException(xException.mutableObject(frame, infoProp.getType()));
-                        }
-                    }
-                }
-
-            ClassComposition clzTarget = (ClassComposition) hTarget.getComposition();
-            ProxyComposition clzProxy  = clzTarget.ensureProxyComposition(typeProxy);
-
-            return frame.assignValue(Op.A_STACK,
-                    Proxy.makeHandle(clzProxy, frame.f_context, hTarget));
+            ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
+            return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
             }
 
         return frame.raiseException(xException.mutableObject(frame, typeProxy));
