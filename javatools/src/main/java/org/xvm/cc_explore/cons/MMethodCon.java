@@ -1,14 +1,16 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.cons;
 
+import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.XEC;
 import java.io.IOException;
 import java.util.Arrays;
 
 /**
   Exploring XEC Constants
  */
-public class MMethodConst extends NamedConst {
-  MMethodConst( XEC.XParser X ) throws IOException {
+public class MMethodCon extends NamedCon {
+  public MMethodCon( XEC.XParser X ) throws IOException {
     super(X);
   }
-  @Override void resolve( CPool pool ) { }  
+  @Override public void resolve( CPool pool ) { }  
 }
