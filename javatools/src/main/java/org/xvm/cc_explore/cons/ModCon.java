@@ -1,17 +1,19 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.cons;
 
+import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.XEC;
 import java.io.IOException;
 import java.util.Arrays;
 
 /**
   Exploring XEC Constants
  */
-public class ModConst extends IdConst {
+public class ModCon extends IdCon {
   private transient int _tx;    // index for module string name
-  private StringConst _str;
-  ModConst( XEC.XParser X ) throws IOException {
+  private StringCon _str;
+  public ModCon( XEC.XParser X ) throws IOException {
     _tx = X.index();
   }
-  @Override void resolve( CPool pool ) { _str = (StringConst)pool.get(_tx); }
-  String name() { return _str._str; }
+  @Override public void resolve( CPool pool ) { _str = (StringCon)pool.get(_tx); }
+  public String name() { return _str._str; }
 }
