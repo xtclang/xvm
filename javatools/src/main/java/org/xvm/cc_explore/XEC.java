@@ -1,5 +1,6 @@
 package org.xvm.cc_explore;
 
+import org.xvm.cc_explore.cons.ModCon;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -74,7 +75,7 @@ public class XEC {
   }
 
   // -----------------------------------------------------------------------------
-  static class XParser {
+  public static class XParser {
     final byte[] buf;
     int x;                      // Cursor
     XParser( byte[] buf ) { this.buf = buf; }
@@ -91,16 +92,16 @@ public class XEC {
 
       CPool pool = new CPool(this);
 
-      String modName = ((ModConst)pool.get(index())).name();
+      String modName = ((ModCon)pool.get(index())).name();
 
       // disassembleChildren(this);
       // return new XEC(pool,mod);
       throw TODO();
     }
     
-    int  u8() { return buf[x++]&0xFF; } // Unsigned byte read as an int
-    int i64() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
-    long pack64() {
+    public int  u8() { return buf[x++]&0xFF; } // Unsigned byte read as an int
+    public int i64() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
+    public long pack64() {
       // See org.xvm.util.PackedInteger;
       
       // Tiny: For a value in the range -64..63 (7 bits), the value can be
@@ -132,7 +133,7 @@ public class XEC {
     }
 
 
-    int index() throws IOException {
+    public int index() throws IOException {
       long n = pack64();
       // this is unsupported in Java; arrays are limited in size by their use
       // of signed 32-bit magnitudes and indexes
@@ -141,7 +142,7 @@ public class XEC {
       return (int) n;
     }
 
-    int[] idxAry() throws IOException {
+    public int[] idxAry() throws IOException {
       int len = index();      
       int[] txs = new int[len];
       for( int i=0; i<len; i++ )
@@ -158,7 +159,7 @@ public class XEC {
     
     // Read a UTF8 string
     private static final StringBuilder SB = new StringBuilder();
-    String utf8() throws IOException {
+    public String utf8() throws IOException {
       SB.setLength(0);
       int len = index();
       int len2 = len - index();

@@ -1,17 +1,19 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.cons;
 
+import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.XEC;
 import java.io.IOException;
 import java.util.Arrays;
 
 /**
   Exploring XEC Constants
  */
-public class ImmutTConst extends TConst {
+public class ImmutTCon extends TCon {
   private transient int _tx;  // Type index for type
-  ImmutTConst( XEC.XParser X ) throws IOException {
+  public ImmutTCon( XEC.XParser X ) throws IOException {
     _tx = X.index();
   }
-  @Override void resolve( CPool pool ) {
+  @Override public void resolve( CPool pool ) {
     throw XEC.TODO();
   }
 }
