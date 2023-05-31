@@ -1,5 +1,6 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.cons;
 
+import org.xvm.cc_explore.CPool;
 import java.util.ArrayList;
 
 /**
@@ -7,7 +8,7 @@ import java.util.ArrayList;
  */
 public abstract class Const {
 
-  abstract void resolve( CPool pool );
+  abstract public void resolve( CPool pool );
 
   public enum Format {
     IntLiteral("numbers"),

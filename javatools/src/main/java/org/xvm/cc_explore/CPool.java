@@ -1,6 +1,6 @@
 package org.xvm.cc_explore;
 
-import org.xvm.cc_explore.cons.Con;
+import org.xvm.cc_explore.cons.*;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -18,22 +18,22 @@ public class CPool {
     for( int i = 0; i < len; i++ ) {
       Const.Format f = Const.Format.valueOf(X.u8());
       _consts.add( switch( f ) {
-        case AnnotatedType -> new AnnotTConst(X);
+        case AnnotatedType -> new AnnotTCon(X);
         case Annotation    -> new Annot(X);
-        case Any           -> new MatchAnyConst(X,f);
-        case Class         -> new ClassConst(X);
-        case ImmutableType -> new ImmutTConst(X);
-        case Int           -> new IntConst(X,f);
-        case Method        -> new MethodConst(X);
-        case Module        -> new ModConst(X);
-        case MultiMethod   -> new MMethodConst(X);
-        case ParameterizedType -> new ParamTConst(X);
-        case Package       -> new PackageConst(X);
-        case Path, Time    -> new LitConst(X,f);
-        case Signature     -> new SigConst(X);
-        case String        -> new StringConst(X);
-        case TerminalType  -> new TermTConst(X);
-        case Tuple         -> new AryConst(X,f);
+        case Any           -> new MatchAnyCon(X,f);
+        case Class         -> new ClassCon(X);
+        case ImmutableType -> new ImmutTCon(X);
+        case Int           -> new IntCon(X,f);
+        case Method        -> new MethodCon(X);
+        case Module        -> new ModCon(X);
+        case MultiMethod   -> new MMethodCon(X);
+        case ParameterizedType -> new ParamTCon(X);
+        case Package       -> new PackageCon(X);
+        case Path, Time    -> new LitCon(X,f);
+        case Signature     -> new SigCon(X);
+        case String        -> new StringCon(X);
+        case TerminalType  -> new TermTCon(X);
+        case Tuple         -> new AryCon(X,f);
         default -> {
           System.err.println("Format "+f);
           throw XEC.TODO();
@@ -46,7 +46,7 @@ public class CPool {
       c.resolve(this);
   }
 
-  Const get( int idx ) {
+  public Const get( int idx ) {
     return idx == -1 ? null : _consts.get(idx);
   }
 }

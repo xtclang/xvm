@@ -1,5 +1,6 @@
 package org.xvm.cc_explore;
 
+import org.xvm.cc_explore.cons.Const;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -13,7 +14,7 @@ public class Annot extends Const {
     _clzx = X.index();
     _parmxs = X.idxAry();
   }
-  @Override void resolve( CPool pool ) {
+  @Override public void resolve( CPool pool ) {
     throw XEC.TODO();
   }
 }
