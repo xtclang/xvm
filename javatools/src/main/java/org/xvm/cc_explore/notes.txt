@@ -1,0 +1,93 @@
+
+XTC Null is Java null.
+XTC objects have a constructor, an assert & a finally.
+XTC Obj construct sequence.
+
+- Alloc raw memory
+- Default init; Java 0s.  Maybe some XTC bits after this.
+- - Replace Java null ptrs with typed TombStone, to avoid null-vs-#uninit confusion
+- Constructs are called as user writes them; only called on child.
+- - Operate on C struct flavor of memory
+- - Can call any parent construct in any order, any number of times (0, 1 or many)
+- - Fields must check for #uninit before use
+- - - Int/Flt fields are pre-init/pre-zero
+- - - Check Tombstone on reads & throw
+- - Structs can escape, and be worked on by non-constructor methods & still must check #uninit
+- - Check for #uninit at exit
+- Call child assert, which auto-calls parent asserts
+- Call child finally, which auto-calls parent finally in pre-order
+
+Later Optimizations
+- XTC MAY be able to declare "no uses of #uninit"
+- XTC MAY be able to declare "no escapes"
+
+------------------
+
+Immutable
+- XTC objs can be declared immutable at any time, via e.g. reflection
+- Write to immutable objects must throw
+- Current strat:
+- - Set a immut bit.
+
+- - Test bit before EVERY write
+
+
+
+------------------
+class B {
+  String[] names;
+  construct() {
+    names = ["bob", "sue"]; // note: actually read from disk, not const pool value
+
+    this.foo(); // compiler error
+
+    // Cliff - TO DISCUSS
+    (struct B) s = this; // extends Struct
+    other.foo(s);  // Here foo tortures over time
+    s.names = ["sue"];
+  } finally {
+    // Cliff - TO DISCUSS when does this get run?
+    B b = this;
+    this.foo();
+  }
+
+  assert() {
+    // this gets called after the constructor before the finally
+  }
+
+  void foo() {...}
+}
+
+class D extends B {
+  construct() {
+    names = ["Cliff"];
+    if (...) {
+      construct B();
+    } else {
+      construct B(1,2,3);
+    }
+
+    // Cliff - TO DISCUSS
+    (struct D) s = this; // extends Struct, extends (struct B)
+  } finally {
+    // Cliff - TO DISCUSS when does this get run?
+    D d = this;
+  }
+
+  assert() {
+    // this gets called after the constructor before the finally
+  }
+}
+
+Call chain order -
+
+D.construct()
+  D.con1();
+  B.construct() // in-order as user writes
+  D.con2();
+D.assert
+  B.assert (pre/post either call)
+(cast struct D to XTC D; set immutable bit)
+D.finally
+  B.finally (pre-order call)
+

@@ -85,5 +85,9 @@ JARBITS += -C $(CLZDIR)/main .    # The java class files
 
 JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
 
-test:	$(classes) $(test_classes)
+test:	$(classes) $(test_classes) tags
 	$(JVM) org.xvm.cc_explore.XEC "../doc/examples/FizzBuzz.xtc"
+
+tags:	$(main_javas) $(test_javas)
+	@rm -f ../TAGS
+	@$(CTAGS) -o ../TAGS -e --recurse=yes --extra=+q --fields=+fksaiS $(SRC) $(TST)
