@@ -1,4 +1,4 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.cons;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -6,5 +6,5 @@ import java.util.Arrays;
 /**
   Exploring XEC Constants
  */
-public abstract class TConst extends Const {
+public abstract class TCon extends Const {
 }
