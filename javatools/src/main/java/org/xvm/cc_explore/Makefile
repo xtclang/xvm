@@ -3,7 +3,7 @@
 # This Makefile is deeply nested inside a larger project and uses internal
 # relative paths to avoid disturbing the larger project.
 #
-#  cd $DESK/xvm/javatools; make -f src/src/main/java/org/xvm/cc_explore/Makefile test
+#  cd $DESK/xvm/javatools; make -f src/main/java/org/xvm/cc_explore/Makefile test
 #
 
 
@@ -91,3 +91,10 @@ test:	$(classes) $(test_classes) tags
 tags:	$(main_javas) $(test_javas)
 	@rm -f ../TAGS
 	@$(CTAGS) -o ../TAGS -e --recurse=yes --extra=+q --fields=+fksaiS $(SRC) $(TST)
+
+.PHONY: clean
+clean:
+	rm -rf build
+	rm -rf out
+	rm -f TAGS
+	(find . -name "*~" -exec rm {} \; 2>/dev/null; exit 0)
