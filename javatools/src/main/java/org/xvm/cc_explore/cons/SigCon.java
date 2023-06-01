@@ -2,7 +2,6 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import java.io.IOException;
-import java.util.Arrays;
 
 /**
   Exploring XEC Constants
@@ -14,7 +13,7 @@ public class SigCon extends IdCon {
   TCon[] _params;
   TCon[] _rets;
   
-  public SigCon( FileComponent X ) throws IOException {
+  public SigCon( FilePart X ) throws IOException {
     _namex  = X.u31();
     _parmxs = X.idxAry();
     _retxs  = X.idxAry();

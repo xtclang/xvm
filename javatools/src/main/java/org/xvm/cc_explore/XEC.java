@@ -1,6 +1,5 @@
 package org.xvm.cc_explore;
 
-import org.xvm.cc_explore.cons.ModCon;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.io.IOException;
@@ -25,7 +24,7 @@ public class XEC {
 
     // Load whole XTC file into buf, then parse
     byte[] buf = Files.readAllBytes(Path.of(args[0]));
-    FileComponent file = new FileComponent(buf);
+    FilePart file = new FilePart(buf);
     
     TODO();
   }
