@@ -19,13 +19,6 @@ class ModPart extends ClassPart {
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, FilePart X ) throws IOException {
     super(par,nFlags,con,cond,X);
 
-    // when the main module is created in the FileStructure, the name has not
-    // yet been configured, so if this is being created and the file already
-    // has a main module name, then this module is being created to act as a
-    // fingerprint
-    String sPrimary = par.getFileComp()._modName;
-    if( sPrimary != null && !sPrimary.equals(con.name()) )
-      throw XEC.TODO();
     _t = ModuleType.valueOf(X.u8());
 
     if( isFingerprint() ) {
