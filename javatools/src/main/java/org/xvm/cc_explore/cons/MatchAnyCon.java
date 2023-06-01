@@ -10,7 +10,7 @@ public class MatchAnyCon extends Const {
   final Format _f;
   private transient int _tx;    // Type index for later
   private Const _con;
-  public MatchAnyCon( FileComponent X, Const.Format f ) throws IOException {
+  public MatchAnyCon( FilePart X, Const.Format f ) throws IOException {
     _f = f;
     _tx = X.u31();
   }  

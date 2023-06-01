@@ -1,19 +1,18 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import java.io.File;
-import java.io.FileInputStream;
+
 import java.io.IOException;
 
 /**
    Module component
  */
-class ModComponent extends ClassComponent {
+class ModPart extends ClassPart {
   public final ModuleType _t;
   public final LitCon _dir;
   public final LitCon _time;
   
-  ModComponent( Component par, int nFlags, ModCon con, CondCon cond, FileComponent X ) throws IOException {
+  ModPart( Part par, int nFlags, ModCon con, CondCon cond, FilePart X ) throws IOException {
     super(par,nFlags,con,cond,X);
 
     // when the main module is created in the FileStructure, the name has not
@@ -27,9 +26,9 @@ class ModComponent extends ClassComponent {
     _t = ModuleType.valueOf(X.u8());
     // modulestructure disassamble
     if( isFingerprint() ) {
-      throw XEC.TODO();
+      //throw XEC.TODO();
     } else {
-      if( X.u1() ) XEC.TODO();
+      throw XEC.TODO();
     }
     _dir  = (LitCon)X._pool.get(X.u31());
     _time = (LitCon)X._pool.get(X.u31());
