@@ -10,8 +10,8 @@ import java.io.IOException;
 public class LitCon extends Const {
   final Format _f;
   private transient int _x;     // Index for actual const
-  private StringCon _str;     // The actual string constant
-  public LitCon( FilePart X, Const.Format f ) throws IOException {
+  StringCon _str;               // The actual string constant
+  public LitCon( FilePart X, Format f ) throws IOException {
     _f = f;
     _x = X.u31();
   }

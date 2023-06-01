@@ -19,7 +19,6 @@ public class MethodCon extends IdCon {
     _par = (MMethodCon)pool.get(_parx);
     _sig = (SigCon)pool.get(_sigx);
   }
-  @Override public Const resolveTypedefs() {
-    throw XEC.TODO();
-  }
+  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
+  @Override public String name() { throw XEC.TODO(); }  
 }
