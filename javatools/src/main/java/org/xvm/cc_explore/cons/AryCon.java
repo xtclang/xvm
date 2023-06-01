@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.*;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -14,9 +13,9 @@ public class AryCon extends Const {
   private transient int[] _txs; // Type index for each element
   private Const[] _cons;
   
-  public AryCon( XEC.XParser X, Const.Format f ) throws IOException {
+  public AryCon( FileComponent X, Const.Format f ) throws IOException {
     _f = f;
-    _tx = X.index();
+    _tx  = X.u31();
     _txs = X.idxAry();
   }
   @Override public void resolve( CPool pool ) {
@@ -25,4 +24,6 @@ public class AryCon extends Const {
     for( int i=0; i<_txs.length; i++ )
       _cons[i] = pool.get(_txs[i]);
   }
+  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
+
 }
