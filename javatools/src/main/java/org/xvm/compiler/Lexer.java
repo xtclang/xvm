@@ -1065,7 +1065,7 @@ public class Lexer
 
                             Token.Id idNum  = null;
                             boolean  fFloat = false;
-                            if (Id.valueByText(suffix) == null && !isWhitespace(peekChar()))
+                            if (Id.valueByText(suffix) == null && source.hasNext() && !isWhitespace(peekChar()))
                                 {
                                 switch (name)
                                     {
