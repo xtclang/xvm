@@ -12,11 +12,13 @@ public abstract class IdCon extends Const {
   public void resetCachedInfo() { _cache = null; }
   
   /**
-   * @return the Component structure that is identified by this IdentityConstant
+   * @return the Part that is identified by this 
    */
-  public Part getComponent() {
+  public Part getPart() {
     if( _cache != null ) return _cache;
     throw XEC.TODO();
   }
+
+  abstract public String name();
   
 }

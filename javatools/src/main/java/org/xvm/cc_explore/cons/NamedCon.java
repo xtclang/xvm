@@ -13,7 +13,6 @@ public abstract class NamedCon extends IdCon {
     _parx  = X.u31();
     _namex = X.u31();
   }
-  @Override public void resolve( CPool pool ) {
-    throw XEC.TODO();
-  }  
+  @Override public void resolve( CPool pool ) { throw XEC.TODO(); }  
+  @Override public String name() { throw XEC.TODO(); }  
 }
