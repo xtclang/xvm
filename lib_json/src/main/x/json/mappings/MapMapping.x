@@ -34,7 +34,17 @@ const MapMapping<Key, Value, Serializable extends Map<Key, Value>>
             }
         else
             {
-            map = new ListMap<Key, Value>().as(Serializable);
+            Type defaultType = ListMap;
+            if (defaultType.isA(Serializable))
+                {
+                map = new ListMap<Key, Value>().as(Serializable);
+                }
+            else
+                {
+                assert val constructor := Serializable.defaultConstructor()
+                        as $"Type {Serializable} doesn't have a default constructor";
+                map = constructor().as(Serializable);
+                }
             }
 
         using (FieldInput mapInput = in.openObject())

@@ -250,14 +250,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
                                  );
             }
 
-        Type<Serializable> type   = Serializable;
-        Schema             schema = this.schema;
-        if (schema.enableMetadata, Doc typeName ?= peekMetadata(schema.typeKey), typeName.is(String))
-            {
-            type = schema.typeForName(typeName).as(Type<Serializable>);
-            }
-
-        return readUsing(schema.ensureMapping(type), defaultValue);
+        return readUsing(schema.ensureMapping(Serializable), defaultValue);
         }
 
     /**
@@ -293,7 +286,9 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
                 Doc typeName ?= peekMetadata(schema.typeKey),
                 typeName.is(String) && typeName != mapping.typeName)
             {
-            mapping = schema.ensureMapping(schema.typeForName(typeName).as(Type<Serializable>));
+            Type type = schema.typeForName(typeName);
+
+            return schema.ensureMapping(type).read(this).as(Serializable);
             }
 
         return mapping.read(this);
