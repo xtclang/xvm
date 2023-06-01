@@ -2,15 +2,19 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 
+import java.util.ArrayList;
 import java.io.IOException;
 
 /**
    Module component
  */
 class ModPart extends ClassPart {
-  public final ModuleType _t;
-  public final LitCon _dir;
-  public final LitCon _time;
+  public final ModuleType _t;   // Type of Module
+  public final LitCon _dir;     // Directory?
+  public final LitCon _time;    // Creation timestamp?
+
+  public final VerTree _allowedVers;
+  public final ArrayList<Version> _prefers;
   
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, FilePart X ) throws IOException {
     super(par,nFlags,con,cond,X);
@@ -22,18 +26,30 @@ class ModPart extends ClassPart {
     String sPrimary = par.getFileComp()._modName;
     if( sPrimary != null && !sPrimary.equals(con.name()) )
       throw XEC.TODO();
-
     _t = ModuleType.valueOf(X.u8());
-    // modulestructure disassamble
+
     if( isFingerprint() ) {
-      //throw XEC.TODO();
+      _allowedVers = new VerTree();
+      for( int i=0, len = X.u31(); i < len; i++ ) {
+        VerCon cVer = (VerCon) X._pool.get(X.u31());
+        _allowedVers.put(cVer.ver(), X.u1());
+      }
+
+      _prefers = new ArrayList<>();
+      for( int i=0, len=X.u31(); i < len; i++ ) {
+        VerCon cVer = (VerCon) X._pool.get(X.u31());
+        Version     ver = cVer.ver();
+        if( !_prefers.contains(ver) ) // Duplicate filtering
+          _prefers.add(ver);
+      }
     } else {
-      throw XEC.TODO();
+      if( X.u1() )
+        throw XEC.TODO();
+      _allowedVers = null;
+      _prefers = null;
     }
     _dir  = (LitCon)X._pool.get(X.u31());
     _time = (LitCon)X._pool.get(X.u31());
-
-    throw XEC.TODO();           // time to parse
   }
 
   /**

@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
-     DAG structure containment of components
+     DAG structure containment of components/parts
  */
 abstract public class Part {
   public final Part _par;  // Parent in the parent chain; null ends
@@ -33,7 +33,7 @@ abstract public class Part {
     // Only null for self FileComponent.  Other components need to parse bits.
     if( X!=null ) {
       int c = X.u31();
-      _contribs = new ArrayList<Contrib>();
+      _contribs = new ArrayList<>();
       for( int i=0; i<c; i++ )
         _contribs.add(new Contrib(X));
     } else {
@@ -45,17 +45,32 @@ abstract public class Part {
     int cnt = X.u31();
     for( int i=0; i<cnt; i++ ) {
       int n = X.u8();
+      Part kid;
       if( (n & CONDITIONAL_BIT)==0 ) {
         // there isn't a conditional multiple-component list, so this is just
         // the first byte of the two-byte FLAGS value (which is the start of
         // the body) for a single component
         n = (n << 8) | X.u8();
-        Part kid = Format.fromFlags(n).parse(this,X._pool.get(X.u31()), n, null, X);
-        throw XEC.TODO();
+        kid = Format.fromFlags(n).parse(this,X._pool.get(X.u31()), n, null, X);
       } else {
+        kid = null;
         throw XEC.TODO();
       }
+      {
+        // TODO: read and reset bodyModified
+        // if the child is a method, it can only be contained by a MultiMethodStructure
+        assert !(kid instanceof ModPart);
+        String name = kid.name();
+        throw XEC.TODO();
+        //addChild(kid);
+      }
+      //int cb = X.u31();
+      //if( cb > 0 ) {
+      //  if( _lazy ) throw XEC.TODO();
+      //  else throw XEC.TODO();
+      //}
     }
+    throw XEC.TODO();
   }
 
   // Walk the parent chain to the top
@@ -65,7 +80,9 @@ abstract public class Part {
     return filec;
   }
 
+  String name() { return _id.name(); }
 
+  
   // ----- inner class: Component Contribution ---------------------------------------------------
   /**
    * Represents one contribution to the definition of a class. A class (with the term used in the

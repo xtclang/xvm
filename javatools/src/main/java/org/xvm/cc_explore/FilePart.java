@@ -96,6 +96,7 @@ public class FilePart extends Part {
 
   // ------------------------------------
   // File parser utilities
+  public boolean u1() { return _buf[x++]!=0; } // boolean read
   public int  u8() { return _buf[x++]&0xFF; } // Unsigned byte read as an int
   public int i64() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
   public long pack64() {
