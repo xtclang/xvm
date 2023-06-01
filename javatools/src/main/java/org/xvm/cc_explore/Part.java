@@ -4,18 +4,31 @@ import org.xvm.cc_explore.cons.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
      DAG structure containment of components/parts
  */
 abstract public class Part {
-  public final Part _par;  // Parent in the parent chain; null ends
+  public final Part _par;       // Parent in the parent chain; null ends.  Last is FilePart.
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
   public final IdCon _id;       // Identifier
 
   public final ArrayList<Contrib> _contribs;
 
+  // Map from kid name to kid.  
+  // TODO: I lifted this 1 layer from the original, and I'm pretty sure this
+  // isn't right but I don't have a test case to debug yet
+  private HashMap<String,Part> _name2kid;
+
+  // Linked list of siblings at the same DAG level with the same name
+  private Part _sibling = null;
+
+  // If a child is lazily created, here is the buffer offset and length to parse.
+  // The actual buffer is in the FilePart at the Part root.
+  int _lazy_off, _lazy_len;
+  
   Part( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) throws IOException {
     _par = par;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
@@ -56,21 +69,29 @@ abstract public class Part {
         kid = null;
         throw XEC.TODO();
       }
-      {
-        // TODO: read and reset bodyModified
-        // if the child is a method, it can only be contained by a MultiMethodStructure
-        assert !(kid instanceof ModPart);
-        String name = kid.name();
-        throw XEC.TODO();
-        //addChild(kid);
+      // if the child is a method, it can only be contained by a MultiMethodStructure
+      assert !(kid instanceof MethodPart);
+      if( _name2kid==null ) _name2kid = new HashMap<>();
+      Part old = _name2kid.get(kid.name());
+      if( old==null ) _name2kid.put(kid.name(),kid);
+      else {
+        while( old._sibling!=null ) old = old._sibling; // Follow linked list to end
+        old._sibling = kid;                             // Append kid to tail of linked list
       }
-      //int cb = X.u31();
-      //if( cb > 0 ) {
-      //  if( _lazy ) throw XEC.TODO();
-      //  else throw XEC.TODO();
-      //}
+      // Here we can be lazy on the child's children
+      int lazy_len = X.u31();
+      if( lazy_len > 0 ) {
+        if( X._lazy ) {
+          X.x += lazy_len; // Skip in parser
+          for( Part p=kid; p!=null; p=p._sibling ) {
+            kid._lazy_off = X.x;
+            kid._lazy_len = lazy_len;
+          }
+        } else {
+          throw XEC.TODO();     // Recursively call parseKids
+        }
+      }
     }
-    throw XEC.TODO();
   }
 
   // Walk the parent chain to the top
@@ -158,7 +179,7 @@ abstract public class Part {
       //case TYPEDEF  -> throw XEC.TODO(); // new TypedefComponent(par, nFlags, (TypedefCon) con, cond);
       //case PROPERTY -> throw XEC.TODO(); // new PropertyComponent(par, nFlags, (PropCon) con, cond);
       //case MULTIMETHOD -> throw XEC.TODO(); //  new MMethodComponent(par, nFlags, (MMthodCon) con, cond);
-      //case METHOD   -> throw XEC.TODO(); // new MethodComponent(par, nFlags, (MethodCon) con, cond);
+      case METHOD   -> new MethodPart(par, nFlags, (MethodCon) con, cond, X);
       default ->  throw new IOException("uninstantiable format: " + this);
       };
     }
