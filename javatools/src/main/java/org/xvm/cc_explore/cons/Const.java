@@ -1,8 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.Component;
-import java.util.ArrayList;
+import org.xvm.cc_explore.Part;
 
 /**
   Exploring XEC Constants
@@ -255,18 +254,18 @@ public abstract class Const {
    */
   public enum Access {
     STRUCT   (0),
-    PUBLIC   (Component.ACCESS_PUBLIC   ),
-    PROTECTED(Component.ACCESS_PROTECTED),
-    PRIVATE  (Component.ACCESS_PRIVATE  );
+    PUBLIC   ( Part.ACCESS_PUBLIC   ),
+    PROTECTED( Part.ACCESS_PROTECTED),
+    PRIVATE  ( Part.ACCESS_PRIVATE  );
 
     Access(int flags) { this.FLAGS = flags; }
     /**
      * The integer flags used to encode the access enum.
-     * @see Component#ACCESS_MASK
-     * @see Component#ACCESS_SHIFT
-     * @see Component#ACCESS_PUBLIC
-     * @see Component#ACCESS_PROTECTED
-     * @see Component#ACCESS_PRIVATE
+     * @see Part#ACCESS_MASK
+     * @see Part#ACCESS_SHIFT
+     * @see Part#ACCESS_PUBLIC
+     * @see Part#ACCESS_PROTECTED
+     * @see Part#ACCESS_PRIVATE
      */
     public final int FLAGS;
   }

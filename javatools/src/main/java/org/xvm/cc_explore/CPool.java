@@ -11,7 +11,7 @@ public class CPool {
   // Constants by index
   private final ArrayList<Const> _consts = new ArrayList<>();
   
-  CPool( FileComponent X ) throws IOException {
+  CPool( FilePart X ) throws IOException {
 
     // load the constant pool from the stream
     int len = X.u31();
