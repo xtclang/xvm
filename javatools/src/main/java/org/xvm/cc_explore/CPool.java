@@ -11,10 +11,10 @@ public class CPool {
   // Constants by index
   private final ArrayList<Const> _consts = new ArrayList<>();
   
-  CPool( XEC.XParser X ) throws IOException {
+  CPool( FileComponent X ) throws IOException {
 
     // load the constant pool from the stream
-    int len = X.index();
+    int len = X.u31();
     for( int i = 0; i < len; i++ ) {
       Const.Format f = Const.Format.valueOf(X.u8());
       _consts.add( switch( f ) {

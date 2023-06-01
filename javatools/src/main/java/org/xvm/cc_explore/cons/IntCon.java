@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.*;
 
 /**
   Exploring XEC Constants
@@ -9,7 +8,7 @@ import org.xvm.cc_explore.XEC;
 public class IntCon extends Const {
   final Format _f;
   final long _x;
-  public IntCon( XEC.XParser X, Const.Format f ) {
+  public IntCon( FileComponent X, Const.Format f ) {
     _f = f;
     _x = X.pack64();        // TODO: larger numbers need more support here
     

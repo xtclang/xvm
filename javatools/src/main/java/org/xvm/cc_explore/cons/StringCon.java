@@ -1,7 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.FileComponent;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -10,7 +10,7 @@ import java.util.ArrayList;
  */
 public class StringCon extends Const {
   final String _str;
-  public StringCon( XEC.XParser X ) throws IOException {
+  public StringCon( FileComponent X ) throws IOException {
     _str = X.utf8();
   }
   @Override public void resolve( CPool pool ) {}

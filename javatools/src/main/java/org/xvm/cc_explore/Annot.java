@@ -13,8 +13,8 @@ public class Annot extends Const {
   private transient int[] _parmxs; // Type index for each parameter
   ClassCon _clz;
   Const[] _cons;
-  Annot( XEC.XParser X ) throws IOException {
-    _clzx = X.index();
+  Annot( FileComponent X ) throws IOException {
+    _clzx = X.u31();
     _parmxs = X.idxAry();
   }
   @Override public void resolve( CPool pool ) {
