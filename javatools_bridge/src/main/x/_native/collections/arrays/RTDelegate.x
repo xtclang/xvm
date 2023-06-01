@@ -5,8 +5,7 @@ import ecstasy.collections.Array.Mutability;
  * The native ArrayDelegate<Object> class.
  */
 class RTDelegate<Element>
-        implements ArrayDelegate<Element>
-    {
+        implements ArrayDelegate<Element> {
     Element getElement(Int index);
 
     void setElement(Int index, Element value);
@@ -35,12 +34,10 @@ class RTDelegate<Element>
     /**
      * Native constructor helper; fill the array from the Iterable source.
      */
-    private static Array fillFromIterable(Array array, Iterable iterable, Mutability mutability)
-        {
-        loop: for (Object element : iterable)
-            {
+    private static Array fillFromIterable(Array array, Iterable iterable, Mutability mutability) {
+        loop: for (Object element : iterable) {
             array[loop.count] = element;
-            }
-        return array.reify(mutability);
         }
+        return array.reify(mutability);
     }
+}

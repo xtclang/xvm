@@ -9,16 +9,15 @@ import libcrypto.Signer;
  */
 service RTSigner
         extends RTVerifier
-        implements Signer
-    {
-    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Int signatureSize, Object signer)
-        {
+        implements Signer {
+
+    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Int signatureSize, Object signer) {
         construct RTVerifier(algorithm, publicKey, signatureSize, signer);
 
         assert privateKey.form == Secret;
 
         this.privateKey = privateKey;
-        }
+    }
 
 
     // ----- Signer API ----------------------------------------------------------------------------
@@ -27,40 +26,32 @@ service RTSigner
     public/private CryptoKey privateKey;
 
     @Override
-    Signature sign(Byte[] data)
-        {
+    Signature sign(Byte[] data) {
         Object secret;
 
-        if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey))
-            {
+        if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey)) {
             secret = key.secret;
-            }
-        else if (Byte[] rawKey := privateKey.isVisible())
-            {
+        } else if (Byte[] rawKey := privateKey.isVisible()) {
             secret = rawKey;
-            }
-        else
-            {
+        } else {
             throw new IllegalState($"Unsupported key {privateKey}");
-            }
-        return new Signature(algorithm.name, sign(signer, secret, data));
         }
+        return new Signature(algorithm.name, sign(signer, secret, data));
+    }
 
     @Override
     OutputSigner createOutputSigner(BinaryOutput? destination=Null,
-                                    Annotations?  annotations=Null)
-        {
+                                    Annotations?  annotations=Null) {
         TODO
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         return $"{algorithm.name.quoted()} signer for {privateKey}";
-        }
+    }
 
 
     // ----- native helpers ------------------------------------------------------------------------
 
     protected Byte[] sign(Object signer, Object secret, Byte[] data) {TODO("Native");}
-    }
+}

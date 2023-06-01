@@ -5,8 +5,8 @@ import ecstasy.reflect.Access;
  */
 class RTMethod<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
         extends RTSignature<ParamTypes, ReturnTypes>
-        implements Method<Target, ParamTypes, ReturnTypes>
-    {
+        implements Method<Target, ParamTypes, ReturnTypes> {
+
     @Override @RO Access access                                           .get() { TODO("native"); }
 
     @Override conditional String[] formalParamNames(Int i)                       { TODO("native"); }
@@ -21,4 +21,4 @@ class RTMethod<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends
     //   Boolean consumesFormalType(String typeName)
     //   Boolean producesFormalType(String typeName)
     //   Boolean isSubstitutableFor(Method!<> that)
-    }
+}

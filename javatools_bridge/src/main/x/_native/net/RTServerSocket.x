@@ -10,18 +10,16 @@ import libnet.ServerSocket;
  * Implements a native [ServerSocket].
  */
 service RTServerSocket(SocketAddress localAddress)
-        implements ServerSocket
-    {
+        implements ServerSocket {
     /**
      * Constructor from native land.
      *
      * @param name            the name of this network interface
      * @param addressesBytes  the byte array for each address of this network interface
      */
-    construct(Byte[] localAddressBytes, UInt16 localPort)
-        {
+    construct(Byte[] localAddressBytes, UInt16 localPort) {
         construct RTServerSocket((new IPAddress(localAddressBytes), localPort));
-        }
+    }
 
     // ----- Socket methods ------------------------------------------------------------------------
 
@@ -29,21 +27,18 @@ service RTServerSocket(SocketAddress localAddress)
     public/private SocketAddress localAddress;
 
     @Override
-    Socket accept()
-        {TODO("Native");}
+    Socket accept() {TODO("Native");}
 
     @Override
-    void close(Exception? cause = Null)
-        {TODO("Native");}
+    void close(Exception? cause = Null) {TODO("Native");}
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "ServerSocket";
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
     // TODO
-    }
+}

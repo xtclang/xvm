@@ -2,8 +2,8 @@
  * Simple timer (stop-watch) using Java's nanosecond-resolution "System" clock.
  */
 service NanosTimer
-        implements Timer
-    {
+        implements Timer {
+
     @Override
     void start();
 
@@ -20,14 +20,12 @@ service NanosTimer
     void reset();
 
     @Override
-    Duration resolution.get()
-        {
+    Duration resolution.get() {
         return Duration.NANOSEC;
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "Timer";
-        }
     }
+}

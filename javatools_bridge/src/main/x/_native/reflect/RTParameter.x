@@ -4,21 +4,18 @@ import ecstasy.reflect.Parameter;
  * Parameter implementation.
  */
 const RTParameter<ParamType>(Int ordinal, String? name, Boolean formal, Boolean hasDefault, ParamType? valDefault)
-        implements Parameter<ParamType>
-    {
+        implements Parameter<ParamType> {
     @Override
-    conditional String hasName()
-        {
+    conditional String hasName() {
         return name == Null
                 ? False
                 : (True, name.as(String));
-        }
+    }
 
     @Override
-    conditional ParamType defaultValue()
-        {
+    conditional ParamType defaultValue() {
         return hasDefault
                 ? (True, valDefault.as(ParamType))
                 : False;
-        }
     }
+}

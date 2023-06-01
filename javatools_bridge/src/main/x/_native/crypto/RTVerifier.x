@@ -8,17 +8,16 @@ import libcrypto.Verifier;
  * The native [Verifier] implementation.
  */
 service RTVerifier
-        implements Verifier
-    {
-    construct(Algorithm algorithm, CryptoKey publicKey, Int signatureSize, Object signer)
-        {
+        implements Verifier {
+
+    construct(Algorithm algorithm, CryptoKey publicKey, Int signatureSize, Object signer) {
         assert publicKey.form == Public;
 
         this.algorithm     = algorithm;
         this.publicKey     = publicKey;
         this.signatureSize = signatureSize;
         this.signer        = signer;
-        }
+    }
 
     /**
      * The native signature.
@@ -35,63 +34,49 @@ service RTVerifier
     public/private CryptoKey publicKey;
 
     @Override
-    Boolean verify(Digest signature, Byte[] data)
-        {
+    Boolean verify(Digest signature, Byte[] data) {
         Object secret;
-        if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey))
-            {
+        if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey)) {
             secret = key.secret;
-            }
-        else if (Byte[] rawKey := publicKey.isVisible())
-            {
+        } else if (Byte[] rawKey := publicKey.isVisible()) {
             secret = rawKey;
-            }
-        else
-            {
+        } else {
             throw new IllegalState($"Unsupported key {publicKey}");
-            }
+        }
 
         Byte[] signatureBytes;
-        if (signature.is(Signature))
-            {
+        if (signature.is(Signature)) {
             assert signature.algorithm == algorithm.name;
             signatureBytes = signature.bytes;
-            }
-        else
-            {
+        } else {
             signatureBytes = signature;
-            }
-        return verify(signer, secret, signatureBytes, data);
         }
+        return verify(signer, secret, signatureBytes, data);
+    }
 
     @Override
     OutputVerifier createOutputVerifier(Digest        signature,
                                         BinaryOutput? destination=Null,
-                                        Annotations?  annotations=Null)
-        {
+                                        Annotations?  annotations=Null) {
         TODO
-        }
+    }
 
     @Override
     InputVerifier createInputVerifier(BinaryInput  source,
-                                      Annotations? annotations=Null)
-        {
+                                      Annotations? annotations=Null) {
         TODO
-        }
+    }
 
     @Override
-    void close(Exception? cause = Null)
-        {
-        }
+    void close(Exception? cause = Null) {}
 
     @Override
-    String toString()
-        {
+    String toString() {
         return $"{algorithm.name.quoted()} verifier for {publicKey}";
-        }
+    }
 
 
     // ----- native helpers ------------------------------------------------------------------------
 
     protected Boolean verify(Object signer, Object secret, Byte[] signature, Byte[] data) {TODO("Native");}
-    }
+}

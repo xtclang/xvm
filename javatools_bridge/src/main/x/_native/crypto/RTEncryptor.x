@@ -8,16 +8,15 @@ import libcrypto.Encryptor;
  * The native [Encryptor] implementation.
  */
 service RTEncryptor(String algorithm, Int blockSize)
-        implements Encryptor
-    {
-    construct(String algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey? privateKey, Object cipher)
-        {
+        implements Encryptor {
+
+    construct(String algorithm, Int blockSize, CryptoKey? publicKey, CryptoKey? privateKey, Object cipher) {
         this.algorithm  = algorithm;
         this.blockSize  = blockSize;
         this.publicKey  = publicKey;
         this.privateKey = privateKey;
         this.cipher     = cipher;
-        }
+    }
 
     /**
      * The native cipher.
@@ -33,71 +32,52 @@ service RTEncryptor(String algorithm, Int blockSize)
     CryptoKey? publicKey;
 
     @Override
-    Byte[] encrypt(Byte[] data)
-        {
+    Byte[] encrypt(Byte[] data) {
         Object secret;
-        if (CryptoKey publicKey ?= this.publicKey)
-            {
-            if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey))
-                {
+        if (CryptoKey publicKey ?= this.publicKey) {
+            if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey)) {
                 secret = key.secret;
-                }
-            else if (Byte[] rawKey := publicKey.isVisible())
-                {
+            } else if (Byte[] rawKey := publicKey.isVisible()) {
                 secret = rawKey;
-                }
-            else
-                {
+            } else {
                 throw new IllegalState($"Unsupported key {publicKey}");
-                }
             }
-        else
-            {
+        } else {
             assert CryptoKey privateKey ?= this.privateKey;
 
-            if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey))
-                {
+            if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey)) {
                 secret = key.secret;
-                }
-            else if (Byte[] rawKey := privateKey.isVisible())
-                {
+            } else if (Byte[] rawKey := privateKey.isVisible()) {
                 secret = rawKey;
-                }
-            else
-                {
+            } else {
                 throw new IllegalState($"Unsupported key {privateKey}");
-                }
             }
+        }
 
         return encrypt(cipher, secret, data);
-        }
+    }
 
     @Override
-    (Int bytesRead, Int bytesWritten) encrypt(BinaryInput source, BinaryOutput destination)
-        {
+    (Int bytesRead, Int bytesWritten) encrypt(BinaryInput source, BinaryOutput destination) {
         TODO
-        }
+    }
 
     @Override
     BinaryOutput createOutputEncryptor(BinaryOutput destination,
-                                       Annotations? annotations=Null)
-        {
+                                       Annotations? annotations=Null) {
         TODO
-        }
+    }
 
     @Override
-    void close(Exception? cause = Null)
-        {
-        }
+    void close(Exception? cause = Null) {}
 
     @Override
-    String toString()
-        {
+    String toString() {
         return $"{algorithm.quoted()} encryptor";
-        }
+    }
 
 
     // ----- native helpers ------------------------------------------------------------------------
 
     protected Byte[] encrypt(Object cipher, Object secret, Byte[] data) {TODO("Native");}
-    }
+}

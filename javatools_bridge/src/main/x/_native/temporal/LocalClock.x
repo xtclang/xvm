@@ -2,8 +2,8 @@
  * Simple wall clock using Java's millisecond-resolution "System" clock.
  */
 service LocalClock
-        implements Clock
-    {
+        implements Clock {
+
     @Override
     @RO Time now;
 
@@ -11,23 +11,20 @@ service LocalClock
     @RO TimeZone timezone;
 
     @Override
-    Duration resolution.get()
-        {
+    Duration resolution.get() {
         return Duration.MILLISEC;
-        }
+    }
 
     @Override
-    Boolean monotonic.get()
-        {
+    Boolean monotonic.get() {
         return False;
-        }
+    }
 
     @Override
     Cancellable schedule(Time when, Alarm alarm);
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "Clock";
-        }
     }
+}

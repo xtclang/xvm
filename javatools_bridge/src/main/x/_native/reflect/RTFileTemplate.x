@@ -7,8 +7,8 @@ import ecstasy.reflect.ModuleTemplate;
  */
 class RTFileTemplate
         extends RTComponentTemplate
-        implements FileTemplate
-    {
+        implements FileTemplate {
+
     @Override
     ModuleTemplate mainModule.get()                     {TODO("native");}
 
@@ -22,14 +22,13 @@ class RTFileTemplate
     conditional ModuleTemplate getModule(String name)   {TODO("native");}
 
     @Override
-    Time? created.get()
-        {
+    Time? created.get() {
         // see OSFileNode.created.get()
         Int createdMillis = this.createdMillis;
         return createdMillis == 0
                 ? Null
                 : new Time(createdMillis*TimeOfDay.PICOS_PER_MILLI);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -37,8 +36,7 @@ class RTFileTemplate
     /**
      * Called by native "resolve(ModuleRepository)". See FileStructure.java for the "original" code.
      */
-    private RTFileTemplate linkModules(ModuleRepository repository)
-        {
+    private RTFileTemplate linkModules(ModuleRepository repository) {
         String      moduleName      = mainModule.name;
         String[]    moduleNamesTodo = moduleNames.reify(Mutable);
         Set<String> moduleNamesDone = new HashSet();
@@ -48,41 +46,37 @@ class RTFileTemplate
 
         ModuleTemplate[] unresolvedModules = new ModuleTemplate[];
         // iteratively link all downstream modules (moduleNamesTodo array may grow)
-        for (Int i = 0; i < moduleNamesTodo.size; ++i)
-            {
+        for (Int i = 0; i < moduleNamesTodo.size; ++i) {
             String nextName = moduleNamesTodo[i];
 
             // only need to link it once (each node in the graph gets visited once)
-            if (moduleNamesDone.contains(nextName))
-                {
+            if (moduleNamesDone.contains(nextName)) {
                 continue;
-                }
+            }
             moduleNamesDone.add(nextName);
 
             ModuleTemplate nextModule;
-            if (nextModule := getModule(nextName), nextModule.resolved)
-                {
+            if (nextModule := getModule(nextName), nextModule.resolved) {
                 continue;
-                }
+            }
 
             // load the module against which the compilation will occur
-            if (!repository.moduleNames.contains(nextName))
-                {
+            if (!repository.moduleNames.contains(nextName)) {
                 throw new Exception($"Missing dependent module: {nextName}");
-                }
+            }
 
             assert ModuleTemplate unresolved := repository.getModule(nextName)
                 as $"Missing module {nextName}";
 
             unresolvedModules += unresolved;
             moduleNamesTodo.addAll(unresolved.parent.as(FileTemplate).moduleNames);
-            }
+        }
 
         replace(unresolvedModules);
         return this;
-        }
+    }
 
     private void replace(ModuleTemplate[] unresolvedModules) { TODO("native"); }
 
     private Int createdMillis.get() { TODO("native"); }
-    }
+}

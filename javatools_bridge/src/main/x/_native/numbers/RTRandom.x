@@ -3,8 +3,7 @@
  * a "repetitive" pseudo-random values.
  */
 service RTRandom
-        implements Random
-    {
+        implements Random {
     @Override Bit bit()                 {TODO("native");}
     @Override Bit[] fill(Bit[] bits)    {TODO("native");}
     @Override Byte[] fill(Byte[] bytes) {TODO("native");}
@@ -22,8 +21,7 @@ service RTRandom
     @Override Float64 float64()         {TODO("native");}
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "Random";
-        }
     }
+}

@@ -12,82 +12,67 @@ import libcrypto.Signature;
  * The native KeyStore service implementation.
  */
 service RTKeyStore
-        implements KeyStore
-    {
-    private construct()
-        {
+        implements KeyStore {
+
+    private construct() {
         certCache = new HashMap();
         keyCache  = new HashMap();
-        }
+    }
 
     @Override
-    @Lazy String[] keyNames.calc()
-        {
+    @Lazy String[] keyNames.calc() {
         String[] names = new String[];
-        for (String name : aliases)
-            {
-            if (isKey(name))
-                {
+        for (String name : aliases) {
+            if (isKey(name)) {
                 names += name;
-                }
             }
-        return names.freeze(True);
         }
+        return names.freeze(True);
+    }
 
     @Override
-    conditional CryptoKey getKey(String name)
-        {
-        if (CryptoKey key := keyCache.get(name))
-            {
+    conditional CryptoKey getKey(String name) {
+        if (CryptoKey key := keyCache.get(name)) {
             return True, key;
-            }
+        }
 
         if ((String  algorithm,
              Int     size,
              Object  secretHandle,
              Object? publicHandle,
-             Byte[]  publicBytes) := getKeyInfo(name))
-            {
+             Byte[]  publicBytes) := getKeyInfo(name)) {
             CryptoKey key;
-            if (publicHandle == Null)
-                {
+            if (publicHandle == Null) {
                 key = new RTPrivateKey(name, algorithm, size, secretHandle);
                 key = &key.maskAs(PrivateKey);
-                }
-            else
-                {
+            } else {
                 CryptoKey privateKey = new RTPrivateKey(name, algorithm, size, secretHandle);
                 CryptoKey publicKey  = new RTPublicKey (name, algorithm, size, publicBytes, publicHandle);
                 key = new KeyPair(name, &publicKey.maskAs(PublicKey), &privateKey.maskAs(PrivateKey));
-                }
+            }
             keyCache.put(name, key);
             return True, key;
-            }
+        }
 
         return False;
-        }
+    }
 
     @Override
-    @Lazy Collection<Certificate> certificates.calc()
-        {
+    @Lazy Collection<Certificate> certificates.calc() {
         Certificate[] certs = new Certificate[];
-        for (String name : aliases)
-            {
-            if (Certificate cert := getCertificate(name))
-                {
+        for (String name : aliases) {
+            if (Certificate cert := getCertificate(name)) {
                 certs += cert;
-                }
             }
-        return certs.freeze(True);
         }
+        return certs.freeze(True);
+    }
 
     @Override
-    conditional Certificate getCertificate(String name)
-        {
-        if (Certificate cert := certCache.get(name))
-            {
+    conditional Certificate getCertificate(String name) {
+        if (Certificate cert := certCache.get(name)) {
             return True, &cert.maskAs(Certificate);
-            }
+        }
 
         if ((String    issuer,
              Int       version,
@@ -104,19 +89,16 @@ service RTKeyStore
              Int       publicKeySize,
              Byte[]    publicKeyBytes,
              Object    publicSecret,
-             Byte[]    derValue) := getCertificateInfo(name))
-            {
+             Byte[]    derValue) := getCertificateInfo(name)) {
             Date notBefore = new Date(notBeforeYear, notBeforeMonth, notBeforeDay);
             Date notAfter  = new Date(notAfterYear,  notAfterMonth,  notAfterDay );
 
             Set<KeyUsage> keyUsage = new HashSet();
-            for (Int i : 0 ..< usageFlags.size)
-                {
-                if (usageFlags[i])
-                    {
+            for (Int i : 0 ..< usageFlags.size) {
+                if (usageFlags[i]) {
                     keyUsage.add(KeyUsage.values[i]);
-                    }
                 }
+            }
             Signature  sig = new Signature(signatureAlgorithm, signatureBytes);
             CryptoKey? key = publicKeyBytes.size > 0
                     ? new RTPublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes, publicSecret)
@@ -126,15 +108,14 @@ service RTKeyStore
                                 keyUsage, sig, derValue, key);
             certCache.put(name, cert);
             return True, &cert.maskAs(Certificate);
-            }
-        return False;
         }
+        return False;
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "KeyStore";
-        }
+    }
 
     /**
      * The local cache of certificates (not masked).
@@ -196,8 +177,8 @@ service RTKeyStore
      * X509Certificate.
      */
     static const X509Certificate
-            implements Certificate
-        {
+            implements Certificate {
+
         construct(String        issuer,
                   Version       version,
                   Date          notBefore,
@@ -205,8 +186,7 @@ service RTKeyStore
                   Set<KeyUsage> keyUsage,
                   Signature     signature,
                   Byte[]        derValue,
-                  CryptoKey?    key)
-            {
+                  CryptoKey?    key) {
             this.issuer    = issuer;
             this.version   = version;
             this.lifetime  = notBefore .. notAfter;
@@ -214,7 +194,7 @@ service RTKeyStore
             this.signature = signature;
             this.derValue  = derValue;
             this.key       = key;
-            }
+        }
 
         @Override
         String standard = "X.509";
@@ -239,20 +219,17 @@ service RTKeyStore
         CryptoKey? key;
 
         @Override
-        Byte[] toDerBytes()
-            {
+        Byte[] toDerBytes() {
             return derValue;
-            }
+        }
 
         @Override
-        conditional CryptoKey containsKey()
-            {
+        conditional CryptoKey containsKey() {
             return Nullable.notNull(key);
-            }
+        }
 
         @Override
-        String toString()
-            {
+        String toString() {
             return $|Standard: {standard}
                     |Version: {version}
                     |Issuer: {issuer}
@@ -261,6 +238,6 @@ service RTKeyStore
                     |Signature: {signature}
                     |
                     ;
-            }
         }
     }
+}

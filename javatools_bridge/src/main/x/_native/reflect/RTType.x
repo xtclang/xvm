@@ -10,8 +10,7 @@ import ecstasy.reflect.TypeTemplate;
  * The native Type implementation.
  */
 const RTType<DataType, OuterType>
-        implements Type<DataType, OuterType>
-    {
+        implements Type<DataType, OuterType> {
     @Override @RO Map<String, Type>    childTypes                         .get() { TODO("native"); }
     @Override @RO Property[]           constants                          .get() { TODO("native"); }
     @Override @RO Constructor[]        constructors                       .get() { TODO("native"); }
@@ -59,35 +58,29 @@ const RTType<DataType, OuterType>
     //   conditional function DataType(Struct) structConstructor(OuterType? outer = Null)
 
     @Override
-    conditional Hasher<DataType> hashed()
-        {
+    conditional Hasher<DataType> hashed() {
         Hasher<DataType>? hasher = this.hasher;
-        if (hasher == Null)
-            {
+        if (hasher == Null) {
             return False;
-            }
+        }
         return True, hasher;
-        }
-
-    private @Lazy Hasher<DataType>? hasher.calc()
-        {
-        Type typeActual = this;
-        if (Hasher<typeActual.DataType> hasher := createHasher())
-            {
-            return hasher;
-            }
-        return Null;
-        }
-
-    @Override
-    @Lazy Iterator<DataType> emptyIterator.calc()
-        {
-        return createEmptyIterator();
-        }
-
-    @Override
-    @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
-        {
-        return collectMultimethods();
-        }
     }
+
+    private @Lazy Hasher<DataType>? hasher.calc() {
+        Type typeActual = this;
+        if (Hasher<typeActual.DataType> hasher := createHasher()) {
+            return hasher;
+        }
+        return Null;
+    }
+
+    @Override
+    @Lazy Iterator<DataType> emptyIterator.calc() {
+        return createEmptyIterator();
+    }
+
+    @Override
+    @Lazy Map<String, MultiMethod<DataType>> multimethods.calc() {
+        return collectMultimethods();
+    }
+}

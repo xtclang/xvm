@@ -7,8 +7,7 @@ import ecstasy.reflect.MultiMethodTemplate;
  */
 class RTMultiMethodTemplate
         extends RTComponentTemplate
-        implements MultiMethodTemplate
-    {
+        implements MultiMethodTemplate {
     @Override
     MethodTemplate[] children();
-    }
+}

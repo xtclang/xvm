@@ -6,8 +6,7 @@ import ecstasy.reflect.ComponentTemplate;
  * The native reflected ComponentTemplate implementation.
  */
 class RTComponentTemplate
-        implements ComponentTemplate
-    {
+        implements ComponentTemplate {
     @Override @RO Access             access;
     @Override @RO String?            doc;
     @Override @RO Format             format;
@@ -19,4 +18,4 @@ class RTComponentTemplate
 
     @Override ComponentTemplate[] children();
     @Override String toString();                            // TODO eventually make this natural
-    }
+}

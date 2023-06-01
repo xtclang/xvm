@@ -6,8 +6,8 @@ import ecstasy.reflect.Parameter;
  */
 class RTFunction<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
         extends RTSignature<ParamTypes, ReturnTypes>
-        implements Function<ParamTypes, ReturnTypes>
-    {
+        implements Function<ParamTypes, ReturnTypes> {
+
     @Override <ParamType> Function!<> bind(
                 Parameter<ParamType> param, ParamType value)      { TODO("native"); }
     @Override Function!<> bind(Map<Parameter, Object> params)     { TODO("native"); }
@@ -21,18 +21,16 @@ class RTFunction<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple
     /**
      * Helper function used by the native code.
      */
-    static (Int[], Object[]) toArray(Map<Parameter, Object> params)
-        {
+    static (Int[], Object[]) toArray(Map<Parameter, Object> params) {
         Int      size     = params.size;
         Int[]    ordinals = new Array<Int>(size);
         Object[] values   = new Array<Object>(size);
 
         loop:
-        for ((Parameter param, Object value) : params)
-            {
+        for ((Parameter param, Object value) : params) {
             ordinals[loop.count] = param.ordinal;
             values  [loop.count] = value;
-            }
-        return (ordinals, values);
         }
+        return (ordinals, values);
     }
+}

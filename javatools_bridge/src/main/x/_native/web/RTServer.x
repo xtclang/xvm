@@ -8,8 +8,8 @@ import libcrypto.KeyStore;
  */
 @Concurrent
 service RTServer
-        implements HttpServer
-    {
+        implements HttpServer {
+
     typedef immutable Object as RequestContext;
 
     @Override
@@ -30,8 +30,7 @@ service RTServer
     @Override
     void configure(String hostName, KeyStore keystore,
                    UInt16 httpPort = 80, UInt16 httpsPort = 443,
-                   String? tlsKey = Null, String? cookieKey  = Null)
-        {
+                   String? tlsKey = Null, String? cookieKey  = Null) {
         configureImpl(hostName, keystore, httpPort, httpsPort, tlsKey);
 
         this.hostName  = hostName;
@@ -40,27 +39,22 @@ service RTServer
 
         CryptoKey secretKey;
         findKey:
-        if (cookieKey == Null)
-            {
-            for (String keyName : keystore.keyNames)
-                {
-                if (CryptoKey key := keystore.getKey(keyName), key.form == Secret)
-                    {
+        if (cookieKey == Null) {
+            for (String keyName : keystore.keyNames) {
+                if (CryptoKey key := keystore.getKey(keyName), key.form == Secret) {
                     secretKey = key;
                     break findKey;
-                    }
                 }
-            throw new IllegalState("The key store is missing a cookie encryption key");
             }
-        else
-            {
+            throw new IllegalState("The key store is missing a cookie encryption key");
+        } else {
             assert secretKey := keystore.getKey(cookieKey)
                     as $|Key is missing "{cookieKey}"
                        ;
             assert secretKey.form == Secret
                     as $|Key "{cookieKey}" must be a symmetrical secret key
                        ;
-            }
+        }
 
         import crypto.RTAlgorithms;
         import crypto.RTEncryptionAlgorithm;
@@ -71,92 +65,73 @@ service RTServer
         Algorithm algorithm  = new RTEncryptionAlgorithm(algName, blockSize, secretKey.size, Secret, cipher);
         Decryptor decryptor  = algorithm.allocate(secretKey).as(Decryptor);
         this.cookieDecryptor = &decryptor.maskAs(Decryptor);
-        }
+    }
 
     @Override
-    void configureService((service) svc)
-        {
-        if (svc.is(DecryptorDependent))
-            {
+    void configureService((service) svc) {
+        if (svc.is(DecryptorDependent)) {
             svc.configureEncryption(cookieDecryptor);
-            }
         }
+    }
 
     /**
      * Native implementation of "configure" that runs on the service context.
      */
     private void configureImpl(String hostName, KeyStore keystore,
-                               UInt16 httpPort, UInt16 httpsPort, String? tlsKey)
-        {TODO("Native");}
+                               UInt16 httpPort, UInt16 httpsPort, String? tlsKey) {TODO("Native");}
 
     @Override
-    void start(Handler handler)
-        {TODO("Native");}
+    void start(Handler handler) {TODO("Native");}
 
     @Override
-    void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body)
-        {TODO("Native");}
+    void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body) {TODO("Native");}
 
     @Override
-    Byte[] getClientAddressBytes(RequestContext context)
-        {TODO("Native");}
+    Byte[] getClientAddressBytes(RequestContext context) {TODO("Native");}
 
     @Override
-    UInt16 getClientPort(RequestContext context)
-        {TODO("Native");}
+    UInt16 getClientPort(RequestContext context) {TODO("Native");}
 
     @Override
-    Byte[] getServerAddressBytes(RequestContext context)
-        {TODO("Native");}
+    Byte[] getServerAddressBytes(RequestContext context) {TODO("Native");}
 
     @Override
-    UInt16 getServerPort(RequestContext context)
-        {TODO("Native");}
+    UInt16 getServerPort(RequestContext context) {TODO("Native");}
 
     @Override
-    String getMethodString(RequestContext context)
-        {TODO("Native");}
+    String getMethodString(RequestContext context) {TODO("Native");}
 
     @Override
-    String getUriString(RequestContext context)
-        {TODO("Native");}
+    String getUriString(RequestContext context) {TODO("Native");}
 
     @Override
-    String getProtocolString(RequestContext context)
-        {TODO("Native");}
+    String getProtocolString(RequestContext context) {TODO("Native");}
 
     @Override
-    String[] getHeaderNames(RequestContext context)
-        {TODO("Native");}
+    String[] getHeaderNames(RequestContext context) {TODO("Native");}
 
     @Override
-    conditional String[] getHeaderValuesForName(RequestContext context, String name)
-        {TODO("Native");}
+    conditional String[] getHeaderValuesForName(RequestContext context, String name) {TODO("Native");}
 
     @Override
-    conditional Byte[] getBodyBytes(RequestContext context)
-        {TODO("Native");}
+    conditional Byte[] getBodyBytes(RequestContext context) {TODO("Native");}
 
     @Override
-    conditional RequestContext[] containsNestedBodies(RequestContext context)
-        {TODO("Native");}
+    conditional RequestContext[] containsNestedBodies(RequestContext context) {TODO("Native");}
 
     @Override
-    void close(Exception? cause = Null)
-        {TODO("Native");}
+    void close(Exception? cause = Null) {TODO("Native");}
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "HttpServer";
-        }
+    }
 
     /**
      * Injectable server.
      */
     static interface HttpServer
-            extends Closeable
-        {
+            extends Closeable {
         /**
          * The host name that was used to start the HttpServer.
          */
@@ -307,22 +282,20 @@ service RTServer
          * @return (conditional) an array of `context` objects, each representing the one nested body
          */
         conditional RequestContext[] containsNestedBodies(RequestContext context);
-        }
+    }
 
     /**
      * HttpRequest handler.
      */
-    static interface Handler
-        {
+    static interface Handler {
         void handle(RequestContext context, String uri, String method, Boolean tls);
-        }
+    }
 
     /**
      * Duck-type based marker interface that identifies service that need to be injected with a
      * [Decryptor]. The name of this interface is irrelevant.
      */
-    static interface DecryptorDependent
-        {
+    static interface DecryptorDependent {
         void configureEncryption(Decryptor cookieDecryptor);
-        }
     }
+}

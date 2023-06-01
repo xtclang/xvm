@@ -4,8 +4,7 @@ import ecstasy.reflect.Annotation;
  * This is the native runtime implementation of Property.
  */
 const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
-        implements Property<Target, Referent, Implementation>
-    {
+        implements Property<Target, Referent, Implementation> {
     @Override @RO String       name                  .get() { TODO("native"); }
     @Override @RO Boolean      readOnly              .get() { TODO("native"); }
     @Override @RO Boolean      hasUnreachableSetter  .get() { TODO("native"); }
@@ -21,4 +20,4 @@ const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
     @Override Implementation of(Target target)              { TODO("native"); }
     @Override Referent get(Target target)                   { TODO("native"); }
     @Override void set(Target target, Referent value)       { TODO("native"); }
-    }
+}

@@ -12,77 +12,65 @@ import ecstasy.fs.Path;
  */
 const OSFile
         extends OSFileNode
-        implements File
-    {
+        implements File {
+
     @Override
-    immutable Byte[] contents
-        {
+    immutable Byte[] contents {
         immutable Byte[] get()                       {TODO("native");}
         void             set(immutable Byte[] bytes) {TODO("native");}
-        }
+    }
 
     @Override
-    Byte[] read(Range<Int> range)
-        {
-        if (!exists)
-            {
+    Byte[] read(Range<Int> range) {
+        if (!exists) {
             throw new FileNotFound(path);
-            }
+        }
         return readImpl(range);
-        }
+    }
 
     @Override
-    File truncate(Int newSize = 0)
-        {
-        if (!exists)
-            {
+    File truncate(Int newSize = 0) {
+        if (!exists) {
             throw new FileNotFound(path);
-            }
+        }
 
-        if (!writable)
-            {
+        if (!writable) {
             throw new AccessDenied(path);
-            }
+        }
 
         truncateImpl(newSize);
 
         return this;
-        }
+    }
 
     @Override
-    File append(Byte[] contents)
-        {
-        if (!exists)
-            {
+    File append(Byte[] contents) {
+        if (!exists) {
             throw new FileNotFound(path);
-            }
+        }
 
-        if (!writable)
-            {
+        if (!writable) {
             throw new AccessDenied(path);
-            }
+        }
 
         appendImpl(contents);
 
         return this;
-        }
+    }
 
     @Override
-    conditional FileStore openArchive()
-        {
+    conditional FileStore openArchive() {
         return False; // TODO
-        }
+    }
 
     @Override
-    Cancellable watch(FileWatcher watcher)
-        {
+    Cancellable watch(FileWatcher watcher) {
         Directory parent = this.parent ?: assert;
-        if (!parent.exists)
-            {
+        if (!parent.exists) {
             throw new FileNotFound(path, "No parent directory");
-            }
-        return store.watchFile(this, watcher);
         }
+        return store.watchFile(this, watcher);
+    }
 
     @Override
     FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]) {TODO("native");}
@@ -93,4 +81,4 @@ const OSFile
     Byte[] readImpl(Range<Int> range) {TODO("native");}
     void truncateImpl(Int newSize)    {TODO("native");}
     void appendImpl(Byte[] contents)  {TODO("native");}
-    }
+}

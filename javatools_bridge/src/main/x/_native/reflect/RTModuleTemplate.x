@@ -6,8 +6,7 @@ import ecstasy.reflect.ModuleTemplate;
  */
 class RTModuleTemplate
         extends RTClassTemplate
-        implements ModuleTemplate
-    {
+        implements ModuleTemplate {
     @Override
     String qualifiedName.get()                            {TODO("native");}
 
@@ -16,4 +15,4 @@ class RTModuleTemplate
 
     @Override
     @RO Boolean resolved.get()                            {TODO("native");}
-    }
+}

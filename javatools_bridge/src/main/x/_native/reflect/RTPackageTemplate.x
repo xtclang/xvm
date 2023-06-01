@@ -6,6 +6,4 @@ import ecstasy.reflect.PackageTemplate;
  */
 class RTPackageTemplate
         extends RTClassTemplate
-        implements PackageTemplate
-    {
-    }
+        implements PackageTemplate {}

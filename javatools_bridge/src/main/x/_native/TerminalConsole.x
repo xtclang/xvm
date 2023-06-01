@@ -2,8 +2,7 @@
  * Simple terminal-based console.
  */
 service TerminalConsole
-        implements Console
-    {
+        implements Console {
     @Override
     void print(Object object= "", Boolean suppressNewline = False);
 
@@ -11,8 +10,7 @@ service TerminalConsole
     String readLine(Boolean suppressEcho = False);
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "TerminalConsole";
-        }
     }
+}

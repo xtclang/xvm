@@ -10,19 +10,17 @@ import libnet.ServerSocket;
  * Implements a native [Socket].
  */
 service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
-        implements Socket
-    {
+        implements Socket {
     /**
      * Constructor from native land.
      *
      * @param name            the name of this network interface
      * @param addressesBytes  the byte array for each address of this network interface
      */
-    construct(Byte[] localAddressBytes, UInt16 localPort, Byte[] remoteAddressBytes, UInt16 remotePort)
-        {
+    construct(Byte[] localAddressBytes, UInt16 localPort, Byte[] remoteAddressBytes, UInt16 remotePort) {
         construct RTSocket((new IPAddress(localAddressBytes), localPort),
                            (new IPAddress(remoteAddressBytes), remotePort));
-        }
+    }
 
     /**
      * State of the socket IO.
@@ -55,79 +53,69 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     public/private SocketAddress remoteAddress;
 
     @Override
-    @Lazy public/private Channel channel.calc()
-        {
-        switch (mode)
-            {
-            case None:
-            case Async:
-                mode = Async;
-                val channel = new SocketChannel(rawChannel);
-                return &channel.maskAs(Socket.Channel);
+    @Lazy public/private Channel channel.calc() {
+        switch (mode) {
+        case None:
+        case Async:
+            mode = Async;
+            val channel = new SocketChannel(rawChannel);
+            return &channel.maskAs(Socket.Channel);
 
-            case Sync:
-                throw new IllegalState("The Socket is already in synchronous I/O mode");
+        case Sync:
+            throw new IllegalState("The Socket is already in synchronous I/O mode");
 
-            case Closed:
-                throw new IOClosed();
-            }
+        case Closed:
+            throw new IOClosed();
         }
+    }
 
     @Override
-    @Lazy BinaryInput in.calc()
-        {
-        switch (mode)
-            {
-            case None:
-            case Sync:
-                mode = Sync;
-                val stream = new SocketInput();
-                return &stream.maskAs(BinaryInput);
+    @Lazy BinaryInput in.calc() {
+        switch (mode) {
+        case None:
+        case Sync:
+            mode = Sync;
+            val stream = new SocketInput();
+            return &stream.maskAs(BinaryInput);
 
-            case Async:
-                throw new IllegalState("The Socket is already in asynchronous I/O mode");
+        case Async:
+            throw new IllegalState("The Socket is already in asynchronous I/O mode");
 
-            case Closed:
-                throw new IOClosed();
-            }
+        case Closed:
+            throw new IOClosed();
         }
+    }
 
     @Override
-    @Lazy BinaryOutput out.calc()
-        {
-        switch (mode)
-            {
-            case None:
-            case Sync:
-                mode = Sync;
-                val stream = new SocketOutput();
-                return &stream.maskAs(BinaryOutput);
+    @Lazy BinaryOutput out.calc() {
+        switch (mode) {
+        case None:
+        case Sync:
+            mode = Sync;
+            val stream = new SocketOutput();
+            return &stream.maskAs(BinaryOutput);
 
-            case Async:
-                throw new IllegalState("The Socket is already in asynchronous I/O mode");
+        case Async:
+            throw new IllegalState("The Socket is already in asynchronous I/O mode");
 
-            case Closed:
-                throw new IOClosed();
-            }
+        case Closed:
+            throw new IOClosed();
         }
+    }
 
     @Override
-    void shutdownInput()
-        {TODO("Native");}
+    void shutdownInput() {TODO("Native");}
 
     @Override
-    void shutdownOutput()
-        {TODO("Native");}
+    void shutdownOutput() {TODO("Native");}
 
     @Override
-    void close(Exception? cause = Null)
-        {TODO("Native");}
+    void close(Exception? cause = Null) {TODO("Native");}
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "Socket";
-        }
+    }
 
 
     // ----- SocketChannel class -------------------------------------------------------------------
@@ -136,10 +124,9 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
      * TODO
      */
     class SocketChannel(Channel rawChannel)
-            delegates Channel(rawChannel)
-        {
+            delegates Channel(rawChannel) {
         // TODO
-        }
+    }
 
     // ----- SocketInput class ---------------------------------------------------------------------
 
@@ -147,10 +134,9 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
      * TODO
      */
     class SocketInput
-            implements BinaryInput
-        {
+            implements BinaryInput {
         // TODO
-        }
+    }
 
 
     // ----- SocketInput class ---------------------------------------------------------------------
@@ -159,13 +145,12 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
      * TODO
      */
     class SocketOutput
-            implements BinaryOutput
-        {
+            implements BinaryOutput {
         // TODO
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
     // TODO
-    }
+}

@@ -12,44 +12,39 @@ import ecstasy.io.IOException;
  */
 const OSFileNode
         implements FileNode
-        delegates  Stringable(pathString)
-    {
+        delegates  Stringable(pathString) {
+
     @Override
     OSFileStore store;
 
     @Override
-    @Lazy Path path.calc()
-        {
+    @Lazy Path path.calc() {
         return new Path(pathString);
-        }
+    }
 
     @Override
     Boolean exists.get() { TODO("native"); }
 
     @Override
-    conditional File linkAsFile()
-        {
+    conditional File linkAsFile() {
         return False; // TODO
-        }
+    }
 
     @Override
-    @Lazy Time created.calc()
-        {
+    @Lazy Time created.calc() {
         // TODO: should it be the "local" timezone?
         return new Time(createdMillis*TimeOfDay.PICOS_PER_MILLI);
-        }
+    }
 
     @Override
-    Time modified.get()
-        {
+    Time modified.get() {
         return new Time(modifiedMillis*TimeOfDay.PICOS_PER_MILLI);
-        }
+    }
 
     @Override
-    @RO Time accessed.get()
-        {
+    @RO Time accessed.get() {
         return new Time(accessedMillis*TimeOfDay.PICOS_PER_MILLI);
-        }
+    }
 
     @Override
     Boolean readable.get() { TODO("native"); }
@@ -58,41 +53,33 @@ const OSFileNode
     Boolean writable.get() { TODO("native"); }
 
     @Override
-    Boolean create()
-        {
+    Boolean create() {
         return !exists && store.create(this:protected);
-        }
+    }
 
     @Override
-    FileNode ensure()
-        {
-        if (!exists)
-            {
+    FileNode ensure() {
+        if (!exists) {
             create();
-            }
+        }
         return this;
-        }
+    }
 
     @Override
-    Boolean delete()
-        {
+    Boolean delete() {
         return exists && store.delete(this:protected);
-        }
+    }
 
     @Override
-    conditional FileNode renameTo(String name)
-        {
+    conditional FileNode renameTo(String name) {
         Path src = path;
         Path dst = new Path(src.parent?, name) : new Path(name);
-        try
-            {
+        try {
             return True, store.copyOrMove(src, src.toString(), dst, dst.toString(), move=True);
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             return False;
-            }
         }
+    }
 
     @Override
     Int size.get() { TODO("native"); }
@@ -100,16 +87,14 @@ const OSFileNode
 
     // ----- equality support ----------------------------------------------------------------------
 
-    static <CompileType extends OSFileNode> Int64 hashCode(CompileType value)
-        {
+    static <CompileType extends OSFileNode> Int64 hashCode(CompileType value) {
         return String.hashCode(value.pathString);
-        }
+    }
 
-    static <CompileType extends OSFileNode> Boolean equals(CompileType node1, CompileType node2)
-        {
+    static <CompileType extends OSFileNode> Boolean equals(CompileType node1, CompileType node2) {
         return node1.pathString == node2.pathString &&
                node1.is(OSFile) == node2.is(OSFile);
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -119,4 +104,4 @@ const OSFileNode
     private Int createdMillis.get()   { TODO("native"); }
     private Int accessedMillis.get()  { TODO("native"); }
     private Int modifiedMillis.get()  { TODO("native"); }
-    }
+}

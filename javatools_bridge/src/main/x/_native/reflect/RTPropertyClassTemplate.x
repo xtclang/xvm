@@ -14,8 +14,7 @@ import ecstasy.reflect.TypeTemplate;
  */
 class RTPropertyClassTemplate
         extends RTComponentTemplate
-        implements ClassTemplate
-    {
+        implements ClassTemplate {
     // ----- Composition methods -------------------------------------------------------------------
 
     @Override @RO ClassTemplate[]       classes;
@@ -25,23 +24,20 @@ class RTPropertyClassTemplate
     @Override @RO TypeTemplate          type;
 
     @Override
-    @RO String? implicitName.get()
-        {
+    @RO String? implicitName.get() {
         return Null;
-        }
+    }
 
     @Override
-    @RO TypeParameter[] typeParams.get()
-        {
+    @RO TypeParameter[] typeParams.get() {
         return [];
-        }
+    }
 
     @Override conditional (AnnotationTemplate, Composition) deannotate();
 
-    @Override Class<> ensureClass(Type[] actualTypes = [])
-        {
+    @Override Class<> ensureClass(Type[] actualTypes = []) {
         throw new UnsupportedOperation();
-        }
+    }
 
     // natural code (these *could* be optimized if they were made native)
     //   Boolean extends(Composition composition)
@@ -55,13 +51,12 @@ class RTPropertyClassTemplate
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
     @Override
-    @RO Boolean virtualChild.get()
-        {
+    @RO Boolean virtualChild.get() {
         return False;
-        }
+    }
 
     @Override @RO Boolean         singleton;
     @Override @RO SourceCodeInfo? sourceInfo;
 
     @Override conditional PropertyTemplate fromProperty();
-    }
+}

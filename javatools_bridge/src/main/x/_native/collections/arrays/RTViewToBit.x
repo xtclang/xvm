@@ -3,7 +3,7 @@
  * ArrayDelegate<Bit>.
  */
 class RTViewToBit<ViewType extends (Number|Nibble|Boolean)>
-        extends RTDelegate<Bit>
-    {
+        extends RTDelegate<Bit> {
+
     private RTDelegate<ViewType> source;
-    }
+}

@@ -2,8 +2,7 @@ import ecstasy.mgmt.Container;
 
 class ContainerControl
         extends RTServiceControl
-        implements Container.Control
-    {
+        implements Container.Control {
     // Container.Control
 
     @Override @RO Container.Status status                                   .get() {TODO("Native");}
@@ -21,4 +20,4 @@ class ContainerControl
     @Override void resume()                                                        {TODO("Native");}
     @Override void store(FileStore filestore)                                      {TODO("Native");}
     @Override void load(FileStore filestore)                                       {TODO("Native");}
-    }
+}

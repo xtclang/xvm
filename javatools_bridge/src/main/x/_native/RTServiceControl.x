@@ -5,8 +5,7 @@ import ecstasy.Service.ServiceStatus;
  * The native ServiceControl implementation.
  */
 class RTServiceControl
-        implements ServiceControl
-    {
+        implements ServiceControl {
     // ServiceStats
 
     @Override @RO ServiceStatus statusIndicator.get() {TODO("native");}
@@ -25,4 +24,4 @@ class RTServiceControl
     @Override void gc()       {TODO("native");}
     @Override void shutdown() {TODO("native");}
     @Override void kill()     {TODO("native");}
-    }
+}

@@ -6,8 +6,7 @@
  * use only, i.e. as an internal implementation detail to optimize specific use cases within the
  * standard library.
  */
-interface Transferable
-    {
+interface Transferable {
     /**
      * Request a new object to transfer to a different service. Note that the result type is
      * expected to be masked, as this interface is not (and must not be) visible to user code, i.e.
@@ -19,4 +18,4 @@ interface Transferable
      *         fiber initial call in the service to which this object is being transferred
      */
     Object transfer();
-    }
+}

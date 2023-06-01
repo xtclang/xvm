@@ -1,10 +1,9 @@
 import libcrypto.CryptoKey;
 
 mixin RTCryptoKey(Object secret)
-        into CryptoKey
-    {
+        into CryptoKey {
     /**
      * The crypto material.
      */
     public/protected Object secret;
-    }
+}

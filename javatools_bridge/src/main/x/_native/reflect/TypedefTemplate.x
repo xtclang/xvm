@@ -7,7 +7,7 @@ import ecstasy.reflect.TypeTemplate;
  */
 class RTTypedefTemplate
         extends RTComponentTemplate
-        implements TypedefTemplate
-    {
+        implements TypedefTemplate {
+
     @Override @RO TypeTemplate referredToType;
-    }
+}

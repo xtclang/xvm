@@ -11,8 +11,7 @@ import ecstasy.reflect.TypeTemplate;
  * The native reflected TypeTemplate implementation.
  */
 const RTTypeTemplate
-        implements TypeTemplate
-    {
+        implements TypeTemplate {
     @Override @RO String         desc;
     @Override @RO Boolean        explicitlyImmutable;
     @Override @RO Form           form;
@@ -41,13 +40,11 @@ const RTTypeTemplate
 
     // helper method to create an AnnotationComposition
     static conditional Composition createComposition(ClassTemplate baseTemplate,
-                                                     AnnotationTemplate[] annotations)
-        {
+                                                     AnnotationTemplate[] annotations) {
         Composition result = baseTemplate;
-        for (AnnotationTemplate annotation : annotations)
-            {
+        for (AnnotationTemplate annotation : annotations) {
             result = new AnnotatingComposition(annotation, result);
-            }
-        return True, result;
         }
+        return True, result;
     }
+}

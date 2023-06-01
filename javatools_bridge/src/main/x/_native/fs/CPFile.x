@@ -10,52 +10,43 @@ import ecstasy.fs.Path;
  */
 const CPFile(Object cookie, FileStore? fileStore, Path path, Time created, Time modified, Int size)
         extends CPFileNode(cookie, fileStore, path, created, modified, size)
-        implements File
-    {
-    construct(Object cookie)
-        {
+        implements File {
+    construct(Object cookie) {
         construct CPFileNode(cookie);
-        }
+    }
 
     @Override
-    @Lazy immutable Byte[] contents.calc()
-        {
-        if (!exists)
-            {
+    @Lazy immutable Byte[] contents.calc() {
+        if (!exists) {
             throw new FileNotFound(path);
-            }
+        }
 
         return CPFileStore.loadFile(cookie);
-        }
+    }
 
     @Override
-    Byte[] read(Range<Int> range)
-        {
+    Byte[] read(Range<Int> range) {
         return contents.slice(range);
-        }
+    }
 
     @Override
-    File truncate(Int newSize = 0)
-        {
+    File truncate(Int newSize = 0) {
         throw exists ? new AccessDenied() : new FileNotFound(path);
-        }
+    }
 
     @Override
-    File append(Byte[] contents)
-        {
+    File append(Byte[] contents) {
         throw new AccessDenied();
-        }
+    }
 
     @Override
-    conditional FileStore openArchive()
-        {
+    conditional FileStore openArchive() {
         // TODO eventually
         return False;
-        }
+    }
 
     @Override
-    FileChannel open(ReadOption read=Read, WriteOption[] write=[Write])
-        {
+    FileChannel open(ReadOption read=Read, WriteOption[] write=[Write]) {
         TODO
-        }
     }
+}

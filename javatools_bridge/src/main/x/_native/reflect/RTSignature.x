@@ -7,8 +7,7 @@ import ecstasy.reflect.Signature;
  * The native Signature implementation.
  */
 class RTSignature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
-        implements Signature<ParamTypes, ReturnTypes>
-    {
+        implements Signature<ParamTypes, ReturnTypes> {
     @Override @RO String      name                         .get() { TODO("native"); }
     @Override @RO Parameter[] params                       .get() { TODO("native"); }
     @Override @RO Return[]    returns                      .get() { TODO("native"); }
@@ -20,4 +19,4 @@ class RTSignature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tupl
     // these methods are currently implemented as natural code:
     //   conditional Parameter findParam(String name)
     //   conditional Return findReturn(String name)
-    }
+}

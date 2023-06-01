@@ -6,8 +6,7 @@ import libcrypto.KeyForm;
 /**
  * Helper service for native functionality.
  */
-service RTAlgorithms
-    {
+service RTAlgorithms {
     typedef Int|Int[] as KeySize;
 
     enum AlgorithmMethod {Hasher, SymmetricCipher, AsymmetricCipher, Signature, KeyGen}
@@ -17,46 +16,41 @@ service RTAlgorithms
      *
      * @see [Java Security Standard Algorithm Names](https://docs.oracle.com/javase/9/docs/specs/security/standard-names.html)
      */
-    Algorithms createAlgorithms()
-        {
+    Algorithms createAlgorithms() {
         Algorithm[] algorithms = new Array<Algorithm>
                 (hashers.size + encryptions.size + signers.size + keyGenerators.size);
 
-        for ((String name, String hasherName, Int hashSize) : hashers)
-            {
+        for ((String name, String hasherName, Int hashSize) : hashers) {
             (_, Object implementation) = getAlgorithmInfo(hasherName, Hasher);
 
             Algorithm alg = new RTHasher(name, hashSize, implementation);
             algorithms.add(&alg.maskAs(Algorithm));
-            }
+        }
 
-        for ((AlgorithmMethod method, String name, KeySize keySize) : encryptions)
-            {
+        for ((AlgorithmMethod method, String name, KeySize keySize) : encryptions) {
             (Int blockSize, Object implementation) = getAlgorithmInfo(name, method);
 
             KeyForm   keyForm = method == SymmetricCipher ? Secret : Pair;
             Algorithm alg     = new RTEncryptionAlgorithm(name, blockSize, keySize, keyForm, implementation);
             algorithms.add(&alg.maskAs(Algorithm));
-            }
+        }
 
-        for ((String name, KeySize keySize, Int sigSize) : signers)
-            {
+        for ((String name, KeySize keySize, Int sigSize) : signers) {
             (Int blockSize, Object implementation) = getAlgorithmInfo(name, Signature);
 
             Algorithm alg = new RTSigningAlgorithm(name, blockSize, keySize, sigSize, implementation);
             algorithms.add(&alg.maskAs(Algorithm));
-            }
+        }
 
-        for (String name : keyGenerators)
-            {
+        for (String name : keyGenerators) {
             (_, Object implementation) = getAlgorithmInfo(name, KeyGen);
 
             Algorithm alg = new RTKeyGenerator(name, implementation);
             algorithms.add(&alg.maskAs(Algorithm));
-            }
+        }
 
         return new Algorithms(algorithms.freeze(True));
-        }
+    }
 
 
     // ----- native methods ------------------------------------------------------------------------
@@ -141,4 +135,4 @@ service RTAlgorithms
 
     static Int[] AES_SIZES = [128 >> 3, 192 >> 3, 256 >> 3];
     static Int[] RSA_SIZES = [1024 >> 3, 2048 >> 3, 4096 >> 3];
-    }
+}

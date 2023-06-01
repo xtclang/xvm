@@ -8,13 +8,12 @@ import libcrypto.PrivateKey;
  * The native [KeyGenerator] [Algorithm] implementation.
  */
 service RTKeyGenerator(String name)
-        implements Algorithm, KeyGenerator
-    {
-    construct(String name, Object factory)
-        {
+        implements Algorithm, KeyGenerator {
+
+    construct(String name, Object factory) {
         this.name    = name;
         this.factory = factory;
-        }
+    }
 
     /**
      * The native factory.
@@ -25,57 +24,50 @@ service RTKeyGenerator(String name)
     // ----- Algorithm API -------------------------------------------------------------------------
 
     @Override
-    Category category.get()
-        {
+    Category category.get() {
         return KeyGeneration;
-        }
+    }
 
     @Override
-    conditional Int|Int[] keyRequired()
-        {
+    conditional Int|Int[] keyRequired() {
         return False;
-        }
+    }
 
     @Override
-    KeyGenerator allocate(CryptoKey? key)
-        {
-        if (key != Null)
-            {
+    KeyGenerator allocate(CryptoKey? key) {
+        if (key != Null) {
             throw new IllegalArgument("Key is not used");
-            }
+        }
 
         return &this.maskAs(KeyGenerator);
-        }
+    }
 
 
     // ----- KeyGenerator API ----------------------------------------------------------------------
 
     @Override
-    @RO Algorithm algorithm.get()
-        {
+    @RO Algorithm algorithm.get() {
         return &this.maskAs(Algorithm);
-        }
+    }
 
     @Override
-    CryptoKey generateSecretKey(String name)
-        {
+    CryptoKey generateSecretKey(String name) {
         (Int keySize, Object secret) = generateSecret(factory);
 
         CryptoKey key = new RTPrivateKey(name, this.name, keySize, secret);
         return &key.maskAs(PrivateKey);
-        }
+    }
 
 
     // ----- Object API ----------------------------------------------------------------------------
 
     @Override
-    String toString()
-        {
+    String toString() {
         return $"{name.quoted()} key generator";
-        }
+    }
 
 
     // ----- native methods ------------------------------------------------------------------------
 
     private (Int keySize, Object secret) generateSecret(Object factory) {TODO("Native");}
-    }
+}

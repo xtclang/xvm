@@ -3,7 +3,7 @@
  * ArrayDelegate<Element>.
  */
 class RTViewFromByte<Element extends Number>
-        extends RTDelegate<Element>
-    {
+        extends RTDelegate<Element> {
+
     private RTDelegate<Byte> source;
-    }
+}

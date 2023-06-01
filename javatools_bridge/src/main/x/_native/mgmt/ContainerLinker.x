@@ -9,8 +9,7 @@ import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
 
 service ContainerLinker
-        implements Container.Linker
-    {
+        implements Container.Linker {
     // TODO remove the temporary method
     @Override FileTemplate loadFileTemplate(File file) {TODO("Native");}
 
@@ -22,41 +21,34 @@ service ContainerLinker
             ResourceProvider? provider        = Null,
             Module[]          sharedModules   = [],
             ModuleSpec[]      additionalSpecs = [],
-            String[]          namedConditions = [])
-        {
+            String[]          namedConditions = []) {
         ModuleTemplate primaryModule;
-        if (primarySpec.is(ModuleTemplate))
-            {
+        if (primarySpec.is(ModuleTemplate)) {
             primaryModule = primarySpec;
-            }
-        else
-            {
+        } else {
             assert:arg repository != Null;
             assert primaryModule := repository.getModule(primarySpec) as $"Missing {primarySpec}";
-            }
+        }
 
-        ModuleTemplate[] additionalModules = new ModuleTemplate[additionalSpecs.size](i ->
-            {
+        ModuleTemplate[] additionalModules = new ModuleTemplate[additionalSpecs.size](i -> {
             ModuleSpec spec = additionalSpecs[i];
-            if (spec.is(ModuleTemplate))
-                {
+            if (spec.is(ModuleTemplate)) {
                 return spec;
-                }
+            }
             assert:arg repository != Null;
             assert ModuleTemplate template :=
                     repository.getModule(spec) as $"Missing additional module {spec}";
             return template;
-            });
+        });
 
         return resolveAndLink(primaryModule, model, repository, provider,
             sharedModules, additionalModules, namedConditions);
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         return "Linker";
-        }
+    }
 
     /**
      * Native implementation.
@@ -68,6 +60,5 @@ service ContainerLinker
             ResourceProvider? provider,
             Module[]          sharedModules,
             ModuleTemplate[]  additionalModules,
-            String[]          namedConditions)
-        {TODO("Native");}
-    }
+            String[]          namedConditions) {TODO("Native");}
+}

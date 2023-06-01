@@ -16,8 +16,7 @@ import ecstasy.reflect.TypeTemplate;
  */
 class RTClassTemplate
         extends RTComponentTemplate
-        implements ClassTemplate
-    {
+        implements ClassTemplate {
     // ----- Composition methods -------------------------------------------------------------------
 
     @Override @RO ClassTemplate[]       classes;
@@ -47,10 +46,9 @@ class RTClassTemplate
     @Override @RO SourceCodeInfo? sourceInfo;
 
     @Override
-    conditional PropertyTemplate fromProperty()
-        {
+    conditional PropertyTemplate fromProperty() {
         return False;
-        }
+    }
 
     @Override @RO String? implicitName;
 
@@ -60,47 +58,43 @@ class RTClassTemplate
                                     Object[]?         parameters,
                                     PropertyTemplate? delegatee,
                                     String[]?         names,
-                                    Type[]?           types)
-        {
+                                    Type[]?           types) {
         TypeTemplate ingredient = ingredientType.template;
         Map<String, TypeTemplate>? constraints = Null;
 
-        switch (action)
-            {
-            case AnnotatedBy:
-                assert Composition composition := ingredient.fromClass();
-                assert composition.is(ClassTemplate) && parameters != Null;
+        switch (action) {
+        case AnnotatedBy:
+            assert Composition composition := ingredient.fromClass();
+            assert composition.is(ClassTemplate) && parameters != Null;
 
-                Argument[] arguments = parameters.size == 0
-                        ? []
-                        : names == Null
-                            ? new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service)))
-                            : new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service), names[i]));
+            Argument[] arguments = parameters.size == 0
+                    ? []
+                    : names == Null
+                        ? new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service)))
+                        : new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service), names[i]));
 
-                composition = new AnnotatingComposition(new AnnotationTemplate(composition, arguments), this);
-                ingredient  = composition.type;
-                break;
+            composition = new AnnotatingComposition(new AnnotationTemplate(composition, arguments), this);
+            ingredient  = composition.type;
+            break;
 
-            case Incorporates:
-                if (names != Null && types != Null)
-                    {
-                    Int count = names.size;
+        case Incorporates:
+            if (names != Null && types != Null) {
+                Int count = names.size;
 
-                    assert count == types.size;
+                assert count == types.size;
 
-                    TypeTemplate[] constraintTemplates =
-                            new TypeTemplate[count](i -> types[i].template);
-                    constraints = new ListMap(names, constraintTemplates);
-                    }
-                break;
+                TypeTemplate[] constraintTemplates =
+                        new TypeTemplate[count](i -> types[i].template);
+                constraints = new ListMap(names, constraintTemplates);
             }
+            break;
+        }
 
         return new Contribution(action, ingredient, delegatee, constraints);
-        }
+    }
 
     // helper function to create an array of TypeParameters
-    static TypeParameter[] createTypeParameters(String[] names, TypeTemplate[] types)
-        {
+    static TypeParameter[] createTypeParameters(String[] names, TypeTemplate[] types) {
         return new TypeParameter[names.size](i -> new TypeParameter(names[i], types[i]));
-        }
     }
+}

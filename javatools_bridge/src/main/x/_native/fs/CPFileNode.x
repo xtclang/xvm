@@ -9,98 +9,82 @@ import ecstasy.fs.Path;
  */
 const CPFileNode(Object cookie, FileStore? fileStore, Path path, Time created, Time modified, Int size)
         implements FileNode
-        delegates  Stringable(path)
-    {
-    construct(Object cookie)
-        {
+        delegates  Stringable(path) {
+
+    construct(Object cookie) {
         (Boolean isDir, String name, Time created, Time modified, Int size) =
                 CPFileStore.loadNode(cookie);
         construct CPFileNode(cookie, fileStore, new Path(name), created, modified, size);
-        }
+    }
 
     @Override
-    FileStore store.get()
-        {
+    FileStore store.get() {
         return fileStore ?: throw new IllegalState("standalone resource") ;
-        }
+    }
 
     @Override
-    @RO String name.get()
-        {
+    @RO String name.get() {
         return path.form == Root ? "" : path.name;
-        }
+    }
 
     @Override
-    @RO Boolean exists.get()
-        {
+    @RO Boolean exists.get() {
         return cookie != Null;
-        }
+    }
 
     @Override
-    conditional File linkAsFile()
-        {
+    conditional File linkAsFile() {
         return False; // not implemented yet
-        }
+    }
 
     @Override
-    @RO Time accessed.get()
-        {
+    @RO Time accessed.get() {
         return Time.EPOCH;
-        }
+    }
 
     @Override
-    @RO Boolean readable.get()
-        {
+    @RO Boolean readable.get() {
         return True;
-        }
+    }
 
     @Override
-    @RO Boolean writable.get()
-        {
+    @RO Boolean writable.get() {
         return False;
-        }
+    }
 
     @Override
-    Boolean create()
-        {
-        if (exists)
-            {
+    Boolean create() {
+        if (exists) {
             return False;
-            }
-        throw new AccessDenied();
         }
+        throw new AccessDenied();
+    }
 
     @Override
-    FileNode ensure()
-        {
-        if (exists)
-            {
+    FileNode ensure() {
+        if (exists) {
             return this;
-            }
-        throw new AccessDenied();
         }
+        throw new AccessDenied();
+    }
 
     @Override
-    Boolean delete()
-        {
-        if (!exists)
-            {
+    Boolean delete() {
+        if (!exists) {
             return False;
-            }
+        }
         throw new AccessDenied();
-        }
+    }
 
     @Override
-    conditional FileNode renameTo(String name)
-        {
+    conditional FileNode renameTo(String name) {
         return False;
-        }
+    }
 
     @Override
-    Cancellable watch(FileWatcher watch)
-        {
+    Cancellable watch(FileWatcher watch) {
         return () -> {};
-        }
+    }
 
 
     // ----- native support ------------------------------------------------------------------------
@@ -109,4 +93,4 @@ const CPFileNode(Object cookie, FileStore? fileStore, Path path, Time created, T
      * The native handle for the constant which this node represents.
      */
     protected Object cookie;
-    }
+}
