@@ -10,10 +10,11 @@ import java.util.Arrays;
  */
 public class TermTCon extends TCon {
   private transient int _defx;  // Type index for def
+  Const _id;
   public TermTCon( XEC.XParser X ) throws IOException {
     _defx = X.index();
   }
   @Override public void resolve( CPool pool ) {
-    throw XEC.TODO();
+    _id = pool.get(_defx);
   }
 }

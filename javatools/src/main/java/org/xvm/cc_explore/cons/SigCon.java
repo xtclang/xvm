@@ -11,13 +11,21 @@ import java.util.Arrays;
 public class SigCon extends IdCon {
   private transient int _namex;  // Type index for name
   private transient int[] _parmxs, _retxs;  // Type index arrays for parms, returns
+  StringCon _name;
+  TCon[] _params;
+  TCon[] _rets;
   
   public SigCon( XEC.XParser X ) throws IOException {
     _namex  = X.index();
     _parmxs = X.idxAry();
     _retxs  = X.idxAry();
   }
+  
   @Override public void resolve( CPool pool ) {
-    throw XEC.TODO();
+    _name = (StringCon)pool.get(_namex);
+    _params = new TCon[_parmxs.length];
+    _rets   = new TCon[_retxs .length];
+    for( int i=0; i<_parmxs.length; i++ )  _params[i] = (TCon)pool.get(_parmxs[i]);
+    for( int i=0; i<_retxs .length; i++ )  _rets  [i] = (TCon)pool.get(_retxs [i]);
   }  
 }

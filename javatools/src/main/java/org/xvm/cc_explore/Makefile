@@ -53,8 +53,8 @@ XEC := org/xvm/cc_explore
 SRC := src/main/java
 TST := src/test/java
 CLZDIR:= build/classes/java
-main_javas   := $(wildcard $(SRC)/$(XEC)/*java $(SRC)/$(AA)/*/*java)
-test_javas   := $(wildcard $(TST)/$(XEC)/*java $(TST)/$(AA)/*/*java)
+main_javas   := $(wildcard $(SRC)/$(XEC)/*java $(SRC)/$(XEC)/*/*java)
+test_javas   := $(wildcard $(TST)/$(XEC)/*java $(TST)/$(XEC)/*/*java)
 main_classes := $(patsubst $(SRC)/%java,$(CLZDIR)/main/%class,$(main_javas))
 test_classes := $(patsubst $(TST)/%java,$(CLZDIR)/test/%class,$(test_javas))
 classes = $(main_classes) $(test_classes)
@@ -69,7 +69,7 @@ classes: $(classes)
 tests:	$(test_classes)
 
 # Compile just the out-of-date files
-$(main_classes): build/classes/java/main/%class: $(SRC)/%java
+$(main_classes): $(CLZDIR)/main/%class: $(SRC)/%java
 	@echo "compiling " $@ " because " $?
 	@[ -d $(CLZDIR)/main ] || mkdir -p $(CLZDIR)/main
 	@javac $(JAVAC_ARGS) -cp "$(CLZDIR)/main$(SEP)$(jars)" -sourcepath $(SRC) -d $(CLZDIR)/main $(main_javas)
