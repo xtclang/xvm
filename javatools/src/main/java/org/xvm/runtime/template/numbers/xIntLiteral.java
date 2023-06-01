@@ -424,9 +424,15 @@ public class xIntLiteral
             }
         catch (NumberFormatException e)
             {
-            ErrorList errs   = new ErrorList(5);
-            Lexer     lexer  = new Lexer(new Source(sText), errs);
-            Token     tokLit = lexer.next();
+            ErrorList errs  = new ErrorList(5);
+            Lexer     lexer = new Lexer(new Source(sText), errs);
+
+            if (!lexer.hasNext())
+                {
+                throw e;
+                }
+
+            Token tokLit = lexer.next();
             if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
                 {
                 throw e;
