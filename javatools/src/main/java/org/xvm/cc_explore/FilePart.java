@@ -84,8 +84,6 @@ public class FilePart extends Part {
 
     // Parse any children components
     parseKids(this);
-    buf = null;
-    throw XEC.TODO();
   }
 
 
@@ -106,22 +104,21 @@ public class FilePart extends Part {
     // encoded in one byte.  The least significant 7 bits of the value are
     // shifted left by 1 bit, and the 0x1 bit is set to 1.  When reading in a
     // packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.      
-    int x = u8();
-    if( (x&1)==1 ) return x>>1; // Tiny
+    int b = _buf[x++];          // Signed byte read
+    if( (b&1)!=0 ) return b>>1; // Tiny
     
     // Small: For a value in the range -4096..4095 (13 bits), the value can
     // be encoded in two bytes. The first byte contains the value 0x2 (010)
     // in the least significant 3 bits, and bits 8-12 of the integer in bits
     // 3-7; the second byte contains bits 0-7 of the integer.
-    if( (x&7)==0b010 )
-      //return (u8()<<(24-3)) | (x>>3);
-      throw XEC.TODO();           // Untested
-    
-    if( (x&7)==0b011 )
-      throw XEC.TODO();           // Medium
+    if( (b&2)!=0 ) {
+      if( (b&4)==0 ) 
+        return ((b & 0xFFFFFFF8) << 5) | u8();
+      else throw XEC.TODO();
+    }
 
-    if( x != 0b11111100 ) {   // Large
-      int b = (x>>2)+2-1;     // Minus one for the self byte
+    if( b != 0b11111100 ) {   // Large
+      b = ((b&0xFC)>>>2)+2-1;     // Minus one for the self byte
       if( b==1 ) return u8();
       throw XEC.TODO();
     }
@@ -136,7 +133,7 @@ public class FilePart extends Part {
     // this is unsupported in Java; arrays are limited in size by their use
     // of signed 32-bit magnitudes and indexes
     if( n > Integer.MAX_VALUE )  throw new IOException("index (" + n + ") exceeds 32-bit maximum");
-    if( n < 0 )                  throw new IOException("negative index (" + n + ") is illegal");
+    if( n < -1 )                 throw new IOException("negative index (" + n + ") is illegal");
     return (int) n;
   }
 
