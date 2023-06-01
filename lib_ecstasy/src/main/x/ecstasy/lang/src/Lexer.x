@@ -2343,7 +2343,6 @@ class Lexer
             Boolean      spaceBefore = False,
             Boolean      spaceAfter  = False) {
 
-            }
         assert() {
             assert value.is(id.Value);
         }
