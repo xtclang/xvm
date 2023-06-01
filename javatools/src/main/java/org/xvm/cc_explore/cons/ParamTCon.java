@@ -2,7 +2,6 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import java.io.IOException;
-import java.util.Arrays;
 
 /**
   Exploring XEC Constants
@@ -13,7 +12,7 @@ public class ParamTCon extends TCon {
   TCon _con;
   TCon[] _params;
   
-  public ParamTCon( FileComponent X ) throws IOException {
+  public ParamTCon( FilePart X ) throws IOException {
     _tx  = X.u31();
     _txs = X.idxAry();
   }

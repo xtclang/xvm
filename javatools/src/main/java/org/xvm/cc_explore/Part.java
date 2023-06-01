@@ -2,27 +2,25 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
 /**
      DAG structure containment of components
  */
-abstract public class Component {
-  public final Component _par;  // Parent in the parent chain; null ends
+abstract public class Part {
+  public final Part _par;  // Parent in the parent chain; null ends
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
   public final IdCon _id;       // Identifier
 
   public final ArrayList<Contrib> _contribs;
 
-  Component( Component par, int nFlags, IdCon id, CondCon cond, FileComponent X ) throws IOException {
+  Part( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) throws IOException {
     _par = par;
-    assert (par==null) ==  this instanceof FileComponent ; // File doesn't have a parent
-    assert (id ==null) ==  this instanceof FileComponent ; // File doesn't have a id
-    assert cond==null || !(this instanceof FileComponent); // File can't be conditional
+    assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
+    assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
+    assert cond==null || !(this instanceof FilePart); // File can't be conditional
     
     if( id != null ) {
       id = (IdCon)id.resolveTypedefs();
@@ -43,7 +41,7 @@ abstract public class Component {
     }
   }
 
-  void parseKids( FileComponent X ) throws IOException {
+  void parseKids( FilePart X ) throws IOException {
     int cnt = X.u31();
     for( int i=0; i<cnt; i++ ) {
       int n = X.u8();
@@ -52,7 +50,7 @@ abstract public class Component {
         // the first byte of the two-byte FLAGS value (which is the start of
         // the body) for a single component
         n = (n << 8) | X.u8();
-        Component kid = Format.fromFlags(n).parse(this,X._pool.get(X.u31()), n, null, X);
+        Part kid = Format.fromFlags(n).parse(this,X._pool.get(X.u31()), n, null, X);
         throw XEC.TODO();
       } else {
         throw XEC.TODO();
@@ -61,9 +59,9 @@ abstract public class Component {
   }
 
   // Walk the parent chain to the top
-  FileComponent getFileComp() {
-    Component c = this;
-    while( !(c instanceof FileComponent filec) ) c = c._par;
+  FilePart getFileComp() {
+    Part c = this;
+    while( !(c instanceof FilePart filec) ) c = c._par;
     return filec;
   }
 
@@ -77,7 +75,7 @@ abstract public class Component {
   public class Contrib {
     final Composition _comp;
     final TCon _tContrib;
-    protected Contrib(FileComponent X) throws IOException  {
+    protected Contrib( FilePart X) throws IOException  {
       _comp = Composition.valueOf(X.u8());
       _tContrib = (TCon)X._pool.get(X.u31());
       assert _tContrib!=null;
@@ -134,10 +132,10 @@ abstract public class Component {
      * @param X      file parser support
      * @return the new component
      */
-    Component parse( Component par, Const con, int nFlags, CondCon cond, FileComponent X ) throws IOException {
+    Part parse( Part par, Const con, int nFlags, CondCon cond, FilePart X ) throws IOException {
       assert par!=null;
       return switch( this ) {
-      case MODULE   -> new ModComponent(par, nFlags, (ModCon) con, cond, X);
+      case MODULE   -> new ModPart(par, nFlags, (ModCon) con, cond, X);
       //case PACKAGE  -> throw XEC.TODO(); // new PackageComponent(par, nFlags, (PackageCon) con, cond);
       //case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE -> throw XEC.TODO(); // new ClassComponent(par, nFlags, (ClassCon) con, cond);
       //case TYPEDEF  -> throw XEC.TODO(); // new TypedefComponent(par, nFlags, (TypedefCon) con, cond);

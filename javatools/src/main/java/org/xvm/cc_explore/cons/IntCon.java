@@ -8,7 +8,7 @@ import org.xvm.cc_explore.*;
 public class IntCon extends Const {
   final Format _f;
   final long _x;
-  public IntCon( FileComponent X, Const.Format f ) {
+  public IntCon( FilePart X, Const.Format f ) {
     _f = f;
     _x = X.pack64();        // TODO: larger numbers need more support here
     
