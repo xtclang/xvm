@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.*;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -15,8 +14,8 @@ public class SigCon extends IdCon {
   TCon[] _params;
   TCon[] _rets;
   
-  public SigCon( XEC.XParser X ) throws IOException {
-    _namex  = X.index();
+  public SigCon( FileComponent X ) throws IOException {
+    _namex  = X.u31();
     _parmxs = X.idxAry();
     _retxs  = X.idxAry();
   }
@@ -28,4 +27,5 @@ public class SigCon extends IdCon {
     for( int i=0; i<_parmxs.length; i++ )  _params[i] = (TCon)pool.get(_parmxs[i]);
     for( int i=0; i<_retxs .length; i++ )  _rets  [i] = (TCon)pool.get(_retxs [i]);
   }  
+  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }
