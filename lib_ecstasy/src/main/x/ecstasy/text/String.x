@@ -6,8 +6,7 @@ const String
         implements Iterable<Char>
         implements Sliceable<Int>
         implements Stringable
-        implements Destringable
-    {
+        implements Destringable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -15,16 +14,14 @@ const String
      *
      * @param chars  an array of characters to include in the String
      */
-    construct(Char[] chars)
-        {
+    construct(Char[] chars) {
         this.chars = chars.is(immutable Char[]) ? chars : chars.freeze();
-        }
+    }
 
     @Override
-    construct(String! text)
-        {
+    construct(String! text) {
         construct String(text.chars.reify(Constant));
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -37,15 +34,13 @@ const String
     /**
      * A lazily calculated, cached hash code.
      */
-    private @Lazy Int64 hash.calc()
-        {
+    private @Lazy Int64 hash.calc() {
         @Unchecked Int64 hash = Int64:982_451_653.toUnchecked(); // start with a prime number
-        for (Char char : chars)
-            {
+        for (Char char : chars) {
             hash = hash * 31 + char.toInt64();
-            }
-        return hash;
         }
+        return hash;
+    }
 
 
     // ----- operators -----------------------------------------------------------------------------
@@ -57,22 +52,19 @@ const String
      *
      * @return a String that is the result of duplicating this String the specified number of times
      */
-    @Op("*") String! dup(Int n)
-        {
-        if (n <= 1)
-            {
+    @Op("*") String! dup(Int n) {
+        if (n <= 1) {
             return n == 1
                     ? this
                     : "";
-            }
+        }
 
         StringBuffer buf = new StringBuffer(size*n);
-        for (Int i = 0; i < n; ++i)
-            {
+        for (Int i = 0; i < n; ++i) {
             appendTo(buf);
-            }
-        return buf.toString();
         }
+        return buf.toString();
+    }
 
     /**
      * Add the String form of the passed object to this String, returning the result.
@@ -81,12 +73,11 @@ const String
      *
      * @return the concatenation of the String form of the passed object onto this String
      */
-    @Op("+") String! append(Object o)
-        {
+    @Op("+") String! append(Object o) {
         Int          add = o.is(Stringable) ? o.estimateStringLength() : 0x0F;
         StringBuffer buf = new StringBuffer(size + add);
         return (buf + this + o).toString();
-        }
+    }
 
 
     // ----- operations ----------------------------------------------------------------------------
@@ -98,27 +89,24 @@ const String
      *
      * @return the specified sub-string
      */
-    String! substring(Int startAt)
-        {
-        return switch ()
-            {
+    String! substring(Int startAt) {
+        return switch () {
             case startAt <= 0:   this;
             case startAt < size: this[startAt ..< size];
             default: "";
-            };
-        }
+        };
+    }
 
     /**
      * Obtain this String, but with its contents reversed.
      *
      * @return the reversed form of this String
      */
-    String! reversed()
-        {
+    String! reversed() {
         return size <= 1
                 ? this
                 : this[size >.. 0];
-        }
+    }
 
     /**
      * Strip the whitespace off of the front and back of the string.
@@ -127,30 +115,26 @@ const String
      *
      * @return the contents of this String, but without any leading or trailing whitespace
      */
-    String trim(function Boolean(Char) whitespace = ch -> ch.isWhitespace())
-        {
+    String trim(function Boolean(Char) whitespace = ch -> ch.isWhitespace()) {
         Int leading = 0;
         val length  = size;
-        while (leading < length && whitespace(this[leading]))
-            {
+        while (leading < length && whitespace(this[leading])) {
             ++leading;
-            }
+        }
 
-        if (leading == length)
-            {
+        if (leading == length) {
             return "";
-            }
+        }
 
         Int trailing = 0;
-        while (whitespace(this[length-trailing-1]))
-            {
+        while (whitespace(this[length-trailing-1])) {
             ++trailing;
-            }
+        }
 
         return leading == 0 && trailing == 0
                 ? this
                 : this[leading ..< size-trailing];
-        }
+    }
 
     /**
      * Count the number of occurrences of the specified character in this String.
@@ -159,18 +143,15 @@ const String
      *
      * @return the number of times that the specified character occurs in this String
      */
-    Int count(Char value)
-        {
+    Int count(Char value) {
         Int count = 0;
-        for (Char ch : chars)
-            {
-            if (ch == value)
-                {
+        for (Char ch : chars) {
+            if (ch == value) {
                 ++count;
-                }
             }
-        return count;
         }
+        return count;
+    }
 
     /**
      * Split the String into an array of Strings, by finding each occurrence of the specified
@@ -181,28 +162,25 @@ const String
      *
      * @return an array of Strings
      */
-    String![] split(Char separator)
-        {
-        if (size == 0)
-            {
+    String![] split(Char separator) {
+        if (size == 0) {
             return [""];
-            }
+        }
 
         String[] results = new String[];
 
         Int start = 0;
-        while (Int next := indexOf(separator, start))
-            {
+        while (Int next := indexOf(separator, start)) {
             results += start == next ? "" : this[start ..< next];
             start    = next + 1;
-            }
+        }
 
         // whatever remains after the last separator (or the entire String, if there were no
         // separators found)
         results += substring(start);
 
         return results;
-        }
+    }
 
     /**
      * Extract the value at the specified index of a delimited String, and returning an empty string
@@ -225,30 +203,26 @@ const String
      * @return the specified item from the delimited String, or the `defaultValue` if the index
      *         is out of bounds
      */
-    String extract(Char separator, Int index, String defaultValue="")
-        {
-        if (size == 0 || index < 0)
-            {
+    String extract(Char separator, Int index, String defaultValue="") {
+        if (size == 0 || index < 0) {
             return size == index ? "" : defaultValue;
-            }
+        }
 
         Int start = 0;
         Int count = 0;
-        while (Int next := indexOf(separator, start))
-            {
-            if (count == index)
-                {
+        while (Int next := indexOf(separator, start)) {
+            if (count == index) {
                 return start == next ? "" : this[start ..< next];
-                }
+            }
 
             start = next + 1;
             ++count;
-            }
+        }
 
         return count == index
                 ? substring(start)
                 : defaultValue;
-        }
+    }
 
     /**
      * Split the String into an map of String keys and String values, by finding each occurrence of
@@ -265,15 +239,13 @@ const String
      */
     Map<String!, String!> splitMap(Char                   kvSeparator    ='=',
                                    Char                   entrySeparator =',',
-                                   function Boolean(Char) whitespace     = ch -> ch.isWhitespace())
-        {
-        if (size == 0)
-            {
+                                   function Boolean(Char) whitespace     = ch -> ch.isWhitespace()) {
+        if (size == 0) {
             return [];
-            }
+        }
 
         return new StringMap(this, kvSeparator, entrySeparator, whitespace);
-        }
+    }
 
     /**
      * A lightweight, immutable Map implementation over a delimited String. Note that the
@@ -286,173 +258,142 @@ const String
                                      Char                   entrySep,
                                      function Boolean(Char) whitespace)
             implements Map<String, String>
-            incorporates collections.maps.KeySetBasedMap<String, String>
-        {
+            incorporates collections.maps.KeySetBasedMap<String, String> {
+
         @Override
-        conditional Orderer? ordered()
-            {
+        conditional Orderer? ordered() {
             return True, Null;
-            }
+        }
 
         @Override
-        @Lazy Int size.calc()
-            {
+        @Lazy Int size.calc() {
             return data.count(entrySep) + 1;
-            }
+        }
 
         @Override
-        Boolean empty.get()
-            {
+        Boolean empty.get() {
             return False;
-            }
+        }
 
         @Override
-        Boolean contains(String key)
-            {
+        Boolean contains(String key) {
             return find(key);
-            }
+        }
 
         @Override
-        conditional String get(String key)
-            {
-            if ((Int keyStart, Int sepOffset, Int valueEnd) := find(key))
-                {
+        conditional String get(String key) {
+            if ((Int keyStart, Int sepOffset, Int valueEnd) := find(key)) {
                 return True, valueEnd > sepOffset+1 ? data[sepOffset >..< valueEnd].trim(whitespace) : "";
-                }
-            return False;
             }
+            return False;
+        }
 
         /**
          * Internal helper to find a "key in a map" that is actually in the underlying String.
          */
-        protected conditional (Int keyStart, Int sepOffset, Int valueEnd) find(String key)
-            {
+        protected conditional (Int keyStart, Int sepOffset, Int valueEnd) find(String key) {
             String data      = data;
             Int    length    = data.size;
             Int    offset    = 0;
             Int    keyLength = key.size;
             Int    keyOffset = 0;
-            EachEntry: while (offset + keyLength <= length)
-                {
+            EachEntry: while (offset + keyLength <= length) {
                 keyOffset = offset;
 
-                while (whitespace(data[offset]))
-                    {
-                    if (++offset >= length)
-                        {
+                while (whitespace(data[offset])) {
+                    if (++offset >= length) {
                         return False;
-                        }
                     }
+                }
 
                 Boolean match = True;
-                for (Char keyChar : key)
-                    {
-                    if (offset >= length)
-                        {
+                for (Char keyChar : key) {
+                    if (offset >= length) {
                         return False;
-                        }
+                    }
 
                     Char mapChar = data[offset++];
-                    if (mapChar != keyChar)
-                        {
-                        if (mapChar == entrySep)
-                            {
+                    if (mapChar != keyChar) {
+                        if (mapChar == entrySep) {
                             continue EachEntry;
-                            }
-                        else
-                            {
+                        } else {
                             match = False;
                             break;
-                            }
                         }
                     }
+                }
 
-                while (offset < length && whitespace(data[offset]))
-                    {
+                while (offset < length && whitespace(data[offset])) {
                     ++offset;
-                    }
+                }
 
-                if (offset >= length)
-                    {
+                if (offset >= length) {
                     // key is at the very end, with no delimiter
                     return match, keyOffset, length, length;
-                    }
+                }
 
                 Int  sepOffset = offset;
                 Char sepChar   = data[offset++];
-                if (match && sepChar == entrySep)
-                    {
+                if (match && sepChar == entrySep) {
                     // key is followed immediately by the entry separator, so value is blank
                     return True, keyOffset, sepOffset, sepOffset;
-                    }
+                }
 
                 // find the separator offset
-                while (offset < length && data[offset] != entrySep)
-                    {
+                while (offset < length && data[offset] != entrySep) {
                     ++offset;
-                    }
+                }
 
-                if (match && sepChar == kvSep)
-                    {
+                if (match && sepChar == kvSep) {
                     // we did find the key, and now we have found the end of the value
                     return True, keyOffset, sepOffset, offset;
-                    }
+                }
 
                 ++offset;
-                }
+            }
 
             return False;
-            }
+        }
 
         @Override
-        @Lazy Set<String> keys.calc()
-            {
+        @Lazy Set<String> keys.calc() {
             return new KeySet();
-            }
+        }
 
         const KeySet
-                implements Set<String>
-            {
+                implements Set<String> {
             @Override
-            conditional Orderer? ordered()
-                {
+            conditional Orderer? ordered() {
                 return True, Null;
-                }
+            }
 
             @Override
-            Int size.get()
-                {
+            Int size.get() {
                 return this.StringMap.size;
-                }
+            }
 
             @Override
-            Boolean empty.get()
-                {
+            Boolean empty.get() {
                 return False;
-                }
+            }
 
             @Override
-            Boolean contains(String value)
-                {
+            Boolean contains(String value) {
                 return this.StringMap.contains(value);
-                }
+            }
 
             @Override
-            Iterator<String> iterator()
-                {
-                return new Iterator<String>()
-                    {
+            Iterator<String> iterator() {
+                return new Iterator<String>() {
                     String data   = this.StringMap.data;
                     Int    offset = 0;
 
                     @Override
-                    conditional String next()
-                        {
+                    conditional String next() {
                         Int length = data.size;
-                        if (offset >= length)
-                            {
+                        if (offset >= length) {
                             return False;
-                            }
+                        }
 
                         // find the end of the entry
                         Int endEntry = length;
@@ -461,20 +402,19 @@ const String
                         // the delimiter between key and value is optional (i.e. value assumed
                         // to be "")
                         Int endKey = endEntry;
-                        if (endKey := data.indexOf(kvSep, offset), endKey > endEntry)
-                            {
+                        if (endKey := data.indexOf(kvSep, offset), endKey > endEntry) {
                             endKey = endEntry;
-                            }
+                        }
 
                         String key = data[offset ..< endKey].trim(whitespace);
                         offset = endEntry + 1;
 
                         return True, key;
-                        }
-                    };
-                }
+                    }
+                };
             }
         }
+    }
 
     /**
      * Determine if this String _starts-with_ the specified character.
@@ -483,10 +423,9 @@ const String
      *
      * @return True iff this String starts-with the specified character
      */
-    Boolean startsWith(Char ch)
-        {
+    Boolean startsWith(Char ch) {
         return size > 0 && chars[0] == ch;
-        }
+    }
 
     /**
      * Determine if `this` String _starts-with_ `that` String. A String `this` of at least `n`
@@ -498,10 +437,9 @@ const String
      *
      * @return True iff this String starts-with that String
      */
-    Boolean startsWith(String that)
-        {
+    Boolean startsWith(String that) {
         return this.chars.startsWith(that.chars);
-        }
+    }
 
     /**
      * Determine if this String _ends-with_ the specified character.
@@ -510,11 +448,10 @@ const String
      *
      * @return True iff this String ends-with the specified character
      */
-    Boolean endsWith(Char ch)
-        {
+    Boolean endsWith(Char ch) {
         Int size = this.size;
         return size > 0 && chars[size-1] == ch;
-        }
+    }
 
     /**
      * Determine if `this` String _ends-with_ `that` String. A String `this` of `m` characters
@@ -526,10 +463,9 @@ const String
      *
      * @return True iff this String ends-with that String
      */
-    Boolean endsWith(String that)
-        {
+    Boolean endsWith(String that) {
         return this.chars.endsWith(that.chars);
-        }
+    }
 
     /**
      * Look for the specified character starting at the specified index.
@@ -540,10 +476,9 @@ const String
      * @return True iff this string contains the character, at or after the `startAt` index
      * @return (conditional) the index at which the specified character was found
      */
-    conditional Int indexOf(Char value, Int startAt = 0)
-        {
+    conditional Int indexOf(Char value, Int startAt = 0) {
         return chars.indexOf(value, startAt);
-        }
+    }
 
     /**
      * Look for the specified character starting at the specified index and searching backwards.
@@ -554,10 +489,9 @@ const String
      * @return True iff this string contains the character, at or before the `startAt` index
      * @return (conditional) the index at which the specified character was found
      */
-    conditional Int lastIndexOf(Char value, Int startAt = MaxValue)
-        {
+    conditional Int lastIndexOf(Char value, Int startAt = MaxValue) {
         return chars.lastIndexOf(value, startAt);
-        }
+    }
 
     /**
      * Look for the specified `that` starting at the specified index.
@@ -568,54 +502,46 @@ const String
      * @return True iff this string contains the specified string, at or after the `startAt` index
      * @return (conditional) the index at which the specified string was found
      */
-     conditional Int indexOf(String that, Int startAt = 0)
-         {
+     conditional Int indexOf(String that, Int startAt = 0) {
          Int thisLen = this.size;
          Int thatLen = that.size;
 
          // there has to be enough room to fit "that"
-         if (startAt > thisLen - thatLen)
-             {
+         if (startAt > thisLen - thatLen) {
              return False;
-             }
+        }
 
          // can't start before the start of the string (at zero)
          startAt = startAt.notLessThan(0);
 
          // break out the special conditions (for small search strings)
-         if (thatLen <= 1)
-             {
+         if (thatLen <= 1) {
              // assume that we can find the empty string wherever we look
-             if (thatLen == 0)
-                {
+             if (thatLen == 0) {
                 return True, startAt;
-                }
+            }
 
              // for single-character strings, use the more efficient single-character search
              return indexOf(that[0], startAt);
-             }
+        }
 
          // otherwise, brute force
          Char first = that[0];
-         NextTry: while (Int index := indexOf(first, startAt))
-             {
-             if (index > thisLen - thatLen)
-                 {
+         NextTry: while (Int index := indexOf(first, startAt)) {
+             if (index > thisLen - thatLen) {
                  return False;
-                 }
-             for (Int of = 1; of < thatLen; ++of)
-                 {
-                 if (this[index+of] != that[of])
-                     {
+            }
+             for (Int of = 1; of < thatLen; ++of) {
+                 if (this[index+of] != that[of]) {
                      startAt = index + 1;
                      continue NextTry;
-                     }
-                 }
+                }
+            }
              return True, index;
-             }
+        }
 
          return False;
-         }
+    }
 
     /**
      * Look for the specified `that` starting at the specified index and searching backwards.
@@ -626,56 +552,48 @@ const String
      * @return True iff this string contains the specified string, at or before the `startAt` index
      * @return (conditional) the index at which the specified string was found
      */
-     conditional Int lastIndexOf(String that, Int startAt = MaxValue)
-         {
+     conditional Int lastIndexOf(String that, Int startAt = MaxValue) {
          Int thisLen = this.size;
          Int thatLen = that.size;
 
          // there has to be enough room to fit "that"
-         if (startAt < thatLen)
-             {
+         if (startAt < thatLen) {
              return False;
-             }
+        }
 
          // can't start beyond the end of the string
          startAt = startAt.notGreaterThan(thisLen);
 
          // break out the special conditions (for small search strings)
-         if (thatLen <= 1)
-             {
+         if (thatLen <= 1) {
              // assume that we can find the empty string wherever we look
-             if (thatLen == 0)
-                {
+             if (thatLen == 0) {
                 return True, startAt;
-                }
+            }
 
              // for single-character strings, use the more efficient single-character search
              return lastIndexOf(that[0], startAt);
-             }
+        }
 
          // otherwise, brute force
          Char first = that[0];
-         NextTry: while (Int index := lastIndexOf(first, startAt))
-             {
-             if (index > thisLen - thatLen)
-                 {
+         NextTry: while (Int index := lastIndexOf(first, startAt)) {
+             if (index > thisLen - thatLen) {
                  startAt = index - 1;
                  continue NextTry;
-                 }
+            }
 
-             for (Int of = 1; of < thatLen; ++of)
-                 {
-                 if (this[index+of] != that[of])
-                     {
+             for (Int of = 1; of < thatLen; ++of) {
+                 if (this[index+of] != that[of]) {
                      startAt = index - 1;
                      continue NextTry;
-                     }
-                 }
+                }
+            }
              return True, index;
-             }
+        }
 
          return False;
-         }
+    }
 
     /**
      * Match all characters in this String to a regular expression pattern.
@@ -685,10 +603,9 @@ const String
      * @return True iff this entire String matches the pattern
      * @return (optional) a Matcher resulting from matching the regular expression with this String
      */
-    conditional Match matches(RegEx pattern)
-        {
+    conditional Match matches(RegEx pattern) {
         return pattern.match(this);
-        }
+    }
 
     /**
      * Match the start of this String to a regular expression pattern.
@@ -701,10 +618,9 @@ const String
      * @return True iff this String starts with a sub-sequence that matches the regular expression
      * @return (optional) a Matcher resulting from matching the start of this String
      */
-    conditional Match prefixMatches(RegEx pattern)
-        {
+    conditional Match prefixMatches(RegEx pattern) {
         return pattern.matchPrefix(this);
-        }
+    }
 
     /**
      * Find the first sub-sequence of characters in this String that match a regular expression
@@ -722,10 +638,9 @@ const String
      * @return True iff the input contains a sub-sequence that matches the pattern
      * @return (optional) a Match resulting from matching the pattern
      */
-    conditional Match containsMatch(RegEx pattern, Int offset = 0)
-        {
+    conditional Match containsMatch(RegEx pattern, Int offset = 0) {
         return pattern.find(this, offset);
-        }
+    }
 
     /**
      * Replaces every subsequence of this String that matches the pattern with the given
@@ -750,10 +665,9 @@ const String
      * @return  A String constructed by replacing each matching subsequence by the replacement
      *          string
      */
-    String! replaceAll(RegEx pattern, String replacement, Int offset = 0)
-        {
+    String! replaceAll(RegEx pattern, String replacement, Int offset = 0) {
         return pattern.replaceAll(this[offset ..< this.size], replacement);
-        }
+    }
 
     /**
      * Format this String into a left-justified String of the specified length, with the remainder
@@ -767,34 +681,31 @@ const String
      * @return this String formatted into a left-justified String filled with the specified
      *         character
      */
-    String! leftJustify(Int length, Char fill = ' ')
-        {
-        switch (length.sign)
-            {
+    String! leftJustify(Int length, Char fill = ' ') {
+        switch (length.sign) {
+        case Negative:
+            assert;
+
+        case Zero:
+            return "";
+
+        case Positive:
+            Int append = length - size;
+            switch (append.sign) {
             case Negative:
-                assert;
+                return this[0 ..< length];
 
             case Zero:
-                return "";
+                return this;
 
             case Positive:
-                Int append = length - size;
-                switch (append.sign)
-                    {
-                    case Negative:
-                        return this[0 ..< length];
-
-                    case Zero:
-                        return this;
-
-                    case Positive:
-                        return new StringBuffer(length)
-                                .addAll(this)
-                                .addAll(fill * append)
-                                .toString();
-                    }
+                return new StringBuffer(length)
+                        .addAll(this)
+                        .addAll(fill * append)
+                        .toString();
             }
         }
+    }
 
     /**
      * Format this String into a right-justified String of the specified length, with the remainder
@@ -808,34 +719,31 @@ const String
      * @return this String formatted into a left-justified String filled with the specified
      *         character
      */
-    String! rightJustify(Int length, Char fill = ' ')
-        {
-        switch (length.sign)
-            {
+    String! rightJustify(Int length, Char fill = ' ') {
+        switch (length.sign) {
+        case Negative:
+            assert;
+
+        case Zero:
+            return "";
+
+        case Positive:
+            Int append = length - size;
+            switch (append.sign) {
             case Negative:
-                assert;
+                return this.substring(-append);
 
             case Zero:
-                return "";
+                return this;
 
             case Positive:
-                Int append = length - size;
-                switch (append.sign)
-                    {
-                    case Negative:
-                        return this.substring(-append);
-
-                    case Zero:
-                        return this;
-
-                    case Positive:
-                        return new StringBuffer(length)
-                                .addAll(fill * append)
-                                .addAll(this)
-                                .toString();
-                    }
+                return new StringBuffer(length)
+                        .addAll(fill * append)
+                        .addAll(this)
+                        .toString();
             }
         }
+    }
 
     /**
     * Replace every appearance of the `match` substring in this String with the `replace` String.
@@ -845,65 +753,56 @@ const String
     *
     * @return the resulting String
     */
-    String! replace(String! match, String! replace)
-        {
+    String! replace(String! match, String! replace) {
         Int replaceSize = replace.size;
 
-        if (Int matchOffset := indexOf(match))
-            {
+        if (Int matchOffset := indexOf(match)) {
             Int thisSize    = this.size;
             Int matchSize   = match.size;
             Int startOffset = 0;
 
             StringBuffer buffer = new StringBuffer(thisSize - matchSize + replaceSize);
-            do
-                {
+            do {
                 buffer.addAll(chars[startOffset ..< matchOffset]);
-                if (replaceSize > 0)
-                    {
+                if (replaceSize > 0) {
                     buffer.addAll(replace.chars);
-                    }
-                startOffset = matchOffset + matchSize;
                 }
-            while (startOffset < thisSize, matchOffset := indexOf(match, startOffset));
+                startOffset = matchOffset + matchSize;
+            } while (startOffset < thisSize, matchOffset := indexOf(match, startOffset));
 
             return buffer.addAll(chars[startOffset ..< thisSize]).toString();
-            }
-        return this;
         }
+        return this;
+    }
 
 
     // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
-    Int size.get()
-        {
+    Int size.get() {
         return chars.size;
-        }
+    }
 
     @Override
-    Iterator<Char> iterator()
-        {
+    Iterator<Char> iterator() {
         return chars.iterator();
-        }
+    }
 
 
     // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
-    @Op("[]") Char getElement(Int index)
-        {
+    @Op("[]") Char getElement(Int index) {
         return chars[index];
-        }
+    }
 
 
     // ----- Sliceable methods ---------------------------------------------------------------------
 
     @Override
-    @Op("[..]") String slice(Range<Int> indexes)
-        {
+    @Op("[..]") String slice(Range<Int> indexes) {
         return new String(chars[indexes]);
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -911,78 +810,66 @@ const String
     /**
      * @return the UTF-8 conversion of this String into a byte array
      */
-    immutable Byte[] utf8()
-        {
+    immutable Byte[] utf8() {
         Int    length = calcUtf8Length();
         Byte[] bytes  = new Byte[length];
         Int    actual = formatUtf8(bytes, 0);
         assert actual == length;
         return bytes.makeImmutable();
-        }
+    }
 
     /**
      * @return the characters of this String as an array
      */
-    immutable Char[] toCharArray()
-        {
+    immutable Char[] toCharArray() {
         return chars;
-        }
+    }
 
     /**
      * @return a Reader over the characters of this String
      */
-    Reader toReader()
-        {
+    Reader toReader() {
         return new io.CharArrayReader(chars);
-        }
+    }
 
     @Override
-    String! toString()
-        {
+    String! toString() {
         return this;
-        }
+    }
 
     /**
      * Convert this `String` to its all-upper-case form.
      *
      * @return the upper-case form of this `String`
      */
-    String! toUppercase()
-        {
-        Each: for (Char char : chars)
-            {
-            if (char != char.uppercase)
-                {
+    String! toUppercase() {
+        Each: for (Char char : chars) {
+            if (char != char.uppercase) {
                 Int checked = Each.count;
                 Char[] upperChars = new Char[size](offset ->
                         offset < checked ? chars[offset] : chars[offset].uppercase);
                 return new String(upperChars.makeImmutable());
-                }
             }
-
-        return this;
         }
+        return this;
+    }
 
     /**
      * Convert this `String` to its all-lower-case form.
      *
      * @return the lower-case form of this `String`
      */
-    String! toLowercase()
-        {
-        Each: for (Char char : chars)
-            {
-            if (char != char.lowercase)
-                {
+    String! toLowercase() {
+        Each: for (Char char : chars) {
+            if (char != char.lowercase) {
                 Int checked = Each.count;
                 Char[] lowerChars = new Char[size](offset ->
                         offset < checked ? chars[offset] : chars[offset].lowercase);
                 return new String(lowerChars.makeImmutable());
-                }
             }
-
-        return this;
         }
+        return this;
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -990,15 +877,13 @@ const String
     /**
      * @return the minimum number of bytes necessary to encode the string in UTF8 format
      */
-    Int calcUtf8Length()
-        {
+    Int calcUtf8Length() {
         Int len = 0;
-        for (Char ch : chars)
-            {
+        for (Char ch : chars) {
             len += ch.calcUtf8Length();
-            }
-        return len;
         }
+        return len;
+    }
 
     /**
      * Encode this string into the passed byte array using the UTF8 format.
@@ -1008,15 +893,13 @@ const String
      *
      * @return the number of bytes used to encode the character in UTF8 format
      */
-    Int formatUtf8(Byte[] bytes, Int of)
-        {
+    Int formatUtf8(Byte[] bytes, Int of) {
         Int len = 0;
-        for (Char ch : chars)
-            {
+        for (Char ch : chars) {
             len += ch.formatUtf8(bytes, of + len);
-            }
-        return len;
         }
+        return len;
+    }
 
     /**
      * Determine if the string needs to be escaped in order to be displayed.
@@ -1024,79 +907,66 @@ const String
      * @return True iff the string should be escaped in order to be displayed
      * @return (conditional) the number of characters in the escaped string
      */
-    conditional Int isEscaped()
-        {
+    conditional Int isEscaped() {
         Int total = size;
-        for (Char ch : chars)
-            {
-            if (Int n := ch.isEscaped())
-                {
+        for (Char ch : chars) {
+            if (Int n := ch.isEscaped()) {
                 total += n - 1;
-                }
             }
+        }
 
         return total == size
                 ? False
                 : True, total;
-        }
+    }
 
     /**
      * Append the string to the Appender, escaping characters as necessary.
      *
      * @param buf  the Appender to append to
      */
-    Appender<Char> appendEscaped(Appender<Char> buf)
-        {
-        for (Char ch : chars)
-            {
+    Appender<Char> appendEscaped(Appender<Char> buf) {
+        for (Char ch : chars) {
             ch.appendEscaped(buf);
-            }
-        return buf;
         }
+        return buf;
+    }
 
     /**
      * @return the string as it would appear in source code, in double quotes and escaped as
      *         necessary
      */
-    String quoted()
-        {
-        if (Int len := isEscaped())
-            {
+    String quoted() {
+        if (Int len := isEscaped()) {
             return appendEscaped(new StringBuffer(len + 2).add('\"')).add('\"').toString();
-            }
-        else
-            {
+        } else {
             return new StringBuffer(size+2).add('\"').addAll(this).add('\"').toString();
-            }
         }
+    }
 
 
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends String> Int64 hashCode(CompileType value)
-        {
+    static <CompileType extends String> Int64 hashCode(CompileType value) {
         return value.hash;
-        }
+    }
 
     @Override
-    static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2) {
         return value1.chars == value2.chars;
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         return buf.addAll(chars);
-        }
     }
+}

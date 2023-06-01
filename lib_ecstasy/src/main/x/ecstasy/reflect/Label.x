@@ -22,8 +22,7 @@
  * @param Value  the [Map.Value] type, available on a label for a "for" loop of the for-each variety
  *               iterating over a Map
  */
-interface Label<Key, Value>
-    {
+interface Label<Key, Value> {
     /**
      * True on the first iteration of the loop (do, while, or for).
      *
@@ -73,4 +72,4 @@ interface Label<Key, Value>
      * occurred within the "try" statement, or Null if no Exception occurred.
      */
     @RO Exception? exception;
-    }
+}

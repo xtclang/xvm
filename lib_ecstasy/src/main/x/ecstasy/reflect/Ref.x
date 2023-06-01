@@ -40,8 +40,7 @@
  * and so on, are provided by the runtime itself, and exposed to the running code via this
  * interface.
  */
-interface Ref<Referent>
-    {
+interface Ref<Referent> {
     /**
      * De-reference the reference to obtain the referent.
      */
@@ -75,15 +74,13 @@ interface Ref<Referent>
      *   annotations.WeakRef}) are allowed to be unassigned, because the garbage collector is
      *   allowed under specific conditions to clear the reference.
      */
-    conditional Referent peek()
-        {
-        if (assigned)
-            {
+    conditional Referent peek() {
+        if (assigned) {
             return True, get();
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Obtain the actual runtime type of the reference that this Ref currently holds. The actualType
@@ -192,45 +189,39 @@ interface Ref<Referent>
      *
      * @return True iff the referent is of the specified type
      */
-    Boolean instanceOf(Type type)
-        {
-        if (peek())
-            {
+    Boolean instanceOf(Type type) {
+        if (peek()) {
             return actualType.isA(type);
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Determine if the referent is a `service`.
      */
-    @RO Boolean isService.get()
-        {
-        if (actualType.is(Type<Service>))
-            {
+    @RO Boolean isService.get() {
+        if (actualType.is(Type<Service>)) {
             return True;
-            }
+        }
 
         Referent referent = get();
         return referent.is(Inner) && referent.&outer.isService;
-        }
+    }
 
     /**
      * Determine if the referent is an `immutable const`.
      */
-    @RO Boolean isConst.get()
-        {
+    @RO Boolean isConst.get() {
         return actualType.is(Type<immutable Const>);
-        }
+    }
 
     /**
      * Determine if the referent is `immutable`.
      */
-    @RO Boolean isImmutable.get()
-        {
+    @RO Boolean isImmutable.get() {
         return actualType.is(Type<immutable Object>);
-        }
+    }
 
     /**
      * The optional name of the reference. References are used for arguments, local variables,
@@ -279,10 +270,9 @@ interface Ref<Referent>
      * two references to two separate runtime objects are equal, in the case where both references
      * are to immutable objects whose structures are identical.
      */
-    static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2) {
         return value1.identity == value2.identity;
-        }
+    }
 
     /**
      * A reference identity is an object that performs three tasks:
@@ -292,22 +282,19 @@ interface Ref<Referent>
      * * It provides comparison of any two references.
      */
     static interface Identity
-            extends immutable Hashable
-        {
+            extends immutable Hashable {
         @Override
-        static <CompileType extends Identity> Int64 hashCode(CompileType value)
-            {
+        static <CompileType extends Identity> Int64 hashCode(CompileType value) {
             // the implementation of the Identity hash code is naturally self-referential; this code
             // cannot work in actuality; see also: infinite recursion
             return value.hashCode();
-            }
+        }
 
         @Override
-        static <CompileType extends Identity> Boolean equals(CompileType value1, CompileType value2)
-            {
+        static <CompileType extends Identity> Boolean equals(CompileType value1, CompileType value2) {
             // the implementation of the Identity equality is naturally self-referential; this code
             // cannot work in actuality; see also: infinite recursion
             return value1 == value2;
-            }
         }
     }
+}

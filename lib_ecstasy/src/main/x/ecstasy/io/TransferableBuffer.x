@@ -22,8 +22,7 @@
  * specified contracts, while minimizing the implied costs of (i) the buffer's service boundary
  * and (ii) the creation of one-time-use proxy references.
  */
-service TransferableBuffer(Int size)
-    {
+service TransferableBuffer(Int size) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -34,13 +33,10 @@ service TransferableBuffer(Int size)
      *                    buffer is ready to be re-used
      * @param alwaysZero  pass True to always zero the buffer contents when invalidating a buffer
      */
-    construct(Int size, function void(TransferableBuffer)? recycle = Null, Boolean alwaysZero = False)
-        {
-        }
-    finally
-        {
+    construct(Int size, function void(TransferableBuffer)? recycle = Null, Boolean alwaysZero = False) {
+    } finally {
         this.actual = new ActualBuffer(size, recycle, alwaysZero);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -53,10 +49,9 @@ service TransferableBuffer(Int size)
     /**
      * The configured buffer size.
      */
-    Int capacity.get()
-        {
+    Int capacity.get() {
         return actual.capacity;
-        }
+    }
 
 
     // ----- public API ----------------------------------------------------------------------------
@@ -66,10 +61,9 @@ service TransferableBuffer(Int size)
      *
      * @return a new WriteBuffer
      */
-    io.WriteBuffer createWriteBuffer()
-        {
+    io.WriteBuffer createWriteBuffer() {
         return actual.createWriteBuffer();
-        }
+    }
 
     /**
      * Invalidate whatever WriteBuffer or ReadBuffer is current. Optionally erase all of the buffer
@@ -77,10 +71,9 @@ service TransferableBuffer(Int size)
      *
      * @param zero  pass True to explicitly zero the contents of the buffer
      */
-    void invalidateCurrent(Boolean zero = False)
-        {
+    void invalidateCurrent(Boolean zero = False) {
         actual.invalidateCurrent(zero);
-        }
+    }
 
 
     // ----- ActualBuffer hidden implementation class ----------------------------------------------
@@ -88,8 +81,7 @@ service TransferableBuffer(Int size)
     /**
      * An internal implementation that provides support for both the read- and the write-buffers.
      */
-    private class ActualBuffer
-        {
+    private class ActualBuffer {
         /**
          * Construct an ActualBuffer, which provides a proxied API to both the WriteBuffer and the
          * ReadBuffer implementations.
@@ -99,12 +91,11 @@ service TransferableBuffer(Int size)
          *                    buffer is ready to be re-used
          * @param alwaysZero  pass True to always zero the buffer contents when invalidating
          */
-        construct(Int size, function void(TransferableBuffer)? recycle = Null, Boolean alwaysZero = False)
-            {
+        construct(Int size, function void(TransferableBuffer)? recycle = Null, Boolean alwaysZero = False) {
             this.bytes      = new Byte[size];
             this.recycle    = recycle;
             this.alwaysZero = alwaysZero;
-            }
+        }
 
 
         // ----- properties --------------------------------------------------------------------
@@ -112,10 +103,9 @@ service TransferableBuffer(Int size)
         /**
          * The configured buffer size.
          */
-        Int capacity.get()
-            {
+        Int capacity.get() {
             return bytes.size;
-            }
+        }
 
         /**
          * The current WriteBuffer or ReadBuffer "ticket" value that is permitted to access and
@@ -159,15 +149,14 @@ service TransferableBuffer(Int size)
          *
          * @return a new WriteBuffer
          */
-        io.WriteBuffer createWriteBuffer()
-            {
+        io.WriteBuffer createWriteBuffer() {
             invalidateCurrent();
 
             offset = 0;
             size   = 0;
 
             return new WriteBuffer(this, currentTicket);
-            }
+        }
 
         /**
          * Clean up when a WriteBuffer converts to a ReadBuffer. Creates a new ReadBuffer that will
@@ -177,29 +166,26 @@ service TransferableBuffer(Int size)
          *
          * @return a new ReadBuffer
          */
-        io.ReadBuffer convertWriteToReadBuffer(Int ticket)
-            {
+        io.ReadBuffer convertWriteToReadBuffer(Int ticket) {
             checkValid(ticket);
             invalidateCurrent();
 
             offset = 0;
 
             return new ReadBuffer(this, currentTicket);
-            }
+        }
 
         /**
          * Clean up when a ReadBuffer closes.
          *
          * @param ticket  the ReadBuffer's ticket
          */
-        void destroyReadBuffer(Int ticket)
-            {
-            if (ticket == currentTicket)
-                {
+        void destroyReadBuffer(Int ticket) {
+            if (ticket == currentTicket) {
                 invalidateCurrent();
                 recycle?(this.TransferableBuffer);
-                }
             }
+        }
 
         /**
          * Validate the provided buffer ticket. This method is used to prevent a previously allocated
@@ -209,10 +195,9 @@ service TransferableBuffer(Int size)
          *
          * @param ticket  the ticket that was provided to the ReadBuffer or WriteBuffer
          */
-        void checkValid(Int ticket)
-            {
+        void checkValid(Int ticket) {
             assert ticket == currentTicket;
-            }
+        }
 
         /**
          * Invalidate whatever WriteBuffer or ReadBuffer is current. Optionally erase all of the
@@ -220,14 +205,12 @@ service TransferableBuffer(Int size)
          *
          * @param zero  pass True to explicitly zero the contents of the buffer
          */
-        void invalidateCurrent(Boolean zero = False)
-            {
+        void invalidateCurrent(Boolean zero = False) {
             ++currentTicket;
-            if (zero || alwaysZero)
-                {
+            if (zero || alwaysZero) {
                 bytes.fill(0);
-                }
             }
+        }
 
 
         // ----- backing methods for ReadBuffer and WriteBuffer ------------------------------------
@@ -239,11 +222,10 @@ service TransferableBuffer(Int size)
          *
          * @return the buffer's capacity (the number of bytes that it can hold when full)
          */
-        Int getCapacity(Int ticket)
-            {
+        Int getCapacity(Int ticket) {
             checkValid(ticket);
             return capacity;
-            }
+        }
 
         /**
          * Obtain the current buffer offset.
@@ -252,11 +234,10 @@ service TransferableBuffer(Int size)
          *
          * @return the current buffer offset
          */
-        Int getOffset(Int ticket)
-            {
+        Int getOffset(Int ticket) {
             checkValid(ticket);
             return offset;
-            }
+        }
 
         /**
          * Modify the current buffer offset.
@@ -266,12 +247,11 @@ service TransferableBuffer(Int size)
          *
          * @throws OutOfBounds  if the new offset is not in the range `(0 <= newOffset <= size)`
          */
-        void setOffset(Int ticket, Int newOffset)
-            {
+        void setOffset(Int ticket, Int newOffset) {
             checkValid(ticket);
             assert:bounds newOffset >= 0 && newOffset <= size;
             offset = newOffset;
-            }
+        }
 
         /**
          * Modify the current buffer offset by changing it relative to its current value.
@@ -282,10 +262,9 @@ service TransferableBuffer(Int size)
          * @throws OutOfBounds  if the adjustment would cause the buffer offset to exceed the range
          *                      `(0 <= offset <= size)`
          */
-        void adjustOffset(Int ticket, Int adjustment)
-            {
+        void adjustOffset(Int ticket, Int adjustment) {
             setOffset(ticket, offset + adjustment);
-            }
+        }
 
         /**
          * Obtain the size of the data in the buffer.
@@ -295,11 +274,10 @@ service TransferableBuffer(Int size)
          * @return the current buffer size, which refers to the number of bytes in the buffer, and
          *         not to the capacity of the buffer
          */
-        Int getSize(Int ticket)
-            {
+        Int getSize(Int ticket) {
             checkValid(ticket);
             return size;
-            }
+        }
 
         /**
          * Determine the number of bytes that can still be read from the buffer.
@@ -308,11 +286,10 @@ service TransferableBuffer(Int size)
          *
          * @return the difference between the buffer's size and its current offset
          */
-        Int getRemaining(Int ticket)
-            {
+        Int getRemaining(Int ticket) {
             checkValid(ticket);
             return size - offset;
-            }
+        }
 
         /**
          * Obtain the byte at the specified index.
@@ -325,12 +302,11 @@ service TransferableBuffer(Int size)
          *
          * @throws OutOfBounds  if the index is outside of the range `(0 <= index < size)`
          */
-        Byte getByte(Int ticket, Int index)
-            {
+        Byte getByte(Int ticket, Int index) {
             checkValid(ticket);
             assert:bounds index < size;
             return bytes[index];
-            }
+        }
 
         /**
          * Store the specified byte value at the specified index.
@@ -342,16 +318,14 @@ service TransferableBuffer(Int size)
          *
          * @throws OutOfBounds  if the index is outside of the range `(0 <= index <= size)`
          */
-        void setByte(Int ticket, Int index, Byte value)
-            {
+        void setByte(Int ticket, Int index, Byte value) {
             checkValid(ticket);
             assert:bounds index <= size;
             bytes[index] = value;
-            if (index == size)
-                {
+            if (index == size) {
                 size = index + 1;
-                }
             }
+        }
 
         /**
          * Obtain the byte at the current offset within the stream.
@@ -362,12 +336,11 @@ service TransferableBuffer(Int size)
          *
          * @throws OutOfBounds  if the buffer offset is equal to the buffer size (remaining == 0)
          */
-        Byte readByte(Int ticket)
-            {
+        Byte readByte(Int ticket) {
             checkValid(ticket);
             assert:bounds offset < size;
             return bytes[offset++];
-            }
+        }
 
         /**
          * Store the specified byte value at the current offset within the stream.
@@ -377,17 +350,15 @@ service TransferableBuffer(Int size)
          *
          * @throws OutOfBounds  if the buffer offset is equal to the buffer capacity
          */
-        void writeByte(Int ticket, Byte value)
-            {
+        void writeByte(Int ticket, Byte value) {
             checkValid(ticket);
             assert:bounds offset < capacity;
             bytes[offset++] = value;
-            if (offset > size)
-                {
+            if (offset > size) {
                 size = offset;
-                }
             }
         }
+    }
 
 
     // ----- ReadBuffer proxy implementation -------------------------------------------------------
@@ -400,8 +371,7 @@ service TransferableBuffer(Int size)
      * exclusive access to the reusable ActualBuffer.
      */
     private static const ReadBuffer(ActualBuffer actual, Int ticket)
-            implements io.ReadBuffer
-        {
+            implements io.ReadBuffer {
         /**
          * The actual buffer storage.
          */
@@ -417,125 +387,105 @@ service TransferableBuffer(Int size)
          * As part of the buffer's mutual exclusion guarantee, once a ReadBuffer is used within a
          * service, it can only be used within that specific service.
          */
-        void checkService()
-            {
-            private @Lazy Service sticky.calc()
-                {
+        void checkService() {
+            private @Lazy Service sticky.calc() {
                 return this:service;
-                }
+            }
 
             assert this:service == sticky;
-            }
+        }
 
         @Override
-        @RO Int size.get()
-            {
+        @RO Int size.get() {
             checkService();
             return actual.getSize(ticket);
-            }
+        }
 
         @Override
-        Int offset
-            {
+        Int offset {
             @Override
-            Int get()
-                {
+            Int get() {
                 checkService();
                 return actual.getOffset(ticket);
-                }
+            }
 
             @Override
-            void set(Int newOffset)
-                {
+            void set(Int newOffset) {
                 checkService();
                 actual.setOffset(ticket, newOffset);
-                }
             }
+        }
 
         @Override
-        ReadBuffer skip(Int count)
-            {
+        ReadBuffer skip(Int count) {
             checkService();
-            if (count > 0)
-                {
+            if (count > 0) {
                 actual.adjustOffset(ticket, count);
-                }
-            else
-                {
+            } else {
                 assert:bounds count >= 0;
-                }
-            return this;
             }
+            return this;
+        }
 
         @Override
-        ReadBuffer rewind()
-            {
+        ReadBuffer rewind() {
             checkService();
             actual.setOffset(ticket, 0);
             return this;
-            }
+        }
 
         @Override
-        ReadBuffer moveTo(Int newOffset)
-            {
+        ReadBuffer moveTo(Int newOffset) {
             checkService();
             actual.setOffset(ticket, newOffset);
             return this;
-            }
+        }
 
         @Override
-        @RO Int remaining.get()
-            {
+        @RO Int remaining.get() {
             checkService();
             return actual.getRemaining(ticket);
-            }
+        }
 
         @Override
-        @Op("[]") Byte getByte(Int index)
-            {
+        @Op("[]") Byte getByte(Int index) {
             checkService();
             return actual.getByte(ticket, index);
-            }
+        }
 
         @Override
-        Byte readByte()
-            {
+        Byte readByte() {
             checkService();
             return actual.readByte(ticket);
-            }
+        }
 
         @Override
-        void readBytes(Byte[] bytes, Int offset, Int count)
-            {
+        void readBytes(Byte[] bytes, Int offset, Int count) {
             checkService();
             assert offset >= 0 && count >= 0;
 
             Int last = offset + count;
             assert last <= bytes.size;
-            while (offset < last)
-                {
+            while (offset < last) {
                 bytes[offset++] = actual.readByte(ticket);
-                }
-            }
-
-        @Override
-        void pipeTo(BinaryOutput out, Int count)
-            {
-            checkService();
-            assert:bounds count >= 0;
-            while (count-- > 0)
-                {
-                out.writeByte(actual.readByte(ticket));
-                }
-            }
-
-        @Override
-        void close(Exception? cause = Null)
-            {
-            // note: this is not strictly required to be called on the same service
-            actual.destroyReadBuffer(ticket);
             }
         }
+
+        @Override
+        void pipeTo(BinaryOutput out, Int count) {
+            checkService();
+            assert:bounds count >= 0;
+            while (count-- > 0) {
+                out.writeByte(actual.readByte(ticket));
+            }
+        }
+
+        @Override
+        void close(Exception? cause = Null) {
+            // note: this is not strictly required to be called on the same service
+            actual.destroyReadBuffer(ticket);
+        }
+    }
 
 
     // ----- WriteBuffer proxy implementation ------------------------------------------------------
@@ -549,74 +499,63 @@ service TransferableBuffer(Int size)
      */
     private static const WriteBuffer(ActualBuffer actual, Int ticket)
             extends ReadBuffer(actual, ticket)
-            implements io.WriteBuffer
-        {
+            implements io.WriteBuffer {
         /**
          * When the WriteBuffer is "flipped" to a ReadBuffer, this property is lazily calculated
          * with the result of that conversion; after this occurs, the WriteBuffer can no longer be
          * used, because it will have lost its exclusive access to the actual buffer.
          */
-        private @Lazy io.ReadBuffer conversion.calc()
-            {
+        private @Lazy io.ReadBuffer conversion.calc() {
             return actual.convertWriteToReadBuffer(ticket);
-            }
+        }
 
         @Override
-        @RO Int capacity.get()
-            {
+        @RO Int capacity.get() {
             checkService();
             return actual.getCapacity(ticket);
-            }
+        }
 
         @Override
-        @Op("[]=") void setByte(Int index, Byte value)
-            {
+        @Op("[]=") void setByte(Int index, Byte value) {
             checkService();
             actual.setByte(ticket, index, value);
-            }
+        }
 
         @Override
-        void writeByte(Byte value)
-            {
+        void writeByte(Byte value) {
             checkService();
             actual.writeByte(ticket, value);
-            }
+        }
 
         @Override
-        void writeBytes(Byte[] bytes)
-            {
+        void writeBytes(Byte[] bytes) {
             checkService();
-            for (Byte byte : bytes)
-                {
+            for (Byte byte : bytes) {
                 actual.writeByte(ticket, byte);
-                }
             }
+        }
 
         @Override
-        void writeBytes(Byte[] bytes, Int offset, Int count)
-            {
+        void writeBytes(Byte[] bytes, Int offset, Int count) {
             checkService();
             assert offset >= 0 && count >= 0;
 
             Int last = offset + count;
-            while (offset < last)
-                {
+            while (offset < last) {
                 actual.writeByte(ticket, bytes[offset++]);
-                }
-            }
-
-        @Override
-        io.ReadBuffer toReadBuffer()
-            {
-            // note: this is not strictly required to be called on the same service
-            return conversion;
-            }
-
-        @Override
-        void close(Exception? cause = Null)
-            {
-            // note: this is not strictly required to be called on the same service
-            val notUsedHere = conversion;
             }
         }
+
+        @Override
+        io.ReadBuffer toReadBuffer() {
+            // note: this is not strictly required to be called on the same service
+            return conversion;
+        }
+
+        @Override
+        void close(Exception? cause = Null) {
+            // note: this is not strictly required to be called on the same service
+            val notUsedHere = conversion;
+        }
     }
+}

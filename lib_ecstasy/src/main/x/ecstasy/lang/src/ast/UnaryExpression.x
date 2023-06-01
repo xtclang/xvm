@@ -7,23 +7,20 @@ import Lexer.Token;
  * Represents an expression composed of a unary operator preceding another expression.
  */
 const UnaryExpression(Token op, Expression expr)
-        extends Expression
-    {
+        extends Expression {
+
     @Override
-    TextPosition start.get()
-        {
+    TextPosition start.get() {
         return op.start;
-        }
-
-    @Override
-    TextPosition end.get()
-        {
-        return expr.end;
-        }
-
-    @Override
-    String toString()
-        {
-        return $"{op}{expr}";
-        }
     }
+
+    @Override
+    TextPosition end.get() {
+        return expr.end;
+    }
+
+    @Override
+    String toString() {
+        return $"{op}{expr}";
+    }
+}

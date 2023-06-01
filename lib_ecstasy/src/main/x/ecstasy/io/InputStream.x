@@ -9,8 +9,7 @@
  * That means that the position within the stream can be modified -- in either direction.
  */
 interface InputStream
-        extends BinaryInput
-    {
+        extends BinaryInput {
     /**
      * The 0-based offset within the stream. Attempting to set the offset outside of the bounds of
      * the stream will result in an exception.
@@ -26,16 +25,14 @@ interface InputStream
      * The number of bytes remaining in the stream. This will be equal to `size` at the start of
      * the stream, and equal to `0` at the end of the stream.
      */
-    @RO Int remaining.get()
-        {
+    @RO Int remaining.get() {
         return (size - offset).notLessThan(0);
-        }
+    }
 
     /**
      * True iff the end of the stream has been reached.
      */
-    @RO Boolean eof.get()
-        {
+    @RO Boolean eof.get() {
         return remaining == 0;
-        }
     }
+}

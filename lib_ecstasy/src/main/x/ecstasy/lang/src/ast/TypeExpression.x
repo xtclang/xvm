@@ -2,8 +2,7 @@
  * Represents all expressions that represents a type.
  */
 @Abstract const TypeExpression
-        extends Expression
-    {
+        extends Expression {
     /**
      * Resolve this `TypeExpression` into an Ecstasy `Type` from the provided [TypeSystem].
      *
@@ -15,9 +14,8 @@
      *
      * @throws InvalidType  if a type exception occurs and `hideExceptions` is not specified
      */
-    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
-        {
+    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False) {
         Class clz = &this.actualClass;
         TODO($"clz={clz}");
-        }
     }
+}

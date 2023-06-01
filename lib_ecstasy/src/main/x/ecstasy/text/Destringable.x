@@ -3,8 +3,7 @@
  * String produced by a class' [toString](Object.toString()) method should produce an identical
  * object via the `Destringable` String-based constructor.
  */
-interface Destringable
-    {
+interface Destringable {
     /**
      * Construct from a `String` value that could have been previously produced from either the
      * [Stringable] interface on the same class, or form the [toString](Object.toString()) method.
@@ -14,4 +13,4 @@ interface Destringable
      *              instance of this same class
      */
     construct(String text);
-    }
+}

@@ -2,8 +2,7 @@
  * Represents the compiled information for a method.
  */
 interface MethodTemplate
-        extends ComponentTemplate
-    {
+        extends ComponentTemplate {
     @Override
     @RO MultiMethodTemplate parent;
 
@@ -18,10 +17,9 @@ interface MethodTemplate
     /**
      * True iff the method is a constructor.
      */
-    @RO Boolean isConstructor.get()
-        {
+    @RO Boolean isConstructor.get() {
         return name == "construct";
-        }
+    }
 
     /**
      * True iff the method has code.
@@ -39,10 +37,9 @@ interface MethodTemplate
     ParameterTemplate[] returns;
 
     @Override
-    @RO String path.get()
-        {
+    @RO String path.get() {
         // the method name is always the same as the its parent's (multimethod)
         // TODO GG: use the parameter types to fill inside the parenthesis
         return parent.path + "()";
-        }
     }
+}

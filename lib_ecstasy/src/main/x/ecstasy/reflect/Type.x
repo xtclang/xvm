@@ -62,8 +62,7 @@ import reflect.TypeTemplate;
  * @param OuterType  the type of the enclosing class, if this is a virtual child type
  */
 interface Type<DataType, OuterType>
-        extends immutable Const
-    {
+        extends immutable Const {
     // ----- inner classes -------------------------------------------------------------------------
 
     /**
@@ -126,10 +125,9 @@ interface Type<DataType, OuterType>
      * Obtain the methods and functions of the type, collected by name, and represented by
      * multimethods.
      */
-    @RO Map<String, MultiMethod<DataType>> multimethods.get()
-        {
+    @RO Map<String, MultiMethod<DataType>> multimethods.get() {
         return collectMultimethods();
-        }
+    }
 
     /**
      * Obtain the raw set of all methods on the type.
@@ -303,10 +301,9 @@ interface Type<DataType, OuterType>
      *
      * @return True iff all objects of `this` type are also objects of `that` type
      */
-    Boolean isA(Type!<> that)
-        {
+    Boolean isA(Type!<> that) {
         return this.is(Type<that>);
-        }
+    }
 
     /**
      * Resolve a formal type based on its name.
@@ -350,79 +347,68 @@ interface Type<DataType, OuterType>
      *      1. _r2_ is assignable to _r1_
      * 2. if _T1_ is explicitly immutable, then _T2_ must also be explicitly immutable.
      */
-    Boolean duckTypeableTo(Type!<> that)
-        {
-        if (this.as(Object) == that.as(Object))
-            {
+    Boolean duckTypeableTo(Type!<> that) {
+        if (this.as(Object) == that.as(Object)) {
             return True;
-            }
+        }
 
-        if (that.explicitlyImmutable && !this.explicitlyImmutable)
-            {
+        if (that.explicitlyImmutable && !this.explicitlyImmutable) {
             return False;
-            }
+        }
 
-        if (this.isA(that))
-            {
+        if (this.isA(that)) {
             return True;
-            }
+        }
 
         // this type must have a matching method for each method of that type
-        nextMethod: for (Method m1 : that.methods)
-            {
+        nextMethod: for (Method m1 : that.methods) {
             // find the corresponding method on this type
-            for (val m2 : this.multimethods[m1.name]?.methods)
-                {
-                if (m2.isSubstitutableFor(m1))
-                    {
+            for (val m2 : this.multimethods[m1.name]?.methods) {
+                if (m2.isSubstitutableFor(m1)) {
                     continue nextMethod;
-                    }
                 }
+            }
 
             // no such matching method
             return False;
-            }
+        }
 
         return True;
-        }
+    }
 
     /**
      * Determine if this type _consumes_ a formal type with the specified name.
      *
      * @see Method.consumesFormalType
      */
-    Boolean consumesFormalType(String typeName)
-        {
+    Boolean consumesFormalType(String typeName) {
         return methods.iterator().untilAny(method -> method.consumesFormalType(typeName));
-        }
+    }
 
     /**
      * Determine if this type _produces_ a formal type with the specified name.
      *
      * @see Method.producesFormalType
      */
-    Boolean producesFormalType(String typeName)
-        {
+    Boolean producesFormalType(String typeName) {
         return methods.iterator().untilAny(method -> method.producesFormalType(typeName));
-        }
+    }
 
     /**
      * Test whether the specified object is an instance of this type.
      */
-    Boolean isInstance(Object o)
-        {
+    Boolean isInstance(Object o) {
         return &o.actualType.isA(this);
-        }
+    }
 
     /**
      * Cast the specified object to this type.
      */
-    DataType cast(Object o)
-        {
+    DataType cast(Object o) {
         return isInstance(o)
                 ? o.as(DataType)
                 : throw new InvalidType($"Type mismatch (actualType={&o.actualType}, this={this}");
-        }
+    }
 
     /**
      * Given a object of this type, determine if it has an "outer" object it is bound to.
@@ -438,10 +424,9 @@ interface Type<DataType, OuterType>
      * @return a function that compares two objects of this type, and which returns True iff the
      *         objects are equal
      */
-    @RO Comparer comparer.get()
-        {
+    @RO Comparer comparer.get() {
         return (DataType o1, DataType o2) -> o1 == o2;
-        }
+    }
 
     /**
      * Determine if this type is Orderable, and if so, obtain the [Order] for objects of this Type
@@ -451,12 +436,11 @@ interface Type<DataType, OuterType>
      * @return True iff the type is Orderable
      * @return (conditional) an Order that implements the natural ordering of objects of this type
      */
-    conditional Orderer ordered()
-        {
+    conditional Orderer ordered() {
         return DataType.is(Type!<Orderable>)
                 ? (True, (DataType o1, DataType o2) -> o1 <=> o2)
                 : False;
-        }
+    }
 
     /**
      * Determine if this type is Hashable, and if so, obtain the [Hasher] for objects of this Type.
@@ -464,18 +448,16 @@ interface Type<DataType, OuterType>
      * @return True iff the type is Hashable
      * @return (conditional) the natural Hasher for objects of this type
      */
-    conditional Hasher<DataType> hashed()
-        {
+    conditional Hasher<DataType> hashed() {
         return createHasher();
-        }
+    }
 
     /**
      * @return an empty iterator of this type
      */
-    @RO Iterator<DataType> emptyIterator.get()
-        {
+    @RO Iterator<DataType> emptyIterator.get() {
         return createEmptyIterator();
-        }
+    }
 
 
     // ----- operators -----------------------------------------------------------------------------
@@ -616,41 +598,32 @@ interface Type<DataType, OuterType>
      * @return True iff the Class has a default constructor
      * @return (conditional) the default constructor
      */
-    conditional function DataType() defaultConstructor(OuterType? outer = Null)
-        {
+    conditional function DataType() defaultConstructor(OuterType? outer = Null) {
         Constructor[] constructors = this.constructors;
-        if (constructors.size == 0)
-            {
+        if (constructors.size == 0) {
             return False;
-            }
+        }
 
-        if (Class clz := fromClass(), clz.virtualChild)
-            {
+        if (Class clz := fromClass(), clz.virtualChild) {
             assert:arg outer != Null;
-            for (val fn : constructors)
-                {
-                if (fn.requiredParamCount == 1)
-                    {
+            for (val fn : constructors) {
+                if (fn.requiredParamCount == 1) {
                     assert fn.ParamTypes[0] == OuterType.DataType;
                     return True, fn.as(function DataType(OuterType)).
                         bind(fn.params[0].as(Parameter<OuterType>), outer)
                             .as(function DataType());
-                    }
                 }
             }
-        else
-            {
-            for (val fn : constructors)
-                {
-                if (fn.requiredParamCount == 0)
-                    {
+        } else {
+            for (val fn : constructors) {
+                if (fn.requiredParamCount == 0) {
                     return True, fn.as(function DataType());
-                    }
                 }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Helper method to locate the structure-based constructor.
@@ -658,340 +631,291 @@ interface Type<DataType, OuterType>
      * @return True iff the Class has a default constructor
      * @return (conditional) the default constructor
      */
-    conditional function DataType(Struct) structConstructor(OuterType? outer = Null)
-        {
-        if (Class clz := fromClass(), clz.virtualChild)
-            {
+    conditional function DataType(Struct) structConstructor(OuterType? outer = Null) {
+        if (Class clz := fromClass(), clz.virtualChild) {
             assert:arg outer != Null;
-            for (val fn : constructors)
-                {
-                if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type!<Struct>))
-                    {
+            for (val fn : constructors) {
+                if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type!<Struct>)) {
                     assert fn.ParamTypes[0] == OuterType;
                     return True, structure -> fn.invoke((outer, structure))[0];
-                    }
                 }
             }
-        else
-            {
-            for (val fn : constructors)
-                {
-                if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].is(Type!<Struct>))
-                    {
+        } else {
+            for (val fn : constructors) {
+                if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].is(Type!<Struct>)) {
                     return True, structure -> fn.invoke(Tuple:(structure))[0];
-                    }
                 }
             }
+        }
 
         return False;
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
-        switch (form)
-            {
-            case Pure:
-                function Int sum(Int, Int) = (n1, n2) -> n1 + n2 + 2;
-                return 6 + properties.map(p -> p.name.size+2).reduce(0, sum)
-                         + methods   .map(m -> m.name.size+4).reduce(0, sum);
+    Int estimateStringLength() {
+        switch (form) {
+        case Pure:
+            function Int sum(Int, Int) = (n1, n2) -> n1 + n2 + 2;
+            return 6 + properties.map(p -> p.name.size+2).reduce(0, sum)
+                     + methods   .map(m -> m.name.size+4).reduce(0, sum);
 
-            case Class:
-                assert Class clz := fromClass();
-                return clz.displayName.size + estimateParameterizedStringLength();
+        case Class:
+            assert Class clz := fromClass();
+            return clz.displayName.size + estimateParameterizedStringLength();
 
-            case Property:
-                assert Property prop := fromProperty();
-                return prop.Target.estimateStringLength() + 1 + prop.name.size;
+        case Property:
+            assert Property prop := fromProperty();
+            return prop.Target.estimateStringLength() + 1 + prop.name.size;
 
-            case Child:
-                assert String name := named();
-                return OuterType.estimateStringLength() + 1 + name.size + estimateParameterizedStringLength();
+        case Child:
+            assert String name := named();
+            return OuterType.estimateStringLength() + 1 + name.size + estimateParameterizedStringLength();
 
-            case Union:
-                assert (Type!<> t1, Type!<> t2) := relational();
-                return t1 == Nullable
-                        ? t2.estimateStringLength() + (t2.relational() ? 3 : 1)
-                        : t1.estimateStringLength() + 3 + t2.estimateStringLength();
+        case Union:
+            assert (Type!<> t1, Type!<> t2) := relational();
+            return t1 == Nullable
+                    ? t2.estimateStringLength() + (t2.relational() ? 3 : 1)
+                    : t1.estimateStringLength() + 3 + t2.estimateStringLength();
 
-            case Intersection:
-            case Difference:
-                assert (Type!<> t1, Type!<> t2) := relational();
-                return t1.estimateStringLength() + 3 + t2.estimateStringLength();
+        case Intersection:
+        case Difference:
+            assert (Type!<> t1, Type!<> t2) := relational();
+            return t1.estimateStringLength() + 3 + t2.estimateStringLength();
 
-            case Immutable:
-                assert Type!<> t := modifying();
-                return "immutable ".size + t.estimateStringLength();
+        case Immutable:
+            assert Type!<> t := modifying();
+            return "immutable ".size + t.estimateStringLength();
 
-            case Service:
-                assert Type!<> t := modifying();
-                return "service ".size + t.estimateStringLength();
+        case Service:
+            assert Type!<> t := modifying();
+            return "service ".size + t.estimateStringLength();
 
-            case Access:
-                assert Type!<> t := modifying();
-                assert Access access := accessSpecified();
-                return t.estimateStringLength() + 1 + access.keyword.size;
+        case Access:
+            assert Type!<> t := modifying();
+            assert Access access := accessSpecified();
+            return t.estimateStringLength() + 1 + access.keyword.size;
 
-            case Annotated:
-                assert Annotation anno := annotated();
-                assert Type!<> t := modifying();
-                return anno.estimateStringLength() + 1 + t.estimateStringLength();
+        case Annotated:
+            assert Annotation anno := annotated();
+            assert Type!<> t := modifying();
+            return anno.estimateStringLength() + 1 + t.estimateStringLength();
 
-            case Sequence:
-                Type!<>[] types = underlyingTypes;
-                return types.size == 0
-                        ? 2
-                        : types.map(t -> t.estimateStringLength() + 2)
-                               .reduce(0, (n1, n2) -> n1 + n2);
+        case Sequence:
+            Type!<>[] types = underlyingTypes;
+            return types.size == 0
+                    ? 2
+                    : types.map(t -> t.estimateStringLength() + 2)
+                           .reduce(0, (n1, n2) -> n1 + n2);
 
-            case FormalProperty:
-            case FormalParameter:
-            case FormalChild:
-            case Typedef:
-                assert String name := named();
-                return name.size;
-            }
+        case FormalProperty:
+        case FormalParameter:
+        case FormalChild:
+        case Typedef:
+            assert String name := named();
+            return name.size;
         }
+    }
 
-    private Int estimateParameterizedStringLength()
-        {
-        if (Type!<>[] params := parameterized())
-            {
+    private Int estimateParameterizedStringLength() {
+        if (Type!<>[] params := parameterized()) {
             return params.size == 0
                     ? 2
                     : params.map(t -> t.estimateStringLength() + 2)
                             .reduce(0, (n1, n2) -> n1 + n2);
-            }
-        else
-            {
+        } else {
             return 0;
-            }
         }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf, Boolean insideUnion = False)
-        {
-        switch (form)
-            {
-            case Pure:
-                "Type[".appendTo(buf);
+    Appender<Char> appendTo(Appender<Char> buf, Boolean insideUnion = False) {
+        switch (form) {
+        case Pure:
+            "Type[".appendTo(buf);
 
-                Boolean first = True;
-                for (Property property : properties)
-                    {
-                    if (first)
-                        {
-                        first = False;
-                        }
-                    else
-                        {
-                        ", ".appendTo(buf);
-                        }
-                    property.name.appendTo(buf);
-                    }
-
-                for (Method method : methods)
-                    {
-                    if (first)
-                        {
-                        first = False;
-                        }
-                    else
-                        {
-                        ", ".appendTo(buf);
-                        }
-                    method.name.appendTo(buf);
-                    "())".appendTo(buf);
-                    }
-
-                buf.add(']');
-                break;
-
-            case Class:
-                assert Class clz := fromClass();
-                clz.displayName.appendTo(buf);
-                appendParameterizedTo(buf);
-                break;
-
-            case Property:
-                assert Property prop := fromProperty();
-                prop.Target.appendTo(buf);
-                buf.add('.');
-                prop.name.appendTo(buf);
-                break;
-
-            case Child:
-                OuterType.appendTo(buf);
-                buf.add('.');
-                assert String name := named();
-                name.appendTo(buf);
-                appendParameterizedTo(buf);
-                break;
-
-            case Union:
-                assert (Type!<> t1, Type!<> t2) := relational();
-                if (t1 == Nullable && !insideUnion)
-                    {
-                    if (t2.relational() || t2.annotated())
-                        {
-                        buf.add('(');
-                        t2  .appendTo(buf);
-                        ")?".appendTo(buf);
-                        }
-                    else
-                        {
-                        t2.appendTo(buf);
-                        buf.add('?');
-                        }
-                    }
-                else
-                    {
-                    t1   .appendTo(buf, insideUnion=True);
-                    " | ".appendTo(buf);
-                    if (t2.relational())
-                        {
-                        buf.add('(');
-                        t2.appendTo(buf);
-                        buf.add(')');
-                        }
-                    else
-                        {
-                        t2.appendTo(buf);
-                        }
-                    }
-                break;
-
-            case Intersection:
-                assert (Type!<> t1, Type!<> t2) := relational();
-                t1   .appendTo(buf);
-                " + ".appendTo(buf);
-                if (t2.relational())
-                    {
-                    buf.add('(');
-                    t2.appendTo(buf);
-                    buf.add(')');
-                    }
-                else
-                    {
-                    t2.appendTo(buf);
-                    }
-                break;
-
-            case Difference:
-                assert (Type!<> t1, Type!<> t2) := relational();
-                t1   .appendTo(buf);
-                " - ".appendTo(buf);
-                if (t2.relational())
-                    {
-                    buf.add('(');
-                    t2.appendTo(buf);
-                    buf.add(')');
-                    }
-                else
-                    {
-                    t2.appendTo(buf);
-                    }
-                break;
-
-            case Immutable:
-                "immutable ".appendTo(buf);
-                assert Type!<> t := modifying();
-                t.appendTo(buf);
-                break;
-
-            case Service:
-                "service ".appendTo(buf);
-                assert Type!<> t := modifying();
-                t.appendTo(buf);
-                break;
-
-            case Access:
-                assert Type!<> t := modifying();
-                t.appendTo(buf);
-                buf.add(':');
-                assert Access access := accessSpecified();
-                access.keyword.appendTo(buf);
-                break;
-
-            case Annotated:
-                assert Annotation anno := annotated();
-                anno.appendTo(buf);
-                buf.add(' ');
-                assert Type!<> t := modifying();
-                t.appendTo(buf);
-                break;
-
-            case Sequence:
-                Type!<>[] types = underlyingTypes;
-                buf.add('<');
-                Loop: for (Type!<> type : types)
-                    {
-                    if (!Loop.first)
-                        {
-                        ", ".appendTo(buf);
-                        }
-                    type.appendTo(buf);
-                    }
-                buf.add('>');
-                break;
-
-            case FormalProperty:
-            case FormalParameter:
-            case FormalChild:
-            case Typedef:
-                assert String name := named();
-                name.appendTo(buf);
-                break;
+            Boolean first = True;
+            for (Property property : properties) {
+                if (first) {
+                    first = False;
+                } else {
+                    ", ".appendTo(buf);
+                }
+                property.name.appendTo(buf);
             }
+
+            for (Method method : methods) {
+                if (first) {
+                    first = False;
+                } else {
+                    ", ".appendTo(buf);
+                }
+                method.name.appendTo(buf);
+                "())".appendTo(buf);
+            }
+
+            buf.add(']');
+            break;
+
+        case Class:
+            assert Class clz := fromClass();
+            clz.displayName.appendTo(buf);
+            appendParameterizedTo(buf);
+            break;
+
+        case Property:
+            assert Property prop := fromProperty();
+            prop.Target.appendTo(buf);
+            buf.add('.');
+            prop.name.appendTo(buf);
+            break;
+
+        case Child:
+            OuterType.appendTo(buf);
+            buf.add('.');
+            assert String name := named();
+            name.appendTo(buf);
+            appendParameterizedTo(buf);
+            break;
+
+        case Union:
+            assert (Type!<> t1, Type!<> t2) := relational();
+            if (t1 == Nullable && !insideUnion) {
+                if (t2.relational() || t2.annotated()) {
+                    buf.add('(');
+                    t2  .appendTo(buf);
+                    ")?".appendTo(buf);
+                } else {
+                    t2.appendTo(buf);
+                    buf.add('?');
+                }
+            } else {
+                t1   .appendTo(buf, insideUnion=True);
+                " | ".appendTo(buf);
+                if (t2.relational()) {
+                    buf.add('(');
+                    t2.appendTo(buf);
+                    buf.add(')');
+                } else {
+                    t2.appendTo(buf);
+                }
+            }
+            break;
+
+        case Intersection:
+            assert (Type!<> t1, Type!<> t2) := relational();
+            t1   .appendTo(buf);
+            " + ".appendTo(buf);
+            if (t2.relational()) {
+                buf.add('(');
+                t2.appendTo(buf);
+                buf.add(')');
+            } else {
+                t2.appendTo(buf);
+            }
+            break;
+
+        case Difference:
+            assert (Type!<> t1, Type!<> t2) := relational();
+            t1   .appendTo(buf);
+            " - ".appendTo(buf);
+            if (t2.relational()) {
+                buf.add('(');
+                t2.appendTo(buf);
+                buf.add(')');
+            } else {
+                t2.appendTo(buf);
+            }
+            break;
+
+        case Immutable:
+            "immutable ".appendTo(buf);
+            assert Type!<> t := modifying();
+            t.appendTo(buf);
+            break;
+
+        case Service:
+            "service ".appendTo(buf);
+            assert Type!<> t := modifying();
+            t.appendTo(buf);
+            break;
+
+        case Access:
+            assert Type!<> t := modifying();
+            t.appendTo(buf);
+            buf.add(':');
+            assert Access access := accessSpecified();
+            access.keyword.appendTo(buf);
+            break;
+
+        case Annotated:
+            assert Annotation anno := annotated();
+            anno.appendTo(buf);
+            buf.add(' ');
+            assert Type!<> t := modifying();
+            t.appendTo(buf);
+            break;
+
+        case Sequence:
+            Type!<>[] types = underlyingTypes;
+            buf.add('<');
+            Loop: for (Type!<> type : types) {
+                if (!Loop.first) {
+                    ", ".appendTo(buf);
+                }
+                type.appendTo(buf);
+            }
+            buf.add('>');
+            break;
+
+        case FormalProperty:
+        case FormalParameter:
+        case FormalChild:
+        case Typedef:
+            assert String name := named();
+            name.appendTo(buf);
+            break;
+        }
 
         return buf;
-        }
+    }
 
-    private void appendParameterizedTo(Appender<Char> buf)
-        {
-        if (Type!<>[] params := parameterized())
-            {
+    private void appendParameterizedTo(Appender<Char> buf) {
+        if (Type!<>[] params := parameterized()) {
             buf.add('<');
-            Loop: for (Type!<> param : params)
-                {
-                if (!Loop.first)
-                    {
+            Loop: for (Type!<> param : params) {
+                if (!Loop.first) {
                     ", ".appendTo(buf);
-                    }
-                param.appendTo(buf);
                 }
-            buf.add('>');
+                param.appendTo(buf);
             }
+            buf.add('>');
         }
+    }
 
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 
-    static <CompileType extends Type> Int64 hashCode(CompileType value)
-        {
+    static <CompileType extends Type> Int64 hashCode(CompileType value) {
         return value.methods   .hashCode()
              ^ value.properties.hashCode();
-        }
+    }
 
-    static <CompileType extends Type> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Type> Boolean equals(CompileType value1, CompileType value2) {
         // the definition for type equality is fairly simple: each of the two types must be
         // type-compatible with the other
         return value1.isA(value2) && value2.isA(value1);
-        }
+    }
 
-    static <CompileType extends Type> Ordered compare(CompileType value1, CompileType value2)
-        {
-        if (value1 == value2)
-            {
+    static <CompileType extends Type> Ordered compare(CompileType value1, CompileType value2) {
+        if (value1 == value2) {
             return Equal;
-            }
+        }
 
         TODO <=>
-        }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -999,163 +923,131 @@ interface Type<DataType, OuterType>
     /**
      * The implementation of [multimethods] property.
      */
-    protected Map<String, MultiMethod<DataType>> collectMultimethods()
-        {
+    protected Map<String, MultiMethod<DataType>> collectMultimethods() {
         Type!<> typeActual = DataType;
         ListMap<String, MultiMethod<typeActual.DataType>> map = new ListMap();
-        for (Method<DataType> m : methods)
-            {
+        for (Method<DataType> m : methods) {
             String name = m.name;
             MultiMethod<typeActual.DataType> mm = map.getOrCompute(name,
                     () -> new MultiMethod<typeActual.DataType>(name, []));
             map.put(name, mm + m);
-            }
-        for (Function f : functions)
-            {
+        }
+        for (Function f : functions) {
             String name = f.name;
             MultiMethod<typeActual.DataType> mm = map.getOrCompute(name,
                     () -> new MultiMethod<typeActual.DataType>(name, []));
             map.put(name, mm + f);
-            }
-        return map.makeImmutable().as(Map<String, MultiMethod<DataType>>);
         }
+        return map.makeImmutable().as(Map<String, MultiMethod<DataType>>);
+    }
 
     /**
      * The implementation of [hashed()] method.
      */
-    protected conditional Hasher<DataType> createHasher()
-        {
-        Boolean isImplemented(String functionName, Int paramCount)
-            {
-            if (MultiMethod<DataType> mm := multimethods.get(functionName))
-                {
-                for (Function fn : mm.functions)
-                    {
+    protected conditional Hasher<DataType> createHasher() {
+        Boolean isImplemented(String functionName, Int paramCount) {
+            if (MultiMethod<DataType> mm := multimethods.get(functionName)) {
+                for (Function fn : mm.functions) {
                     assert MethodTemplate template := fn.isFunction();
-                    if (template.parameters.size == paramCount)
-                        {
+                    if (template.parameters.size == paramCount) {
                         return template.hasCode;
-                        }
                     }
                 }
+            }
             return False;
+        }
+
+        if (DataType.is(Type!<Hashable>)) {
+            switch (form) {
+            case Class:
+            case Child:
+                if (isImplemented("hashCode", 2) && isImplemented("equals", 3)) {
+                    return True, new NaturalHasher<DataType>();
+                }
+                break;
+
+            case Union: {
+                assert (Type!<> t1, Type!<> t2) := relational();
+
+                if (Hasher<t1.DataType> hasher1 := t1.DataType.hashed(),
+                    Hasher<t2.DataType> hasher2 := t2.DataType.hashed()) {
+                    return True, new Hasher<DataType>() {
+                        @Override
+                        Int64 hashOf(Value value) {
+                            if (&value.actualType.isA(t1)) {
+                                assert Hasher<t1.DataType> hasher := t1.DataType.hashed();
+                                return hasher.hashOf(value.as(t1.DataType));
+                            } else {
+                                assert Hasher<t2.DataType> hasher := t2.DataType.hashed();
+                                return hasher.hashOf(value.as(t2.DataType));
+                            }
+                        }
+
+                        @Override
+                        Boolean areEqual(Value value1, Value value2) {
+                            Type actualType1 = &value1.actualType;
+                            Type actualType2 = &value2.actualType;
+
+                            if (actualType1.isA(t1) && actualType2.isA(t1)) {
+                                assert Hasher<t1.DataType> hasher := t1.DataType.hashed();
+                                return hasher.areEqual(value1.as(t1.DataType),
+                                                       value2.as(t1.DataType));
+                            }
+                            if (actualType1.isA(t2) && actualType2.isA(t2)) {
+                                assert Hasher<t2.DataType> hasher := t2.DataType.hashed();
+                                return hasher.areEqual(value1.as(t2.DataType),
+                                                       value2.as(t2.DataType));
+                            }
+                            return False;
+                        }
+                    }.makeImmutable();
+                }
+                break;
             }
 
-        if (DataType.is(Type!<Hashable>))
-            {
-            switch (form)
-                {
-                case Class:
-                case Child:
-                    if (isImplemented("hashCode", 2) && isImplemented("equals", 3))
-                        {
-                        return True, new NaturalHasher<DataType>();
-                        }
-                    break;
+            case Intersection: {
+                assert (Type!<> t1, Type!<> t2) := relational();
 
-                case Union:
-                    {
-                    assert (Type!<> t1, Type!<> t2) := relational();
-
-                    if (Hasher<t1.DataType> hasher1 := t1.DataType.hashed(),
-                        Hasher<t2.DataType> hasher2 := t2.DataType.hashed())
-                        {
-                        return True, new Hasher<DataType>()
-                            {
+                if (Hasher<t1.DataType> hasher1 := t1.DataType.hashed()) {
+                    if (Hasher<t2.DataType> hasher2 := t2.DataType.hashed()) {
+                        return True, new Hasher<DataType>() {
                             @Override
-                            Int64 hashOf(Value value)
-                                {
-                                if (&value.actualType.isA(t1))
-                                    {
-                                    assert Hasher<t1.DataType> hasher := t1.DataType.hashed();
-                                    return hasher.hashOf(value.as(t1.DataType));
-                                    }
-                                else
-                                    {
-                                    assert Hasher<t2.DataType> hasher := t2.DataType.hashed();
-                                    return hasher.hashOf(value.as(t2.DataType));
-                                    }
-                                }
+                            Int64 hashOf(Value value) {
+                                return hasher1.hashOf(value.as(t1.DataType))
+                                     + hasher2.hashOf(value.as(t2.DataType));
+                            }
 
                             @Override
-                            Boolean areEqual(Value value1, Value value2)
-                                {
-                                Type actualType1 = &value1.actualType;
-                                Type actualType2 = &value2.actualType;
-
-                                if (actualType1.isA(t1) && actualType2.isA(t1))
-                                    {
-                                    assert Hasher<t1.DataType> hasher := t1.DataType.hashed();
-                                    return hasher.areEqual(value1.as(t1.DataType),
-                                                           value2.as(t1.DataType));
-                                    }
-                                if (actualType1.isA(t2) && actualType2.isA(t2))
-                                    {
-                                    assert Hasher<t2.DataType> hasher := t2.DataType.hashed();
-                                    return hasher.areEqual(value1.as(t2.DataType),
-                                                           value2.as(t2.DataType));
-                                    }
-                                return False;
-                                }
-                            }.makeImmutable();
-                        }
-                    break;
-                    }
-
-                case Intersection:
-                    {
-                    assert (Type!<> t1, Type!<> t2) := relational();
-
-                    if (Hasher<t1.DataType> hasher1 := t1.DataType.hashed())
-                        {
-                        if (Hasher<t2.DataType> hasher2 := t2.DataType.hashed())
-                            {
-                            return True, new Hasher<DataType>()
-                                {
-                                @Override
-                                Int64 hashOf(Value value)
-                                    {
-                                    return hasher1.hashOf(value.as(t1.DataType))
-                                         + hasher2.hashOf(value.as(t2.DataType));
-                                    }
-
-                                @Override
-                                Boolean areEqual(Value value1, Value value2)
-                                    {
-                                    return hasher1.areEqual(value1.as(t1.DataType), value2.as(t1.DataType))
-                                        && hasher2.areEqual(value1.as(t2.DataType), value2.as(t2.DataType));
-                                    }
-                                }.makeImmutable();
+                            Boolean areEqual(Value value1, Value value2) {
+                                return hasher1.areEqual(value1.as(t1.DataType), value2.as(t1.DataType))
+                                    && hasher2.areEqual(value1.as(t2.DataType), value2.as(t2.DataType));
                             }
-                        else
-                            {
-                            return True, hasher1;
-                            }
-                        }
-                    else
-                        {
-                        return t2.DataType.hashed();
-                        }
+                        }.makeImmutable();
+                    } else {
+                        return True, hasher1;
                     }
-
-                case Immutable:
-                case Access:
-                case Annotated:
-                    assert Type!<> t := modifying();
-                    return t.DataType.hashed();
-
-                default:
-                    break;
+                } else {
+                    return t2.DataType.hashed();
                 }
             }
-        return False;
+
+            case Immutable:
+            case Access:
+            case Annotated:
+                assert Type!<> t := modifying();
+                return t.DataType.hashed();
+
+            default:
+                break;
+            }
         }
+        return False;
+    }
 
     /**
      * The implementation of [emptyIterator.get()].
      */
-    protected Iterator<DataType> createEmptyIterator()
-        {
+    protected Iterator<DataType> createEmptyIterator() {
         return new iterators.EmptyIterator<DataType>();
-        }
     }
+}

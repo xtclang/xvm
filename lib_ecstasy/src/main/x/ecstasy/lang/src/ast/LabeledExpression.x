@@ -8,23 +8,20 @@ import Lexer.Token;
  * named.
  */
 const LabeledExpression(Token label, Expression expr)
-        extends Expression
-    {
+        extends Expression {
+
     @Override
-    TextPosition start.get()
-        {
+    TextPosition start.get() {
         return label.start;
-        }
-
-    @Override
-    TextPosition end.get()
-        {
-        return expr.end;
-        }
-
-    @Override
-    String toString()
-        {
-        return $"{label} = {expr}";
-        }
     }
+
+    @Override
+    TextPosition end.get() {
+        return expr.end;
+    }
+
+    @Override
+    String toString() {
+        return $"{label} = {expr}";
+    }
+}

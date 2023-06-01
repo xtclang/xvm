@@ -7,11 +7,10 @@
  * * The Var only allows assignment under specific conditions.
  */
 interface Var<Referent>
-        extends Ref<Referent>
-    {
+        extends Ref<Referent> {
     /**
      * Specify the referent for this variable reference. The Var may reject the mutation by throwing
      * an exception.
      */
     void set(Referent value);
-    }
+}

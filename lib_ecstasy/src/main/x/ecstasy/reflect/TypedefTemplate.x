@@ -7,10 +7,9 @@
  * evolvable, and reliable code.
  */
 interface TypedefTemplate
-        extends ComponentTemplate
-    {
+        extends ComponentTemplate {
     /**
      * The type that this `typedef` refers to.
      */
     @RO TypeTemplate referredToType;
-    }
+}

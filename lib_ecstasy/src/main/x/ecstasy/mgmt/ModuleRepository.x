@@ -3,8 +3,7 @@ import reflect.ModuleTemplate;
 /**
  * Represents the source of compiled module structures.
  */
-interface ModuleRepository
-    {
+interface ModuleRepository {
     /**
      * Set of domain names that are known by this repository.
      */
@@ -31,11 +30,10 @@ interface ModuleRepository
      * @throws IllegalArgument if the module does not exist
      * @throws Exception       if the module cannot be resolved
      */
-    ModuleTemplate getResolvedModule(String name)
-        {
+    ModuleTemplate getResolvedModule(String name) {
         assert ModuleTemplate template := getModule(name) as $"Missing module {name}";
         return template.parent.resolve(this).mainModule;
-        }
+    }
 
     /**
      * Store the specified module template in the repository.
@@ -47,4 +45,4 @@ interface ModuleRepository
      *         module is not able to be stored in the repository, etc.
      */
     void storeModule(ModuleTemplate template);
-    }
+}

@@ -3,8 +3,8 @@
  */
 mixin FPNumberArray<Element extends FPNumber>
         into Array<Element>
-        extends NumberArray<Element>
-    {
+        extends NumberArray<Element> {
+
     typedef Number.Rounding as Rounding;
 
     // ----- vector operations ---------------------------------------------------------------------
@@ -19,19 +19,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray round(Rounding direction = TiesToAway, Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray round(Rounding direction = TiesToAway, Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].round(direction);
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].round(direction)).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the greatest integer value less than or equal to
@@ -42,19 +39,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray floor(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray floor(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].floor();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].floor()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the least integer value greater than or equal to the
@@ -65,19 +59,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray ceil(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray ceil(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].ceil();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].ceil()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate Euler's number raised to the power of the floating
@@ -88,19 +79,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray exp(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray exp(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].exp();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].exp()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, scale the value by an power of its radix; this is analogous to
@@ -114,19 +102,16 @@ mixin FPNumberArray<Element extends FPNumber>
      * @return the array containing the floating point results, each one formed by the original
      *         value scaled by `radix` raised to the specified `power`
      */
-    FPNumberArray scaleByPow(Int power, Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray scaleByPow(Int power, Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].scaleByPow(power);
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].scaleByPow(power)).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, scale the value by an power of its radix; this is analogous to
@@ -140,21 +125,18 @@ mixin FPNumberArray<Element extends FPNumber>
      * @return the array containing the floating point results, each one formed by the original
      *         value scaled by `radix` raised to the power of `n`
      */
-    FPNumberArray scaleByPow(Int[] powers, Boolean inPlace = False)
-        {
+    FPNumberArray scaleByPow(Int[] powers, Boolean inPlace = False) {
         assert:bounds this.size == powers.size;
 
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].scaleByPow(powers[i]);
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].scaleByPow(powers[i])).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the natural logarithm (base _e_).
@@ -164,19 +146,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray log(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray log(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].log();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].log()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the base 2 logarithm.
@@ -186,19 +165,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray log2(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray log2(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].log2();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].log2()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the base 10 logarithm.
@@ -208,19 +184,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray log10(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray log10(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].log10();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].log10()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the square root.
@@ -230,19 +203,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray sqrt(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray sqrt(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].sqrt();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].sqrt()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the cubic root.
@@ -252,19 +222,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray cbrt(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray cbrt(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].cbrt();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].cbrt()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the sine.
@@ -274,19 +241,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray sin(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray sin(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].sin();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].sin()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the cosine.
@@ -296,19 +260,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray cos(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray cos(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].cos();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].cos()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the tangent.
@@ -318,19 +279,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray tan(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray tan(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].tan();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].tan()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the arc sine.
@@ -340,19 +298,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray asin(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray asin(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].asin();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].asin()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the arc cosine.
@@ -362,19 +317,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray acos(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray acos(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].acos();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].acos()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the arc tangent.
@@ -384,19 +336,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray atan(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray atan(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].atan();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].atan()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, assumed to be an x value, and each value in the passed array,
@@ -408,21 +357,18 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray atan2(Element[] y, Boolean inPlace = False)
-        {
+    FPNumberArray atan2(Element[] y, Boolean inPlace = False) {
         assert:bounds this.size == y.size;
 
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].atan2(y[i]);
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].atan2(y[i])).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, assuming that the value represents a hyperbolic angle,
@@ -433,19 +379,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray sinh(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray sinh(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].sinh();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].sinh()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, assuming that the value represents a hyperbolic angle,
@@ -456,19 +399,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray cosh(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray cosh(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].cosh();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].cosh()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, assumed to represent a hyperbolic angle, calculate the
@@ -479,19 +419,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray tanh(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray tanh(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].tanh();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].tanh()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the area hyperbolic sine.
@@ -501,19 +438,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray asinh(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray asinh(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].asinh();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].asinh()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the area hyperbolic cosine.
@@ -523,19 +457,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the floating point results
      */
-    FPNumberArray acosh(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray acosh(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].acosh();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].acosh()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, calculate the area hyperbolic tangent of the value.
@@ -545,19 +476,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the area hyperbolic tangents
      */
-    FPNumberArray atanh(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray atanh(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].atanh();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].atanh()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, assume the value is a number of degrees, and calculate the
@@ -568,19 +496,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the radian values
      */
-    FPNumberArray deg2rad(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray deg2rad(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].deg2rad();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].deg2rad()).toArray(mutability, inPlace=True);
-        }
+    }
 
     /**
      * For each value in this array, assume the value is a number of radians, and calculate the
@@ -591,19 +516,16 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return the array containing the degree values
      */
-    FPNumberArray rad2deg(Boolean inPlace = False)
-        {
-        if (inPlace && this.inPlace)
-            {
-            for (Int i : 0 ..< size)
-                {
+    FPNumberArray rad2deg(Boolean inPlace = False) {
+        if (inPlace && this.inPlace) {
+            for (Int i : 0 ..< size) {
                 this[i] = this[i].rad2deg();
-                }
-            return this;
             }
+            return this;
+        }
 
         return new Element[size](i -> this[i].rad2deg()).toArray(mutability, inPlace=True);
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -640,8 +562,7 @@ mixin FPNumberArray<Element extends FPNumber>
             ResultType?      NaN             = Null,
             ResultType?      infinite        = Null,
             ResultType?      negBounds       = Null,
-            ResultType?      negInfinity     = Null)
-        {
+            ResultType?      negInfinity     = Null) {
         assert Range<Number> range := ResultType.range()
                 as $"{ResultType} a is not fixed length integer type";
         assert range.is(Range<ResultType>);
@@ -652,33 +573,29 @@ mixin FPNumberArray<Element extends FPNumber>
 
         function ResultType(Element) convert = Element.converterTo(ResultType);
 
-        function ResultType(Element) coerce = e ->
-            {
-            if (e.finite)
-                {
+        function ResultType(Element) coerce = e -> {
+            if (e.finite) {
                 Element v = e.round(rounding);
                 return v < min
                         ? (negBounds ?: outOfBounds ?: throw new OutOfBounds("val={v}, min={min}"))
                         : v > max
                                 ? (outOfBounds ?: throw new OutOfBounds("val={v}, max={max}"))
                                 : convert(v);
-                }
+            }
 
-            if (e.NaN)
-                {
+            if (e.NaN) {
                 return NaN ?: throw new OutOfBounds("value is NaN");
-                }
+            }
 
-            if (e.negative)
-                {
+            if (e.negative) {
                 return negInfinity?;
-                }
+            }
 
             return infinite ?: throw new OutOfBounds("value is infinite");
-            };
+        };
 
         return new ResultType[size](i -> coerce(this[i])).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Dec values.
@@ -687,14 +604,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Dec values drawn from this array
      */
-    Dec[] toDecArray(Mutability mutability = Constant)
-        {
+    Dec[] toDecArray(Mutability mutability = Constant) {
         return Element == Dec
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Dec[size](i -> this[i].toDec()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Dec32 values.
@@ -703,14 +619,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Dec32 values drawn from this array
      */
-    Dec32[] toDec32Array(Mutability mutability = Constant)
-        {
+    Dec32[] toDec32Array(Mutability mutability = Constant) {
         return Element == Dec32
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Dec32[size](i -> this[i].toDec32()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Dec64 values.
@@ -719,14 +634,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Dec64 values drawn from this array
      */
-    Dec64[] toDec64Array(Mutability mutability = Constant)
-        {
+    Dec64[] toDec64Array(Mutability mutability = Constant) {
         return Element == Dec64
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Dec64[size](i -> this[i].toDec64()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Dec128 values.
@@ -735,14 +649,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Dec128 values drawn from this array
      */
-    Dec128[] toDec128Array(Mutability mutability = Constant)
-        {
+    Dec128[] toDec128Array(Mutability mutability = Constant) {
         return Element == Dec128
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Dec128[size](i -> this[i].toDec128()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Float8e4 values.
@@ -751,14 +664,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Float8e4 values drawn from this array
      */
-    Float8e4[] toFloat8e4Array(Mutability mutability = Constant)
-        {
+    Float8e4[] toFloat8e4Array(Mutability mutability = Constant) {
         return Element == Float8e4
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Float8e4[size](i -> this[i].toFloat8e4()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Float8e5 values.
@@ -767,14 +679,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Float8e5 values drawn from this array
      */
-    Float8e5[] toFloat8e5Array(Mutability mutability = Constant)
-        {
+    Float8e5[] toFloat8e5Array(Mutability mutability = Constant) {
         return Element == Float8e5
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Float8e5[size](i -> this[i].toFloat8e5()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to BFloat16 values.
@@ -783,14 +694,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing BFloat16 values drawn from this array
      */
-    BFloat16[] toBFloat16Array(Mutability mutability = Constant)
-        {
+    BFloat16[] toBFloat16Array(Mutability mutability = Constant) {
         return Element == BFloat16
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new BFloat16[size](i -> this[i].toBFloat16()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Float16 values.
@@ -799,14 +709,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Float16 values drawn from this array
      */
-    Float16[] toFloat16Array(Mutability mutability = Constant)
-        {
+    Float16[] toFloat16Array(Mutability mutability = Constant) {
         return Element == Float16
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Float16[size](i -> this[i].toFloat16()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Float32 values.
@@ -815,14 +724,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Float32 values drawn from this array
      */
-    Float32[] toFloat32Array(Mutability mutability = Constant)
-        {
+    Float32[] toFloat32Array(Mutability mutability = Constant) {
         return Element == Float32
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Float32[size](i -> this[i].toFloat32()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Float64 values.
@@ -831,14 +739,13 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Float64 values drawn from this array
      */
-    Float64[] toFloat64Array(Mutability mutability = Constant)
-        {
+    Float64[] toFloat64Array(Mutability mutability = Constant) {
         return Element == Float64
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Float64[size](i -> this[i].toFloat64()).toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain copy of this array's floating point values, converted to Float128 values.
@@ -847,12 +754,11 @@ mixin FPNumberArray<Element extends FPNumber>
      *
      * @return an array of the specified mutability containing Float128 values drawn from this array
      */
-    Float128[] toFloat128Array(Mutability mutability = Constant)
-        {
+    Float128[] toFloat128Array(Mutability mutability = Constant) {
         return Element == Float128
                 ? (this.mutability <= Persistent
                         ? this.toArray(mutability)
                         : new Array(mutability, this))
                 : new Float128[size](i -> this[i].toFloat128()).toArray(mutability, True);
-        }
     }
+}

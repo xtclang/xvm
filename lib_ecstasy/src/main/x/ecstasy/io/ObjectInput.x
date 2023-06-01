@@ -5,10 +5,9 @@
  * a single object.
  */
 interface ObjectInput
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * @return  an object from the stream
      */
     <ObjectType> ObjectType read<ObjectType>();
-    }
+}

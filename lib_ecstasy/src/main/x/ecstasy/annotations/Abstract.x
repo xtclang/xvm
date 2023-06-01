@@ -11,6 +11,5 @@
  * * A method marked with `@Abstract` requires TODO
  */
 mixin Abstract
-        into Class | Property | Method
-    {
-    }
+        into Class | Property | Method {
+}

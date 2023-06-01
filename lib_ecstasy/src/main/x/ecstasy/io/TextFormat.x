@@ -8,8 +8,7 @@
  *
  * @see BinaryFormat
  */
-interface TextFormat
-    {
+interface TextFormat {
     /**
      * A TextFormat is typically identified by a name, such as "XML", "JSON", or "TOML".
      */
@@ -34,4 +33,4 @@ interface TextFormat
      * @return an ObjectOutput that serializes objects into text data
      */
     ObjectOutput createObjectOutput(Writer writer);
-    }
+}

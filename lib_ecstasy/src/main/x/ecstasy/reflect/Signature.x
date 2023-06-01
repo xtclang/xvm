@@ -2,8 +2,7 @@
  * The signature of a method or function.
  */
 interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
-        extends immutable Const
-    {
+        extends immutable Const {
     /**
      * The function's name.
      */
@@ -20,36 +19,30 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
     /**
      * @return the number of parameters with default values
      */
-    @RO Int defaultParamCount.get()
-        {
+    @RO Int defaultParamCount.get() {
         Int count = 0;
-        for (Parameter param : params)
-            {
-            if (param.defaultValue())
-                {
+        for (Parameter param : params) {
+            if (param.defaultValue()) {
                 count++;
-                }
             }
-        return count;
         }
+        return count;
+    }
 
     /**
      * @return the number of required parameters (without default values)
      */
-    @RO Int requiredParamCount.get()
-        {
+    @RO Int requiredParamCount.get() {
         Int count = 0;
-        for (Parameter param : params)
-            {
-            if (param.defaultValue())
-                {
+        for (Parameter param : params) {
+            if (param.defaultValue()) {
                 // there are no regular parameters after the first parameter with a default value
                 break;
-                }
-            count++;
             }
-        return count;
+            count++;
         }
+        return count;
+    }
 
     /**
      * Find a parameter by the provided name.
@@ -59,17 +52,14 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
      * @return True iff a parameter with the specified name was found
      * @return (conditional) the parameter
      */
-    conditional Parameter findParam(String name)
-        {
-        return params.iterator().untilAny(p ->
-            {
-            if (String s := p.hasName())
-                {
+    conditional Parameter findParam(String name) {
+        return params.iterator().untilAny(p -> {
+            if (String s := p.hasName()) {
                 return s == name;
-                }
+            }
             return False;
-            });
-        }
+        });
+    }
 
     /**
      * The return values, by ordinal.
@@ -84,17 +74,14 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
      * @return True iff a return value with the specified name was found
      * @return (conditional) the return value
      */
-    conditional Return findReturn(String name)
-        {
-        return returns.iterator().untilAny(r ->
-            {
-            if (String s := r.hasName())
-                {
+    conditional Return findReturn(String name) {
+        return returns.iterator().untilAny(r -> {
+            if (String s := r.hasName()) {
                 return s == name;
-                }
+            }
             return False;
-            });
-        }
+        });
+    }
 
     /**
      * Determine if the function return value is a _conditional return_. A conditional return is a
@@ -121,113 +108,89 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         Int      total   = 0;
 
         Return[] returns = this.returns;
         Int      count   = returns.size;
-        if (count == 0)
-            {
+        if (count == 0) {
             total += 4; // void
-            }
-        else
-            {
+        } else {
             Int first  = 0;
-            if (count > 1)
-                {
-                if (conditionalResult)
-                    {
+            if (count > 1) {
+                if (conditionalResult) {
                     total += 12; // conditional
                     first  = 1;
-                    }
-                }
-
-            if (count - first > 1)
-                {
-                total += 2 + (count - first - 1) * 2; // parens + comma and space delimiters
-                }
-
-            for (Int i : first ..< count)
-                {
-                total += returns[i].estimateStringLength();
                 }
             }
+
+            if (count - first > 1) {
+                total += 2 + (count - first - 1) * 2; // parens + comma and space delimiters
+            }
+
+            for (Int i : first ..< count) {
+                total += returns[i].estimateStringLength();
+            }
+        }
 
         total += 1 + name.size + 2; // space before name + name + parens
 
-        if (!params.empty)
-            {
+        if (!params.empty) {
             total += (params.size - 1) * 2; // comma and space delimiter between params
-            for (Parameter param : params)
-                {
+            for (Parameter param : params) {
                 total += param.estimateStringLength();
-                }
             }
-
-        return total;
         }
 
+        return total;
+    }
+
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         Return[] returns = this.returns;
         Int      count   = returns.size;
-        if (count == 0)
-            {
+        if (count == 0) {
             "void".appendTo(buf);
-            }
-        else
-            {
+        } else {
             Int     first  = 0;
             Boolean parens = False;
-            if (count > 1)
-                {
-                if (conditionalResult)
-                    {
+            if (count > 1) {
+                if (conditionalResult) {
                     "conditional ".appendTo(buf);
                     first  = 1;
                     parens = count > 2;
-                    }
-                else
-                    {
+                } else {
                     parens = True;
-                    }
-                }
-
-            if (parens)
-                {
-                buf.add('(');
-                }
-
-            EachReturn: for (Int i : first ..< count)
-                {
-                if (!EachReturn.first)
-                    {
-                    ", ".appendTo(buf);
-                    }
-                returns[i].appendTo(buf);
-                }
-
-            if (parens)
-                {
-                buf.add(')');
                 }
             }
+
+            if (parens) {
+                buf.add('(');
+            }
+
+            EachReturn: for (Int i : first ..< count) {
+                if (!EachReturn.first) {
+                    ", ".appendTo(buf);
+                }
+                returns[i].appendTo(buf);
+            }
+
+            if (parens) {
+                buf.add(')');
+            }
+        }
 
         buf.add(' ')
            .addAll(name)
            .add('(');
 
-        EachParam: for (Parameter param : params)
-            {
-            if (!EachParam.first)
-                {
+        EachParam: for (Parameter param : params) {
+            if (!EachParam.first) {
                 ", ".appendTo(buf);
-                }
-            param.appendTo(buf);
             }
+            param.appendTo(buf);
+        }
 
         return buf.add(')');
-        }
     }
+}

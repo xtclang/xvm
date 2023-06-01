@@ -64,14 +64,12 @@
  *     may temporarily suppress these notifications within a [SynchronizedSection].
  * * * `@Soft` and `@Weak` reference-cleared notifications.
  */
-interface Service
-    {
+interface Service {
     /**
      * A low-level control interface for a Service.
      */
     static interface ServiceControl
-            extends ServiceStats
-        {
+            extends ServiceStats {
         /**
          * Request the service to look for objects that are no longer used and reclaim their memory.
          *
@@ -95,7 +93,7 @@ interface Service
          * This method can be invoked from either inside or outside of the service.
          */
         void kill();
-        }
+    }
 
     /**
      * A service exposes its status through a status indicator:
@@ -116,8 +114,7 @@ interface Service
     /**
      * The various run-time statistics for a Service, with an ability to produce a snap-shot.
      */
-    static interface ServiceStats
-        {
+    static interface ServiceStats {
         /**
          * Determine if the service is still running.
          */
@@ -173,12 +170,11 @@ interface Service
         /**
          * Create an immutable snapshot of the current statistics.
          */
-        ServiceStats snapshotStats()
-            {
+        ServiceStats snapshotStats() {
             return new StatsSnapshot(statusIndicator, upTime, cpuTime, contended, backlogDepth,
                     bytesReserved, bytesAllocated);
-            }
         }
+    }
 
     /**
      * A simple, immutable implementation of the [ServiceStats] interface.
@@ -190,14 +186,13 @@ interface Service
                                Int           backlogDepth,
                                Int           bytesReserved,
                                Int           bytesAllocated)
-            implements ServiceStats
-        {
+            implements ServiceStats {
+
         @Override
-        ServiceStats snapshotStats()
-            {
+        ServiceStats snapshotStats() {
             return this;
-            }
         }
+    }
 
     /**
      * The TypeSystem of the container that this service is running within.
@@ -430,16 +425,14 @@ interface Service
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    String toString()
-        {
+    String toString() {
         return serviceName;
-        }
+    }
 
     @Override
-    immutable Service makeImmutable()
-        {
+    immutable Service makeImmutable() {
         // services are, by their nature, mutable; it is illegal to attempt to make a service into
         // an immutable object
         throw new UnsupportedOperation();
-        }
     }
+}

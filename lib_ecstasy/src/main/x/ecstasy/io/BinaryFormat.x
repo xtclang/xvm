@@ -9,8 +9,7 @@
  *
  * @see TextFormat
  */
-interface BinaryFormat
-    {
+interface BinaryFormat {
     /**
      * A BinaryFormat is typically identified by a name, such as "Thrift", "Avro", "protobuf", or
      * "ASN.1".
@@ -36,4 +35,4 @@ interface BinaryFormat
      * @return an ObjectOutput that serializes objects into binary data
      */
     ObjectOutput createObjectOutput(OutputStream out);
-    }
+}

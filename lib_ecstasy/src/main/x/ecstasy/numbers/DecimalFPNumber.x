@@ -2,8 +2,7 @@
  * A DecimalFPNumber is a Number that represents a decimal floating point value.
  */
 @Abstract const DecimalFPNumber
-        extends FPNumber
-    {
+        extends FPNumber {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -13,10 +12,9 @@
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         super(bits);
-        }
+    }
 
     /**
      * Construct a decimal floating point number from its network-portable representation.
@@ -25,47 +23,40 @@
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         super(bytes);
-        }
+    }
 
 
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
+    Signum sign.get() {
         // TODO this is correct for the default 0 encoding, but not for all members of the 0 cohort
-        eachBit: for (Bit bit : bits)
-            {
-            if (bit == 1)
-                {
-                if (!eachBit.first)
-                    {
+        eachBit: for (Bit bit : bits) {
+            if (bit == 1) {
+                if (!eachBit.first) {
                     return negative ? Negative : Positive;
-                    }
                 }
             }
-        return Zero;
         }
+        return Zero;
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Boolean finite.get()
-        {
+    Boolean finite.get() {
         Bit[] bitsL2R = bits;
         return bitsL2R[1] != 1          // G0
             || bitsL2R[2] != 1          // G1
             || bitsL2R[3] != 1          // G2
             || bitsL2R[4] != 1;         // G3
-        }
+    }
 
     @Override
-    Boolean infinity.get()
-        {
+    Boolean infinity.get() {
         // from IEEE 754-2008:
         //   If G0 through G4 are 11110 then r and v = (−1) S × (+∞).
         Bit[] bitsL2R = bits;
@@ -74,11 +65,10 @@
             && bitsL2R[3] == 1          // G2
             && bitsL2R[4] == 1          // G3
             && bitsL2R[5] == 0;         // G4
-        }
+    }
 
     @Override
-    Boolean NaN.get()
-        {
+    Boolean NaN.get() {
         // from IEEE 754-2008:
         //   If G0 through G4 are 11111, then v is NaN regardless of S.
         Bit[] bitsL2R = bits;
@@ -87,37 +77,33 @@
             && bitsL2R[3] == 1          // G2
             && bitsL2R[4] == 1          // G3
             && bitsL2R[5] == 1;         // G4
-        }
+    }
 
     @Override
-    @RO Int radix.get()
-        {
+    @RO Int radix.get() {
         return 10;
-        }
+    }
 
     @Override
-    @RO Int precision.get()
-        {
+    @RO Int precision.get() {
         // from IEEE 754-2008:
         //   p = 9×k/32−2
         return 9 * byteLength / 32 - 2;
-        }
+    }
 
     @Override
-    @RO Int significandBitLength.get()
-        {
+    @RO Int significandBitLength.get() {
         // from IEEE 754-2008:
         //   15×k/16 – 10
         return 15 * bitLength / 16 - 10;
-        }
+    }
 
     @Override
-    @RO Int exponentBitLength.get()
-        {
+    @RO Int exponentBitLength.get() {
         // from IEEE 754-2008:
         //   combination field width in bits
         //   w+5 = 15×k/16 – 10
         // subtract 5 bits for the raw exponent length
         return bitLength / 16 + 4;
-        }
     }
+}

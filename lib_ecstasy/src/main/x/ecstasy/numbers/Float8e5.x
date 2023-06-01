@@ -10,8 +10,7 @@
  */
 const Float8e5
         extends BinaryFPNumber
-        default(0.0)
-    {
+        default(0.0) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -21,11 +20,10 @@ const Float8e5
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert:bounds bits.size == 8;
         super(bits);
-        }
+    }
 
     /**
      * Construct an 8-bit E4M3 binary floating point number from its network-portable representation.
@@ -34,11 +32,10 @@ const Float8e5
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert:bounds bytes.size == 1;
         super(bytes);
-        }
+    }
 
     /**
      * Construct an 8-bit E4M3 binary floating point number from its `String` representation.
@@ -46,300 +43,253 @@ const Float8e5
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct Float8e5(new FPLiteral(text).toFloat8e5().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return True, 8;
-        }
+    }
 
     @Override
-    static Float8e5 zero()
-        {
+    static Float8e5 zero() {
         return 0.0;
-        }
+    }
 
     @Override
-    static Float8e5 one()
-        {
+    static Float8e5 one() {
         return 1.0;
-        }
+    }
 
 
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
-        if (bits.toByte() & 0b01111111 == 0)
-            {
+    Signum sign.get() {
+        if (bits.toByte() & 0b01111111 == 0) {
             return Zero;
-            }
+        }
 
         return bits[0] == 1 ? Negative : Positive;
-        }
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op Float8e5 add(Float8e5 n)
-        {
+    @Op Float8e5 add(Float8e5 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float8e5 sub(Float8e5 n)
-        {
+    @Op Float8e5 sub(Float8e5 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float8e5 mul(Float8e5 n)
-        {
+    @Op Float8e5 mul(Float8e5 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float8e5 div(Float8e5 n)
-        {
+    @Op Float8e5 div(Float8e5 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float8e5 mod(Float8e5 n)
-        {
+    @Op Float8e5 mod(Float8e5 n) {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 abs()
-        {
+    Float8e5 abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op Float8e5 neg()
-        {
+    @Op Float8e5 neg() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 pow(Float8e5 n)
-        {
+    Float8e5 pow(Float8e5 n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Int emax.get()
-        {
+    Int emax.get() {
         return 8;
-        }
+    }
 
     @Override
-    Int emin.get()
-        {
+    Int emin.get() {
         return -6;
-        }
+    }
 
     @Override
-    Int bias.get()
-        {
+    Int bias.get() {
         return 7;
-        }
+    }
 
     @Override
-    Int significandBitLength.get()
-        {
+    Int significandBitLength.get() {
         return 3;
-        }
+    }
 
     @Override
-    Int exponentBitLength.get()
-        {
+    Int exponentBitLength.get() {
         return 4;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, Int significand, Int exponent) split()
-        {
+    (Boolean negative, Int significand, Int exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 round(Rounding direction = TiesToAway)
-        {
+    Float8e5 round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 floor()
-        {
+    Float8e5 floor() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 ceil()
-        {
+    Float8e5 ceil() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 exp()
-        {
+    Float8e5 exp() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 scaleByPow(Int n)
-        {
+    Float8e5 scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 log()
-        {
+    Float8e5 log() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 log2()
-        {
+    Float8e5 log2() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 log10()
-        {
+    Float8e5 log10() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 sqrt()
-        {
+    Float8e5 sqrt() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 cbrt()
-        {
+    Float8e5 cbrt() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 sin()
-        {
+    Float8e5 sin() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 cos()
-        {
+    Float8e5 cos() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 tan()
-        {
+    Float8e5 tan() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 asin()
-        {
+    Float8e5 asin() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 acos()
-        {
+    Float8e5 acos() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 atan()
-        {
+    Float8e5 atan() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 atan2(Float8e5 y)
-        {
+    Float8e5 atan2(Float8e5 y) {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 sinh()
-        {
+    Float8e5 sinh() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 cosh()
-        {
+    Float8e5 cosh() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 tanh()
-        {
+    Float8e5 tanh() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 asinh()
-        {
+    Float8e5 asinh() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 acosh()
-        {
+    Float8e5 acosh() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 atanh()
-        {
+    Float8e5 atanh() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 deg2rad()
-        {
+    Float8e5 deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 rad2deg()
-        {
+    Float8e5 rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 nextUp()
-        {
+    Float8e5 nextUp() {
         TODO
-        }
+    }
 
     @Override
-    Float8e5 nextDown()
-        {
+    Float8e5 nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -360,10 +310,9 @@ const Float8e5
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -381,19 +330,17 @@ const Float8e5
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
 
     @Override
-    Float8e5 toFloat8e5()
-        {
+    Float8e5 toFloat8e5() {
         return this;
-        }
+    }
 
     @Auto
     @Override
@@ -417,10 +364,9 @@ const Float8e5
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return new FloatN(bits);
-        }
+    }
 
     @Auto
     @Override
@@ -436,8 +382,7 @@ const Float8e5
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toFPLiteral().toDecN();
-        }
     }
+}

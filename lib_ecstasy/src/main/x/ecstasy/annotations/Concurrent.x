@@ -46,6 +46,5 @@
  *   state (e.g. using a non-concurrent iterator over a collection) should be avoided.
  */
 mixin Concurrent
-        into Class | Property | Method
-    {
-    }
+        into Class | Property | Method {
+}

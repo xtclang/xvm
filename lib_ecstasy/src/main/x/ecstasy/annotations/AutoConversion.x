@@ -40,6 +40,5 @@
  *   and the more easily that the trade-off is accepted, the more likely it is to be wrong.**
  */
 mixin AutoConversion
-        into Method
-    {
-    }
+        into Method {
+}

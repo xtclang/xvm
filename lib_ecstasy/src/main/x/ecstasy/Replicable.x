@@ -13,8 +13,7 @@
  *     // new DerivedClass, because that is the runtime type of b1
  *     BaseClass b2 = b1.new();
  */
-interface Replicable
-    {
+interface Replicable {
     /**
      * Construct a new replica of this object, but with the default initial state for this object's
      * class, by using the default (no parameter) constructor.
@@ -22,4 +21,4 @@ interface Replicable
      * This is a virtual "default constructor".
      */
     construct();
-    }
+}

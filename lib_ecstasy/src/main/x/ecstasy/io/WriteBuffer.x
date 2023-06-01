@@ -31,8 +31,7 @@
  */
 interface WriteBuffer
         extends ReadBuffer
-        extends OutputStream
-    {
+        extends OutputStream {
     /**
      * The buffer's capacity, in terms of the number of bytes that it can hold.
      */
@@ -67,4 +66,4 @@ interface WriteBuffer
      */
     @Override
     void close(Exception? cause = Null);
-    }
+}

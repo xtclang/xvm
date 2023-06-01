@@ -89,8 +89,7 @@ import reflect.Annotation;
  */
 mixin LinkedList<Element>
         into Var<Element?>
-        implements List<Element>
-    {
+        implements List<Element> {
     /**
      * This `Link` type is the property type that will provide a next pointer from each element to
      * each next element, and optionally from each element to its previous element.
@@ -134,13 +133,10 @@ mixin LinkedList<Element>
     construct(Link?   next     = Null,
               Link?   prev     = Null,
               Boolean omitThis = False,
-              Boolean readOnly = False)
-        {
+              Boolean readOnly = False) {
         // the property that this is mixed into must be of the element type (but can be Null).
         assert Referent == Element?;
-        }
-    finally
-        {
+    } finally {
         // these checks are deferred until the construction is completing, to ensure that a "this"
         // exists for the property
         assert (Property prop, val container) := isProperty();
@@ -152,7 +148,7 @@ mixin LinkedList<Element>
         // property can't be the implicit "next", so verify that either the container could be the
         // head of the list (by being the Element type), or that a "next" is specified
         assert next != Null || container.is(Element);
-        }
+    }
 
 
     // ----- metadata ------------------------------------------------------------------------------
@@ -162,18 +158,15 @@ mixin LinkedList<Element>
      *
      * @return the array of Arguments
      */
-    protected Argument[] annotationArgs.get()
-        {
-        for (Annotation anno : annotations)
-            {
+    protected Argument[] annotationArgs.get() {
+        for (Annotation anno : annotations) {
             val clz = anno.mixinClass;
-            if (clz == LinkedList || clz.derivesFrom(LinkedList))
-                {
+            if (clz == LinkedList || clz.derivesFrom(LinkedList)) {
                 return anno.arguments;
-                }
             }
-        assert;
         }
+        assert;
+    }
 
     /**
      * Obtain the configuration for this LinkedList.
@@ -194,8 +187,7 @@ mixin LinkedList<Element>
      *                      that no mutations are permitted via the [List] interface
      */
     protected (Element? head, Link nextLink, Link? prevLink, Boolean thisHeadVar, Boolean readOnly)
-            readConfig(Boolean rewind = True)
-        {
+            readConfig(Boolean rewind = True) {
         Argument[] args     = annotationArgs;
         Link?      nextLink = args[0].value.as(Link?);
         Link?      prevLink = args[1].value.as(Link?);
@@ -217,24 +209,21 @@ mixin LinkedList<Element>
 
         // for any bi-directional list (scenarios #3, #4, and #6), the assumed head may have a
         // previous node, so rewind to the beginning of the list if necessary
-        if (rewind && head != Null && prevLink != Null)
-            {
+        if (rewind && head != Null && prevLink != Null) {
             Boolean changed = False;
-            while (Element preceding ?= prevLink.get(head))
-                {
+            while (Element preceding ?= prevLink.get(head)) {
                 head    = preceding;
                 changed = True;
-                }
-
-            // update the list head if it changed
-            if (changed && !ro && thisHeadVar)
-                {
-                set(head);
-                }
             }
 
-        return (head, nextLink, prevLink, thisHeadVar, ro);
+            // update the list head if it changed
+            if (changed && !ro && thisHeadVar) {
+                set(head);
+            }
         }
+
+        return (head, nextLink, prevLink, thisHeadVar, ro);
+    }
 
     /**
      * Obtain the configuration for reading and mutating this LinkedList.
@@ -252,146 +241,121 @@ mixin LinkedList<Element>
      * @throws ReadOnly  if the list has been configured as read-only
      */
     protected (Element? head, Link nextLink, Link? prevLink, Boolean thisHeadVar)
-            writeConfig(Boolean rewind = True)
-        {
+            writeConfig(Boolean rewind = True) {
         (val head, val nextLink, val prevLink, val headVar, val readOnly) = readConfig(rewind);
-        if (readOnly)
-            {
+        if (readOnly) {
             throw new ReadOnly();
-            }
-        return head, nextLink, prevLink, headVar;
         }
+        return head, nextLink, prevLink, headVar;
+    }
 
 
     // ----- List operations -----------------------------------------------------------------------
 
     @Override
-    @RO Boolean indexed.get()
-        {
+    @RO Boolean indexed.get() {
         return False;
-        }
+    }
 
     @Override
-    conditional Int knownSize()
-        {
+    conditional Int knownSize() {
         return False;
-        }
+    }
 
     @Override
-    Boolean empty.get()
-        {
+    Boolean empty.get() {
         Element? head = readConfig(rewind = False);
         return head != Null;
-        }
+    }
 
     @Override
-    Int size.get()
-        {
+    Int size.get() {
         Int count = 0;
         for ((Element? node, Link nextLink) = readConfig();
                 node != Null;
-                node = nextLink.get(node))
-            {
+                node = nextLink.get(node)) {
             ++count;
-            }
-        return count;
         }
+        return count;
+    }
 
     @Override
-    Iterator<Element> iterator()
-        {
-        return new Iterator()
-            {
-            construct()
-                {
+    Iterator<Element> iterator() {
+        return new Iterator() {
+            construct() {
                 (node, nextLink) = readConfig();
-                }
+            }
 
             private Element? node;
             private Link     nextLink;
 
             @Override
-            conditional Element next()
-                {
+            conditional Element next() {
                 Element? cur = node;
-                if (cur != Null)
-                    {
+                if (cur != Null) {
                     node = nextLink.get(cur);
                     return True, cur;
-                    }
-                return False;
                 }
-            };
-        }
+                return False;
+            }
+        };
+    }
 
     @Override
-    conditional Element first()
-        {
+    conditional Element first() {
         Element? head = readConfig();
         return head == Null
                 ? False
                 : (True, head);
-        }
+    }
 
     @Override
-    conditional Element last()
-        {
+    conditional Element last() {
         (Element? node, Link nextLink) = readConfig(rewind = False);
-        if (node == Null)
-            {
+        if (node == Null) {
             return False;
-            }
+        }
 
         Element tail;
-        do
-            {
+        do {
             tail = node;
             node = nextLink.get(node);
-            }
-        while (node != Null);
+        } while (node != Null);
         return True, tail;
-        }
+    }
 
     @Override
-    conditional Int indexOf(Element value, Int startAt = 0)
-        {
+    conditional Int indexOf(Element value, Int startAt = 0) {
         Loop: for ((Element? node, Link nextLink) = readConfig();
                 node != Null;
-                node = nextLink.get(node))
-            {
-            if (Loop.count >= startAt && node == value)
-                {
+                node = nextLink.get(node)) {
+            if (Loop.count >= startAt && node == value) {
                 return True, Loop.count;
-                }
             }
-        return False;
         }
+        return False;
+    }
 
     @Override
-    @Op("[]") Element getElement(Int index)
-        {
+    @Op("[]") Element getElement(Int index) {
         Loop: for ((Element? node, Link nextLink) = readConfig();
                 node != Null;
-                node = nextLink.get(node))
-            {
-            if (index == Loop.count)
-                {
+                node = nextLink.get(node)) {
+            if (index == Loop.count) {
                 return node;
-                }
             }
-        throw new OutOfBounds($"index={index}");
         }
+        throw new OutOfBounds($"index={index}");
+    }
 
     @Override
-    @Op("[..]") List<Element> slice(Range<Int> indexes)
-        {
+    @Op("[..]") List<Element> slice(Range<Int> indexes) {
         TODO check interval descending, and flip it if so, then collect forwards in an array, then flip again if descending
         // TODO
-        }
+    }
 
     @Override
-    @Op("[]=") void setElement(Int index, Element value)
-        {
+    @Op("[]=") void setElement(Int index, Element value) {
         assert:arg value != Null;
 
         (Element? node, Link nextLink, Link? prevLink, Boolean thisHeadVar) = writeConfig();
@@ -399,21 +363,17 @@ mixin LinkedList<Element>
         // verify that the value isn't already linked in to some list
         assert:arg nextLink.get(value) == Null && prevLink?.get(value) == Null;
 
-        if (prevLink == Null)
-            {
+        if (prevLink == Null) {
             // drag the nodeVar behind the node, because in a singly linked list we need to keep a
             // reference to the node that will point to the newly inserted node
             Loop: for (Var<Element?> nodeVar = this;
                     node != Null;
-                    nodeVar = nextLink.of(node), node = nodeVar.get())
-                {
-                if (index == Loop.count)
-                    {
+                    nodeVar = nextLink.of(node), node = nodeVar.get()) {
+                if (index == Loop.count) {
                     // scenario #1 cannot replace the head, because the parent "this" _is_ the head
-                    if (index == 0 && !thisHeadVar)
-                        {
+                    if (index == 0 && !thisHeadVar) {
                         throw new ReadOnly("LinkedList head cannot be modified");
-                        }
+                    }
 
                     // replace "node" with "value" by linking the prev to the value to the next
                     Element? next = nextLink.get(node);
@@ -424,101 +384,85 @@ mixin LinkedList<Element>
                     nextLink.set(node, Null);
 
                     return;
-                    }
                 }
             }
-        else
-            {
-            Loop: for ( ; node != Null; node = nextLink.get(node))
-                {
-                if (index == Loop.count)
-                    {
-                    if (index > 0)
-                        {
+        } else {
+            Loop: for ( ; node != Null; node = nextLink.get(node)) {
+                if (index == Loop.count) {
+                    if (index > 0) {
                         // replace "node" with "value" by linking the prev to the value to the next
                         assert Element prev ?= prevLink.get(node);
                         nextLink.set(prev, value);
                         prevLink.set(value, prev);
-                        }
+                    }
                     Element? next = nextLink.get(node);
-                    if (next != Null)
-                        {
+                    if (next != Null) {
                         prevLink.set(next, value);
                         nextLink.set(value, next);
-                        }
+                    }
 
                     // unlink the old node (don't let it think it's still in this list)
                     prevLink.set(node, Null);
                     nextLink.set(node, Null);
 
                     // update the head var
-                    if (index == 0 && thisHeadVar)
-                        {
+                    if (index == 0 && thisHeadVar) {
                         set(value);
-                        }
+                    }
 
                     return;
-                    }
                 }
             }
-
-        throw new OutOfBounds($"index={index}");
         }
 
+        throw new OutOfBounds($"index={index}");
+    }
+
     @Override
-    @Op("+") LinkedList add(Element value)
-        {
+    @Op("+") LinkedList add(Element value) {
         (Element? node, Link nextLink, Link? prevLink, Boolean thisHeadVar) = writeConfig();
 
         // verify that the value isn't already linked in to some list
         assert:arg nextLink.get(value) == Null && prevLink?.get(value) == Null;
 
-        if (node == Null)
-            {
+        if (node == Null) {
             assert thisHeadVar;
             set(value);
             return this;
-            }
+        }
 
         // fast-forward to the end
         Element tail;
-        do
-            {
+        do {
             tail = node;
             node = nextLink.get(node);
-            }
-        while (node != Null);
+        } while (node != Null);
 
         nextLink.set(tail, value);
         prevLink?.set(value, tail);
         return this;
-        }
+    }
 
     @Override
-    LinkedList addAll(Iterator<Element> iter)
-        {
+    LinkedList addAll(Iterator<Element> iter) {
         (Element? node, Link nextLink, Link? prevLink, Boolean thisHeadVar) = writeConfig();
 
         // fast-forward to the end
         Element? tail = Null;
-        while (node != Null)
-            {
+        while (node != Null) {
             tail = node;
             node = nextLink.get(node);
-            }
+        }
 
         // gluing a linked list to a linked list is easy; it's like adding one value
-        if (iter.is(Inner))
-            {
+        if (iter.is(Inner)) {
             Object that = iter.outer;
             if (that.is(LinkedList),
                     Property thisProp := this.isProperty(),
                     Property thatProp := that.isProperty(),
-                    &thisProp == &thatProp)
-                {
+                    &thisProp == &thatProp) {
                 Element? thatNode = that.writeConfig();
-                if (thatNode != Null)
-                    {
+                if (thatNode != Null) {
                     // adding the list means adding the whole list; since it's linked, we can't just
                     // add part of it without destroying the original
                     assert:arg Element firstToAdd := iter.next(), &thatNode == &firstToAdd;
@@ -526,70 +470,57 @@ mixin LinkedList<Element>
                     // obviously, it can't be linked to something else before it
                     assert:arg prevLink?.get(thatNode) == Null;
 
-                    if (tail == Null)
-                        {
+                    if (tail == Null) {
                         set(thatNode);
-                        }
-                    else
-                        {
+                    } else {
                         nextLink.set(tail, thatNode);
                         prevLink?.set(thatNode, tail);
-                        }
                     }
-                return this;
                 }
+                return this;
             }
+        }
 
         // append one at a time by (i) taking it from the iterator, (ii) linking it to the tail, and
         // (iii) advancing the tail
-        for (Element value : iter)
-            {
+        for (Element value : iter) {
             // verify that the value isn't already linked in to some list
             assert:arg nextLink.get(value) == Null && prevLink?.get(value) == Null;
 
-            if (tail == Null)
-                {
+            if (tail == Null) {
                 set(value);
-                }
-            else
-                {
+            } else {
                 nextLink.set(tail, value);
                 prevLink?.set(value, tail);
-                }
-
-            tail = value;
             }
 
-        return this;
+            tail = value;
         }
 
+        return this;
+    }
+
     @Override
-    @Op("-") LinkedList remove(Element value)
-        {
+    @Op("-") LinkedList remove(Element value) {
         removeIfPresent(value);
         return this;
-        }
+    }
 
     @Override
-    conditional LinkedList removeIfPresent(Element value)
-        {
+    conditional LinkedList removeIfPresent(Element value) {
         (Element? node, Link nextLink, Link? prevLink, Boolean thisHeadVar) = writeConfig();
 
-        if (prevLink == Null)
-            {
+        if (prevLink == Null) {
             // drag the nodeVar behind the node, because in a singly linked list we need to keep a
             // reference to the node that points to the node to remove
             Loop: for (Var<Element?> nodeVar = this;
                     node != Null;
-                    nodeVar = nextLink.of(node), node = nodeVar.get())
-                {
-                if (node == value)
-                    {
+                    nodeVar = nextLink.of(node), node = nodeVar.get()) {
+                if (node == value) {
                     // scenario #1 cannot remove the head, because the parent "this" _is_ the head
-                    if (Loop.count == 0 && !thisHeadVar)
-                        {
+                    if (Loop.count == 0 && !thisHeadVar) {
                         throw new ReadOnly("LinkedList head cannot be modified");
-                        }
+                    }
 
                     // remove "node" by linking the node's prev to the node's next
                     // note: this updates the head var if index==0
@@ -599,15 +530,11 @@ mixin LinkedList<Element>
                     nextLink.set(node, Null);
 
                     return True, this;
-                    }
                 }
             }
-        else
-            {
-            Loop: for ( ; node != Null; node = nextLink.get(node))
-                {
-                if (node == value)
-                    {
+        } else {
+            Loop: for ( ; node != Null; node = nextLink.get(node)) {
+                if (node == value) {
                     // remove "node" by linking the prev to the next and next to prev
                     Element? prev = prevLink.get(node);
                     Element? next = nextLink.get(node);
@@ -619,98 +546,84 @@ mixin LinkedList<Element>
                     nextLink.set(node, Null);
 
                     // update the head var
-                    if (Loop.count == 0 && thisHeadVar)
-                        {
+                    if (Loop.count == 0 && thisHeadVar) {
                         set(next);
-                        }
+                    }
 
                     return True, this;
-                    }
                 }
             }
+        }
 
         return False;
-        }
+    }
 
     @Override
-    LinkedList insert(Int index, Element value)
-        {
+    LinkedList insert(Int index, Element value) {
         cursor(index).insert(value);
         return this;
-        }
+    }
 
     @Override
-    LinkedList insertAll(Int index, Iterable<Element> values)
-        {
+    LinkedList insertAll(Int index, Iterable<Element> values) {
         // TODO handle insert of a LinkedList<Element> (see addAll())
 
         Cursor cursor = cursor(index);
-        for (Element e : values)
-            {
+        for (Element e : values) {
             cursor.insert(e);
             cursor.advance();
-            }
-        return this;
         }
+        return this;
+    }
 
     @Override
-    LinkedList delete(Int index)
-        {
+    LinkedList delete(Int index) {
         cursor(index).delete();
         return this;
-        }
+    }
 
     @Override
-    LinkedList deleteAll(Interval<Int> indexes)
-        {
+    LinkedList deleteAll(Interval<Int> indexes) {
         Int count = indexes.size;
-        if (count > 0)
-            {
+        if (count > 0) {
             Cursor cursor = cursor(indexes.effectiveLowerBound);
-            for (Int i = 0; i < count; ++i)
-                {
+            for (Int i = 0; i < count; ++i) {
                 assert cursor.exists;
                 cursor.delete();
-                }
             }
-        return this;
         }
+        return this;
+    }
 
     @Override
-    LinkedList clear()
-        {
+    LinkedList clear() {
         (Element? node, Link nextLink, Link? prevLink, Boolean thisHeadVar) = writeConfig();
-        if (node == Null)
-            {
+        if (node == Null) {
             return this;
-            }
+        }
 
-        if (!thisHeadVar)
-            {
+        if (!thisHeadVar) {
             throw new ReadOnly("LinkedList head cannot be modified");
-            }
+        }
 
         // unlink the nodes
-        do
-            {
+        do {
             Element? next = nextLink.get(node);
             prevLink?.set(node, Null);
             nextLink.set(node, Null);
             node = next;
-            }
-        while (node != Null);
+        } while (node != Null);
 
         // clear the head
         set(Null);
 
         return this;
-        }
+    }
 
     @Override
-    Cursor cursor(Int index = 0)
-        {
+    Cursor cursor(Int index = 0) {
         return new LinkedListCursor(index);
-        }
+    }
 
 
     // ----- LinkedListCursor ----------------------------------------------------------------------
@@ -723,27 +636,23 @@ mixin LinkedList<Element>
      * concurrent modification, since either would require state on the `LinkedList`.
      */
     protected class LinkedListCursor
-            implements Cursor
-        {
+            implements Cursor {
         /**
          * Construct a LinkedListCursor.
          *
          * @param index  the starting index to advance the cursor to
          */
-        construct(Int index = 0)
-            {
+        construct(Int index = 0) {
             (node, nextLink, prevLink, thisHeadVar, readOnly) = readConfig();
             this.head      = node;
             this.nodeIndex = 0;
-            }
-        finally
-            {
+        } finally {
             // the pointer to the first node is the head pointer
             nodeVar = headVar;
 
             // seek to the desired position
             this.index = index;
-            }
+        }
 
 
         // ----- properties ------------------------------------------------------------------------
@@ -770,19 +679,17 @@ mixin LinkedList<Element>
         /**
          * The list head.
          */
-        protected Element? head.get()
-            {
+        protected Element? head.get() {
             return headVar?.get() : super();
-            }
+        }
 
         /**
          * The pointer to the list head, or `Null` if the parent of the LinkedList is actually the
          * list head (in which case, the head can neither be removed or replaced).
          */
-        protected Var<Element?>? headVar.get()
-            {
+        protected Var<Element?>? headVar.get() {
             return thisHeadVar ? this.LinkedList : Null;
-            }
+        }
 
         /**
          * True iff the `LinkedList<Element>` (which is also a `Var<Element?>`) holds a reference to
@@ -811,73 +718,59 @@ mixin LinkedList<Element>
         // ----- Cursor operations -------------------------------------------------------------
 
         @Override
-        @RO Boolean bidirectional.get()
-            {
+        @RO Boolean bidirectional.get() {
             return prevLink != Null;
-            }
+        }
 
         @Override
-        conditional Element next()
-            {
+        conditional Element next() {
             return advance()
                     ? (True, value)
                     : False;
-            }
+        }
 
         @Override
-        Int index
-            {
+        Int index {
             @Override
-            Int get()
-                {
+            Int get() {
                 return nodeIndex;
+            }
+
+            @Override
+            void set(Int newIndex) {
+                Int oldIndex = nodeIndex;
+                if (newIndex == oldIndex) {
+                    return;
                 }
 
-            @Override
-            void set(Int newIndex)
-                {
-                Int oldIndex = nodeIndex;
-                if (newIndex == oldIndex)
-                    {
-                    return;
-                    }
-
-                if (newIndex < oldIndex)
-                    {
+                if (newIndex < oldIndex) {
                     assert:bounds newIndex >= 0;
                     rewind(oldIndex - newIndex);
-                    }
-                else
-                    {
+                } else {
                     advance(newIndex - oldIndex);
-                    }
                 }
             }
+        }
 
         @Override
-        @RO Boolean exists.get()
-            {
+        @RO Boolean exists.get() {
             return node != Null;
-            }
+        }
 
         @Override
-        Element value
-            {
+        Element value {
             @Override
-            Element get()
-                {
+            Element get() {
                 return node ?: throw new OutOfBounds($"index={index}");
-                }
+            }
 
             @Override
-            void set(Element newNode)
-                {
+            void set(Element newNode) {
                 // no-op if it's the same element already at this index
                 Element? oldNode = this.node;
-                if (&newNode == &oldNode)
-                    {
+                if (&newNode == &oldNode) {
                     return;
-                    }
+                }
 
                 // if the new value has previous or next pointers set already, then it's already in
                 // a list and we can't use it (without destroying the other list)
@@ -893,39 +786,34 @@ mixin LinkedList<Element>
                 nextLink.set(newNode, nextNode?);   // link the newNode to the next
 
                 // add the backwards links if the list is bidirectional
-                if (Link prevLink ?= this.prevLink)
-                    {
+                if (Link prevLink ?= this.prevLink) {
                     prevLink.set(newNode, prevLink.get(oldNode?)?);
                     prevLink.set(nextNode?, newNode);
-                    }
+                }
 
                 // store the newNode as the current cursor node
                 node = newNode;
 
                 // clear the links on the oldNode (don't let it think that it's still in this list)
-                if (oldNode != Null)
-                    {
+                if (oldNode != Null) {
                     nextLink.set(oldNode, Null);
                     prevLink?.set(oldNode, Null);
-                    }
                 }
             }
+        }
 
         @Override
-        Boolean advance()
-            {
-            if (exists)
-                {
+        Boolean advance() {
+            if (exists) {
                 advance(1);
                 return exists;
-                }
-
-            return False;
             }
 
+            return False;
+        }
+
         @Override
-        void insert(Element newNode)
-            {
+        void insert(Element newNode) {
             // if the new value has previous or next pointers set already, then it's already in
             // a list and we can't use it (without destroying the other list)
             assert:arg nextLink.get(newNode) == Null && prevLink?.get(newNode) == Null;
@@ -939,26 +827,23 @@ mixin LinkedList<Element>
             nextLink.set(newNode, nextNode);    // link the newNode to the next
 
             // add the backwards links if the list is bidirectional
-            if (Link prevLink ?= this.prevLink)
-                {
+            if (Link prevLink ?= this.prevLink) {
                 prevLink.set(newNode, prevLink.get(oldNode?)?);
                 prevLink.set(nextNode?, newNode);
-                }
+            }
 
             // store the newNode as the current cursor node
             node = newNode;
 
             // clear the links on the oldNode (don't let it think that it's still in this list)
-            if (oldNode != Null)
-                {
+            if (oldNode != Null) {
                 nextLink.set(oldNode, Null);
                 prevLink?.set(oldNode, Null);
-                }
             }
+        }
 
         @Override
-        void delete()
-            {
+        void delete() {
             // the cursor has to be on an element
             Element oldNode = node ?: assert:bounds;
 
@@ -968,10 +853,9 @@ mixin LinkedList<Element>
             // unlink the current node from the list
             Element? nextNode = nextLink.get(oldNode);
             nodeVar?.set(nextNode) : assert;    // note: this updates the head var if index==0
-            if (Link prevLink ?= this.prevLink)
-                {
+            if (Link prevLink ?= this.prevLink) {
                 prevLink.set(nextNode?, prevLink.get(oldNode));
-                }
+            }
 
             // the next node is now the current node (because the old current node was deleted)
             node = nextNode;
@@ -979,7 +863,7 @@ mixin LinkedList<Element>
             // clear the links on the oldNode (don't let it think that it's still in this list)
             nextLink.set(oldNode, Null);
             prevLink?.set(oldNode, Null);
-            }
+        }
 
 
         // ----- internal operations -----------------------------------------------------------
@@ -992,57 +876,49 @@ mixin LinkedList<Element>
          *                   is not modifiable (which can occur if the element at the head of the
          *                   list is actually the object itself that contains the list)
          */
-        protected void ensureWritable()
-            {
-            if (readOnly)
-                {
+        protected void ensureWritable() {
+            if (readOnly) {
                 throw new ReadOnly();
-                }
+            }
 
-            if (nodeVar == Null)
-                {
+            if (nodeVar == Null) {
                 assert index == 0 && headVar == Null;
                 throw new ReadOnly("LinkedList head cannot be modified");
-                }
             }
+        }
 
         /**
          * @param count  the number of nodes to advance, in the range `[1..size-index]`
          */
-        protected void advance(Int count)
-            {
+        protected void advance(Int count) {
             assert:arg count > 0;
 
             Element? cur  = node ?: assert;
             Element? prev = Null;
-            for (Int i = 0; i < count; ++i)
-                {
+            for (Int i = 0; i < count; ++i) {
                 prev = cur;
                 cur  = nextLink.get(cur?) : assert:bounds;
-                }
+            }
 
             nodeVar    = nextLink.of(prev?) : assert;
             node       = cur;
             nodeIndex += count;
-            }
+        }
 
         /**
          * @param count  the number of nodes to rewind, in the range `[1..index]`
          */
-        protected void rewind(Int count)
-            {
+        protected void rewind(Int count) {
             Int oldIndex = nodeIndex;
             Int newIndex = oldIndex - count;
             assert:arg count > 0 && newIndex >= 0;
 
             // check if going backwards would be the shorter path
-            if (count < newIndex, Link prevLink ?= this.prevLink)
-                {
+            if (count < newIndex, Link prevLink ?= this.prevLink) {
                 // make sure that the current position in actually in the list; the cursor is
                 // allowed to be past the end of the list, which means the current node is Null
                 Element curNode;
-                if (!(curNode ?= node))
-                    {
+                if (!(curNode ?= node)) {
                     // the cursor is actually *past* the tail, so first we need to rewind *to* the
                     // tail; there is a pointer (i.e. nodeVar) to where we are (humorously, it's
                     // currently pointing to `Null`)
@@ -1061,14 +937,13 @@ mixin LinkedList<Element>
                     // we successfully rewound to the tail; after this, it gets easy
                     curNode = tail;
                     --count;
-                    }
+                }
 
                 // fast rewind (since we don't have to worry about running past the end of the list,
                 // there's no worries with bounds or null checks etc.)
-                while (count-- > 0)
-                    {
+                while (count-- > 0) {
                     curNode = prevLink.get(curNode) ?: assert;
-                    }
+                }
 
                 // since the index is somewhere in the middle of the list, we know that there is a
                 // previous node
@@ -1078,20 +953,17 @@ mixin LinkedList<Element>
                 node      = curNode;
                 nodeVar   = nextLink.of(preNode);
                 nodeIndex = newIndex;
-                }
-            else
-                {
+            } else {
                 // skip straight to the head
                 node      = head;
                 nodeVar   = headVar;
                 nodeIndex = 0;
 
                 // fast forward to the desired index
-                if (newIndex > 0)
-                    {
+                if (newIndex > 0) {
                     advance(newIndex);
-                    }
                 }
             }
         }
     }
+}

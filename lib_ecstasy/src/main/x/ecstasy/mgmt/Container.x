@@ -54,8 +54,7 @@ import reflect.ModuleTemplate;
  * garbage-collection of the container; examples include `Timer` alarms and `Socket` connections.
  */
 service Container
-        delegates Control(control)
-    {
+        delegates Control(control) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -99,8 +98,7 @@ service Container
               ResourceProvider? injector          = Null,
               Module[]          sharedModules     = [],
               ModuleSpec[]      additionalModules = [],
-              String[]          namedConditions   = [])
-        {
+              String[]          namedConditions   = []) {
         // load and link the modules to form a type system
         @Inject Linker linker;
         Control control = linker.loadAndLink(
@@ -109,7 +107,7 @@ service Container
         // store off the results
         this.model   = model;
         this.control = control;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -140,8 +138,7 @@ service Container
      * A Container Model specifies a use case that may imply additional constraints for the
      * container when it is created.
      */
-    enum Model
-        {
+    enum Model {
         /**
          * The `Lightweight` container model is used to automatically share all modules from the
          * parent container with the newly created container; it is designed to be used only when
@@ -177,13 +174,12 @@ service Container
          * "`debug`" specified.
          */
         Debugger
-        }
+    }
 
     /**
      * The module linker.
      */
-    static interface Linker
-        {
+    static interface Linker {
         /**
          * Load and link the specified modules together to form a type system.
          * Construct an Ecstasy `Container`. As part of the construction of the container, a new
@@ -225,13 +221,12 @@ service Container
          * @throws an Exception if the file doesn't contain a valid module
          */
         FileTemplate loadFileTemplate(File xtcFile);
-        }
+    }
 
     /**
      * Various states of the controlled container.
      */
-    enum Status
-        {
+    enum Status {
         /**
          * The `Container` has been created, but has not yet experienced any activity, either
          * from invocation or reactivation.
@@ -254,14 +249,13 @@ service Container
          * The `Container` has been killed.
          */
         Dead
-        }
+    }
 
     /**
      * Represents the container control facility.
      */
     static interface Control
-            extends Service.ServiceControl
-        {
+            extends Service.ServiceControl {
         /**
          * The status of the container.
          */
@@ -271,8 +265,7 @@ service Container
          * The `Goal` enumeration defines general classes of optimization that the container may
          * be directed to achieve, in terms of time/space trade-offs.
          */
-        enum Goal
-            {
+        enum Goal {
             /**
              * The goal is to maximize execution throughput.
              */
@@ -294,7 +287,7 @@ service Container
              * any one measurement.
              */
             Balanced
-            }
+        }
 
         /**
          * The optimization goal of the container, which may be utilized by the runtime as a hint to
@@ -574,5 +567,5 @@ service Container
          */
         @Override
         void gc();
-        }
     }
+}

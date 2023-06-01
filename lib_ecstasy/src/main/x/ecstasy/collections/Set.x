@@ -4,8 +4,7 @@
  * requirement to maintain a distinct set of values.
  */
 interface Set<Element>
-        extends Collection<Element>
-    {
+        extends Collection<Element> {
     /**
      * The "symmetric difference" operator determines the elements that are present in only this
      * set or the other set, but not both.
@@ -19,46 +18,38 @@ interface Set<Element>
      *
      * @return the resultant set, which is the same as `this` for a mutable set
      */
-    @Op("^") Set symmetricDifference(Set!<Element> values)
-        {
+    @Op("^") Set symmetricDifference(Set!<Element> values) {
         Set<Element> result = this;
-        Clone: if (result.inPlace && result.is(immutable))
-            {
-            if (result.is(Replicable))
-                {
+        Clone: if (result.inPlace && result.is(immutable)) {
+            if (result.is(Replicable)) {
                 result = result.new();
-                if (!(result.inPlace && result.is(immutable)))
-                    {
+                if (!(result.inPlace && result.is(immutable))) {
                     result = result.addAll(this);
                     break Clone;
-                    }
                 }
+            }
 
             throw new ReadOnly($"{this:class} is immutable or does not support symmetricDifference()");
-            }
+        }
 
         Element[]? remove = Null;
-        for (Element value : this)
-            {
-            if (values.contains(value))
-                {
+        for (Element value : this) {
+            if (values.contains(value)) {
                 remove = (remove ?: new Element[]) + value;
-                }
             }
+        }
 
         Element[]? add = Null;
-        for (Element value : values)
-            {
-            if (!this.contains(value))
-                {
+        for (Element value : values) {
+            if (!this.contains(value)) {
                 add = (add ?: new Element[]) + value;
-                }
             }
+        }
 
         result -= remove?;
         result += add?;
         return result;
-        }
+    }
 
     /**
      * The "complement" operator.
@@ -69,10 +60,9 @@ interface Set<Element>
      * @return a new set that represents the complement of this set within the `universalSet`
      */
     @Concurrent
-    @Op("~") Set! complement(immutable Set!<Element> universalSet)
-        {
+    @Op("~") Set! complement(immutable Set!<Element> universalSet) {
         return new ComplementSet<Element>(this, universalSet);
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -84,10 +74,9 @@ interface Set<Element>
             String?                   post   = "}",
             Int?                      limit  = Null,
             String                    trunc  = "...",
-            function String(Element)? render = Null)
-        {
+            function String(Element)? render = Null) {
         return super(sep, pre, post, limit, trunc, render);
-        }
+    }
 
     @Override
     Appender<Char> appendTo(
@@ -97,8 +86,7 @@ interface Set<Element>
             String?                   post   = "}",
             Int?                      limit  = Null,
             String                    trunc  = "...",
-            function String(Element)? render = Null)
-        {
+            function String(Element)? render = Null) {
         return super(buf, sep, pre, post, limit, trunc, render);
-        }
     }
+}

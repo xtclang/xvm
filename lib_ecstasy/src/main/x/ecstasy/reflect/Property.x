@@ -3,8 +3,7 @@
  * name, and a value. At runtime, a property is itself of type `Ref`.
  */
 interface Property<Target, Referent, Implementation extends Ref<Referent>>
-        extends immutable Const
-    {
+        extends immutable Const {
     /**
      * The name of the property.
      */
@@ -105,39 +104,34 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
      * Given an object reference of a type that contains this property, obtain the value of the
      * property.
      */
-    Referent get(Target target)
-        {
+    Referent get(Target target) {
         return this.of(target).get();
-        }
+    }
 
     /**
      * Given an object reference of a type that contains this property, modify the value of the
      * property.
      */
-    void set(Target target, Referent value)
-        {
-        if (readOnly)
-            {
+    void set(Target target, Referent value) {
+        if (readOnly) {
             throw new Exception($"Property {name} is read-only");
-            }
+        }
 
         this.of(target).as(Var<Referent>).set(value);
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return Referent.estimateStringLength() + 1 + name.size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         Referent.appendTo(buf);
         buf.add(' ');
         return name.appendTo(buf);
-        }
     }
+}

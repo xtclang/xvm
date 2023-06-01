@@ -2,8 +2,7 @@ interface Const
         extends immutable Object
         extends Hashable
         extends Orderable
-        extends Stringable
-    {
+        extends Stringable {
     /**
      * The default implementation of comparison for Const implementations is to compare each of
      * the fields.
@@ -23,4 +22,4 @@ interface Const
      * compare each of the fields for equality.
      */
     static <CompileType extends Const> Boolean equals(CompileType value1, CompileType value2);
-    }
+}

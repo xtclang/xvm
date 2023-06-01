@@ -1,8 +1,7 @@
 /**
  * The results of successfully matching an input String value with a RegEx regular expression.
  */
-const Match(RegEx regEx, String text, Range<Int>?[] groups)
-    {
+const Match(RegEx regEx, String text, Range<Int>?[] groups) {
     /**
      * The number of capturing groups in this matcher's pattern.
      *
@@ -11,10 +10,9 @@ const Match(RegEx regEx, String text, Range<Int>?[] groups)
      * Valid group indexes for this `Matcher` are any non-negative Int values less than or equal to
      * the `groupCount`.
      */
-    Int groupCount.get()
-        {
+    Int groupCount.get() {
         return groups.size - 1;
-        }
+    }
 
     /*
      * Returns the input text captured by the given group during the previous match operation.
@@ -32,14 +30,12 @@ const Match(RegEx regEx, String text, Range<Int>?[] groups)
      * @return (optional) the Range containing the start and end index the input text of the
      *         specified capturing group
      */
-    conditional (String, Range<Int>) group(Int index = 0)
-        {
-        if (Range<Int> range ?= groups[index])
-            {
+    conditional (String, Range<Int>) group(Int index = 0) {
+        if (Range<Int> range ?= groups[index]) {
             return True, text[range], range;
-            }
-        return False;
         }
+        return False;
+    }
 
     /*
      * Returns the input text captured by the given group during the previous
@@ -57,14 +53,12 @@ const Match(RegEx regEx, String text, Range<Int>?[] groups)
      *         the given index
      */
     @Op("[]")
-    String? getGroupOrNull(Int group)
-        {
-        if (Range<Int> range ?= groups[group])
-            {
+    String? getGroupOrNull(Int group) {
+        if (Range<Int> range ?= groups[group]) {
             return text[range];
-            }
-        return Null;
         }
+        return Null;
+    }
 
     /**
      * Finds the next subsequence in the input text that matches the regular expression
@@ -74,16 +68,13 @@ const Match(RegEx regEx, String text, Range<Int>?[] groups)
      * @return True iff the input text contains a further sub-sequence that matches this pattern
      * @return (optional) a Match resulting from matching the remaining input string
      */
-    conditional Match! next()
-        {
-        if (Range<Int> range ?= groups[0])
-            {
+    conditional Match! next() {
+        if (Range<Int> range ?= groups[0]) {
             Int start = range.lastExclusive ? range.last : range.last + 1;
-            if (start < text.size)
-                {
+            if (start < text.size) {
                 return regEx.find(text, start);
-                }
             }
-        return False;
         }
+        return False;
     }
+}

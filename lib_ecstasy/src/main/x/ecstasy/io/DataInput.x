@@ -7,286 +7,251 @@ import io.IllegalUTF;
  * encoded as UTF-8, UTF-16, UTF-32, or even ASCII.
  */
 interface DataInput
-        extends BinaryInput
-    {
+        extends BinaryInput {
     /**
      * @return  a value of type Boolean read from the stream
      */
-    Boolean readBoolean()
-        {
+    Boolean readBoolean() {
         return readByte() != 0;
-        }
+    }
 
     /**
      * @return  a value of type Char read from the stream
      */
-    Char readChar()
-        {
+    Char readChar() {
         return new Char(readUInt32());
-        }
+    }
 
     /**
      * @return  a value of type String read from the stream
      */
-    String readString()
-        {
+    String readString() {
         UInt64 length = readUInt64();
-        if (length == 0)
-            {
+        if (length == 0) {
             return "";
-            }
+        }
 
         assert length > 0;
         Char[] chars = new Char[length];
-        for (Int i : 0 ..< length)
-            {
+        for (Int i : 0 ..< length) {
             chars[i] = readChar();
-            }
-        return new String(chars);
         }
+        return new String(chars);
+    }
 
     /**
      * @return  a value of the specified enumeration type read from the stream
      */
-    <EnumType extends Enum> EnumType readEnum(Enumeration<EnumType> enumeration)
-        {
+    <EnumType extends Enum> EnumType readEnum(Enumeration<EnumType> enumeration) {
         Int n = readUInt16();
         assert 0 <= n < enumeration.count;
         return enumeration.values[n];
-        }
+    }
 
     /**
      * @return  a value of type Int8 read from the stream
      */
-    Int8 readInt8()
-        {
+    Int8 readInt8() {
         return new Int8(readBytes(1));
-        }
+    }
 
     /**
      * @return  a value of type Int16 read from the stream
      */
-    Int16 readInt16()
-        {
+    Int16 readInt16() {
         return new Int16(readBytes(2));
-        }
+    }
 
     /**
      * @return  a value of type Int32 read from the stream
      */
-    Int32 readInt32()
-        {
+    Int32 readInt32() {
         return new Int32(readBytes(4));
-        }
+    }
 
     /**
      * @return  a value of type Int64 (aka "Int") read from the stream
      */
-    Int64 readInt64()
-        {
+    Int64 readInt64() {
         return new Int64(readBytes(8));
-        }
+    }
 
     /**
      * @return  a value of type Int128 read from the stream
      */
-    Int128 readInt128()
-        {
+    Int128 readInt128() {
         return new Int128(readBytes(16));
-        }
+    }
 
     /**
      * @return  a value of type IntN read from the stream
      */
-    IntN readIntN()
-        {
+    IntN readIntN() {
         return new IntN(readBytes(readUInt64()));
-        }
+    }
 
     /**
      * @return  a value of type UInt8 read from the stream
      */
-    UInt8 readUInt8()
-        {
+    UInt8 readUInt8() {
         return readByte();
-        }
+    }
 
     /**
      * @return  a value of type UInt16 read from the stream
      */
-    UInt16 readUInt16()
-        {
+    UInt16 readUInt16() {
         return new UInt16(readBytes(2));
-        }
+    }
 
     /**
      * @return  a value of type UInt32 read from the stream
      */
-    UInt32 readUInt32()
-        {
+    UInt32 readUInt32() {
         return new UInt32(readBytes(4));
-        }
+    }
 
     /**
      * @return  a value of type UInt64 (aka "UInt") read from the stream
      */
-    UInt64 readUInt64()
-        {
+    UInt64 readUInt64() {
         return new UInt64(readBytes(8));
-        }
+    }
 
     /**
      * @return  a value of type UInt128 read from the stream
      */
-    UInt128 readUInt128()
-        {
+    UInt128 readUInt128() {
         return new UInt128(readBytes(16));
-        }
+    }
 
     /**
      * @return  a value of type UIntN read from the stream
      */
-    UIntN readUIntN()
-        {
+    UIntN readUIntN() {
         return new UIntN(readBytes(readUInt64()));
-        }
+    }
 
     /**
      * @return  a value of type Dec64 read from the stream
      */
-    Dec32 readDec32()
-        {
+    Dec32 readDec32() {
         return new Dec32(readBytes(4));
-        }
+    }
 
     /**
      * @return  a value of type Dec64 read from the stream
      */
-    Dec64 readDec64()
-        {
+    Dec64 readDec64() {
         return new Dec64(readBytes(8));
-        }
+    }
 
     /**
      * @return  a value of type Dec128 read from the stream
      */
-    Dec128 readDec128()
-        {
+    Dec128 readDec128() {
         return new Dec128(readBytes(16));
-        }
+    }
 
     /**
      * @return  a value of type DecN read from the stream
      */
-    DecN readDecN()
-        {
+    DecN readDecN() {
         return new DecN(readBytes(readUInt64()));
-        }
+    }
 
     /**
      * @return  a value of type Float16 read from the stream
      */
-    Float16 readFloat16()
-        {
+    Float16 readFloat16() {
         return new Float16(readBytes(2));
-        }
+    }
 
     /**
      * @return  a value of type BFloat16 read from the stream
      */
-    BFloat16 readBFloat16()
-        {
+    BFloat16 readBFloat16() {
         return new BFloat16(readBytes(2));
-        }
+    }
 
     /**
      * @return  a value of type Float32 read from the stream
      */
-    Float32 readFloat32()
-        {
+    Float32 readFloat32() {
         return new Float32(readBytes(4));
-        }
+    }
 
     /**
      * @return  a value of type Float64 read from the stream
      */
-    Float64 readFloat64()
-        {
+    Float64 readFloat64() {
         return new Float64(readBytes(8));
-        }
+    }
 
     /**
      * @return  a value of type Float128 read from the stream
      */
-    Float128 readFloat128()
-        {
+    Float128 readFloat128() {
         return new Float128(readBytes(16));
-        }
+    }
 
     /**
      * @return  a value of type FloatN read from the stream
      */
-    FloatN readFloatN()
-        {
+    FloatN readFloatN() {
         return new FloatN(readBytes(readUInt64()));
-        }
+    }
 
     /**
      * @return  a value of type Date read from the stream
      */
-    Date readDate()
-        {
+    Date readDate() {
         return new Date(readInt32());
-        }
+    }
 
     /**
      * @return  a value of type TimeOfDay read from the stream
      */
-    TimeOfDay readTime()
-        {
+    TimeOfDay readTime() {
         return new TimeOfDay(readUInt64());
-        }
+    }
 
     /**
      * @return  a value of type Time read from the stream
      */
-    Time readTime()
-        {
+    Time readTime() {
         return new Time(readInt128(), readTimeZone());
-        }
+    }
 
     /**
      * @return  a value of type TimeZone read from the stream
      */
-    TimeZone readTimeZone()
-        {
-        switch (Byte b = readByte())
-            {
-            case 0:
-                return TimeZone.UTC;
+    TimeZone readTimeZone() {
+        switch (Byte b = readByte()) {
+        case 0:
+            return TimeZone.UTC;
 
-            case 3:
-                return TimeZone.NoTZ;
+        case 3:
+            return TimeZone.NoTZ;
 
-            case 2:
-                String name = readString();
-                TODO Rules-based TimeZone
+        case 2:
+            String name = readString();
+            TODO Rules-based TimeZone
 
-            case 1:
-                return new TimeZone(readInt64());
+        case 1:
+            return new TimeZone(readInt64());
 
-            default:
-                throw new IOException($"illegal timezone format indicator: {b}");
-            }
+        default:
+            throw new IOException($"illegal timezone format indicator: {b}");
         }
+    }
 
     /**
      * @return  a value of type Duration read from the stream
      */
-    Duration readDuration()
-        {
+    Duration readDuration() {
         return new Duration(readUInt128());
-        }
+    }
 
 
     // ----- helper functions ----------------------------------------------------------------------
@@ -329,34 +294,30 @@ interface DataInput
      *
      * @throws OutOfBounds  if the packed integer value can not fit into an Int
      */
-    static Int readPackedInt(DataInput in)
-        {
+    static Int readPackedInt(DataInput in) {
         // use a signed byte to get auto sign-extension when converting to an int
         Int8 b = in.readInt8();
 
         // Tiny format: the first bit of the first byte is used to indicate a single byte format,
         // in which the entire value is contained in the 7 MSBs
-        if (b & 0x01 != 0)
-            {
+        if (b & 0x01 != 0) {
             return b >> 1;
-            }
+        }
 
         // Small and Medium formats are indicated by the second bit (and differentiated by the third
         // bit). Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
         // next byte provides bits 0..7 of the result. Medium format: bits 3..7 of the first byte
         // are bits 16..20 of the result, and the next byte provides bits 8..15 of the result, and
         // the next byte provides bits 0..7 of the result
-        if (b & 0x02 != 0)
-            {
+        if (b & 0x02 != 0) {
             Int64 n = (b >> 3).toInt64() << 8 | in.readByte();
 
             // the third bit is used to indicate Medium format (a second trailing byte)
-            if (b & 0x04 != 0)
-                {
+            if (b & 0x04 != 0) {
                 n = n << 8 | in.readByte();
-                }
-            return n;
             }
+            return n;
+        }
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
@@ -364,12 +325,11 @@ interface DataInput
         assert:bounds size <= 16;   // an Int is limited to a 16-byte value
 
         Int128 n = in.readInt8();
-        while (--size > 0)
-            {
+        while (--size > 0) {
             n = n << 8 | in.readByte();
-            }
-        return n;
         }
+        return n;
+    }
 
     /**
      * Read an integer value that is formatted using the packed integer format, and return it as
@@ -379,53 +339,47 @@ interface DataInput
      *
      * @return the resulting IntN value
      */
-    static IntN readPackedIntN(DataInput in)
-        {
+    static IntN readPackedIntN(DataInput in) {
         // use a signed byte to get auto sign-extension when converting to an int
         Int8 b = in.readInt8();
 
         // Tiny format: the first bit of the first byte is used to indicate a single byte format,
         // in which the entire value is contained in the 7 MSBs
-        if (b & 0x01 != 0)
-            {
+        if (b & 0x01 != 0) {
             return b >> 1;
-            }
+        }
 
         // Small and Medium formats are indicated by the second bit (and differentiated by the third
         // bit). Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
         // next byte provides bits 0..7 of the result. Medium format: bits 3..7 of the first byte
         // are bits 16..20 of the result, and the next byte provides bits 8..15 of the result, and
         // the next byte provides bits 0..7 of the result
-        if (b & 0x02 != 0)
-            {
+        if (b & 0x02 != 0) {
             Int64 n = (b >> 3).toInt64() << 8 | in.readByte();
 
             // the third bit is used to indicate Medium format (a second trailing byte)
-            if (b & 0x04 != 0)
-                {
+            if (b & 0x04 != 0) {
                 n = n << 8 | in.readByte();
-                }
-            return n;
             }
+            return n;
+        }
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         // Huge format: the first byte is 0, and is followed by a packed integer that specifes the
         // size of the packed integer that we are already in the process of reading
         Int size = b == Huge ? readPackedInt(in) : 1 + (b >>> 2);
-        if (size <= 16)
-            {
+        if (size <= 16) {
             Int128 n = in.readInt8();                   // use sign extension on the first byte
-            while (--size > 0)
-                {
+            while (--size > 0) {
                 n = n << 8 | in.readByte();             // additional bytes remain bitwise intact
-                }
-            return n;
             }
+            return n;
+        }
 
         assert:bounds size <= 1K;                       // arbitrary limit
         Byte[] bytes = new Byte[size];
         in.readBytes(bytes, 0, size);
         return new IntN(bytes);
-        }
     }
+}

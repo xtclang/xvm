@@ -10,8 +10,7 @@
  * within the scope of another service), use [invoke] assigning the result into a [@Future Tuple].
  */
 interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
-        extends Signature<ParamTypes, ReturnTypes>
-    {
+        extends Signature<ParamTypes, ReturnTypes> {
     // ----- dynamic invocation support ------------------------------------------------------------
 
     /**
@@ -75,4 +74,4 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
      * @return (optional) a map of parameter values
      */
     <Target> conditional (Target, Method<Target>, Map<Parameter, Object>) isMethod();
-    }
+}

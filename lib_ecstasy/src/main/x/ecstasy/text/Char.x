@@ -9,74 +9,66 @@ const Char(UInt32 codepoint)
         implements IntConvertible
         implements Sequential
         implements Destringable
-        default('\u0000')
-    {
+        default('\u0000') {
     // ----- constructors --------------------------------------------------------------------------
 
-    assert()
-        {
+    assert() {
         assert codepoint <= 0x10FFFF as $"Character code-point ({codepoint}) out of Unicode range";
 
         assert !(0xD7FF < codepoint < 0xE000) as
                 $|Character code-point ({codepoint}) is a Unicode surrogate value;\
                  | surrogate values are not valid Unicode characters
                 ;
-        }
+    }
 
     /**
      * Construct a character from the codepoint indicated by the passed UTF8 value.
      *
      * @param utf8  the character, in UTF8 format
      */
-    construct(Byte[] utf8)
-        {
+    construct(Byte[] utf8) {
         Int length = utf8.size;
         UInt32 codepoint;
-        switch (length)
-            {
-            case 1:
-                // ASCII value
-                codepoint = utf8[0].toUInt32();
-                if (codepoint > 0x7F)
-                    {
-                    throw new IllegalUTF($"Illegal ASCII code in 1-byte UTF8 format: {codepoint}");
-                    }
-                break;
-
-            case 2..6:
-                // #1s first byte  trailing  # trailing  bits  code-points
-                // --- ----------  --------  ----------  ----  -----------------------
-                //  0  0xxxxxxx    n/a           0         7   U+0000    - U+007F     (ASCII)
-                //  2  110xxxxx    10xxxxxx      1        11   U+0080    - U+07FF
-                //  3  1110xxxx    10xxxxxx      2        16   U+0800    - U+FFFF
-                //  4  11110xxx    10xxxxxx      3        21   U+10000   - U+1FFFFF
-                //  5  111110xx    10xxxxxx      4        26   U+200000  - U+3FFFFFF
-                //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
-                codepoint = utf8[0].toUInt32();
-                Int bits = (~codepoint).leftmostBit.trailingZeroCount;
-                if (length != 7 - bits)
-                    {
-                    throw new IllegalUTF($"Expected UTF8 length of {7 - bits} bytes; actual length is {length} bytes");
-                    }
-                codepoint &= 0b11111 >>> 5 - bits;
-
-                for (Int i : 1 ..< length)
-                    {
-                    Byte b = utf8[i];
-                    if (b & 0b11000000 != 0b10000000)
-                        {
-                        throw new IllegalUTF("trailing unicode byte does not match 10xxxxxx");
-                        }
-                    codepoint = codepoint << 6 | (b & 0b00111111).toUInt32();
-                    }
-                break;
-
-            default:
-                throw new IllegalUTF($"Illegal UTF8 encoding length: {length}");
+        switch (length) {
+        case 1:
+            // ASCII value
+            codepoint = utf8[0].toUInt32();
+            if (codepoint > 0x7F) {
+                throw new IllegalUTF($"Illegal ASCII code in 1-byte UTF8 format: {codepoint}");
             }
+            break;
+
+        case 2..6:
+            // #1s first byte  trailing  # trailing  bits  code-points
+            // --- ----------  --------  ----------  ----  -----------------------
+            //  0  0xxxxxxx    n/a           0         7   U+0000    - U+007F     (ASCII)
+            //  2  110xxxxx    10xxxxxx      1        11   U+0080    - U+07FF
+            //  3  1110xxxx    10xxxxxx      2        16   U+0800    - U+FFFF
+            //  4  11110xxx    10xxxxxx      3        21   U+10000   - U+1FFFFF
+            //  5  111110xx    10xxxxxx      4        26   U+200000  - U+3FFFFFF
+            //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
+            codepoint = utf8[0].toUInt32();
+            Int bits = (~codepoint).leftmostBit.trailingZeroCount;
+            if (length != 7 - bits) {
+                throw new IllegalUTF($"Expected UTF8 length of {7 - bits} bytes; actual length is {length} bytes");
+            }
+            codepoint &= 0b11111 >>> 5 - bits;
+
+            for (Int i : 1 ..< length) {
+                Byte b = utf8[i];
+                if (b & 0b11000000 != 0b10000000) {
+                    throw new IllegalUTF("trailing unicode byte does not match 10xxxxxx");
+                }
+                codepoint = codepoint << 6 | (b & 0b00111111).toUInt32();
+            }
+            break;
+
+        default:
+            throw new IllegalUTF($"Illegal UTF8 encoding length: {length}");
+        }
 
         construct Char(codepoint);
-        }
+    }
 
     /**
      * Construct a character from the codepoint indicated by the passed `Byte` value. This is
@@ -84,27 +76,24 @@ const Char(UInt32 codepoint)
      *
      * @param codepoint  the codepoint for the character
      */
-    construct(Byte codepoint)
-        {
+    construct(Byte codepoint) {
         construct Char(codepoint.toUInt32());
-        }
+    }
 
     /**
      * Construct a character from the codepoint indicated by the passed `Int` value.
      *
      * @param n  the codepoint for the character
      */
-    construct(Int n)
-        {
+    construct(Int n) {
         construct Char(codepoint.toUInt32());
-        }
+    }
 
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         assert:arg text.size == 1;
         construct Char(text[0].codepoint);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -118,86 +107,72 @@ const Char(UInt32 codepoint)
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override
-    conditional Char prev()
-        {
-        if (codepoint > 0)
-            {
+    conditional Char prev() {
+        if (codepoint > 0) {
             return True, new Char(codepoint - 1);
-            }
-        return False;
         }
+        return False;
+    }
 
     @Override
-    conditional Char next()
-        {
-        if (codepoint < MaxValue)
-            {
+    conditional Char next() {
+        if (codepoint < MaxValue) {
             return True, new Char(codepoint + 1);
-            }
+        }
         return False;
-        }
+    }
 
     @Override
-    Int stepsTo(Char that)
-        {
+    Int stepsTo(Char that) {
         return that - this;
-        }
+    }
 
     @Override
-    Char skip(Int steps)
-        {
+    Char skip(Int steps) {
         return this + steps.toUInt32();
-        }
+    }
 
 
     // ----- operators ---------------------------------------------------------------------------
 
     @Op("+")
-    Char add(UInt32 n)
-        {
+    Char add(UInt32 n) {
         return new Char(codepoint + n);
-        }
+    }
 
     @Op("+")
-    String add(Char ch)
-        {
+    String add(Char ch) {
         return new StringBuffer(2).add(this).add(ch).toString();
-        }
+    }
 
     @Op("+")
-    String add(String s)
-        {
+    String add(String s) {
         return new StringBuffer(1 + s.size).add(this).addAll(s).toString();
-        }
+    }
 
     @Op("-")
-    Char sub(UInt32 n)
-        {
+    Char sub(UInt32 n) {
         return new Char(codepoint - n);
-        }
+    }
 
     @Op("-")
-    UInt32 sub(Char ch)
-        {
+    UInt32 sub(Char ch) {
         return this.codepoint - ch.codepoint;
-        }
+    }
 
     @Op("*")
-    String dup(Int n)
-        {
-        if (n == 0)
-            {
+    String dup(Int n) {
+        if (n == 0) {
             return "";
-            }
+        }
 
         assert n > 0;
         StringBuffer buf = new StringBuffer(n);
-        for (Int i = 0; i < n; ++i)
-            {
+        for (Int i = 0; i < n; ++i) {
             buf.add(this);
-            }
-        return buf.toString();
         }
+        return buf.toString();
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -207,11 +182,10 @@ const Char(UInt32 codepoint)
      * value (anything not an ASCII character) will result in an exception; this is subtly different
      * from [toUInt8], which supports any value up to 0xFF.
      */
-    Byte toByte()
-        {
+    Byte toByte() {
         assert codepoint <= 0x7F;
         return codepoint.toByte();
-        }
+    }
 
     /**
      * A conversion to Byte[] results in a byte array with between 1-6 bytes containing
@@ -220,14 +194,13 @@ const Char(UInt32 codepoint)
      * Note: The current version 9 of Unicode limits code points to 0x10FFFF, which
      * means that all UTF-8 encoding will use between 1-4 bytes.
      */
-    immutable Byte[] utf8()
-        {
+    immutable Byte[] utf8() {
         Int    length = calcUtf8Length();
         Byte[] bytes  = new Byte[length];
         Int    actual = formatUtf8(bytes, 0);
         assert actual == length;
         return bytes.makeImmutable();
-        }
+    }
 
     // conversion to integer types are **not** @Auto, because a Char is not considered to be a
     // number, and a conversion fails if the codepoint is out of range of the desired type
@@ -236,34 +209,30 @@ const Char(UInt32 codepoint)
      * @return the character's codepoint as an integer
      */
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
         return codepoint.toInt();
-        }
+    }
 
     /**
      * @return the character's codepoint as a variable-length signed integer
      */
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return codepoint.toIntN();
-        }
+    }
 
     /**
      * @return the character's codepoint as a 32-bit unsigned integer
      */
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         return codepoint;
-        }
+    }
 
     /**
      * @return the character as it would appear in source code as a character literal
      */
-    String toSourceString()
-        {
+    String toSourceString() {
         Int len = 1;
         len := isEscaped();
 
@@ -273,7 +242,7 @@ const Char(UInt32 codepoint)
         buf.add('\'');
 
         return buf.toString();
-        }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -283,19 +252,16 @@ const Char(UInt32 codepoint)
      *
      * @return True iff this character is considered to be an Ecstasy whitespace character
      */
-    Boolean isWhitespace()
-        {
+    Boolean isWhitespace() {
         // optimize for the ASCII range
-        if (codepoint <= 0x7F)
-            {
+        if (codepoint <= 0x7F) {
             return 0x09 <= codepoint <= 0x20
                     //                             2               1      0
                     //                             0FEDCBA9876543210FEDCBA9
                     && UInt64:1 << codepoint-9 & 0b111110100000000000011111 != 0;
-            }
+        }
 
-        return switch (codepoint)
-            {
+        return switch (codepoint) {
          // case 0x0009:        //   U+0009      9  HT      Horizontal Tab
          // case 0x000A:        //   U+000A     10  LF      Line Feed
          // case 0x000B:        //   U+000B     11  VT      Vertical Tab
@@ -328,54 +294,49 @@ const Char(UInt32 codepoint)
             case 0x3000: True;  //   U+3000  12288          Ideographic Space
 
             default    : False;
-            };
-        }
+        };
+    }
 
     /**
      * Determine if the character acts as a line terminator.
      *
      * @return True iff this character acts as an Ecstasy line terminator
      */
-    Boolean isLineTerminator()
-        {
+    Boolean isLineTerminator() {
         // optimize for the ASCII range
-        if (codepoint <= 0x7F)
-            {
+        if (codepoint <= 0x7F) {
             // this handles the following cases:
             //   U+000A  10  LF   Line Feed
             //   U+000B  11  VT   Vertical Tab
             //   U+000C  12  FF   Form Feed
             //   U+000D  13  CR   Carriage Return
             return 0x0A <= codepoint <= 0x0D;
-            }
+        }
 
         // this handles the following cases:
         //   U+0085    133   NEL    Next Line
         //   U+2028   8232   LS     Line Separator
         //   U+2029   8233   PS     Paragraph Separator
         return codepoint == 0x0085 || codepoint == 0x2028 || codepoint == 0x2029;
-        }
+    }
 
     /**
      * @return the minimum number of bytes necessary to encode the character in UTF8 format
      */
-    Int calcUtf8Length()
-        {
-        if (codepoint <= 0x7f)
-            {
+    Int calcUtf8Length() {
+        if (codepoint <= 0x7f) {
             return 1;
-            }
+        }
 
         UInt32 codepoint = this.codepoint >> 11;
         Int    length    = 2;
-        while (codepoint != 0)
-            {
+        while (codepoint != 0) {
             codepoint >>= 5;
             ++length;
-            }
+        }
 
         return length;
-        }
+    }
 
     /**
      * Encode this character into the passed byte array using the UTF8 format.
@@ -385,15 +346,13 @@ const Char(UInt32 codepoint)
      *
      * @return the number of bytes used to encode the character in UTF8 format
      */
-    Int formatUtf8(Byte[] bytes, Int of)
-        {
+    Int formatUtf8(Byte[] bytes, Int of) {
         UInt32 cp = codepoint;
-        if (cp <= 0x7F)
-            {
+        if (cp <= 0x7F) {
             // ASCII - single byte 0xxxxxxx format
             bytes[of] = cp.toByte();
             return 1;
-            }
+        }
 
         // otherwise the format is based on the number of significant bits:
         // bits  code-points             first byte  trailing  # trailing
@@ -404,67 +363,65 @@ const Char(UInt32 codepoint)
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         Int trailing;
-        switch (cp.leftmostBit)
-            {
-            case 0b00000000000000000000000010000000:
-            case 0b00000000000000000000000100000000:
-            case 0b00000000000000000000001000000000:
-            case 0b00000000000000000000010000000000:
-                bytes[of++] = 0b11000000 | (cp >>> 6).toByte();
-                trailing = 1;
-                break;
+        switch (cp.leftmostBit) {
+        case 0b00000000000000000000000010000000:
+        case 0b00000000000000000000000100000000:
+        case 0b00000000000000000000001000000000:
+        case 0b00000000000000000000010000000000:
+            bytes[of++] = 0b11000000 | (cp >>> 6).toByte();
+            trailing = 1;
+            break;
 
-            case 0b00000000000000000000100000000000:
-            case 0b00000000000000000001000000000000:
-            case 0b00000000000000000010000000000000:
-            case 0b00000000000000000100000000000000:
-            case 0b00000000000000001000000000000000:
-                bytes[of++] = 0b11100000 | (cp >>> 12).toByte();
-                trailing = 2;
-                break;
+        case 0b00000000000000000000100000000000:
+        case 0b00000000000000000001000000000000:
+        case 0b00000000000000000010000000000000:
+        case 0b00000000000000000100000000000000:
+        case 0b00000000000000001000000000000000:
+            bytes[of++] = 0b11100000 | (cp >>> 12).toByte();
+            trailing = 2;
+            break;
 
-            case 0b00000000000000010000000000000000:
-            case 0b00000000000000100000000000000000:
-            case 0b00000000000001000000000000000000:
-            case 0b00000000000010000000000000000000:
-            case 0b00000000000100000000000000000000:
-                bytes[of++] = 0b11110000 | (cp >>> 18).toByte();
-                trailing = 3;
-                break;
+        case 0b00000000000000010000000000000000:
+        case 0b00000000000000100000000000000000:
+        case 0b00000000000001000000000000000000:
+        case 0b00000000000010000000000000000000:
+        case 0b00000000000100000000000000000000:
+            bytes[of++] = 0b11110000 | (cp >>> 18).toByte();
+            trailing = 3;
+            break;
 
-            case 0b00000000001000000000000000000000:
-            case 0b00000000010000000000000000000000:
-            case 0b00000000100000000000000000000000:
-            case 0b00000001000000000000000000000000:
-            case 0b00000010000000000000000000000000:
-                bytes[of++] = 0b11111000 | (cp >>> 24).toByte();
-                trailing = 4;
-                break;
+        case 0b00000000001000000000000000000000:
+        case 0b00000000010000000000000000000000:
+        case 0b00000000100000000000000000000000:
+        case 0b00000001000000000000000000000000:
+        case 0b00000010000000000000000000000000:
+            bytes[of++] = 0b11111000 | (cp >>> 24).toByte();
+            trailing = 4;
+            break;
 
-            case 0b00000100000000000000000000000000:
-            case 0b00001000000000000000000000000000:
-            case 0b00010000000000000000000000000000:
-            case 0b00100000000000000000000000000000:
-            case 0b01000000000000000000000000000000:
-                bytes[of++] = 0b11111100 | (cp >>> 30).toByte();
-                trailing = 5;
-                break;
+        case 0b00000100000000000000000000000000:
+        case 0b00001000000000000000000000000000:
+        case 0b00010000000000000000000000000000:
+        case 0b00100000000000000000000000000000:
+        case 0b01000000000000000000000000000000:
+            bytes[of++] = 0b11111100 | (cp >>> 30).toByte();
+            trailing = 5;
+            break;
 
-            default:
-                // TODO: cp.toHexString() would be a better output
-                throw new IllegalUTF($"illegal codepoint: {cp}");
-            }
+        default:
+            // TODO: cp.toHexString() would be a better output
+            throw new IllegalUTF($"illegal codepoint: {cp}");
+        }
         Int length = trailing + 1;
 
         // write out trailing bytes; each has the same "10xxxxxx" format with 6
         // bits of data
-        while (trailing > 0)
-            {
+        while (trailing > 0) {
             bytes[of++] = 0b10_000000 | (cp >>> --trailing * 6 & 0b00_111111).toByte();
-            }
+        }
 
         return length;
-        }
+    }
 
     /**
      * Determine if the character needs to be escaped in order to be displayed.
@@ -472,10 +429,8 @@ const Char(UInt32 codepoint)
      * @return True iff the character should be escaped in order to be displayed
      * @return (conditional) the number of characters in the escape sequence
      */
-    conditional Int isEscaped()
-        {
-        return switch (codepoint)
-            {
+    conditional Int isEscaped() {
+        return switch (codepoint) {
             case 0x00           :               // null terminator
             case 0x08           :               // backspace
             case 0x09           :               // horizontal tab
@@ -495,8 +450,8 @@ const Char(UInt32 codepoint)
             case 0x2028..0x2029 : (True, 5);    // line and paragraph separator
 
             default             : False;
-            };
-        }
+        };
+    }
 
     /**
      * Append the specified character to the StringBuilder, escaping if
@@ -507,10 +462,8 @@ const Char(UInt32 codepoint)
      *
      * @return the StringBuilder
      */
-    Appender<Char!> appendEscaped(Appender<Char!> buf)
-        {
-        return switch (codepoint)
-            {
+    Appender<Char!> appendEscaped(Appender<Char!> buf) {
+        return switch (codepoint) {
             case 0x00:
                 // null terminator
                 buf.add('\\')
@@ -588,24 +541,20 @@ const Char(UInt32 codepoint)
 
             default:
                 buf.add(this);
-            };
-        }
+        };
+    }
 
     /**
      * @return the character as it would appear in source code, in single quotes and escaped as
      *         necessary
      */
-    String quoted()
-        {
-        if (Int len := isEscaped())
-            {
+    String quoted() {
+        if (Int len := isEscaped()) {
             return appendEscaped(new StringBuffer(len + 2).add('\'')).add('\'').toString();
-            }
-        else
-            {
+        } else {
             return new StringBuffer(3).add('\'').add(this).add('\'').toString();
-            }
         }
+    }
 
 
     // ----- ASCII support -------------------------------------------------------------------------
@@ -613,10 +562,9 @@ const Char(UInt32 codepoint)
     /**
      * Determine if the character is in the ASCII range.
      */
-    Boolean ascii.get()
-        {
+    Boolean ascii.get() {
         return codepoint <= 0x7F;
-        }
+    }
 
     /**
      * Determine if the character is an ASCII digit, one of the values '0'..'9'.
@@ -624,14 +572,12 @@ const Char(UInt32 codepoint)
      * @return True iff the character is an ASCII digit
      * @return (conditional) a value in the range `0..9`
      */
-    conditional UInt8 asciiDigit()
-        {
-        return switch (this)
-            {
+    conditional UInt8 asciiDigit() {
+        return switch (this) {
             case '0'..'9': (True, (this - '0').toUInt8());
             default      : False;
-            };
-        }
+        };
+    }
 
     /**
      * Determine if the character is an ASCII hexit, one of the values `'0'..'9'`, `'A'..'F'`,
@@ -640,16 +586,14 @@ const Char(UInt32 codepoint)
      * @return True iff the character is an ASCII hexadecimal digit (a "hexit")
      * @return (conditional) a value in the range `0..15`
      */
-    conditional UInt8 asciiHexit()
-        {
-        return switch (this)
-            {
+    conditional UInt8 asciiHexit() {
+        return switch (this) {
             case '0'..'9': (True,       (this - '0').toUInt8());
             case 'A'..'F': (True, 0xA + (this - 'A').toUInt8());
             case 'a'..'f': (True, 0xa + (this - 'a').toUInt8());
             default      : False;
-            };
-        }
+        };
+    }
 
     /**
      * Determine if the character is an ASCII letter, one of the values 'A'..'Z' or 'a'..'z'.
@@ -657,15 +601,13 @@ const Char(UInt32 codepoint)
      * @return True iff the character is an ASCII letter
      * @return (conditional) this letter
      */
-    conditional Char asciiLetter()
-        {
-        return switch (this)
-            {
+    conditional Char asciiLetter() {
+        return switch (this) {
             case 'A'..'Z': (True, this);
             case 'a'..'z': (True, this);
             default      : False;
-            };
-        }
+        };
+    }
 
     /**
      * Determine if the character is an ASCII uppercase letter, one of the values 'A'..'Z'.
@@ -673,12 +615,11 @@ const Char(UInt32 codepoint)
      * @return True iff the character is an ASCII uppercase letter
      * @return (conditional) this uppercase letter
      */
-    conditional Char asciiUppercase()
-        {
+    conditional Char asciiUppercase() {
         return 'A' <= this <= 'Z'
                 ? (True, this)
                 : False;
-        }
+    }
 
     /**
      * Determine if the character is an ASCII lowercase letter, one of the values 'a'..'z'.
@@ -686,12 +627,11 @@ const Char(UInt32 codepoint)
      * @return True iff the character is an ASCII lowercase letter
      * @return (conditional) this lowercase letter
      */
-    conditional Char asciiLowercase()
-        {
+    conditional Char asciiLowercase() {
         return 'a' <= this <= 'z'
                 ? (True, this)
                 : False;
-        }
+    }
 
 
     // ----- numeric conversion support ------------------------------------------------------------
@@ -702,17 +642,15 @@ const Char(UInt32 codepoint)
      * @return True iff the character represents a nibble value
      * @return (optional) the corresponding Nibble
      */
-    conditional Nibble isNibble()
-        {
-        return switch (this)
-            {
+    conditional Nibble isNibble() {
+        return switch (this) {
             case '0'..'9':
             case 'A'..'F':
             case 'a'..'f': (True, Nibble.of(this));
 
             default: False;
-            };
-        }
+        };
+    }
 
 
     // ----- surrogate pair support ----------------------------------------------------------------
@@ -734,23 +672,20 @@ const Char(UInt32 codepoint)
      * @throws IllegalUTF if this Char has a surrogate codepoint, but is not a valid **leading**
      *                    value for a surrogate pair
      */
-    Boolean requiresTrailingSurrogate()
-        {
-        if (codepoint < 0xD800 || codepoint >= 0xE000)
-            {
+    Boolean requiresTrailingSurrogate() {
+        if (codepoint < 0xD800 || codepoint >= 0xE000) {
             return False;
-            }
+        }
 
         // for surrogates, the high ten bits (in the range 0x000–0x3FF) are encoded in the range
         // 0xD800–0xDBFF, and the low ten bits (in the range 0x000–0x3FF) are encoded in the range
         // 0xDC00–0xDFFF
-        if (codepoint >= 0xDC00)
-            {
+        if (codepoint >= 0xDC00) {
             throw new IllegalUTF($"leading-surrogate required; trailing-surrogate found: {codepoint}");
-            }
+        }
 
         return True;
-        }
+    }
 
     /**
      * Combine this leading surrogate with a trailing surrogate to produce a character.
@@ -787,23 +722,20 @@ const Char(UInt32 codepoint)
      * @throws IllegalUTF if `this` Char is not a leading surrogate, or the `trailing` Char is not a
      *                    trailing surrogate
      */
-    Char addTrailingSurrogate(Char trailing)
-        {
+    Char addTrailingSurrogate(Char trailing) {
         UInt32 hi = this.codepoint;
-        if (hi < 0xD800 || hi >= 0xDC00)
-            {
+        if (hi < 0xD800 || hi >= 0xDC00) {
             throw new IllegalUTF($"illegal leading-surrogate: {hi}");
-            }
+        }
 
         UInt32 lo = trailing.codepoint;
-        if (lo < 0xDC00 || codepoint >= 0xE000)
-            {
+        if (lo < 0xDC00 || codepoint >= 0xE000) {
             throw new IllegalUTF($"illegal trailing-surrogate: {lo}");
-            }
+        }
 
         static UInt32 SURROGATE_OFFSET = (0xD800 << 10) + 0xDC00 - 0x10000;
         return new Char((hi << 10) + lo - SURROGATE_OFFSET);
-        }
+    }
 
 
     // ----- Unicode support -----------------------------------------------------------------------
@@ -811,10 +743,9 @@ const Char(UInt32 codepoint)
     /**
      * True iff the codepoint is a defined Unicode character.
      */
-    Boolean unicode.get()
-        {
+    Boolean unicode.get() {
         return category != Unassigned;
-        }
+    }
 
     /**
      * The Unicode General Category of the character.
@@ -829,20 +760,18 @@ const Char(UInt32 codepoint)
      * This information is stored in the binary file "CharCats.dat" in this package. For a codepoint
      * `n`, the n-th byte of the file is the ordinal of the `Category` enum value for the character.
      */
-    Category category.get()
-        {
+    Category category.get() {
         static List<Int> categoriesByCodepoint = new ConstOrdinalList(#./CharCats.dat);
 
         return codepoint < categoriesByCodepoint.size
                 ? Category.values[categoriesByCodepoint[codepoint]]
                 : Unassigned;
-        }
+    }
 
     /**
      * Unicode "General Categories".
      */
-    enum Category(String code, String description)
-        {
+    enum Category(String code, String description) {
         UppercaseLetter     ("Lu", "An uppercase letter"),
         LowercaseLetter     ("Ll", "A lowercase letter"),
         TitlecaseLetter     ("Lt", "A digraphic character, with first part uppercase"),
@@ -883,8 +812,7 @@ const Char(UInt32 codepoint)
         Boolean separator;
         Boolean other;
 
-        construct(String code, String description)
-            {
+        construct(String code, String description) {
             this.code        = code;
             this.description = description;
 
@@ -897,8 +825,8 @@ const Char(UInt32 codepoint)
             other       = code[0] == 'C';
 
             casedLetter = letter && (code == "Lu" || code == "Ll" || code == "Lt");
-            }
         }
+    }
 
     /**
      * The value in the range `0..9` that represents the decimal value of this character.
@@ -911,21 +839,18 @@ const Char(UInt32 codepoint)
      * > Chapter 4, Character Properties in
      * > [Unicode](https://www.unicode.org/reports/tr41/tr41-26.html#Unicode).
      */
-    conditional Int decimalValue()
-        {
+    conditional Int decimalValue() {
         static List<Int> decsByCodepoint = new ConstOrdinalList(#./CharDecs.dat);
 
-        if (codepoint < decsByCodepoint.size)
-            {
+        if (codepoint < decsByCodepoint.size) {
             Int val = decsByCodepoint[codepoint];
-            if (val < 10)
-                {
+            if (val < 10) {
                 return True, val;
-                }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * The numeric value of this character, represented as a `String`, and potentially represented
@@ -937,13 +862,11 @@ const Char(UInt32 codepoint)
      * > this field, and fields 6 and 7 are null. This includes fractions such as, for example,
      * > "1/5" for U+2155 VULGAR FRACTION ONE FIFTH.
      */
-    String? numericValue.get()
-        {
+    String? numericValue.get() {
         static List<Int> numsByCodepoint = new ConstOrdinalList(#./CharNums.dat);
-        if (codepoint >= numsByCodepoint.size)
-            {
+        if (codepoint >= numsByCodepoint.size) {
             return Null;
-            }
+        }
 
         static String[] numStrings =
             [
@@ -1102,76 +1025,68 @@ const Char(UInt32 codepoint)
         return index >= numStrings.size
                 ? Null
                 : numStrings[index];
-        }
+    }
 
     /**
      * For characters that have a Unicode lowercase form, this property provides that form;
      * otherwise, this property returns `this`.
      */
-    Char lowercase.get()
-        {
+    Char lowercase.get() {
         static List<Int> lowersByCodepoint = new ConstOrdinalList(#./CharLowers.dat);
 
-        if (codepoint >= lowersByCodepoint.size)
-            {
+        if (codepoint >= lowersByCodepoint.size) {
             return this;
-            }
+        }
 
         Int lower = lowersByCodepoint[codepoint];
         return lower == 0
                 ? this
                 : new Char(lower);
-        }
+    }
 
     /**
      * For characters that have a Unicode uppercase form, this property provides that form;
      * otherwise, this property returns `this`.
      */
-    Char uppercase.get()
-        {
+    Char uppercase.get() {
         static List<Int> uppersByCodepoint = new ConstOrdinalList(#./CharUppers.dat);
 
-        if (codepoint >= uppersByCodepoint.size)
-            {
+        if (codepoint >= uppersByCodepoint.size) {
             return this;
-            }
+        }
 
         Int upper = uppersByCodepoint[codepoint];
         return upper == 0
                 ? this
                 : new Char(upper);
-        }
+    }
 
     /**
      * For characters that have a Unicode titlecase form, this property provides that form;
      * otherwise, this property returns `this`.
      */
-    Char titlecase.get()
-        {
+    Char titlecase.get() {
         static List<Int> titlesByCodepoint = new ConstOrdinalList(#./CharTitles.dat);
 
-        if (codepoint >= titlesByCodepoint.size)
-            {
+        if (codepoint >= titlesByCodepoint.size) {
             return this;
-            }
+        }
 
         Int title = titlesByCodepoint[codepoint];
         return title == 0
                 ? this
                 : new Char(title);
-        }
+    }
 
     /**
      * The Unicode Block name for the range of codepoints containing this character, or `Null` if
      * the codepoint for this character does not belong to a Unicode block.
      */
-    String? blockName.get()
-        {
+    String? blockName.get() {
         static List<Int> blocksByCodepoint = new ConstOrdinalList(#./CharBlocks.dat);
-        if (codepoint >= blocksByCodepoint.size)
-            {
+        if (codepoint >= blocksByCodepoint.size) {
             return Null;
-            }
+        }
 
         static String[] blockNames =
             [
@@ -1490,7 +1405,7 @@ const Char(UInt32 codepoint)
         return index >= blockNames.size
                 ? Null
                 : blockNames[index];
-        }
+    }
 
     /**
      * The Unicode canonical combining class for the character's codepoint.
@@ -1501,23 +1416,20 @@ const Char(UInt32 codepoint)
      * > names associated with different numeric values, see DerivedCombiningClass.txt and Canonical
      * > Combining Class Values.
      */
-    Int? unicodeCanonicalCombiningClass.get()
-        {
+    Int? unicodeCanonicalCombiningClass.get() {
         TODO CharCombineClass.dat
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return 1;
-        }
+    }
 
     @Override
-    Appender<Char!> appendTo(Appender<Char!> buf)
-        {
+    Appender<Char!> appendTo(Appender<Char!> buf) {
         return buf.add(this);
-        }
     }
+}

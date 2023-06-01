@@ -7,33 +7,28 @@
  * hiding portions of the stack trace that represent information from outside of the current
  * container.
  */
-const Exception
-    {
-    construct(String? text = Null, Exception? cause = Null)
-        {
+const Exception {
+    construct(String? text = Null, Exception? cause = Null) {
         this.text  = text;
         this.cause = cause;
-        }
+    }
 
     String? text;
     Exception!? cause;
     Iterable<StackFrame> stackTrace;
 
-    @RO String message.get()
-        {
+    @RO String message.get() {
         return text ?: "";
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         String name       = &this.actualClass.name;
         String stackTrace = formatStackTrace();
         return formatExceptionString(name, stackTrace);
-        }
+    }
 
-    String formatExceptionString(String exceptionName, String stackTrace)
-        {
+    String formatExceptionString(String exceptionName, String stackTrace) {
         StringBuffer buf = new StringBuffer();
 
         buf.append(exceptionName)
@@ -41,22 +36,19 @@ const Exception
            .append(message)
            .append(stackTrace);
 
-        if (cause != Null)
-            {
+        if (cause != Null) {
             buf.append("\nCaused by: ")
                .append(cause.toString());
-            }
+        }
 
         return buf.toString();
-        }
+    }
 
-    String formatStackTrace()
-        {
+    String formatStackTrace() {
         TODO
-        }
+    }
 
-    static const StackFrame
-        {
+    static const StackFrame {
         /**
          * The module containing the code corresponding to the execution frame.
          *
@@ -94,5 +86,5 @@ const Exception
          * that is purposefully hidden from the caller by the runtime.
          */
         Boolean opaque;
-        }
     }
+}

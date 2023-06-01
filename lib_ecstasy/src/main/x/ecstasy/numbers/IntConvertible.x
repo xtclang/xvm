@@ -3,8 +3,7 @@ import Number.Rounding;
 /**
  * Represents a value that can be converted to an integer or floating point numeric value.
  */
-interface IntConvertible
-    {
+interface IntConvertible {
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -18,10 +17,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the signed integer range
      *                      and `truncate` is not `True`
      */
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
         return toIntN(direction).toInt(truncate);
-        }
+    }
 
     /**
      * Convert the value to a signed 8-bit integer.
@@ -34,10 +32,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
      *                      and `truncate` is not `True`
      */
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         return toInt(truncate, direction).toInt8(truncate);
-        }
+    }
 
     /**
      * Convert the value to a signed 16-bit integer.
@@ -50,10 +47,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
      *                      and `truncate` is not `True`
      */
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         return toInt(truncate, direction).toInt16(truncate);
-        }
+    }
 
     /**
      * Convert the value to a signed 32-bit integer.
@@ -66,10 +62,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
      *                      and `truncate` is not `True`
      */
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         return toInt(truncate, direction).toInt32(truncate);
-        }
+    }
 
     /**
      * Convert the value to a signed 64-bit integer.
@@ -82,10 +77,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
      *                      and `truncate` is not `True`
      */
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         return toInt(truncate, direction).toInt64(truncate);
-        }
+    }
 
     /**
      * Convert the value to a signed 128-bit integer.
@@ -98,10 +92,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
      *                      and `truncate` is not `True`
      */
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         return toInt(truncate, direction).toInt128(truncate);
-        }
+    }
 
     /**
      * Convert the value to a variable-length signed integer.
@@ -129,10 +122,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the unsigned integer range
      *                      and `truncate` is not `True`
      */
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero) {
         return toInt(truncate, direction).toUInt(truncate);
-        }
+    }
 
     /**
      * Convert the value to an unsigned 8-bit integer.
@@ -145,18 +137,16 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
      *                      and `truncate` is not `True`
      */
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         return toUInt(truncate, direction).toUInt8(truncate);
-        }
+    }
 
     /**
      * A second name for the [toUInt8] method, to assist with readability.
      */
-    Byte toByte(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Byte toByte(Boolean truncate = False, Rounding direction = TowardZero) {
         return toUInt8(truncate, direction);
-        }
+    }
 
     /**
      * Convert the value to an unsigned 16-bit integer.
@@ -169,10 +159,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
      *                      and `truncate` is not `True`
      */
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         return toUInt(truncate, direction).toUInt16(truncate);
-        }
+    }
 
     /**
      * Convert the value to an unsigned 32-bit integer.
@@ -185,10 +174,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
      *                      and `truncate` is not `True`
      */
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         return toUInt(truncate, direction).toUInt32(truncate);
-        }
+    }
 
     /**
      * Convert the value to an unsigned 64-bit integer.
@@ -201,10 +189,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
      *                      and `truncate` is not `True`
      */
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         return toUInt(truncate, direction).toUInt64(truncate);
-        }
+    }
 
     /**
      * Convert the value to an unsigned 128-bit integer.
@@ -217,11 +204,10 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
      *                      and `truncate` is not `True`
      */
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         // this cannot use toUInt(), because UInt is only127 bits
         return toIntN(direction).toUInt128(truncate);
-        }
+    }
 
     /**
      * Convert the value to a variable-length unsigned integer.
@@ -233,10 +219,9 @@ interface IntConvertible
      * @throws OutOfBounds  if the resulting value is out of the integer range supported by the
      *         variable-length unsigned integer type
      */
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return toIntN(direction).toUIntN();
-        }
+    }
 
     /**
      * Convert the value to an `IntLiteral` that represents the same value.
@@ -245,8 +230,7 @@ interface IntConvertible
      *
      * @return an integer literal
      */
-    IntLiteral toIntLiteral(Rounding direction = TowardZero)
-        {
+    IntLiteral toIntLiteral(Rounding direction = TowardZero) {
         return toIntN().toIntLiteral();
-        }
     }
+}

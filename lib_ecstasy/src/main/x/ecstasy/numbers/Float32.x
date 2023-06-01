@@ -1,7 +1,6 @@
 const Float32
         extends BinaryFPNumber
-        default(0.0)
-    {
+        default(0.0) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -12,11 +11,10 @@ const Float32
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert:bounds bits.size == 32;
         super(bits);
-        }
+    }
 
     /**
      * Construct a 32-bit binary floating point number from its network-portable representation.
@@ -25,11 +23,10 @@ const Float32
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert:bounds bytes.size == 4;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a 32-bit binary floating point number from its `String` representation.
@@ -37,283 +34,239 @@ const Float32
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct Float32(new FPLiteral(text).toFloat32().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return True, 32;
-        }
+    }
 
     @Override
-    static Float32 zero()
-        {
+    static Float32 zero() {
         return 0.0;
-        }
+    }
 
     @Override
-    static Float32 one()
-        {
+    static Float32 one() {
         return 1.0;
-        }
+    }
 
 
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
+    Signum sign.get() {
         TODO need to think this through carefully because there is a sign bit and both +/-0
-        }
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op Float32 add(Float32 n)
-        {
+    @Op Float32 add(Float32 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float32 sub(Float32 n)
-        {
+    @Op Float32 sub(Float32 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float32 mul(Float32 n)
-        {
+    @Op Float32 mul(Float32 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float32 div(Float32 n)
-        {
+    @Op Float32 div(Float32 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float32 mod(Float32 n)
-        {
+    @Op Float32 mod(Float32 n) {
         TODO
-        }
+    }
 
     @Override
-    Float32 abs()
-        {
+    Float32 abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op Float32 neg()
-        {
+    @Op Float32 neg() {
         TODO
-        }
+    }
 
     @Override
-    Float32 pow(Float32 n)
-        {
+    Float32 pow(Float32 n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Int emax.get()
-        {
+    Int emax.get() {
         return 127;
-        }
+    }
 
     @Override
-    Int emin.get()
-        {
+    Int emin.get() {
         return 1 - emax;
-        }
+    }
 
     @Override
-    Int bias.get()
-        {
+    Int bias.get() {
         return emax;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, Int significand, Int exponent) split()
-        {
+    (Boolean negative, Int significand, Int exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    Float32 round(Rounding direction = TiesToAway)
-        {
+    Float32 round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    Float32 floor()
-        {
+    Float32 floor() {
         TODO
-        }
+    }
 
     @Override
-    Float32 ceil()
-        {
+    Float32 ceil() {
         TODO
-        }
+    }
 
     @Override
-    Float32 exp()
-        {
+    Float32 exp() {
         TODO
-        }
+    }
 
     @Override
-    Float32 scaleByPow(Int n)
-        {
+    Float32 scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    Float32 log()
-        {
+    Float32 log() {
         TODO
-        }
+    }
 
     @Override
-    Float32 log2()
-        {
+    Float32 log2() {
         TODO
-        }
+    }
 
     @Override
-    Float32 log10()
-        {
+    Float32 log10() {
         TODO
-        }
+    }
 
     @Override
-    Float32 sqrt()
-        {
+    Float32 sqrt() {
         TODO
-        }
+    }
 
     @Override
-    Float32 cbrt()
-        {
+    Float32 cbrt() {
         TODO
-        }
+    }
 
     @Override
-    Float32 sin()
-        {
+    Float32 sin() {
         TODO
-        }
+    }
 
     @Override
-    Float32 cos()
-        {
+    Float32 cos() {
         TODO
-        }
+    }
 
     @Override
-    Float32 tan()
-        {
+    Float32 tan() {
         TODO
-        }
+    }
 
     @Override
-    Float32 asin()
-        {
+    Float32 asin() {
         TODO
-        }
+    }
 
     @Override
-    Float32 acos()
-        {
+    Float32 acos() {
         TODO
-        }
+    }
 
     @Override
-    Float32 atan()
-        {
+    Float32 atan() {
         TODO
-        }
+    }
 
     @Override
-    Float32 atan2(Float32 y)
-        {
+    Float32 atan2(Float32 y) {
         TODO
-        }
+    }
 
     @Override
-    Float32 sinh()
-        {
+    Float32 sinh() {
         TODO
-        }
+    }
 
     @Override
-    Float32 cosh()
-        {
+    Float32 cosh() {
         TODO
-        }
+    }
 
     @Override
-    Float32 tanh()
-        {
+    Float32 tanh() {
         TODO
-        }
+    }
 
     @Override
-    Float32 asinh()
-        {
+    Float32 asinh() {
         TODO
-        }
+    }
 
     @Override
-    Float32 acosh()
-        {
+    Float32 acosh() {
         TODO
-        }
+    }
 
     @Override
-    Float32 atanh()
-        {
+    Float32 atanh() {
         TODO
-        }
+    }
 
     @Override
-    Float32 deg2rad()
-        {
+    Float32 deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    Float32 rad2deg()
-        {
+    Float32 rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    Float32 nextUp()
-        {
+    Float32 nextUp() {
         TODO
-        }
+    }
 
     @Override
-    Float32 nextDown()
-        {
+    Float32 nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -334,10 +287,9 @@ const Float32
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -355,10 +307,9 @@ const Float32
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
@@ -373,10 +324,9 @@ const Float32
     Float16 toFloat16();
 
     @Override
-    Float32 toFloat32()
-        {
+    Float32 toFloat32() {
         return this;
-        }
+    }
 
     @Auto
     @Override
@@ -388,10 +338,9 @@ const Float32
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return new FloatN(bits);
-        }
+    }
 
     @Override
     Dec32 toDec32();
@@ -406,8 +355,7 @@ const Float32
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toFPLiteral().toDecN();
-        }
     }
+}

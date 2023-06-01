@@ -2,8 +2,7 @@
  * A UIntNumber is a Number that represents an unsigned integer value.
  */
 @Abstract const UIntNumber
-        extends IntNumber
-    {
+        extends IntNumber {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -13,10 +12,9 @@
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         super(bits);
-        }
+    }
 
     /**
      * Construct an unsigned integer number from its network-portable representation.
@@ -25,48 +23,42 @@
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         super(bytes);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
-    Boolean signed.get()
-        {
+    Boolean signed.get() {
         return False;
-        }
+    }
 
     @Override
-    UIntNumber magnitude.get()
-        {
+    UIntNumber magnitude.get() {
         return this;
-        }
+    }
 
 
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
-    UIntNumber abs()
-        {
+    UIntNumber abs() {
         return this;
-        }
+    }
 
     @Override
     @Op("-#")
-    UIntNumber neg()
-        {
+    UIntNumber neg() {
         throw new UnsupportedOperation();
-        }
+    }
 
 
     // ----- Stringable implementation -------------------------------------------------------------
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         TODO($"Implementations of UIntNumber must override appendTo(); class={this:class}");
-        }
     }
+}

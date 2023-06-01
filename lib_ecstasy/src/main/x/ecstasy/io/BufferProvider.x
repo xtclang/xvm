@@ -152,8 +152,7 @@
  * - how to track time to fill first buffer
  * - how to track time to fill each additional buffer
  */
-interface BufferProvider
-    {
+interface BufferProvider {
     /**
      * Obtain the next buffer from the `BufferProvider`, if there is one available or if the
      * BufferProvider can allocate one.
@@ -174,25 +173,21 @@ interface BufferProvider
      * @return an array of one or more [WriteBuffer] objects
      * @return the number of bytes that can be held by the returned [WriteBuffer] objects
      */
-    (WriteBuffer[] buffers, Int bytesAllocated) alloc(Int bytesRequested)
-        {
+    (WriteBuffer[] buffers, Int bytesAllocated) alloc(Int bytesRequested) {
         // this is a default implementation for a BufferProvider that does not
         WriteBuffer[] buffers        = new WriteBuffer[];
         Int           bytesAllocated = 0;
 
-        do
-            {
-            if (WriteBuffer buffer := next())
-                {
+        do {
+            if (WriteBuffer buffer := next()) {
                 assert buffer.offset == 0;
                 buffers        += buffer;
                 bytesAllocated += buffer.capacity;
-                }
             }
-        while (bytesAllocated < bytesRequested);
+        } while (bytesAllocated < bytesRequested);
 
         return buffers, bytesAllocated;
-        }
+    }
 
     /**
      * Determine if the `BufferProvider` has a known capacity limit.
@@ -237,17 +232,15 @@ interface BufferProvider
      * The number of buffers that the `BufferProvider` can provide at this point without actually
      * allocating any new buffers.
      */
-    @RO Int availableBuffers.get()
-        {
+    @RO Int availableBuffers.get() {
         return totalBuffers - consumedBuffers;
-        }
+    }
 
     /**
      * The number of buffer bytes that the `BufferProvider` can still provide without actually
      * allocating any new buffers.
      */
-    @RO Int availableBytes.get()
-        {
+    @RO Int availableBytes.get() {
         return totalBytes - consumedBytes;
-        }
     }
+}

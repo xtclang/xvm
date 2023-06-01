@@ -6,15 +6,13 @@
  * Runtime objects, such as classes and functions, may be able to provide a template, but the
  * opposite is never true; any such relationship is unidirectional.
  */
-interface ComponentTemplate
-    {
+interface ComponentTemplate {
     /**
      * The ComponentTemplate Format enumerates the various forms of
      *
      * Those beginning with "Reserved_" are reserved, and must not be used.
      */
-    enum Format<TemplateType extends ComponentTemplate>(Boolean implicitlyStatic, Boolean autoNarrowingAllowed)
-        {
+    enum Format<TemplateType extends ComponentTemplate>(Boolean implicitlyStatic, Boolean autoNarrowingAllowed) {
         Interface  <ClassTemplate      >(False, True ),
         Class      <ClassTemplate      >(False, True ),
         Const      <ClassTemplate      >(False, True ),
@@ -31,7 +29,7 @@ interface ComponentTemplate
         Reserved_D <ComponentTemplate  >(False, False),
         MultiMethod<MultiMethodTemplate>(False, False),
         File       <FileTemplate       >(False, False)
-        }
+    }
 
     /**
      * The template format.
@@ -47,55 +45,46 @@ interface ComponentTemplate
     /**
      * The first ClassTemplate encountered while walking up the parentage chain of this template.
      */
-    @RO ClassTemplate? containingClass.get()
-        {
+    @RO ClassTemplate? containingClass.get() {
         ComponentTemplate? parent = this.parent;
-        while (parent != Null)
-            {
-            if (parent.is(ClassTemplate))
-                {
+        while (parent != Null) {
+            if (parent.is(ClassTemplate)) {
                 return parent;
-                }
-            parent = parent.parent;
             }
-        return Null;
+            parent = parent.parent;
         }
+        return Null;
+    }
 
     /**
      * The ModuleTemplate this template belongs to. For runtime templates, only the [FileTemplate]
      * will have no `containingModule`.
      */
-    @RO ModuleTemplate? containingModule.get()
-        {
+    @RO ModuleTemplate? containingModule.get() {
         ComponentTemplate? parent = this.parent;
-        while (parent != Null)
-            {
-            if (parent.is(ModuleTemplate))
-                {
+        while (parent != Null) {
+            if (parent.is(ModuleTemplate)) {
                 return parent;
-                }
-            parent = parent.parent;
             }
-        return Null;
+            parent = parent.parent;
         }
+        return Null;
+    }
 
     /**
      * The FileTemplate this template belongs to.
      */
-    @RO FileTemplate containingFile.get()
-        {
+    @RO FileTemplate containingFile.get() {
         ComponentTemplate? parent = this.parent;
-        while (True)
-            {
-            if (parent.is(FileTemplate))
-                {
+        while (True) {
+            if (parent.is(FileTemplate)) {
                 return parent;
-                }
+            }
 
             assert parent != Null;
             parent = parent.parent;
-            }
         }
+    }
 
     /**
      * The simple name of the template. The name ordinarily identifies the template within the scope
@@ -108,15 +97,14 @@ interface ComponentTemplate
      * followed by a dot-delimited sequence of names necessary to identify this class within its
      * module.
      */
-    @RO String path.get()
-        {
+    @RO String path.get() {
         ComponentTemplate? parent = this.parent;
         return parent == Null
                 ? name
                 : parent.is(ModuleTemplate) // ModuleTemplate.path is always ':'-terminated
                     ? parent.path + name
                     : parent.path + '.' + name;
-        }
+    }
 
     /**
      * Templates include an "access" indicator. The meaning of the access indicator is specific to
@@ -149,4 +137,4 @@ interface ComponentTemplate
      * The child templates of this template.
      */
     ComponentTemplate![] children();
-    }
+}

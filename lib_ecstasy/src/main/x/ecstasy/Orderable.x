@@ -3,47 +3,42 @@
  * for purposes of ordering.
  */
 interface Orderable
-        extends Comparable
-    {
+        extends Comparable {
     /**
      * Create a Range that represents the values from _this_ (inclusive) **to** _that_
      * (inclusive).
      */
-    @Op("..") Range<Orderable> to(Orderable that)
-        {
+    @Op("..") Range<Orderable> to(Orderable that) {
         assert this.is(immutable) && that.is(immutable);
         return new Range<immutable Orderable>(this, that);
-        }
+    }
 
     /**
      * Create a Range that represents the values from _this_ (**exclusive**) **to** _that_
      * (inclusive).
      */
-    @Op(">..") Range<Orderable> exTo(Orderable that)
-        {
+    @Op(">..") Range<Orderable> exTo(Orderable that) {
         assert this.is(immutable) && that.is(immutable);
         return new Range<immutable Orderable>(this, that, firstExclusive=True);
-        }
+    }
 
     /**
      * Create a Range that represents the values from _this_ (inclusive) **to** _that_
      * (**exclusive**).
      */
-    @Op("..<") Range<Orderable> toEx(Orderable that)
-        {
+    @Op("..<") Range<Orderable> toEx(Orderable that) {
         assert this.is(immutable) && that.is(immutable);
         return new Range<immutable Orderable>(this, that, lastExclusive=True);
-        }
+    }
 
     /**
      * Create a Range that represents the values from _this_ (**exclusive**) **to** _that_
      * (**exclusive**).
      */
-    @Op(">..<") Range<Orderable> exToEx(Orderable that)
-        {
+    @Op(">..<") Range<Orderable> exToEx(Orderable that) {
         assert this.is(immutable) && that.is(immutable);
         return new Range<immutable Orderable>(this, that, firstExclusive=True, lastExclusive=True);
-        }
+    }
 
     /**
      * Return the minimum value of the two specified values. This is the traditional `min` function
@@ -55,10 +50,9 @@ interface Orderable
      *
      *     Int minVal = n1.minOf(n2);
      */
-    static <CompileType extends Orderable> CompileType minOf(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Orderable> CompileType minOf(CompileType value1, CompileType value2) {
         return value1 <= value2 ? value1 : value2;
-        }
+    }
 
     /**
      * This function is identical to [minOf], but is useful for improving the readability of code.
@@ -70,10 +64,9 @@ interface Orderable
      *
      *     Int width = size.notLessThan(4).notGreaterThan(32);
      */
-    static <CompileType extends Orderable> CompileType notGreaterThan(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Orderable> CompileType notGreaterThan(CompileType value1, CompileType value2) {
         return value1 <= value2 ? value1 : value2;
-        }
+    }
 
     /**
      * Return the maximum value of the two specified values. This is the traditional `max` function
@@ -85,10 +78,9 @@ interface Orderable
      *
      *     Int maxVal = n1.maxOf(n2);
      */
-    static <CompileType extends Orderable> CompileType maxOf(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Orderable> CompileType maxOf(CompileType value1, CompileType value2) {
         return value1 >= value2 ? value1 : value2;
-        }
+    }
 
     /**
      * This function is identical to [maxOf], but is useful for improving the readability of code.
@@ -100,10 +92,9 @@ interface Orderable
      *
      *     Int width = size.notLessThan(4).notGreaterThan(32);
      */
-    static <CompileType extends Orderable> CompileType notLessThan(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Orderable> CompileType notLessThan(CompileType value1, CompileType value2) {
         return value1 >= value2 ? value1 : value2;
-        }
+    }
 
     /**
      * Compare two objects of the same type for purposes of ordering.
@@ -123,4 +114,4 @@ interface Orderable
      */
     @Override
     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
-    }
+}

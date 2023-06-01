@@ -4,8 +4,7 @@
  * This is commonly known as "array access", although Ecstasy allows access in this manner, via
  * this interface, to data structures that are not arrays.
  */
-interface UniformIndexed<Index, Element>
-    {
+interface UniformIndexed<Index, Element> {
     /**
      * Obtain the element value at the specified index.
      *
@@ -27,10 +26,9 @@ interface UniformIndexed<Index, Element>
      * @throws OutOfBounds if the specified `index` is outside of the range of indexes for which an
      *                     element exists
      */
-    @Op("[]=") void setElement(Index index, Element value)
-        {
+    @Op("[]=") void setElement(Index index, Element value) {
         throw new ReadOnly();
-        }
+    }
 
     /**
      * Obtain a Ref for the specified element.
@@ -42,8 +40,7 @@ interface UniformIndexed<Index, Element>
      * @throws OutOfBounds if the specified `index` is outside of the range of indexes for which an
      *                     element exists
      */
-    Var<Element> elementAt(Index index)
-        {
+    Var<Element> elementAt(Index index) {
         return new SimpleVar<Index, Element>(this, index);
 
         /**
@@ -51,31 +48,26 @@ interface UniformIndexed<Index, Element>
          * the return value from the {@link UniformIndexed.get} method.
          */
         class SimpleVar<Index, Element>(UniformIndexed<Index, Element> indexed, Index index)
-                delegates Var<Element>(ref)
-            {
+                delegates Var<Element>(ref) {
             @Override
-            Boolean assigned.get()
-                {
+            Boolean assigned.get() {
                 return True;
-                }
+            }
 
             @Override
-            Element get()
-                {
+            Element get() {
                 return indexed.getElement(index);
-                }
+            }
 
             @Override
-            void set(Element value)
-                {
+            void set(Element value) {
                 indexed.setElement(index, value);
-                }
+            }
 
-            private Var<Element> ref.get()
-                {
+            private Var<Element> ref.get() {
                 Element value = get();
                 return &value;
-                }
             }
         }
     }
+}

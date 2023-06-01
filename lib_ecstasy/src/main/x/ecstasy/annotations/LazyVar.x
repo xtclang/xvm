@@ -30,26 +30,23 @@
  * provided.)
  */
 mixin LazyVar<Referent>(function Referent ()? calculate = Null)
-        into Var<Referent>
-    {
+        into Var<Referent> {
+
     private function Referent ()? calculate;
 
     @Override
     @Concurrent
-    Referent get()
-        {
-        if (!assigned)
-            {
+    Referent get() {
+        if (!assigned) {
             set(calc());
-            }
+        }
 
         return super();
-        }
+    }
 
     @Synchronized
-    protected Referent calc()
-        {
+    protected Referent calc() {
         return calculate?();
         TODO("construct LazyVar with a calculate function, or override the calc() method");
-        }
     }
+}

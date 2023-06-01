@@ -13,6 +13,5 @@
  * {@link Service.dispatchRuntimeEvents}.
  */
 mixin WeakVar<Referent>(function void ()? notify)
-        into Var<Referent>
-    {
-    }
+        into Var<Referent> {
+}

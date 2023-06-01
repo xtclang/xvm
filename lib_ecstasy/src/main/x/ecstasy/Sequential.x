@@ -3,8 +3,7 @@
  * both its next and previous value in the series, if any.
  */
 interface Sequential
-        extends Orderable
-    {
+        extends Orderable {
     /**
      * @return the value that precedes this value, if there is one.
      */
@@ -21,15 +20,13 @@ interface Sequential
      * @throws OutOfBounds  if there is no previous value
      */
     @Op
-    Sequential prevValue()
-        {
-        if (Sequential value := prev())
-            {
+    Sequential prevValue() {
+        if (Sequential value := prev()) {
             return value;
-            }
+        }
 
         throw new OutOfBounds();
-        }
+    }
 
     /**
      * @return the value that follows this value.
@@ -37,15 +34,13 @@ interface Sequential
      * @throws OutOfBounds  if there is no next value
      */
     @Op
-    Sequential nextValue()
-        {
-        if (Sequential value := next())
-            {
+    Sequential nextValue() {
+        if (Sequential value := next()) {
             return value;
-            }
+        }
 
         throw new OutOfBounds();
-        }
+    }
 
     /**
      * Determine the distance between this value and that value.
@@ -90,4 +85,4 @@ interface Sequential
      *                      Sequential type
      */
     Sequential skip(Int steps);
-    }
+}

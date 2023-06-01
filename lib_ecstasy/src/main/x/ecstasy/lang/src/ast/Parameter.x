@@ -10,35 +10,30 @@ import Lexer.Token;
 const Parameter(TypeExpression type,
                 Token?         name  = Null,
                 Expression?    value = Null)
-        extends Node
-    {
-    assert()
-        {
+        extends Node {
+
+    assert() {
         assert value == Null || name != Null;   // must have a name to have a value
-        }
+    }
 
     @Override
-    TextPosition start.get()
-        {
+    TextPosition start.get() {
         return type.start;
-        }
+    }
 
     @Override
-    TextPosition end.get()
-        {
+    TextPosition end.get() {
         return value?.end : name?.end : type.end;
-        }
+    }
 
     @Override
-    String toString()
-        {
-        if (name != Null)
-            {
+    String toString() {
+        if (name != Null) {
             return value == Null
                     ? $"{type} {name}"
                     : $"{type} {name} = {value}";
-            }
+        }
 
         return type.toString();
-        }
     }
+}

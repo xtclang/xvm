@@ -8,8 +8,7 @@
  * and any subsequent calls may _or may not_ fail as a result.
  */
 interface BinaryInput
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * @return  a value of type Byte read from the stream
      *
@@ -26,10 +25,9 @@ interface BinaryInput
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void readBytes(Byte[] bytes)
-        {
+    void readBytes(Byte[] bytes) {
         readBytes(bytes, 0, bytes.size);
-        }
+    }
 
     /**
      * Read the specified number of bytes into the provided array.
@@ -41,17 +39,15 @@ interface BinaryInput
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void readBytes(Byte[] bytes, Int offset, Int count)
-        {
+    void readBytes(Byte[] bytes, Int offset, Int count) {
         assert:arg offset >= 0 && count >= 0;
 
         Int last = offset + count;
         assert last <= bytes.size;
-        while (offset < last)
-            {
+        while (offset < last) {
             bytes[offset++] = readByte();
-            }
         }
+    }
 
     /**
      * Read the specified number of bytes, returning those bytes as an array.
@@ -63,14 +59,13 @@ interface BinaryInput
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    Byte[] readBytes(Int count)
-        {
+    Byte[] readBytes(Int count) {
         assert:arg count >= 0;
 
         Byte[] bytes = new Byte[count];
         readBytes(bytes);
         return bytes;
-        }
+    }
 
     /**
      * Pipe contents from this stream to the specified stream.
@@ -81,32 +76,26 @@ interface BinaryInput
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void pipeTo(BinaryOutput out, Int count)
-        {
-        if (count > 0)
-            {
+    void pipeTo(BinaryOutput out, Int count) {
+        if (count > 0) {
             Int    bufSize  = count.notGreaterThan(8192);
             Byte[] buf      = new Byte[bufSize];
-            while (count > 0)
-                {
+            while (count > 0) {
                 Int copySize = bufSize.notGreaterThan(count);
                 readBytes(buf, 0, copySize);
                 out.writeBytes(buf, 0, copySize);
                 count -= copySize;
-                }
             }
-        else
-            {
+        } else {
             // the only legal value for count is zero at this point, but the assertion is likely
             // to print a detailed message of the assertion condition, so it needs to be obvious
             assert:arg count >= 0;
-            }
         }
+    }
 
     @Override
-    void close(Exception? cause = Null)
-        {
-        }
+    void close(Exception? cause = Null) {
+    }
 
 
     // ----- helper functions ----------------------------------------------------------------------
@@ -122,17 +111,14 @@ interface BinaryInput
      *
      * @throws IllegalUTF if there is a flaw in the UTF-8 encoding or in the resulting codepoint
      */
-    static Char readUTF8Char(BinaryInput in)
-        {
-        private UInt32 trailing(BinaryInput in)
-            {
+    static Char readUTF8Char(BinaryInput in) {
+        private UInt32 trailing(BinaryInput in) {
             Byte b = in.readByte();
-            if (b & 0b11000000 != 0b10000000)
-                {
+            if (b & 0b11000000 != 0b10000000) {
                 throw new IllegalUTF("trailing unicode byte does not match 10xxxxxx");
-                }
-            return (b & 0b00111111).toUInt32();
             }
+            return (b & 0b00111111).toUInt32();
+        }
 
         // otherwise the format is based on the number of high-order 1-bits:
         // #1s first byte  trailing  # trailing  bits  code-points
@@ -145,53 +131,52 @@ interface BinaryInput
         //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
         Byte   b = in.readByte();
         UInt32 n = b.toUInt32();
-        switch ((~b).leftmostBit)
-            {
-            case 0b10000000:
-                return n.toChar();
+        switch ((~b).leftmostBit) {
+        case 0b10000000:
+            return n.toChar();
 
-            case 0b00100000:
-                return (n & 0b00011111 << 6 | trailing(in)).toChar();
+        case 0b00100000:
+            return (n & 0b00011111 << 6 | trailing(in)).toChar();
 
-            case 0b00010000:
-                n = n & 0b00001111 << 6
-                    | trailing(in) << 6
-                    | trailing(in);
-                break;
+        case 0b00010000:
+            n = n & 0b00001111 << 6
+                | trailing(in) << 6
+                | trailing(in);
+            break;
 
-            case 0b00001000:
-                n = n & 0b00000111 << 6
-                    | trailing(in) << 6
-                    | trailing(in) << 6
-                    | trailing(in);
-                break;
+        case 0b00001000:
+            n = n & 0b00000111 << 6
+                | trailing(in) << 6
+                | trailing(in) << 6
+                | trailing(in);
+            break;
 
-            case 0b00000100:
-                n = n & 0b00000011 << 6
-                    | trailing(in) << 6
-                    | trailing(in) << 6
-                    | trailing(in) << 6
-                    | trailing(in);
-                break;
+        case 0b00000100:
+            n = n & 0b00000011 << 6
+                | trailing(in) << 6
+                | trailing(in) << 6
+                | trailing(in) << 6
+                | trailing(in);
+            break;
 
-            case 0b00000010:
-                n = n & 0b00000001 << 6
-                    | trailing(in) << 6
-                    | trailing(in) << 6
-                    | trailing(in) << 6
-                    | trailing(in) << 6
-                    | trailing(in);
-                break;
+        case 0b00000010:
+            n = n & 0b00000001 << 6
+                | trailing(in) << 6
+                | trailing(in) << 6
+                | trailing(in) << 6
+                | trailing(in) << 6
+                | trailing(in);
+            break;
 
-            default:
-                throw new IllegalUTF($"initial byte: {b}");
-            }
+        default:
+            throw new IllegalUTF($"initial byte: {b}");
+        }
 
         Char ch = n.toChar();
         return ch.requiresTrailingSurrogate()
                 ? ch.addTrailingSurrogate(readUTF8Char(in))
                 : ch;
-        }
+    }
 
     /**
      * Read a sequence of either 2 or 4 bytes from the stream corresponding to a single Unicode
@@ -203,13 +188,12 @@ interface BinaryInput
      *
      * @throws IllegalUTF if there is a flaw in the UTF-16 encoding or in the resulting codepoint
      */
-    static Char readUTF16BEChar(BinaryInput in)
-        {
+    static Char readUTF16BEChar(BinaryInput in) {
         Char ch = readUInt16BE(in).toChar();
         return ch.requiresTrailingSurrogate()
                 ? ch.addTrailingSurrogate(readUInt16BE(in).toChar())
                 : ch;
-        }
+    }
 
     /**
      * Read a sequence of either 2 or 4 bytes from the stream corresponding to a single Unicode
@@ -221,13 +205,12 @@ interface BinaryInput
      *
      * @throws IllegalUTF if there is a flaw in the UTF-16 encoding or in the resulting codepoint
      */
-    static Char readUTF16LEChar(BinaryInput in)
-        {
+    static Char readUTF16LEChar(BinaryInput in) {
         Char ch = readUInt16LE(in).toChar();
         return ch.requiresTrailingSurrogate()
                 ? ch.addTrailingSurrogate(readUInt16LE(in).toChar())
                 : ch;
-        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
@@ -239,13 +222,12 @@ interface BinaryInput
      *
      * @throws IllegalUTF if there is a flaw in the UTF-32 encoding or in the resulting codepoint
      */
-    static Char readUTF32BEChar(BinaryInput in)
-        {
+    static Char readUTF32BEChar(BinaryInput in) {
         Char ch = readUInt32BE(in).toChar();
         return ch.requiresTrailingSurrogate()
                 ? ch.addTrailingSurrogate(readUInt32BE(in).toChar())
                 : ch;
-        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
@@ -257,13 +239,12 @@ interface BinaryInput
      *
      * @throws IllegalUTF if there is a flaw in the UTF-32 encoding or in the resulting codepoint
      */
-    static Char readUTF32LEChar(BinaryInput in)
-        {
+    static Char readUTF32LEChar(BinaryInput in) {
         Char ch = readUInt32LE(in).toChar();
         return ch.requiresTrailingSurrogate()
                 ? ch.addTrailingSurrogate(readUInt32LE(in).toChar())
                 : ch;
-        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a big-endian encoded, 16-bit
@@ -273,11 +254,10 @@ interface BinaryInput
      *
      * @return the UInt16 value read from the stream
      */
-    static UInt16 readUInt16BE(BinaryInput in)
-        {
+    static UInt16 readUInt16BE(BinaryInput in) {
         return in.readByte().toUInt16() << 8
              | in.readByte().toUInt16();
-        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a little-endian encoded, 16-bit
@@ -287,11 +267,10 @@ interface BinaryInput
      *
      * @return the UInt16 value read from the stream
      */
-    static UInt16 readUInt16LE(BinaryInput in)
-        {
+    static UInt16 readUInt16LE(BinaryInput in) {
         return in.readByte().toUInt16()
             | (in.readByte().toUInt16() <<  8);
-        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a big-endian encoded, 32-bit
@@ -301,13 +280,12 @@ interface BinaryInput
      *
      * @return the UInt32 value read from the stream
      */
-    static UInt32 readUInt32BE(BinaryInput in)
-        {
+    static UInt32 readUInt32BE(BinaryInput in) {
         return in.readByte().toUInt32() << 8
              | in.readByte().toUInt32() << 8
              | in.readByte().toUInt32() << 8
              | in.readByte().toUInt32();
-        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a little-endian encoded, 32-bit
@@ -317,13 +295,12 @@ interface BinaryInput
      *
      * @return the UInt32 value read from the stream
      */
-    static UInt32 readUInt32LE(BinaryInput in)
-        {
+    static UInt32 readUInt32LE(BinaryInput in) {
         return in.readByte().toUInt32()
             | (in.readByte().toUInt32() <<  8)
             | (in.readByte().toUInt32() << 16)
             | (in.readByte().toUInt32() << 24);
-        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a null-terminated ASCII string.
@@ -334,15 +311,13 @@ interface BinaryInput
      *
      * @return the String read from the stream (but not including the closing null terminator)
      */
-    static String readAsciiStringZ(BinaryInput in, function Char(Byte) convNonAscii = _ -> '?')
-        {
+    static String readAsciiStringZ(BinaryInput in, function Char(Byte) convNonAscii = _ -> '?') {
         StringBuffer buf = new StringBuffer();
         Byte b = in.readByte();
-        while (b != 0)
-            {
+        while (b != 0) {
             buf.add(b <= 0x7F ? b.toChar() : convNonAscii(b));
             b = in.readByte();
-            }
-        return buf.toString();
         }
+        return buf.toString();
     }
+}

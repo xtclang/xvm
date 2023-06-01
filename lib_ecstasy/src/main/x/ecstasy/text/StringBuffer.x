@@ -9,17 +9,15 @@ class StringBuffer
         implements UniformIndexed<Int, Char>
         implements Iterable<Char>
         implements Sliceable<Int>
-        implements Stringable
-    {
+        implements Stringable {
     /**
      * Construct a StringBuffer.
      *
      * @param capacity  an optional value indicating the expected size of the resulting String
      */
-    construct(Int capacity = 0)
-        {
+    construct(Int capacity = 0) {
         chars = new Array<Char>(capacity);
-        }
+    }
 
     /**
      * The underlying representation of a StringBuffer is a mutable array of characters.
@@ -37,26 +35,21 @@ class StringBuffer
      * @return this buffer
      */
     @Op("+")
-    StringBuffer append(Object o)
-        {
-        if (o.is(Stringable))
-            {
+    StringBuffer append(Object o) {
+        if (o.is(Stringable)) {
             o.appendTo(this);
-            }
-        else
-            {
+        } else {
             o.toString().appendTo(this);
-            }
+        }
 
         return this;
-        }
+    }
 
     @Auto
     @Override
-    String toString()
-        {
+    String toString() {
         return new String(chars);
-        }
+    }
 
     /**
      * Modify the contents of this StringBuffer so that it has the specified size.
@@ -66,128 +59,111 @@ class StringBuffer
      *
      * @return this buffer
      */
-    StringBuffer truncate(Int newSize)
-        {
+    StringBuffer truncate(Int newSize) {
         Int size = this.size;
-        if (newSize < 0)
-            {
+        if (newSize < 0) {
             newSize = size + newSize;
-            }
+        }
 
         assert:bounds 0 <= newSize < size;
         chars.deleteAll(newSize ..< size);
         return this;
-        }
+    }
 
     /**
      * Clear the contents of this StringBuffer.
      */
-    StringBuffer clear()
-        {
+    StringBuffer clear() {
         chars.clear();
         return this;
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         return buf.addAll(chars);
-        }
+    }
 
 
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override
-    StringBuffer add(Char v)
-        {
+    StringBuffer add(Char v) {
         chars[size] = v;
         return this;
-        }
+    }
 
     @Override
-    StringBuffer addAll(Iterable<Char> array)
-        {
+    StringBuffer addAll(Iterable<Char> array) {
         chars += array;
         return this;
-        }
+    }
 
 
     // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
-    Int size.get()
-        {
+    Int size.get() {
         return chars.size;
-        }
+    }
 
     @Override
-    Iterator<Char> iterator()
-        {
+    Iterator<Char> iterator() {
         return chars.iterator();
-        }
+    }
 
 
     // ----- UniformIndexed methods ----------------------------------------------------------------------
 
     @Override
     @Op("[]")
-    Char getElement(Int index)
-        {
+    Char getElement(Int index) {
         return chars[index];
-        }
+    }
 
     @Override
     @Op("[]=")
-    void setElement(Int index, Char value)
-        {
+    void setElement(Int index, Char value) {
         chars[index] = value;
-        }
+    }
 
 
     // ----- Sliceable methods ----------------------------------------------------------------------
 
     @Override
-    @Op("[..]") StringBuffer slice(Range<Int> indexes)
-        {
+    @Op("[..]") StringBuffer slice(Range<Int> indexes) {
         StringBuffer that = new StringBuffer(indexes.size);
         that.addAll(chars[indexes]);
         return that;
-        }
+    }
 
 
     // -----  methods ----------------------------------------------------------------------
 
-    Int capacity
-        {
+    Int capacity {
         @Override
-        Int get()
-            {
+        Int get() {
             return chars.capacity;
-            }
+        }
 
         @Override
-        void set(Int n)
-            {
+        void set(Int n) {
             chars.capacity = Int.maxOf(n, chars.size);
-            }
-        }
-
-    conditional Int indexOf(Char value, Int startAt = 0)
-        {
-        return chars.indexOf(value, startAt);
-        }
-
-    conditional Int lastIndexOf(Char value, Int startAt = MaxValue)
-        {
-        return chars.lastIndexOf(value, startAt);
         }
     }
+
+    conditional Int indexOf(Char value, Int startAt = 0) {
+        return chars.indexOf(value, startAt);
+    }
+
+    conditional Int lastIndexOf(Char value, Int startAt = MaxValue) {
+        return chars.lastIndexOf(value, startAt);
+    }
+}

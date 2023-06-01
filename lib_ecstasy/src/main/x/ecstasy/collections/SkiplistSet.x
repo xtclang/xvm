@@ -8,8 +8,7 @@
 class SkiplistSet<Element extends Orderable>
         extends OrderedMapSet<Element>
         implements OrderedSet<Element>
-        implements Replicable
-    {
+        implements Replicable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -20,10 +19,9 @@ class SkiplistSet<Element extends Orderable>
      * @param orderer          the Orderer for this Set, or `Null` to use natural order
      */
     @Override
-    construct(Int initialCapacity = 0, Orderer? orderer = Null)
-        {
+    construct(Int initialCapacity = 0, Orderer? orderer = Null) {
         construct OrderedMapSet(new SkiplistMap<Element, Nullable>(initialCapacity, orderer));
-        }
+    }
 
     /**
      * Copy constructor.
@@ -31,8 +29,7 @@ class SkiplistSet<Element extends Orderable>
      * @param that  the SkiplistSet to copy from
      */
     @Override
-    construct(SkiplistSet<Element> that)
-        {
+    construct(SkiplistSet<Element> that) {
         super(that);
-        }
     }
+}

@@ -4,8 +4,7 @@ import io.TextPosition;
  * An Error implementation that represents its location within the text of a source code file.
  */
 const Error
-        extends lang.Error
-    {
+        extends lang.Error {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -20,8 +19,7 @@ const Error
      * @param after     the TextPosition of the last character (exclusive) related to the error
      */
     construct(Severity severity, String code, MessageLookup lookup, Object[] params,
-              Source source, TextPosition before, TextPosition after)
-        {
+              Source source, TextPosition before, TextPosition after) {
         this.severity = severity;
         this.code     = code;
         this.lookup   = lookup;
@@ -29,7 +27,7 @@ const Error
         this.source   = source;
         this.before   = before;
         this.after    = after;
-        }
+    }
 
 
     // ----- types ---------------------------------------------------------------------------------
@@ -58,32 +56,29 @@ const Error
     TextPosition after;
 
     @Override
-    String location.get()
-        {
+    String location.get() {
         String?      name = source.file?.name : Null;
         StringBuffer buf  = new StringBuffer(16 + (name?.size : 0));
 
-        if (name != Null)
-            {
+        if (name != Null) {
             name.appendTo(buf);
             buf.add(' ');
-            }
+        }
 
         buf.add('[');
         (before.lineNumber + 1).appendTo(buf);
         buf.add(':');
         (before.lineOffset + 1).appendTo(buf);
-        if (after != before)
-            {
+        if (after != before) {
             "..".appendTo(buf);
             (after.lineNumber + 1).appendTo(buf);
             buf.add(':');
             (after.lineOffset + 1).appendTo(buf);
-            }
+        }
         buf.add(']');
 
         return buf.toString();
-        }
+    }
 
     /**
      * The function that provides an unformatted message based on an error code. This provides the
@@ -92,14 +87,12 @@ const Error
     MessageLookup lookup;
 
     @Override
-    String unformattedMessage.get()
-        {
+    String unformattedMessage.get() {
         return lookup(code);
-        }
+    }
 
     @Override
-    String? context.get()
-        {
+    String? context.get() {
         return before == after ? Null : source.createReader()[before..after];
-        }
     }
+}

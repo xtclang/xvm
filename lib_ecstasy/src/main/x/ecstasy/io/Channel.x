@@ -19,8 +19,7 @@
  * as the underlying process' or operating system's own buffers.
  */
 interface Channel
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * The Channel's own [BufferProvider] that is intrinsic to the `Channel`. A caller can choose to
      * use this `BufferProvider`, and there may be efficiency benefits in doing so, but the caller
@@ -107,10 +106,9 @@ interface Channel
      * @throws TimedOut      it is expected that a time-out could occur while a read is being
      *                       awaited, if a [Timeout] exists
      */
-    Int read(WriteBuffer buffer, Int minBytes = MaxValue)
-        {
+    Int read(WriteBuffer buffer, Int minBytes = MaxValue) {
         return read([buffer], minBytes);
-        }
+    }
 
     /**
      * Read a sequence of bytes from this channel into the specified buffers.
@@ -165,10 +163,9 @@ interface Channel
      * @throws TimedOut      it is expected that a time-out could occur while a write completion is
      *                       being awaited, if a [Timeout] exists
      */
-    Int write(ReadBuffer buffer)
-        {
+    Int write(ReadBuffer buffer) {
         return write([buffer]);
-        }
+    }
 
     /**
      * Write a sequence of bytes from the specified buffers into this channel into starting at
@@ -191,44 +188,36 @@ interface Channel
      * @throws TimedOut      it is expected that a time-out could occur while a write completion is
      *                       being awaited, if a [Timeout] exists
      */
-    Int write(ReadBuffer[] buffers, function void(ReadBuffer)? written=Null)
-        {
+    Int write(ReadBuffer[] buffers, function void(ReadBuffer)? written=Null) {
         // either this implementation or the implementation of the write(ReadBuffer) method must be
         // overridden, or infinite recursion will result; this implementation is intended to convey
         // the expected behavior for this method, assuming that the other method is re-implemented
-        switch (buffers.size)
-            {
-            case 0:
-                return 0;
+        switch (buffers.size) {
+        case 0:
+            return 0;
 
-            case 1:
-                ReadBuffer buffer = buffers[0];
-                if (written == Null)
-                    {
-                    return write(buffer);
-                    }
-
-                @Future Int result = write(buffer);
-                &result.thenDo(() -> written(buffer));
-                return result;
-
-            default:
-                private void accumulate(ReadBuffer[] buffers, Int index, Int part, Int sum, Future<Int> pending)
-                    {
-                    sum += part;
-                    if (++index < buffers.size)
-                        {
-                        write^(buffers[index]).passTo(accumulate(buffers, index, _, sum, pending));
-                        }
-                    else
-                        {
-                        pending.complete(sum);
-                        }
-                    }
-
-                @Future Int finalResult;
-                write^(buffers[0]).passTo(accumulate(buffers, 0, _, 0, &finalResult));
-                return finalResult;
+        case 1:
+            ReadBuffer buffer = buffers[0];
+            if (written == Null) {
+                return write(buffer);
             }
+            @Future Int result = write(buffer);
+            &result.thenDo(() -> written(buffer));
+            return result;
+
+        default:
+            private void accumulate(ReadBuffer[] buffers, Int index, Int part, Int sum, Future<Int> pending) {
+                sum += part;
+                if (++index < buffers.size) {
+                    write^(buffers[index]).passTo(accumulate(buffers, index, _, sum, pending));
+                } else {
+                    pending.complete(sum);
+                }
+            }
+
+            @Future Int finalResult;
+            write^(buffers[0]).passTo(accumulate(buffers, 0, _, 0, &finalResult));
+            return finalResult;
         }
     }
+}

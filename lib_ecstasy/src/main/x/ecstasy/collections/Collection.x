@@ -43,8 +43,7 @@
 interface Collection<Element>
         extends Iterable<Element>
         extends Appender<Element>
-        extends Stringable
-    {
+        extends Stringable {
     /**
      * An Orderer is a function that compares two elements for order.
      */
@@ -81,10 +80,9 @@ interface Collection<Element>
      * check that `inPlace` is `True`, and otherwise throw a [ReadOnly] exception; one example is
      * when the `value` property on a [List.Cursor] is set.
      */
-    @RO Boolean inPlace.get()
-        {
+    @RO Boolean inPlace.get() {
         return True;
-        }
+    }
 
     /**
      * Metadata: Is the collection maintained in a specific order? And if that order is a function
@@ -95,10 +93,9 @@ interface Collection<Element>
      *         indicates that an order is maintained, but not by comparison of elements, for example
      *         when a collection stores elements in the order that they are added
      */
-    conditional Orderer? ordered()
-        {
+    conditional Orderer? ordered() {
         return False;
-        }
+    }
 
     /**
      * Metadata: Is the collection of a known size? The size is available from the [size] property,
@@ -109,13 +106,12 @@ interface Collection<Element>
      * @return (conditional) the `Collection` size, if it is efficiently known
      */
     @Concurrent
-    conditional Int knownSize()
-        {
+    conditional Int knownSize() {
         // implementations of Collection that do not have a cached size of the collection should
         // override this method and return False when the size requires any calculation more
         // expensive than O(1)
         return True, size;
-        }
+    }
 
 
     // ----- read operations -----------------------------------------------------------------------
@@ -130,12 +126,11 @@ interface Collection<Element>
      *     return size == 0;
      */
     @Concurrent
-    @RO Boolean empty.get()
-        {
+    @RO Boolean empty.get() {
         // implementations of Collection that do not have a cached size of the collection should
         // override this method if a more efficient means of determining emptiness is available
         return size == 0;
-        }
+    }
 
     /**
      * Determine if this collection contains the specified value.
@@ -145,12 +140,11 @@ interface Collection<Element>
      * @return `True` iff the specified value is present in this `Collection`
      */
     @Concurrent
-    Boolean contains(Element value)
-        {
+    Boolean contains(Element value) {
         // this should be overridden by any implementation that has a structure that can do better
         // than an O(n) search, such as a sorted structure (binary search) or a hashed structure
         return iterator().untilAny(element -> element == value);
-        }
+    }
 
     /**
      * Determine if the collection contains all of the specified values.
@@ -159,88 +153,76 @@ interface Collection<Element>
      *
      * @return `True` iff the specified values all exist in this collection
      */
-    Boolean containsAll(Collection! values)
-        {
+    Boolean containsAll(Collection! values) {
         // this.contains(values) is always True when there are no values to test, or when the passed
         // values collection is the same collection as this
-        if (values.empty || &values == &this)
-            {
+        if (values.empty || &values == &this) {
             return True;
-            }
+        }
 
         // this.contains(values) is always False when there are values to test and this is empty
-        if (this.empty)
-            {
+        if (this.empty) {
             return False;
-            }
+        }
 
         // if both collections are sorted by the same thing, then a "zipper" algorithm is O(N)
         if (Orderer? thisOrder := this.ordered(),
             Orderer? thatOrder := values.ordered(),
-            thisOrder? == thatOrder?)
-            {
+            thisOrder? == thatOrder?) {
             using (Iterator<Element> iterThat = values.iterator(),
-                   Iterator<Element> iterThis = this  .iterator())
-                {
+                   Iterator<Element> iterThis = this  .iterator()) {
                 assert Element valThat := iterThat.next();
-                for (Element valThis : iterThis)
-                    {
-                    switch (thisOrder(valThis, valThat))
-                        {
-                        case Lesser:
-                            // the current element in "this" is not one that we are looking for
-                            break;
+                for (Element valThis : iterThis) {
+                    switch (thisOrder(valThis, valThat)) {
+                    case Lesser:
+                        // the current element in "this" is not one that we are looking for
+                        break;
 
-                        case Equal:
-                            // found it! advance to the next element in "that" to find
-                            if (!(valThat := iterThat.next()))
-                                {
-                                // we found everything!
-                                return True;
-                                }
-                            break;
-
-                        case Greater:
-                            // "this" was missing the element from "that" that we were looking for
-                            return False;
+                    case Equal:
+                        // found it! advance to the next element in "that" to find
+                        if (!(valThat := iterThat.next())) {
+                            // we found everything!
+                            return True;
                         }
+                        break;
+
+                    case Greater:
+                        // "this" was missing the element from "that" that we were looking for
+                        return False;
                     }
                 }
+            }
 
             // we ran out of elements before finding the element from "that"
             return False;
-            }
+        }
 
         // assume that sets have O(N) time with fast e.g. O(1) look-ups
         // assume that sorted collections have O(N*logN) time with fast e.g. O(logN) look-ups
         // assume that optimizing for small collections is a negative return
         // use hashing as the optimization (requiring elements to be Hashable)
-        if (!this.is(Set) && this.ordered() && size > 17 && Element.is(Type<Hashable>))
-            {
+        if (!this.is(Set) && this.ordered() && size > 17 && Element.is(Type<Hashable>)) {
             // it's expensive to create a new HashSet for this purpose, but it turns an O(N^2)
             // operation into an O(2*N) problem
             return new HashSet<Element>(this).containsAll(values);
-            }
+        }
 
         // brute force search for each value from the passed-in values collection
-        using (val iter = values.iterator())
-            {
+        using (val iter = values.iterator()) {
             return iter.whileEach(contains(_));
-            }
         }
+    }
 
     /**
      * Perform the specified action for all elements in this collection.
      *
      * @param process  an action to perform on each element
      */
-    void forEach(function void (Element) process)
-        {
-        for (Element e : this)
-            {
+    void forEach(function void (Element) process) {
+        for (Element e : this) {
             process(e);
-            }
         }
+    }
 
     /**
      * Determine if any elements of the `Collection` match the provided criteria.
@@ -251,13 +233,11 @@ interface Collection<Element>
      * @return (conditional) the first element that matched the criteria
      */
     @Concurrent
-    conditional Element any(function Boolean(Element) match = _ -> True)
-        {
-        using (val iter = iterator())
-            {
+    conditional Element any(function Boolean(Element) match = _ -> True) {
+        using (val iter = iterator()) {
             return iter.untilAny(match);
-            }
         }
+    }
 
     /**
      * Determine if all elements of the `Collection` match the provided criteria.
@@ -267,13 +247,11 @@ interface Collection<Element>
      * @return True if every single element in the `Collection` matched the specified criteria
      */
     @Concurrent
-    Boolean all(function Boolean(Element) match)
-        {
-        using (val iter = iterator())
-            {
+    Boolean all(function Boolean(Element) match) {
+        using (val iter = iterator()) {
             return iter.whileEach(match);
-            }
         }
+    }
 
     /**
      * Evaluate the contents of this `Collection` using the provided criteria, and produce a
@@ -287,26 +265,20 @@ interface Collection<Element>
      */
     @Concurrent
     Collection! filter(function Boolean(Element) match,
-                       Collection!?              dest  = Null)
-        {
-        if (dest == Null)
-            {
+                       Collection!?              dest  = Null) {
+        if (dest == Null) {
             dest = new Element[];       // TODO replace with deferred-filter collection
-            }
-        else if (&dest == &this)
-            {
+        } else if (&dest == &this) {
             return this.removeAll(e -> !match(e));
-            }
-
-        for (Element e : this)
-            {
-            if (match(e))
-                {
-                dest = dest.add(e);
-                }
-            }
-        return dest;
         }
+
+        for (Element e : this) {
+            if (match(e)) {
+                dest = dest.add(e);
+            }
+        }
+        return dest;
+    }
 
     /**
      * Partition the elements of the collection into those that match the provided criteria, and
@@ -322,18 +294,16 @@ interface Collection<Element>
     @Concurrent
     (List<Element> trueList, List<Element> falseList) partition(function Boolean(Element) match,
                                                                 List<Element>? trueList  = Null,
-                                                                List<Element>? falseList = Null)
-        {
+                                                                List<Element>? falseList = Null) {
         // TODO if passed trueList or falseList is this
 
         trueList  ?:= new Element[];
         falseList ?:= new Element[];
-        for (Element e : this)
-            {
+        for (Element e : this) {
             (match(e) ? trueList : falseList).add(e);
-            }
-        return trueList, falseList;
         }
+        return trueList, falseList;
+    }
 
     /**
      * Build a `Collection` that has one value "mapped from" each value in this `Collection`, using
@@ -347,33 +317,29 @@ interface Collection<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     <Result> Collection!<Result> map(function Result(Element) transform,
-                                     Collection!<Result>?     dest      = Null)
-        {
+                                     Collection!<Result>?     dest      = Null) {
         Iterator<Element> iter = iterator();
 
         // there is no way to optimize the in-place mapping on an amorphous Collection;
         // implementations of this interface should replace this default behavior
-        if (&dest == &this)
-            {
+        if (&dest == &this) {
             Result[] results = new Result[size](_ -> transform(iter.take()));
             clear();
             addAll(results.as(List<Element>));
             assert dest != Null;
             return dest;
-            }
+        }
 
-        if (dest == Null)
-            {
+        if (dest == Null) {
             // TODO replace with deferred-map collection?
             return new Result[size](_ -> transform(iter.take()));
-            }
-
-        for (Element e : iter)
-            {
-            dest = dest.add(transform(e));
-            }
-        return dest;
         }
+
+        for (Element e : iter) {
+            dest = dest.add(transform(e));
+        }
+        return dest;
+    }
 
     /**
      * Build a `Collection` that has some number of elements "flattened from" each element of this
@@ -388,14 +354,13 @@ interface Collection<Element>
      */
     @Concurrent
     <Result> Collection!<Result> flatMap(function Iterable<Result>(Element) flatten,
-                                         Collection!<Result>?               dest    = Null)
-        {
+                                         Collection!<Result>?               dest    = Null) {
         assert:arg &dest != &this;
 
         dest ?:= new Result[];
         forEach(e -> dest.addAll(flatten(e)));
         return dest;
-        }
+    }
 
     /**
      * Build a distinct [Set] of elements found in this collection.
@@ -405,17 +370,14 @@ interface Collection<Element>
      * @return the resulting `Set` containing the distinct set of elements
      */
     @Concurrent
-    Set<Element> distinct(Set<Element>? dest = Null)
-        {
-        if (dest == Null)
-            {
+    Set<Element> distinct(Set<Element>? dest = Null) {
+        if (dest == Null) {
             return this.is(Set<Element>)
                     ? this
                     : new ListSet(this); // TODO replace with deferred-distinct set ???
-            }
-
-        return &dest == &this ? dest : dest.addAll(this);
         }
+        return &dest == &this ? dest : dest.addAll(this);
+    }
 
     /**
      * Reduce this collection of elements to a result value using the provided function. This
@@ -428,15 +390,13 @@ interface Collection<Element>
      */
     @Concurrent
     <Result> Result reduce(Result                           initial,
-                           function Result(Result, Element) accumulate)
-        {
+                           function Result(Result, Element) accumulate) {
         Result result = initial;
-        forEach(e ->
-            {
+        forEach(e -> {
             result = accumulate(result, e);
-            });
+        });
         return result;
-        }
+    }
 
     /**
      * Use an [Aggregator] to analyze the contents of the collection to produce a single result,
@@ -445,12 +405,11 @@ interface Collection<Element>
      * @param aggregator  the mechanism for the reduction
      */
     @Concurrent
-    <Result> Result reduce(Aggregator<Element, Result> aggregator)
-        {
+    <Result> Result reduce(Aggregator<Element, Result> aggregator) {
         Appender<Element> accumulator = aggregator.init();
         accumulator.addAll(this);
         return aggregator.reduce(accumulator);
-        }
+    }
 
     /**
      * Create a [Map] from the contents of this `Collection` by transforming each element of the
@@ -463,16 +422,14 @@ interface Collection<Element>
      */
     @Concurrent
     <Key, Value> Map<Key,Value> associate(function (Key, Value) (Element) transform,
-                                          Map<Key,Value>?                 dest = Null)
-        {
+                                          Map<Key,Value>?                 dest = Null) {
         Map<Key, Value> map = dest ?: new ListMap();
-        forEach(e ->
-            {
+        forEach(e -> {
             (Key k, Value v) = transform(e);
             map.put(k, v);
-            });
+        });
         return map;
-        }
+    }
 
     /**
      * Create a [Map] from the contents of this `Collection` by using each element as a value in the
@@ -488,10 +445,9 @@ interface Collection<Element>
      */
     @Concurrent
     <Key> Map<Key, Element> associateBy(function Key(Element) keyFor,
-                                        Map<Key, Element>?    dest = Null)
-        {
+                                        Map<Key, Element>?    dest = Null) {
         return associate(e -> {return keyFor(e), e;}, dest);
-        }
+    }
 
     /**
      * Create a [Map] from the contents of this `Collection` by using each element as a key in the
@@ -507,10 +463,9 @@ interface Collection<Element>
      */
     @Concurrent
     <Value> Map<Element, Value> associateWith(function Value(Element) valueFor,
-                                              Map<Element, Value>?    dest = Null)
-        {
+                                              Map<Element, Value>?    dest = Null) {
         return associate(e -> {return e, valueFor(e);}, dest);
-        }
+    }
 
     /**
      * Create a [Map] from the contents of this `Collection` by evaluating each element to obtain a
@@ -527,15 +482,13 @@ interface Collection<Element>
      */
     @Concurrent
     <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element)           keyFor,
-                                                 Map<Key, Collection!<Element>>? dest   = Null)
-        {
+                                                 Map<Key, Collection!<Element>>? dest   = Null) {
         Map<Key, Collection<Element>> map = dest ?: new ListMap();
-        forEach(e ->
-            {
+        forEach(e -> {
             map.computeIfAbsent(keyFor(e), () -> new ListSet<Element>()).add(e);
-            });
+        });
         return map;
-        }
+    }
 
     /**
      * Create a [Map] from the contents of this `Collection` by using each element as a key, and
@@ -556,21 +509,18 @@ interface Collection<Element>
     @Concurrent
     <Value> Map<Element, Value> groupWith(function Value(Element, Value) accumulate,
                                           function Value(Element)        initial,
-                                          Map<Element, Value>?           dest = Null)
-        {
+                                          Map<Element, Value>?           dest = Null) {
         Map<Element, Value> map = dest ?: new ListMap();
-        forEach(e ->
-            {
-            map.process(e, entry ->
-                {
+        forEach(e -> {
+            map.process(e, entry -> {
                 entry.value = entry.exists
                         ? accumulate(e, entry.value)
                         : initial(e);
                 return Null;
-                });
             });
+        });
         return map;
-        }
+    }
 
     /**
      * Create a sorted `List` from this `Collection`.
@@ -584,10 +534,9 @@ interface Collection<Element>
      *                               [Orderable]
      */
     @Concurrent
-    List<Element> sorted(Orderer? orderer = Null)
-        {
+    List<Element> sorted(Orderer? orderer = Null) {
         return toArray(Mutable).sorted(orderer, True);
-        }
+    }
 
     /**
      * Obtain a `Collection` that has the same contents as this `Collection`, but which has two
@@ -616,12 +565,11 @@ interface Collection<Element>
      * @return a reified Collection, which may be `this`
      */
     @Concurrent
-    Collection reify()
-        {
+    Collection reify() {
         // this method must be overridden by any implementing Collection that may return a view of
         // itself as a Collection, such that mutations to one might be visible from the other
         return this;
-        }
+    }
 
 
     // ----- write operations ----------------------------------------------------------------------
@@ -639,10 +587,9 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element addition
      */
     @Override
-    @Op("+") Collection add(Element value)
-        {
+    @Op("+") Collection add(Element value) {
         throw new ReadOnly();
-        }
+    }
 
     /**
      * Add all of the passed values to this collection.
@@ -673,15 +620,13 @@ interface Collection<Element>
      */
     @Override
     @Concurrent
-    Collection addAll(Iterator<Element> iter)
-        {
+    Collection addAll(Iterator<Element> iter) {
         Collection collection = this;
-        iter.forEach(value ->
-            {
+        iter.forEach(value -> {
             collection = collection.add(value);
-            });
+        });
         return collection;
-        }
+    }
 
     /**
      * Add the specified value to this collection if it is not already present in the collection.
@@ -697,15 +642,13 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element addition
      */
     @Concurrent
-    conditional Collection addIfAbsent(Element value)
-        {
-        if (contains(value))
-            {
+    conditional Collection addIfAbsent(Element value) {
+        if (contains(value)) {
             return False;
-            }
+        }
 
         return True, add(value);
-        }
+    }
 
     /**
      * Remove the specified value from this collection.
@@ -719,10 +662,9 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
-    @Op("-") Collection remove(Element value)
-        {
+    @Op("-") Collection remove(Element value) {
         throw new ReadOnly();
-        }
+    }
 
     /**
      * Remove all of the specified values from this collection.
@@ -737,23 +679,20 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element removal
      */
     @Concurrent
-    @Op("-") Collection removeAll(Iterable<Element> values)
-        {
-        if (&values == &this)
-            {
+    @Op("-") Collection removeAll(Iterable<Element> values) {
+        if (&values == &this) {
             return clear();
-            }
+        }
 
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
         Collection result = this;
-        values.iterator().forEach(value ->
-            {
+        values.iterator().forEach(value -> {
             result = result.remove(value);
-            });
+        });
         return result;
-        }
+    }
 
     /**
      * Remove the specified value from this collection, reporting back to the caller whether or not
@@ -770,15 +709,13 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element removal
      */
     @Concurrent
-    conditional Collection removeIfPresent(Element value)
-        {
-        if (contains(value))
-            {
+    conditional Collection removeIfPresent(Element value) {
+        if (contains(value)) {
             return True, remove(value);
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * For each value in the collection, evaluate it using the specified function, removing each
@@ -796,24 +733,20 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element removal
      */
     @Concurrent
-    (Collection, Int) removeAll(function Boolean (Element) shouldRemove)
-        {
+    (Collection, Int) removeAll(function Boolean (Element) shouldRemove) {
         Element[]? values = Null;
-        forEach(value ->
-            {
-            if (shouldRemove(value))
-                {
+        forEach(value -> {
+            if (shouldRemove(value)) {
                 values = (values ?: new Element[]) + value;
-                }
-            });
-
-        if (values == Null)
-            {
-            return this, 0;
             }
+        });
+
+        if (values == Null) {
+            return this, 0;
+        }
 
         return removeAll(values), values.size;
-        }
+    }
 
     /**
      * Remove all of the values from this collection that do **not** occur in the specified
@@ -829,19 +762,17 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element removal
      */
     @Concurrent
-    Collection retainAll(Iterable<Element> values)
-        {
-        if (&values == &this)
-            {
+    Collection retainAll(Iterable<Element> values) {
+        if (&values == &this) {
             return this;
-            }
+        }
 
         // this default implementation is likely to be overridden in cases where optimizations can
         // be made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
         Collection<Element> retain = values.is(Collection<Element>) ? values : new ListSet(values);
         return removeAll(value -> !retain.contains(value));
-        }
+    }
 
     /**
      * Remove all values from the collection.
@@ -854,11 +785,10 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element removal
      */
     @Concurrent
-    Collection clear()
-        {
+    Collection clear() {
         // this default implementation is likely to always be overridden for efficiency
         return removeAll(value -> True);
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -870,40 +800,33 @@ interface Collection<Element>
             String?                   post   = "]",
             Int?                      limit  = Null,
             String                    trunc  = "...",
-            function String(Element)? render = Null)
-        {
+            function String(Element)? render = Null) {
         Int elementCount = size;
         Int count        = (pre?.size : 0) + (post?.size : 0);
 
-        if (elementCount == 0)
-            {
+        if (elementCount == 0) {
             return count;
-            }
+        }
 
         Int displayCount = limit?.notGreaterThan(elementCount) : elementCount;
 
-        if (render == Null && Element.is(Type<Stringable>))
-            {
+        if (render == Null && Element.is(Type<Stringable>)) {
             val iter = this.iterator();
-            if (displayCount < elementCount)
-                {
+            if (displayCount < elementCount) {
                 iter   = iter.limit(displayCount);
                 count += trunc.size;
-                }
-            for (Element e : iter)
-                {
-                count += e.estimateStringLength();
-                }
             }
-        else
-            {
+            for (Element e : iter) {
+                count += e.estimateStringLength();
+            }
+        } else {
             // random educated guess for an element size, because we don't want to actually render
             // each element at this point
             count += displayCount * 4;
-            }
+        }
 
         return count + (displayCount-1) * sep.size;
-        }
+    }
 
     /**
      * Append the contents of the `Collection` to the specified buffer.
@@ -926,41 +849,35 @@ interface Collection<Element>
             String?                   post   = "]",
             Int?                      limit  = Null,
             String                    trunc  = "...",
-            function String(Element)? render = Null)
-        {
+            function String(Element)? render = Null) {
         pre?.appendTo(buf);
 
-        function Appender<Char>(Element) appendElement = switch ()
-            {
+        function Appender<Char>(Element) appendElement = switch () {
             case render != Null              : (e -> render(e).appendTo(buf));
             case Element.is(Type<Stringable>): (e -> e.appendTo(buf));
             default: (e -> e.is(Stringable) ? e.appendTo(buf) : buf.addAll(e.toString()));
-            };
+        };
 
-        if (limit == Null || limit < 0)
-            {
+        if (limit == Null || limit < 0) {
             limit = MaxValue;
+        }
+
+        Loop: for (Element e : this) {
+            if (!Loop.first) {
+                sep.appendTo(buf);
             }
 
-        Loop: for (Element e : this)
-            {
-            if (!Loop.first)
-                {
-                sep.appendTo(buf);
-                }
-
-            if (Loop.count >= limit)
-                {
+            if (Loop.count >= limit) {
                 trunc.appendTo(buf);
                 break;
-                }
+            }
 
             appendElement(e);
-            }
+        }
 
         post?.appendTo(buf);
         return buf;
-        }
+    }
 
 
     // ----- equality ------------------------------------------------------------------------------
@@ -969,114 +886,91 @@ interface Collection<Element>
      * Two collections are equal iff they are they contain the same values.
      */
     static <CompileType extends Collection>
-            Boolean equals(CompileType collection1, CompileType collection2)
-        {
+            Boolean equals(CompileType collection1, CompileType collection2) {
         // they must be of the same arity
         Int size = collection1.size;
-        if (collection2.size != size)
-            {
+        if (collection2.size != size) {
             return False;
-            }
+        }
 
         // empty collections are considered equal
-        if (size == 0)
-            {
+        if (size == 0) {
             return True;
-            }
+        }
 
         // check if a once-through zipper algorithm can be used
         Boolean sameOrder = size == 1;
         if (!sameOrder,
                 Collection<CompileType.Element>.Orderer? order1 := collection1.ordered(),
                 Collection<CompileType.Element>.Orderer? order2 := collection2.ordered(),
-                order1? == order2?)
-            {
+                order1? == order2?) {
             sameOrder = True;
-            }
+        }
 
-        if (sameOrder)
-            {
+        if (sameOrder) {
             // if either is sorted, then both must be in the same order;
             // the collections were of the same arity, so the second iterator shouldn't run out
             // before the first
             Iterator<CompileType.Element> iter1 = collection1.iterator();
             Iterator<CompileType.Element> iter2 = collection2.iterator();
-            for (val value1 : iter1)
-                {
+            for (val value1 : iter1) {
                 assert val value2 := iter2.next();
-                if (value1 != value2)
-                    {
+                if (value1 != value2) {
                     return False;
-                    }
                 }
+            }
 
             // the collections were of the same arity, so the first iterator shouldn't run out
             // before the second
             return !iter2.next();
-            }
+        }
 
         // in theory, sets may execute in O(N) time
-        if (collection1.is(Set<CompileType.Element>))
-            {
+        if (collection1.is(Set<CompileType.Element>)) {
             return collection1.containsAll(collection2);
-            }
-        else if (collection2.is(Set<CompileType.Element>))
-            {
+        } else if (collection2.is(Set<CompileType.Element>)) {
             return collection2.containsAll(collection1);
-            }
+        }
 
         // if the type is hashable, then build a HashSet, and if its size is the same as before,
         // then the contents are unique; it looks expensive, but this optimizes to O(2*N)
-        if (CompileType.Element.is(Type<Hashable>))
-            {
+        if (CompileType.Element.is(Type<Hashable>)) {
             Map<CompileType.Element, Int> map = collection1.groupWith(
                     (_, n) -> (n + 1),
                     (_) -> 1,
                     new HashMap());
-            if (map.size == size)
-                {
+            if (map.size == size) {
                 return collection1.containsAll(collection2);
-                }
-            else
-                {
-                return collection2.any(e -> map.process(e, entry ->
-                    {
-                    if (!entry.exists)
-                        {
+            } else {
+                return collection2.any(e -> map.process(e, entry -> {
+                    if (!entry.exists) {
                         // found no matching element in collection1
                         return True;
-                        }
+                    }
 
                     Int oldValue = entry.value;
-                    if (oldValue <= 1)
-                        {
+                    if (oldValue <= 1) {
                         entry.delete();
-                        }
-                    else
-                        {
+                    } else {
                         entry.value = oldValue-1;
-                        }
+                    }
                     return False;
-                    }));
-                }
+                }));
             }
+        }
 
         // this is text-book inefficiency; we're comparing two bags of non-Hashable values
         enum NonExistent {NotAValue}
         typedef (CompileType.Element | NonExistent) as Remnant;
         Remnant[] remnants = new Array(Mutable, collection1);
 
-        for (CompileType.Element value : collection2)
-            {
-            if (Int i := remnants.indexOf(value))
-                {
+        for (CompileType.Element value : collection2) {
+            if (Int i := remnants.indexOf(value)) {
                 remnants[i] = NotAValue;
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
-        return True;
         }
+        return True;
     }
+}

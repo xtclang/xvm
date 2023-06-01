@@ -40,8 +40,7 @@
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
 mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
-        into Class | Property | Method | Function
-    {
+        into Class | Property | Method | Function {
     /**
      * Use this [group] value to indicate a normal unit test. This is the default test group name.
      */
@@ -57,4 +56,4 @@ mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
      * Use this [group] value to indicate that the method must **not** be treated as a unit test.
      */
     static String Omit = "omit";
-    }
+}

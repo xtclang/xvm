@@ -8,8 +8,7 @@
  * and any subsequent calls may _or may not_ fail as a result.
  */
 interface BinaryOutput
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * Write a Byte value to the stream.
      *
@@ -22,10 +21,9 @@ interface BinaryOutput
      *
      * @param  bytes   the byte array containing the bytes to write out
      */
-    void writeBytes(Byte[] bytes)
-        {
+    void writeBytes(Byte[] bytes) {
         writeBytes(bytes, 0, bytes.size);
-        }
+    }
 
     /**
      * Write the specified number of bytes to the stream from the provided array.
@@ -34,19 +32,16 @@ interface BinaryOutput
      * @param  offset  the offset into the array of the first byte to write
      * @param  count   the number of bytes to write
      */
-    void writeBytes(Byte[] bytes, Int offset, Int count)
-        {
+    void writeBytes(Byte[] bytes, Int offset, Int count) {
         assert offset >= 0 && count >= 0;
 
         Int last = offset + count;
-        while (offset < last)
-            {
+        while (offset < last) {
             writeByte(bytes[offset++]);
-            }
-        }
-
-    @Override
-    void close(Exception? cause = Null)
-        {
         }
     }
+
+    @Override
+    void close(Exception? cause = Null) {
+    }
+}

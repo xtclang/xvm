@@ -5,8 +5,7 @@
  */
 const Float16
         extends BinaryFPNumber
-        default(0.0)
-    {
+        default(0.0) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -17,11 +16,10 @@ const Float16
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert:bounds bits.size == 16;
         super(bits);
-        }
+    }
 
     /**
      * Construct a 16-bit binary floating point number from its network-portable representation.
@@ -30,11 +28,10 @@ const Float16
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert:bounds bytes.size == 2;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a 16-bit binary floating point number from its `String` representation.
@@ -42,289 +39,244 @@ const Float16
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct Float16(new FPLiteral(text).toFloat16().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return True, 16;
-        }
+    }
 
     @Override
-    static Float16 zero()
-        {
+    static Float16 zero() {
         return 0.0;
-        }
+    }
 
     @Override
-    static Float16 one()
-        {
+    static Float16 one() {
         return 1.0;
-        }
+    }
 
 
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
+    Signum sign.get() {
         UInt16 n = bits.toUInt16();
-        if (n == 0x0000 || n == 0x8000)
-            {
+        if (n == 0x0000 || n == 0x8000) {
             return Zero;
-            }
+        }
 
         return n & 0x8000 == 0 ? Positive : Negative;
-        }
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op Float16 add(Float16 n)
-        {
+    @Op Float16 add(Float16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float16 sub(Float16 n)
-        {
+    @Op Float16 sub(Float16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float16 mul(Float16 n)
-        {
+    @Op Float16 mul(Float16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float16 div(Float16 n)
-        {
+    @Op Float16 div(Float16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float16 mod(Float16 n)
-        {
+    @Op Float16 mod(Float16 n) {
         TODO
-        }
+    }
 
     @Override
-    Float16 abs()
-        {
+    Float16 abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op Float16 neg()
-        {
+    @Op Float16 neg() {
         TODO
-        }
+    }
 
     @Override
-    Float16 pow(Float16 n)
-        {
+    Float16 pow(Float16 n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Int emax.get()
-        {
+    Int emax.get() {
         return 15;
-        }
+    }
 
     @Override
-    Int emin.get()
-        {
+    Int emin.get() {
         return 1 - emax;
-        }
+    }
 
     @Override
-    Int bias.get()
-        {
+    Int bias.get() {
         return emax;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, Int significand, Int exponent) split()
-        {
+    (Boolean negative, Int significand, Int exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    Float16 round(Rounding direction = TiesToAway)
-        {
+    Float16 round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    Float16 floor()
-        {
+    Float16 floor() {
         TODO
-        }
+    }
 
     @Override
-    Float16 ceil()
-        {
+    Float16 ceil() {
         TODO
-        }
+    }
 
     @Override
-    Float16 exp()
-        {
+    Float16 exp() {
         TODO
-        }
+    }
 
     @Override
-    Float16 scaleByPow(Int n)
-        {
+    Float16 scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    Float16 log()
-        {
+    Float16 log() {
         TODO
-        }
+    }
 
     @Override
-    Float16 log2()
-        {
+    Float16 log2() {
         TODO
-        }
+    }
 
     @Override
-    Float16 log10()
-        {
+    Float16 log10() {
         TODO
-        }
+    }
 
     @Override
-    Float16 sqrt()
-        {
+    Float16 sqrt() {
         TODO
-        }
+    }
 
     @Override
-    Float16 cbrt()
-        {
+    Float16 cbrt() {
         TODO
-        }
+    }
 
     @Override
-    Float16 sin()
-        {
+    Float16 sin() {
         TODO
-        }
+    }
 
     @Override
-    Float16 cos()
-        {
+    Float16 cos() {
         TODO
-        }
+    }
 
     @Override
-    Float16 tan()
-        {
+    Float16 tan() {
         TODO
-        }
+    }
 
     @Override
-    Float16 asin()
-        {
+    Float16 asin() {
         TODO
-        }
+    }
 
     @Override
-    Float16 acos()
-        {
+    Float16 acos() {
         TODO
-        }
+    }
 
     @Override
-    Float16 atan()
-        {
+    Float16 atan() {
         TODO
-        }
+    }
 
     @Override
-    Float16 atan2(Float16 y)
-        {
+    Float16 atan2(Float16 y) {
         TODO
-        }
+    }
 
     @Override
-    Float16 sinh()
-        {
+    Float16 sinh() {
         TODO
-        }
+    }
 
     @Override
-    Float16 cosh()
-        {
+    Float16 cosh() {
         TODO
-        }
+    }
 
     @Override
-    Float16 tanh()
-        {
+    Float16 tanh() {
         TODO
-        }
+    }
 
     @Override
-    Float16 asinh()
-        {
+    Float16 asinh() {
         TODO
-        }
+    }
 
     @Override
-    Float16 acosh()
-        {
+    Float16 acosh() {
         TODO
-        }
+    }
 
     @Override
-    Float16 atanh()
-        {
+    Float16 atanh() {
         TODO
-        }
+    }
 
     @Override
-    Float16 deg2rad()
-        {
+    Float16 deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    Float16 rad2deg()
-        {
+    Float16 rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    Float16 nextUp()
-        {
+    Float16 nextUp() {
         TODO
-        }
+    }
 
     @Override
-    Float16 nextDown()
-        {
+    Float16 nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -345,10 +297,9 @@ const Float16
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -366,10 +317,9 @@ const Float16
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
@@ -381,10 +331,9 @@ const Float16
     BFloat16 toBFloat16();
 
     @Override
-    Float16 toFloat16()
-        {
+    Float16 toFloat16() {
         return this;
-        }
+    }
 
     @Auto
     @Override
@@ -400,10 +349,9 @@ const Float16
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return new FloatN(bits);
-        }
+    }
 
     @Auto
     @Override
@@ -419,8 +367,7 @@ const Float16
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toFPLiteral().toDecN();
-        }
     }
+}

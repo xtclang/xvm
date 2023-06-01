@@ -9,8 +9,7 @@
  */
 const Date(Int32 epochDay)
         implements Sequential
-        implements Destringable
-    {
+        implements Destringable {
     enum DayOfWeek {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}
 
     enum MonthOfYear {January, February, March, April, May, June,
@@ -25,47 +24,43 @@ const Date(Int32 epochDay)
      * @param day    a day in the range 1..31 (or a smaller legal range, depending on the year and
      *               month)
      */
-    construct(Int year, Int month, Int day)
-        {
+    construct(Int year, Int month, Int day) {
         construct Date(calcEpochOffset(year, month, day));
-        }
+    }
 
     /**
      * Construct a Date from an ISO-8601 date string.
      */
     @Override
-    construct(String date)
-        {
+    construct(String date) {
         Int year;
         Int month;
         Int day;
 
         String[] parts = date.split('-');
-        switch (parts.size)
-            {
-            case 3:
-                year  = new IntLiteral(parts[0]);
-                month = new IntLiteral(parts[1]);
-                day   = new IntLiteral(parts[2]);
+        switch (parts.size) {
+        case 3:
+            year  = new IntLiteral(parts[0]);
+            month = new IntLiteral(parts[1]);
+            day   = new IntLiteral(parts[2]);
+            break;
+
+        case 1:
+            Int len = date.size;
+            if (len >= 8) {
+                year  = new IntLiteral(date[0    ..len-5]);
+                month = new IntLiteral(date[len-4..len-3]);
+                day   = new IntLiteral(date[len-2..len-1]);
                 break;
-
-            case 1:
-                Int len = date.size;
-                if (len >= 8)
-                    {
-                    year  = new IntLiteral(date[0    ..len-5]);
-                    month = new IntLiteral(date[len-4..len-3]);
-                    day   = new IntLiteral(date[len-2..len-1]);
-                    break;
-                    }
-                continue;
-
-            default:
-                throw new IllegalArgument($"invalid ISO-8601 date: \"{date}\"");
             }
+            continue;
+
+        default:
+            throw new IllegalArgument($"invalid ISO-8601 date: \"{date}\"");
+        }
 
         construct Date(year, month, day);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -73,10 +68,9 @@ const Date(Int32 epochDay)
     /**
      * True iff the year is a leap year.
      */
-    @RO Boolean leapYear.get()
-        {
+    @RO Boolean leapYear.get() {
         return isLeapYear(year);
-        }
+    }
 
     /**
      * The year portion of the date.
@@ -84,11 +78,10 @@ const Date(Int32 epochDay)
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
      * the Date class, they are not expressible in terms of year/month/day.
      */
-    @RO Int year.get()
-        {
+    @RO Int year.get() {
         (Int year, _, _, _) = calcDate(epochDay);
         return year;
-        }
+    }
 
     /**
      * The month portion of the date.
@@ -96,11 +89,10 @@ const Date(Int32 epochDay)
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
      * the Date class, they are not expressible in terms of year/month/day.
      */
-    @RO Int month.get()
-        {
+    @RO Int month.get() {
         (_, Int month, _, _) = calcDate(epochDay);
         return month;
-        }
+    }
 
     /**
      * The day portion of the date.
@@ -108,11 +100,10 @@ const Date(Int32 epochDay)
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
      * the Date class, they are not expressible in terms of year/month/day.
      */
-    @RO Int day.get()
-        {
+    @RO Int day.get() {
         (_, _, Int day, _) = calcDate(epochDay);
         return day;
-        }
+    }
 
     /**
      * The day-of-year portion of the date.
@@ -120,20 +111,18 @@ const Date(Int32 epochDay)
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
      * the Date class, they are not expressible in terms of year/month/day.
      */
-    @RO Int dayOfYear.get()
-        {
+    @RO Int dayOfYear.get() {
         (_, _, _, Int dayOfYear) = calcDate(epochDay);
         return dayOfYear;
-        }
+    }
 
     /**
      * The day of the week represented by the date.
      */
-    @RO DayOfWeek dayOfWeek.get()
-        {
+    @RO DayOfWeek dayOfWeek.get() {
         // epoch 0 was a Thursday, so we need to shift it forward 4 days to make Monday be day 0
         return DayOfWeek.values[(epochDay + 4) % 7];
-        }
+    }
 
     /**
      * The month of the year represented by the date.
@@ -141,56 +130,48 @@ const Date(Int32 epochDay)
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
      * the Date class, they are not expressible in terms of year/month/day.
      */
-    @RO MonthOfYear monthOfYear.get()
-        {
+    @RO MonthOfYear monthOfYear.get() {
         return MonthOfYear.values[month-1];
-        }
+    }
 
 
     // ----- operators -----------------------------------------------------------------------------
 
-    @Op("+") Date add(Duration duration)
-        {
+    @Op("+") Date add(Duration duration) {
         return new Date(this.epochDay + duration.days.toInt32());
-        }
+    }
 
-    @Op("-") Date sub(Duration duration)
-        {
+    @Op("-") Date sub(Duration duration) {
         return new Date(this.epochDay - duration.days.toInt32());
-        }
+    }
 
-    @Op("-") Duration sub(Date date)
-        {
+    @Op("-") Duration sub(Date date) {
         return Duration.ofDays(this.epochDay - date.epochDay);
-        }
+    }
 
 
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override
-    conditional Date prev()
-        {
+    conditional Date prev() {
         return True, new Date(this.epochDay-1);
-        }
+    }
 
     @Override
-    conditional Date next()
-        {
+    conditional Date next() {
         return True, new Date(this.epochDay+1);
-        }
+    }
 
     @Override
-    Int stepsTo(Date that)
-        {
+    Int stepsTo(Date that) {
         return this.epochDay - that.epochDay;
-        }
+    }
 
     @Override
-    Date skip(Int steps)
-        {
+    Date skip(Int steps) {
         assert:bounds -1G < steps < 1G;
         return new Date(epochDay + steps.toInt32());
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -198,41 +179,36 @@ const Date(Int32 epochDay)
     /**
      * @return a Time that corresponds to midnight (start of day) on this Date
      */
-    Time toTime()
-        {
+    Time toTime() {
         return new Time(this, TimeOfDay.MIDNIGHT, TimeZone.NoTZ);
-        }
+    }
 
 
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return 10;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         year.appendTo(buf);
         buf.add('-');
 
         Int month = this.month;
-        if (month < 10)
-            {
+        if (month < 10) {
             buf.add('0');
-            }
+        }
         month.appendTo(buf);
         buf.add('-');
 
         Int day = this.day;
-        if (day < 10)
-            {
+        if (day < 10) {
             buf.add('0');
-            }
-        return day.appendTo(buf);
         }
+        return day.appendTo(buf);
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -248,13 +224,12 @@ const Date(Int32 epochDay)
      *
      * @return True iff the specified date is a valid date on the Gregorian calendar
      */
-    static Boolean isGregorian(Int year, Int month, Int day)
-        {
+    static Boolean isGregorian(Int year, Int month, Int day) {
         // Gregorian dates did not exist before 15 October 1582
         return (year > 1582 || year == 1582 && (month == 10 && day >= 15 || month > 10))
                 && 1 <= month <= 12
                 && 1 <= day <= daysInMonth(year, month);
-        }
+    }
 
     /**
      * The starting year of the 400-year block that began on 1201-01-01T00:00:00. (Note that we use
@@ -306,8 +281,7 @@ const Date(Int32 epochDay)
      * @return the days offset of the specified year from the beginning of the epoch, 00:00:00 UTC,
      *         1 January 1970
      */
-    static Int32 calcEpochOffset(Int year)
-        {
+    static Int32 calcEpochOffset(Int year) {
         assert year >= 1582;
 
         Int qcenturyNum  = (year - QCENTURY_YEAR) / 400;
@@ -323,7 +297,7 @@ const Date(Int32 epochDay)
                                 + qennialNum  * DAYS_PER_QYEAR
                                 + ennialNum   * DAYS_PER_YEAR
                ).toInt32();
-        }
+    }
 
     /**
      * Calculate the number of days to add to the beginning of the epoch to get to the specified
@@ -336,11 +310,10 @@ const Date(Int32 epochDay)
      *
      * @return the day offset from the beginning of the epoch, 00:00:00 UTC, 1 January 1970
      */
-    static Int32 calcEpochOffset(Int year, Int month, Int day)
-        {
+    static Int32 calcEpochOffset(Int year, Int month, Int day) {
         assert isGregorian(year, month, day);
         return calcEpochOffset(year) + daysInYearBefore(year, month) + day.toInt32() - 1;
-        }
+    }
 
     /**
      * Convert an epoch day value (the number of days since the epoch began) into a year, month, and
@@ -350,8 +323,7 @@ const Date(Int32 epochDay)
      *
      * @return a tuple of year, month, day, and day-of-year
      */
-    static (Int32 year, Int32 month, Int32 day, Int32 dayOfYear) calcDate(Int epochDay)
-        {
+    static (Int32 year, Int32 month, Int32 day, Int32 dayOfYear) calcDate(Int epochDay) {
         assert GREGORIAN_OFFSET <= epochDay < 1G;
 
         Int32 daysLeft     = epochDay.toInt32() - QCENTURY_OFFSET;
@@ -376,7 +348,7 @@ const Date(Int32 epochDay)
         Int32 dayOfYear = daysLeft + 1;
         (Int32 month, Int32 day) = calcDate(year, dayOfYear);
         return year, month, day, dayOfYear;
-        }
+    }
 
     /**
      * Convert a day-of-year value into a month and day value.
@@ -387,18 +359,16 @@ const Date(Int32 epochDay)
      *
      * @return a tuple of month and day
      */
-    static (Int32 month, Int32 day) calcDate(Int year, Int dayOfYear)
-        {
+    static (Int32 month, Int32 day) calcDate(Int year, Int dayOfYear) {
         assert 1 <= dayOfYear <= daysInYear(year);
 
         Int month = (dayOfYear - 1) / 31 + 1;
-        if (daysInYearAtEndOf(year, month) < dayOfYear)
-            {
+        if (daysInYearAtEndOf(year, month) < dayOfYear) {
             ++month;
-            }
+        }
 
         return month.toInt32(), dayOfYear.toInt32() - daysInYearBefore(year, month);
-        }
+    }
 
     /**
      * Calculate the day of the year, such that the first of January is day 1, and so on.
@@ -410,11 +380,10 @@ const Date(Int32 epochDay)
      *
      * @return the "n-th day of the year" (starting with 1) for the specified year, month, and day
      */
-    static Int32 calcDayOfYear(Int year, Int month, Int day)
-        {
+    static Int32 calcDayOfYear(Int year, Int month, Int day) {
         assert isGregorian(year, month, day);
         return daysInYearBefore(year, month) + day.toInt32();
-        }
+    }
 
     /**
      * Determine if the specified year is a leap year.
@@ -423,13 +392,12 @@ const Date(Int32 epochDay)
      *
      * @return True iff the specified year is a leap year
      */
-    static Boolean isLeapYear(Int year)
-        {
+    static Boolean isLeapYear(Int year) {
         return year > 1582              // before this, there were no Gregorian years
                 && year  % 4   == 0     // must be divisible by 4
                 && (year % 100 != 0     // unless divisible by 100
                 ||  year % 400 == 0);   // unless divisible by 400
-        }
+    }
 
     /**
      * Determine the number of days in the specified year.
@@ -438,10 +406,9 @@ const Date(Int32 epochDay)
      *
      * @return 365 for normal years; 366 for leap years
      */
-    static Int32 daysInYear(Int year)
-        {
+    static Int32 daysInYear(Int year) {
         return isLeapYear(year) ? 366 : 365;
-        }
+    }
 
     /**
      * For a valid year and month, determine the number of days in the specified month.
@@ -458,11 +425,10 @@ const Date(Int32 epochDay)
      *
      * @return the number of days in the specified month
      */
-    static Int32 daysInMonth(Int year, Int month)
-        {
+    static Int32 daysInMonth(Int year, Int month) {
         assert 1 <= month <= 12;
         return (isLeapYear(year) ? MONTH_DAYS_LEAP : MONTH_DAYS) [month-1];
-        }
+    }
 
     /**
      * Calculate the number of days that come before the specified month in the specified year.
@@ -473,11 +439,10 @@ const Date(Int32 epochDay)
      * @return the number of days that have passed in the specified year before the first day of the
      *         specified month
      */
-    static Int32 daysInYearBefore(Int year, Int month)
-        {
+    static Int32 daysInYearBefore(Int year, Int month) {
         assert 1 <= month <= 12;
         return (isLeapYear(year) ? SUM_DAYS_LEAP : SUM_DAYS) [month-1];
-        }
+    }
 
     /**
      * Calculate the number of days that have passed at the end of the specified month in the
@@ -489,11 +454,10 @@ const Date(Int32 epochDay)
      * @return the number of days that have passed in the specified year after the last day of the
      *         specified month
      */
-    static Int32 daysInYearAtEndOf(Int year, Int month)
-        {
+    static Int32 daysInYearAtEndOf(Int year, Int month) {
         assert 1 <= month <= 12;
         return (isLeapYear(year) ? SUM_DAYS_LEAP : SUM_DAYS) [month];
-        }
+    }
 
     /**
      * The number of days in each month (January is month 0) of the year for normal years.
@@ -516,4 +480,4 @@ const Date(Int32 epochDay)
      * month 0) and at the end of a month (January is month 1).
      */
     static Int32[] SUM_DAYS_LEAP   = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
-    }
+}

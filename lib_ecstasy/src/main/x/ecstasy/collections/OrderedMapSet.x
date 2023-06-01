@@ -4,8 +4,8 @@
  */
 class OrderedMapSet<Element extends Orderable>
         extends MapSet<Element>(contents)
-        implements OrderedSet<Element>
-    {
+        implements OrderedSet<Element> {
+
     typedef CopyableMap<Element, Nullable>+OrderedMap<Element, Nullable> as CopyableOrderedMap;
 
     // ----- constructors --------------------------------------------------------------------------
@@ -15,10 +15,9 @@ class OrderedMapSet<Element extends Orderable>
      *
      * @param map   the Map to construct the `MapSet` on top of
      */
-    construct(CopyableOrderedMap map)
-        {
+    construct(CopyableOrderedMap map) {
         construct MapSet(map);
-        }
+    }
 
     /**
      * [Duplicable] constructor.
@@ -26,10 +25,9 @@ class OrderedMapSet<Element extends Orderable>
      * @param that  the [Duplicable] `MapSet` object to duplicate from
      */
     @Override
-    construct(OrderedMapSet<Element> that)
-        {
+    construct(OrderedMapSet<Element> that) {
         super(that);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -41,59 +39,50 @@ class OrderedMapSet<Element extends Orderable>
     // ----- read operations -----------------------------------------------------------------------
 
     @Override
-    conditional Orderer ordered()
-        {
+    conditional Orderer ordered() {
         return contents.ordered();
-        }
+    }
 
     @Override
-    conditional Element first()
-        {
+    conditional Element first() {
         return contents.first();
-        }
+    }
 
     @Override
-    conditional Element last()
-        {
+    conditional Element last() {
         return contents.last();
-        }
+    }
 
     @Override
-    conditional Element next(Element element)
-        {
+    conditional Element next(Element element) {
         return contents.next(element);
-        }
+    }
 
     @Override
-    conditional Element prev(Element element)
-        {
+    conditional Element prev(Element element) {
         return contents.prev(element);
-        }
+    }
 
     @Override
-    conditional Element ceiling(Element element)
-        {
+    conditional Element ceiling(Element element) {
         return contents.ceiling(element);
-        }
+    }
 
     @Override
-    conditional Element floor(Element element)
-        {
+    conditional Element floor(Element element) {
         return contents.floor(element);
-        }
+    }
 
     @Override
-    @Op("[..]") OrderedSet<Element> slice(Range<Element> keys)
-        {
+    @Op("[..]") OrderedSet<Element> slice(Range<Element> keys) {
         return contents.slice(keys).keys;
-        }
+    }
 
     @Override
-    OrderedSet<Element> reify()
-        {
+    OrderedSet<Element> reify() {
         assert Orderer orderer := ordered();
         val result = new SkiplistSet<Element>(size, orderer);
         result.addAll(this);
         return result;
-        }
     }
+}

@@ -9,8 +9,7 @@
  * Additionally, the FileStore interface is designed to be incredibly straight-forward to implement
  * constrained forms thereof.
  */
-interface FileStore
-    {
+interface FileStore {
     /**
      * The root directory of the FileStore. This is conceptually analogous to "/" in UNIX, for
      * example. However, a FileStore is an abstraction, so its root may not correspond to the
@@ -189,9 +188,8 @@ interface FileStore
      * @param buf        the Appender to emit the listing to
      * @param recursive  True to have the listing recurse through sub-directories
      */
-    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = True)
-        {
+    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = True) {
         buf.addAll("FileStore:\n");
         return root.emitListing(buf, recursive, "");
-        }
     }
+}

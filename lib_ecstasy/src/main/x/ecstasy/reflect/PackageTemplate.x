@@ -2,8 +2,7 @@
  * A PackageTemplate is a representation of an Ecstasy `module` or `package`.
  */
 interface PackageTemplate
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     /**
      * Obtain the module that this package imports.
      *
@@ -11,4 +10,4 @@ interface PackageTemplate
      * @return (optional) the ModuleTemplate this package represents
      */
     conditional ModuleTemplate imported();
-    }
+}

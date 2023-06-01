@@ -4,8 +4,7 @@
  */
 interface CopyableMap<Key, Value>
         extends Map<Key, Value>
-        extends Duplicable
-    {
+        extends Duplicable {
     /**
      * @param transform  an optional key and value transformer
      */
@@ -18,37 +17,31 @@ interface CopyableMap<Key, Value>
      */
     static mixin ReplicableCopier<Key, Value>
             into Replicable + Map<Key, Value>
-            implements CopyableMap<Key, Value>
-        {
+            implements CopyableMap<Key, Value> {
         /**
          * @param transform  an optional element transformer
          */
         @Override
-        ReplicableCopier duplicate(function (Key, Value)(Key, Value)? transform = Null)
-            {
-            if (this.is(immutable CopyableMap) && transform == Null)
-                {
+        ReplicableCopier duplicate(function (Key, Value)(Key, Value)? transform = Null) {
+            if (this.is(immutable CopyableMap) && transform == Null) {
                 return this;
-                }
+            }
 
-            if (transform == Null)
-                {
+            if (transform == Null) {
                 return this.new(this);
-                }
+            }
 
             ReplicableCopier<Key, Value> that = this.new();
-            for ((Key key, Value value) : this)
-                {
+            for ((Key key, Value value) : this) {
                 (key, value) = transform(key, value);
                 that = that.put(key, value);
-                }
-            return that;
             }
+            return that;
+        }
 
         @Override
-        ReplicableCopier clear()
-            {
+        ReplicableCopier clear() {
             return inPlace ? super() : this.new();
-            }
         }
     }
+}

@@ -3,8 +3,7 @@
  * implement this interface, allowing the runtime to non-destructively obtain a immutable version
  * of the data structure when and as necessary, such as when crossing a service boundary.
  */
-interface Freezable
-    {
+interface Freezable {
     /**
      * Obtain an immutable reference to this value, either by creating an immutable form of this
      * object, or by making this object immutable.
@@ -25,20 +24,17 @@ interface Freezable
      * @throws NotShareable if the object is not already immutable (i.e. it has not yet been frozen),
      *         is not a `service`, and is not `Freezable`
      */
-    static <AnyType> conditional AnyType+Freezable requiresFreeze(AnyType object)
-        {
-        if (object.is(immutable | service))
-            {
+    static <AnyType> conditional AnyType+Freezable requiresFreeze(AnyType object) {
+        if (object.is(immutable | service)) {
             return False;
-            }
+        }
 
-        if (object.is(Freezable))
-            {
+        if (object.is(Freezable)) {
             return True, object;
-            }
+        }
 
         throw new NotShareable();
-        }
+    }
 
     /**
      * Freeze the passed object if it needs to be frozen in order to be passed to another service.
@@ -53,13 +49,11 @@ interface Freezable
      * @throws NotShareable if the object is not already immutable (i.e. it has not yet been frozen),
      *         is not a `service`, and is not `Freezable`
      */
-    static <AnyType> AnyType+Shareable frozen(AnyType object, Boolean inPlace=False)
-        {
-        if (val notYetFrozen := requiresFreeze(object))
-            {
+    static <AnyType> AnyType+Shareable frozen(AnyType object, Boolean inPlace=False) {
+        if (val notYetFrozen := requiresFreeze(object)) {
             return notYetFrozen.freeze(inPlace);
-            }
+        }
 
         return object.as(Shareable);
-        }
     }
+}

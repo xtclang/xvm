@@ -4,8 +4,7 @@
  */
 interface CopyableCollection<Element>
         extends Collection<Element>
-        extends Duplicable
-    {
+        extends Duplicable {
     /**
      * @param transform  an optional element transformer
      */
@@ -18,33 +17,28 @@ interface CopyableCollection<Element>
      */
     static mixin ReplicableCopier<Element>
             into Replicable + Collection<Element>
-            implements CopyableCollection<Element>
-        {
+            implements CopyableCollection<Element> {
         /**
          * @param transform  an optional element transformer
          */
         @Override
-        ReplicableCopier duplicate(function Element(Element)? transform = Null)
-            {
-            if (this.is(immutable ReplicableCopier) && transform == Null)
-                {
+        ReplicableCopier duplicate(function Element(Element)? transform = Null) {
+            if (this.is(immutable ReplicableCopier) && transform == Null) {
                 return this;
-                }
+            }
 
-            if (transform == Null)
-                {
+            if (transform == Null) {
                 return this.new(this);
-                }
+            }
 
             ReplicableCopier<Element> that = this.new();
             this.map(transform, that);
             return that;
-            }
+        }
 
         @Override
-        ReplicableCopier clear()
-            {
+        ReplicableCopier clear() {
             return inPlace ? super() : this.new();
-            }
         }
     }
+}

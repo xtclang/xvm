@@ -6,8 +6,7 @@
  * within the buffer.
  */
 interface ReadBuffer
-        extends InputStream
-    {
+        extends InputStream {
     /**
      * Read the byte at the specified position. This method allows random read access into the
      * buffer. This method does not alter the current buffer offset.
@@ -28,23 +27,21 @@ interface ReadBuffer
      *
      * @return this buffer
      */
-    ReadBuffer skip(Int count)
-        {
+    ReadBuffer skip(Int count) {
         assert:bounds 0 <= count <= size - offset;
         offset += count;
         return this;
-        }
+    }
 
     /**
      * Rewind this buffer. This sets the buffer offset to zero.
      *
      * @return this buffer
      */
-    ReadBuffer rewind()
-        {
+    ReadBuffer rewind() {
         offset = 0;
         return this;
-        }
+    }
 
     /**
      * Move the current position to the specified offset.
@@ -54,12 +51,11 @@ interface ReadBuffer
      *
      * @return this buffer
      */
-    ReadBuffer moveTo(Int newOffset)
-        {
+    ReadBuffer moveTo(Int newOffset) {
         assert:bounds 0 <= newOffset <= size;
         offset = newOffset;
         return this;
-        }
+    }
 
     /**
      * Release the buffer. After this method is invoked, the ReadBuffer is no longer valid, and must
@@ -67,4 +63,4 @@ interface ReadBuffer
      */
     @Override
     void close(Exception? cause = Null);
-    }
+}

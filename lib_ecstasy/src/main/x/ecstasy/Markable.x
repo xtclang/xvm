@@ -4,8 +4,7 @@
  * @see Iterator.ensureMarkable()
  * @see iterators.MarkedIterator
  */
-interface Markable
-    {
+interface Markable {
     /**
      * Obtain a mark that can later be used to restore the current position of this object.
      */
@@ -26,7 +25,6 @@ interface Markable
      *
      * @param mark  the result from a previous call to [mark()]
      */
-    void unmark(immutable Object mark)
-        {
-        }
+    void unmark(immutable Object mark) {
     }
+}

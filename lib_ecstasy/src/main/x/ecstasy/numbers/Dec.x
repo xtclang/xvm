@@ -23,8 +23,7 @@
  */
 const Dec
         extends DecimalFPNumber
-        default(0.0)
-    {
+        default(0.0) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -34,18 +33,16 @@ const Dec
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
-        switch (bits.size)
-            {
-            case 28, 32, 60, 64, 128:
-                construct DecimalFPNumber(bits);
-                break;
+    construct(Bit[] bits) {
+        switch (bits.size) {
+        case 28, 32, 60, 64, 128:
+            construct DecimalFPNumber(bits);
+            break;
 
-            default:
-                throw new OutOfBounds($"Unsupported Dec bit size: {bits.size}");
-            }
+        default:
+            throw new OutOfBounds($"Unsupported Dec bit size: {bits.size}");
         }
+    }
 
     /**
      * Construct a decimal floating point number from its network-portable representation.
@@ -54,18 +51,16 @@ const Dec
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
-        switch (bytes.size)
-            {
-            case 4, 8, 16:
-                construct DecimalFPNumber(bytes);
-                break;
+    construct(Byte[] bytes) {
+        switch (bytes.size) {
+        case 4, 8, 16:
+            construct DecimalFPNumber(bytes);
+            break;
 
-            default:
-                throw new OutOfBounds($"Unsupported Dec bytes size: {bytes.size}");
-            }
+        default:
+            throw new OutOfBounds($"Unsupported Dec bytes size: {bytes.size}");
         }
+    }
 
     /**
      * Construct a decimal floating point number from its `String` representation.
@@ -73,274 +68,231 @@ const Dec
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct Dec(new FPLiteral(text).toDec().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return False;
-        }
+    }
 
     @Override
-    static Dec zero()
-        {
+    static Dec zero() {
         return 0.0;
-        }
+    }
 
     @Override
-    static Dec one()
-        {
+    static Dec one() {
         return 1.0;
-        }
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op Dec add(Dec n)
-        {
+    @Op Dec add(Dec n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Dec sub(Dec n)
-        {
+    @Op Dec sub(Dec n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Dec mul(Dec n)
-        {
+    @Op Dec mul(Dec n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Dec div(Dec n)
-        {
+    @Op Dec div(Dec n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Dec mod(Dec n)
-        {
+    @Op Dec mod(Dec n) {
         TODO
-        }
+    }
 
     @Override
-    Dec abs()
-        {
+    Dec abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op Dec neg()
-        {
+    @Op Dec neg() {
         TODO
-        }
+    }
 
     @Override
-    Dec pow(Dec n)
-        {
+    Dec pow(Dec n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    @RO Int emax.get()
-        {
+    @RO Int emax.get() {
         return 6144;
-        }
+    }
 
     @Override
-    Int emin.get()
-        {
+    Int emin.get() {
         return 1 - emax;
-        }
+    }
 
     @Override
-    Int bias.get()
-        {
+    Int bias.get() {
         return 6176;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, Int significand, Int exponent) split()
-        {
+    (Boolean negative, Int significand, Int exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    Dec round(Rounding direction = TiesToAway)
-        {
+    Dec round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    Dec floor()
-        {
+    Dec floor() {
         TODO
-        }
+    }
 
     @Override
-    Dec ceil()
-        {
+    Dec ceil() {
         TODO
-        }
+    }
 
     @Override
-    Dec exp()
-        {
+    Dec exp() {
         TODO
-        }
+    }
 
     @Override
-    Dec scaleByPow(Int n)
-        {
+    Dec scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    Dec log()
-        {
+    Dec log() {
         TODO
-        }
+    }
 
     @Override
-    Dec log2()
-        {
+    Dec log2() {
         TODO
-        }
+    }
 
     @Override
-    Dec log10()
-        {
+    Dec log10() {
         TODO
-        }
+    }
 
     @Override
-    Dec sqrt()
-        {
+    Dec sqrt() {
         TODO
-        }
+    }
 
     @Override
-    Dec cbrt()
-        {
+    Dec cbrt() {
         TODO
-        }
+    }
 
     @Override
-    Dec sin()
-        {
+    Dec sin() {
         TODO
-        }
+    }
 
     @Override
-    Dec cos()
-        {
+    Dec cos() {
         TODO
-        }
+    }
 
     @Override
-    Dec tan()
-        {
+    Dec tan() {
         TODO
-        }
+    }
 
     @Override
-    Dec asin()
-        {
+    Dec asin() {
         TODO
-        }
+    }
 
     @Override
-    Dec acos()
-        {
+    Dec acos() {
         TODO
-        }
+    }
 
     @Override
-    Dec atan()
-        {
+    Dec atan() {
         TODO
-        }
+    }
 
     @Override
-    Dec atan2(Dec y)
-        {
+    Dec atan2(Dec y) {
         TODO
-        }
+    }
 
     @Override
-    Dec sinh()
-        {
+    Dec sinh() {
         TODO
-        }
+    }
 
     @Override
-    Dec cosh()
-        {
+    Dec cosh() {
         TODO
-        }
+    }
 
     @Override
-    Dec tanh()
-        {
+    Dec tanh() {
         TODO
-        }
+    }
 
     @Override
-    Dec asinh()
-        {
+    Dec asinh() {
         TODO
-        }
+    }
 
     @Override
-    Dec acosh()
-        {
+    Dec acosh() {
         TODO
-        }
+    }
 
     @Override
-    Dec atanh()
-        {
+    Dec atanh() {
         TODO
-        }
+    }
 
     @Override
-    Dec deg2rad()
-        {
+    Dec deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    Dec rad2deg()
-        {
+    Dec rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    Dec nextUp()
-        {
+    Dec nextUp() {
         TODO
-        }
+    }
 
     @Override
-    Dec nextDown()
-        {
+    Dec nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -361,10 +313,9 @@ const Dec
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -382,10 +333,9 @@ const Dec
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
@@ -411,92 +361,78 @@ const Dec
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return toFPLiteral().toFloatN();
-        }
+    }
 
     @Override
-    Dec toDec()
-        {
+    Dec toDec() {
         return this;
-        }
+    }
 
     @Override
-    Dec32 toDec32()
-        {
-        return switch (bits.size)
-            {
+    Dec32 toDec32() {
+        return switch (bits.size) {
             case 28:     TODO
             case 32:     new Dec32(bits);
             case 60, 64: toDec64().toDec32();
             case 128:    toDec128().toDec32();
             default:     assert;
-            };
-        }
+        };
+    }
 
     @Override
-    Dec64 toDec64()
-        {
-        return switch (bits.size)
-            {
+    Dec64 toDec64() {
+        return switch (bits.size) {
             case 28, 32: toDec32().toDec64();
             case 60:     TODO
             case 64:     new Dec64(bits);
             case 128:    toDec128().toDec64();
             default:     assert;
-            };
-        }
+        };
+    }
 
     @Auto
     @Override
-    Dec128 toDec128()
-        {
-        return switch (bits.size)
-            {
+    Dec128 toDec128() {
+        return switch (bits.size) {
             case 28, 32: toDec32().toDec128();
             case 60, 64: toDec64().toDec128();
             case 128:    new Dec128(bits);
             default:     assert;
-            };
-        }
+        };
+    }
 
     @Auto
     @Override
-    DecN toDecN()
-        {
-        return switch (bits.size)
-            {
+    DecN toDecN() {
+        return switch (bits.size) {
             case 28:          toDec32().toDecN();
             case 60:          toDec64().toDecN();
             case 32, 64, 128: new DecN(bits);
             default:          assert;
-            };
-        }
+        };
+    }
 
 
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends Dec> Int64 hashCode(CompileType value)
-        {
+    static <CompileType extends Dec> Int64 hashCode(CompileType value) {
         return value.toDec128().hashCode();
-        }
+    }
 
     @Override
-    static <CompileType extends Dec> Boolean equals(CompileType value1, CompileType value2)
-        {
-        if (value1.bits == value2.bits)
-            {
+    static <CompileType extends Dec> Boolean equals(CompileType value1, CompileType value2) {
+        if (value1.bits == value2.bits) {
             return True;
-            }
+        }
 
-        return switch (maxOf(value1.bits.size, value2.bits.size))
-            {
+        return switch (maxOf(value1.bits.size, value2.bits.size)) {
             case 28, 32: value1.toDec32()  == value2.toDec32();
             case 60, 64: value1.toDec64()  == value2.toDec64();
             case 128:    value1.toDec128() == value2.toDec128();
             default: assert;
-            };
-        }
+        };
     }
+}

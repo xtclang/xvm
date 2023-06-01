@@ -4,8 +4,7 @@
  */
 interface OrderedSet<Element extends Orderable>
         extends Set<Element>
-        extends Sliceable<Element>
-    {
+        extends Sliceable<Element> {
     @Override
     conditional Orderer ordered();
 
@@ -57,15 +56,13 @@ interface OrderedSet<Element extends Orderable>
      * @return (conditional) the element that was passed in, if it exists in the Set, otherwise the
      *         [next] element
      */
-    conditional Element ceiling(Element element)
-        {
-        if (contains(element))
-            {
+    conditional Element ceiling(Element element) {
+        if (contains(element)) {
             return True, element;
-            }
+        }
 
         return next(element);
-        }
+    }
 
     /**
      * Obtain the element that comes at or immediately before the specified element in the Set.
@@ -77,15 +74,13 @@ interface OrderedSet<Element extends Orderable>
      * @return (conditional) the element that was passed in, if it exists in the Set, otherwise the
      *         [prev] element
      */
-    conditional Element floor(Element element)
-        {
-        if (contains(element))
-            {
+    conditional Element floor(Element element) {
+        if (contains(element)) {
             return True, element;
-            }
+        }
 
         return prev(element);
-        }
+    }
 
 
     // ----- equality ------------------------------------------------------------------------------
@@ -98,57 +93,43 @@ interface OrderedSet<Element extends Orderable>
      *
      * @return True iff the sets are equal, according to the definition of an ordered set
      */
-    static <CompileType extends OrderedSet> Boolean equals(CompileType set1, CompileType set2)
-        {
+    static <CompileType extends OrderedSet> Boolean equals(CompileType set1, CompileType set2) {
         // some simple optimizations: two empty sets are equal, and two sets of different sizes are
         // not equal
-        if (Int size1 := set1.knownSize(), Int size2 := set2.knownSize())
-            {
-            if (size1 != size2)
-                {
+        if (Int size1 := set1.knownSize(), Int size2 := set2.knownSize()) {
+            if (size1 != size2) {
                 return False;
-                }
-            else if (size1 == 0)
-                {
+            } else if (size1 == 0) {
                 return True;
-                }
             }
-        else
-            {
-            switch (set1.empty, set2.empty)
-                {
-                case (False, False):
-                    break;
+        } else {
+            switch (set1.empty, set2.empty) {
+            case (False, False):
+                break;
 
-                case (False, True ):
-                case (True , False):
-                    return False;
+            case (False, True ):
+            case (True , False):
+                return False;
 
-                case (True , True ):
-                    return True;
-                }
+            case (True , True ):
+                return True;
             }
+        }
 
         // compare all of the elements in the two ordered sets, in the order that they appear
         using (Iterator<CompileType.Element> iter1 = set1.iterator(),
-               Iterator<CompileType.Element> iter2 = set2.iterator())
-            {
-            while (CompileType.Element e1 := iter1.next())
-                {
-                if (CompileType.Element e2 := iter2.next())
-                    {
-                    if (e1 != e2)
-                        {
+               Iterator<CompileType.Element> iter2 = set2.iterator()) {
+            while (CompileType.Element e1 := iter1.next()) {
+                if (CompileType.Element e2 := iter2.next()) {
+                    if (e1 != e2) {
                         return False;
-                        }
                     }
-                else
-                    {
+                } else {
                     return False;
-                    }
                 }
+            }
 
             return !iter2.next();
-            }
         }
     }
+}

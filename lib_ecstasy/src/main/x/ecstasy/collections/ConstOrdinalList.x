@@ -6,8 +6,7 @@ import ecstasy.io.ByteArrayOutputStream;
  * The ConstOrdinalList is an immutable List implementation based on a compressed byte array value.
  */
 const ConstOrdinalList
-        implements List<Int>
-    {
+        implements List<Int> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -15,26 +14,23 @@ const ConstOrdinalList
      *
      * @param contents  the compressed form of a bit-set
      */
-    construct(Byte[] contents)
-        {
+    construct(Byte[] contents) {
         this.contents = contents;
 
         (size, firstOffset) = contents.unpackInt(0);
-        if (size > 0)
-            {
+        if (size > 0) {
             (defaultVal, firstOffset) = contents.unpackInt(firstOffset);
             (bitsPerVal, firstOffset) = contents.unpackInt(firstOffset);
             (firstIndex, firstOffset) = contents.unpackInt(firstOffset);
-            }
         }
+    }
 
     /**
      * Construct a ConstOrdinalList from an array of integer values.
      *
      * @param values  an array of integer values
      */
-    construct(Int[] values, Int fastAccess = 0)
-        {
+    construct(Int[] values, Int fastAccess = 0) {
         assert:arg 0 <= fastAccess <= values.size;
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
@@ -42,8 +38,7 @@ const ConstOrdinalList
         Int valueCount = values.size;
         out.writeInt128(valueCount);
 
-        if (valueCount > 0)
-            {
+        if (valueCount > 0) {
             (Int highest, Int defaultVal) = analyzeValues(values);
             out.writeInt128(defaultVal);
 
@@ -65,22 +60,20 @@ const ConstOrdinalList
             // last field in the header is the index of the first value from the first node
             out.writeInt128(nodes.size == 0 ? valueCount : nodes[0].index);
 
-            if (nodes.size > 0)
-                {
+            if (nodes.size > 0) {
                 // link the nodes' "jump" pointers
                 createSkips(nodes, 0 ..< nodes.size);
 
                 // turn each node into a byte array, and write out the nodes
                 Byte[][] nodesBytes = toBytes(nodes, values, bitsPerVal);
-                for (Byte[] nodeBytes : nodesBytes)
-                    {
+                for (Byte[] nodeBytes : nodesBytes) {
                     out.writeBytes(nodeBytes);
-                    }
                 }
             }
+        }
 
         construct ConstOrdinalList(out.bytes);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -117,31 +110,26 @@ const ConstOrdinalList
     // ----- List methods --------------------------------------------------------------------------
 
     @Override
-    @Op("[]") Int getElement(Int index)
-        {
+    @Op("[]") Int getElement(Int index) {
         assert:bounds 0 <= index < size;
 
         Int indexCurrent = firstIndex;
-        if (index < indexCurrent)
-            {
+        if (index < indexCurrent) {
             return defaultVal;
-            }
+        }
 
         Int offsetCurrent = firstOffset;
         Int contentLength = contents.size;
-        while (True)
-            {
+        while (True) {
             (Int indexSkip, offsetCurrent) = contents.unpackInt(offsetCurrent);
-            if (indexSkip != 0)
-                {
+            if (indexSkip != 0) {
                 (Int offsetSkip, offsetCurrent) = contents.unpackInt(offsetCurrent);
-                if (index >= indexCurrent + indexSkip)
-                    {
+                if (index >= indexCurrent + indexSkip) {
                     indexCurrent  += indexSkip;
                     offsetCurrent += offsetSkip;
                     continue;
-                    }
                 }
+            }
 
             // three possibilities for the value's position at this point:
             // 1) between the current point and the end of values present in this node
@@ -149,40 +137,30 @@ const ConstOrdinalList
             // 3) somewhere after the start of the next node (i.e. only if there is a next node)
             (Int indexNext, offsetCurrent) = contents.unpackInt(offsetCurrent);
             (Int nodeLen  , offsetCurrent) = contents.unpackInt(offsetCurrent);
-            if (nodeLen < 0)
-                {
+            if (nodeLen < 0) {
                 (Int nodeVal, offsetCurrent) = contents.unpackInt(offsetCurrent);
-                if (index < indexCurrent - nodeLen)
-                    {
+                if (index < indexCurrent - nodeLen) {
                     return nodeVal;
-                    }
                 }
-            else
-                {
-                if (index < indexCurrent + nodeLen)
-                    {
+            } else {
+                if (index < indexCurrent + nodeLen) {
                     return unpackOne(contents, offsetCurrent, index - indexCurrent, bitsPerVal);
-                    }
+                }
 
                 offsetCurrent += (nodeLen * bitsPerVal + 7) / 8;
-                }
+            }
 
-            if (indexNext != 0 && index >= indexCurrent + indexNext && offsetCurrent < contentLength)
-                {
+            if (indexNext != 0 && index >= indexCurrent + indexNext && offsetCurrent < contentLength) {
                 indexCurrent += indexNext;
-                }
-            else
-                {
+            } else {
                 return defaultVal;
-                }
             }
         }
+    }
 
     @Override
-    Iterator<Int> iterator()
-        {
-        return new Iterator<Int>()
-            {
+    Iterator<Int> iterator() {
+        return new Iterator<Int>() {
             Int     curIndex       = 0;
 
             Int     curNodeIndex   = 0;
@@ -196,64 +174,51 @@ const ConstOrdinalList
             Int     nextNodeOffset = firstOffset;
 
             @Override
-            conditional Int next()
-                {
+            conditional Int next() {
                 // check if the current node is exhausted
-                if (curIndex >= nextNodeIndex && !loadNextNode())
-                    {
+                if (curIndex >= nextNodeIndex && !loadNextNode()) {
                     // the iterator is exhausted
                     return False;
-                    }
+                }
 
                 // check if the value is between the current node and the next node
                 Int val;
-                if (curIndex >= curNodeIndex + curNodeSize)
-                    {
+                if (curIndex >= curNodeIndex + curNodeSize) {
                     val = defaultVal;
-                    }
-                else if (runLenEnc)
-                    {
+                } else if (runLenEnc) {
                     val = repeatingVal;
-                    }
-                else
-                    {
+                } else {
                     // packed array mode
                     val = unpackOne(contents, packedOffset, curIndex - curNodeIndex, bitsPerVal);
-                    }
+                }
 
                 ++curIndex;
                 return True, val;
-                }
+            }
 
-            private Boolean loadNextNode()
-                {
+            private Boolean loadNextNode() {
                 // check if the iterator is exhausted
                 Int listSize = this.ConstOrdinalList.size;
-                if (curIndex >= listSize)
-                    {
+                if (curIndex >= listSize) {
                     return False;
-                    }
+                }
 
                 Boolean firstNode = nextNodeIndex == 0;
                 // advance to the next node
                 curNodeIndex = nextNodeIndex;
-                if (firstNode && firstIndex > 0 || nextNodeOffset >= contents.size)
-                    {
+                if (firstNode && firstIndex > 0 || nextNodeOffset >= contents.size) {
                     // the compressed list has a "hole" at the beginning (or the end); pretend that
                     // it is represented as an RLE node
                     runLenEnc     = True;
                     repeatingVal  = defaultVal;
                     curNodeSize   = firstNode ? firstIndex : listSize - curIndex;
                     nextNodeIndex = firstNode ? firstIndex : listSize;
-                    }
-                else
-                    {
+                } else {
                     // skip the jump-forward info
                     (Int jumpIndex, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
-                    if (jumpIndex != 0)
-                        {
+                    if (jumpIndex != 0) {
                         (_, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
-                        }
+                    }
 
                     // read the relative index of the next node
                     (nextNodeIndex, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
@@ -261,24 +226,21 @@ const ConstOrdinalList
 
                     // read the number of values in the current node
                     (curNodeSize, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
-                    if (curNodeSize < 0)
-                        {
+                    if (curNodeSize < 0) {
                         runLenEnc   = True;
                         curNodeSize = -curNodeSize;
                         (repeatingVal, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
-                        }
-                    else
-                        {
+                    } else {
                         runLenEnc       = False;
                         packedOffset    = nextNodeOffset;
                         nextNodeOffset += (curNodeSize * bitsPerVal + 7) / 8;
-                        }
                     }
+                }
 
                 return True;
-                }
-            };
-        }
+            }
+        };
+    }
 
 
     // ----- packed array --------------------------------------------------------------------------
@@ -295,18 +257,15 @@ const ConstOrdinalList
      *
      * @return a byte array containing the packed integer values
      */
-    static Byte[] pack(Int[] vals, Int packFirst, Int packCount, Int bitsPerVal)
-        {
+    static Byte[] pack(Int[] vals, Int packFirst, Int packCount, Int bitsPerVal) {
         Int128 mask   = (1 << bitsPerVal) - 1;
         Int    binLen = (packCount * bitsPerVal + 7) / 8;
         Byte[] binVal = new Byte[binLen];
 
-        for (Int i = 0; i < packCount; ++i)
-            {
+        for (Int i = 0; i < packCount; ++i) {
             Int128 curVal    = vals[packFirst+i] & mask;
             Int    bitOffset = i * bitsPerVal;
-            while (curVal != 0)
-                {
+            while (curVal != 0) {
                 Int  byteOffset = bitOffset / 8;
                 Byte byte       = binVal[byteOffset];
 
@@ -319,11 +278,11 @@ const ConstOrdinalList
 
                 curVal     >>>= bitCount;
                 bitOffset    += bitCount;
-                }
             }
+        }
 
         return binVal;
-        }
+    }
 
     /**
      * Given a sequence of `packedCount` integers, each of `bitsPerVal` bits in size, packed
@@ -337,10 +296,9 @@ const ConstOrdinalList
      *
      * @return an array of the unpacked integer values
      */
-    static Int[] unpack(Byte[] contents, Int packedOffset, Int packedCount, Int bitsPerVal)
-        {
+    static Int[] unpack(Byte[] contents, Int packedOffset, Int packedCount, Int bitsPerVal) {
         return new Int[packedCount](i -> unpackOne(contents, packedOffset, i, bitsPerVal));
-        }
+    }
 
     /**
      * Given a sequence of integers, each of `bitsPerVal` bits in size, packed end-to-end inside
@@ -354,14 +312,12 @@ const ConstOrdinalList
      *
      * @return the unpacked integer value
      */
-    static Int unpackOne(Byte[] contents, Int packedOffset, Int packedIndex, Int bitsPerVal)
-        {
+    static Int unpackOne(Byte[] contents, Int packedOffset, Int packedIndex, Int bitsPerVal) {
         Int val = 0;
 
         Int bitOffset     = packedIndex * bitsPerVal;
         Int remainingBits = bitsPerVal;
-        while (remainingBits > 0)
-            {
+        while (remainingBits > 0) {
             Int  partOffset = bitOffset & 0x7;
             Int  partLength = (8 - partOffset).notGreaterThan(remainingBits);
             Byte bytePart   = contents[packedOffset + bitOffset / 8] >>> partOffset;
@@ -370,10 +326,10 @@ const ConstOrdinalList
 
             bitOffset      += partLength;
             remainingBits  -= partLength;
-            }
+        }
 
         return val;
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -382,13 +338,11 @@ const ConstOrdinalList
      * Given an array of values, find the highest value and select the most common value as a
      * default value to use.
      */
-    private static (Int highest, Int defaultVal) analyzeValues(Int[] values)
-        {
+    private static (Int highest, Int defaultVal) analyzeValues(Int[] values) {
         Map<Int, Int> map = new HashMap();
         Int highest = -1;
         Int mostest =  0;       // parents mistakenly tell their kids that this is not a word
-        for (Int n : values)
-            {
+        for (Int n : values) {
             // verify no negative values
             assert:arg n >= 0;
 
@@ -396,43 +350,38 @@ const ConstOrdinalList
             map.process(n, e -> {e.value = e.exists ? e.value + 1 : 1;});
 
             // determine highest magnitude value
-            if (n > highest)
-                {
+            if (n > highest) {
                 highest = n;
-                }
             }
+        }
 
         // determine which value can be omitted (i.e. pick a default value)
         Int defaultVal = -1;
-        for ((Int n, Int count) : map)
-            {
-            if (count > mostest)
-                {
+        for ((Int n, Int count) : map) {
+            if (count > mostest) {
                 defaultVal = n;
                 mostest    = count;
-                }
             }
+        }
 
         return highest, defaultVal;
-        }
+    }
 
     /**
      * A scratch-pad structure used to collect information about each node that will make up the
      * compressed list.
      */
-    private static class Node
-        {
+    private static class Node {
         Int     index;
         Int     length;
         Boolean runLenEnc;      // indicates either an RLE node or a packed-array node
         Int     jumpIndex;
-        }
+    }
 
     /**
      * Chop up the array of values into a sequence of run-length-encoded and packed-array nodes.
      */
-    private static Node[] buildNodeList(Int[] values, Int minRunLen, Int defaultVal)
-        {
+    private static Node[] buildNodeList(Int[] values, Int minRunLen, Int defaultVal) {
         // identify the runs within the array, and build a sequence of nodes (run length encoded
         // nodes, and packed-array nodes)
         Int    firstNumIndex = -1;  // index of first "not picked up into a node" non-default number
@@ -440,41 +389,34 @@ const ConstOrdinalList
         Int    prevVal       = -1;
         Int    runLen        = 0;
         Node[] nodes         = new Node[];
-        Loop: for (Int val : values)
-            {
-            if (val == prevVal)
-                {
+        Loop: for (Int val : values) {
+            if (val == prevVal) {
                 ++runLen;
-                }
-            else
-                {
-                if (runLen >= minRunLen)
-                    {
+            } else {
+                if (runLen >= minRunLen) {
                     createNodes(nodes, values, Loop.count, prevVal, runLen, minRunLen,
                                 firstNumIndex, lastNumIndex, defaultVal);
                     firstNumIndex = -1;
                     lastNumIndex  = -1;
-                    }
+                }
                 runLen = 1;
-                }
+            }
 
-            if (val != defaultVal)
-                {
-                if (firstNumIndex < 0)
-                    {
+            if (val != defaultVal) {
+                if (firstNumIndex < 0) {
                     firstNumIndex = Loop.count;
-                    }
-                lastNumIndex = Loop.count;
                 }
+                lastNumIndex = Loop.count;
+            }
 
             prevVal = val;
-            }
+        }
 
         createNodes(nodes, values, values.size, prevVal, runLen, minRunLen,
                     firstNumIndex, lastNumIndex, defaultVal);
 
         return nodes;
-        }
+    }
 
     /**
      * Create zero, one, or two nodes (an optional run-length-encoded node followed by an optional
@@ -482,81 +424,68 @@ const ConstOrdinalList
      */
     private static void createNodes(Node[] nodes, Int[] values, Int index,
                                     Int runVal, Int runLen, Int minRunLen,
-                                    Int firstNumIndex, Int lastNumIndex, Int defaultVal)
-        {
-        if (runLen >= minRunLen)
-            {
+                                    Int firstNumIndex, Int lastNumIndex, Int defaultVal) {
+        if (runLen >= minRunLen) {
             Int runIndex = index - runLen;
 
             // the last `runLen` values form a run, so we will create an RLE node for it, but
             // first we need to create an array node in front of it if there were any values
             // that appeared before the run that we did not previously capture in a node
-            if (0 <= firstNumIndex < runIndex)
-                {
+            if (0 <= firstNumIndex < runIndex) {
                 // only take numbers up to the beginning of the run (and don't keep any trailing
                 // default values)
-                if (lastNumIndex >= runIndex)
-                    {
+                if (lastNumIndex >= runIndex) {
                     lastNumIndex = runIndex - 1;
-                    while (lastNumIndex > firstNumIndex && values[lastNumIndex] == defaultVal)
-                        {
+                    while (lastNumIndex > firstNumIndex && values[lastNumIndex] == defaultVal) {
                         --lastNumIndex;
-                        }
                     }
+                }
 
                 Node node      = new Node();
                 node.runLenEnc = False;
                 node.index     = firstNumIndex;
                 node.length    = lastNumIndex - firstNumIndex + 1;
                 nodes.add(node);
-                }
+            }
 
-            if (values[runIndex] != defaultVal)
-                {
+            if (values[runIndex] != defaultVal) {
                 // create the RLE node
                 Node node      = new Node();
                 node.runLenEnc = True;
                 node.index     = runIndex;
                 node.length    = runLen;
                 nodes.add(node);
-                }
             }
-        else if (firstNumIndex >= 0)
-            {
+        } else if (firstNumIndex >= 0) {
             // create a packed-array node
             Node node      = new Node();
             node.runLenEnc = False;
             node.index     = firstNumIndex;
             node.length    = lastNumIndex - firstNumIndex + 1;
             nodes.add(node);
-            }
         }
+    }
 
     /**
      * Collapse as many nodes as necessary at the beginning of the list into a single node to ensure
      * O(1) access to that portion of the information.
      */
-    private static void ensureFastNode(Node[] nodes, Int[] values, Int fastAccess, Int minRunLen)
-        {
+    private static void ensureFastNode(Node[] nodes, Int[] values, Int fastAccess, Int minRunLen) {
         // make sure that the initial block covers the entire "fast" range as a single block
-        if (fastAccess > 0)
-            {
+        if (fastAccess > 0) {
             // figure out how many nodes have to be combined to create the "fast" node
             Int span = 0;
-            for (Node node : nodes)
-                {
-                if (node.index >= fastAccess)
-                    {
+            for (Node node : nodes) {
+                if (node.index >= fastAccess) {
                     break;
-                    }
+                }
 
                 ++span;
-                }
+            }
 
-            if (span <= 1)
-                {
+            if (span <= 1) {
                 return;
-                }
+            }
 
             // if the last node to combine to make the fast node is an RLE node, then see if the RLE
             // node represents a run that is long enough to be split into a portion that goes into
@@ -564,21 +493,19 @@ const ConstOrdinalList
             Node nodeLast   = nodes[span - 1];
             Int  firstIndex = nodes[0].index;
             Int  lastIndex  = nodeLast.index + nodeLast.length - 1;
-            if (nodeLast.runLenEnc && lastIndex - fastAccess > minRunLen)
-                {
+            if (nodeLast.runLenEnc && lastIndex - fastAccess > minRunLen) {
                 lastIndex = fastAccess - 1;
                 Int cAdjust = fastAccess - nodeLast.index;
                 assert cAdjust > 0;
                 nodeLast.index  += cAdjust;
                 nodeLast.length -= cAdjust;
                 --span;
-                }
+            }
 
             // drop the extra nodes that we're collapsing into the fast node
-            if (span > 1)
-                {
+            if (span > 1) {
                 nodes.deleteAll(1 ..< span);
-                }
+            }
 
             // build the fast node and use it in place of the first node
             Node nodeFast      = new Node();
@@ -586,19 +513,17 @@ const ConstOrdinalList
             nodeFast.length    = lastIndex - firstIndex + 1;
             nodeFast.runLenEnc = False;
             nodes[0]           = nodeFast;
-            }
         }
+    }
 
     /**
      * Link the nodes' "jump" pointers.
      */
-    private static void createSkips(Node[] nodes, Range<Int> indexes)
-        {
+    private static void createSkips(Node[] nodes, Range<Int> indexes) {
         Int count = indexes.size;
-        if (count <= 2)
-            {
+        if (count <= 2) {
             return;
-            }
+        }
 
         Int firstIndex = indexes.effectiveLowerBound;
         Int lastIndex  = indexes.effectiveUpperBound;
@@ -611,19 +536,17 @@ const ConstOrdinalList
 
         createSkips(nodes, firstIndex+1 ..< firstIndex+relativeJump);
         createSkips(nodes, firstIndex+relativeJump .. lastIndex);
-        }
+    }
 
     /**
      * Serialize the passed array of nodes.
      */
-    private static Byte[][] toBytes(Node[] nodes, Int[] values, Int bitsPerVal)
-        {
+    private static Byte[][] toBytes(Node[] nodes, Int[] values, Int bitsPerVal) {
         // turn the nodes into bytes
         Byte[][] nodesBytes = new Byte[][nodes.size]([]);
 
         Node? nodeNext = Null;
-        for (Int i : nodes.size >.. 0)
-            {
+        for (Int i : nodes.size >.. 0) {
             Node node = nodes[i];
             assert nodeNext?.index > node.index;
 
@@ -632,18 +555,14 @@ const ConstOrdinalList
             Int    nextIndex = nodeNext?.index - node.index : node.length;
             Int    val       = 0;
             Byte[] packed    = [];
-            if (node.runLenEnc)
-                {
+            if (node.runLenEnc) {
                 val = values[node.index];
-                }
-            else
-                {
+            } else {
                 packed = pack(values, node.index, node.length, bitsPerVal);
-                }
+            }
 
             Int jumpOffset = 0;
-            if (jumpIndex != 0)
-                {
+            if (jumpIndex != 0) {
                 // skip over the rest of this node
                 jumpOffset += DataOutput.packedIntLength(nextIndex);
                 jumpOffset += DataOutput.packedIntLength(valCount);
@@ -653,45 +572,39 @@ const ConstOrdinalList
 
                 // then we have to skip over any nodes in between the "from" and "to" nodes
                 Int skip = i + 1;
-                Loop: while (True)
-                    {
+                Loop: while (True) {
                     Node nodeSkip = nodes[skip];
-                    switch (nodeSkip.index <=> node.jumpIndex)
-                        {
-                        case Lesser:
-                            jumpOffset += nodesBytes[skip++].size;
-                            break;
+                    switch (nodeSkip.index <=> node.jumpIndex) {
+                    case Lesser:
+                        jumpOffset += nodesBytes[skip++].size;
+                        break;
 
-                        case Equal:
-                            break Loop;
+                    case Equal:
+                        break Loop;
 
-                        case Greater:
-                            assert;
-                        }
+                    case Greater:
+                        assert;
                     }
                 }
+            }
 
             @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
             out.writeInt128(jumpIndex);
-            if (jumpIndex != 0)
-                {
+            if (jumpIndex != 0) {
                 out.writeInt128(jumpOffset);
-                }
+            }
             out.writeInt128(nextIndex);
             out.writeInt128(valCount);
-            if (node.runLenEnc)
-                {
+            if (node.runLenEnc) {
                 out.writeInt128(val);
-                }
-            else
-                {
+            } else {
                 out.writeBytes(packed);
-                }
+            }
             nodesBytes[i] = out.bytes;
 
             nodeNext = node;
-            }
+        }
 
         return nodesBytes;
-        }
     }
+}

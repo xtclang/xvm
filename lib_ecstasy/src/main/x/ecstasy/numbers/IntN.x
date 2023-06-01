@@ -4,8 +4,7 @@
 const IntN
         extends IntNumber
         incorporates Bitwise
-        default(0)
-    {
+        default(0) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -15,11 +14,10 @@ const IntN
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert bits.size >= 8 && bits.size.bitCount == 1;
         super(bits);
-        }
+    }
 
     /**
      * Construct a variable-length signed integer number from its network-portable representation.
@@ -28,11 +26,10 @@ const IntN
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert bytes.size >= 1;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a variable-sized signed integer number from its `String` representation.
@@ -40,139 +37,120 @@ const IntN
      * @param text  an integer number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct IntN(new IntLiteral(text).toIntN().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static IntN zero()
-        {
+    static IntN zero() {
         return 0;
-        }
+    }
 
     @Override
-    static IntN one()
-        {
+    static IntN one() {
         return 1;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
-        return switch (this <=> 0)
-            {
+    Signum sign.get() {
+        return switch (this <=> 0) {
             case Lesser : Negative;
             case Equal  : Zero;
             case Greater: Positive;
-            };
-        }
+        };
+    }
 
     @Override
-    UIntN magnitude.get()
-        {
+    UIntN magnitude.get() {
         return abs().toUIntN();
-        }
+    }
 
 
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
     @Op("-#")
-    IntN neg()
-        {
+    IntN neg() {
         return ~this + 1;
-        }
+    }
 
     @Override
     @Op("+")
-    IntN add(IntN! n)
-        {
+    IntN add(IntN! n) {
         return this + n;
-        }
+    }
 
     @Override
     @Op("-")
-    IntN sub(IntN! n)
-        {
+    IntN sub(IntN! n) {
         return this + ~n + 1;
-        }
+    }
 
     @Override
     @Op("*")
-    IntN mul(IntN! n)
-        {
+    IntN mul(IntN! n) {
         return this * n;
-        }
+    }
 
     @Override
     @Op("/")
-    IntN div(IntN! n)
-        {
+    IntN div(IntN! n) {
         return this / n;
-        }
+    }
 
     @Override
     @Op("%")
-    IntN mod(IntN! n)
-        {
+    IntN mod(IntN! n) {
         return this % n;
-        }
+    }
 
     @Override
-    IntN abs()
-        {
+    IntN abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    IntN pow(IntN! n)
-        {
+    IntN pow(IntN! n) {
         IntN result = 1;
 
-        while (n-- > 0)
-            {
+        while (n-- > 0) {
             result *= this;
-            }
+        }
 
         return result;
-        }
+    }
 
 
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional IntN next()
-        {
+    conditional IntN next() {
         return True, this + 1;
-        }
+    }
 
     @Override
-    conditional IntN prev()
-        {
+    conditional IntN prev() {
         return True, this - 1;
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    (IntN - Unchecked) toChecked()
-        {
+    (IntN - Unchecked) toChecked() {
         return this.is(Unchecked) ? new IntN(bits) : this;
-        }
+    }
 
     @Override
-    @Unchecked IntN toUnchecked()
-        {
+    @Unchecked IntN toUnchecked() {
         return this.is(Unchecked) ? this : new @Unchecked IntN(bits);
-        }
+    }
 
     @Override
     Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
@@ -181,87 +159,75 @@ const IntN
     UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int8.MinValue && this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int16.MinValue && this <= Int16.MaxValue;
         return new Int16(bits[bitLength-16 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int32.MinValue && this <= Int32.MaxValue;
         return new Int32(bits[bitLength-32 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int64.MinValue && this <= Int64.MaxValue;
         return new Int64(bits[bitLength-64 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int128.MinValue && this <= Int128.MaxValue;
         return new Int128(bits[bitLength-128 ..< bitLength]);
-        }
+    }
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return this;
-        }
+    }
 
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt8.MinValue && this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt16.MinValue && this <= UInt16.MaxValue;
         return new UInt16(bits[bitLength-16 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt32.MinValue && this <= UInt32.MaxValue;
         return new UInt32(bits[bitLength-32 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt64.MinValue && this <= UInt64.MaxValue;
         return new UInt64(bits[bitLength-64 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt128.MinValue && this <= UInt128.MaxValue;
         return new UInt128(bits[bitLength-128 ..< bitLength]);
-        }
+    }
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         assert:bounds this >= 0;
         return new UIntN(bits);
-        }
+    }
 
     @Auto
     @Override
@@ -285,10 +251,9 @@ const IntN
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return toIntLiteral().toFloatN();
-        }
+    }
 
     @Auto
     @Override
@@ -304,8 +269,7 @@ const IntN
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toIntLiteral().toDecN();
-        }
     }
+}

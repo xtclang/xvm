@@ -2,8 +2,7 @@
  * Represents the compiled information for a property.
  */
 interface PropertyTemplate
-        extends ComponentTemplate
-    {
+        extends ComponentTemplate {
     /**
      * The TypeTemplate representing the type of this property.
      */
@@ -42,16 +41,13 @@ interface PropertyTemplate
      * @return True iff there is an annotation of the specified name
      * @return the corresponding `AnnotationTemplate` (optional)
      */
-    conditional AnnotationTemplate findAnnotation(String annotationName)
-        {
-        for (AnnotationTemplate annotation : annotations)
-            {
-            if (annotation.template.displayName == annotationName)
-                {
+    conditional AnnotationTemplate findAnnotation(String annotationName) {
+        for (AnnotationTemplate annotation : annotations) {
+            if (annotation.template.displayName == annotationName) {
                 return True, annotation;
-                }
             }
+        }
 
         return False;
-        }
     }
+}

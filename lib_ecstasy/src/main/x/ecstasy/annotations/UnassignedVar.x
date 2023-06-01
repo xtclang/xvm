@@ -6,12 +6,11 @@
  * otherwise occur when a property or variable is not explicitly assigned.
  */
 mixin UnassignedVar<Referent>
-        into Var<Referent>
-    {
+        into Var<Referent> {
+
     @Override
-    Referent get()
-        {
+    Referent get() {
         assert assigned;
         return super();
-        }
     }
+}

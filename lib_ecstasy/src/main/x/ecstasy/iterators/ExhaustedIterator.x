@@ -3,48 +3,41 @@
  */
 const ExhaustedIterator<Element>
         implements Iterator<Element>
-        implements Markable
-    {
+        implements Markable {
+
     @Override
-    conditional Element next()
-        {
+    conditional Element next() {
         return False;
-        }
+    }
 
     @Override
-    Boolean knownDistinct()
-        {
+    Boolean knownDistinct() {
         return True;
-        }
+    }
 
     @Override
-    Boolean knownEmpty()
-        {
+    Boolean knownEmpty() {
         return True;
-        }
+    }
 
     @Override
-    conditional Int knownSize()
-        {
+    conditional Int knownSize() {
         return True, 0;
-        }
+    }
 
 
     // ----- Markable ------------------------------------------------------------------------------
 
     @Override
-    immutable Object mark()
-        {
+    immutable Object mark() {
         return Null;
-        }
-
-    @Override
-    void restore(immutable Object mark, Boolean unmark = False)
-        {
-        }
-
-    @Override
-    void unmark(immutable Object mark)
-        {
-        }
     }
+
+    @Override
+    void restore(immutable Object mark, Boolean unmark = False) {
+    }
+
+    @Override
+    void unmark(immutable Object mark) {
+    }
+}

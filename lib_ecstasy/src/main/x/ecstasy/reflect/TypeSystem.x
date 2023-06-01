@@ -13,27 +13,23 @@ import reflect.TypeTemplate;
  * contain singleton services, then the mutable information represented by those services will be
  * shared across the containers.)
  */
-const TypeSystem
-    {
+const TypeSystem {
     /**
      * Construct a TypeSystem from an array of modules.
      *
      * @param modules  an array of modules
      * @param shared   (optional) an array of indicators of which modules are shared
      */
-    construct(Module[] modules, Boolean[] shared=[])
-        {
+    construct(Module[] modules, Boolean[] shared=[]) {
         assert modules.size > 0;
-        if (!modules.is(immutable))
-            {
+        if (!modules.is(immutable)) {
             modules = modules.freeze();
-            }
+        }
 
         HashSet<Module>         sharedModules         = new HashSet();
         ListMap<String, Module> moduleBySimpleName    = new ListMap();
         ListMap<String, Module> moduleByQualifiedName = new ListMap();
-        Loop: for (Module _module : modules)
-            {
+        Loop: for (Module _module : modules) {
             String  simpleName    = _module.simpleName;
             String  qualifiedName = _module.qualifiedName;
 
@@ -41,34 +37,31 @@ const TypeSystem
             moduleBySimpleName.putIfAbsent(simpleName, _module);
 
             if (shared.size > Loop.count && shared[Loop.count]
-                    || qualifiedName == MackKernel)     // the core Ecstasy module is always shared
-                {
+                    || qualifiedName == MackKernel) {   // the core Ecstasy module is always shared
                 sharedModules.add(_module);
-                }
             }
+        }
 
         // make sure that the core Ecstasy module is always present, and always shared
         Module ecstasy = this:module;
         assert ecstasy.qualifiedName == MackKernel;
-        if (moduleByQualifiedName.putIfAbsent(MackKernel, ecstasy))
-            {
+        if (moduleByQualifiedName.putIfAbsent(MackKernel, ecstasy)) {
             modules = modules + ecstasy;
             sharedModules.add(ecstasy);
-            }
+        }
 
         ListMap<Module, String> modulePaths = new ListMap();
         modulePaths.put(modules[0], "");
-        for ((String path, Module _module) : modules[0].modulesByPath)
-            {
+        for ((String path, Module _module) : modules[0].modulesByPath) {
             modulePaths.put(_module, path);
-            }
+        }
 
         this.modules               = modules;
         this.modulePaths           = modulePaths          .freeze(True);
         this.sharedModules         = sharedModules        .freeze(True);
         this.moduleBySimpleName    = moduleBySimpleName   .freeze(True);
         this.moduleByQualifiedName = moduleByQualifiedName.freeze(True);
-        }
+    }
 
     /**
      * The qualified name of the core Ecstasy module. The core Ecstasy module is notable for two
@@ -92,8 +85,7 @@ const TypeSystem
     /**
      * The implicitly-imported types from the Ecstasy core library.
      */
-    static immutable Map<String, Type> implicitTypes =
-        {
+    static immutable Map<String, Type> implicitTypes = {
         import lang.src.Lexer.Token;
         import lang.src.Parser;
         import lang.src.ast.ImportStatement;
@@ -102,27 +94,22 @@ const TypeSystem
         Parser                parser     = new Parser(source);
         Module                mackModule = this:module;
         ListMap<String, Type> implicits  = new ListMap();
-        NextImport: while (!parser.eof)
-            {
+        NextImport: while (!parser.eof) {
             ImportStatement stmt = parser.parseImportStatement();
             Module?         mod  = mackModule;
             Type            type = &mod.actualType;
-            for (Token name : stmt.names)
-                {
+            for (Token name : stmt.names) {
                 assert type := type.childTypes.get(name.valueText);
-                }
-            if (Class clz := type.fromClass())
-                {
-                implicits.put(stmt.aliasName, clz.PublicType);
-                }
-            else
-                {
-                implicits.put(stmt.aliasName, type);
-                }
             }
+            if (Class clz := type.fromClass()) {
+                implicits.put(stmt.aliasName, clz.PublicType);
+            } else {
+                implicits.put(stmt.aliasName, type);
+            }
+        }
 
         return implicits.makeImmutable();
-        };
+    };
 
     /**
      * The modules that make up the type system.
@@ -153,10 +140,9 @@ const TypeSystem
      * graph, or even on the number of times that any given module is imported into any other given
      * module.)
      */
-    Module primaryModule.get()
-        {
+    Module primaryModule.get() {
         return modules[0];
-        }
+    }
 
     /**
      * A look-up of modules in the type system, by their qualified names, in the same order that
@@ -186,16 +172,14 @@ const TypeSystem
      *
      * @throws InvalidType  if a type exception occurs and `hideExceptions` is not specified
      */
-    conditional Class classForName(String name, Boolean hideExceptions = False)
-        {
+    conditional Class classForName(String name, Boolean hideExceptions = False) {
         // delegate to the typeForName() implementation
-        if (Type type := typeForName(name, hideExceptions))
-            {
+        if (Type type := typeForName(name, hideExceptions)) {
             return type.fromClass();
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Obtain a [Type] that exists within this `TypeSystem`, based on its type string.
@@ -209,27 +193,22 @@ const TypeSystem
      *
      * @throws InvalidType  if a type exception occurs and `hideExceptions` is not specified
      */
-    conditional Type typeForName(String name, Boolean hideExceptions = False)
-        {
-        if (name == "")
-            {
+    conditional Type typeForName(String name, Boolean hideExceptions = False) {
+        if (name == "") {
             return True, &primaryModule.actualType;
+        }
+
+        if (CacheEntry entry ?= lookupCache[name]) {
+            if (Type type ?= entry.type) {
+                return True, type;
             }
 
-        if (CacheEntry entry ?= lookupCache[name])
-            {
-            if (Type type ?= entry.type)
-                {
-                return True, type;
-                }
-
-            if (!hideExceptions, String message ?= entry.failure)
-                {
+            if (!hideExceptions, String message ?= entry.failure) {
                 throw new InvalidType(message);
-                }
+            }
 
             return False;
-            }
+        }
 
         import lang.src.Parser;
         import lang.src.ast.TypeExpression;
@@ -238,53 +217,41 @@ const TypeSystem
         Exception?     exception = Null;
         String?        failure   = Null;
         TypeExpression typeExpr;
-        try
-            {
+        try {
             typeExpr = parser.parseTypeExpression();
 
             // if the parser left something unparsed, then the type name is not valid
-            if (parser.eof)
-                {
-                if (Type result := typeExpr.resolveType(this))
-                    {
+            if (parser.eof) {
+                if (Type result := typeExpr.resolveType(this)) {
                     lookupCache[name] = new CacheEntry(result);
                     return True, result;
-                    }
                 }
-            else
-                {
+            } else {
                 failure = $"Type name contains unparsable element(s): {name.quoted()}";
-                }
             }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             exception = e;
-            }
+        }
 
-        if (failure == Null && exception != Null)
-            {
+        if (failure == Null && exception != Null) {
             failure = $"Type name contains unparsable element(s): {name.quoted()}";
-            if (exception.text == Null)
-                {
+            if (exception.text == Null) {
                 failure += &exception.actualClass.name;
-                }
-            else
-                {
+            } else {
                 failure += ": " + exception.text;
-                }
             }
+        }
 
         lookupCache[name] = new CacheEntry(failure = failure);
 
-        if (!hideExceptions && failure != Null)
-            {
+        if (!hideExceptions && failure != Null) {
             throw exception.is(InvalidType)
                     ? exception
                     : new InvalidType(failure, cause = exception);
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Obtain a [Type] based on a name specified in the implicitly-imported types from the Ecstasy
@@ -295,36 +262,31 @@ const TypeSystem
      * @return True iff the name identifies a `Type` that is implicitly defined
      * @return (conditional) the specified `Type`
      */
-    conditional Type typeForImplicitName(String name)
-        {
+    conditional Type typeForImplicitName(String name) {
         return implicitTypes.get(name);
-        }
+    }
 
     /**
      * A lazily instantiated cache for looking up type information by name.
      */
-    private @Lazy LookupCache lookupCache.calc()
-        {
+    private @Lazy LookupCache lookupCache.calc() {
         return new LookupCache();
-        }
+    }
 
     /**
      * A lightweight caching service implementation for looking up type information by name.
      */
-    private service LookupCache
-        {
+    private service LookupCache {
         private HashMap<String, CacheEntry> cache = new HashMap();
 
-        @Op("[]") CacheEntry? getElement(String typeName)
-            {
+        @Op("[]") CacheEntry? getElement(String typeName) {
             return cache.getOrNull(typeName);
-            }
-
-        @Op("[]=") void setElement(String typeName, CacheEntry entry)
-            {
-            cache.putIfAbsent(typeName, entry);
-            }
         }
+
+        @Op("[]=") void setElement(String typeName, CacheEntry entry) {
+            cache.putIfAbsent(typeName, entry);
+        }
+    }
 
     /**
      * A representation of a result from looking up a type by name.
@@ -340,58 +302,48 @@ const TypeSystem
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         Int size = "TypeSystem{ (primary)}".size + 2 * (moduleByQualifiedName.size - 1);
-        Modules: for (Module _module : modules)
-            {
+        Modules: for (Module _module : modules) {
             size += _module.qualifiedName.size;
 
-            if (String path := modulePaths.get(_module), path.size > 0)
-                {
+            if (String path := modulePaths.get(_module), path.size > 0) {
                 size += 6 + path.size;
-                }
-
-            if (sharedModules.contains(_module))
-                {
-                size += " (shared)".size;
-                }
             }
-        return size;
+
+            if (sharedModules.contains(_module)) {
+                size += " (shared)".size;
+            }
         }
+        return size;
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         buf.addAll("TypeSystem{");
 
-        Modules: for (Module _module : modules)
-            {
-            if (!Modules.first)
-                {
+        Modules: for (Module _module : modules) {
+            if (!Modules.first) {
                 buf.addAll(", ");
-                }
+            }
 
             buf.addAll(_module.qualifiedName);
 
-            if (String path := modulePaths.get(_module), path.size > 0)
-                {
+            if (String path := modulePaths.get(_module), path.size > 0) {
                 buf.addAll(" at \"")
                    .addAll(path)
                    .add('\"');
-                }
-
-            if (Modules.first)
-                {
-                buf.addAll(" (primary)");
-                }
-
-            if (sharedModules.contains(_module))
-                {
-                buf.addAll(" (shared)");
-                }
             }
 
-        return buf.add('}');
+            if (Modules.first) {
+                buf.addAll(" (primary)");
+            }
+
+            if (sharedModules.contains(_module)) {
+                buf.addAll(" (shared)");
+            }
         }
+
+        return buf.add('}');
     }
+}

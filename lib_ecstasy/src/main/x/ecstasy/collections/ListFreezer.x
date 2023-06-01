@@ -5,22 +5,19 @@
  */
 mixin ListFreezer<Element extends Shareable>
         into List<Element> + CopyableCollection<Element>
-        implements Freezable
-    {
+        implements Freezable {
+
     @Override
-    immutable ListFreezer freeze(Boolean inPlace = False)
-        {
+    immutable ListFreezer freeze(Boolean inPlace = False) {
         // don't freeze the list if it is already frozen
-        if (this.is(immutable ListFreezer))
-            {
+        if (this.is(immutable ListFreezer)) {
             return this;
-            }
+        }
 
         // if the only thing not frozen is the list itself, then just make it immutable
-        if (inPlace && all(e -> e.is(immutable | service)))
-            {
+        if (inPlace && all(e -> e.is(immutable | service))) {
             return this.makeImmutable();
-            }
+        }
 
         // inPlace  inPlace  indexed
         // request  List     List     description
@@ -37,34 +34,26 @@ mixin ListFreezer<Element extends Shareable>
         //    Y        Y        N     easy and efficient: freeze element in place using a cursor
         //    Y        Y        Y     easy and efficient: freeze the elements in place using []
 
-        if (inPlace && this.inPlace)
-            {
-            if (indexed)
-                {
-                for (Int i = 0, Int c = size; i < c; ++i)
-                    {
-                    if (Element+Freezable e := requiresFreeze(this[i]))
-                        {
+        if (inPlace && this.inPlace) {
+            if (indexed) {
+                for (Int i = 0, Int c = size; i < c; ++i) {
+                    if (Element+Freezable e := requiresFreeze(this[i])) {
                         this[i] = e.freeze();
-                        }
                     }
                 }
-            else
-                {
+            } else {
                 Cursor cur = cursor();
-                while (cur.exists)
-                    {
-                    if (Element+Freezable e := requiresFreeze(cur.value))
-                        {
+                while (cur.exists) {
+                    if (Element+Freezable e := requiresFreeze(cur.value)) {
                         cur.value = e.freeze();
-                        }
-                    cur.advance();
                     }
+                    cur.advance();
                 }
-            return makeImmutable();
             }
+            return makeImmutable();
+        }
 
         // otherwise, just duplicate the list, freezing each item as necessary
         return duplicate(e -> frozen(e)).makeImmutable();
-        }
     }
+}

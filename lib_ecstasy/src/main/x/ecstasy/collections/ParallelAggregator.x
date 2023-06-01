@@ -28,8 +28,7 @@
  *    `Partial` values into the `Accumulator` and reduce that into the `Result` value.
  */
 interface ParallelAggregator<Element, Partial, Result>
-        extends Aggregator<Element, Result>
-    {
+        extends Aggregator<Element, Result> {
     /**
      * A `Aggregator` that operates on `Element` values, and can be used across multiple Ecstasy
      * services concurrently, each operating on a "slice" of the data.
@@ -57,19 +56,17 @@ interface ParallelAggregator<Element, Partial, Result>
     @RO Aggregator<Partial, Result> finalAggregator;
 
     @Override
-    Accumulator init()
-        {
+    Accumulator init() {
         // the default init() and reduce() implementations should be optimized for non-parallel
         // aggregation, if appropriate, in order to reduce the number of objects and steps
         return elementAggregator.init();
-        }
+    }
 
     @Override
-    Result reduce(Accumulator accumulator)
-        {
+    Result reduce(Accumulator accumulator) {
         // the default init() and reduce() implementations should be optimized for non-parallel
         // aggregation, if appropriate, in order to reduce the number of objects and steps
         Partial intermediateResult = elementAggregator.reduce(accumulator);
         return finalAggregator.reduce(finalAggregator.init().add(intermediateResult));
-        }
     }
+}

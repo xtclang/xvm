@@ -8,8 +8,7 @@
  *
  * The interface is designed so that only one method, [add(Element)], needs to be implemented.
  */
-interface Appender<Element>
-    {
+interface Appender<Element> {
     /**
      * Append the specified value.
      *
@@ -27,10 +26,9 @@ interface Appender<Element>
      * @return this
      */
     @Concurrent
-    Appender addAll(Iterable<Element> iterable)
-        {
+    Appender addAll(Iterable<Element> iterable) {
         return ensureCapacity(iterable.size).addAll(iterable.iterator());
-        }
+    }
 
     /**
      * Add the items from the passed Iterator to this structure.
@@ -40,12 +38,11 @@ interface Appender<Element>
      * @return this
      */
     @Concurrent
-    Appender addAll(Iterator<Element> iter)
-        {
+    Appender addAll(Iterator<Element> iter) {
         var result = this;
         iter.forEach(e -> {result = result.add(e);});
         return result;
-        }
+    }
 
     /**
      * Indicate to the Appender that a certain number of additional elements are likely to be
@@ -60,8 +57,7 @@ interface Appender<Element>
      * @return this
      */
     @Concurrent
-    Appender ensureCapacity(Int count)
-        {
+    Appender ensureCapacity(Int count) {
         return this;
-        }
     }
+}

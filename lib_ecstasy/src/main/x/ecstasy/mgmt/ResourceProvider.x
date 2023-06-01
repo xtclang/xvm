@@ -1,8 +1,7 @@
 /**
  * Represents the source of injected resources.
  */
-interface ResourceProvider
-    {
+interface ResourceProvider {
     import annotations.InjectedRef.Options;
 
     /**
@@ -22,4 +21,4 @@ interface ResourceProvider
      * exception, possibly causing the termination of the container.
      */
     Supplier getResource(Type type, String name);
-    }
+}

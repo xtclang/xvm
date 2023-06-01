@@ -9,31 +9,23 @@ import src.Lexer.Token;
  *     String?
  */
 const NullableTypeExpression(TypeExpression type, Token suffix)
-        extends SuffixTypeExpression(type, suffix)
-    {
-    @Override
-    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
-        {
-        if (Type type := this.type.resolveType(typeSystem, hideExceptions))
-            {
-            if (type.isA(Nullable))
-                {
-                return True, type;
-                }
+        extends SuffixTypeExpression(type, suffix) {
 
-            try
-                {
-                return True, Nullable | type;
-                }
-            catch (InvalidType e)
-                {
-                if (!hideExceptions)
-                    {
-                    throw e;
-                    }
-                }
+    @Override
+    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False) {
+        if (Type type := this.type.resolveType(typeSystem, hideExceptions)) {
+            if (type.isA(Nullable)) {
+                return True, type;
             }
 
-        return False;
+            try {
+                return True, Nullable | type;
+            } catch (InvalidType e) {
+                if (!hideExceptions) {
+                    throw e;
+                }
+            }
         }
+        return False;
     }
+}

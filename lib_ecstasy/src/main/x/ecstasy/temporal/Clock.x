@@ -14,8 +14,7 @@
  *
  * To measure elapsed time, use a Timer.
  */
-interface Clock
-    {
+interface Clock {
     /**
      * The instantaneous Time value of the Clock.
      */
@@ -58,8 +57,7 @@ interface Clock
      * Invoking the returned #Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
      * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
      */
-    Cancellable schedule(Duration delay, Alarm alarm)
-        {
+    Cancellable schedule(Duration delay, Alarm alarm) {
         return schedule(now+delay, alarm);
-        }
     }
+}

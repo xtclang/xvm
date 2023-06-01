@@ -5,8 +5,7 @@
 interface ClassTemplate
         extends ComponentTemplate
         extends Composition
-        extends Stringable
-    {
+        extends Stringable {
     // ----- local types ---------------------------------------------------------------------------
 
     /**
@@ -19,20 +18,16 @@ interface ClassTemplate
      * that acts as a factory for Class instances, based on the values of the formal type parameters
      * for the Class.
      */
-    static interface Composition
-        {
+    static interface Composition {
         /**
          * The underlying ClassTemplate representing the basis of the class composition.
          */
-        @RO ClassTemplate baseTemplate.get()
-            {
+        @RO ClassTemplate baseTemplate.get() {
             Composition base = this;
-            while ((AnnotationTemplate annotation, base) := base.deannotate())
-                {
-                }
+            while ((AnnotationTemplate annotation, base) := base.deannotate()) {}
             assert base.is(ClassTemplate);
             return base;
-            }
+        }
 
         /**
          * The TypeTemplate representing the type of this composition.
@@ -42,8 +37,7 @@ interface ClassTemplate
         /**
          * An `Action` describes the manner in which one step of the class composition was achieved.
          */
-        enum Action
-            {
+        enum Action {
             /**
              * AnnotatedBy - The specified `mixin` is applied "around" a class (preceding the
              * members defined on the underlying `ClassTemplate` for this composition) in order to
@@ -83,7 +77,7 @@ interface ClassTemplate
              * Imports - The `ingredient` specifies a `package` type that is a module import.
              */
             Imports,
-            }
+        }
 
         /**
          * A `Contribution` represents a single step in a compositional recipe. A class is composed
@@ -106,88 +100,78 @@ interface ClassTemplate
          *
          * @return True iff this Composition extends the specified class
          */
-        Boolean extends(Composition! composition)
-            {
+        Boolean extends(Composition! composition) {
             Format thisFormat = baseTemplate.format;
             Format thatFormat = composition.baseTemplate.format;
 
             // interfaces do not extend and cannot be extended
-            if (thisFormat == Interface || thatFormat == Interface)
-                {
+            if (thisFormat == Interface || thatFormat == Interface) {
                 return False;
-                }
+            }
 
-            if (&this == &composition)
-                {
+            if (&this == &composition) {
                 return True;
-                }
+            }
 
             // unwrap any annotations from the composition that we are testing extension of
-            while ((AnnotationTemplate annotation, composition) := composition.deannotate())
-                {
-                if (!this.incorporates(annotation.template))
-                    {
+            while ((AnnotationTemplate annotation, composition) := composition.deannotate()) {
+                if (!this.incorporates(annotation.template)) {
                     return False;
-                    }
-
-                if (&this == &composition)
-                    {
-                    return True;
-                    }
                 }
+
+                if (&this == &composition) {
+                    return True;
+                }
+            }
 
             // one can only "extend" a class
-            if (!composition.is(ClassTemplate))
-                {
+            if (!composition.is(ClassTemplate)) {
                 return False;
-                }
+            }
 
             // test whether it is possible for this to extend whatever the class template represents
-            switch (thisFormat, thatFormat)
-                {
-                // any class can extend a class
-                case (Class    , Class):
-                case (Const    , Class):
-                case (Enum     , Class):
-                case (EnumValue, Class):
-                case (Service  , Class):
-                case (Package  , Class):
-                case (Module   , Class):
+            switch (thisFormat, thatFormat) {
+            // any class can extend a class
+            case (Class    , Class):
+            case (Const    , Class):
+            case (Enum     , Class):
+            case (EnumValue, Class):
+            case (Service  , Class):
+            case (Package  , Class):
+            case (Module   , Class):
 
                 // a const (including Enum, EnumValue, Package, Module) can extend a const
-                case (Const    , Const):
-                case (Enum     , Const):
-                case (EnumValue, Const):
-                case (Package  , Const):
-                case (Module   , Const):
+            case (Const    , Const):
+            case (Enum     , Const):
+            case (EnumValue, Const):
+            case (Package  , Const):
+            case (Module   , Const):
 
                 // only an EnumValue can extend an enum
-                case (EnumValue, Enum):
+            case (EnumValue, Enum):
 
                 // only a mixin can extend a mixin
-                case (Mixin, Mixin):
+            case (Mixin, Mixin):
 
                 // only a service can extend a service
-                case (Service, Service):
-                    break;
+            case (Service, Service):
+                break;
 
-                default:
-                    return False;
-                }
+            default:
+                return False;
+            }
 
             // search through the composition of this class to find the specified super class
-            for (Contribution contrib : baseTemplate.contribs)
-                {
+            for (Contribution contrib : baseTemplate.contribs) {
                 if (contrib.action == Extends,
-                    Composition compositionSuper := contrib.ingredient.fromClass(),
-                    compositionSuper.extends(composition))
-                    {
+                        Composition compositionSuper := contrib.ingredient.fromClass(),
+                        compositionSuper.extends(composition)) {
                     return True;
-                    }
                 }
+            }
 
             return False;
-            }
+        }
 
         /**
          * Determine if this composition incorporates (or is) the specified mixin.
@@ -197,86 +181,69 @@ interface ClassTemplate
          * @return True iff this Composition incorporates the specified mixin
          * @return (conditional) True iff the incorporation is conditional
          */
-        conditional Boolean incorporates(Composition! composition)
-            {
+        conditional Boolean incorporates(Composition! composition) {
             Format  thisFormat   = baseTemplate.format;
             Format  thatFormat   = composition.baseTemplate.format;
             Boolean fConditional = False;
 
             // interfaces do not incorporate and cannot be incorporated; only a mixin can be
             // incorporated
-            if (thisFormat == Interface || thatFormat != Mixin)
-                {
+            if (thisFormat == Interface || thatFormat != Mixin) {
                 return False;
-                }
+            }
 
-            if (&this == &composition)
-                {
+            if (&this == &composition) {
                 return True, False;
-                }
+            }
 
             // unwrap any annotations from the composition that we are testing extension of
             Composition baseThat = composition;
-            while ((AnnotationTemplate annoThat, baseThat) := baseThat.deannotate())
-                {
-                if (Boolean fCond := this.incorporates(annoThat.template))
-                    {
+            while ((AnnotationTemplate annoThat, baseThat) := baseThat.deannotate()) {
+                if (Boolean fCond := this.incorporates(annoThat.template)) {
                     fConditional |= fCond;
-                    }
-                else
-                    {
+                } else {
                     return False;
-                    }
+                }
 
-                if (&this == &baseThat)
-                    {
+                if (&this == &baseThat) {
                     return True, fConditional;
-                    }
                 }
+            }
 
-            if (!baseThat.is(ClassTemplate))
-                {
+            if (!baseThat.is(ClassTemplate)) {
                 return False;
-                }
+            }
 
             Composition baseThis = this;
-            while ((AnnotationTemplate annoThis, baseThis) := baseThis.deannotate())
-                {
-                if (Boolean fCond := annoThis.template.incorporates(baseThat))
-                    {
+            while ((AnnotationTemplate annoThis, baseThis) := baseThis.deannotate()) {
+                if (Boolean fCond := annoThis.template.incorporates(baseThat)) {
                     fConditional |= fCond;
-                    }
-                else
-                    {
+                } else {
                     return False;
-                    }
+                }
 
-                if (&baseThis == &baseThat)
-                    {
+                if (&baseThis == &baseThat) {
                     return True, fConditional;
-                    }
                 }
+            }
 
-            if (!baseThis.is(ClassTemplate))
-                {
+            if (!baseThis.is(ClassTemplate)) {
                 return False;
-                }
+            }
 
             // search through the composition of this class to find the specified mixin
-            for (Contribution contrib : baseThis.contribs)
-                {
+            for (Contribution contrib : baseThis.contribs) {
                 if (contrib.action != AnnotatedBy, // avoid a infinite recursion
                     Composition comp  := contrib.ingredient.fromClass(),
-                    Boolean     fCond := comp.incorporates(baseThat))
-                    {
+                    Boolean     fCond := comp.incorporates(baseThat)) {
                     fConditional |= fCond |
                             (contrib.action == Incorporates && contrib.constraints != Null);
                     return True, fConditional;
-                    }
                 }
+            }
 
             return False;
-            }
+        }
 
         /**
          * Determine if this composition is a mixin that applies to the specified type.
@@ -285,13 +252,11 @@ interface ClassTemplate
          *
          * @return True iff this mixin applies to the specified type
          */
-        Boolean mixesInto(TypeTemplate type)
-            {
+        Boolean mixesInto(TypeTemplate type) {
             // only a mixin can be "into"
-            if (baseTemplate.format != Mixin)
-                {
+            if (baseTemplate.format != Mixin) {
                 return False;
-                }
+            }
 
             assert TypeTemplate intoType := findInto(this.as(ClassTemplate)) as
                     "Mixin {displayName} doesn't have an 'into' contribution";
@@ -301,22 +266,17 @@ interface ClassTemplate
             /**
              * @return the "into" ingredient for the specified template
              */
-            static conditional TypeTemplate findInto(ClassTemplate template)
-                {
-                for (Contribution contrib : template.contribs)
-                    {
-                    if (contrib.action == MixesInto)
-                        {
+            static conditional TypeTemplate findInto(ClassTemplate template) {
+                for (Contribution contrib : template.contribs) {
+                    if (contrib.action == MixesInto) {
                         return True, contrib.ingredient;
-                        }
                     }
-
-                if (ClassTemplate templateSuper := template.hasSuper())
-                    {
-                    return findInto(templateSuper);
-                    }
-                return False;
                 }
+                if (ClassTemplate templateSuper := template.hasSuper()) {
+                    return findInto(templateSuper);
+                }
+                return False;
+            }
 
             /**
              * Given some `mixin M into intoType`, determine if that mixin can be legally mixed into
@@ -324,30 +284,28 @@ interface ClassTemplate
              *
              * @return True iff the mixin can be legally mixed into the specified `testType`
              */
-            static Boolean isInto(TypeTemplate intoType, TypeTemplate testType)
-                {
-                switch (intoType.form)
-                    {
-                    case Class:
-                        return testType.isA(intoType);
+            static Boolean isInto(TypeTemplate intoType, TypeTemplate testType) {
+                switch (intoType.form) {
+                case Class:
+                    return testType.isA(intoType);
 
-                    case Union:
-                        assert (TypeTemplate t1, TypeTemplate t2) := intoType.relational();
-                        return isInto(t1, testType) || isInto(t2, testType);
+                case Union:
+                    assert (TypeTemplate t1, TypeTemplate t2) := intoType.relational();
+                    return isInto(t1, testType) || isInto(t2, testType);
 
-                    case Immutable:
-                    case Access:
-                        assert TypeTemplate t1 := intoType.modifying();
-                        return isInto(t1, testType);
+                case Immutable:
+                case Access:
+                    assert TypeTemplate t1 := intoType.modifying();
+                    return isInto(t1, testType);
 
-                    case Typedef:
-                        return isInto(intoType.underlyingTypes[0], testType);
+                case Typedef:
+                    return isInto(intoType.underlyingTypes[0], testType);
 
-                    default:
-                        return False;
-                    }
+                default:
+                    return False;
                 }
             }
+        }
 
         /**
          * Determine if this composition implements (or is) the specified interface.
@@ -364,85 +322,72 @@ interface ClassTemplate
          *
          * @return True iff this Composition implements the specified interface
          */
-        Boolean implements(Composition! composition, Boolean allowInto = True)
-            {
-            if (&this == &composition)
-                {
+        Boolean implements(Composition! composition, Boolean allowInto = True) {
+            if (&this == &composition) {
                 return True;
-                }
+            }
 
             // one can only "implement" an interface
             // REVIEW implication of the possibility of an @Annotated interface
-            if (!(composition.is(ClassTemplate) && composition.format == Interface))
-                {
+            if (!(composition.is(ClassTemplate) && composition.format == Interface)) {
                 return False;
-                }
+            }
 
             // search through the composition of this class to find the specified interface
-            for (Contribution contrib : contribs)
-                {
+            for (Contribution contrib : contribs) {
                 Boolean isInto = contrib.action == MixesInto;
-                if (isInto && !allowInto)
-                    {
+                if (isInto && !allowInto) {
                     continue;
-                    }
+                }
 
                 if (Composition comp := contrib.ingredient.fromClass(),
-                    comp.implements(composition, allowInto & !isInto))
-                    {
+                    comp.implements(composition, allowInto & !isInto)) {
                     return True;
-                    }
                 }
+            }
 
-            if (this.is(ClassTemplate))
-                {
-                switch (format)
-                    {
-                    case Const:
-                        // implicitly implements Const
-                        if (Const.composition.implements(composition))
-                            {
-                            return True;
-                            }
-                        break;
-
-                    case Enum:
-                    case EnumValue:
-                        // implicitly implements Enum
-                        if (Enum.composition.implements(composition))
-                            {
-                            return True;
-                            }
-                        break;
-
-                    case Service:
-                        // implicitly implements Service
-                        if (Service.composition.implements(composition))
-                            {
-                            return True;
-                            }
-                        break;
-
-                    case Package:
-                        // implicitly implements Package
-                        if (Package.composition.implements(composition))
-                            {
-                            return True;
-                            }
-                        break;
-
-                    case Module:
-                        // implicitly implements Module
-                        if (Module.composition.implements(composition))
-                            {
-                            return True;
-                            }
-                        break;
+            if (this.is(ClassTemplate)) {
+                switch (format) {
+                case Const:
+                    // implicitly implements Const
+                    if (Const.composition.implements(composition)) {
+                        return True;
                     }
+                    break;
+
+                case Enum:
+                case EnumValue:
+                    // implicitly implements Enum
+                    if (Enum.composition.implements(composition)) {
+                        return True;
+                    }
+                    break;
+
+                case Service:
+                    // implicitly implements Service
+                    if (Service.composition.implements(composition)) {
+                        return True;
+                    }
+                    break;
+
+                case Package:
+                    // implicitly implements Package
+                    if (Package.composition.implements(composition)) {
+                        return True;
+                    }
+                    break;
+
+                case Module:
+                    // implicitly implements Module
+                    if (Module.composition.implements(composition)) {
+                        return True;
+                    }
+                    break;
                 }
+            }
 
             return False;
-            }
+        }
 
         /**
          * Determine if this composition "derives from" (or is) the specified composition.
@@ -452,13 +397,12 @@ interface ClassTemplate
          * @return True iff this (or something that this derives from) extends the specified class,
          *         incorporates the specified mixin, or implements the specified interface
          */
-        Boolean derivesFrom(Composition! composition)
-            {
+        Boolean derivesFrom(Composition! composition) {
             return &this == &composition
                     || this.extends(composition)
                     || this.incorporates(composition)
                     || this.implements(composition);
-            }
+        }
 
         /**
          * Determine if this composition has a super-class.
@@ -473,24 +417,20 @@ interface ClassTemplate
          * @return True iff this Composition has a super class
          * @return (conditional) the ClassTemplate of the super class
          */
-        conditional ClassTemplate hasSuper()
-            {
-            if (baseTemplate.format == Interface)
-                {
+        conditional ClassTemplate hasSuper() {
+            if (baseTemplate.format == Interface) {
                 return False;
-                }
+            }
 
-            for (Contribution contrib : contribs)
-                {
-                if (contrib.action == Extends)
-                    {
+            for (Contribution contrib : contribs) {
+                if (contrib.action == Extends) {
                     assert Composition compositionSuper := contrib.ingredient.fromClass();
                     return True, compositionSuper.as(ClassTemplate);
-                    }
                 }
+            }
 
             return False;
-            }
+        }
 
         /**
          * Produce a new composition that represents an annotation of an existing composition.
@@ -499,10 +439,9 @@ interface ClassTemplate
          *
          * @return the newly annotated composition
          */
-        Composition! annotate(AnnotationTemplate annotation)
-            {
+        Composition! annotate(AnnotationTemplate annotation) {
             return new AnnotatingComposition(annotation, this);
-            }
+        }
 
         /**
          * Determine if this composition is the result of annotating an existing composition, and if
@@ -520,12 +459,9 @@ interface ClassTemplate
          * @return True iff there is an annotation of the specified name
          * @return the corresponding `AnnotationTemplate` (optional)
          */
-        conditional AnnotationTemplate findAnnotation(String annotationName)
-            {
-            for (Contribution contrib : contribs)
-                {
-                if (contrib.action == AnnotatedBy)
-                    {
+        conditional AnnotationTemplate findAnnotation(String annotationName) {
+            for (Contribution contrib : contribs) {
+                if (contrib.action == AnnotatedBy) {
                     assert Composition composition := contrib.ingredient.fromClass();
                     assert composition.is(AnnotatingComposition);
 
@@ -534,38 +470,31 @@ interface ClassTemplate
 
                     // if the mixin is not of the requested name, check if it extends one that is
                     if (baseTemplate.displayName == annotationName ||
-                            extendsMixin(baseTemplate, annotationName))
-                        {
+                            extendsMixin(baseTemplate, annotationName)) {
                         return True, annoTemplate;
-                        }
                     }
                 }
-
+            }
             return False;
 
             /**
              * @return True iff the specified mixin template extends a mixin with the specified name
              */
-            static Boolean extendsMixin(ClassTemplate template, String mixinName)
-                {
-                for (Contribution contrib : template.contribs)
-                    {
-                    if (contrib.action == Extends)
-                        {
+            static Boolean extendsMixin(ClassTemplate template, String mixinName) {
+                for (Contribution contrib : template.contribs) {
+                    if (contrib.action == Extends) {
                         assert Composition compositionSuper := contrib.ingredient.fromClass();
                         assert compositionSuper.is(ClassTemplate);
-                        if (compositionSuper.format == Mixin)
-                            {
+                        if (compositionSuper.format == Mixin) {
                             return compositionSuper.displayName == mixinName
                                 || extendsMixin(compositionSuper, mixinName);
-                            }
-                        break;
                         }
+                        break;
                     }
-
-                return False;
                 }
+                return False;
             }
+        }
 
         /**
          * Obtain the Class represented by the combination of this composition and the specified
@@ -580,41 +509,35 @@ interface ClassTemplate
          * @throws InvalidClass iff the result of the composition and/or formal types would produce
          *         a class that violates the verifier rules
          */
-        Class!<> ensureClass(Type[] actualTypes = [])
-            {
+        Class!<> ensureClass(Type[] actualTypes = []) {
             TODO("This Composition has not been loaded into a container");
-            }
         }
+    }
 
     /**
      * Represents an annotated form of an existing composition.
      */
     static const AnnotatingComposition(AnnotationTemplate annotation, Composition composition)
-            implements Composition
-        {
-        assert()
-            {
+            implements Composition {
+        assert() {
             assert composition.is(ClassTemplate) || composition.is(AnnotatingComposition);
-            }
-
-        @Override
-        TypeTemplate type.get()
-            {
-            return composition.type.annotate(annotation);
-            }
-
-        @Override
-        Contribution[] contribs.get()
-            {
-            return [];
-            }
-
-        @Override
-        conditional (AnnotationTemplate, Composition!) deannotate()
-            {
-            return True, annotation, composition;
-            }
         }
+
+        @Override
+        TypeTemplate type.get() {
+            return composition.type.annotate(annotation);
+        }
+
+        @Override
+        Contribution[] contribs.get() {
+            return [];
+        }
+
+        @Override
+        conditional (AnnotationTemplate, Composition!) deannotate() {
+            return True, annotation, composition;
+        }
+    }
 
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
@@ -631,12 +554,11 @@ interface ClassTemplate
     // ----- attributes ----------------------------------------------------------------------------
 
     @Override
-    @RO ModuleTemplate containingModule.get()
-        {
+    @RO ModuleTemplate containingModule.get() {
         ModuleTemplate? template = super();
         assert template != Null;
         return template;
-        }
+    }
 
     /**
      * Identically to [Class.implicitName], a name by which the Class represented by this
@@ -649,22 +571,19 @@ interface ClassTemplate
      * while still being sufficiently descriptive that it would be accepted by the Ecstasy compiler
      * within the context of the module that this ClassTemplate was resolved within.
      */
-    @RO String displayName.get()
-        {
+    @RO String displayName.get() {
         String? alias = implicitName;
-        if (alias != Null)
-            {
+        if (alias != Null) {
             return alias;
-            }
+        }
 
-        if (String relative := pathWithin())
-            {
+        if (String relative := pathWithin()) {
             return relative;
-            }
+        }
 
         // use absolute path
         return path;
-        }
+    }
 
     /**
      * Determine the path that identifies this ClassTemplate within the main module of its
@@ -675,31 +594,25 @@ interface ClassTemplate
      * @return (optional) the qualified path to the class from the main module of the enclosing
      *         FileTemplate
      */
-    conditional String pathWithin()
-        {
+    conditional String pathWithin() {
         String path = this.path;
-        if (Int colon := path.indexOf(':'))
-            {
+        if (Int colon := path.indexOf(':')) {
             String moduleName = path[0 ..< colon];
             String relPath    = path.substring(colon+1);
 
             ModuleTemplate mainModule = containingFile.mainModule;
-            if (moduleName == mainModule.qualifiedName)
-                {
+            if (moduleName == mainModule.qualifiedName) {
                 return True, relPath;
-                }
-
-            for ((String name, String qualifiedName) : mainModule.moduleNamesByPath)
-                {
-                if (qualifiedName == moduleName)
-                    {
-                    return True, name + '.' + relPath;
-                    }
-                }
             }
 
-        return False;
+            for ((String name, String qualifiedName) : mainModule.moduleNamesByPath) {
+                if (qualifiedName == moduleName) {
+                    return True, name + '.' + relPath;
+                }
+            }
         }
+        return False;
+    }
 
      /**
      * Determine if the class is an inner class, which must be instantiated virtually.
@@ -768,49 +681,39 @@ interface ClassTemplate
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         Int size = 0;
 
         size += displayName.size;
 
         TypeParameter[] params = typeParams;
-        if (!params.empty)
-            {
+        if (!params.empty) {
             size += 2;
-            Params: for (TypeParameter type : params)
-                {
-                if (!Params.first)
-                    {
+            Params: for (TypeParameter type : params) {
+                if (!Params.first) {
                     size += 2;
-                    }
-                size += type.estimateStringLength();
                 }
+                size += type.estimateStringLength();
             }
-
-        return size;
         }
+        return size;
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         displayName.appendTo(buf);
 
         TypeParameter[] params = typeParams;
-        if (!params.empty)
-            {
+        if (!params.empty) {
             buf.add('<');
-            Params: for (TypeParameter param : params)
-                {
-                if (!Params.first)
-                    {
+            Params: for (TypeParameter param : params) {
+                if (!Params.first) {
                     ", ".appendTo(buf);
-                    }
-                param.type.appendTo(buf);
                 }
-            buf.add('>');
+                param.type.appendTo(buf);
             }
-
-        return buf;
+            buf.add('>');
         }
+        return buf;
     }
+}

@@ -7,25 +7,21 @@ import Lexer.Token;
  * Represents any type composed of a suffix on another type.
  */
 @Abstract const SuffixTypeExpression(TypeExpression type, Token suffix)
-        extends TypeExpression
-    {
+        extends TypeExpression {
     @Override
-    TextPosition start.get()
-        {
+    TextPosition start.get() {
         return type.start;
-        }
+    }
 
     @Override
-    TextPosition end.get()
-        {
+    TextPosition end.get() {
         return suffix.end;
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         return type.is(RelationalTypeExpression)
                 ? $"({type}){suffix}"
                 : $"{type}{suffix}";
-        }
     }
+}

@@ -4,8 +4,7 @@
  */
 class ListSet<Element>
         extends MapSet<Element>
-        implements Replicable
-    {
+        implements Replicable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -14,25 +13,22 @@ class ListSet<Element>
      * @param initCapacity  (optional) initial capacity of the ListSet
      */
     @Override
-    construct(Int initCapacity = 0)
-        {
+    construct(Int initCapacity = 0) {
         construct MapSet(new ListMap(initCapacity));
-        }
+    }
 
     /**
      * Construct a ListSet that contains an initial set of values.
      *
      * @param values  initial values to store in the ListSet
      */
-    construct(Iterable<Element> values)
-        {
+    construct(Iterable<Element> values) {
         ListMap<Element, Nullable> map = new ListMap(values.size);
-        for (Element value : values)
-            {
+        for (Element value : values) {
             map.put(value, Null);
-            }
-        construct MapSet(map);
         }
+        construct MapSet(map);
+    }
 
     /**
      * [Duplicable] constructor.
@@ -40,8 +36,7 @@ class ListSet<Element>
      * @param that  the [Duplicable] `MapSet` object to duplicate from
      */
     @Override
-    construct(ListSet<Element> that)
-        {
+    construct(ListSet<Element> that) {
         super(that);
-        }
     }
+}

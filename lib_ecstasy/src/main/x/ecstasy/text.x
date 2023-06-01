@@ -1,5 +1,4 @@
-package text
-    {
+package text {
     /**
      * A Log is simply an `Appender<String>`.
      */
@@ -9,32 +8,29 @@ package text
      * Simple Log implementation.
      */
     class SimpleLog
-            delegates Log(messages)
-        {
+            delegates Log(messages) {
+
         protected String[] messages = new String[];
 
         /**
          * True if the log is empty.
          */
-        Boolean empty.get()
-            {
+        Boolean empty.get() {
             return messages.empty;
-            }
+        }
 
         /**
          * Clean up all messages.
          */
-        void reset()
-            {
+        void reset() {
             messages.clear();
-            }
+        }
 
         @Override
-        String toString()
-            {
+        String toString() {
             StringBuffer buf = new StringBuffer(
                 messages.estimateStringLength(sep="\n", pre="", post=""));
             return messages.appendTo(buf, sep="\n", pre="", post="").toString();
-            }
         }
     }
+}

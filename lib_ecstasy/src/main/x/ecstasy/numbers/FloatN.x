@@ -1,7 +1,6 @@
 const FloatN
-        extends BinaryFPNumber
+        extends BinaryFPNumber {
         // TODO default(0.0)
-    {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -12,11 +11,10 @@ const FloatN
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert:bounds bits.size >= 16 && bits.size.bitCount == 1;
         super(bits);
-        }
+    }
 
     /**
      * Construct a variable-length binary floating point number from its network-portable
@@ -26,11 +24,10 @@ const FloatN
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert:bounds bytes.size >= 2 && bytes.size.bitCount == 1;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a variable-length binary floating point number from its `String` representation.
@@ -38,286 +35,241 @@ const FloatN
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct FloatN(new FPLiteral(text).toFloatN().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static FloatN zero()
-        {
+    static FloatN zero() {
         TODO return 0.0;
-        }
+    }
 
     @Override
-    static FloatN one()
-        {
+    static FloatN one() {
         TODO return 1.0;
-        }
+    }
 
 
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
-        eachBit: for (Bit bit : bits)
-            {
-            if (bit == 1 && !eachBit.first)
-                {
+    Signum sign.get() {
+        eachBit: for (Bit bit : bits) {
+            if (bit == 1 && !eachBit.first) {
                 return negative ? Negative : Positive;
-                }
             }
-        return Zero;
         }
+        return Zero;
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op FloatN add(FloatN n)
-        {
+    @Op FloatN add(FloatN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op FloatN sub(FloatN n)
-        {
+    @Op FloatN sub(FloatN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op FloatN mul(FloatN n)
-        {
+    @Op FloatN mul(FloatN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op FloatN div(FloatN n)
-        {
+    @Op FloatN div(FloatN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op FloatN mod(FloatN n)
-        {
+    @Op FloatN mod(FloatN n) {
         TODO
-        }
+    }
 
     @Override
-    FloatN abs()
-        {
+    FloatN abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op FloatN neg()
-        {
+    @Op FloatN neg() {
         TODO
-        }
+    }
 
     @Override
-    FloatN pow(FloatN n)
-        {
+    FloatN pow(FloatN n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    IntN emax.get()
-        {
+    IntN emax.get() {
         // 2^(k–p–1) – 1
         Int k = bitLength;
         return (1 << (k - precision - 1)) - 1;
-        }
+    }
 
     @Override
-    IntN emin.get()
-        {
+    IntN emin.get() {
         return 1 - emax;
-        }
+    }
 
     @Override
-    IntN bias.get()
-        {
+    IntN bias.get() {
         return emax;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, IntN significand, IntN exponent) split()
-        {
+    (Boolean negative, IntN significand, IntN exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    FloatN round(Rounding direction = TiesToAway)
-        {
+    FloatN round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    FloatN floor()
-        {
+    FloatN floor() {
         TODO
-        }
+    }
 
     @Override
-    FloatN ceil()
-        {
+    FloatN ceil() {
         TODO
-        }
+    }
 
     @Override
-    FloatN exp()
-        {
+    FloatN exp() {
         TODO
-        }
+    }
 
     @Override
-    FloatN scaleByPow(Int n)
-        {
+    FloatN scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    FloatN log()
-        {
+    FloatN log() {
         TODO
-        }
+    }
 
     @Override
-    FloatN log2()
-        {
+    FloatN log2() {
         TODO
-        }
+    }
 
     @Override
-    FloatN log10()
-        {
+    FloatN log10() {
         TODO
-        }
+    }
 
     @Override
-    FloatN sqrt()
-        {
+    FloatN sqrt() {
         TODO
-        }
+    }
 
     @Override
-    FloatN cbrt()
-        {
+    FloatN cbrt() {
         TODO
-        }
+    }
 
     @Override
-    FloatN sin()
-        {
+    FloatN sin() {
         TODO
-        }
+    }
 
     @Override
-    FloatN cos()
-        {
+    FloatN cos() {
         TODO
-        }
+    }
 
     @Override
-    FloatN tan()
-        {
+    FloatN tan() {
         TODO
-        }
+    }
 
     @Override
-    FloatN asin()
-        {
+    FloatN asin() {
         TODO
-        }
+    }
 
     @Override
-    FloatN acos()
-        {
+    FloatN acos() {
         TODO
-        }
+    }
 
     @Override
-    FloatN atan()
-        {
+    FloatN atan() {
         TODO
-        }
+    }
 
     @Override
-    FloatN atan2(FloatN y)
-        {
+    FloatN atan2(FloatN y) {
         TODO
-        }
+    }
 
     @Override
-    FloatN sinh()
-        {
+    FloatN sinh() {
         TODO
-        }
+    }
 
     @Override
-    FloatN cosh()
-        {
+    FloatN cosh() {
         TODO
-        }
+    }
 
     @Override
-    FloatN tanh()
-        {
+    FloatN tanh() {
         TODO
-        }
+    }
 
     @Override
-    FloatN asinh()
-        {
+    FloatN asinh() {
         TODO
-        }
+    }
 
     @Override
-    FloatN acosh()
-        {
+    FloatN acosh() {
         TODO
-        }
+    }
 
     @Override
-    FloatN atanh()
-        {
+    FloatN atanh() {
         TODO
-        }
+    }
 
     @Override
-    FloatN deg2rad()
-        {
+    FloatN deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    FloatN rad2deg()
-        {
+    FloatN rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    FloatN nextUp()
-        {
+    FloatN nextUp() {
         TODO
-        }
+    }
 
     @Override
-    FloatN nextDown()
-        {
+    FloatN nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -338,10 +290,9 @@ const FloatN
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -359,10 +310,9 @@ const FloatN
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
@@ -386,10 +336,9 @@ const FloatN
     Float128 toFloat128();
 
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return this;
-        }
+    }
 
     @Override
     Dec32 toDec32();
@@ -402,8 +351,7 @@ const FloatN
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toFPLiteral().toDecN();
-        }
     }
+}

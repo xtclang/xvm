@@ -7,20 +7,18 @@
  */
 mixin EntryStringer<MapKey extends Stringable, MapValue extends Stringable>
         into Map<MapKey, MapValue>.Entry
-        implements Stringable
-    {
-    @Override
-    Int estimateStringLength()
-        {
-        return key.estimateStringLength() + 1 + value.estimateStringLength();
-        }
+        implements Stringable {
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Int estimateStringLength() {
+        return key.estimateStringLength() + 1 + value.estimateStringLength();
+    }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf) {
         key.appendTo(buf);
         buf.add('=');
         value.appendTo(buf);
         return buf;
-        }
     }
+}

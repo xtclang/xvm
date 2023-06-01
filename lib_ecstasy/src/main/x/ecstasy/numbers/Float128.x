@@ -1,7 +1,6 @@
 const Float128
-        extends BinaryFPNumber
+        extends BinaryFPNumber {
         // TODO default(0.0)
-    {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -12,11 +11,10 @@ const Float128
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert:bounds bits.size == 128;
         super(bits);
-        }
+    }
 
     /**
      * Construct a 128-bit binary floating point number from its network-portable representation.
@@ -25,11 +23,10 @@ const Float128
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert:bounds bytes.size == 16;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a 128-bit binary floating point number from its `String` representation.
@@ -37,283 +34,239 @@ const Float128
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct Float128(new FPLiteral(text).toFloat128().bits);
-        }
+    }
 
 
     // ----- Numberic interface --------------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return True, 128;
-        }
+    }
 
     @Override
-    static Float128 zero()
-        {
+    static Float128 zero() {
         TODO return 0.0;
-        }
+    }
 
     @Override
-    static Float128 one()
-        {
+    static Float128 one() {
         TODO return 1.0;
-        }
+    }
 
 
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
+    Signum sign.get() {
         TODO need to think this through carefully because there is a sign bit and both +/-0
-        }
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op Float128 add(Float128 n)
-        {
+    @Op Float128 add(Float128 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float128 sub(Float128 n)
-        {
+    @Op Float128 sub(Float128 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float128 mul(Float128 n)
-        {
+    @Op Float128 mul(Float128 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float128 div(Float128 n)
-        {
+    @Op Float128 div(Float128 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op Float128 mod(Float128 n)
-        {
+    @Op Float128 mod(Float128 n) {
         TODO
-        }
+    }
 
     @Override
-    Float128 abs()
-        {
+    Float128 abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op Float128 neg()
-        {
+    @Op Float128 neg() {
         TODO
-        }
+    }
 
     @Override
-    Float128 pow(Float128 n)
-        {
+    Float128 pow(Float128 n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Int emax.get()
-        {
+    Int emax.get() {
         return 16383;
-        }
+    }
 
     @Override
-    Int emin.get()
-        {
+    Int emin.get() {
         return 1 - emax;
-        }
+    }
 
     @Override
-    Int bias.get()
-        {
+    Int bias.get() {
         return emax;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, Int128 significand, Int exponent) split()
-        {
+    (Boolean negative, Int128 significand, Int exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    Float128 round(Rounding direction = TiesToAway)
-        {
+    Float128 round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    Float128 floor()
-        {
+    Float128 floor() {
         TODO
-        }
+    }
 
     @Override
-    Float128 ceil()
-        {
+    Float128 ceil() {
         TODO
-        }
+    }
 
     @Override
-    Float128 exp()
-        {
+    Float128 exp() {
         TODO
-        }
+    }
 
     @Override
-    Float128 scaleByPow(Int n)
-        {
+    Float128 scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    Float128 log()
-        {
+    Float128 log() {
         TODO
-        }
+    }
 
     @Override
-    Float128 log2()
-        {
+    Float128 log2() {
         TODO
-        }
+    }
 
     @Override
-    Float128 log10()
-        {
+    Float128 log10() {
         TODO
-        }
+    }
 
     @Override
-    Float128 sqrt()
-        {
+    Float128 sqrt() {
         TODO
-        }
+    }
 
     @Override
-    Float128 cbrt()
-        {
+    Float128 cbrt() {
         TODO
-        }
+    }
 
     @Override
-    Float128 sin()
-        {
+    Float128 sin() {
         TODO
-        }
+    }
 
     @Override
-    Float128 cos()
-        {
+    Float128 cos() {
         TODO
-        }
+    }
 
     @Override
-    Float128 tan()
-        {
+    Float128 tan() {
         TODO
-        }
+    }
 
     @Override
-    Float128 asin()
-        {
+    Float128 asin() {
         TODO
-        }
+    }
 
     @Override
-    Float128 acos()
-        {
+    Float128 acos() {
         TODO
-        }
+    }
 
     @Override
-    Float128 atan()
-        {
+    Float128 atan() {
         TODO
-        }
+    }
 
     @Override
-    Float128 atan2(Float128 y)
-        {
+    Float128 atan2(Float128 y) {
         TODO
-        }
+    }
 
     @Override
-    Float128 sinh()
-        {
+    Float128 sinh() {
         TODO
-        }
+    }
 
     @Override
-    Float128 cosh()
-        {
+    Float128 cosh() {
         TODO
-        }
+    }
 
     @Override
-    Float128 tanh()
-        {
+    Float128 tanh() {
         TODO
-        }
+    }
 
     @Override
-    Float128 asinh()
-        {
+    Float128 asinh() {
         TODO
-        }
+    }
 
     @Override
-    Float128 acosh()
-        {
+    Float128 acosh() {
         TODO
-        }
+    }
 
     @Override
-    Float128 atanh()
-        {
+    Float128 atanh() {
         TODO
-        }
+    }
 
     @Override
-    Float128 deg2rad()
-        {
+    Float128 deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    Float128 rad2deg()
-        {
+    Float128 rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    Float128 nextUp()
-        {
+    Float128 nextUp() {
         TODO
-        }
+    }
 
     @Override
-    Float128 nextDown()
-        {
+    Float128 nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -334,10 +287,9 @@ const Float128
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -355,10 +307,9 @@ const Float128
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
@@ -379,17 +330,15 @@ const Float128
     Float64 toFloat64();
 
     @Override
-    Float128 toFloat128()
-        {
+    Float128 toFloat128() {
         return this;
-        }
+    }
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return new FloatN(bits);
-        }
+    }
 
     @Override
     Dec32 toDec32();
@@ -402,8 +351,7 @@ const Float128
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toFPLiteral().toDecN();
-        }
     }
+}

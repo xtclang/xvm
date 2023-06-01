@@ -10,8 +10,7 @@
  *        // ...
  *        }
  */
-interface Iterator<Element>
-    {
+interface Iterator<Element> {
     /**
      * An Orderer is a function that compares two objects for order.
      */
@@ -36,11 +35,10 @@ interface Iterator<Element>
      *
      * @throws IllegalState if the iterator is exhausted
      */
-    Element take()
-        {
+    Element take() {
         assert Element e := next();
         return e;
-        }
+    }
 
     /**
      * Perform the specified action for all remaining elements in the iterator, allowing for
@@ -53,17 +51,14 @@ interface Iterator<Element>
      * @return True iff the iteration completed without short-circuiting; otherwise False if the
      *         iterator was short-circuited
      */
-    Boolean whileEach(function Boolean process(Element))
-        {
-        while (Element value := next())
-            {
-            if (!process(value))
-                {
+    Boolean whileEach(function Boolean process(Element)) {
+        while (Element value := next()) {
+            if (!process(value)) {
                 return False;
-                }
             }
-        return True;
         }
+        return True;
+    }
 
     /**
      * Perform the specified action for all remaining elements in the iterator, allowing for
@@ -77,17 +72,14 @@ interface Iterator<Element>
      *         completed without short-circuiting
      * @return (conditional) the element that caused the iterator to short-circuit
      */
-    conditional Element untilAny(function Boolean process(Element))
-        {
-        while (Element value := next())
-            {
-            if (process(value))
-                {
+    conditional Element untilAny(function Boolean process(Element)) {
+        while (Element value := next()) {
+            if (process(value)) {
                 return True, value;
-                }
             }
-        return False;
         }
+        return False;
+    }
 
     /**
      * Perform the specified action for all remaining elements in the iterator.
@@ -96,13 +88,11 @@ interface Iterator<Element>
      *
      * @param process  an action to perform on each element
      */
-    void forEach(function void (Element) process)
-        {
-        while (Element value := next())
-            {
+    void forEach(function void (Element) process) {
+        while (Element value := next()) {
             process(value);
-            }
         }
+    }
 
     /**
      * Determine the minimum value contained in this iterator.
@@ -115,41 +105,31 @@ interface Iterator<Element>
      * @return True iff the iterator is not empty and a minimum value was determined
      * @return (conditional) the minimum element from this iterator
      */
-    conditional Element min(Orderer? order = Null)
-        {
-        if (order != Null, Orderer actual := knownOrder(), order == actual)
-            {
+    conditional Element min(Orderer? order = Null) {
+        if (order != Null, Orderer actual := knownOrder(), order == actual) {
             return next();
-            }
+        }
 
-        if (Element minValue := next())
-            {
-            if (order == Null)
-                {
+        if (Element minValue := next()) {
+            if (order == Null) {
                 assert Element.is(Type<Orderable>);
 
-                while (Element el := next())
-                    {
-                    if (el < minValue)
-                        {
+                while (Element el := next()) {
+                    if (el < minValue) {
                         minValue = el;
-                        }
                     }
                 }
-            else
-                {
-                while (Element el := next())
-                    {
-                    if (order(el, minValue) == Lesser)
-                        {
+            } else {
+                while (Element el := next()) {
+                    if (order(el, minValue) == Lesser) {
                         minValue = el;
-                        }
                     }
                 }
-            return True, minValue;
             }
-        return False;
+            return True, minValue;
         }
+        return False;
+    }
 
     /**
      * Determine the maximum value contained in this iterator.
@@ -162,36 +142,27 @@ interface Iterator<Element>
      * @return True iff the iterator is not empty and a minimum value was determined
      * @return (conditional) the maximum element from this iterator
      */
-    conditional Element max(Orderer? order = Null)
-        {
-        if (Element maxValue := next())
-            {
-            if (order == Null)
-                {
+    conditional Element max(Orderer? order = Null) {
+        if (Element maxValue := next()) {
+            if (order == Null) {
                 assert Element.is(Type<Orderable>);
 
-                while (Element el := next())
-                    {
-                    if (el > maxValue)
-                        {
+                while (Element el := next()) {
+                    if (el > maxValue) {
                         maxValue = el;
-                        }
                     }
                 }
-            else
-                {
-                while (Element el := next())
-                    {
-                    if (order(el, maxValue) == Greater)
-                        {
+            } else {
+                while (Element el := next()) {
+                    if (order(el, maxValue) == Greater) {
                         maxValue = el;
-                        }
                     }
                 }
-            return True, maxValue;
             }
-        return False;
+            return True, maxValue;
         }
+        return False;
+    }
 
     /**
      * Returns the interval defining the minimum and maximum elements of this iterator.
@@ -204,45 +175,32 @@ interface Iterator<Element>
      * @return True iff the iterator is not empty and the range of values was determined
      * @return (conditional) the range of elements from this iterator
      */
-    conditional Range<Element> range(Orderer? order = Null)
-        {
+    conditional Range<Element> range(Orderer? order = Null) {
         assert Element.is(Type<Orderable>);
 
-        if (Element minValue := next())
-            {
+        if (Element minValue := next()) {
             Element maxValue = minValue;
-            if (order == Null)
-                {
-                while (Element el := next())
-                    {
-                    if (el < minValue)
-                        {
+            if (order == Null) {
+                while (Element el := next()) {
+                    if (el < minValue) {
                         minValue = el;
-                        }
-                    else if (el > maxValue)
-                        {
+                    } else if (el > maxValue) {
                         maxValue = el;
-                        }
                     }
                 }
-            else
-                {
-                while (Element el := next())
-                    {
-                    if (order(el, minValue) == Lesser)
-                        {
+            } else {
+                while (Element el := next()) {
+                    if (order(el, minValue) == Lesser) {
                         minValue = el;
-                        }
-                    else if (order(el, maxValue) == Greater)
-                        {
+                    } else if (order(el, maxValue) == Greater) {
                         maxValue = el;
-                        }
                     }
                 }
-            return True, minValue..maxValue;
             }
-        return False;
+            return True, minValue..maxValue;
         }
+        return False;
+    }
 
     /**
      * Determine the actual number of elements in this iterator, as if the iterator has to count
@@ -252,25 +210,21 @@ interface Iterator<Element>
      *
      * @return the count of elements in this iterator
      */
-    Int count()
-        {
-        if (knownEmpty())
-            {
+    Int count() {
+        if (knownEmpty()) {
             return 0;
-            }
+        }
 
-        if (Int size := knownSize())
-            {
+        if (Int size := knownSize()) {
             return size;
-            }
+        }
 
         Int n = 0;
-        while (Element el := next())
-            {
+        while (Element el := next()) {
             ++n;
-            }
-        return n;
         }
+        return n;
+    }
 
     /**
      * Obtain an array that contains all of the elements in this iterator. The contents will be
@@ -281,31 +235,24 @@ interface Iterator<Element>
      *
      * @return an array containing the elements of this iterator
      */
-    Element[] toArray(Array.Mutability? mutability = Null)
-        {
+    Element[] toArray(Array.Mutability? mutability = Null) {
         Element[] elements;
 
-        if (knownEmpty())
-            {
+        if (knownEmpty()) {
             elements = [];
-            }
-        else if (Int size := knownSize())
-            {
+        } else if (Int size := knownSize()) {
             elements = new Element[size](_ -> {assert Element el := next(); return el;});
-            }
-        else
-            {
+        } else {
             elements = new Element[];
-            while (Element el := next())
-                {
+            while (Element el := next()) {
                 elements += el;
-                }
             }
+        }
 
         return mutability == Null
                 ? elements
                 : elements.toArray(mutability, True);
-        }
+    }
 
 
     // ----- metadata ------------------------------------------------------------------------------
@@ -313,10 +260,9 @@ interface Iterator<Element>
     /**
      * Metadata: Are the elements of the iterator known to be distinct?
      */
-    Boolean knownDistinct()
-        {
+    Boolean knownDistinct() {
         return False;
-        }
+    }
 
     /**
      * Metadata: Is the iterator in an order that is a function of its elements? And if so, what is
@@ -325,10 +271,9 @@ interface Iterator<Element>
      * @return True iff the iterator in an order that is a function of its elements
      * @return (conditional) the Orderer that represents the order
      */
-    conditional Orderer knownOrder()
-        {
+    conditional Orderer knownOrder() {
         return False;
-        }
+    }
 
     /**
      * Metadata: Is the iterator known to be empty?
@@ -336,15 +281,13 @@ interface Iterator<Element>
      * @return True iff the iterator is known to be empty; False if the iterator is not known to be
      *         empty (which means that it still _could_ be empty)
      */
-    Boolean knownEmpty()
-        {
-        if (Int size := knownSize())
-            {
+    Boolean knownEmpty() {
+        if (Int size := knownSize()) {
             return size == 0;
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Metadata: Is the iterator of a known size?
@@ -352,10 +295,9 @@ interface Iterator<Element>
      * @return True iff the iterator size is efficiently known
      * @return (conditional) the number of elements in the iterator
      */
-    conditional Int knownSize()
-        {
+    conditional Int knownSize() {
         return False;
-        }
+    }
 
 
     // ----- intermediate operations ---------------------------------------------------------------
@@ -369,20 +311,17 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the concatenation of the two iterators
      */
-    Iterator! concat(Iterator! that)
-        {
-        if (that.knownEmpty())
-            {
+    Iterator! concat(Iterator! that) {
+        if (that.knownEmpty()) {
             return this;
-            }
+        }
 
-        if (this.knownEmpty())
-            {
+        if (this.knownEmpty()) {
             return that;
-            }
+        }
 
         return new iterators.CompoundIterator(this, that);
-        }
+    }
 
     /**
      * Returns a iterator consisting of the elements of this iterator that match the given predicate.
@@ -393,15 +332,13 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the filtered contents of this iterator
      */
-    Iterator! filter(function Boolean (Element) include)
-        {
-        if (knownEmpty())
-            {
+    Iterator! filter(function Boolean (Element) include) {
+        if (knownEmpty()) {
             return this;
-            }
+        }
 
         return new iterators.FilteredIterator<Element>(this, include);
-        }
+    }
 
     /**
      * Returns a iterator consisting of the results of applying the given function to the elements of
@@ -416,10 +353,9 @@ interface Iterator<Element>
      * @return a new iterator representing the results of applying the specified function to each
      *         element in this iterator
      */
-    <Result> Iterator!<Result> map(function Result (Element) apply)
-        {
+    <Result> Iterator!<Result> map(function Result (Element) apply) {
         return new iterators.MappedIterator<Result, Element>(this, apply);
-        }
+    }
 
     /**
      * Returns a iterator consisting of the concatenation of all of the streams resulting from
@@ -433,10 +369,9 @@ interface Iterator<Element>
      * @return a new iterator representing the concatenated results of applying the specified function
      *         to each element in this iterator
      */
-    <Result> Iterator!<Result> flatMap(function Iterator!<Result> (Element) flatten)
-        {
+    <Result> Iterator!<Result> flatMap(function Iterator!<Result> (Element) flatten) {
         return new iterators.FlatMappedIterator<Result, Element>(this, flatten);
-        }
+    }
 
     /**
      * Returns a iterator representing the _distinct_ elements of this iterator.
@@ -445,15 +380,13 @@ interface Iterator<Element>
      *
      * @return a new iterator representing only the distinct set of elements from this iterator
      */
-    Iterator! dedup()
-        {
-        if (knownEmpty() || knownDistinct())
-            {
+    Iterator! dedup() {
+        if (knownEmpty() || knownDistinct()) {
             return this;
-            }
+        }
 
         return new iterators.DistinctIterator<Element>(this);
-        }
+    }
 
     /**
      * Returns a iterator representing the same elements of this iterator, but in a sorted order.
@@ -465,21 +398,18 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the same elements from this iterator in a sorted order
      */
-    Iterator! sorted(Orderer? order = Null)
-        {
-        if (order == Null)
-            {
+    Iterator! sorted(Orderer? order = Null) {
+        if (order == Null) {
             assert Element.is(Type<Orderable>);
             order = (el1, el2) -> el1.as(Element) <=> el2.as(Element);
-            }
+        }
 
-        if (knownEmpty())
-            {
+        if (knownEmpty()) {
             return this;
-            }
+        }
 
         return toArray().sorted(order).iterator();
-        }
+    }
 
     /**
      * Returns a iterator representing the same elements of this iterator, but in reverse order.
@@ -490,15 +420,13 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the same elements from this iterator, but in reverse order
      */
-    Iterator! reversed()
-        {
-        if (knownEmpty())
-            {
+    Iterator! reversed() {
+        if (knownEmpty()) {
             return this;
-            }
+        }
 
         return toArray().reversed().iterator();
-        }
+    }
 
     /**
      * Returns a iterator representing the same elements as exist in this iterator, but additionally
@@ -512,15 +440,13 @@ interface Iterator<Element>
      *
      * @return a new iterator with the specified functionality attached to it
      */
-    Iterator! peek(function void observe(Element))
-        {
-        if (knownEmpty())
-            {
+    Iterator! peek(function void observe(Element)) {
+        if (knownEmpty()) {
             return this;
-            }
+        }
 
         return new iterators.PeekingIterator<Element>(this, observe);
-        }
+    }
 
     /**
      * Returns a iterator representing only the remaining elements of this iterator after discarding
@@ -534,26 +460,21 @@ interface Iterator<Element>
      *
      * @return a new iterator that does not include the first `count` elements of this iterator
      */
-    Iterator! skip(Int count)
-        {
+    Iterator! skip(Int count) {
         assert:bounds count >= 0;
 
-        if (count == 0 || knownEmpty())
-            {
+        if (count == 0 || knownEmpty()) {
             return this;
-            }
+        }
 
-        if (Int size := knownSize(), size <= count)
-            {
+        if (Int size := knownSize(), size <= count) {
             return new iterators.ExhaustedIterator();
-            }
+        }
 
-        for (Int i = 0; i < count && next(); ++i)
-            {
-            }
+        for (Int i = 0; i < count && next(); ++i) {}
 
         return this;
-        }
+    }
 
     /**
      * Returns a iterator representing only the first `count` elements of this iterator.
@@ -564,27 +485,23 @@ interface Iterator<Element>
      *
      * @return a new iterator that only includes up to the first `count` elements of this iterator
      */
-    Iterator! limit(Int count)
-        {
+    Iterator! limit(Int count) {
         assert:bounds count >= 0;
 
-        if (knownEmpty())
-            {
+        if (knownEmpty()) {
             return this;
-            }
+        }
 
-        if (count == 0)
-            {
+        if (count == 0) {
             return new iterators.ExhaustedIterator();
-            }
+        }
 
-        if (Int size := knownSize(), size <= count)
-            {
+        if (Int size := knownSize(), size <= count) {
             return this;
-            }
+        }
 
         return new iterators.LimitedIterator<Element>(this, count);
-        }
+    }
 
     /**
      * Returns a iterator representing only the specified range of elements of this iterator. If the
@@ -599,27 +516,23 @@ interface Iterator<Element>
      * @return a new iterator that only includes the the elements whose position in this iterator
      *         correspond to the specified range of indexes
      */
-    Iterator! extract(Interval<Int> interval) // REVIEW why not "slice"?
-        {
-        if (knownEmpty())
-            {
+    Iterator! extract(Interval<Int> interval) { // REVIEW why not "slice"?
+        if (knownEmpty()) {
             return this;
-            }
+        }
 
-        if (Int size := knownSize(), size < interval.effectiveLowerBound)
-            {
+        if (Int size := knownSize(), size < interval.effectiveLowerBound) {
             return new iterators.ExhaustedIterator();
-            }
+        }
 
-        if (interval.descending)
-            {
+        if (interval.descending) {
             return extract(interval.reversed()).reversed();
-            }
+        }
 
         return interval.lowerBound == 0
                 ? limit(interval.effectiveUpperBound)
                 : skip(interval.effectiveLowerBound).limit(interval.size);
-        }
+    }
 
     /**
      * Returns two independent copies of this iterator.
@@ -631,16 +544,14 @@ interface Iterator<Element>
      * @return a first clone of this iterator
      * @return a second clone of this iterator
      */
-    (Iterator!, Iterator!) bifurcate()
-        {
-        if (knownEmpty())
-            {
+    (Iterator!, Iterator!) bifurcate() {
+        if (knownEmpty()) {
             return this, this;
-            }
+        }
 
         Element[] snapshot = toArray();
         return snapshot.iterator(), snapshot.iterator();
-        }
+    }
 
 
     // ----- advanced terminal operations ----------------------------------------------------------
@@ -664,15 +575,13 @@ interface Iterator<Element>
      *                    combining two values
      * @return the result of the reduction
      */
-    Element reduce(Element identity, function Element accumulate(Element, Element))
-        {
+    Element reduce(Element identity, function Element accumulate(Element, Element)) {
         Element result = identity;
-        while (Element element := next())
-            {
+        while (Element element := next()) {
             result = accumulate(result, element);
-            }
-        return result;
         }
+        return result;
+    }
 
     /**
      * Performs a reduction on the elements of this iterator, using an associative accumulation
@@ -689,21 +598,16 @@ interface Iterator<Element>
      *
      * @return a conditional result of the reduction
      */
-    conditional Element reduce(function Element accumulate(Element, Element))
-        {
-        if (Element result := next())
-            {
-            while (Element element := next())
-                {
+    conditional Element reduce(function Element accumulate(Element, Element)) {
+        if (Element result := next()) {
+            while (Element element := next()) {
                 result = accumulate(result, element);
-                }
+            }
             return True, result;
-            }
-        else
-            {
+        } else {
             return False;
-            }
         }
+    }
 
 
     // ----- Markable ------------------------------------------------------------------------------
@@ -714,13 +618,11 @@ interface Iterator<Element>
      *
      * @return a Markable Iterator
      */
-    Iterator! + Markable ensureMarkable()
-        {
-        if (this.is(Markable))
-            {
+    Iterator! + Markable ensureMarkable() {
+        if (this.is(Markable)) {
             return this;
-            }
+        }
 
         return new iterators.MarkedIterator<Element>(this);
-        }
     }
+}

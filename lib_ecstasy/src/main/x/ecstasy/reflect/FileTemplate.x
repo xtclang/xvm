@@ -4,8 +4,7 @@ import mgmt.ModuleRepository;
  * A FileTemplate is a representation of an Ecstasy portable binary (".xtc") file.
  */
 interface FileTemplate
-        extends ComponentTemplate
-    {
+        extends ComponentTemplate {
     /**
      * The primary module that the FileTemplate represents.
      */
@@ -47,16 +46,14 @@ interface FileTemplate
     /**
      * An array of qualified module names contained within this FileTemplate.
      */
-    @RO String[] moduleNames.get()
-        {
+    @RO String[] moduleNames.get() {
         ComponentTemplate[] children = children();
         return new String[](children.size, i -> children[i].as(ModuleTemplate).qualifiedName)
                 .freeze(True);
-        }
+    }
 
     @Override
-    @RO FileTemplate containingFile.get()
-        {
+    @RO FileTemplate containingFile.get() {
         return this;
-        }
     }
+}

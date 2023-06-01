@@ -2,8 +2,7 @@
  * Represents a function return value.
  */
 interface Return<ReturnType>
-        extends immutable Const
-    {
+        extends immutable Const {
     /**
      * The ordinal index of the return value.
      */
@@ -21,25 +20,21 @@ interface Return<ReturnType>
     // ----- Stringable methods ----------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         Int len = ReturnType.estimateStringLength();
-        if (String name := hasName())
-            {
+        if (String name := hasName()) {
             len += 1 + name.size;
-            }
-        return len;
         }
+        return len;
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         ReturnType.appendTo(buf);
-        if (String name := hasName())
-            {
+        if (String name := hasName()) {
             buf.add(' ');
             name.appendTo(buf);
-            }
-        return buf;
         }
+        return buf;
     }
+}

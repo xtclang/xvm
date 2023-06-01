@@ -5,347 +5,307 @@
  * encoded as UTF-8, UTF-16, UTF-32, or even ASCII.
  */
 interface DataOutput
-        extends BinaryOutput
-    {
+        extends BinaryOutput {
     /**
      * Write a Boolean value to the stream.
      *
      * @param value  a value of type Boolean to write to the stream
      */
-    void writeBoolean(Boolean value)
-        {
+    void writeBoolean(Boolean value) {
         writeByte(value.toUInt8());
-        }
+    }
 
     /**
      * Write a Char value to the stream.
      *
      * @param value  a value of type Char to write to the stream
      */
-    void writeChar(Char value)
-        {
+    void writeChar(Char value) {
         writeUInt32(value.codepoint);
-        }
+    }
 
     /**
      * Write a String value to the stream.
      *
      * @param value  a value of type String to write to the stream
      */
-    void writeString(String value)
-        {
+    void writeString(String value) {
         writeUInt64(value.size.toUInt64());
-        for (Char ch : value)
-            {
+        for (Char ch : value) {
             writeChar(ch);
-            }
         }
+    }
 
     /**
      * Write an Enum value to the stream.
      *
      * @param value  a value of an enumerated type to write to the stream
      */
-    void writeEnum(Enum value)
-        {
+    void writeEnum(Enum value) {
         writeUInt16(value.ordinal.toUInt16());
-        }
+    }
 
     /**
      * Write an Int8 value to the stream.
      *
      * @param value  a value of type Int8 to write to the stream
      */
-    void writeInt8(Int8 value)
-        {
+    void writeInt8(Int8 value) {
         writeByte(value.toByteArray()[0]);  // TODO CP sliceByte
-        }
+    }
 
     /**
      * Write an Int16 value to the stream.
      *
      * @param value  a value of type Int16 to write to the stream
      */
-    void writeInt16(Int16 value)
-        {
+    void writeInt16(Int16 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write an Int32 value to the stream.
      *
      * @param value  a value of type Int32 to write to the stream
      */
-    void writeInt32(Int32 value)
-        {
+    void writeInt32(Int32 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a 64-bit Int value to the stream.
      *
      * @param value  a value of type Int to write to the stream
      */
-    void writeInt64(Int64 value)
-        {
+    void writeInt64(Int64 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write an Int128 value to the stream.
      *
      * @param value  a value of type Int128 to write to the stream
      */
-    void writeInt128(Int128 value)
-        {
+    void writeInt128(Int128 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a IntN value to the stream.
      *
      * @param value  a value of type IntN to write to the stream
      */
-    void writeIntN(IntN value)
-        {
+    void writeIntN(IntN value) {
         Byte[] bytes = value.toByteArray();
         writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
-        }
+    }
 
     /**
      * Write a UInt8 (aka a "Byte") value to the stream.
      *
      * @param value  a value of type UInt8 to write to the stream
      */
-    void writeUInt8(UInt8 value)
-        {
+    void writeUInt8(UInt8 value) {
         writeByte(value);
-        }
+    }
 
     /**
      * Write a UInt16 value to the stream.
      *
      * @param value  a value of type UInt16 to write to the stream
      */
-    void writeUInt16(UInt16 value)
-        {
+    void writeUInt16(UInt16 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a UInt32 value to the stream.
      *
      * @param value  a value of type UInt32 to write to the stream
      */
-    void writeUInt32(UInt32 value)
-        {
+    void writeUInt32(UInt32 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a 64-bit UInt value to the stream.
      *
      * @param value  a value of type UInt64 to write to the stream
      */
-    void writeUInt64(UInt64 value)
-        {
+    void writeUInt64(UInt64 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a UInt128 value to the stream.
      *
      * @param value  a value of type UInt128 to write to the stream
      */
-    void writeUInt128(UInt128 value)
-        {
+    void writeUInt128(UInt128 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a UIntN value to the stream.
      *
      * @param value  a value of type UIntN to write to the stream
      */
-    void writeUIntN(UIntN value)
-        {
+    void writeUIntN(UIntN value) {
         Byte[] bytes = value.toByteArray();
         writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
-        }
+    }
 
     /**
      * Write a Dec32 value to the stream.
      *
      * @param value  a value of type Dec64 to write to the stream
      */
-    void writeDec32(Dec32 value)
-        {
+    void writeDec32(Dec32 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a Dec64 value to the stream.
      *
      * @param value  a value of type Dec64 to write to the stream
      */
-    void writeDec64(Dec64 value)
-        {
+    void writeDec64(Dec64 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a Dec128 value to the stream.
      *
      * @param value  a value of type Dec128 to write to the stream
      */
-    void writeDec128(Dec128 value)
-        {
+    void writeDec128(Dec128 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a DecN value to the stream.
      *
      * @param value  a value of type DecN to write to the stream
      */
-    void writeDecN(DecN value)
-        {
+    void writeDecN(DecN value) {
         Byte[] bytes = value.toByteArray();
         writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
-        }
+    }
 
     /**
      * Write a Float16 value to the stream.
      *
      * @param value  a value of type Float16 to write to the stream
      */
-    void writeFloat16(Float16 value)
-        {
+    void writeFloat16(Float16 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a BFloat16 value to the stream.
      *
      * @param value  a value of type BFloat16 to write to the stream
      */
-    void writeBFloat16(BFloat16 value)
-        {
+    void writeBFloat16(BFloat16 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a Float32 value to the stream.
      *
      * @param value  a value of type Float32 to write to the stream
      */
-    void writeFloat32(Float32 value)
-        {
+    void writeFloat32(Float32 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a Float64 value to the stream.
      *
      * @param value  a value of type Float64 to write to the stream
      */
-    void writeFloat64(Float64 value)
-        {
+    void writeFloat64(Float64 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a Float128 value to the stream.
      *
      * @param value  a value of type Float128 to write to the stream
      */
-    void writeFloat128(Float128 value)
-        {
+    void writeFloat128(Float128 value) {
         writeBytes(value.toByteArray());
-        }
+    }
 
     /**
      * Write a FloatN value to the stream.
      *
      * @param value  a value of type FloatN to write to the stream
      */
-    void writeFloatN(FloatN value)
-        {
+    void writeFloatN(FloatN value) {
         Byte[] bytes = value.toByteArray();
         writeUInt64(bytes.size.toUInt64());
         writeBytes(bytes);
-        }
+    }
 
     /**
      * Write a Date value to the stream.
      *
      * @param value  a value of type Date to write to the stream
      */
-    void writeDate(Date value)
-        {
+    void writeDate(Date value) {
         writeInt32(value.epochDay);
-        }
+    }
 
     /**
      * Write a TimeOfDay value to the stream.
      *
      * @param value  a value of type TimeOfDay to write to the stream
      */
-    void writeTime(TimeOfDay value)
-        {
+    void writeTime(TimeOfDay value) {
         writeUInt64(value.picos);
-        }
+    }
 
     /**
      * Write a Time value to the stream.
      *
      * @param value  a value of type Time to write to the stream
      */
-    void writeTime(Time value)
-        {
+    void writeTime(Time value) {
         writeInt128(value.epochPicos);
         writeTimeZone(value.timezone);
-        }
+    }
 
     /**
      * Write a TimeZone value to the stream.
      *
      * @param value  a value of type TimeZone to write to the stream
      */
-    void writeTimeZone(TimeZone value)
-        {
-        if (value.isUTC)
-            {
+    void writeTimeZone(TimeZone value) {
+        if (value.isUTC) {
             writeByte(0);
-            }
-        else if (value.isNoTZ)
-            {
+        } else if (value.isNoTZ) {
             writeByte(3);
-            }
-        else if (value.rules.size > 0)
-            {
+        } else if (value.rules.size > 0) {
             writeByte(2);
             writeString(value.name ?: assert);      // TODO
-            }
-        else
-            {
+        } else {
             writeByte(1);
             writeInt64(value.picos);
-            }
         }
+    }
 
     /**
      * Write a Duration value to the stream.
      *
      * @param value  a value of type Duration to write to the stream
      */
-    void writeDuration(Duration value)
-        {
+    void writeDuration(Duration value) {
         writeUInt128(value.picoseconds);
-        }
+    }
 
 
     // ----- helper functions ----------------------------------------------------------------------
@@ -358,24 +318,21 @@ interface DataOutput
      *
      * @return the number of bytes required to write the value as a packed value
      */
-    static Int packedIntLength(Int n)
-        {
+    static Int packedIntLength(Int n) {
         // test for Tiny
-        if (-64 <= n <= 63)
-            {
+        if (-64 <= n <= 63) {
             return 1;
-            }
+        }
 
         // test for Small and Medium
         Int128 m        = n.toInt128();
         UInt16 bitCount = 129 - UInt16.maxOf(m, ~m).leadingZeroCount.toUInt16();
-        if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
-            {
+        if (1 << bitCount & 0x3E3E00 != 0) {            // test against bits 9-13 and 17-21
             return bitCount <= 13 ? 2 : 3;
-            }
+        }
 
         return 1 + (bitCount + 7 >>> 3);
-        }
+    }
 
     /**
      * Calculate the number of bytes required to write an integer to a stream, encoding it using the
@@ -385,12 +342,11 @@ interface DataOutput
      *
      * @return the number of bytes required to write the value as a packed value
      */
-    static Int packedIntNLength(IntN n)
-        {
+    static Int packedIntNLength(IntN n) {
         return Int.MinValue <= n <= Int.MaxValue
                 ? packedIntLength(n.toInt64())
                 : 1 + n.toByteArray().size;
-        }
+    }
 
     /**
      * Write an integer to the passed stream, encoding it using the packed integer format.
@@ -435,43 +391,37 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param n    the Int value to write to the stream
      */
-    static void writePackedInt(DataOutput out, Int n)
-        {
+    static void writePackedInt(DataOutput out, Int n) {
         // test for Tiny
-        if (-64 <= n <= 63)
-            {
+        if (-64 <= n <= 63) {
             out.writeByte((n << 1 | 0x01).toByte(truncate=True));
             return;
-            }
+        }
 
         // test for Small and Medium
         Int128 n128     = n.toInt128();
         Int    bitCount = 129 - Int128.maxOf(n128, ~n128).leadingZeroCount;
-        if (1 << bitCount & 0x3E3E00 != 0)                // test against bits 9-13 and 17-21
-            {
+        if (1 << bitCount & 0x3E3E00 != 0) {              // test against bits 9-13 and 17-21
             Int32 n32 = n128.toInt32();
-            if (bitCount <= 13)
-                {
+            if (bitCount <= 13) {
                 n32 = 0b010_00000000                      // 0x2 marker at 0..2 in byte #1
                         | (n32 & 0x1F00 << 3)             // bits 8..12 at 3..7 in byte #1
                         | (n32 & 0x00FF);                 // bits 0..7  at 0..7 in byte #2
                 out.writeBytes(n32.toByteArray(), 2, 2);
-                }
-            else
-                {
+            } else {
                 n32 = 0b110_00000000_00000000             // 0x6 marker  at 0..2 in byte #1
                         | (n32 & 0x1F0000 << 3)           // bits 16..20 at 3..7 in byte #1
                         | (n32 & 0x00FFFF);               // bits 8..15  at 0..7 in byte #2
                                                           // bits 0..7   at 0..7 in byte #3
                 out.writeBytes(n32.toByteArray(), 1, 3);
-                }
-            return;
             }
+            return;
+        }
 
         Int byteCount = bitCount + 7 >> 3;
         out.writeByte((byteCount - 1 << 2).toByte(truncate=True));
         out.writeBytes(n128.toByteArray(), 16 - byteCount, byteCount);
-        }
+    }
 
     /**
      * Write an integer to the passed stream, encoding it using the packed integer format.
@@ -482,28 +432,23 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param n    the IntN value to write to the stream
      */
-    static void writePackedIntN(DataOutput out, IntN n)
-        {
-        if (Int.MinValue <= n <= Int.MaxValue)
-            {
+    static void writePackedIntN(DataOutput out, IntN n) {
+        if (Int.MinValue <= n <= Int.MaxValue) {
             writePackedInt(out, n.toInt64());
-            }
+        }
 
         Byte[] bytes     = n.toByteArray();
         Int    byteCount = bytes.size;
-        if (byteCount >= 64)
-            {
+        if (byteCount >= 64) {
             // huge format
             out.writeByte(0b111111_00);
             writePackedInt(out, byteCount);
-            }
-        else
-            {
+        } else {
             // large format
             out.writeByte((byteCount-1).toByte() << 2);
-            }
-        out.writeBytes(bytes);
         }
+        out.writeBytes(bytes);
+    }
 
     /**
      * Write a Char to the stream using the UTF-8 format.
@@ -513,10 +458,9 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF8Char(BinaryOutput out, Char ch)
-        {
+    static void writeUTF8Char(BinaryOutput out, Char ch) {
         writeUTF8Codepoint(out, ch.codepoint);
-        }
+    }
 
     /**
      * Write a Unicode codepoint to the stream using the UTF-8 format.
@@ -526,14 +470,12 @@ interface DataOutput
       *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF8Codepoint(BinaryOutput out, UInt32 codepoint)
-        {
-        if (codepoint & ~0x7F == 0)
-            {
+    static void writeUTF8Codepoint(BinaryOutput out, UInt32 codepoint) {
+        if (codepoint & ~0x7F == 0) {
             // ASCII - single byte 0xxxxxxx format
             out.writeByte(codepoint.toUInt8());
             return;
-            }
+        }
 
         // otherwise the format is based on the number of significant bits:
         // bits  code-points             first byte  trailing  # trailing
@@ -544,62 +486,60 @@ interface DataOutput
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         Int trail;
-        switch (codepoint.leftmostBit)
-            {
-            case 0b00000000000000000000000010000000:
-            case 0b00000000000000000000000100000000:
-            case 0b00000000000000000000001000000000:
-            case 0b00000000000000000000010000000000:
-                out.writeByte(0b11000000 | (codepoint >>> 6).toUInt8());
-                trail = 1;
-                break;
+        switch (codepoint.leftmostBit) {
+        case 0b00000000000000000000000010000000:
+        case 0b00000000000000000000000100000000:
+        case 0b00000000000000000000001000000000:
+        case 0b00000000000000000000010000000000:
+            out.writeByte(0b11000000 | (codepoint >>> 6).toUInt8());
+            trail = 1;
+            break;
 
-            case 0b00000000000000000000100000000000:
-            case 0b00000000000000000001000000000000:
-            case 0b00000000000000000010000000000000:
-            case 0b00000000000000000100000000000000:
-            case 0b00000000000000001000000000000000:
-                out.writeByte(0b11100000 | (codepoint >>> 12).toUInt8());
-                trail = 2;
-                break;
+        case 0b00000000000000000000100000000000:
+        case 0b00000000000000000001000000000000:
+        case 0b00000000000000000010000000000000:
+        case 0b00000000000000000100000000000000:
+        case 0b00000000000000001000000000000000:
+            out.writeByte(0b11100000 | (codepoint >>> 12).toUInt8());
+            trail = 2;
+            break;
 
-            case 0b00000000000000010000000000000000:
-            case 0b00000000000000100000000000000000:
-            case 0b00000000000001000000000000000000:
-            case 0b00000000000010000000000000000000:
-            case 0b00000000000100000000000000000000:
-                out.writeByte(0b11110000 | (codepoint >>> 18).toUInt8());
-                trail = 3;
-                break;
+        case 0b00000000000000010000000000000000:
+        case 0b00000000000000100000000000000000:
+        case 0b00000000000001000000000000000000:
+        case 0b00000000000010000000000000000000:
+        case 0b00000000000100000000000000000000:
+            out.writeByte(0b11110000 | (codepoint >>> 18).toUInt8());
+            trail = 3;
+            break;
 
-            case 0b00000000001000000000000000000000:
-            case 0b00000000010000000000000000000000:
-            case 0b00000000100000000000000000000000:
-            case 0b00000001000000000000000000000000:
-            case 0b00000010000000000000000000000000:
-                out.writeByte(0b11111000 | (codepoint >>> 24).toUInt8());
-                trail = 4;
-                break;
+        case 0b00000000001000000000000000000000:
+        case 0b00000000010000000000000000000000:
+        case 0b00000000100000000000000000000000:
+        case 0b00000001000000000000000000000000:
+        case 0b00000010000000000000000000000000:
+            out.writeByte(0b11111000 | (codepoint >>> 24).toUInt8());
+            trail = 4;
+            break;
 
-            case 0b00000100000000000000000000000000:
-            case 0b00001000000000000000000000000000:
-            case 0b00010000000000000000000000000000:
-            case 0b00100000000000000000000000000000:
-            case 0b01000000000000000000000000000000:
-                out.writeByte(0b11111100 | (codepoint >>> 30).toUInt8());
-                trail = 5;
-                break;
+        case 0b00000100000000000000000000000000:
+        case 0b00001000000000000000000000000000:
+        case 0b00010000000000000000000000000000:
+        case 0b00100000000000000000000000000000:
+        case 0b01000000000000000000000000000000:
+            out.writeByte(0b11111100 | (codepoint >>> 30).toUInt8());
+            trail = 5;
+            break;
 
-            default: throw new IllegalUTF($"illegal character codepoint: {codepoint}");
-            }
+        default: throw new IllegalUTF($"illegal character codepoint: {codepoint}");
+        }
 
         // write out trailing bytes; each has the same "10xxxxxx" format with 6
         // bits of data
-        while (trail > 0)
-            {
+        while (trail > 0) {
             out.writeByte(0b10_000000 | (codepoint >>> --trail * 6 & 0b00_111111).toByte());
-            }
         }
+    }
 
     /**
      * Write a Char to the stream using the UTF-16 format.
@@ -609,10 +549,9 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF16Char(DataOutput out, Char ch)
-        {
+    static void writeUTF16Char(DataOutput out, Char ch) {
         writeUTF16Codepoint(out, ch.codepoint);
-        }
+    }
 
     /**
      * Write a Unicode codepoint to the stream using the UTF-16 format.
@@ -622,10 +561,8 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF16Codepoint(DataOutput out, UInt32 codepoint)
-        {
-        if (codepoint > 0xFFFF)
-            {
+    static void writeUTF16Codepoint(DataOutput out, UInt32 codepoint) {
+        if (codepoint > 0xFFFF) {
             // the high ten bits (in the range 0x000–0x3FF) are encoded in the range 0xD800–0xDBFF;
             // the low ten bits (in the range 0x000–0x3FF) are encoded in the range 0xDC00–0xDFFF
             codepoint -= 0x10000;
@@ -633,12 +570,10 @@ interface DataOutput
                          | (codepoint & 0xFFC << 6)
                          | (codepoint & 0x3FF     );
             out.writeBytes(nHiLo.toByteArray());
-            }
-        else
-            {
+        } else {
             out.writeBytes(codepoint.toByteArray(), 2, 2);
-            }
         }
+    }
 
     /**
      * Write a Char to the stream using the UTF-32 format.
@@ -648,10 +583,9 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF32Char(DataOutput out, Char ch)
-        {
+    static void writeUTF32Char(DataOutput out, Char ch) {
         writeUTF32Codepoint(out, ch.codepoint);
-        }
+    }
 
     /**
      * Write a Unicode codepoint to the stream using the UTF-32 format.
@@ -661,10 +595,9 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF32Codepoint(DataOutput out, UInt32 codepoint)
-        {
+    static void writeUTF32Codepoint(DataOutput out, UInt32 codepoint) {
         out.writeBytes(codepoint.toByteArray());
-        }
+    }
 
     /**
      * Write a String to the DataOutput stream as a null-terminated ASCII string.
@@ -675,18 +608,15 @@ interface DataOutput
      *                     outside of the ASCII range into a Byte that can be written to the stream
      *
      */
-    static void writeAsciiStringZ(DataOutput out, String s, function Byte(Char) convToAscii = _ -> '?'.toByte())
-        {
-        for (Char ch : s)
-            {
+    static void writeAsciiStringZ(DataOutput out, String s, function Byte(Char) convToAscii = _ -> '?'.toByte()) {
+        for (Char ch : s) {
             UInt32 codepoint = ch.codepoint;
             Byte   byte      = 0 < codepoint <= 0x7F ? codepoint.toByte() : convToAscii(ch);
             out.writeByte(byte);
-            if (byte == 0)
-                {
+            if (byte == 0) {
                 return;
-                }
             }
-        out.writeByte(0);
         }
+        out.writeByte(0);
     }
+}

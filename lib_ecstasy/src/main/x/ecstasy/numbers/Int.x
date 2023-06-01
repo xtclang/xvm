@@ -30,8 +30,7 @@
  */
 const Int
         extends IntNumber
-        default(0)
-    {
+        default(0) {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -48,28 +47,24 @@ const Int
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return False;
-        }
+    }
 
     @Override
-    static Int zero()
-        {
+    static Int zero() {
         return 0;
-        }
+    }
 
     @Override
-    static Int one()
-        {
+    static Int one() {
         return 1;
-        }
+    }
 
     @Override
-    static conditional Range<Int> range()
-        {
+    static conditional Range<Int> range() {
         return True, MinValue..MaxValue;
-        }
+    }
 
 
     // ----- constructors --------------------------------------------------------------------------
@@ -81,11 +76,10 @@ const Int
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert bits.size <= 128;
         super(bits);
-        }
+    }
 
     /**
      * Construct a 64-bit signed integer number from its network-portable representation.
@@ -94,11 +88,10 @@ const Int
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert bytes.size <= 16;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a 64-bit signed integer number from its `String` representation.
@@ -106,97 +99,84 @@ const Int
      * @param text  an integer number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct Int(new IntLiteral(text).toInt().bits);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
-        return switch (this <=> 0)
-            {
+    Signum sign.get() {
+        return switch (this <=> 0) {
             case Lesser : Negative;
             case Equal  : Zero;
             case Greater: Positive;
-            };
-        }
+        };
+    }
 
     @Override
-    UInt magnitude.get()
-        {
+    UInt magnitude.get() {
         // there is no "abs()" for MinValue
         return this == MinValue
                 ? UInt.MaxValue
                 : abs().toUInt();
-        }
+    }
 
 
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
     @Op("-#")
-    Int neg()
-        {
+    Int neg() {
         TODO
-        }
+    }
 
     @Override
     @Op("+")
-    Int add(Int! n)
-        {
+    Int add(Int! n) {
         TODO
-        }
+    }
 
     @Override
     @Op("-")
-    Int sub(Int! n)
-        {
+    Int sub(Int! n) {
         TODO
-        }
+    }
 
     @Override
     @Op("*")
-    Int mul(Int! n)
-        {
+    Int mul(Int! n) {
         TODO
-        }
+    }
 
     @Override
     @Op("/")
-    Int div(Int! n)
-        {
+    Int div(Int! n) {
         TODO
-        }
+    }
 
     @Override
     @Op("%")
-    Int mod(Int! n)
-        {
+    Int mod(Int! n) {
         TODO
-        }
+    }
 
     @Override
-    Int abs()
-        {
+    Int abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    Int pow(Int! n)
-        {
+    Int pow(Int! n) {
         Int result = 1;
 
-        while (n-- > 0)
-            {
+        while (n-- > 0) {
             result *= this;
-            }
+        }
 
         return result;
-        }
+    }
 
 
     // ----- Bitwise operations (but only a subset) ------------------------------------------------
@@ -207,23 +187,21 @@ const Int
      *
      * @throws OutOfBounds if this integer value is negative
      */
-    @RO Int leftmostBit.get()
-        {
+    @RO Int leftmostBit.get() {
         return this == 0
                 ? this
                 : toInt128().leftmostBit.toInt();
-        }
+    }
 
     /**
      * If any bits are set in this integer, then return an integer with only the least significant
      * (right-most) of those bits set, otherwise return zero.
      */
-    @RO Int rightmostBit.get()
-        {
+    @RO Int rightmostBit.get() {
         return this == 0
                 ? this
                 : toInt128().rightmostBit.toInt();
-        }
+    }
 
     /**
      * The number of bits that are zero following the least significant (right-most) `1` bit.
@@ -231,206 +209,179 @@ const Int
      *
      * For an integer with `bitCount==1`, this provides the log2 value of the integer.
      */
-    Int! trailingZeroCount.get()
-        {
+    Int! trailingZeroCount.get() {
         return toInt128().trailingZeroCount;
-        }
+    }
 
     /**
      * The number of bits that are set (non-zero) in the integer. This is also referred to as a
      * _population count_, or `POPCNT`.
      */
-    Int! bitCount.get()
-        {
+    Int! bitCount.get() {
         // warning: for negative values, this will almost always return a value larger than the
         // number of bits used to the Int value itself, as the result of sign extension
         return toInt128().bitCount;
-        }
+    }
 
     /**
      * Bitwise AND.
      */
-    @Op("&") Int and(Int that)
-        {
+    @Op("&") Int and(Int that) {
         return toInt128().and(that.toInt128()).toInt();
-        }
+    }
 
     /**
      * Bitwise OR.
      */
-    @Op("|") Int or(Int that)
-        {
+    @Op("|") Int or(Int that) {
         return toInt128().or(that.toInt128()).toInt();
-        }
+    }
 
     /**
      * Bitwise XOR.
      */
-    @Op("^") Int xor(Int that)
-        {
+    @Op("^") Int xor(Int that) {
         return toInt128().xor(that.toInt128()).toInt();
-        }
+    }
 
     /**
      * Bitwise NOT.
      */
-    @Op("~") Int not()
-        {
+    @Op("~") Int not() {
         return toInt128().not().toInt();
-        }
+    }
 
     /**
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for
      * both signed and unsigned integer values.
      */
-    @Op("<<") Int shiftLeft(Int! count)
-        {
+    @Op("<<") Int shiftLeft(Int! count) {
         return toInt128().shiftLeft(count).toInt();
-        }
+    }
 
     /**
      * Shift bits right. For signed integer values, this is an arithmetic right shift. For
      * unsigned integer values, this is both a logical right shift and arithmetic right
      * shift.
      */
-    @Op(">>") Int shiftRight(Int! count)
-        {
+    @Op(">>") Int shiftRight(Int! count) {
         return toInt128().shiftRight(count).toInt();
-        }
+    }
 
     /**
      * Keep the specified number of least-significant (right-most) bit values unchanged, zeroing any
      * remaining bits. Note that for negative values, if any bits are zeroed, this will change the
      * sign of the resulting value.
      */
-    Int retainLSBits(Int! count)
-        {
+    Int retainLSBits(Int! count) {
         return toInt128().retainLSBits(count).toInt();
-        }
+    }
 
 
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional Int next()
-        {
-        if (this < MaxValue)
-            {
+    conditional Int next() {
+        if (this < MaxValue) {
             return True, this + 1;
-            }
+        }
 
         return False;
-        }
+    }
 
     @Override
-    conditional Int prev()
-        {
-        if (this > MinValue)
-            {
+    conditional Int prev() {
+        if (this > MinValue) {
             return True, this - 1;
-            }
+        }
 
         return False;
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
         return this;
-        }
+    }
 
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int8.MinValue && this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int16.MinValue && this <= Int16.MaxValue;
         return new Int16(bits[bitLength-16 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int32.MinValue && this <= Int32.MaxValue;
         return new Int32(bits[bitLength-32 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= Int64.MinValue && this <= Int64.MaxValue;
         return new Int64(bits[bitLength-64 ..< bitLength]);
-        }
+    }
 
     @Auto
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         return new Int128(new Bit[128](i -> bits[i < 128-bitLength ? 0 : i]));
-        }
+    }
 
     @Auto
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return new IntN(bits);
-        }
+    }
 
     @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero) {
         return magnitude;
-        }
+    }
 
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt8.MinValue && this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt16.MinValue && this <= UInt16.MaxValue;
         return new UInt16(bits[bitLength-16 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt32.MinValue && this <= UInt32.MaxValue;
         return new UInt32(bits[bitLength-32 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= UInt64.MinValue && this <= UInt64.MaxValue;
         return new UInt64(bits[bitLength-64 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this >= 0;
         return new UInt128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
-        }
+    }
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         assert:bounds this >= 0;
         return new UIntN(bits);
-        }
+    }
 
     @Auto
     @Override
@@ -454,10 +405,9 @@ const Int
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return toIntLiteral().toFloatN();
-        }
+    }
 
     @Auto
     @Override
@@ -473,8 +423,7 @@ const Int
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toIntLiteral().toDecN();
-        }
     }
+}

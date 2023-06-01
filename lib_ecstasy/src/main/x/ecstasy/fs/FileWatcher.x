@@ -2,8 +2,7 @@
  * FileWatcher represents an event interface for an object that is watching for changes occurring
  * to files and/or directories within a FileStore.
  */
-interface FileWatcher
-    {
+interface FileWatcher {
     enum Subject {DirOnly, FileOnly, Both}
 
     enum Event {Created, Modified, Deleted}
@@ -18,10 +17,9 @@ interface FileWatcher
      * This value is considered to be _advisory_; the FileWatcher must be written in a manner that
      * ignores events that it does not desire.
      */
-    @RO Subject desiredSubject.get()
-        {
+    @RO Subject desiredSubject.get() {
         return Both;
-        }
+    }
 
     /**
      * If the mechanism that is detecting and reporting the changes to this FileWatcher is capable
@@ -31,10 +29,9 @@ interface FileWatcher
      * This value is considered to be _advisory_; the FileWatcher must be written in a manner that
      * ignores events that it does not desire.
      */
-    @RO Set<Event> desiredEvents.get()
-        {
+    @RO Set<Event> desiredEvents.get() {
         return ALL_EVENTS;
-        }
+    }
 
     /**
      * If the mechanism that is detecting and reporting the changes to this FileWatcher is capable
@@ -47,10 +44,9 @@ interface FileWatcher
      * written in a manner that is tolerant of event delivery delays, or conversely, of events
      * being delivered at a higher-than-desired rate.
      */
-    @RO Duration desiredPeriod.get()
-        {
+    @RO Duration desiredPeriod.get() {
         return Duration.ofSeconds(10);
-        }
+    }
 
     /**
      * Invoked when a directory event has been detected.
@@ -60,10 +56,9 @@ interface FileWatcher
      *
      * @return True to cancel the watch that caused this event to be delivered
      */
-    Boolean onEvent(Event event, Directory dir)
-        {
+    Boolean onEvent(Event event, Directory dir) {
         return False;
-        }
+    }
 
     /**
      * Invoked when a file event has been detected.
@@ -73,10 +68,9 @@ interface FileWatcher
      *
      * @return True to cancel the watch that caused this event to be delivered
      */
-    Boolean onEvent(Event event, File file)
-        {
+    Boolean onEvent(Event event, File file) {
         return False;
-        }
+    }
 
     /**
      * Invoked when events scheduled to be delivered to this FileWatcher backed up to the point
@@ -85,8 +79,7 @@ interface FileWatcher
      *
      * @return True to attempt to cancel the watch(es) that caused the back-up
      */
-    Boolean eventsDiscarded()
-        {
+    Boolean eventsDiscarded() {
         return False;
-        }
     }
+}

@@ -4,17 +4,15 @@ import io.IOException;
  * The filing system package contains classes and interfaces related to accessing, manipulating,
  * and managing hierarchical file systems.
  */
-package fs
-    {
+package fs {
     /**
      * A generic path-related exception, used as the basis for many filing system exceptions.
      */
     const PathException(Path? path = Null, String? text = Null, Exception? cause = Null)
-            extends IOException(text, cause)
-        {
+            extends IOException(text, cause) {
+
         @Override
-        @RO String message.get()
-            {
+        @RO String message.get() {
             String message = super();
             Path?  path    = this.path;
             return path == Null
@@ -22,8 +20,8 @@ package fs
                 : message == ""
                     ? path.toString()
                     : $"{path}; {message}";
-            }
         }
+    }
 
     /**
      * Indicates that a file or directory that was required by an operation does not exist.
@@ -45,4 +43,4 @@ package fs
      */
     const FileAlreadyExists(Path? path = Null, String? text = Null, Exception? cause = Null)
             extends PathException(path, text, cause);
-    }
+}

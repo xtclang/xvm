@@ -33,8 +33,7 @@
  */
 interface Tuple<ElementTypes extends Tuple<ElementTypes>>
         extends Freezable
-        extends Stringable
-    {
+        extends Stringable {
     /**
      * The number of elements in the tuple. A tuple cannot change its size; a size change requires
      * the creation of a new tuple.
@@ -167,8 +166,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * those of an [array](Array.Mutability), but there are subtle differences, such as how a
      * `Fixed` tuple supports element addition and removal by creating a new `Tuple` instance.
      */
-    enum Mutability
-        {
+    enum Mutability {
         /*
          * A _Constant_ `Tuple` is also a persistent data structure, but additionally it must be
          * immutable, and all of its contents must be immutable.
@@ -185,7 +183,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
          * create a new `Tuple` with the requested changes incorporated.
          */
         Fixed
-        }
+    }
 
     /**
      * The Mutability of the Tuple.
@@ -222,37 +220,30 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return 10*size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         buf.add('(');
 
-        for (Int i : 0 ..< size)
-            {
-            if (i > 0)
-                {
+        for (Int i : 0 ..< size) {
+            if (i > 0) {
                 buf.addAll(", ");
-                }
+            }
 
             Object v = this[i];
 
-            if (v.is(Stringable))
-                {
+            if (v.is(Stringable)) {
                 v.appendTo(buf);
-                }
-            else
-                {
+            } else {
                 v.toString().appendTo(buf);
-                }
             }
+        }
 
         return buf.add(')');
-        }
+    }
 
 
     // ----- Comparable ----------------------------------------------------------------------------
@@ -260,33 +251,28 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     /**
      * Tuples are equal if their types are comparable and the contents are equal.
      */
-    static <CompileType extends Tuple> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Tuple> Boolean equals(CompileType value1, CompileType value2) {
         Int c = value1.size;
-        if (c != value2.size)
-            {
+        if (c != value2.size) {
             return False;
-            }
+        }
 
-        for (Int i : 0 ..< c)
-            {
+        for (Int i : 0 ..< c) {
             val ref1 = value1.elementAt(i);
             val ref2 = value2.elementAt(i);
-            if (ref1 == ref2)
-                {
+            if (ref1 == ref2) {
                 // identical references (including two Null values)
                 continue;
-                }
+            }
 
             val val1 = ref1.get();
             val val2 = ref2.get();
             if (val1 == Null || val2 == Null                            // eliminate either-is-Null
                 || (ref1.Referent-Nullable) != (ref2.Referent-Nullable) // so ignore type Nullable
-                || val1.as(ref1.Referent) != val2.as(ref1.Referent))
-                {
+                || val1.as(ref1.Referent) != val2.as(ref1.Referent)) {
                 return False;
-                }
             }
-        return True;
         }
+        return True;
     }
+}

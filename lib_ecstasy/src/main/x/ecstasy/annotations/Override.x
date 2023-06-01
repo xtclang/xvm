@@ -5,6 +5,5 @@
  *   declaration on its super-type will cause a compile-time error
  */
 mixin Override
-        into Class | Property | Method | Function
-    {
-    }
+        into Class | Property | Method | Function {
+}

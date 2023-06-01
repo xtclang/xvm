@@ -3,23 +3,20 @@
  * source code, and the aggregate unit for compiled code distribution and deployment.
  */
 interface Module
-        extends Package
-    {
+        extends Package {
     /**
      * The simple qualified name of the module, such as "ecstasy".
      */
-    @RO String simpleName.get()
-        {
+    @RO String simpleName.get() {
         return qualifiedName.split('.')[0];
-        }
+    }
 
     /**
      * The fully qualified name of the module, such as "ecstasy.xtclang.org".
      */
-    @RO String qualifiedName.get()
-        {
+    @RO String qualifiedName.get() {
         return &this.actualClass.name;
-        }
+    }
 
     /**
      * The version of the module.
@@ -56,14 +53,12 @@ interface Module
     // ----- Stringable methods ----------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return qualifiedName.size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         return qualifiedName.appendTo(buf);
-        }
     }
+}

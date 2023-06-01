@@ -9,8 +9,7 @@
  * The (optional) flags value is a combination of the [CASE_INCENSE], [COMMENTS], [MULTILINE],
  * [LITERAL] or [DOT_ALL] values.
  */
-const RegEx(String pattern, Int flags = 0)
-    {
+const RegEx(String pattern, Int flags = 0) {
     /**
      * Match this pattern against the entire input value.
      *
@@ -19,10 +18,9 @@ const RegEx(String pattern, Int flags = 0)
      * @return True iff the entire input String matches this pattern
      * @return (optional) a Match resulting from matching the input string
      */
-    conditional Match match(String input)
-        {
+    conditional Match match(String input) {
         return False;
-        }
+    }
 
     /**
      * Match this pattern from the beginning of the specified input String.
@@ -40,10 +38,9 @@ const RegEx(String pattern, Int flags = 0)
      * @return True iff the input starts with a sub-sequence that matches this pattern
      * @return (optional) a Match resulting from matching the input string
      */
-    conditional Match matchPrefix(String input)
-        {
+    conditional Match matchPrefix(String input) {
         return False;
-        }
+    }
 
     /**
      * Find the first occurrence of this pattern in the specified input String.
@@ -64,10 +61,9 @@ const RegEx(String pattern, Int flags = 0)
      * @return True iff the input contains a sub-sequence that matches this pattern
      * @return (optional) a Match resulting from matching the input string
      */
-    conditional Match find(String input, Int offset = 0)
-        {
+    conditional Match find(String input, Int offset = 0) {
         return False;
-        }
+    }
 
     /**
      * Replaces every subsequence of the input text that matches this regular expression pattern
@@ -88,10 +84,9 @@ const RegEx(String pattern, Int flags = 0)
      * @return  a string constructed by replacing each matching subsequence by the replacement
      *          string, substituting captured subsequences as needed
      */
-    String replaceAll(String text, String replacement)
-        {
+    String replaceAll(String text, String replacement) {
         TODO
-        }
+    }
 
     /**
      * Creates a regular expression that will match the specified String exactly as a literal,
@@ -111,29 +106,23 @@ const RegEx(String pattern, Int flags = 0)
      *
      * @return a literal String pattern that matches the input String
      */
-    public static String toLiteral(String input)
-        {
-        if (Int slashEIndex := input.indexOf("\\E"))
-            {
+    public static String toLiteral(String input) {
+        if (Int slashEIndex := input.indexOf("\\E")) {
             Int          current = 0;
             StringBuffer buffer  = new StringBuffer();
             buffer.append("\\Q");
-            do
-                {
+            do {
                 buffer.append(input[current ..< slashEIndex]).append("\\E\\\\E\\Q");
                 current = slashEIndex + 2;
-                }
-            while (slashEIndex := input.indexOf("\\E", current));
+            } while (slashEIndex := input.indexOf("\\E", current));
 
             return buffer.append(input[current ..< input.size])
                          .append("\\E")
                          .toString();
-            }
-        else
-            {
+        } else {
             return $"\\Q{input}\\E";
-            }
         }
+    }
 
 
     // ---- Flags -----------------------------------------------------------
@@ -165,4 +154,4 @@ const RegEx(String pattern, Int flags = 0)
      * In this mode, the expression `.` matches any character including a line terminator.
      */
     static Int DOT_ALL      = 0x20;
-    }
+}

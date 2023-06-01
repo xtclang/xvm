@@ -3,8 +3,7 @@
  */
 @Abstract const IntNumber
         extends Number
-        implements Sequential
-    {
+        implements Sequential {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -14,10 +13,9 @@
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         super(bits);
-        }
+    }
 
     /**
      * Construct an integer number from its network-portable representation.
@@ -26,10 +24,9 @@
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         super(bytes);
-        }
+    }
 
 
     // ----- IntNumber properties ------------------------------------------------------------------
@@ -41,16 +38,14 @@
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    Int stepsTo(IntNumber that)
-        {
+    Int stepsTo(IntNumber that) {
         return (that - this).toInt64();
-        }
+    }
 
     @Override
-    IntNumber skip(Int steps)
-        {
+    IntNumber skip(Int steps) {
         return this + steps;
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -58,32 +53,29 @@
     /**
      * Convert the integer number to a character.
      */
-    Char toChar()
-        {
+    Char toChar() {
         return new Char(toUInt32());
-        }
+    }
 
     /**
      * Convert the least significant 4 bits of the integer value to a hexadecimal digit (hexit).
      *
      * @return the hexit for the least significant 4 bits of the integer value
      */
-    Char toHexit()
-        {
+    Char toHexit() {
         return toNibble(True).toChar();
-        }
+    }
 
     /**
      * Convert the IntNumber to a Nibble.
      *
      * @return the hexit for the least significant 4 bits of the integer value
      */
-    Nibble toNibble(Boolean truncate = False)
-        {
+    Nibble toNibble(Boolean truncate = False) {
         Byte byte = toByte(truncate);
         assert truncate || byte <= 0xF;
         return Nibble.of(byte & 0xF);
-        }
+    }
 
     /**
      * Obtain the number as an array of boolean values, each corresponding to one bit.
@@ -92,53 +84,44 @@
      *
      * @return the number as an array of booleans.
      */
-    Boolean[] toBooleanArray()
-        {
+    Boolean[] toBooleanArray() {
         return toBitArray().toBooleanArray();
-        }
+    }
 
     @Override
-    IntLiteral toIntLiteral(Rounding direction = TowardZero)
-        {
+    IntLiteral toIntLiteral(Rounding direction = TowardZero) {
         return new IntLiteral(toString());
-        }
+    }
 
     @Override
-    FPLiteral toFPLiteral()
-        {
+    FPLiteral toFPLiteral() {
         return new FPLiteral(toString());
-        }
+    }
 
 
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return magnitude.estimateStringLength() + (sign == Negative ? 1 : 0);
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        if (sign == Negative)
-            {
+    Appender<Char> appendTo(Appender<Char> buf) {
+        if (sign == Negative) {
             buf.add('-');
-            }
-        return magnitude.appendTo(buf);
         }
+        return magnitude.appendTo(buf);
+    }
 
     /**
      * Calculate the string size for the specified IntNumber and type specific size array.
      */
-    protected static <IntType extends IntNumber> Int calculateStringSize(IntType n, IntType[] sizeArray)
-        {
-        for (Int index = 0; True; index++)
-            {
-            if (n <= sizeArray[index])
-                {
+    protected static <IntType extends IntNumber> Int calculateStringSize(IntType n, IntType[] sizeArray) {
+        for (Int index = 0; True; index++) {
+            if (n <= sizeArray[index]) {
                 return index + 1;
-                }
             }
         }
     }
+}

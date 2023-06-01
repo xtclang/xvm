@@ -32,11 +32,9 @@
  * @see Service.Synchronicity
  */
 const SynchronizedSection
-        implements Closeable
-    {
+        implements Closeable {
     @Synchronized
-    construct(Boolean critical = False)
-        {
+    construct(Boolean critical = False) {
         // store off the previous SynchronizedSection; it will be replaced by this SynchronizedSection, and
         // restored when this SynchronizedSection is closed
         previousSynchronizedSection = this:service.synchronizedSection;
@@ -47,11 +45,9 @@ const SynchronizedSection
 
         // calculate the reentrancy for the synchronized section
         this.critical = critical | previousCritical;
-        }
-    finally
-        {
+    } finally {
         this:service.registerSynchronizedSection(this);
-        }
+    }
 
     /**
      * The SynchronizedSection that this SynchronizedSection replaced, if any.
@@ -66,44 +62,38 @@ const SynchronizedSection
     /**
      * Determine whether this SynchronizedSection is the active SynchronizedSection for the current service.
      */
-    Boolean active.get()
-        {
+    Boolean active.get() {
         return this:service.synchronizedSection == this;
-        }
+    }
 
     /**
      * Determine whether this SynchronizedSection is registered with the current service, regardless of
      * whether it is the currently-active SynchronizedSection.
      */
-    Boolean registered.get()
-        {
+    Boolean registered.get() {
         SynchronizedSection? cs = this:service.synchronizedSection;
-        while (cs != Null)
-            {
-            if (this == cs)
-                {
+        while (cs != Null) {
+            if (this == cs) {
                 return True;
-                }
-
-            cs = cs.previousSynchronizedSection;
             }
 
-        return False;
+            cs = cs.previousSynchronizedSection;
         }
+
+        return False;
+    }
 
     /**
      * Close the SynchronizedSection. This method is invoked automatically by the `using` or
      * `try` with-resources keywords.
      */
     @Override
-    void close(Exception? cause = Null)
-        {
-        if (registered)
-            {
+    void close(Exception? cause = Null) {
+        if (registered) {
             // the reason that the SynchronizedSection checks whether it is registered instead of
             // if it is active is that it is possible that a downstream SynchronizedSection was not
             // properly closed, e.g. by failing to use the "using" or "try"-with-resources syntax
             this:service.registerSynchronizedSection(previousSynchronizedSection);
-            }
         }
     }
+}

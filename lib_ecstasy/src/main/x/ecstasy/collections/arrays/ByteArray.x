@@ -3,8 +3,7 @@
  */
 mixin ByteArray<Element extends Byte>
         into Array<Element>
-        extends BitwiseArray<Element>
-    {
+        extends BitwiseArray<Element> {
     // ----- UTF-8 operations ----------------------------------------------------------------------
 
     import io.IllegalUTF;
@@ -20,86 +19,79 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws IllegalUTF  if the UTF-8 data was not valid
      */
-    (Char ch, Int length) utf8Char(Int offset = 0)
-        {
+    (Char ch, Int length) utf8Char(Int offset = 0) {
         Byte b = this[offset];
-        if (b < 0x80)
-            {
+        if (b < 0x80) {
             // ASCII
             return b.toChar(), 1;
-            }
+        }
 
-        private UInt32 trailing(Int offset)
-            {
-            if (offset >= size)
-                {
+        private UInt32 trailing(Int offset) {
+            if (offset >= size) {
                 throw new IllegalUTF($"missing trailing unicode byte at offset {offset}");
-                }
+            }
 
             Byte b = this[offset];
-            if (b & 0b11000000 != 0b10000000)
-                {
+            if (b & 0b11000000 != 0b10000000) {
                 throw new IllegalUTF(
                     $"trailing unicode byte {b} at offset {offset} does not match 10xxxxxx");
-                }
+            }
 
             return (b & 0b00111111).toUInt32();
-            }
+        }
 
         UInt32 n = b.toUInt32();
         Int    len;
-        switch ((~b).leftmostBit)
-            {
-            case 0b00100000:
-                return (n & 0b00011111 << 6 | trailing(offset+1)).toChar(), 2;
+        switch ((~b).leftmostBit) {
+        case 0b00100000:
+            return (n & 0b00011111 << 6 | trailing(offset+1)).toChar(), 2;
 
-            case 0b00010000:
-                n = n & 0b00001111 << 6
-                    | trailing(offset+1) << 6
-                    | trailing(offset+2);
-                len = 3;
-                break;
+        case 0b00010000:
+            n = n & 0b00001111 << 6
+                | trailing(offset+1) << 6
+                | trailing(offset+2);
+            len = 3;
+            break;
 
-            case 0b00001000:
-                n = n & 0b00000111 << 6
-                    | trailing(offset+1) << 6
-                    | trailing(offset+2) << 6
-                    | trailing(offset+3);
-                len = 4;
-                break;
+        case 0b00001000:
+            n = n & 0b00000111 << 6
+                | trailing(offset+1) << 6
+                | trailing(offset+2) << 6
+                | trailing(offset+3);
+            len = 4;
+            break;
 
-            case 0b00000100:
-                n = n & 0b00000011 << 6
-                    | trailing(offset+1) << 6
-                    | trailing(offset+2) << 6
-                    | trailing(offset+3) << 6
-                    | trailing(offset+4);
-                len = 5;
-                break;
+        case 0b00000100:
+            n = n & 0b00000011 << 6
+                | trailing(offset+1) << 6
+                | trailing(offset+2) << 6
+                | trailing(offset+3) << 6
+                | trailing(offset+4);
+            len = 5;
+            break;
 
-            case 0b00000010:
-                n = n & 0b00000001 << 6
-                    | trailing(offset+1) << 6
-                    | trailing(offset+2) << 6
-                    | trailing(offset+3) << 6
-                    | trailing(offset+4) << 6
-                    | trailing(offset+5);
-                len = 6;
-                break;
+        case 0b00000010:
+            n = n & 0b00000001 << 6
+                | trailing(offset+1) << 6
+                | trailing(offset+2) << 6
+                | trailing(offset+3) << 6
+                | trailing(offset+4) << 6
+                | trailing(offset+5);
+            len = 6;
+            break;
 
-            default:
-                throw new IllegalUTF($"initial byte: {b}");
-            }
+        default:
+            throw new IllegalUTF($"initial byte: {b}");
+        }
 
         Char ch = n.toChar();
-        if (ch.requiresTrailingSurrogate())
-            {
+        if (ch.requiresTrailingSurrogate()) {
             (Char ch2, Int len2) = utf8Char(offset + len);
             return ch.addTrailingSurrogate(ch2), len + len2;
-            }
+        }
 
         return ch, len;
-        }
+    }
 
     /**
      * Translate the byte array from the UTF-8 format into a String.
@@ -108,25 +100,22 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws IllegalUTF  if the UTF-8 data was not valid
      */
-    String unpackUtf8()
-        {
+    String unpackUtf8() {
         Int byteCount = this.size;
-        if (byteCount == 0)
-            {
+        if (byteCount == 0) {
             return "";
-            }
+        }
 
         Int          offset = 0;
         StringBuffer buf    = new StringBuffer(byteCount);
-        while (offset < byteCount)
-            {
+        while (offset < byteCount) {
             (Char ch, Int chLen) = utf8Char(offset);
             buf.add(ch);
             offset += chLen;
-            }
+        }
 
         return buf.toString();
-        }
+    }
 
     /**
      * Translate a series of bytes from the UTF-8 format into a String.
@@ -145,24 +134,21 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws IllegalUTF  if the UTF-8 data was not valid
      */
-    (String string, Int newIndex) unpackUtf8(Int index, Int charCount)
-        {
-        if (charCount == 0)
-            {
+    (String string, Int newIndex) unpackUtf8(Int index, Int charCount) {
+        if (charCount == 0) {
             return "", 0;
-            }
+        }
 
         Char[] chars = new Char[charCount];
         Int    len   = 0;
-        for (Int i = 0; i < charCount; ++i)
-            {
+        for (Int i = 0; i < charCount; ++i) {
             (Char ch, Int chLen) = utf8Char(index + len);
             chars[i] = ch;
             len     += chLen;
-            }
+        }
 
         return new String(chars.freeze()), index + len;
-        }
+    }
 
 
     // ----- packed integer operations -------------------------------------------------------------
@@ -176,32 +162,29 @@ mixin ByteArray<Element extends Byte>
      * @return the integer value
      * @return the index immediately following the packed integer value
      */
-    (Int value, Int newIndex) unpackInt(Int index)
-        {
+    (Int value, Int newIndex) unpackInt(Int index) {
         // use a signed byte to get auto sign-extension when converting to an int
         Int8 b = this[index].toInt8(truncate=True);
 
         // Tiny format: the first bit of the first byte is used to indicate a single byte format,
         // in which the entire value is contained in the 7 MSBs
-        if (b & 0x01 != 0)
-            {
+        if (b & 0x01 != 0) {
             return (b >> 1), index + 1;
-            }
+        }
 
         // Small and Medium formats are indicated by the second bit (and differentiated by the
         // third bit). Small format: bits 3..7 of the first byte are bits 8..12 of the result,
         // and the next byte provides bits 0..7 of the result. Medium format: bits 3..7 of the
         // first byte are bits 16..20 of the result, and the next byte provides bits 8..15 of
         // the result, and the next byte provides bits 0..7 of the result
-        if (b & 0x02 != 0)
-            {
+        if (b & 0x02 != 0) {
             Int n = (b >> 3).toInt() << 8 | this[index+1];
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             return b & 0x04 != 0
                     ? (n << 8 | this[index+2], index + 3)
                     : (n, index + 2);
-            }
+        }
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
@@ -211,12 +194,11 @@ mixin ByteArray<Element extends Byte>
         Int curOffset  = index + 1;
         Int nextOffset = curOffset + byteCount;
         Int n          = this[curOffset++].toInt8(truncate=True);   // Int8 will sign-extend
-        while (curOffset < nextOffset)
-            {
+        while (curOffset < nextOffset) {
             n = n << 8 | this[curOffset++];
-            }
-        return n, nextOffset;
         }
+        return n, nextOffset;
+    }
 
 
     // ----- view support --------------------------------------------------------------------------
@@ -225,118 +207,100 @@ mixin ByteArray<Element extends Byte>
      * Translator from an array of bytes to an array of any fixed-length numeric type.
      */
     private static class Translator<NumType extends Number>(ByteArray bytes)
-            implements ArrayDelegate<NumType>
-        {
-        construct(ByteArray bytes)
-            {
+            implements ArrayDelegate<NumType> {
+
+        construct(ByteArray bytes) {
             assert Int bitsPerNum := NumType.fixedBitLength();
 
             this.bytes       = bytes;
             this.bytesPerNum = (bitsPerNum + 7) / 8;
-            }
+        }
 
         @Override
-        construct(Translator that)
-            {
+        construct(Translator that) {
             this.bytes       = that.bytes.duplicate();
             this.bytesPerNum = that.bytesPerNum;
-            }
+        }
 
         private Byte[] bytes;
         private Int bytesPerNum;
 
         @Override
-        Mutability mutability.get()
-            {
+        Mutability mutability.get() {
             return bytes.mutability;
-            }
+        }
 
         @Override
-        Int capacity
-            {
+        Int capacity {
             @Override
-            Int get()
-                {
+            Int get() {
                 return bytes.capacity / bytesPerNum;
-                }
-
-            @Override
-            void set(Int c)
-                {
-                bytes.capacity = c * bytesPerNum;
-                }
             }
 
+            @Override
+            void set(Int c) {
+                bytes.capacity = c * bytesPerNum;
+            }
+        }
+
         @Override
-        Int size.get()
-            {
+        Int size.get() {
             (Int nums, Int remain) = bytes.size /% bytesPerNum;
             assert remain == 0;
             return nums;
-            }
+        }
 
         @Override
-        Var<NumType> elementAt(Int index)
-            {
+        Var<NumType> elementAt(Int index) {
             assert:bounds 0 <= index < size;
 
-            return new Object()
-                {
-                NumType element
-                    {
+            return new Object() {
+                NumType element {
                     @Override
-                    Boolean assigned.get()
-                        {
+                    Boolean assigned.get() {
                         return index < size;
-                        }
+                    }
 
                     @Override
-                    NumType get()
-                        {
+                    NumType get() {
                         assert:bounds index < size;
                         val offset = index * bytesPerNum;
                         return new NumType(bytes[offset ..< offset+bytesPerNum]);
-                        }
+                    }
 
                     @Override
-                    void set(NumType num)
-                        {
-                        if (num != get())
-                            {
+                    void set(NumType num) {
+                        if (num != get()) {
                             Byte[] newBytes = num.toByteArray();
                             Int    offset   = index * bytesPerNum;
-                            for (Int i : 0 ..< bytesPerNum)
-                                {
+                            for (Int i : 0 ..< bytesPerNum) {
                                 bytes[offset+i] = newBytes[i];
-                                }
                             }
                         }
                     }
-                }.&element;
-            }
+                }
+            }.&element;
+        }
 
         @Override
-        Translator insert(Int index, NumType value)
-            {
+        Translator insert(Int index, NumType value) {
             Byte[] newBytes = bytes.insertAll(index * bytesPerNum, value.toByteArray());
             return &bytes == &newBytes ? this : new Translator<NumType>(newBytes);
-            }
+        }
 
         @Override
-        Translator delete(Int index)
-            {
+        Translator delete(Int index) {
             Int offset = index * bytesPerNum;
             Byte[] newBytes = bytes.deleteAll(offset ..< offset+bytesPerNum);
             return &bytes == &newBytes ? this : new Translator<NumType>(newBytes);
-            }
+        }
 
         @Override
-        NumType[] reify(Mutability? mutability = Null)
-            {
+        NumType[] reify(Mutability? mutability = Null) {
             mutability ?:= this.mutability;
             return new NumType[size](i -> elementAt(i).get()).toArray(mutability, inPlace=True);
-            }
         }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Int8 values. The resulting array has
@@ -348,10 +312,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int8
      */
-    Int8[] asInt8Array()
-        {
+    Int8[] asInt8Array() {
         return new Array<Int8>(new Translator<Int8>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Int16 values. The resulting array has
@@ -363,11 +326,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int16
      */
-    Int16[] asInt16Array()
-        {
+    Int16[] asInt16Array() {
         assert size % 2 == 0;
         return new Array<Int16>(new Translator<Int16>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Int32 values. The resulting array has
@@ -379,11 +341,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int32
      */
-    Int32[] asInt32Array()
-        {
+    Int32[] asInt32Array() {
         assert size % 4 == 0;
         return new Array<Int32>(new Translator<Int32>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Int64 values. The resulting array has
@@ -395,11 +356,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int64
      */
-    Int64[] asInt64Array()
-        {
+    Int64[] asInt64Array() {
         assert size % 8 == 0;
         return new Array<Int64>(new Translator<Int64>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Int128 values. The resulting array has
@@ -411,40 +371,34 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int128
      */
-    Int128[] asInt128Array()
-        {
+    Int128[] asInt128Array() {
         assert size % 16 == 0;
         return new Array<Int128>(new Translator<Int128>(this), mutability);
-        }
+    }
 
     @Override
-    Byte[] asByteArray()
-        {
+    Byte[] asByteArray() {
         static class ReifiableArray
-                extends Array<Byte>
-            {
-            construct(Byte[] bytes, Mutability mutability)
-                {
+                extends Array<Byte> {
+            construct(Byte[] bytes, Mutability mutability) {
                 construct Array(bytes, mutability);
-                }
-
-            @Override
-            construct(ReifiableArray that)
-                {
-                construct Array(that);
-                }
-
-            @Override
-            Byte[] reify(Mutability? mutability = Null)
-                {
-                return new Array<Byte>(mutability ?: this.mutability, this);
-                }
             }
+
+            @Override
+            construct(ReifiableArray that) {
+                construct Array(that);
+            }
+
+            @Override
+            Byte[] reify(Mutability? mutability = Null) {
+                return new Array<Byte>(mutability ?: this.mutability, this);
+            }
+        }
 
         // it is frustrating to have to create a new Byte[] when this is already a Byte[], but if
         // we do not do so, then we cannot reify to guarantee a copy
         return new ReifiableArray(this, mutability);
-        }
+    }
 
     /**
      * A second name for the [asByteArray] method, to assist with readability and uniformity.
@@ -461,11 +415,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt16
      */
-    UInt16[] asUInt16Array()
-        {
+    UInt16[] asUInt16Array() {
         assert size % 2 == 0;
         return new Array<UInt16>(new Translator<UInt16>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-UInt32 values. The resulting array has
@@ -477,11 +430,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt32
      */
-    UInt32[] asUInt32Array()
-        {
+    UInt32[] asUInt32Array() {
         assert size % 4 == 0;
         return new Array<UInt32>(new Translator<UInt32>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-UInt64 values. The resulting array has
@@ -493,11 +445,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt64
      */
-    UInt64[] asUInt64Array()
-        {
+    UInt64[] asUInt64Array() {
         assert size % 8 == 0;
         return new Array<UInt64>(new Translator<UInt64>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-UInt128 values. The resulting array has
@@ -509,11 +460,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt128
      */
-    UInt128[] asUInt128Array()
-        {
+    UInt128[] asUInt128Array() {
         assert size % 16 == 0;
         return new Array<UInt128>(new Translator<UInt128>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-BFloat16 values. The resulting array
@@ -526,11 +476,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a BFloat16
      */
-    BFloat16[] asBFloat16Array()
-        {
+    BFloat16[] asBFloat16Array() {
         assert size % 2 == 0;
         return new Array<BFloat16>(new Translator<BFloat16>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Float16 values. The resulting array has
@@ -542,11 +491,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float16
      */
-    Float16[] asFloat16Array()
-        {
+    Float16[] asFloat16Array() {
         assert size % 2 == 0;
         return new Array<Float16>(new Translator<Float16>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Float32 values. The resulting array has
@@ -558,11 +506,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float32
      */
-    Float32[] asFloat32Array()
-        {
+    Float32[] asFloat32Array() {
         assert size % 4 == 0;
         return new Array<Float32>(new Translator<Float32>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Float64 values. The resulting array has
@@ -574,11 +521,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float64
      */
-    Float64[] asFloat64Array()
-        {
+    Float64[] asFloat64Array() {
         assert size % 8 == 0;
         return new Array<Float64>(new Translator<Float64>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Float128 values. The resulting array
@@ -591,11 +537,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float128
      */
-    Float128[] asFloat128Array()
-        {
+    Float128[] asFloat128Array() {
         assert size % 16 == 0;
         return new Array<Float128>(new Translator<Float128>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Dec32 values. The resulting array has
@@ -607,11 +552,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec32
      */
-    Dec32[] asDec32Array()
-        {
+    Dec32[] asDec32Array() {
         assert size % 4 == 0;
         return new Array<Dec32>(new Translator<Dec32>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Dec64 values. The resulting array has
@@ -623,11 +567,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec64
      */
-    Dec64[] asDec64Array()
-        {
+    Dec64[] asDec64Array() {
         assert size % 8 == 0;
         return new Array<Dec64>(new Translator<Dec64>(this), mutability);
-        }
+    }
 
     /**
      * Obtain a _view_ of this array-of-bytes as an array-of-Dec128 values. The resulting array has
@@ -639,11 +582,10 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec128
      */
-    Dec128[] asDec128Array()
-        {
+    Dec128[] asDec128Array() {
         assert size % 16 == 0;
         return new Array<Dec128>(new Translator<Dec128>(this), mutability);
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -658,10 +600,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int8
      */
-    Int8[] toInt8Array(Mutability mutability = Constant)
-        {
+    Int8[] toInt8Array(Mutability mutability = Constant) {
         return asInt8Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Int16
@@ -673,10 +614,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int16
      */
-    Int16[] toInt16Array(Mutability mutability = Constant)
-        {
+    Int16[] toInt16Array(Mutability mutability = Constant) {
         return asInt16Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Int32
@@ -688,10 +628,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int32
      */
-    Int32[] toInt32Array(Mutability mutability = Constant)
-        {
+    Int32[] toInt32Array(Mutability mutability = Constant) {
         return asInt32Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Int64
@@ -703,10 +642,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int64
      */
-    Int64[] toInt64Array(Mutability mutability = Constant)
-        {
+    Int64[] toInt64Array(Mutability mutability = Constant) {
         return asInt64Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Int128
@@ -718,10 +656,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of an Int128
      */
-    Int128[] toInt128Array(Mutability mutability = Constant)
-        {
+    Int128[] toInt128Array(Mutability mutability = Constant) {
         return asInt128Array().reify(mutability);
-        }
+    }
 
     /**
      * A second name for the [toByteArray] method, to assist with readability and uniformity.
@@ -738,10 +675,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt16
      */
-    UInt16[] toUInt16Array(Mutability mutability = Constant)
-        {
+    UInt16[] toUInt16Array(Mutability mutability = Constant) {
         return asUInt16Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as UInt32
@@ -753,10 +689,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt32
      */
-    UInt32[] toUInt32Array(Mutability mutability = Constant)
-        {
+    UInt32[] toUInt32Array(Mutability mutability = Constant) {
         return asUInt32Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as UInt64
@@ -768,10 +703,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt64
      */
-    UInt64[] toUInt64Array(Mutability mutability = Constant)
-        {
+    UInt64[] toUInt64Array(Mutability mutability = Constant) {
         return asUInt64Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as
@@ -783,10 +717,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a UInt128
      */
-    UInt128[] toUInt128Array(Mutability mutability = Constant)
-        {
+    UInt128[] toUInt128Array(Mutability mutability = Constant) {
         return asUInt128Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as
@@ -798,10 +731,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a BFloat16
      */
-    BFloat16[] toBFloat16Array(Mutability mutability = Constant)
-        {
+    BFloat16[] toBFloat16Array(Mutability mutability = Constant) {
         return asBFloat16Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as
@@ -813,10 +745,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float16
      */
-    Float16[] toFloat16Array(Mutability mutability = Constant)
-        {
+    Float16[] toFloat16Array(Mutability mutability = Constant) {
         return asFloat16Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as
@@ -828,10 +759,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float32
      */
-    Float32[] toFloat32Array(Mutability mutability = Constant)
-        {
+    Float32[] toFloat32Array(Mutability mutability = Constant) {
         return asFloat32Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as
@@ -843,10 +773,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float64
      */
-    Float64[] toFloat64Array(Mutability mutability = Constant)
-        {
+    Float64[] toFloat64Array(Mutability mutability = Constant) {
         return asFloat64Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as
@@ -858,10 +787,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Float128
      */
-    Float128[] toFloat128Array(Mutability mutability = Constant)
-        {
+    Float128[] toFloat128Array(Mutability mutability = Constant) {
         return asFloat128Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Dec32
@@ -873,10 +801,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec32
      */
-    Dec32[] toDec32Array(Mutability mutability = Constant)
-        {
+    Dec32[] toDec32Array(Mutability mutability = Constant) {
         return asDec32Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Dec64
@@ -888,10 +815,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec64
      */
-    Dec64[] toDec64Array(Mutability mutability = Constant)
-        {
+    Dec64[] toDec64Array(Mutability mutability = Constant) {
         return asDec64Array().reify(mutability);
-        }
+    }
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Dec128
@@ -903,10 +829,9 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws OutOfBounds  if the byte array size is not evenly divisible by the size of a Dec128
      */
-    Dec128[] toDec128Array(Mutability mutability = Constant)
-        {
+    Dec128[] toDec128Array(Mutability mutability = Constant) {
         return asDec128Array().reify(mutability);
-        }
+    }
 
     /**
      * Format the contents of this byte array as a "hex dump", useful for debugging.
@@ -915,13 +840,11 @@ mixin ByteArray<Element extends Byte>
      *
      * @return a String containing the hex dump
      */
-    String toHexDump(Int bytesPerLine = 0)
-        {
+    String toHexDump(Int bytesPerLine = 0) {
         assert:arg bytesPerLine >= 0;
-        if (bytesPerLine == 0)
-            {
+        if (bytesPerLine == 0) {
             bytesPerLine = size.notLessThan(4).notGreaterThan(32);
-            }
+        }
 
         // calculate how many digits it will take to show the address
         Int addrLen = ((size.leftmostBit.trailingZeroCount) / 8 + 1) * 2;       // 2, 4, 6, ...
@@ -940,43 +863,37 @@ mixin ByteArray<Element extends Byte>
         Int hexOffset  = addrLen + 2;
         Int charOffset = hexOffset + bytesPerLine * 3;
 
-        for (Int line : 0 ..< lines)
-            {
+        for (Int line : 0 ..< lines) {
             // format the address
             Int addr       = byteOffset;
             Int addrOffset = addrLen - 1;
-            while (addrOffset >= 0)
-                {
+            while (addrOffset >= 0) {
                 lineText[addrOffset--] = addr.toHexit();
                 addr >>= 4;
-                }
+            }
 
-            for (Int index : 0 ..< bytesPerLine)
-                {
-                if (byteOffset < size)
-                    {
+            for (Int index : 0 ..< bytesPerLine) {
+                if (byteOffset < size) {
                     Byte b  = this[byteOffset];
                     Char ch = b.toChar();
 
                     lineText[hexOffset + index * 3    ] = (b >>> 4).toHexit();
                     lineText[hexOffset + index * 3 + 1] = b.toHexit();
                     lineText[charOffset + index       ] = ch.isEscaped() ? '.' : ch;
-                    }
-                else
-                    {
+                } else {
                     lineText[hexOffset + index * 3    ] = ' ';
                     lineText[hexOffset + index * 3 + 1] = ' ';
                     lineText[charOffset + index       ] = ' ';
-                    }
-
-                ++byteOffset;
                 }
 
-            buf.addAll(line < lines - 1 ? lineText : lineText[0 ..< charsPerLine]);
+                ++byteOffset;
             }
 
-        return buf.toString();
+            buf.addAll(line < lines - 1 ? lineText : lineText[0 ..< charsPerLine]);
         }
+
+        return buf.toString();
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -988,12 +905,11 @@ mixin ByteArray<Element extends Byte>
             String?                   post   = Null,
             Int?                      limit  = Null,
             String                    trunc  = "...",
-            function String(Element)? render = Null)
-        {
+            function String(Element)? render = Null) {
         return sep == "" && limit == Null && render == Null
                 ? (pre?.size : 0) + size*2 + (post?.size : 0)
                 : super(sep, pre, post, limit, trunc, render);
-        }
+    }
 
     @Override
     Appender<Char> appendTo(
@@ -1003,10 +919,9 @@ mixin ByteArray<Element extends Byte>
             String?                   post   = Null,
             Int?                      limit  = Null,
             String                    trunc  = "...",
-            function String(Element)? render = Null)
-        {
+            function String(Element)? render = Null) {
         return sep == "" && limit == Null && render == Null
                 ? asNibbleArray().appendTo(buf, sep, pre, post)
                 : super(buf, sep, pre, post, limit, trunc, render);
-        }
     }
+}

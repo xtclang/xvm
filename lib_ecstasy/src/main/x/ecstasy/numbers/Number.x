@@ -21,8 +21,7 @@
         implements Numeric
         implements IntConvertible
         implements FPConvertible
-        implements Orderable
-    {
+        implements Orderable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -32,10 +31,9 @@
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         this.bits = bits;
-        }
+    }
 
     /**
      * Construct a number from its network-portable representation.
@@ -44,10 +42,9 @@
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         construct Number(bytes.toBitArray());
-        }
+    }
 
 
     // ----- related types -------------------------------------------------------------------------
@@ -62,12 +59,11 @@
     /**
      * Signum represents the sign of the number, whether zero, negative or positive.
      */
-    enum Signum(String prefix, IntLiteral factor, Ordered ordered)
-        {
+    enum Signum(String prefix, IntLiteral factor, Ordered ordered) {
         Negative("-", -1, Lesser ),
         Zero    ("" ,  0, Equal  ),
         Positive("+", +1, Greater)
-        }
+    }
 
     /**
      * An IllegalMath exception is raised to indicate any operation that violates mathematical
@@ -95,28 +91,25 @@
     /**
      * The number of bits that the number uses.
      */
-    @RO Int bitLength.get()
-        {
+    @RO Int bitLength.get() {
         return bits.size;
-        }
+    }
 
     /**
      * The number of bytes that this number uses for its storage. In the case of a number that does
      * not use an exact number of bytes, the number is rounded up to the closest byte.
      */
-    @RO Int byteLength.get()
-        {
+    @RO Int byteLength.get() {
         return (bitLength + 7) / 8;
-        }
+    }
 
     /**
      * True if the numeric type is signed (has the potential to hold positive or negative values);
      * False if unsigned (representing only a magnitude).
      */
-    @RO Boolean signed.get()
-        {
+    @RO Boolean signed.get() {
         return True;
-        }
+    }
 
     /**
      * The Sign of the number. The case of [Zero] is special, in that some numeric formats have an
@@ -128,37 +121,33 @@
      * The explicit negative sign of this number. This method only differs from the `sign==Negative`
      * when the value is a negative zero.
      */
-    @RO Boolean negative.get()
-        {
+    @RO Boolean negative.get() {
         return sign == Negative;
-        }
+    }
 
     /**
      * True iff the floating point value is a finite value, indicating that it is neither infinity
      * nor Not-a-Number (`NaN`).
      */
-    @RO Boolean finite.get()
-        {
+    @RO Boolean finite.get() {
         return !infinity && !NaN;
-        }
+    }
 
     /**
      * True iff the this Number is positive infinity or negative infinity. Some forms of Numbers
      * such as floating point values can be infinite as the result of math overflow, for example.
      */
-    @RO Boolean infinity.get()
-        {
+    @RO Boolean infinity.get() {
         return False;
-        }
+    }
 
     /**
      * True iff the this Number is a `NaN` (_Not-a-Number_). Some forms of Numbers such as floating
      * point values can be `NaN` as the result of math underflow, for example.
      */
-    @RO Boolean NaN.get()
-        {
+    @RO Boolean NaN.get() {
         return False;
-        }
+    }
 
     /**
      * The magnitude of this number (its distance from zero), which may use a different Number type
@@ -166,10 +155,9 @@
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
-    @RO Number! magnitude.get()
-        {
+    @RO Number! magnitude.get() {
         return abs();
-        }
+    }
 
 
     // ----- operators -----------------------------------------------------------------------------
@@ -257,12 +245,11 @@
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("/%") (Number quotient, Number remainder) divrem(Number n)
-        {
+    @Op("/%") (Number quotient, Number remainder) divrem(Number n) {
         Number quotient  = this / n;
         Number remainder = this - (n * quotient);
         return quotient, remainder;
-        }
+    }
 
 
     // ----- other operations ----------------------------------------------------------------------
@@ -279,10 +266,9 @@
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
-    Number remainder(Number n)
-        {
+    Number remainder(Number n) {
         return this - (this / n * n);
-        }
+    }
 
     /**
      * Calculate the absolute value of this number. If there is no absolute value representable
@@ -295,17 +281,15 @@
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    Number abs()
-        {
-        if (sign != Negative)
-            {
+    Number abs() {
+        if (sign != Negative) {
             return this;
-            }
+        }
 
         Number n = -this;
         assert:bounds n.sign != Negative;
         return n;
-        }
+    }
 
     /**
      * Calculate this number raised to the specified power.
@@ -329,10 +313,9 @@
      *
      * @return the number as an array of bits
      */
-    Bit[] toBitArray(Array.Mutability mutability = Constant)
-        {
+    Bit[] toBitArray(Array.Mutability mutability = Constant) {
         return bits.toArray(mutability, True);
-        }
+    }
 
     /**
      * Obtain the number as an array of nibbles, in left-to-right order.
@@ -341,10 +324,9 @@
      *
      * @return the number as an array of nibbles
      */
-    Nibble[] toNibbleArray(Array.Mutability mutability = Constant)
-        {
+    Nibble[] toNibbleArray(Array.Mutability mutability = Constant) {
         return bits.toNibbleArray(mutability);
-        }
+    }
 
     /**
      * Obtain the number as an array of bytes, in left-to-right order.
@@ -353,10 +335,9 @@
      *
      * @return the number as an array of bytes
      */
-    Byte[] toByteArray(Array.Mutability mutability = Constant)
-        {
+    Byte[] toByteArray(Array.Mutability mutability = Constant) {
         return bits.toByteArray(mutability);
-        }
+    }
 
     /**
      * Obtain a function that converts from the first specified numeric type to the second
@@ -367,10 +348,9 @@
      *
      * @return a function that converts from the `from` type and to the `to` type
      */
-    static <From extends Number!, To extends Number!> function To(From) converterFor(Type<From> from, Type<To> to)
-        {
+    static <From extends Number!, To extends Number!> function To(From) converterFor(Type<From> from, Type<To> to) {
         return From.converterTo(to);
-        }
+    }
 
 
     // ----- Numeric interface ---------------------------------------------------------------------
@@ -379,8 +359,7 @@
      * Funky interface for Numbers to expose their metadata without needing an instance.
      */
     static interface Numeric
-            extends Destringable
-        {
+            extends Destringable {
         /**
          * Construct a number from its bitwise machine representation.
          *
@@ -454,37 +433,31 @@
          */
 //        static conditional (Int radix, Int precision, Int emax, Int emin, Int bias,
 //                            Int significandBitLength, Int exponentBitLength) fixedLengthFP();
-        }
+    }
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return False;
-        }
+    }
 
     @Override
-    static Number zero()
-        {
+    static Number zero() {
         assert;
-        }
+    }
 
     @Override
-    static Number one()
-        {
+    static Number one() {
         assert;
-        }
+    }
 
     @Override
-    static conditional Range<Number> range()
-        {
+    static conditional Range<Number> range() {
         return False;
-        }
+    }
 
     @Override
-    static <To extends Number!> function To (Number) converterTo(Type<To> to)
-        {
-        return switch (to)
-            {
+    static <To extends Number!> function To (Number) converterTo(Type<To> to) {
+        return switch (to) {
             case @Unchecked Int8    : n -> n.toInt8()   .toUnchecked().as(To);
             case @Unchecked Int16   : n -> n.toInt16()  .toUnchecked().as(To);
             case @Unchecked Int32   : n -> n.toInt32()  .toUnchecked().as(To);
@@ -531,8 +504,8 @@
             case FloatN             : n -> n.toFloatN()               .as(To);
 
             default: assert as $"unsupported convert-to type: {to}";
-            };
-        }
+        };
+    }
 
 
     // ----- Stringable support --------------------------------------------------------------------
@@ -541,4 +514,4 @@
      * The representations for "digits" in any radix up to 16 (hexadecimal).
      */
     static Char[] DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
-    }
+}

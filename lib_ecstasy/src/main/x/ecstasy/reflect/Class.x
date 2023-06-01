@@ -75,8 +75,8 @@ import reflect.ClassTemplate.Composition;
  */
 const Class<PublicType, ProtectedType extends PublicType,
                         PrivateType   extends ProtectedType,
-                        StructType    extends Struct>
-    {
+                        StructType    extends Struct> {
+
     typedef function StructType(PublicType.OuterType?) as Allocator;
 
     // ----- constructors --------------------------------------------------------------------------
@@ -95,30 +95,25 @@ const Class<PublicType, ProtectedType extends PublicType,
     construct(Composition            composition,
               ListMap<String, Type>? canonicalParams = Null,
               Allocator?             allocateStruct  = Null,
-              function StructType()? allocateDefault = Null)
-        {
-        if (Type[] formalTypes := PublicType.parameterized(), formalTypes.size > 0)
-            {
+              function StructType()? allocateDefault = Null) {
+        if (Type[] formalTypes := PublicType.parameterized(), formalTypes.size > 0) {
             assert:arg canonicalParams != Null;
             assert:arg canonicalParams.size == formalTypes.size;
             val formals    = formalTypes.iterator();
             val canonicals = canonicalParams.values.iterator();
-            while (Type formal := formals.next())
-                {
+            while (Type formal := formals.next()) {
                 assert:arg Type canonical := canonicals.next();
                 assert:arg formal.isA(canonical);
-                }
             }
-        else
-            {
+        } else {
             assert:arg canonicalParams?.size == 0;
-            }
+        }
 
         this.composition     = composition;
         this.canonicalParams = canonicalParams ?: new ListMap();
         this.allocateStruct  = allocateStruct;
         this.allocateDefault = allocateDefault;
-        }
+    }
 
 
     // ----- attributes ----------------------------------------------------------------------------
@@ -126,51 +121,45 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * The simple unqualified name of the Class.
      */
-    @RO String name.get()
-        {
+    @RO String name.get() {
         return baseTemplate.name;
-        }
+    }
 
     /**
      * A name by which the Class is globally visible at compile time. This only applies to a small
      * subset of classes in the core Ecstasy module; for example, `numbers.Int64` has the implicit
      * name `Int`.
      */
-    @RO String? implicitName.get()
-        {
+    @RO String? implicitName.get() {
         return baseTemplate.implicitName;
-        }
+    }
 
     /**
      * The path of a class is composed of its module qualified name followed by a colon, followed
      * by a dot-delimited sequence of names necessary to identify this class within its module.
      */
-    @RO String path.get()
-        {
+    @RO String path.get() {
         return baseTemplate.path;
-        }
+    }
 
     /**
      * A name intended to be more easily human-readable than a fully qualified path (if possible),
      * while still being sufficiently descriptive that it would be accepted by
      * [TypeSystem.classForName], and would result in this class.
      */
-    @RO String displayName.get()
-        {
+    @RO String displayName.get() {
         String? alias = implicitName;
-        if (alias != Null)
-            {
+        if (alias != Null) {
             return alias;
-            }
+        }
 
-        if (String relative := pathWithin(this:service.typeSystem))
-            {
+        if (String relative := pathWithin(this:service.typeSystem)) {
             return relative;
-            }
+        }
 
         // use absolute path
         return path;
-        }
+    }
 
     /**
      * Given a specified TypeSystem, determine the path that identifies this Class within that
@@ -182,34 +171,28 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @return (optional) the qualified path to the class within the TypeSystem, in a format that
      *         is supported by [TypeSystem.classForName]
      */
-    conditional String pathWithin(TypeSystem typeSystem)
-        {
+    conditional String pathWithin(TypeSystem typeSystem) {
         String path       = this.path;
         assert Int colon := path.indexOf(':');
         String moduleName = path[0 ..< colon];
-        if (Module _module := typeSystem.moduleByQualifiedName.get(moduleName))
-            {
-            if (String modPath := typeSystem.modulePaths.get(_module))
-                {
+        if (Module _module := typeSystem.moduleByQualifiedName.get(moduleName)) {
+            if (String modPath := typeSystem.modulePaths.get(_module)) {
                 // compute a relative path from the root of the primary module
                 String relPath = path.substring(colon+1);
-                return True, switch (modPath, relPath)
-                        {
-                        case ("", ""): typeSystem.primaryModule.qualifiedName + ':';
-                        case ("", _ ): relPath;
-                        case (_ , ""): modPath;
-                        case (_ , _ ): modPath + '.' + relPath;
-                        };
-                }
-            else
-                {
+                return True, switch (modPath, relPath) {
+                    case ("", ""): typeSystem.primaryModule.qualifiedName + ':';
+                    case ("", _ ): relPath;
+                    case (_ , ""): modPath;
+                    case (_ , _ ): modPath + '.' + relPath;
+                };
+            } else {
                 // use the absolute path including the module qualified name
                 return True, path;
-                }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * The composition of the class.
@@ -220,14 +203,13 @@ const Class<PublicType, ProtectedType extends PublicType,
      * The underlying ClassTemplate of this Class. For example, given a composition
      * `@A1 @A2 C`, the `baseTemplate` property would return `C`.
      */
-    ClassTemplate baseTemplate.get()
-        {
+    ClassTemplate baseTemplate.get() {
         (Class!<> baseClass, _) = deannotate();
 
         Composition baseComposition = baseClass.composition;
         assert baseComposition.is(ClassTemplate);
         return baseComposition;
-        }
+    }
 
     /**
      * Obtain the deannotated form of this class, and the annotations, if any, that were added to
@@ -242,26 +224,20 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @return the underlying class
      * @return an array of the annotations that were applied to the underlying class
      */
-    (Class!<> deannotated, Annotation[] annotations) deannotate()
-        {
+    (Class!<> deannotated, Annotation[] annotations) deannotate() {
         Type type = PublicType;
-        if (Annotation annotation := type.annotated())
-            {
+        if (Annotation annotation := type.annotated()) {
             Annotation[] annotations = new Annotation[];
-            do
-                {
+            do {
                 annotations.add(annotation);
                 assert type.form == Annotated, type := type.modifying();
-                }
-            while (annotation := type.annotated());
+            } while (annotation := type.annotated());
             assert Class!<> deannotated := type.fromClass();
             return deannotated, annotations.reversed();
-            }
-        else
-            {
+        } else {
             return this, [];
-            }
         }
+    }
 
     /**
      * Add the specified annotations to this class to produce a new, annotated class.
@@ -270,29 +246,23 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return the annotated class
      */
-    Class!<> annotate(Annotation[] | Annotation annotations)
-        {
+    Class!<> annotate(Annotation[] | Annotation annotations) {
         Type type = PublicType;
-        if (annotations.is(Annotation[]))
-            {
-            if (annotations.size == 0)
-                {
+        if (annotations.is(Annotation[])) {
+            if (annotations.size == 0) {
                 return this;
-                }
+            }
 
-            for (Annotation annotation : annotations)
-                {
+            for (Annotation annotation : annotations) {
                 type = type.annotate(annotation);
-                }
             }
-        else
-            {
+        } else {
             type = type.annotate(annotations);
-            }
+        }
 
         assert Class!<> annotated := type.fromClass();
         return annotated;
-        }
+    }
 
     /**
      * The formal type parameter names and the canonical (constraint) type for each. The order is
@@ -304,34 +274,29 @@ const Class<PublicType, ProtectedType extends PublicType,
      * The values for each of the formal types required by the class. The order of the entries in
      * the map is significant.
      */
-    @Lazy ListMap<String, Type> formalTypes.calc()
-        {
+    @Lazy ListMap<String, Type> formalTypes.calc() {
         ListMap<String, Type> canonicals = canonicalParams;
         ListMap<String, Type> formals    = new ListMap(canonicals.size);
-        if (Type[] formalTypes := PublicType.parameterized())
-            {
+        if (Type[] formalTypes := PublicType.parameterized()) {
             assert formalTypes.size == canonicals.size;
-            Loop: for (String name : canonicals.keys)
-                {
+            Loop: for (String name : canonicals.keys) {
                 formals[name] = formalTypes[Loop.count];
-                }
             }
-        return formals.makeImmutable();
         }
+        return formals.makeImmutable();
+    }
 
     /**
      * @return the canonical form of this class
      */
-    @RO Class!<> canonicalClass.get()
-        {
-        if (PublicType.parameterized())
-            {
+    @RO Class!<> canonicalClass.get() {
+        if (PublicType.parameterized()) {
             assert Class!<> that := PublicType.parameterize().fromClass();
             return that;
-            }
+        }
 
         return this;
-        }
+    }
 
     /**
      * Add, remove, or replace type parameters on this class.
@@ -340,34 +305,29 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return the corresponding parameterized class
      */
-    Class!<> parameterize(Type[] paramTypes = [])
-        {
+    Class!<> parameterize(Type[] paramTypes = []) {
         // TODO tuple support
 
         Type[] oldParams = [];
         oldParams := PublicType.parameterized();
-        CheckSame: if (paramTypes.size == oldParams.size)
-            {
-            for (Int i = 0, Int c = paramTypes.size; i < c; ++i)
-                {
-                if (paramTypes[i] != oldParams[i])
-                    {
+        CheckSame: if (paramTypes.size == oldParams.size) {
+            for (Int i = 0, Int c = paramTypes.size; i < c; ++i) {
+                if (paramTypes[i] != oldParams[i]) {
                     break CheckSame;
-                    }
                 }
-            return this;
             }
+            return this;
+        }
 
         Type[] canonicalTypes = canonicalParams.values.toArray();
         assert:arg paramTypes.size <= canonicalTypes.size;
-        for (Int i = 0, Int c = paramTypes.size; i < c; ++i)
-            {
+        for (Int i = 0, Int c = paramTypes.size; i < c; ++i) {
             assert:arg paramTypes[i].isA(canonicalTypes[i]);
-            }
+        }
 
         assert Class!<> that := PublicType.parameterize(paramTypes).fromClass();
         return that;
-        }
+    }
 
     /**
      * The factory for structure instances, if the class is not abstract in this [TypeSystem].
@@ -377,14 +337,13 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * The singleton instance, which is either an `immutable Const` or a `Service`.
      */
-    private @Lazy PublicType singletonInstance.calc()
-        {
+    private @Lazy PublicType singletonInstance.calc() {
         Allocator? alloc = allocateStruct;
         assert baseTemplate.singleton && alloc != Null;
         PublicType instance = instantiate(alloc(Null));
         assert &instance.isConst || &instance.isService;
         return instance;
-        }
+    }
 
     /**
      * The factory for default value, if the class has one.
@@ -394,29 +353,26 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * The default value instance.
      */
-    private @Lazy PublicType defaultInstance.calc()
-        {
+    private @Lazy PublicType defaultInstance.calc() {
         function StructType()? alloc = allocateDefault;
         assert baseTemplate.hasDefault && alloc != Null;
         PublicType instance = instantiate(alloc());
         return instance;
-        }
+    }
 
     /**
      * True iff the class is abstract.
      */
-    @RO Boolean abstract.get()
-        {
+    @RO Boolean abstract.get() {
         return baseTemplate.isAbstract; // TODO CP the composition itself should have abstract as a property
-        }
+    }
 
     /**
      * Determine if the class is a virtual child class, which must be instantiated virtually.
      */
-    Boolean virtualChild.get()
-        {
+    Boolean virtualChild.get() {
         return baseTemplate.virtualChild;
-        }
+    }
 
     /**
      * Determine if the class of the referent extends (or is) the specified class.
@@ -425,16 +381,14 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return True iff this class extends the specified class
      */
-    Boolean extends(Class!<> clz)
-        {
+    Boolean extends(Class!<> clz) {
         // one can only "extend" a class (or a mixin extend a mixin)
-        if (clz.baseTemplate.format == Interface)
-            {
+        if (clz.baseTemplate.format == Interface) {
             return False;
-            }
+        }
 
         return this.PublicType.isA(clz.PublicType) && this.composition.extends(clz.composition);
-        }
+    }
 
     /**
      * Determine if the class of the referent incorporates the specified mixin.
@@ -443,16 +397,14 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return True iff this class incorporates the specified class
      */
-    Boolean incorporates(Class!<> mix)
-        {
+    Boolean incorporates(Class!<> mix) {
         // one can only "incorporate" a mixin
-        if (mix.baseTemplate.format != Mixin)
-            {
+        if (mix.baseTemplate.format != Mixin) {
             return False;
-            }
+        }
 
         return this.PublicType.isA(mix.PublicType) && this.composition.incorporates(mix.composition);
-        }
+    }
 
     /**
      * Determine if the class of the referent is a mixin that applies to the specified type.
@@ -461,16 +413,14 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return True iff this mixin applies to the specified type
      */
-    Boolean mixesInto(Type type)
-        {
+    Boolean mixesInto(Type type) {
         // only a mixin can be "into"
-        if (baseTemplate.format != Mixin)
-            {
+        if (baseTemplate.format != Mixin) {
             return False;
-            }
+        }
 
         return this.composition.mixesInto(type.template);
-        }
+    }
 
     /**
      * Determine if the class of the referent is annotated by the specified mixin.
@@ -479,16 +429,14 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return True iff this class is annotated by the specified class
      */
-    conditional AnnotationTemplate annotatedBy(Class!<> mix)
-        {
+    conditional AnnotationTemplate annotatedBy(Class!<> mix) {
         // one can only be annotated by a mixin
-        if (mix.baseTemplate.format != Mixin)
-            {
+        if (mix.baseTemplate.format != Mixin) {
             return False;
-            }
+        }
 
         return composition.findAnnotation(mix.displayName);
-        }
+    }
 
     /**
      * Determine if the class of the referent implements the specified interface.
@@ -505,16 +453,14 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return True iff this class implements the specified class (representing an interface)
      */
-    Boolean implements(Class!<> clz)
-        {
+    Boolean implements(Class!<> clz) {
         // one can only "implement" an interface
-        if (clz.baseTemplate.format != Interface)
-            {
+        if (clz.baseTemplate.format != Interface) {
             return False;
-            }
+        }
 
         return this.PublicType.isA(clz.PublicType) && this.composition.implements(clz.composition);
-        }
+    }
 
     /**
      * Determine if this class "derives from" another class.
@@ -522,13 +468,12 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @return True iff this (or something that this derives from) extends the specified class,
      *         incorporates the specified mixin, or implements the specified interface
      */
-    Boolean derivesFrom(Class!<> clz)
-        {
+    Boolean derivesFrom(Class!<> clz) {
         return &this == &clz
                 || this.extends(clz)
                 || this.incorporates(clz)
                 || this.implements(clz);
-        }
+    }
 
 
     // ----- construction --------------------------------------------------------------------------
@@ -542,12 +487,11 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return the child class as specified
      */
-    Class!<> childForName(String name, Type[] paramTypes = [])
-        {
+    Class!<> childForName(String name, Type[] paramTypes = []) {
         assert Type     childType  := PrivateType.childTypes.get(name);
         assert Class!<> childClass := childType.parameterize(paramTypes).fromClass();
         return childClass;
-        }
+    }
 
     /**
      * Determine if the class defines a singleton, and if so, obtain that singleton. If a class is
@@ -563,12 +507,11 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @throws Exception if an exception occurred instantiating the singleton, it is thrown when an
      *         attempt is made to access the singleton instance
      */
-    conditional PublicType isSingleton()
-        {
+    conditional PublicType isSingleton() {
         return baseTemplate.singleton && allocateStruct != Null
                 ? (True, singletonInstance)
                 : False;
-        }
+    }
 
     /**
      * Determine if the class defines a default value, and if so, obtain that value.
@@ -579,24 +522,22 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @throws IllegalState if the class is not part of the caller's type system, or a type system
      *         of a container nested under the caller's container
      */
-    conditional PublicType defaultValue()
-        {
+    conditional PublicType defaultValue() {
         return baseTemplate.hasDefault && allocateDefault != Null
                 ? (True, defaultInstance)
                 : False;
-        }
+    }
 
     /**
      * Allocate an empty structure for this class.
      */
-    conditional StructType allocate(PublicType.OuterType? outer = Null)
-        {
+    conditional StructType allocate(PublicType.OuterType? outer = Null) {
         ClassTemplate baseTemplate = this.baseTemplate;
         Allocator?    alloc        = allocateStruct;
         return baseTemplate.isAbstract || baseTemplate.singleton || alloc == Null
                 ? False
                 : (True, alloc(outer));
-        }
+    }
 
     /**
      * - if a corresponding constructor exists, it will be called before the automatic structure
@@ -604,11 +545,10 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @throws IllegalState if the structure is illegal in any way
      */
-    PublicType instantiate(StructType structure, PublicType.OuterType? outer = Null)
-        {
+    PublicType instantiate(StructType structure, PublicType.OuterType? outer = Null) {
         assert function PublicType (StructType) constructor := PublicType.structConstructor(outer);
         return constructor(structure);
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -623,78 +563,65 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @return the PublicType
      */
     @Auto
-    Type toType()
-        {
+    Type toType() {
         return PublicType;
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         Int size = 0;
 
         (_, Annotation[] annotations) = deannotate();
-        if (annotations.size > 0)
-            {
-            for (Annotation annotation : annotations)
-                {
+        if (annotations.size > 0) {
+            for (Annotation annotation : annotations) {
                 size += annotation.estimateStringLength();
-                }
-            size += annotations.size; // spaces
             }
+            size += annotations.size; // spaces
+        }
 
         size += displayName.size;
 
         ListMap<String, Type> params = formalTypes;
-        if (!params.empty)
-            {
+        if (!params.empty) {
             size += 2;
-            Params: for (Type type : params.values)
-                {
-                if (!Params.first)
-                    {
+            Params: for (Type type : params.values) {
+                if (!Params.first) {
                     size += 2;
-                    }
-                size += type.estimateStringLength();
                 }
+                size += type.estimateStringLength();
             }
-
-        return size;
         }
 
+        return size;
+    }
+
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         (_, Annotation[] annotations) = deannotate();
-        if (annotations.size > 0)
-            {
-            for (Annotation annotation : annotations.reversed())
-                {
+        if (annotations.size > 0) {
+            for (Annotation annotation : annotations.reversed()) {
                 annotation.appendTo(buf);
                 buf.add(' ');
-                }
             }
+        }
 
         displayName.appendTo(buf);
 
         ListMap<String, Type> params = formalTypes;
-        if (!params.empty)
-            {
+        if (!params.empty) {
             buf.add('<');
-            Params: for (Type type : params.values)
-                {
-                if (!Params.first)
-                    {
+            Params: for (Type type : params.values) {
+                if (!Params.first) {
                     ", ".appendTo(buf);
-                    }
-                type.appendTo(buf);
                 }
-            buf.add('>');
+                type.appendTo(buf);
             }
+            buf.add('>');
+        }
 
         return buf;
-        }
     }
+}

@@ -5,8 +5,7 @@
  * in the range, or _exclusive_, which means that the value at the bound is excluded from the range.
  */
 const Range<Element extends Orderable>
-        incorporates conditional Interval<Element extends Sequential>
-    {
+        incorporates conditional Interval<Element extends Sequential> {
     /**
      * Construct a Range.
      *
@@ -18,25 +17,21 @@ const Range<Element extends Orderable>
     construct(Element first,
               Element last,
               Boolean firstExclusive = False,
-              Boolean lastExclusive = False)
-        {
-        if (first > last)
-            {
+              Boolean lastExclusive = False) {
+        if (first > last) {
             lowerBound     = last;
             lowerExclusive = lastExclusive;
             upperBound     = first;
             upperExclusive = firstExclusive;
             descending     = True;
-            }
-        else
-            {
+        } else {
             lowerBound     = first;
             lowerExclusive = firstExclusive;
             upperBound     = last;
             upperExclusive = lastExclusive;
             descending     = False;
-            }
         }
+    }
 
     /**
      * Internal constructor.
@@ -52,46 +47,41 @@ const Range<Element extends Orderable>
                       Element upperBound,
                       Boolean upperExclusive,
                       Boolean descending,
-                     )
-        {
+                     ) {
         this.lowerBound     = lowerBound;
         this.lowerExclusive = lowerExclusive;
         this.upperBound     = upperBound;
         this.upperExclusive = upperExclusive;
         this.descending     = descending;
-        }
+    }
 
     /**
      * The starting bound of the range.
      */
-    Element first.get()
-        {
+    Element first.get() {
         return descending ? upperBound : lowerBound;
-        }
+    }
 
     /**
      * True iff the starting bound of the range is exclusive.
      */
-    Boolean firstExclusive.get()
-        {
+    Boolean firstExclusive.get() {
         return descending ? upperExclusive : lowerExclusive;
-        }
+    }
 
     /**
      * The ending bound of the range.
      */
-    Element last.get()
-        {
+    Element last.get() {
         return descending ? lowerBound : upperBound;
-        }
+    }
 
     /**
      * True iff the ending bound of the range is exclusive.
      */
-    Boolean lastExclusive.get()
-        {
+    Boolean lastExclusive.get() {
         return descending ? lowerExclusive : upperExclusive;
-        }
+    }
 
     /**
      * The lower bound of the range.
@@ -123,60 +113,53 @@ const Range<Element extends Orderable>
      *
      * @return the range in ascending order
      */
-    Range! asAscending()
-        {
+    Range! asAscending() {
         return descending
                 ? this.reversed()
                 : this;
-        }
+    }
 
     /**
      * If the range is ascending, reverse it.
      *
      * @return the range in descending order
      */
-    Range! asDescending()
-        {
+    Range! asDescending() {
         return descending
                 ? this
                 : this.reversed();
-        }
+    }
 
     /**
      * Create a new range in the reverse order of this range.
      */
-    Range! reversed()
-        {
+    Range! reversed() {
         return new Range(lowerBound,
                          lowerExclusive,
                          upperBound,
                          upperExclusive,
                          !descending);
-        }
+    }
 
     /**
      * Determine if the specified value exists within this range.
      */
-    Boolean contains(Element value)
-        {
-        return switch (value <=> lowerBound, value <=> upperBound)
-            {
+    Boolean contains(Element value) {
+        return switch (value <=> lowerBound, value <=> upperBound) {
             case (Lesser , _      ): False;                              // below lower bound
             case (_      , Greater): False;                              // above upper bound
             case (Greater, Lesser ): True;                               // between lower and upper
             case (Equal  , Lesser ): !lowerExclusive;                    // at lower bound
             case (Equal  , Equal  ): !lowerExclusive && !upperExclusive; // at both bounds
             case (Greater, Equal  ): !upperExclusive;                    // at upper bound
-            };
-        }
+        };
+    }
 
     /**
      * This range contains that range iff every value within that range is also in this range.
      */
-    Boolean covers(Range that)
-        {
-        return switch (that.lowerBound <=> this.lowerBound, that.upperBound <=> this.upperBound)
-            {
+    Boolean covers(Range that) {
+        return switch (that.lowerBound <=> this.lowerBound, that.upperBound <=> this.upperBound) {
             case (Lesser , _      ): False;                                     // below lower bound
             case (_      , Greater): False;                                     // above upper bound
             case (Greater, Lesser ): True;                                      // between bounds
@@ -184,24 +167,21 @@ const Range<Element extends Orderable>
             case (Equal  , Equal  ): !this.lowerExclusive | that.lowerExclusive
                                   && !this.upperExclusive | that.upperExclusive;// at both bounds
             case (Greater, Equal  ): !this.upperExclusive | that.upperExclusive;// at upper bound
-            };
-        }
+        };
+    }
 
     /**
      * That range contains this range iff every value within this range is also in that range.
      */
-    Boolean isCoveredBy(Range that)
-        {
+    Boolean isCoveredBy(Range that) {
         return that.covers(this);
-        }
+    }
 
     /**
      * @return True if `this` and `that` intersect
      */
-    Boolean intersects(Range that)
-        {
-        return switch (that.lowerBound <=> this.upperBound, that.upperBound <=> this.lowerBound)
-            {
+    Boolean intersects(Range that) {
+        return switch (that.lowerBound <=> this.upperBound, that.upperBound <=> this.lowerBound) {
             case (Greater, _      ): False;                                      // above upper bound
             case (_      , Lesser ): False;                                      // below lower bound
             case (Lesser , Greater): True;                                       // between bounds
@@ -209,8 +189,8 @@ const Range<Element extends Orderable>
             case (Equal  , Greater): !this.upperExclusive & !that.lowerExclusive;// at upper bound
             case (Equal  , Equal  ): !this.lowerExclusive & !this.upperExclusive // zero length!
                                    & !that.lowerExclusive & !that.upperExclusive;
-            };
-        }
+        };
+    }
 
     /**
      * The intersection of this range and that range is the range that contains all of the values
@@ -219,166 +199,150 @@ const Range<Element extends Orderable>
      * @return True if `this` and `that` intersect
      * @return (conditional) the `Range` that represents the intersecting values from the two ranges
      */
-    conditional Range intersection(Range that)
-        {
-        if (!this.intersects(that))
-            {
+    conditional Range intersection(Range that) {
+        if (!this.intersects(that)) {
             return False;
-            }
+        }
 
         Element lower;
         Boolean excludeLower;
-        switch (this.lowerBound <=> that.lowerBound)
-            {
-            case Lesser:
-                lower        = that.lowerBound;
-                excludeLower = False;
-                break;
+        switch (this.lowerBound <=> that.lowerBound) {
+        case Lesser:
+            lower        = that.lowerBound;
+            excludeLower = False;
+            break;
 
-            case Equal:
-                lower        = this.lowerBound;
-                excludeLower = this.lowerExclusive & that.lowerExclusive;
-                break;
+        case Equal:
+            lower        = this.lowerBound;
+            excludeLower = this.lowerExclusive & that.lowerExclusive;
+            break;
 
-            case Greater:
-                lower        = this.lowerBound;
-                excludeLower = False;
-                break;
-            }
+        case Greater:
+            lower        = this.lowerBound;
+            excludeLower = False;
+            break;
+        }
 
         Element upper;
         Boolean excludeUpper;
-        switch (this.upperBound <=> that.upperBound)
-            {
-            case Lesser:
-                upper        = this.upperBound;
-                excludeUpper = False;
-                break;
+        switch (this.upperBound <=> that.upperBound) {
+        case Lesser:
+            upper        = this.upperBound;
+            excludeUpper = False;
+            break;
 
-            case Equal:
-                upper        = this.upperBound;
-                excludeUpper = this.upperExclusive & that.upperExclusive;
-                break;
+        case Equal:
+            upper        = this.upperBound;
+            excludeUpper = this.upperExclusive & that.upperExclusive;
+            break;
 
-            case Greater:
-                upper        = that.upperBound;
-                excludeUpper = False;
-                break;
-            }
+        case Greater:
+            upper        = that.upperBound;
+            excludeUpper = False;
+            break;
+        }
 
         return True, (this.descending & that.descending
                 ? new Range(upper, lower, firstExclusive=excludeUpper, lastExclusive=lowerExclusive)
                 : new Range(lower, upper, firstExclusive=excludeLower, lastExclusive=upperExclusive));
-        }
+    }
 
     /**
      * @return True iff the union of `this` and `that` is a contiguous range
      */
-    Boolean adjoins(Range that)
-        {
-        return switch (that.lowerBound <=> this.upperBound, that.upperBound <=> this.lowerBound)
-            {
+    Boolean adjoins(Range that) {
+        return switch (that.lowerBound <=> this.upperBound, that.upperBound <=> this.lowerBound) {
             case (Greater, _      ): False;                                      // above upper bound
             case (_      , Lesser ): False;                                      // below lower bound
             case (Lesser , Greater): True;                                       // between bounds
             case (Lesser , Equal  ): !this.lowerExclusive | !that.upperExclusive;// at lower bound
             case (Equal  , Greater): !this.upperExclusive | !that.lowerExclusive;// at upper bound
             case (Equal  , Equal  ): True;                                       // zero length!
-            };
-        }
+        };
+    }
 
     /**
      * Two ranges that are contiguous or overlap can be joined together to form a larger range.
      */
-    conditional Range union(Range that)
-        {
-        if (!this.adjoins(that))
-            {
+    conditional Range union(Range that) {
+        if (!this.adjoins(that)) {
             return False;
-            }
+        }
 
         Element lower;
         Boolean excludeLower;
-        switch (this.lowerBound <=> that.lowerBound)
-            {
-            case Lesser:
-                lower        = this.lowerBound;
-                excludeLower = this.lowerExclusive;
-                break;
+        switch (this.lowerBound <=> that.lowerBound) {
+        case Lesser:
+            lower        = this.lowerBound;
+            excludeLower = this.lowerExclusive;
+            break;
 
-            case Equal:
-                lower        = this.lowerBound;
-                excludeLower = this.lowerExclusive & that.lowerExclusive;
-                break;
+        case Equal:
+            lower        = this.lowerBound;
+            excludeLower = this.lowerExclusive & that.lowerExclusive;
+            break;
 
-            case Greater:
-                lower        = that.lowerBound;
-                excludeLower = that.lowerExclusive;
-                break;
-            }
+        case Greater:
+            lower        = that.lowerBound;
+            excludeLower = that.lowerExclusive;
+            break;
+        }
 
         Element upper;
         Boolean excludeUpper;
-        switch (this.upperBound <=> that.upperBound)
-            {
-            case Lesser:
-                upper        = that.upperBound;
-                excludeUpper = that.upperExclusive;
-                break;
+        switch (this.upperBound <=> that.upperBound) {
+        case Lesser:
+            upper        = that.upperBound;
+            excludeUpper = that.upperExclusive;
+            break;
 
-            case Equal:
-                upper        = this.upperBound;
-                excludeUpper = this.upperExclusive & that.upperExclusive;
-                break;
+        case Equal:
+            upper        = this.upperBound;
+            excludeUpper = this.upperExclusive & that.upperExclusive;
+            break;
 
-            case Greater:
-                upper        = this.upperBound;
-                excludeUpper = this.upperExclusive;
-                break;
-            }
+        case Greater:
+            upper        = this.upperBound;
+            excludeUpper = this.upperExclusive;
+            break;
+        }
 
         return True, (this.descending & that.descending
                 ? new Range(upper, lower, firstExclusive=excludeUpper, lastExclusive=lowerExclusive)
                 : new Range(lower, upper, firstExclusive=excludeLower, lastExclusive=upperExclusive));
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return firstExclusive.toInt64() + 2 + lastExclusive.toInt64()
             + (Element.is(Type<Stringable>)
                 ? first.estimateStringLength() + last.estimateStringLength()
                 : (first.is(Stringable) ? first.estimateStringLength() : 8)
                     + (last.is(Stringable) ? last.estimateStringLength() : 8));
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        String op = switch (firstExclusive, lastExclusive)
-            {
+    Appender<Char> appendTo(Appender<Char> buf) {
+        String op = switch (firstExclusive, lastExclusive) {
             case (False, False): "..";
             case (False, True ): "..<";
             case (True , False): ">..";
             case (True , True ): ">..<";
-            };
+        };
 
-        if (Element.is(Type<Stringable>))
-            {
+        if (Element.is(Type<Stringable>)) {
             first.appendTo(buf);
             op.appendTo(buf);
             last.appendTo(buf);
-            }
-        else
-            {
+        } else {
             (first.is(Stringable) ? first : first.toString()).appendTo(buf);
             op.appendTo(buf);
             (last.is(Stringable) ? last : last.toString()).appendTo(buf);
-            }
+        }
 
         return buf;
-        }
     }
+}

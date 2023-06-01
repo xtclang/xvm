@@ -6,14 +6,13 @@ import ClassTemplate.Composition;
  * @see Enumeration
  */
 const EnumValue<Value extends Enum>
-        extends Class<Value>
-    {
-    construct(Composition composition, Enumeration<Value> enumeration)
-        {
+        extends Class<Value> {
+
+    construct(Composition composition, Enumeration<Value> enumeration) {
         construct Class(composition);
 
         this.enumeration = enumeration;
-        }
+    }
 
     /**
      * The Enumeration that contains this Enum value.
@@ -23,9 +22,8 @@ const EnumValue<Value extends Enum>
     /**
      * The singleton Enum value of this EnumValue class.
      */
-    Value value.get()
-        {
+    Value value.get() {
         assert Value value := enumeration.byName.get(name);
         return value;
-        }
     }
+}

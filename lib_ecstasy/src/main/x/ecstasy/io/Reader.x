@@ -6,8 +6,7 @@
 interface Reader
         extends Iterator<Char>
         extends TextPosition
-        extends Closeable
-    {
+        extends Closeable {
     // ----- TextPosition support ------------------------------------------------------------------
 
     /**
@@ -15,24 +14,22 @@ interface Reader
      */
     @Abstract
     protected static const AbstractPos
-            implements TextPosition
-        {
-        @Override
-        Int estimateStringLength()
-            {
-            return 3 + lineNumber.estimateStringLength() + lineOffset.estimateStringLength();
-            }
+            implements TextPosition {
 
         @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
+        Int estimateStringLength() {
+            return 3 + lineNumber.estimateStringLength() + lineOffset.estimateStringLength();
+        }
+
+        @Override
+        Appender<Char> appendTo(Appender<Char> buf) {
             buf.add('(');
             lineNumber.appendTo(buf);
             buf.add(':');
             lineOffset.appendTo(buf);
             return buf.add(')');
-            }
         }
+    }
 
 
     // ----- general operations --------------------------------------------------------------------
@@ -64,16 +61,13 @@ interface Reader
      * @return this Reader
      */
     @Override
-    Reader skip(Int count = 1)
-        {
+    Reader skip(Int count = 1) {
         assert:arg count >= 0;
 
-        while (count-- > 0 && next())
-            {
-            }
+        while (count-- > 0 && next()) {}
 
         return this;
-        }
+    }
 
     /**
      * Rewind the Reader by the specified number of characters, but not past the beginning.
@@ -82,13 +76,12 @@ interface Reader
      *
      * @return this Reader
      */
-    Reader rewind(Int count = 1)
-        {
+    Reader rewind(Int count = 1) {
         assert:arg count >= 0;
 
         Int target = (offset - count).notLessThan(0);
         return reset().skip(target);
-        }
+    }
 
     /**
      * Rewinds the Reader to the beginning.
@@ -101,15 +94,13 @@ interface Reader
     // ----- Iterator ------------------------------------------------------------------------------
 
     @Override
-    conditional Char next()
-        {
-        if (eof)
-            {
+    conditional Char next() {
+        if (eof) {
             return False;
-            }
+        }
 
         return True, nextChar();
-        }
+    }
 
 
     // ----- bulk read operators -------------------------------------------------------------------
@@ -125,39 +116,32 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
      */
-    @Op("[..]") String slice(Range<TextPosition> indexes)
-        {
+    @Op("[..]") String slice(Range<TextPosition> indexes) {
         Int count = indexes.upperBound.offset
                   - indexes.lowerBound.offset
                   + (indexes.upperExclusive ? 0 : 1)
                   - (indexes.lowerExclusive ? 1 : 0);
-        if (count <= 0)
-            {
+        if (count <= 0) {
             return "";
-            }
+        }
 
         String result;
-        try (TextPosition current = position)
-            {
+        try (TextPosition current = position) {
             position = indexes.lowerBound;
-            if (indexes.lowerExclusive)
-                {
+            if (indexes.lowerExclusive) {
                 nextChar();
-                }
+            }
 
             result = nextString(count);
-            if (indexes.descending)
-                {
+            if (indexes.descending) {
                 result = result.reversed();
-                }
             }
-        finally
-            {
+        } finally {
             position = current;
-            }
+        }
 
         return result;
-        }
+    }
 
 
     // ----- bulk read operations ------------------------------------------------------------------
@@ -179,10 +163,9 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void nextChars(Char[] chars)
-        {
+    void nextChars(Char[] chars) {
         nextChars(chars, 0, chars.size);
-        }
+    }
 
     /**
      * Read the specified number of characters into the provided array.
@@ -194,16 +177,14 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void nextChars(Char[] chars, Int offset, Int count)
-        {
+    void nextChars(Char[] chars, Int offset, Int count) {
         assert offset >= 0 && count >= 0;
 
         Int last = offset + count;
-        while (offset < last)
-            {
+        while (offset < last) {
             chars[offset++] = nextChar();
-            }
         }
+    }
 
     /**
      * Read the specified number of characters, returning those characters as an array.
@@ -215,22 +196,20 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    immutable Char[] nextChars(Int count)
-        {
+    immutable Char[] nextChars(Int count) {
         Array<Char> chars = new Char[count];
         nextChars(chars);
         return chars.freeze(True);
-        }
+    }
 
     /**
      * Read the specified number of characters.
      *
      * @return a String of the specified size
      */
-    String nextString(Int count)
-        {
+    String nextString(Int count) {
         return new String(nextChars(count));
-        }
+    }
 
 
     // ----- line oriented operations --------------------------------------------------------------
@@ -245,35 +224,30 @@ interface Reader
      * @throws EndOfFile  if an EOF condition is encountered while attempting to seek to the
      *                    specified line
      */
-    Reader seekLine(Int line)
-        {
-        switch (line <=> lineNumber)
-            {
-            case Equal:
-                rewind(lineOffset);
-                return this;
+    Reader seekLine(Int line) {
+        switch (line <=> lineNumber) {
+        case Equal:
+            rewind(lineOffset);
+            return this;
 
-            case Lesser:
-                reset();
-                continue;
-            case Greater:
-                // attempt to "fast forward" to the line
-                while (!eof && lineNumber + 1 < line)
-                    {
-                    skip(line - lineNumber);
-                    }
-                // now that we're close, advance until we reach that line
-                while (Char ch := next())
-                    {
-                    if (lineNumber >= line)
-                        {
-                        assert lineNumber == line;
-                        return this;
-                        }
-                    }
-                throw new EndOfFile();
+        case Lesser:
+            reset();
+            continue;
+        case Greater:
+            // attempt to "fast forward" to the line
+            while (!eof && lineNumber + 1 < line) {
+                skip(line - lineNumber);
             }
+            // now that we're close, advance until we reach that line
+            while (Char ch := next()) {
+                if (lineNumber >= line) {
+                    assert lineNumber == line;
+                    return this;
+                }
+            }
+            throw new EndOfFile();
         }
+    }
 
     /**
      * Read from the current position to the end of the line, returning the characters up to but
@@ -283,28 +257,22 @@ interface Reader
      * @return the String representing the contents of the current line, starting from the current
      *         position, up to but not including the line terminator
      */
-    String nextLine()
-        {
+    String nextLine() {
         StringBuffer buf = new StringBuffer();
-        while (Char ch := next())
-            {
-            if (ch.isLineTerminator())
-                {
-                if (ch == '\r' && !eof && nextChar() != '\n')
-                    {
+        while (Char ch := next()) {
+            if (ch.isLineTerminator()) {
+                if (ch == '\r' && !eof && nextChar() != '\n') {
                     rewind(1);
-                    }
+                }
 
                 break;
-                }
-            else
-                {
+            } else {
                 buf.add(ch);
-                }
             }
+        }
 
         return buf.toString();
-        }
+    }
 
 
     // ----- redirection ---------------------------------------------------------------------------
@@ -317,13 +285,11 @@ interface Reader
      *
      * @throws IOException  represents the general category of input/output exceptions
      */
-    void pipeTo(Appender<Char> buf)
-        {
-        while (Char ch := next())
-            {
+    void pipeTo(Appender<Char> buf) {
+        while (Char ch := next()) {
             buf.add(ch);
-            }
         }
+    }
 
     /**
      * Pipe contents from this stream to the specified stream.
@@ -334,24 +300,21 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void pipeTo(Appender<Char> buf, Int count)
-        {
+    void pipeTo(Appender<Char> buf, Int count) {
         assert:arg count >= 0;
 
         buf.ensureCapacity(count);
 
-        while (count > 0)
-            {
+        while (count > 0) {
             buf.add(nextChar());
             --count;
-            }
         }
+    }
 
 
     // ----- Closeable -----------------------------------------------------------------------------
 
     @Override
-    void close(Exception? cause = Null)
-        {
-        }
+    void close(Exception? cause = Null) {
     }
+}

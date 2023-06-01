@@ -7,13 +7,11 @@ import io.TextPosition;
 const NonBindingExpression(TypeExpression? type,
                            TextPosition    start,
                            TextPosition    end)
-        extends Expression
-    {
+        extends Expression {
     @Override
-    String toString()
-        {
+    String toString() {
         return type == Null
                 ? "_"
                 : $"<{type}> _";
-        }
     }
+}

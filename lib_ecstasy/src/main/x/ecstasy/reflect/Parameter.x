@@ -2,8 +2,7 @@
  * Represents a function parameter, including type parameters.
  */
 interface Parameter<ParamType>
-        extends immutable Const
-    {
+        extends immutable Const {
     /**
      * The ordinal index of the parameter.
      */
@@ -34,25 +33,21 @@ interface Parameter<ParamType>
     // ----- Stringable methods ----------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         Int len = ParamType.estimateStringLength();
-        if (String name := hasName())
-            {
+        if (String name := hasName()) {
             len += 1 + name.size;
-            }
-        return len;
         }
+        return len;
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         ParamType.appendTo(buf);
-        if (String name := hasName())
-            {
+        if (String name := hasName()) {
             buf.add(' ');
             name.appendTo(buf);
-            }
-        return buf;
         }
+        return buf;
     }
+}

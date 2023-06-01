@@ -3,8 +3,7 @@
  * directory or a file.
  */
 interface FileNode
-        extends Hashable
-    {
+        extends Hashable {
     /**
      * The FileStore that contains this FileNode. Each FileNode object is created by the FileStore
      * that contains it, and its path is relative to the root of that FileStore.
@@ -15,16 +14,14 @@ interface FileNode
      * The parent FileNode of this FileNode. The root directory of the FileStore does not have a
      * parent; its `parent` property evaluates to `Null`.
      */
-    @RO Directory? parent.get()
-        {
-        if (path.form == Root)
-            {
+    @RO Directory? parent.get() {
+        if (path.form == Root) {
             return Null;
-            }
+        }
 
         Path parentPath = path.parent ?: assert;
         return store.dirFor(parentPath);
-        }
+    }
 
     /**
      * The Path of this file-node as it is identified within its FileStore.
@@ -34,10 +31,9 @@ interface FileNode
     /**
      * The name of this file-node within its directory. (The root directory name may be blank.)
      */
-    @RO String name.get()
-        {
+    @RO String name.get() {
         return path.form == Root ? "" : path.name;
-        }
+    }
 
     /**
      * True iff the file-node entry actually exists in the directory that contains it.
@@ -163,18 +159,16 @@ interface FileNode
     // ----- equality ------------------------------------------------------------------------------
 
     @Override
-    static <CompileType extends FileNode> Int64 hashCode(CompileType node)
-        {
+    static <CompileType extends FileNode> Int64 hashCode(CompileType node) {
         return node.path.hashCode();
-        }
+    }
 
     /**
      * Two file nodes are equal iff they belong to the same store, have the same path and both are
      * files or both are directories.
      */
-    static <CompileType extends FileNode> Boolean equals(CompileType node1, CompileType node2)
-        {
+    static <CompileType extends FileNode> Boolean equals(CompileType node1, CompileType node2) {
         return node1.&store == node2.&store && node1.path == node2.path &&
                node1.is(File) == node2.is(File);
-        }
     }
+}

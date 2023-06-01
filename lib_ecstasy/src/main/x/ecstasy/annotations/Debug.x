@@ -6,6 +6,5 @@
  * be loaded by default, but will be available when the TypeSystem is created in `debug` mode.
  */
 mixin Debug
-        into Class | Property | Method
-    {
-    }
+        into Class | Property | Method {
+}

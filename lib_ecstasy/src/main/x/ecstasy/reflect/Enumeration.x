@@ -49,12 +49,11 @@ import ClassTemplate.Composition;
  *   no class can extend the class of any Enum.
  */
 const Enumeration<Value extends Enum>
-        extends Class<Value>
-    {
-    construct(Composition composition, ListMap<String, Type>? canonicalParams = Null)
-        {
+        extends Class<Value> {
+
+    construct(Composition composition, ListMap<String, Type>? canonicalParams = Null) {
         construct Class(composition, canonicalParams);
-        }
+    }
 
     /**
      * The name of the Enumeration.
@@ -65,11 +64,10 @@ const Enumeration<Value extends Enum>
      * * "Ordered" for {@link Ordered}
      */
     @Override
-    @RO String name.get()
-        {
+    @RO String name.get() {
         // the name of the class is same as the name of the Enumeration
         return super();
-        }
+    }
 
     /**
      * The number of Enum values in the Enumeration.
@@ -79,10 +77,9 @@ const Enumeration<Value extends Enum>
      * * 2 for {@link Boolean}
      * * 3 for {@link Ordered}
      */
-    @Lazy Int count.calc()
-        {
+    @Lazy Int count.calc() {
         return byName.size;
-        }
+    }
 
     /**
      * The names of the Enum values in the Enumeration. These correspond in their positions to the
@@ -93,10 +90,9 @@ const Enumeration<Value extends Enum>
      * * {"False", "True"} for {@link Boolean}
      * * {"Lesser", "Equal", "Greater"} for {@link Ordered}
      */
-    @Lazy String[] names.calc()
-        {
+    @Lazy String[] names.calc() {
         return byName.keys.toArray();
-        }
+    }
 
     /**
      * The Enum values of the Enumeration. These correspond in their positions to the {@link names}.
@@ -106,10 +102,9 @@ const Enumeration<Value extends Enum>
      * * {False, True} for {@link Boolean}
      * * {Lesser, Equal, Greater} for {@link Ordered}
      */
-    @Lazy Value[] values.calc()
-        {
+    @Lazy Value[] values.calc() {
         return byName.values.toArray();
-        }
+    }
 
     /**
      * The Enum values of the Enumeration, indexed by their names.
@@ -119,22 +114,19 @@ const Enumeration<Value extends Enum>
      * * {"False"=False, "True"=True} for {@link Boolean}
      * * {"Lesser"=Lesser, "Equal"=Equal, "Greater"=Greater} for {@link Ordered}
      */
-    @Lazy Map<String, Value> byName.calc()
-        {
+    @Lazy Map<String, Value> byName.calc() {
         // the Enumeration class contains singleton Enum class/values; collect those values into a
         // Map keyed by name
         ListMap<String, Value> map = new ListMap();
 
-        for ((String name, Type type) : PublicType.childTypes)
-            {
-            if (type.is(Type<PublicType>))
-                {
+        for ((String name, Type type) : PublicType.childTypes) {
+            if (type.is(Type<PublicType>)) {
                 assert Class<> clz := type.fromClass();
                 assert Value instance := clz.as(Class<Value>).isSingleton();
                 assert instance.ordinal == map.size;
                 map.put(name, instance);
-                }
             }
-        return map.freeze();
         }
+        return map.freeze();
     }
+}

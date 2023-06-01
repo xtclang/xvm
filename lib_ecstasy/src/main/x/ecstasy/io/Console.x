@@ -1,8 +1,7 @@
 /**
  * Represents a text-based console, with both line-oriented text input, and text output.
  */
-interface Console
-    {
+interface Console {
     /**
      * Outputs the textual form of the specified object to the console. The textual form of the
      * object is expected to be obtained via a call to the [Object.toString()] method.
@@ -21,4 +20,4 @@ interface Console
      * @return the input string
      */
     String readLine(Boolean suppressEcho = False);
-    }
+}

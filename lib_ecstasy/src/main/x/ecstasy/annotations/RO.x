@@ -8,6 +8,5 @@
  *   in behavior to a property declared as "`public/private`".
  */
 mixin RO
-        into Property
-    {
-    }
+        into Property {
+}

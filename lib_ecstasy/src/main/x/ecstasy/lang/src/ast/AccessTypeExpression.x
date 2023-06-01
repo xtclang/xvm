@@ -10,99 +10,80 @@ import reflect.InvalidType;
  *     Person:private
  */
 const AccessTypeExpression(TypeExpression type, Token suffix)
-        extends SuffixTypeExpression(type, suffix)
-    {
+        extends SuffixTypeExpression(type, suffix) {
     @Override
-    String toString()
-        {
+    String toString() {
         return type.is(RelationalTypeExpression)
                 ? $"({type}):{suffix}"
                 : $"{type}:{suffix}";
-        }
+    }
 
     /**
      * The [Access] specified by this `AccessTypeExpression`.
      */
-    Access access.get()
-        {
-        return switch (suffix.id)
-            {
+    Access access.get() {
+        return switch (suffix.id) {
             case Public   : Public;
             case Protected: Protected;
             case Private  : Private;
             case Struct   : Struct;
             default       : assert;
-            };
-        }
+        };
+    }
 
     @Override
-    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
-        {
-        if (Type result := type.resolveType(typeSystem, hideExceptions))
-            {
+    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False) {
+        if (Type result := type.resolveType(typeSystem, hideExceptions)) {
             // check for previously existing access specification
-            if (Access previousAccess := result.accessSpecified())
-                {
+            if (Access previousAccess := result.accessSpecified()) {
                 // if it matches, then the work here is already done
-                if (previousAccess == this.access)
-                    {
+                if (previousAccess == this.access) {
                     return True, result;
-                    }
+                }
 
                 // try to strip off the previous access
-                if (Type stripped := result.modifying(), !result.accessSpecified())
-                    {
+                if (Type stripped := result.modifying(), !result.accessSpecified()) {
                     result = stripped;
-                    }
-                else
-                    {
-                    if (hideExceptions)
-                        {
+                } else {
+                    if (hideExceptions) {
                         return False;
-                        }
+                    }
 
                     throw new InvalidType(
                             $"Unable to remove {previousAccess.keyword} access from type: {result}");
-                    }
-                }
-
-            // apply the specified access modifier
-            switch (suffix.id)
-                {
-                case Public:
-                    return True, result;
-
-                case Protected:
-                    {
-                    if (Class clz := result.fromClass())
-                        {
-                        return True, clz.ProtectedType;
-                        }
-                    return False;
-                    }
-
-                case Private:
-                    {
-                    if (Class clz := result.fromClass())
-                        {
-                        return True, clz.PrivateType;
-                        }
-                    return False;
-                    }
-
-                case Struct:
-                    {
-                    if (Class clz := result.fromClass())
-                        {
-                        return True, clz.StructType;
-                        }
-                    return False;
-                    }
-
-                default: assert;
                 }
             }
 
-        return False;
+            // apply the specified access modifier
+            switch (suffix.id) {
+            case Public:
+                return True, result;
+
+            case Protected: {
+                if (Class clz := result.fromClass()) {
+                    return True, clz.ProtectedType;
+                }
+                return False;
+            }
+
+            case Private: {
+                if (Class clz := result.fromClass()) {
+                    return True, clz.PrivateType;
+                }
+                return False;
+            }
+
+            case Struct: {
+                if (Class clz := result.fromClass()) {
+                    return True, clz.StructType;
+                }
+                return False;
+            }
+
+            default: assert;
+            }
         }
+
+        return False;
     }
+}

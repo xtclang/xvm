@@ -46,6 +46,5 @@
  * state.
  */
 mixin Transient
-        into Property
-    {
-    }
+        into Property {
+}

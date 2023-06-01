@@ -10,90 +10,76 @@
 interface List<Element>
         extends Collection<Element>
         extends UniformIndexed<Int, Element>
-        extends Sliceable<Int>
-    {
+        extends Sliceable<Int> {
     // ----- metadata ------------------------------------------------------------------------------
 
     @Override
-    conditional Orderer? ordered()
-        {
+    conditional Orderer? ordered() {
         // there is an order to a list, but (unless otherwise specified) not based on an Orderer
         return True, Null;
-        }
+    }
 
     /**
      * Metadata: Does this `List` provide efficient O(1) access times when using the index-based
      * methods to access values from the List?
      */
-    @RO Boolean indexed.get()
-        {
+    @RO Boolean indexed.get() {
         return True;
-        }
+    }
 
 
     // ----- read operations -----------------------------------------------------------------------
 
     @Override
-    Iterator<Element> iterator()
-        {
+    Iterator<Element> iterator() {
         // implementations that are not indexed should provide a more efficient implementation
-        return new Iterator()
-            {
+        return new Iterator() {
             private Int i = 0;
 
             @Override
-            conditional Element next()
-                {
-                if (i < this.List.size)
-                    {
+            conditional Element next() {
+                if (i < this.List.size) {
                     return True, this.List[i++];
-                    }
-                return False;
                 }
-            };
-        }
+                return False;
+            }
+        };
+    }
 
     @Override
-    Boolean contains(Element value)
-        {
-        if (Orderer? orderer := ordered(), orderer != Null)
-            {
+    Boolean contains(Element value) {
+        if (Orderer? orderer := ordered(), orderer != Null) {
             // binary search
             Int lo = 0;
             Int hi = size - 1;
-            while (lo <= hi)
-                {
+            while (lo <= hi) {
                 Int     mid = (lo + hi) >> 1;
                 Element cur = this[mid];
-                switch (orderer(value, cur))
-                    {
-                    case Lesser:
-                        hi = mid - 1;
-                        break;
-                    case Equal:
-                        return True;
-                    case Greater:
-                        lo = mid + 1;
-                        break;
-                    }
-                }
-            return False;
-            }
-
-        if (indexed, Int size := knownSize())
-            {
-            for (Int i = 0; i < size; ++i)
-                {
-                if (this[i] == value)
-                    {
+                switch (orderer(value, cur)) {
+                case Lesser:
+                    hi = mid - 1;
+                    break;
+                case Equal:
                     return True;
-                    }
+                case Greater:
+                    lo = mid + 1;
+                    break;
                 }
-            return False;
             }
+            return False;
+        }
+
+        if (indexed, Int size := knownSize()) {
+            for (Int i = 0; i < size; ++i) {
+                if (this[i] == value) {
+                    return True;
+                }
+            }
+            return False;
+        }
 
         return super(value);
-        }
+    }
 
     /**
      * Obtain the first element in the list.
@@ -101,14 +87,12 @@ interface List<Element>
      * @return True iff the list is not empty
      * @return the first element in the list
      */
-    conditional Element first()
-        {
-        if (empty)
-            {
+    conditional Element first() {
+        if (empty) {
             return False;
-            }
-        return True, this[0];
         }
+        return True, this[0];
+    }
 
     /**
      * Obtain the last element in the list.
@@ -116,25 +100,21 @@ interface List<Element>
      * @return True iff the list is not empty
      * @return the last element in the list
      */
-    conditional Element last()
-        {
-        if (empty)
-            {
+    conditional Element last() {
+        if (empty) {
             return False;
-            }
+        }
 
-        if (indexed, Int size := knownSize())
-            {
+        if (indexed, Int size := knownSize()) {
             return True, this[size-1];
-            }
+        }
 
         Iterator<Element> iter = iterator();
         assert Element value := iter.next();
-        while (value := iter.next())
-            {
-            }
-        return True, value;
+        while (value := iter.next()) {
         }
+        return True, value;
+    }
 
     /**
      * Determine if `this` list _starts-with_ `that` list. A list `this` of at least `n`
@@ -146,52 +126,40 @@ interface List<Element>
      *
      * @return True iff this list starts-with that list
      */
-    Boolean startsWith(List! that)
-        {
+    Boolean startsWith(List! that) {
         if (Int thisSize := this.knownSize(),
-            Int thatSize := that.knownSize())
-            {
-            if (thatSize == 0)
-                {
+            Int thatSize := that.knownSize()) {
+            if (thatSize == 0) {
                 return True;
-                }
-
-            if (thisSize < thatSize)
-                {
-                return False;
-                }
-
-            if (this.indexed && that.indexed)
-                {
-                for (Int i : 0 ..< thatSize)
-                    {
-                    if (this[i] != that[i])
-                        {
-                        return False;
-                        }
-                    }
-                return True;
-                }
             }
+
+            if (thisSize < thatSize) {
+                return False;
+            }
+
+            if (this.indexed && that.indexed) {
+                for (Int i : 0 ..< thatSize) {
+                    if (this[i] != that[i]) {
+                        return False;
+                    }
+                }
+                return True;
+            }
+        }
 
         // fall-back: use iterators to compare the items in the two lists
         using (Iterator<Element> thisIter = this.iterator(),
-               Iterator<Element> thatIter = that.iterator())
-           {
-           while (Element thatElem := thatIter.next())
-                {
-                if (Element thisElem := thisIter.next())
-                    {
+               Iterator<Element> thatIter = that.iterator()) {
+           while (Element thatElem := thatIter.next()) {
+                if (Element thisElem := thisIter.next()) {
                     continue;
-                    }
-                else
-                    {
+                } else {
                     return False;
-                    }
                 }
-           }
-        return True;
+            }
         }
+        return True;
+    }
 
     /**
      * Determine if `this` list _ends-with_ `that` list. A list `this` of `m` elements
@@ -203,50 +171,41 @@ interface List<Element>
      *
      * @return True iff this list end-with that list
      */
-    Boolean endsWith(List! that)
-        {
+    Boolean endsWith(List! that) {
         Int thatSize = that.size;
-        if (thatSize == 0)
-            {
+        if (thatSize == 0) {
             return True;
-            }
+        }
 
         Int thisSize = this.size;
-        if (thisSize < thatSize)
-            {
+        if (thisSize < thatSize) {
             return False;
-            }
+        }
 
         Int offset = thisSize - thatSize;
-        if (this.indexed && that.indexed)
-            {
-            for (Int i : 0 ..< thatSize)
-                {
-                if (this[offset+i] != that[i])
-                    {
+        if (this.indexed && that.indexed) {
+            for (Int i : 0 ..< thatSize) {
+                if (this[offset+i] != that[i]) {
                     return False;
-                    }
                 }
-            return True;
             }
+            return True;
+        }
 
         Iterator<Element> thisIter = this.iterator();
         Iterator<Element> thatIter = that.iterator();
-        for (Int i : 0 ..< offset)
-            {
+        for (Int i : 0 ..< offset) {
             assert thisIter.next();
-            }
-        while (Element thatVal := thatIter.next())
-            {
+        }
+        while (Element thatVal := thatIter.next()) {
             assert Element thisVal := thisIter.next();
-            if (thisVal != thatVal)
-                {
+            if (thisVal != thatVal) {
                 return False;
-                }
             }
+        }
         assert !thisIter.next();
         return True;
-        }
+    }
 
     /**
      * Look for the specified `value` starting at the specified index.
@@ -257,42 +216,33 @@ interface List<Element>
      * @return True iff this list contains the `value`, at or after the `startAt` index
      * @return (conditional) the index at which the specified value was found
      */
-    conditional Int indexOf(Element value, Int startAt = 0)
-        {
-        if (Orderer? orderer := ordered(), orderer != Null)
-            {
-            if (Int index := binarySearch(value, orderer))
-                {
-                while (index > startAt && this[index-1] == value)
-                    {
+    conditional Int indexOf(Element value, Int startAt = 0) {
+        if (Orderer? orderer := ordered(), orderer != Null) {
+            if (Int index := binarySearch(value, orderer)) {
+                while (index > startAt && this[index-1] == value) {
                     --index;
-                    }
+                }
                 return True, index;
-                }
+            }
             return False;
-            }
-
-        if (indexed, Int size := knownSize())
-            {
-            for (Int i = startAt.notLessThan(0); i < size; ++i)
-                {
-                if (this[i] == value)
-                    {
-                    return True, i;
-                    }
-                }
-            return False;
-            }
-
-        Loop: for (Element e : iterator())
-            {
-            if (Loop.count >= startAt && e == value)
-                {
-                return True, Loop.count;
-                }
-            }
-        return False;
         }
+
+        if (indexed, Int size := knownSize()) {
+            for (Int i = startAt.notLessThan(0); i < size; ++i) {
+                if (this[i] == value) {
+                    return True, i;
+                }
+            }
+            return False;
+        }
+
+        Loop: for (Element e : iterator()) {
+            if (Loop.count >= startAt && e == value) {
+                return True, Loop.count;
+            }
+        }
+        return False;
+    }
 
     /**
      * Determine if `this` list _contains_ `that` list, and at what index `that` list
@@ -304,33 +254,27 @@ interface List<Element>
      * @return True iff this list contains that list, at or after the `startAt` index
      * @return (conditional) the index at which the specified list of values was found
      */
-    conditional Int indexOf(List! that, Int startAt = 0)
-        {
+    conditional Int indexOf(List! that, Int startAt = 0) {
         Int length = that.size;
         startAt = startAt.notLessThan(0);
-        if (length == 0)
-            {
+        if (length == 0) {
             return startAt > size ? False : (True, startAt);
-            }
+        }
 
         Element firstMatch = that[0];
-        Next: for (Int offset = startAt, Int stopAt = this.size - length; offset <= stopAt; ++offset)
-            {
-            if (this[offset] == firstMatch)
-                {
-                for (Int i = 1; i < length; ++i)
-                    {
-                    if (this[offset + i] != that[i])
-                        {
+        Next: for (Int offset = startAt, Int stopAt = this.size - length; offset <= stopAt; ++offset) {
+            if (this[offset] == firstMatch) {
+                for (Int i = 1; i < length; ++i) {
+                    if (this[offset + i] != that[i]) {
                         continue Next;
-                        }
                     }
-                return True, offset;
                 }
+                return True, offset;
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Look for the specified `value` starting at the specified index and searching backwards.
@@ -341,51 +285,41 @@ interface List<Element>
      * @return True iff this list contains the `value`, at or before the `startAt` index
      * @return (conditional) the index at which the specified value was found
      */
-    conditional Int lastIndexOf(Element value, Int startAt = MaxValue)
-        {
-        if (Orderer? orderer := ordered(), orderer != Null)
-            {
-            if (Int index := binarySearch(value, orderer))
-                {
+    conditional Int lastIndexOf(Element value, Int startAt = MaxValue) {
+        if (Orderer? orderer := ordered(), orderer != Null) {
+            if (Int index := binarySearch(value, orderer)) {
                 Int stop = startAt.notGreaterThan(size-1);
-                while (index < stop && this[index+1] == value)
-                    {
+                while (index < stop && this[index+1] == value) {
                     ++index;
-                    }
+                }
                 return True, index;
-                }
-
-            return False;
             }
 
-        if (indexed)
-            {
-            for (Int i = startAt.notGreaterThan(size-1); i >= 0; --i)
-                {
-                if (this[i] == value)
-                    {
+            return False;
+        }
+
+        if (indexed) {
+            for (Int i = startAt.notGreaterThan(size-1); i >= 0; --i) {
+                if (this[i] == value) {
                     return True, i;
-                    }
                 }
-            return False;
             }
+            return False;
+        }
 
         Int last = -1;
-        Loop: for (Element e : iterator())
-            {
-            if (Loop.count > startAt)
-                {
+        Loop: for (Element e : iterator()) {
+            if (Loop.count > startAt) {
                 break;
-                }
-            if (e == value)
-                {
-                last = Loop.count;
-                }
             }
+            if (e == value) {
+                last = Loop.count;
+            }
+        }
         return last >= 0
                 ? (True, last)
                 : False;
-        }
+    }
 
     /**
      * Determine if `this` list _contains_ `that` list, and at what index `that` list
@@ -397,33 +331,27 @@ interface List<Element>
      * @return True iff this list contains that list, at or before the `startAt` index
      * @return (conditional) the index at which the specified list of values was found
      */
-    conditional Int lastIndexOf(List! that, Int startAt = MaxValue)
-        {
+    conditional Int lastIndexOf(List! that, Int startAt = MaxValue) {
         Int length = that.size;
         startAt = startAt.notGreaterThan(this.size-length);
-        if (length == 0)
-            {
+        if (length == 0) {
             return startAt < 0 ? False : (True, startAt);
-            }
+        }
 
         Element firstMatch = that[0];
-        Next: for (Int offset = startAt; offset >= 0; --offset)
-            {
-            if (this[offset] == firstMatch)
-                {
-                for (Int i = 1; i < length; ++i)
-                    {
-                    if (this[offset + i] != that[i])
-                        {
+        Next: for (Int offset = startAt; offset >= 0; --offset) {
+            if (this[offset] == firstMatch) {
+                for (Int i = 1; i < length; ++i) {
+                    if (this[offset + i] != that[i]) {
                         continue Next;
-                        }
                     }
-                return True, offset;
                 }
+                return True, offset;
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Look for the specified `value` in the list, with the assumption that the list is ordered.
@@ -435,15 +363,13 @@ interface List<Element>
      * @return the index at which the specified value was found, or the insertion point if the
      *         value was not found
      */
-    (Boolean found, Int index) binarySearch(Element value, Orderer? compare=Null)
-        {
-        if (compare == Null)
-            {
+    (Boolean found, Int index) binarySearch(Element value, Orderer? compare=Null) {
+        if (compare == Null) {
             assert compare := Element.ordered();
-            }
+        }
 
         return binarySearch(compare(value, _));
-        }
+    }
 
     /**
      * Binary search the list using the supplied function.
@@ -454,57 +380,49 @@ interface List<Element>
      * @return the index at which the specified value was found, or the insertion point if the
      *         value was not found
      */
-    (Boolean found, Int index) binarySearch(function Ordered(Element) order)
-        {
-        switch (Int size = this.size)
-            {
-            case 0:
-                return False, 0;
+    (Boolean found, Int index) binarySearch(function Ordered(Element) order) {
+        switch (Int size = this.size) {
+        case 0:
+            return False, 0;
 
-            case 1:
-                return switch (order(this[0]))
-                    {
-                    case Lesser:  (False, 0);
-                    case Equal:   (True,  0);
-                    case Greater: (False, 1);
-                    };
+        case 1:
+            return switch (order(this[0])) {
+            case Lesser:  (False, 0);
+            case Equal:   (True,  0);
+            case Greater: (False, 1);
+        };
 
-            case 2..4:
-                // linear probe assumed to be faster than binary search for a small list
-                Each: for (Element each : this)
-                    {
-                    switch (order(each))
-                        {
-                        case Lesser:
-                            return (False, Each.count);
-                        case Equal:
-                            return (True,  Each.count);
-                        }
-                    }
-                return False, size;
-
-            default:
-                Int first = 0;
-                Int last  = size - 1;
-                do
-                    {
-                    Int midpoint = (first + last) >> 1;
-                    switch (order(this[midpoint]))
-                        {
-                        case Lesser:
-                            last = midpoint - 1;
-                            break;
-                        case Equal:
-                            return True, midpoint;
-                        case Greater:
-                            first = midpoint + 1;
-                            break;
-                        }
-                    }
-                while (first <= last);
-                return False, first;
+        case 2..4:
+            // linear probe assumed to be faster than binary search for a small list
+            Each: for (Element each : this) {
+                switch (order(each)) {
+                case Lesser:
+                    return (False, Each.count);
+                case Equal:
+                    return (True,  Each.count);
+                }
             }
+            return False, size;
+
+        default:
+            Int first = 0;
+            Int last  = size - 1;
+            do {
+                Int midpoint = (first + last) >> 1;
+                switch (order(this[midpoint])) {
+                case Lesser:
+                    last = midpoint - 1;
+                    break;
+                case Equal:
+                    return True, midpoint;
+                case Greater:
+                    first = midpoint + 1;
+                    break;
+                }
+            } while (first <= last);
+            return False, first;
         }
+    }
 
     /**
      * Evaluate the contents of this `Collection` using the provided criteria, and produce a
@@ -517,38 +435,30 @@ interface List<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     List! filterIndexed(function Boolean(Element, Int) match,
-                        List?                          dest = Null)
-        {
-        if (&dest == &this)
-            {
+                        List?                          dest = Null) {
+        if (&dest == &this) {
             Cursor cur = cursor();
             Int index = 0;
-            while (cur.exists)
-                {
+            while (cur.exists) {
                 // note that since this is occurring "in place", the cursor index will not advance
                 // after a node is deleted, so the original index is simulated with the counter
-                if (match(cur.value, index++))
-                    {
+                if (match(cur.value, index++)) {
                     cur.advance();
-                    }
-                else
-                    {
+                } else {
                     cur.delete();
-                    }
                 }
-            return this;
             }
+            return this;
+        }
 
         dest ?:= new Element[];
-        Loop: for (Element e : this)
-            {
-            if (match(e, Loop.count))
-                {
+        Loop: for (Element e : this) {
+            if (match(e, Loop.count)) {
                 dest += e;
-                }
             }
-        return dest;
         }
+        return dest;
+    }
 
     /**
      * Build a `Collection` that has one value "mapped from" each value in this `Collection`, using
@@ -562,29 +472,25 @@ interface List<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     <Result> List!<Result> mapIndexed(function Result(Element, Int) transform,
-                                      List!<Result>?                dest = Null)
-        {
+                                      List!<Result>?                dest = Null) {
         // in place
-        if (&dest == &this)
-            {
+        if (&dest == &this) {
             assert inPlace;
             Cursor cur = cursor(0);
-            while (cur.exists)
-                {
+            while (cur.exists) {
                 cur.value = transform(cur.value, cur.index).as(Element);
                 cur.advance();
-                }
+            }
             assert dest != Null;
             return dest;
-            }
+        }
 
         dest ?:= new Result[];
-        Loop: for (Element e : this)
-            {
+        Loop: for (Element e : this) {
             dest.add(transform(e, Loop.count));
-            }
-        return dest;
         }
+        return dest;
+    }
 
     /**
      * Reduce this Collection of elements to a result value using the provided function. This
@@ -596,15 +502,13 @@ interface List<Element>
      * @return the result of the reduction
      */
     <Result> Result reduceIndexed(Result                                initial,
-                                  function Result(Result, Element, Int) accumulate)
-        {
+                                  function Result(Result, Element, Int) accumulate) {
         Result result = initial;
-        Loop: for (Element e : this)
-            {
+        Loop: for (Element e : this) {
             result = accumulate(result, e, Loop.count);
-            }
-        return result;
         }
+        return result;
+    }
 
     /**
      * Chunk up this List into certain sized chunks, and evaluate each chunk, collecting the
@@ -616,16 +520,14 @@ interface List<Element>
      * @return the list of results from the `process` function
      */
     <Result> List!<Result> chunked(Int                            size,
-                                   function Result(List<Element>) process)
-        {
+                                   function Result(List<Element>) process) {
         assert:arg size > 0;
         Result[] results = new Result[];
-        for (Int i = 0, Int thisSize = this.size; i < thisSize; i += size)
-            {
+        for (Int i = 0, Int thisSize = this.size; i < thisSize; i += size) {
             results.add(process(this[i ..< (i+size).notGreaterThan(thisSize)]));
-            }
-        return results;
         }
+        return results;
+    }
 
     /**
      * Slide a window over this List, evaluating the contents of the window as it moves using the
@@ -642,18 +544,16 @@ interface List<Element>
     <Result> List!<Result> windowed(Int                            size,
                                     function Result(List<Element>) process,
                                     Int                            step    = 1,
-                                    Boolean                        partial = False)
-        {
+                                    Boolean                        partial = False) {
         assert:arg size > 0;
         Result[] results  = new Result[];
         Int      thisSize = this.size;
         Int      stop     = thisSize - (partial ? 1 : size);
-        for (Int i = 0; i <= stop; i += step)
-            {
+        for (Int i = 0; i <= stop; i += step) {
             results.add(process(this[i ..< (i+size).notGreaterThan(thisSize)]));
-            }
-        return results;
         }
+        return results;
+    }
 
     /**
      * Sort the contents of this list in the order specified by the optional [Type.Orderer].
@@ -666,27 +566,24 @@ interface List<Element>
      * @return the resultant list, which is the same as `this` for a mutable list
      */
     @Override
-    List! sorted(Orderer? orderer = Null, Boolean inPlace = False)
-        {
+    List! sorted(Orderer? orderer = Null, Boolean inPlace = False) {
         Int size = this.size;
-        if (size <= 1 && (inPlace || !this.inPlace))
-            {
+        if (size <= 1 && (inPlace || !this.inPlace)) {
             // nothing to sort
             return this;
-            }
+        }
 
-        if (orderer != Null, Orderer? prev := ordered(), prev? == orderer)
-            {
+        if (orderer != Null, Orderer? prev := ordered(), prev? == orderer) {
             // already in the right order
             return inPlace
                     ? this
                     : this[0 ..< size];
-            }
+        }
 
         return this.inPlace && inPlace
                 ? sort(this, orderer)
                 : super(orderer);
-        }
+    }
 
     /**
      * Obtain a new List that represents the reverse order of this List.
@@ -700,34 +597,29 @@ interface List<Element>
      *
      * @return a List that is in the reverse order as this List
      */
-    List! reversed(Boolean inPlace = False)
-        {
-        if (indexed, Int size := knownSize())
-            {
-            if (size <= 1 && (inPlace || !this.inPlace))
-                {
+    List! reversed(Boolean inPlace = False) {
+        if (indexed, Int size := knownSize()) {
+            if (size <= 1 && (inPlace || !this.inPlace)) {
                 return this;
-                }
+            }
 
-            if (inPlace && this.inPlace)
-                {
+            if (inPlace && this.inPlace) {
                 // swap the elements in-place to reverse the list
-                for (Int i = 0, Int swap = size >> 1; i < swap; ++i)
-                    {
+                for (Int i = 0, Int swap = size >> 1; i < swap; ++i) {
                     Element e1 = this[i];
                     Element e2 = this[size - i - 1];
 
                     this[size - i - 1] = e1;
                     this[i]            = e2;
-                    }
-                return this;
                 }
-
-            return this[size >.. 0];
+                return this;
             }
 
-        return new Array<Element>(Mutable, this).reversed(True);
+            return this[size >.. 0];
         }
+
+        return new Array<Element>(Mutable, this).reversed(True);
+    }
 
     /**
      * Obtain a new List that represents a randomized order of this List.
@@ -738,111 +630,88 @@ interface List<Element>
      *
      * @return a List that contains this List's contents, but in a randomly-shuffled order
      */
-    List! shuffled(Boolean inPlace = False)
-        {
-        if (Int size := knownSize())
-            {
-            if (size <= 1 && (inPlace || !this.inPlace))
-                {
+    List! shuffled(Boolean inPlace = False) {
+        if (Int size := knownSize()) {
+            if (size <= 1 && (inPlace || !this.inPlace)) {
                 return this;
-                }
+            }
 
-            if (inPlace && this.inPlace && indexed)
-                {
+            if (inPlace && this.inPlace && indexed) {
                 @Inject Random random;
-                Loop: for (Element e : this)
-                    {
+                Loop: for (Element e : this) {
                     Int swapFrom = random.int(size);
-                    if (Loop.count != swapFrom)
-                        {
+                    if (Loop.count != swapFrom) {
                         Element swapValue = this[swapFrom];
                         this[swapFrom  ] = e;
                         this[Loop.count] = swapValue;
-                        }
                     }
-                return this;
                 }
+                return this;
             }
-
-        return new Array<Element>(Mutable, this).shuffled(True);
         }
 
+        return new Array<Element>(Mutable, this).shuffled(True);
+    }
+
     @Override
-    List reify()
-        {
+    List reify() {
         // this method must be overridden by any implementing Collection that may return a view of
         // itself as a Collection, such that mutations to one might be visible from the other
         return this;
-        }
+    }
 
 
     // ----- write operations ----------------------------------------------------------------------
 
     @Override
-    @Op("-") List remove(Element value)
-        {
-        if (Int index := indexOf(value))
-            {
+    @Op("-") List remove(Element value) {
+        if (Int index := indexOf(value)) {
             return delete(index);
-            }
+        }
 
         return this;
-        }
+    }
 
     @Override
-    conditional List removeIfPresent(Element value)
-        {
-        if (Int index := indexOf(value))
-            {
+    conditional List removeIfPresent(Element value) {
+        if (Int index := indexOf(value)) {
             return True, delete(index);
-            }
+        }
 
         return False;
-        }
+    }
 
     @Override
-    (List, Int) removeAll(function Boolean (Element) shouldRemove)
-        {
+    (List, Int) removeAll(function Boolean (Element) shouldRemove) {
         List<Element> result = this;
         Int           count  = 0;
 
-        if (inPlace && !indexed)
-            {
+        if (inPlace && !indexed) {
             Cursor cur = cursor(0);
-            while (cur.exists)
-                {
-                if (shouldRemove(cur.value))
-                    {
+            while (cur.exists) {
+                if (shouldRemove(cur.value)) {
                     cur.delete();
                     ++count;
-                    }
-                else
-                    {
+                } else {
                     cur.advance();
-                    }
                 }
             }
-        else
-            {
+        } else {
             Int index = 0;
             Int size  = this.size;
-            while (index < size)
-                {
-                if (shouldRemove(result[index]))
-                    {
+            while (index < size) {
+                if (shouldRemove(result[index])) {
                     result = result.delete(index);
                     --size;
                     ++count;
-                    }
-                else
-                    {
+                } else {
                     ++index;
-                    }
                 }
             }
+        }
 
         return result, count;
-        }
+    }
 
     /**
      * Replace the existing value in the List at the specified index with the specified value.
@@ -856,16 +725,14 @@ interface List<Element>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    List replace(Int index, Element value)
-        {
-        if (inPlace && !this.is(immutable))
-            {
+    List replace(Int index, Element value) {
+        if (inPlace && !this.is(immutable)) {
             this[index] = value;
             return this;
-            }
+        }
 
         throw new ReadOnly($"{this:class} is immutable or does not support replace()");
-        }
+    }
 
     /**
      * Replace existing values in the List with the provided values, starting at the specified
@@ -881,18 +748,16 @@ interface List<Element>
      *                      `size` (inclusive), or if the specified index plus the size of the
      *                      provided Iterable is greater than the size of this array
      */
-    List replaceAll(Int index, Iterable<Element> values)
-        {
+    List replaceAll(Int index, Iterable<Element> values) {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to replace multiple elements efficiently
         Int  i      = index;
         List result = this;
-        for (Element value : values)
-            {
+        for (Element value : values) {
             result = result.replace(i++, value);
-            }
-        return result;
         }
+        return result;
+    }
 
     /**
      * Insert the specified value into the List at the specified index, shifting the contents of the
@@ -911,10 +776,9 @@ interface List<Element>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    List insert(Int index, Element value)
-        {
+    List insert(Int index, Element value) {
         throw new ReadOnly($"{this:class} does not support insert()");
-        }
+    }
 
     /**
      * Insert the specified values into the List at the specified index, shifting the contents of
@@ -933,18 +797,16 @@ interface List<Element>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    List insertAll(Int index, Iterable<Element> values)
-        {
+    List insertAll(Int index, Iterable<Element> values) {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to insert multiple elements efficiently
         Int  i      = index;
         List result = this;
-        for (Element value : values)
-            {
+        for (Element value : values) {
             result = result.insert(i++, value);
-            }
-        return result;
         }
+        return result;
+    }
 
     /**
      * Delete the element at the specified index, shifting the contents of the entire remainder of
@@ -961,10 +823,9 @@ interface List<Element>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (exclusive)
      */
-    List delete(Int index)
-        {
+    List delete(Int index) {
         throw new ReadOnly($"{this:class} does not support delete()");
-        }
+    }
 
     /**
      * Delete the elements within the specified range, shifting the contents of the entire remainder
@@ -981,17 +842,15 @@ interface List<Element>
      * @throws OutOfBounds  if any of the specified indexes is outside of range `0` (inclusive) to
      *                      `size` (exclusive)
      */
-    List deleteAll(Interval<Int> indexes)
-        {
+    List deleteAll(Interval<Int> indexes) {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to delete multiple elements efficiently
         List result = this;
-        for (Int index = indexes.effectiveLowerBound, Int count = indexes.size; count-- > 0; )
-            {
+        for (Int index = indexes.effectiveLowerBound, Int count = indexes.size; count-- > 0; ) {
             result = result.delete(index);
-            }
-        return result;
         }
+        return result;
+    }
 
 
     // ----- List Cursor ---------------------------------------------------------------------------
@@ -1007,10 +866,9 @@ interface List<Element>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    Cursor cursor(Int index = 0)
-        {
+    Cursor cursor(Int index = 0) {
         return new IndexCursor(index);
-        }
+    }
 
     /**
      * A Cursor is a stateful, mutable navigator of a List. It can be used to walk through a list in
@@ -1019,25 +877,22 @@ interface List<Element>
      * elements from the list.
      */
     interface Cursor
-            extends Iterator<Element>
-        {
+            extends Iterator<Element> {
         // ----- metadata ----------------------------------------------------------------------
 
         /**
          * The containing list.
          */
-        @RO List list.get()
-            {
+        @RO List list.get() {
             return this.List;
-            }
+        }
 
         /**
          * Metadata: `True` iff the Cursor can move in reverse in an efficient manner.
          */
-        @RO Boolean bidirectional.get()
-            {
+        @RO Boolean bidirectional.get() {
             return True;
-            }
+        }
 
 
         // ----- Iterator methods --------------------------------------------------------------
@@ -1049,17 +904,15 @@ interface List<Element>
          * @return (conditional) the `Element` [value] that the `Cursor` was situated on
          */
         @Override
-        conditional Element next()
-            {
-            if (exists)
-                {
+        conditional Element next() {
+            if (exists) {
                 Element value = this.value;
                 advance();
                 return True, value;
-                }
+            }
 
             return False;
-            }
+        }
 
 
         // ----- Cursor operations -------------------------------------------------------------
@@ -1099,17 +952,15 @@ interface List<Element>
          * @return True if the cursor has advanced to another element in the list, or False if the
          *         cursor is now beyond the end of the list
          */
-        Boolean advance()
-            {
+        Boolean advance() {
             Int index = this.index;
             Int size  = list.size;
-            if (index < size)
-                {
+            if (index < size) {
                 this.index = ++index;
                 return index < size;
-                }
-            return False;
             }
+            return False;
+        }
 
         /**
          * Move the cursor so that it points to the _previous_ element in the list. If there are no
@@ -1119,19 +970,15 @@ interface List<Element>
          * @return True if the cursor has rewound to another element in the list, or False if the
          *         cursor was already at the beginning of the list
          */
-        Boolean rewind()
-            {
+        Boolean rewind() {
             Int prev = index;
-            if (prev > 0)
-                {
+            if (prev > 0) {
                 index = prev - 1;
                 return True;
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
+        }
 
         /**
          * Insert the specified element at the current index, shifting the contents of the entire
@@ -1159,247 +1006,204 @@ interface List<Element>
          *                      beyond the end of the list
          */
         void delete();
-        }
+    }
 
     /**
      * An IndexCursor is a simple [List.Cursor] implementation that delegates all operations back to
      * a List using the index-based operations on the List itself.
      */
     class IndexCursor
-            implements Cursor
-        {
+            implements Cursor {
         /**
          * Construct an IndexCursor for the specified List.
          *
          * @param index  the location of the cursor in the list, between `0` (inclusive) and [List.size]
          *               (exclusive)
          */
-        construct(Int index = 0)
-            {
-            if (index < 0 || index > size)
-                {
+        construct(Int index = 0) {
+            if (index < 0 || index > size) {
                 throw new OutOfBounds();
-                }
+            }
 
             this.index = index;
-            }
+        }
 
         @Override
-        List<Element> list.get()
-            {
+        List<Element> list.get() {
             return this.List;
-            }
+        }
 
         @Override
-        Int index
-            {
+        Int index {
             @Override
-            Int get()
-                {
+            Int get() {
                 return super().notGreaterThan(size);
-                }
+            }
 
             @Override
-            void set(Int i)
-                {
-                if (i < 0 || i > size)
-                    {
+            void set(Int i) {
+                if (i < 0 || i > size) {
                     throw new OutOfBounds();
-                    }
-                super(i);
                 }
+                super(i);
             }
+        }
 
         @Override
-        Boolean exists.get()
-            {
+        Boolean exists.get() {
             return index < size;
-            }
+        }
 
         @Override
-        Boolean advance()
-            {
+        Boolean advance() {
             Int next = index + 1;
             index = next.notGreaterThan(size);
             return next < size;
-            }
+        }
 
         @Override
-        Boolean rewind()
-            {
+        Boolean rewind() {
             Int prev = index;
-            if (prev > 0)
-                {
+            if (prev > 0) {
                 index = prev - 1;
                 return True;
-                }
-            return False;
             }
+            return False;
+        }
 
         @Override
-        Element value
-            {
+        Element value {
             @Override
-            Element get()
-                {
+            Element get() {
                 // may throw OutOfBounds
                 return list[index];
-                }
-
-            @Override
-            void set(Element value)
-                {
-                Int index = this.index;
-                Int size  = this.List.size;
-                if (index < size)
-                    {
-                    // may throw ReadOnly
-                    list[index] = value;
-                    }
-                else if (this.is(immutable))
-                    {
-                    throw new ReadOnly($"{this:class} is immutable");
-                    }
-                else if (inPlace)
-                    {
-                    this.index = size;
-                    add(value);
-                    }
-                else
-                    {
-                    throw new ReadOnly($"{this:class} does not support element set()");
-                    }
-                }
             }
 
-        @Override
-        void insert(Element value)
-            {
-            if (!inPlace || this.is(immutable))
-                {
-                throw new ReadOnly($"{this:class} is immutable or does not support insert()");
+            @Override
+            void set(Element value) {
+                Int index = this.index;
+                Int size  = this.List.size;
+                if (index < size) {
+                    // may throw ReadOnly
+                    list[index] = value;
+                } else if (this.is(immutable)) {
+                    throw new ReadOnly($"{this:class} is immutable");
+                } else if (inPlace) {
+                    this.index = size;
+                    add(value);
+                } else {
+                    throw new ReadOnly($"{this:class} does not support element set()");
                 }
+            }
+        }
+
+        @Override
+        void insert(Element value) {
+            if (!inPlace || this.is(immutable)) {
+                throw new ReadOnly($"{this:class} is immutable or does not support insert()");
+            }
 
             Int index = this.index;
             Int size  = this.List.size;
-            if (index < size)
-                {
+            if (index < size) {
                 list.insert(index, value);
-                }
-            else
-                {
+            } else {
                 this.index = size;
                 add(value);
-                }
             }
+        }
 
         @Override
-        void delete()
-            {
-            if (!inPlace || this.is(immutable))
-                {
+        void delete() {
+            if (!inPlace || this.is(immutable)) {
                 throw new ReadOnly($"{this:class} is immutable or does not support delete()");
-                }
+            }
 
             Int index = this.index;
             Int size  = this.List.size;
             assert:bounds index < size;
             list.delete(index);
-            }
         }
+    }
 
 
     // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
-    @Op("[..]") List!<Element> slice(Range<Int> indexes)
-        {
+    @Op("[..]") List!<Element> slice(Range<Int> indexes) {
         return new SubList(indexes);
-        }
+    }
 
     /**
      * An SubList is a simple [List] implementation that delegates all operations back to an
      * underlying List.
      */
     class SubList
-            implements List<Element>
-        {
-        construct(Range<Int> indexes)
-            {
+            implements List<Element> {
+
+        construct(Range<Int> indexes) {
             assert indexes.effectiveLowerBound >= 0;
             assert indexes.effectiveUpperBound < size;
             this.indexes = indexes;
-            }
+        }
 
         protected/private Range<Int> indexes;
 
         @Override
-        Int size.get()
-            {
+        Int size.get() {
             return indexes.size;
-            }
+        }
 
         @Override
-        @Op("[]") Element getElement(Int index)
-            {
+        @Op("[]") Element getElement(Int index) {
             return this.List[indexes[index]];
-            }
+        }
 
         @Override
-        @Op("[]=") void setElement(Int index, Element value)
-            {
+        @Op("[]=") void setElement(Int index, Element value) {
             this.List[indexes[index]] = value;
-            }
+        }
 
         @Override
-        Iterator<Element> iterator()
-            {
+        Iterator<Element> iterator() {
             Int first = indexes.effectiveFirst;
             Int last  = indexes.effectiveLast;
 
             return indexes.descending
-                    ? new Iterator()
-                        {
+                    ? new Iterator() {
                         private Int i = first;
 
                         @Override
-                        conditional Element next()
-                            {
-                            if (i >= last)
-                                {
+                        conditional Element next() {
+                            if (i >= last) {
                                 return True, this.List[i--];
-                                }
-                            return False;
                             }
+                            return False;
                         }
-                    : new Iterator()
-                        {
+                    }
+                    : new Iterator() {
                         private Int i = first;
 
                         @Override
-                        conditional Element next()
-                            {
-                            if (i <= last)
-                                {
+                        conditional Element next() {
+                            if (i <= last) {
                                 return True, this.List[i++];
-                                }
-                            return False;
                             }
-                        };
-            }
-
-        @Override
-        @Op("[..]") List!<Element> slice(Range<Int> indexes)
-            {
-            return this.List.slice(this.indexes[indexes.effectiveFirst] .. this.indexes[indexes.effectiveLast]);
-            }
-
-        @Override
-        List!<Element> reify()
-            {
-            return toArray();
-            }
+                            return False;
+                        }
+                    };
         }
+
+        @Override
+        @Op("[..]") List!<Element> slice(Range<Int> indexes) {
+            return this.List.slice(this.indexes[indexes.effectiveFirst] .. this.indexes[indexes.effectiveLast]);
+        }
+
+        @Override
+        List!<Element> reify() {
+            return toArray();
+        }
+    }
 
 
     // ----- Equality ------------------------------------------------------------------------------
@@ -1408,43 +1212,33 @@ interface List<Element>
      * Two lists are equal iff they are of the same size, and they contain the same values, in the
      * same order.
      */
-    static <CompileType extends List> Boolean equals(CompileType list1, CompileType list2)
-        {
+    static <CompileType extends List> Boolean equals(CompileType list1, CompileType list2) {
         if (Int size1 := list1.knownSize(),
-            Int size2 := list2.knownSize())
-            {
-            if (size1 != size2)
-                {
+            Int size2 := list2.knownSize()) {
+            if (size1 != size2) {
                 return False;
-                }
-
-            if (list1.indexed && list2.indexed)
-                {
-                for (Int i = 0; i < size1; ++i)
-                    {
-                    if (list1[i] != list2[i])
-                        {
-                        return False;
-                        }
-                    }
-                return True;
-                }
             }
 
-        using (val iter1 = list1.iterator(),
-               val iter2 = list2.iterator())
-            {
-            while (val value1 := iter1.next())
-                {
-                if (val value2 := iter2.next(), value1 == value2) {}
-                else
-                    {
-                    return False;
+            if (list1.indexed && list2.indexed) {
+                for (Int i = 0; i < size1; ++i) {
+                    if (list1[i] != list2[i]) {
+                        return False;
                     }
                 }
-            return !iter2.next();
+                return True;
             }
         }
+
+        using (val iter1 = list1.iterator(),
+               val iter2 = list2.iterator()) {
+            while (val value1 := iter1.next()) {
+                if (val value2 := iter2.next(), value1 == value2) {} else {
+                    return False;
+                }
+            }
+            return !iter2.next();
+        }
+    }
 
 
     // ----- sorting algorithms --------------------------------------------------------------------
@@ -1458,24 +1252,20 @@ interface List<Element>
      *
      * @return the sorted list (which may not be the list that was passed in)
      */
-    static <Element> List<Element> sort(List<Element> list, Element.Orderer? order = Null)
-        {
-        if (order == Null)
-            {
-            if (!(order := Element.ordered()))
-                {
+    static <Element> List<Element> sort(List<Element> list, Element.Orderer? order = Null) {
+        if (order == Null) {
+            if (!(order := Element.ordered())) {
                 throw new TypeMismatch($"Element type {Element} is not Orderable");
-                }
             }
+        }
 
-        if (list.is(immutable List) || !list.inPlace)
-            {
+        if (list.is(immutable List) || !list.inPlace) {
             list = list.toArray(Mutable);
-            }
+        }
 
         bubbleSort(list, order);
         return list;
-        }
+    }
 
     /**
      * Bubble-sort the contents of the passed list, in place, using the specified Orderer. The loop
@@ -1489,47 +1279,38 @@ interface List<Element>
      */
     static <Element> Boolean bubbleSort(List<Element>   list,
                                         Element.Orderer order,
-                                        Int             max = MaxValue)
-        {
-        if (!list.indexed)
-            {
+                                        Int             max = MaxValue) {
+        if (!list.indexed) {
             // TODO cursor-based implementation?
-            }
+        }
 
         Int last = list.size - 1;
-        if (last <= 0)
-            {
+        if (last <= 0) {
             return True;
-            }
+        }
 
         Int     first = 0;
         Boolean sorted;
-        do
-            {
+        do {
             sorted = True;
 
             list.Element bubble = list[last];
-            for (Int i = last-1; i >= first; --i)
-                {
+            for (Int i = last-1; i >= first; --i) {
                 list.Element prev = list[i];
-                if (order(prev, bubble) == Greater)
-                    {
+                if (order(prev, bubble) == Greater) {
                     list[i  ] = bubble;
                     list[i+1] = prev;
                     sorted    = False;
-                    }
-                else
-                    {
+                } else {
                     bubble = prev;
-                    }
                 }
+            }
 
             // the smallest item in the list has now bubbled up to the first position in the list;
             // optimize the next iteration by only bubbling up to the second position, and so on
             ++first;
-            }
-        while (!sorted && --max > 0);
+        } while (!sorted && --max > 0);
 
         return sorted;
-        }
     }
+}

@@ -6,17 +6,15 @@
  *   @Watch(n -> {console.print($"new value={n}");}) Int n = 0;
  */
 mixin WatchVar<Referent>(function void (Referent) notify)
-        into Var<Referent>
-    {
+        into Var<Referent> {
     /**
      * The notification function.
      */
     private function void (Referent) notify;
 
     @Override
-    void set(Referent value)
-        {
+    void set(Referent value) {
         super(value);
         notify(value);
-        }
     }
+}

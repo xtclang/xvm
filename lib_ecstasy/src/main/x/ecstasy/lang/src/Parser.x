@@ -32,8 +32,7 @@ import ast.UnionTypeExpression;
 
 
 class Parser
-        implements Markable
-    {
+        implements Markable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -45,10 +44,9 @@ class Parser
      * @param allowModuleNames  pass True if the Parser is being used to parse type names that may
      *                          include explicit module names
      */
-    construct(String source, ErrorList? errs = Null, Boolean allowModuleNames = False)
-        {
+    construct(String source, ErrorList? errs = Null, Boolean allowModuleNames = False) {
         construct Parser(new Source(source), errs, allowModuleNames);
-        }
+    }
 
     /**
      * Construct an Ecstasy parser.
@@ -59,18 +57,15 @@ class Parser
      * @param allowModuleNames  pass True if the Parser is being used to parse type names that may
      *                          include explicit module names
      */
-    construct(Source source, ErrorList? errs = Null, Boolean allowModuleNames = False)
-        {
+    construct(Source source, ErrorList? errs = Null, Boolean allowModuleNames = False) {
         this.source           = source;
         this.errs             = errs ?: new ErrorList(10);
         this.lexer            = new Lexer(source, this.errs, synthesizeEof = True);
         this.allowModuleNames = allowModuleNames;
-        }
-    finally
-        {
+    } finally {
         // prime the parser
         advance();
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -106,32 +101,30 @@ class Parser
      *
      * @return an `Expression`
      */
-    Expression parseExpression()
-        {
+    Expression parseExpression() {
         // TODO - temporarily, the parser implementation does not parse expressions other than
         //        constant literals; normally, an parsing would begin with an ElseExpression
         // return parseElseExpression();
 
         // note: this is all wrong (just temporary)
-        switch (Id id = peek().id)
-            {
-            case LeftParen:
-                expect(LeftParen);
-                Expression expr = parseExpression();
-                expect(RightParen);
-                return expr;
+        switch (Id id = peek().id) {
+        case LeftParen:
+            expect(LeftParen);
+            Expression expr = parseExpression();
+            expect(RightParen);
+            return expr;
 
-            case Sub:
-                return new UnaryExpression(expect(Sub), parseExpression());
+        case Sub:
+            return new UnaryExpression(expect(Sub), parseExpression());
 
-            case LitChar..LitPath:
-                return new LiteralExpression(expect(id));
+        case LitChar..LitPath:
+            return new LiteralExpression(expect(id));
 
-            default:
-                // this is obviously temporary, and not correct in the general case
-                return parseTypeExpression();
-            }
+        default:
+            // this is obviously temporary, and not correct in the general case
+            return parseTypeExpression();
         }
+    }
 
     /**
      * Parse a type expression.
@@ -141,10 +134,9 @@ class Parser
      *
      * @return a `TypeExpression`
      */
-    TypeExpression parseTypeExpression()
-        {
+    TypeExpression parseTypeExpression() {
         return parseIntersectingTypeExpression();
-        }
+    }
 
 
     // ----- statement parsing ---------------------------------------------------------------------
@@ -160,18 +152,16 @@ class Parser
      *
      * @return an ImportStatement
      */
-    ImportStatement parseImportStatement()
-        {
+    ImportStatement parseImportStatement() {
         Token   keyword = expect(Import);
         Token[] names   = parseQualifiedName();
         Token?  alias   = Null;
-        if (match(As))
-            {
+        if (match(As)) {
             alias = expect(Identifier);
-            }
+        }
         expect(Semicolon);
         return new ImportStatement(keyword, names, alias);
-        }
+    }
 
 
     // ----- expression parsing --------------------------------------------------------------------
@@ -206,96 +196,81 @@ class Parser
      */
     protected Expression[]? parseArgumentList(Boolean required       = False,
                                     Boolean allowCurrying  = False,
-                                    Boolean allowArraySize = False)
-        {
+                                    Boolean allowArraySize = False) {
         Id       close;
         Boolean  array = False;
-        switch (peek().id)
-            {
-            case LeftParen:
-                expect(LeftParen);
-                close = RightParen;
-                break;
+        switch (peek().id) {
+        case LeftParen:
+            expect(LeftParen);
+            close = RightParen;
+            break;
 
-            case LeftSquare:
-                if (!allowArraySize)
-                    {
-                    return Null;
-                    }
-
-                expect(LeftSquare);
-                close = RightSquare;
-                array = True;
-                break;
-
-            default:
-                if (required)
-                    {
-                    // this generates an error for the missing arguments list
-                    expect(LeftParen);
-                    }
+        case LeftSquare:
+            if (!allowArraySize) {
                 return Null;
             }
 
+            expect(LeftSquare);
+            close = RightSquare;
+            array = True;
+            break;
+
+        default:
+            if (required) {
+                // this generates an error for the missing arguments list
+                expect(LeftParen);
+            }
+            return Null;
+        }
+
         Expression[] args = new Expression[];
-        Loop: while (!match(close))
-            {
-            if (!Loop.first)
-                {
+        Loop: while (!match(close)) {
+            if (!Loop.first) {
                 expect(Comma);
-                }
-
-            Token? label = Null;
-            if (!array)
-                {
-                // special case where the parameter names are being specified with the arguments
-                if (Token name := match(Identifier))
-                    {
-                    if (match(Asn))
-                        {
-                        label = name;
-                        }
-                    else
-                        {
-                        // oops, it wasn't a "name=value" argument
-                        putBack(name);
-                        }
-                    }
-                }
-
-            Expression expr;
-            if (allowCurrying && !array)
-                {
-                switch (peek().id)
-                    {
-                    case Any:
-                        Token any = expect(Any);
-                        expr = new NonBindingExpression(Null, any.start, any.end);
-                        break;
-
-                    case CompareLT:
-                        Token          open = expect(CompareLT);
-                        TypeExpression type = parseTypeExpression();
-                                              expect(CompareGT);
-                        Token          any  = expect(Any);
-                        expr = new NonBindingExpression(type, open.start, any.end);
-                        break;
-
-                    default:
-                        expr = parseExpression();
-                        break;
-                    }
-                }
-            else
-                {
-                expr = parseExpression();
-                }
-
-            args.add(new LabeledExpression(label?, expr) : expr);
             }
 
-        return args;
+            Token? label = Null;
+            if (!array) {
+                // special case where the parameter names are being specified with the arguments
+                if (Token name := match(Identifier)) {
+                    if (match(Asn)) {
+                        label = name;
+                    } else {
+                        // oops, it wasn't a "name=value" argument
+                        putBack(name);
+                    }
+                }
+            }
+
+            Expression expr;
+            if (allowCurrying && !array) {
+                switch (peek().id) {
+                case Any:
+                    Token any = expect(Any);
+                    expr = new NonBindingExpression(Null, any.start, any.end);
+                    break;
+
+                case CompareLT:
+                    Token          open = expect(CompareLT);
+                    TypeExpression type = parseTypeExpression();
+                                          expect(CompareGT);
+                    Token          any  = expect(Any);
+                    expr = new NonBindingExpression(type, open.start, any.end);
+                    break;
+
+                default:
+                    expr = parseExpression();
+                    break;
+                }
+            } else {
+                expr = parseExpression();
+            }
+
+            args.add(new LabeledExpression(label?, expr) : expr);
         }
+
+        return args;
+    }
 
     /**
      * Parse a declared list of return types.
@@ -317,27 +292,22 @@ class Parser
      *
      * @return an array of `Parameter`
      */
-    protected Parameter[] parseReturnList()
-        {
-        if (match(Void))
-            {
+    protected Parameter[] parseReturnList() {
+        if (match(Void)) {
             return [];
-            }
+        }
 
-        if (!match(LeftParen))
-            {
+        if (!match(LeftParen)) {
             return [new Parameter(parseTypeExpression())];
-            }
+        }
 
         Parameter[] returns = new Parameter[];
-        do
-            {
+        do {
             returns.add(new Parameter(parseTypeExpression(), match(Identifier) ?: match(Any) ?: Null));
-            }
-        while (match(Comma));
+        } while (match(Comma));
         expect(RightParen);
         return returns;
-        }
+    }
 
 
     // ----- type expression parsing ---------------------------------------------------------------
@@ -352,26 +322,23 @@ class Parser
      *
      * @return a type expression
      */
-    protected TypeExpression parseIntersectingTypeExpression()
-        {
+    protected TypeExpression parseIntersectingTypeExpression() {
         TypeExpression expr = parseUnionedTypeExpression();
-        while (True)
-            {
-            switch (peek().id)
-                {
-                case Add:
-                    expr = new IntersectionTypeExpression(expr, expect(Add), parseUnionedTypeExpression());
-                    break;
+        while (True) {
+            switch (peek().id) {
+            case Add:
+                expr = new IntersectionTypeExpression(expr, expect(Add), parseUnionedTypeExpression());
+                break;
 
-                case Sub:
-                    expr = new DifferenceTypeExpression(expr, expect(Sub), parseUnionedTypeExpression());
-                    break;
+            case Sub:
+                expr = new DifferenceTypeExpression(expr, expect(Sub), parseUnionedTypeExpression());
+                break;
 
-                default:
-                    return expr;
-                }
+            default:
+                return expr;
             }
         }
+    }
 
     /**
      * Parse a type expression of the form "Type | Type".
@@ -382,22 +349,19 @@ class Parser
      *
      * @return a type expression
      */
-    protected TypeExpression parseUnionedTypeExpression()
-        {
+    protected TypeExpression parseUnionedTypeExpression() {
         TypeExpression expr = parseNonBiTypeExpression();
-        while (True)
-            {
-            switch (peek().id)
-                {
-                case BitOr:
-                    expr = new UnionTypeExpression(expr, expect(BitOr), parseNonBiTypeExpression());
-                    break;
+        while (True) {
+            switch (peek().id) {
+            case BitOr:
+                expr = new UnionTypeExpression(expr, expect(BitOr), parseNonBiTypeExpression());
+                break;
 
-                default:
-                    return expr;
-                }
+            default:
+                return expr;
             }
         }
+    }
 
     /**
      * Parse any type expression that does NOT look like "Type + Type" or "Type | Type".
@@ -432,104 +396,89 @@ class Parser
      *
      * @return a type expression
      */
-    protected TypeExpression parseNonBiTypeExpression()
-        {
+    protected TypeExpression parseNonBiTypeExpression() {
         TypeExpression type;
-        switch (peek().id)
-            {
-            case LeftParen:
-                expect(LeftParen);
-                type = parseTypeExpression();
-                expect(RightParen);
+        switch (peek().id) {
+        case LeftParen:
+            expect(LeftParen);
+            type = parseTypeExpression();
+            expect(RightParen);
+            break;
+
+        case At:
+            type = parseAnnotatedTypeExpression();
+            break;
+
+        case Function:
+            type = parseFunctionTypeExpression();
+            break;
+
+        case Immutable:
+            type = new ImmutableTypeExpression(expect(Immutable), parseNonBiTypeExpression());
+            break;
+
+        default:
+            type = parseNamedTypeExpression();
+            break;
+        }
+
+        while (True) {
+            switch (peek().id) {
+            case LeftSquare:
+                // this could be either:
+                //  -> NonBiTypeExpression ArrayDims
+                //  -> NonBiTypeExpression ArrayIndexes
+                // in the case of the ArrayIndexes, we do NOT consume that portion of the
+                // expression; we use it to give us a dimension count, as if it were ArrayDims
+                val mark = mark();
+
+                expect(LeftSquare);
+                Int dims    = 0;
+                Int indexes = 0;
+                while (!match(RightSquare)) {
+                    if (dims + indexes > 0) {
+                        expect(Comma);
+                    }
+
+                    Token dim = peek(); // just for error reporting
+                    if (match(Condition)) {
+                        if (dims == 0 && indexes > 0) {
+                            // just log the first one that deviates
+                            log(Error, AllOrNoDims, [], dim.start, dim.end);
+                        }
+                        ++dims;
+                    } else {
+                        parseExpression();
+                        if (indexes == 0 && dims > 0) {
+                            // just log the first one that deviates
+                            log(Error, AllOrNoDims, [], dim.start, dim.end);
+                        }
+                        ++indexes;
+                    }
+                }
+                type = new ArrayTypeExpression(type, dims + indexes, lastMatch().end);
+
+                // if there were only indexes, then we need to leave them in place because the
+                // type expression does not consume them
+                if (dims == 0 && indexes > 0) {
+                    restore(mark);
+                    return type;
+                }
                 break;
 
-            case At:
-                type = parseAnnotatedTypeExpression();
-                break;
-
-            case Function:
-                type = parseFunctionTypeExpression();
-                break;
-
-            case Immutable:
-                type = new ImmutableTypeExpression(expect(Immutable), parseNonBiTypeExpression());
+            case Condition:
+                if (!peek().spaceBefore) {
+                    type = new NullableTypeExpression(type, expect(Condition));
+                } else {
+                    return type;
+                }
                 break;
 
             default:
-                type = parseNamedTypeExpression();
-                break;
-            }
-
-        while (True)
-            {
-            switch (peek().id)
-                {
-                case LeftSquare:
-                    // this could be either:
-                    //  -> NonBiTypeExpression ArrayDims
-                    //  -> NonBiTypeExpression ArrayIndexes
-                    // in the case of the ArrayIndexes, we do NOT consume that portion of the
-                    // expression; we use it to give us a dimension count, as if it were ArrayDims
-                    val mark = mark();
-
-                    expect(LeftSquare);
-                    Int dims    = 0;
-                    Int indexes = 0;
-                    while (!match(RightSquare))
-                        {
-                        if (dims + indexes > 0)
-                            {
-                            expect(Comma);
-                            }
-
-                        Token dim = peek(); // just for error reporting
-                        if (match(Condition))
-                            {
-                            if (dims == 0 && indexes > 0)
-                                {
-                                // just log the first one that deviates
-                                log(Error, AllOrNoDims, [], dim.start, dim.end);
-                                }
-                            ++dims;
-                            }
-                        else
-                            {
-                            parseExpression();
-                            if (indexes == 0 && dims > 0)
-                                {
-                                // just log the first one that deviates
-                                log(Error, AllOrNoDims, [], dim.start, dim.end);
-                                }
-                            ++indexes;
-                            }
-                        }
-                    type = new ArrayTypeExpression(type, dims + indexes, lastMatch().end);
-
-                    // if there were only indexes, then we need to leave them in place because the
-                    // type expression does not consume them
-                    if (dims == 0 && indexes > 0)
-                        {
-                        restore(mark);
-                        return type;
-                        }
-                    break;
-
-                case Condition:
-                    if (!peek().spaceBefore)
-                        {
-                        type = new NullableTypeExpression(type, expect(Condition));
-                        }
-                    else
-                        {
-                        return type;
-                        }
-                    break;
-
-                default:
-                    return type;
-                }
+                return type;
             }
         }
+    }
 
     /**
      * Parse a type expression that is preceded by an annotation.
@@ -539,13 +488,12 @@ class Parser
      *
      * @return the annotated type expression
      */
-    protected AnnotatedTypeExpression parseAnnotatedTypeExpression()
-        {
+    protected AnnotatedTypeExpression parseAnnotatedTypeExpression() {
         AnnotationExpression annotation = parseAnnotation(True) ?: assert;
         TypeExpression type = parseTypeExpression();
 
         return new AnnotatedTypeExpression(annotation, type);
-        }
+    }
 
     /**
      * Parse an annotation.
@@ -557,41 +505,36 @@ class Parser
      *
      * @return an annotation, or Null if no annotation was encountered
      */
-    protected AnnotationExpression? parseAnnotation(Boolean required)
-        {
+    protected AnnotationExpression? parseAnnotation(Boolean required) {
         TextPosition start = peek().start;
-        if (!match(At, required))
-            {
+        if (!match(At, required)) {
             return Null;
-            }
+        }
 
         // while the annotation is technically a named type expression, it only allows a qualified
         // name (and none of the other things that are normally allowed in a named type expression)
         Token[]?     moduleNames = Null;
         Token[]      names       = parseQualifiedName();
         TextPosition end         = lastMatch().end;
-        if (allowModuleNames && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
-            {
+        if (allowModuleNames && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter)) {
             (moduleNames, names) = parseModuleQualifiedName(names);
-            if (moduleNames != Null)
-                {
+            if (moduleNames != Null) {
                 end = lastMatch().end;
-                }
             }
+        }
 
         TypeExpression type = new NamedTypeExpression(moduleNames, names, Null, Null, Null, end);
 
         // a trailing argument list is only assumed to be part of the annotation if there is
         // no whitespace separating the annotation from the arguments
         Expression[]? args = Null;
-        if (peek(t -> t.id == LeftParen && !t.spaceBefore))
-            {
+        if (peek(t -> t.id == LeftParen && !t.spaceBefore)) {
             args = parseArgumentList(True, False, False);
-            }
+        }
 
         TextPosition endAnno = args == Null ? type.end : lastMatch().end;
         return new AnnotationExpression(type, args, start, endAnno);
-        }
+    }
 
 
     /**
@@ -608,8 +551,7 @@ class Parser
      *
      * @return a FunctionTypeExpression
      */
-    protected FunctionTypeExpression parseFunctionTypeExpression()
-        {
+    protected FunctionTypeExpression parseFunctionTypeExpression() {
         Token func = expect(Function);
 
         // return values
@@ -618,18 +560,17 @@ class Parser
         // see if the parameters precede the name
         TypeExpression[]? params = parseParameterTypeList();
 
-        if (params == Null)
-            {
+        if (params == Null) {
             // name optionally comes before or after the parameters
             Token name = expect(Identifier);
             params = parseParameterTypeList(True);
 
             // pretend the name is the next token (as if we didn't eat it already)
             putBack(name);
-            }
+        }
 
         return new FunctionTypeExpression(func, returns, params?, lastMatch().end) : assert;
-        }
+    }
 
     /**
      * Parse a named type expression.
@@ -649,62 +590,52 @@ class Parser
      *
      * @return a TypeExpression for the named type
      */
-    protected TypeExpression parseNamedTypeExpression()
-        {
+    protected TypeExpression parseNamedTypeExpression() {
         Token[]?        moduleNames = Null;
         TypeExpression? parent      = Null;
         TypeExpression  type;
-        do
-            {
+        do {
             AnnotationExpression[] annotations = [];
-            if (parent != Null && peek(At))
-                {
+            if (parent != Null && peek(At)) {
                 annotations = new AnnotationExpression[];
-                do
-                    {
+                do {
                     // TODO this is not yet implemented in the Java version
                     annotations.add(parseAnnotation(True)?) : assert;
-                    }
-                while (peek(At));
-                }
+                } while (peek(At));
+            }
 
             // QualifiedName
             Token[] names = parseQualifiedName();
             if (allowModuleNames && parent == Null
-                    && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
-                {
+                    && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter)) {
                 (moduleNames, names) = parseModuleQualifiedName(names);
-                }
+            }
 
             // TypeAccessModifier
             Token? access = Null;
-            if (Token colon := match(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
-                {
-                switch (Id next = peek().id)
-                    {
-                    case Public:
-                    case Protected:
-                    case Private:
-                    case Struct:
-                        access = expect(next);
-                        if (parent != Null)
-                            {
-                            log(Error, NoChildAccess, [access.id.text],  access.start, access.end);
-                            }
-                        break;
-
-                    default:
-                        putBack(colon);
-                        break;
+            if (Token colon := match(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter)) {
+                switch (Id next = peek().id) {
+                case Public:
+                case Protected:
+                case Private:
+                case Struct:
+                    access = expect(next);
+                    if (parent != Null) {
+                        log(Error, NoChildAccess, [access.id.text],  access.start, access.end);
                     }
+                    break;
+
+                default:
+                    putBack(colon);
+                    break;
                 }
+            }
 
             // NoAutoNarrowModifier
             Token? noNarrow = Null;
-            if (noNarrow := match(t -> t.id == BoolNot && !t.spaceBefore), parent != Null)
-                {
+            if (noNarrow := match(t -> t.id == BoolNot && !t.spaceBefore), parent != Null) {
                 log(Error, NoChildNonNarrow, [], noNarrow.start, noNarrow.end);
-                }
+            }
 
             // TypeParameterTypeList
             TypeExpression[]? params = parseTypeParameterTypeList();
@@ -714,11 +645,10 @@ class Parser
                     : new ChildTypeExpression(parent, annotations, names, params, lastMatch().end);
             moduleNames = Null;
             parent      = type;
-            }
-        while (match(Dot));
+        } while (match(Dot));
 
         return type;
-        }
+    }
 
     /**
      * Parse a list of type expressions.
@@ -729,29 +659,23 @@ class Parser
      *
      * @return an array of TypeExpression
      */
-    protected TypeExpression[] parseTypeExpressionList(Boolean noSequence = False)
-        {
+    protected TypeExpression[] parseTypeExpressionList(Boolean noSequence = False) {
         TypeExpression[] types = new TypeExpression[];
-        Loop: while (True)
-            {
-            if (!Loop.first && !match(Comma))
-                {
+        Loop: while (True) {
+            if (!Loop.first && !match(Comma)) {
                 return types;
-                }
+            }
 
-            if (noSequence || peek().id != CompareLT)
-                {
+            if (noSequence || peek().id != CompareLT) {
                 types.add(parseTypeExpression());
-                }
-            else
-                {
+            } else {
                 Token            start = peek();
                 TypeExpression[] seq   = parseTypeParameterTypeList(required=True, noSequence=True) ?: assert;
                 Token            end   = lastMatch();
                 types.add(new TupleTypeExpression(seq, start.start, end.end));
-                }
             }
         }
+    }
 
     /**
      * Parse a list of parameter types (without parameter names).
@@ -763,19 +687,17 @@ class Parser
      *
      * @return an array of TypeExpression
      */
-    protected TypeExpression[]? parseParameterTypeList(Boolean required = False)
-        {
-        if (!match(LeftParen, required))
-            {
+    protected TypeExpression[]? parseParameterTypeList(Boolean required = False) {
+        if (!match(LeftParen, required)) {
             return Null;
-            }
+        }
 
         TypeExpression[] types = peek().id == RightParen
                 ? []
                 : parseTypeExpressionList(noSequence = True);
         expect(RightParen);
         return types;
-        }
+    }
 
     /**
      * For a parameterized type, parse the list of the types of its type parameters. For example,
@@ -797,22 +719,19 @@ class Parser
      *
      * @return an array of zero or more types, or `Null` if there were no angle brackets
      */
-    protected TypeExpression[]? parseTypeParameterTypeList(Boolean required = False, Boolean noSequence = False)
-        {
-        if (!match(CompareLT, required))
-            {
+    protected TypeExpression[]? parseTypeParameterTypeList(Boolean required = False, Boolean noSequence = False) {
+        if (!match(CompareLT, required)) {
             return Null;
-            }
+        }
 
-        if (match(CompareGT))
-            {
+        if (match(CompareGT)) {
             return [];
-            }
+        }
 
         TypeExpression[] types = parseTypeExpressionList(noSequence);
         expect(CompareGT);
         return types;
-        }
+    }
 
 
     // ----- miscellaneous parsing -----------------------------------------------------------------
@@ -828,21 +747,17 @@ class Parser
      *
      * @return an array of zero or more identifier tokens
      */
-    protected Token[] parseQualifiedName(Boolean required = True)
-        {
-        if (!required && !peek(Identifier))
-            {
+    protected Token[] parseQualifiedName(Boolean required = True) {
+        if (!required && !peek(Identifier)) {
             return [];
-            }
+        }
 
         Token[] names = new Token[];
-        do
-            {
+        do {
             names.add(expect(Identifier));
-            }
-        while (match(Dot));
+        } while (match(Dot));
         return names;
-        }
+    }
 
     /**
      * Parse a possible dot-delimited list of names that follows a dot-delimited list of names that
@@ -854,60 +769,54 @@ class Parser
      *
      * @return an array of zero or more identifier tokens
      */
-    protected (Token[]? modulesNames, Token[] names) parseModuleQualifiedName(Token[] names)
-        {
+    protected (Token[]? modulesNames, Token[] names) parseModuleQualifiedName(Token[] names) {
         assert allowModuleNames && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter);
         assert names.size > 0;
 
         // eliminate literal types
-        switch (names[names.size-1].valueText)
-            {
-            case "Array":
-            case "List":
-            case "Range":
-            case "Interval":
-            case "Map":
-            case "Tuple":
-            case "Path":
-            case "File":
-            case "Directory":
-            case "FileStore":
+        switch (names[names.size-1].valueText) {
+        case "Array":
+        case "List":
+        case "Range":
+        case "Interval":
+        case "Map":
+        case "Tuple":
+        case "Path":
+        case "File":
+        case "Directory":
+        case "FileStore":
             // the following are already accounted for the by the Lexer, but they are repeated here
             // to avoid generating confusing errors
-            case "Date":
-            case "TimeOfDay":
-            case "Time":
-            case "TimeZone":
-            case "Duration":
-            case "Version":
-            case "v":
-                return Null, names;
-            }
+        case "Date":
+        case "TimeOfDay":
+        case "Time":
+        case "TimeZone":
+        case "Duration":
+        case "Version":
+        case "v":
+            return Null, names;
+        }
 
         Token colon = expect(Colon);
-        switch (peek().id)
-            {
-            case Public:
-            case Protected:
-            case Private:
-            case Struct:
-                putBack(colon);
-                return Null, names;
-            }
+        switch (peek().id) {
+        case Public:
+        case Protected:
+        case Private:
+        case Struct:
+            putBack(colon);
+            return Null, names;
+        }
 
         Token[] moduleNames = names;
         Token[] localNames  = new Token[];
-        if (peek(Identifier))
-            {
-            do
-                {
+        if (peek(Identifier)) {
+            do {
                 localNames.add(expect(Identifier));
-                }
-            while (match(Dot));
-            }
+            } while (match(Dot));
+        }
 
         return moduleNames, localNames;
-        }
+    }
 
 
     // ----- token handling ------------------------------------------------------------------------
@@ -940,46 +849,41 @@ class Parser
     /**
      * True iff the token stream is exhausted.
      */
-    public Boolean eof.get()
-        {
+    public Boolean eof.get() {
         return (nextToken?.id == EndOfFile : True) && (backToken?.id == EndOfFile : True);
-        }
+    }
 
     /**
      * Advance the parser to the next token. (The first time that this is called, it primes the
      * parser by advancing to the first token.)
      */
-    protected Token? advance()
-        {
-        if (Token result ?= backToken)
-            {
+    protected Token? advance() {
+        if (Token result ?= backToken) {
             backToken = Null;
             return result;
-            }
+        }
 
         Token? result = nextToken;
-        while (Token newNext := lexer.next())
-            {
-            switch (newNext.id)
-                {
-                case EolComment:
-                case EncComment:
-                    // silently discard comments
-                    break;
+        while (Token newNext := lexer.next()) {
+            switch (newNext.id) {
+            case EolComment:
+            case EncComment:
+                // silently discard comments
+                break;
 
-                case DocComment:
-                    prevDoc = newNext;
-                    break;
+            case DocComment:
+                prevDoc = newNext;
+                break;
 
-                default:
-                    nextToken = newNext;
-                    return result;
-                }
+            default:
+                nextToken = newNext;
+                return result;
             }
+        }
 
         nextToken = Null;
         return result;
-        }
+    }
 
     /**
      * Without actually taking anything out of the token stream, obtain the next token.
@@ -988,10 +892,9 @@ class Parser
      *
      * @throws ParseFailed  iff there are no more tokens in the token stream
      */
-    protected Token peek()
-        {
+    protected Token peek() {
         return backToken ?: nextToken ?: lexer.eofToken ?: throw new ParseFailed("Token stream exhausted");
-        }
+    }
 
     /**
      * Without actually taking anything out of the token stream, determine if the next token matches
@@ -1002,15 +905,13 @@ class Parser
      * @return True iff the next token in the token stream matches the specified Id
      * @return (conditional) the matching token
      */
-    protected conditional Token peek(Id id)
-        {
-        if (Token token ?= backToken ?: nextToken, token.id == id)
-            {
+    protected conditional Token peek(Id id) {
+        if (Token token ?= backToken ?: nextToken, token.id == id) {
             return True, token;
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Without actually taking anything out of the token stream, determine if the next token matches
@@ -1021,15 +922,13 @@ class Parser
      * @return True iff the next token in the token stream matches the constraint
      * @return (conditional) the matching token
      */
-    protected conditional Token peek(function Boolean(Token) matches)
-        {
-        if (Token token ?= backToken ?: nextToken, matches(token))
-            {
+    protected conditional Token peek(function Boolean(Token) matches) {
+        if (Token token ?= backToken ?: nextToken, matches(token)) {
             return True, token;
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Verify that the next token matches the specified token id, and return it. This method is a
@@ -1042,10 +941,9 @@ class Parser
      * @throws ParseFailed  iff either the next token does not match or there are no more tokens in
      *                      the token stream
      */
-    protected Token expect(Id id)
-        {
+    protected Token expect(Id id) {
         return match(id, True) ?: assert;
-        }
+    }
 
     /**
      * Verify that the next token matches the specified constraint, and return it.
@@ -1057,10 +955,9 @@ class Parser
      * @throws ParseFailed  iff either the next token does not match or there are no more tokens in
      *                      the token stream
      */
-    protected Token expect(function Boolean(Token) matches)
-        {
+    protected Token expect(function Boolean(Token) matches) {
         return match(matches, True) ?: assert;
-        }
+    }
 
     /**
      * Determine if the next token matches the specified token id, and return it if it does.
@@ -1074,34 +971,30 @@ class Parser
      * @throws ParseFailed  iff `required` is specified, and either the next token does not match or
      *                      there are no more tokens in the token stream
      */
-    protected conditional Token match(Id id, Boolean required=False)
-        {
-        if (eof)
-            {
+    protected conditional Token match(Id id, Boolean required=False) {
+        if (eof) {
             return required
                     ? throw new ParseFailed($"{id} required, EOF found")
                     : False;
-            }
+        }
 
         Token token = peek();
-        if (token.id == id)
-            {
+        if (token.id == id) {
             matchedToken = token;
             advance();
             return True, token;
-            }
+        }
 
-        if ((Token left, Token right) := token.peel(id, lexer))
-            {
+        if ((Token left, Token right) := token.peel(id, lexer)) {
             matchedToken = left;
             replaceNext(token, right);
             return True, left;
-            }
+        }
 
         return required
                 ? throw new ParseFailed($"{id} required, {token.id} found")
                 : False;
-        }
+    }
 
     /**
      * Determine if the next token matches some constraint, and return it if it does.
@@ -1116,37 +1009,33 @@ class Parser
      * @throws ParseFailed  iff `required` is specified, and either the next token does not match or
      *                      there are no more tokens in the token stream
      */
-    protected conditional Token match(function Boolean(Token) matches, Boolean required=False)
-        {
-        if (eof)
-            {
+    protected conditional Token match(function Boolean(Token) matches, Boolean required=False) {
+        if (eof) {
             return required
                     ? throw new ParseFailed("matching token required, EOF found")
                     : False;
-            }
+        }
 
         Token token = peek();
-        if (matches(token))
-            {
+        if (matches(token)) {
             matchedToken = token;
             advance();
             return True, token;
-            }
+        }
 
         return required
                 ? throw new ParseFailed($"matching token required, {token.id} found")
                 : False;
-        }
+    }
 
     /**
      * Obtain the most recently _matched_ token from the parse stream.
      *
      * @return the most recent token returned from `match(...)`, or `expect(...)`
      */
-    protected Token lastMatch()
-        {
+    protected Token lastMatch() {
         return matchedToken ?: assert;
-        }
+    }
 
     /**
      * Place the specified token in the front of the parse stream. For each call to a method that
@@ -1156,19 +1045,15 @@ class Parser
      *
      * @token  the token to use as the next token in the parse stream
      */
-    protected void putBack(Token token)
-        {
+    protected void putBack(Token token) {
         Token next = peek();
-        if (Token beforePeel := token.anneal(next))
-            {
+        if (Token beforePeel := token.anneal(next)) {
             replaceNext(next, beforePeel);
-            }
-        else
-            {
+        } else {
             assert backToken == Null;
             backToken = token;
-            }
         }
+    }
 
     /**
      * Replace the expected next token with the specified token.
@@ -1176,19 +1061,15 @@ class Parser
      * @param the exact token instance that must appear next in the token stream
      * @param the token to replace the next token with
      */
-    protected void replaceNext(Token expected, Token replacement)
-        {
-        if (backToken != Null)
-            {
+    protected void replaceNext(Token expected, Token replacement) {
+        if (backToken != Null) {
             assert &backToken == &expected;
             backToken = replacement;
-            }
-        else
-            {
+        } else {
             assert &nextToken == &expected;
             nextToken = replacement;
-            }
         }
+    }
 
 
     // ----- Markable methods ----------------------------------------------------------------------
@@ -1204,14 +1085,12 @@ class Parser
                                 Boolean          suppressRecovery);
 
     @Override
-    immutable Object mark()
-        {
+    immutable Object mark() {
         return new Mark(lexer.mark(), nextToken, matchedToken, backToken, prevDoc, suppressRecovery);
-        }
+    }
 
     @Override
-    void restore(immutable Object mark, Boolean unmark = False)
-        {
+    void restore(immutable Object mark, Boolean unmark = False) {
         assert mark.is(Mark);
 
         lexer.restore(mark.lexerMark);
@@ -1220,15 +1099,14 @@ class Parser
         backToken        = mark.backToken;
         prevDoc          = mark.prevDoc;
         suppressRecovery = mark.suppressRecovery;
-        }
+    }
 
     @Override
-    void unmark(Object mark)
-        {
+    void unmark(Object mark) {
         assert mark.is(Mark);
 
         lexer.unmark(mark.lexerMark);
-        }
+    }
 
 
     // ----- error handling ------------------------------------------------------------------------
@@ -1252,10 +1130,9 @@ class Parser
      * @return True indicates that the process that reported the error should attempt to abort at
      *         this point if it is able to
      */
-    protected Boolean log(Severity severity, ErrorMsg errmsg, Object[] params, TextPosition before, TextPosition after)
-        {
+    protected Boolean log(Severity severity, ErrorMsg errmsg, Object[] params, TextPosition before, TextPosition after) {
         return errs.log(new Error(severity, errmsg.code, ErrorMsg.lookup, params, source, before, after));
-        }
+    }
 
     /**
      * Error codes.
@@ -1263,8 +1140,7 @@ class Parser
      * While it may appear that the error messages are hard-coded, the text found here is simply
      * the default error text; it will eventually be localized as necessary.
      */
-    enum ErrorMsg(String code, String message)
-        {
+    enum ErrorMsg(String code, String message) {
         FatalError      ("PARSER-01", "Unknown fatal parser error: \"{0}\"."),
         UnexpectedEof   ("PARSER-02", "Unexpected End-Of-File (token exhaustion)."),
         ExpectedToken   ("PARSER-03", "Expected token {0}; found {1}."),
@@ -1291,23 +1167,20 @@ class Parser
         /**
          * Message  token ids, but not including context-sensitive keywords.
          */
-        static Map<String, ErrorMsg> byCode =
-            {
+        static Map<String, ErrorMsg> byCode = {
             HashMap<String, ErrorMsg> map = new HashMap();
-            for (ErrorMsg errmsg : ErrorMsg.values)
-                {
+            for (ErrorMsg errmsg : ErrorMsg.values) {
                 map[errmsg.code] = errmsg;
-                }
+            }
             return map.makeImmutable();
-            };
+        };
 
         /**
          * Lookup unformatted error message by error code.
          */
-        static String lookup(String code)
-            {
+        static String lookup(String code) {
             assert ErrorMsg err := byCode.get(code);
             return err.message;
-            }
         }
     }
+}

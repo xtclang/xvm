@@ -7,12 +7,11 @@
  * an attempt to assign to a variable occurs after the variable has already been assigned.
  */
 mixin FinalVar<Referent>
-        into Var<Referent>
-    {
+        into Var<Referent> {
+
     @Override
-    void set(Referent value)
-        {
+    void set(Referent value) {
         assert !assigned;
         super(value);
-        }
     }
+}

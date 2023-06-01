@@ -2,8 +2,7 @@
  * A UTF8Writer emits UTF8 data to an underlying OutputStream.
  */
 class UTF8Writer(BinaryOutput out)
-        implements Writer
-    {
+        implements Writer {
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -15,9 +14,8 @@ class UTF8Writer(BinaryOutput out)
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override
-    UTF8Writer add(Char v)
-        {
+    UTF8Writer add(Char v) {
         DataOutput.writeUTF8Char(out, v);
         return this;
-        }
     }
+}

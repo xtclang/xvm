@@ -17,8 +17,7 @@
  * A collection of commonly used Aggregator implementations are located in the
  * `aggregate.xtclang.org` module.
  */
-interface Aggregator<Element, Result>
-    {
+interface Aggregator<Element, Result> {
     /**
      * An Accumulator is the mutable, stateful representation into which `Element` values are
      * accumulated.
@@ -44,4 +43,4 @@ interface Aggregator<Element, Result>
      * @return the result of the aggregation process
      */
     Result reduce(Accumulator accumulator);
-    }
+}

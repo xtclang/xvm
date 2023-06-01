@@ -3,13 +3,12 @@
  * Element values.
  */
 class FlatMappedIterator<Element, Original>
-        implements Iterator<Element>
-    {
-    construct(Iterator<Original> iter, function Iterator<Element> transform(Original))
-        {
+        implements Iterator<Element> {
+
+    construct(Iterator<Original> iter, function Iterator<Element> transform(Original)) {
         this.iterOrig  = iter;
         this.transform = transform;
-        }
+    }
 
     /**
      * The iterator of original elements to delegate to.
@@ -27,36 +26,28 @@ class FlatMappedIterator<Element, Original>
     protected/private Iterator<Element>? iterCur;
 
     @Override
-    conditional Element next()
-        {
-        while (True)
-            {
-            if (Element el := iterCur?.next())
-                {
+    conditional Element next() {
+        while (True) {
+            if (Element el := iterCur?.next()) {
                 return True, el;
-                }
+            }
 
-            if (Original el := iterOrig.next())
-                {
+            if (Original el := iterOrig.next()) {
                 iterCur = transform(el);
-                }
-            else
-                {
+            } else {
                 iterCur = Null;
                 return False;
-                }
             }
         }
-
-    @Override
-    Boolean knownEmpty()
-        {
-        return (iterCur?.knownEmpty() : True) && iterOrig.knownEmpty();
-        }
-
-    @Override
-    conditional Int knownSize()
-        {
-        return False;
-        }
     }
+
+    @Override
+    Boolean knownEmpty() {
+        return (iterCur?.knownEmpty() : True) && iterOrig.knownEmpty();
+    }
+
+    @Override
+    conditional Int knownSize() {
+        return False;
+    }
+}

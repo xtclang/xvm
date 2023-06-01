@@ -1,8 +1,7 @@
 /**
  * Represents a value that can be converted to a floating point numeric value.
  */
-interface FPConvertible
-    {
+interface FPConvertible {
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -12,10 +11,9 @@ interface FPConvertible
      *
      * @throws OutOfBounds  if the resulting value is out of the `Dec` range
      */
-    Dec toDec()
-        {
+    Dec toDec() {
         return toDecN().toDec();
-        }
+    }
 
     /**
      * Convert the value to a 32-bit radix-10 (decimal) floating point number.
@@ -24,10 +22,9 @@ interface FPConvertible
      *
      * @throws OutOfBounds  if the resulting value is out of the 32-bit decimal range
      */
-    Dec32 toDec32()
-        {
+    Dec32 toDec32() {
         return toDecN().toDec32();
-        }
+    }
 
     /**
      * Convert the value to a 64-bit radix-10 (decimal) floating point number.
@@ -36,10 +33,9 @@ interface FPConvertible
      *
      * @throws OutOfBounds  if the resulting value is out of the 64-bit decimal range
      */
-    Dec64 toDec64()
-        {
+    Dec64 toDec64() {
         return toDecN().toDec64();
-        }
+    }
 
     /**
      * Convert the value to a 128-bit radix-10 (decimal) floating point number.
@@ -48,10 +44,9 @@ interface FPConvertible
      *
      * @throws OutOfBounds  if the resulting value is out of the 128-bit decimal range
      */
-    Dec128 toDec128()
-        {
+    Dec128 toDec128() {
         return toDecN().toDec128();
-        }
+    }
 
     /**
      * Convert the value to a variable-length decimal radix floating point number.
@@ -65,70 +60,63 @@ interface FPConvertible
      *
      * @return an 8-bit "E4M3" floating point number
      */
-    Float8e4 toFloat8e4()
-        {
+    Float8e4 toFloat8e4() {
         return toFloatN().toFloat8e4();
-        }
+    }
 
     /**
      * Convert the value to an 8-bit radix-2 (binary) "FP8 E5M2" floating point number.
      *
      * @return an 8-bit "E5M2" floating point number
      */
-    Float8e5 toFloat8e5()
-        {
+    Float8e5 toFloat8e5() {
         return toFloatN().toFloat8e5();
-        }
+    }
 
     /**
      * Convert the value to a 16-bit radix-2 (binary) "brain" floating point number.
      *
      * @return a 16-bit "brain" floating point number
      */
-    BFloat16 toBFloat16()
-        {
+    BFloat16 toBFloat16() {
         return toFloatN().toBFloat16();
-        }
+    }
 
     /**
      * Convert the value to a 16-bit radix-2 (binary) floating point number.
      *
      * @return a 16-bit binary floating point number
      */
-    Float16 toFloat16()
-        {
+    Float16 toFloat16() {
         return toFloatN().toFloat16();
-        }
+    }
 
     /**
      * Convert the value to a 32-bit radix-2 (binary) floating point number.
      *
      * @return a 32-bit binary floating point number
      */
-    Float32 toFloat32()
-        {
+    Float32 toFloat32() {
         return toFloatN().toFloat32();
-        }
+    }
 
     /**
      * Convert the value to a 64-bit radix-2 (binary) floating point number.
      *
      * @return a 64-bit binary floating point number
      */
-    Float64 toFloat64()
-        {
+    Float64 toFloat64() {
         return toFloatN().toFloat64();
-        }
+    }
 
     /**
      * Convert the value to a 128-bit radix-2 (binary) floating point number.
      *
      * @return a 128-bit binary floating point number
      */
-    Float128 toFloat128()
-        {
+    Float128 toFloat128() {
         return toFloatN().toFloat128();
-        }
+    }
 
     /**
      * Convert the value to a variable-length binary radix floating point number.
@@ -142,8 +130,7 @@ interface FPConvertible
      *
      * @return a floating point literal
      */
-    FPLiteral toFPLiteral()
-        {
+    FPLiteral toFPLiteral() {
         return toDecN().toFPLiteral();
-        }
     }
+}

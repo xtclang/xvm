@@ -2,8 +2,7 @@ import ecstasy.lang.ErrorList;
 
 import ecstasy.mgmt.ModuleRepository;
 
-interface Compiler
-    {
+interface Compiler {
     /**
      * Provide a ModuleRepository of modules that are necessary for the compilation.
      */
@@ -25,4 +24,4 @@ interface Compiler
      * @return errors  the errors (including warnings);  must not be empty if 'success' is False
      */
     (Boolean success, String[] errors) compile((Directory|File)[] sources);
-    }
+}

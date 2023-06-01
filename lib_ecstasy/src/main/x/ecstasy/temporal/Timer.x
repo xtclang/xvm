@@ -10,8 +10,7 @@
  *   // do some work here
  *   Duration elapsed = timer.elapsed;
  */
-interface Timer
-    {
+interface Timer {
     /**
      * If the Timer is stopped, then this method starts the Timer, such that the elapsed time begins
      * accumulating again. If the Timer is already started, then this method has no effect.
@@ -51,12 +50,11 @@ interface Timer
     /**
      * Restart the timer, as if the timer were stopped, reset, and re-started.
      */
-    void restart()
-        {
+    void restart() {
         stop();
         reset();
         start();
-        }
+    }
 
     /**
      * Resets the Timer such that the elapsed time starts accumulating again from zero.
@@ -74,4 +72,4 @@ interface Timer
      * the lower bound of the smallest time unit that can be measured.
      */
     @RO Duration resolution;
-    }
+}

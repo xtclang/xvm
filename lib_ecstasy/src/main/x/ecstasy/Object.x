@@ -14,41 +14,36 @@
  *   masked by {@link Ref.maskAs<AsType>()}.
  */
 interface Object
-        extends Comparable
-    {
+        extends Comparable {
     /**
      * By default, comparing any two objects will only result in equality if they are the
      * same object, or if they are two constant objects with identical values.
      */
-    static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)
-        {
+    static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2) {
         return &o1 == &o2;
-        }
+    }
 
     /**
      * Provide a String representation of the object.
      *
      * This is intended primarily for debugging, log messages, and other diagnostic features.
      */
-    String toString()
-        {
-        if (this.is(Stringable))
-            {
+    String toString() {
+        if (this.is(Stringable)) {
             val buf = new StringBuffer(estimateStringLength());
             appendTo(buf);
             return buf.toString();
-            }
+        }
 
         // the Object's rudimentary toString() shows class information only
         return this:class.toString();
-        }
+    }
 
     /**
      * Make this object immutable.
      */
-    immutable Object makeImmutable()
-        {
+    immutable Object makeImmutable() {
         this:struct.freeze();
         return this.as(immutable Object);
-        }
     }
+}

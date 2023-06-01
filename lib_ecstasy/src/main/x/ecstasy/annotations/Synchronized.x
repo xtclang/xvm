@@ -41,6 +41,5 @@
  *   `@Synchronized` annotation takes precedence.
  */
 mixin Synchronized
-        into Class | Property | Method | Function
-    {
-    }
+        into Class | Property | Method | Function {
+}

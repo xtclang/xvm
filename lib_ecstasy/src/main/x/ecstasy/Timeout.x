@@ -65,10 +65,9 @@
  *       }
  */
 const Timeout
-        implements Closeable
-    {
-    construct(Duration remainingTime, Boolean independent = False)
-        {
+        implements Closeable {
+
+    construct(Duration remainingTime, Boolean independent = False) {
         assert remainingTime > Duration:0S;
 
         // store off the previous timeout; it will be replaced by this timeout, and restored when
@@ -79,18 +78,15 @@ const Timeout
         duration = remainingTime;
 
         Timeout? previousTimeout = this.previousTimeout;
-        if (!independent && previousTimeout != Null)
-            {
+        if (!independent && previousTimeout != Null) {
             // because the timeout is not independent, it must respect the current outgoing timeout
             // that it is replacing
             duration = duration.notGreaterThan(previousTimeout.remainingTime);
-            }
+        }
         this.independent = independent;
-        }
-    finally
-        {
+    } finally {
         this:service.registerTimeout(this);
-        }
+    }
 
     /**
      * The timer selected by the runtime to manage timeouts.
@@ -118,80 +114,69 @@ const Timeout
      * Determine the amount of remaining time on this timeout. This value decreases until it
      * reaches zero.
      */
-    Duration remainingTime.get()
-        {
+    Duration remainingTime.get() {
         return (duration - timer.elapsed).notLessThan(Duration.NONE);
-        }
+    }
 
     /**
      * Determine whether this timeout has timed out.
      */
-    Boolean expired.get()
-        {
+    Boolean expired.get() {
         return timer.elapsed > duration;
-        }
+    }
 
     /**
      * Determine whether this timeout is the active timeout for the current service.
      */
-    Boolean active.get()
-        {
+    Boolean active.get() {
         return this:service.timeout == this;
-        }
+    }
 
     /**
      * Determine whether this timeout is registered with the current service, regardless of whether
      * it is the currently-active timeout.
      */
-    Boolean registered.get()
-        {
+    Boolean registered.get() {
         Timeout? timeout = this:service.timeout;
-        while (timeout != Null)
-            {
-            if (this == timeout)
-                {
+        while (timeout != Null) {
+            if (this == timeout) {
                 return True;
-                }
-
-            timeout = timeout.previousTimeout;
             }
 
-        return False;
+            timeout = timeout.previousTimeout;
         }
+
+        return False;
+    }
 
     /**
      * Check to see if the timeout has expired, and if it has, invoke its expiration.
      */
-    void checkExpiry()
-        {
-        if (expired)
-            {
+    void checkExpiry() {
+        if (expired) {
             onExpiry();
-            }
         }
+    }
 
     /**
      * This method is invoked when the timeout determines that it has expired. The default behavior
      * of this method is to throw a TimedOut exception.
      */
-    protected void onExpiry()
-        {
+    protected void onExpiry() {
         throw new TimedOut(this);
-        }
+    }
 
     /**
      * Close the timeout. This method is invoked automatically by the `using` or `try`
      * with-resources keywords.
      */
     @Override
-    void close(Exception? cause = Null)
-        {
-        if (registered)
-            {
+    void close(Exception? cause = Null) {
+        if (registered) {
             // the reason that the timeout checks whether it is registered instead of if it is
             // active is that it is possible that a downstream Timeout was not properly closed,
             // e.g. by failing to use a "using" or "try"-with-resources construct
             this:service.registerTimeout(previousTimeout);
-            }
         }
     }
+}

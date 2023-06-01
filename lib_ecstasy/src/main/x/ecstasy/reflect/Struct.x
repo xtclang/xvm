@@ -12,8 +12,7 @@
  * with the properties declared by the class being constructed, any property declared here could
  * collide with a property declared by that class -- a condition which must be avoided.
  */
-interface Struct
-    {
+interface Struct {
     /**
      * Represents the mutability of the structure. Once the property has been set to False, the
      * Struct is no longer mutable, and as a result, the property cannot be set to True.
@@ -48,4 +47,4 @@ interface Struct
      * @return the size of this structure, in bytes
      */
     Int calcByteLength();
-    }
+}

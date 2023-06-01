@@ -13,8 +13,7 @@
  * the [put] and [remove] methods.
  */
 interface Map<Key, Value>
-        extends Stringable
-    {
+        extends Stringable {
     /**
      * An Orderer is a function that compares two keys for order.
      */
@@ -32,10 +31,9 @@ interface Map<Key, Value>
      * It is expected that all mutating operations that do not return a resulting map will
      * assert that `inPlace` is `True`.
      */
-    @RO Boolean inPlace.get()
-        {
+    @RO Boolean inPlace.get() {
         return True;
-        }
+    }
 
     /**
      * Metadata: Is the Map maintained in a specific order? And if that order is a function
@@ -46,10 +44,9 @@ interface Map<Key, Value>
      *         indicates that an order is maintained, but not by the comparison of keys, such as
      *         when a map stores entries in the order that they are added
      */
-    conditional Orderer? ordered()
-        {
+    conditional Orderer? ordered() {
         return False;
-        }
+    }
 
     /**
      * Metadata: Is the Map of a known size? The size is available from the [size] property, but may
@@ -61,12 +58,11 @@ interface Map<Key, Value>
      * @return (conditional) the `Map` size, if it is efficiently known
      */
     @Concurrent
-    conditional Int knownSize()
-        {
+    conditional Int knownSize() {
         // implementations of Map that do not have a cached size should override this method and
         // return False if the size requires any calculation more expensive than O(1)
         return True, size;
-        }
+    }
 
 
     // ----- read operations -----------------------------------------------------------------------
@@ -75,10 +71,9 @@ interface Map<Key, Value>
      * Determine the size of the Map, which is the number of entries (key/value pairs) in the Map.
      */
     @Concurrent
-    @RO Int size.get()
-        {
+    @RO Int size.get() {
         return keys.size;
-        }
+    }
 
     /**
      * Determine if the Map is empty.
@@ -87,10 +82,9 @@ interface Map<Key, Value>
      * implementations that have a cost associated with calculating the size.
      */
     @Concurrent
-    @RO Boolean empty.get()
-        {
+    @RO Boolean empty.get() {
         return keys.empty;
-        }
+    }
 
     /**
      * Check if this map contains the specified key.
@@ -100,10 +94,9 @@ interface Map<Key, Value>
      * @return the True iff the specified key exists in the map
      */
     @Concurrent
-    Boolean contains(Key key)
-        {
+    Boolean contains(Key key) {
         return keys.contains(key);
-        }
+    }
 
     /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If
@@ -127,15 +120,13 @@ interface Map<Key, Value>
      * @return the value for the associated key if it exists in the map; otherwise Null
      */
     @Concurrent
-    @Op("[]") Value? getOrNull(Key key)
-        {
-        if (Value value := get(key))
-            {
+    @Op("[]") Value? getOrNull(Key key) {
+        if (Value value := get(key)) {
             return value;
-            }
+        }
 
         return Null;
-        }
+    }
 
     /**
      * Obtain the value associated with the specified key, or if the key does not already exist in
@@ -149,15 +140,13 @@ interface Map<Key, Value>
      * @return the value for the specified key if it exists in the map; otherwise, the default value
      */
     @Concurrent
-    Value getOrDefault(Key key, Value dftval)
-        {
-        if (Value value := get(key))
-            {
+    Value getOrDefault(Key key, Value dftval) {
+        if (Value value := get(key)) {
             return value;
-            }
+        }
 
         return dftval;
-        }
+    }
 
     /**
      * Obtain the value associated with the specified key, or if the key does not already exist in
@@ -172,15 +161,13 @@ interface Map<Key, Value>
      *         the result from the provided function
      */
     @Concurrent
-    Value getOrCompute(Key key, function Value () compute)
-        {
-        if (Value value := get(key))
-            {
+    Value getOrCompute(Key key, function Value () compute) {
+        if (Value value := get(key)) {
             return value;
-            }
+        }
 
         return compute();
-        }
+    }
 
     /**
      * Obtain the set of all keys in the map.
@@ -217,10 +204,9 @@ interface Map<Key, Value>
      * @return a Map containing entries indicated by the keys and values that matched the function
      */
     @Concurrent
-    Map! filter(function Boolean(Entry) match)
-        {
+    Map! filter(function Boolean(Entry) match) {
         return entries.filter(match).associate(entryAssociator());
-        }
+    }
 
     /**
      * Create a sorted `Map` from this `Map`.
@@ -234,20 +220,16 @@ interface Map<Key, Value>
      * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Key] is not [Orderable]
      */
     @Concurrent
-    Map! sorted(Orderer? order = Null)
-        {
-        if (order == Null)
-            {
+    Map! sorted(Orderer? order = Null) {
+        if (order == Null) {
             assert order := Key.ordered();
-            }
-        else if (Orderer? currentOrder := ordered(), order == currentOrder)
-            {
+        } else if (Orderer? currentOrder := ordered(), order == currentOrder) {
             // optimization if the requested order is the same as the current order
             return this;
-            }
+        }
 
         return sortedByEntry(orderByKey(order));
-        }
+    }
 
     /**
      * Create a sorted `Map` from this `Map`.
@@ -257,37 +239,33 @@ interface Map<Key, Value>
      * @return a sorted Map
      */
     @Concurrent
-    Map! sortedByEntry(function Ordered (Entry, Entry) order)
-        {
+    Map! sortedByEntry(function Ordered (Entry, Entry) order) {
         return entries.sorted(order).associate(entryAssociator());
-        }
+    }
 
     /**
      * An implementation of a matching function that operators on entries, whose purpose is to match
      * on the values in those entries, by delegating to an underlying function that matches only on
      * the value.
      */
-    function Boolean(Entry) valueMatches(function Boolean(Value) match)
-        {
+    function Boolean(Entry) valueMatches(function Boolean(Value) match) {
         return e -> match(e.value);
-        }
+    }
 
     /**
      * A comparison function for entries that delegates to a comparison function on keys.
      */
-    function Ordered (Entry, Entry) orderByKey(function Ordered (Key, Key) order)
-        {
+    function Ordered (Entry, Entry) orderByKey(function Ordered (Key, Key) order) {
         return (e1, e2) -> order(e1.key, e2.key);
-        }
+    }
 
     /**
      * An implementation of an associator, as used by [Collection.associate], that splits an [Entry]
      * into its constituent key and value.
      */
-    function (Key, Value) (Entry) entryAssociator()
-        {
+    function (Key, Value) (Entry) entryAssociator() {
         return e -> (e.key, e.value);
-        }
+    }
 
 
     // ----- write operations ----------------------------------------------------------------------
@@ -306,10 +284,9 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-     Map put(Key key, Value value)
-        {
+     Map put(Key key, Value value) {
         throw new ReadOnly("entry addition and modification is not supported");
-        }
+    }
 
     /**
      * For an in-place Map, store a mapping of the specified key to the specified value, regardless
@@ -324,17 +301,13 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     @Concurrent
-    @Op("[]=") void putInPlace(Key key, Value value)
-        {
-        if (inPlace)
-            {
+    @Op("[]=") void putInPlace(Key key, Value value) {
+        if (inPlace) {
             put(key, value);
-            }
-        else
-            {
+        } else {
             throw new ReadOnly("map does not support in-place modification");
-            }
         }
+    }
 
     /**
      * Store in this map each of the mappings of key and values specified in another map, regardless
@@ -350,15 +323,13 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     @Concurrent
-    Map putAll(Map! that)
-        {
+    Map putAll(Map! that) {
         Map result = this;
-        that.entries.forEach(entry ->
-            {
+        that.entries.forEach(entry -> {
             result = result.put(entry.key, entry.value);
-            });
+        });
         return result;
-        }
+    }
 
     /**
      * Map the specified key to the specified value, iff that key is *not* currently present in the
@@ -377,15 +348,13 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     @Concurrent
-    conditional Map putIfAbsent(Key key, Value value)
-        {
-        if (keys.contains(key))
-            {
+    conditional Map putIfAbsent(Key key, Value value) {
+        if (keys.contains(key)) {
             return False;
-            }
+        }
 
         return True, put(key, value);
-        }
+    }
 
     /**
      * Store the specified new value in the map associated with the specified key, iff that key is
@@ -399,18 +368,15 @@ interface Map<Key, Value>
      * @return the resultant map, which is the same as `this` for an in-place map
      */
     @Concurrent
-    conditional Map replace(Key key, Value valueOld, Value valueNew)
-        {
-        if (valueOld != valueNew)
-            {
-            if (Value valueCur := get(key), valueOld == valueCur)
-                {
+    conditional Map replace(Key key, Value valueOld, Value valueNew) {
+        if (valueOld != valueNew) {
+            if (Value valueCur := get(key), valueOld == valueCur) {
                 return True, put(key, valueNew);
-                }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Remove the specified key and any associated value from this map.
@@ -421,10 +387,9 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-    Map remove(Key key)
-        {
+    Map remove(Key key) {
         throw new ReadOnly("entry removal is not supported");
-        }
+    }
 
     /**
      * Remove the specified key and the associated value from this map, iff the key exists in this
@@ -439,15 +404,13 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     @Concurrent
-    conditional Map remove(Key key, Value value)
-        {
-        if (Value valueOld := get(key), value == valueOld)
-            {
+    conditional Map remove(Key key, Value value) {
+        if (Value valueOld := get(key), value == valueOld) {
             return True, remove(key);
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Remove all key/value mappings from the map.
@@ -460,24 +423,19 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     @Concurrent
-    Map clear()
-        {
+    Map clear() {
         // this method should be overridden by any class that has a more efficient implementation
         // available
         Map result = this;
-        if (inPlace)
-            {
+        if (inPlace) {
             keys.clear();
-            }
-        else
-            {
-            keys.forEach(key ->
-                {
+        } else {
+            keys.forEach(key -> {
                 result = result.remove(key);
-                });
-            }
-        return result;
+            });
         }
+        return result;
+    }
 
 
     // ----- Entry operations -----------------------------------------------------------
@@ -500,12 +458,11 @@ interface Map<Key, Value>
      */
     @Concurrent
     <Result> Result process(Key                    key,
-                            function Result(Entry) compute)
-        {
+                            function Result(Entry) compute) {
         Entry  entry  = new @maps.KeyEntry(key) Entry() {};
         Result result = compute(entry);
         return result;
-        }
+    }
 
     /**
      * Apply the specified function to the Entry objects for the specified keys.
@@ -521,12 +478,11 @@ interface Map<Key, Value>
      */
     @Concurrent
     <Result> Map!<Key, Result> processAll(Iterable<Key>          keys,
-                                          function Result(Entry) compute)
-        {
+                                          function Result(Entry) compute) {
         ListMap<Key, Result> result = new ListMap(keys.size);
         keys.iterator().forEach(key -> result.put(key, process(key, compute)));
         return result;
-        }
+    }
 
     /**
      * Apply the specified function to the entry for the specified key, iff such an entry exists in
@@ -544,23 +500,18 @@ interface Map<Key, Value>
      */
     @Concurrent
     <Result> conditional Result processIfPresent(Key                    key,
-                                                 function Result(Entry) compute)
-        {
+                                                 function Result(Entry) compute) {
         // this implementation can be overridden to combine the contains() and process() into
         // a single step
-        if (contains(key))
-            {
-            return True, process(key, entry ->
-                {
+        if (contains(key)) {
+            return True, process(key, entry -> {
                 assert entry.exists;
                 return compute(entry);
-                });
-            }
-        else
-            {
+            });
+        } else {
             return False;
-            }
         }
+    }
 
     /**
      * Obtain the existing value for the specified key, or if the key does not already exist in the
@@ -578,25 +529,21 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     (Value, Boolean) computeIfAbsent(Key              key,
-                                     function Value() compute)
-        {
-        return process(key, entry ->
-            {
-            if (entry.exists)
-                {
+                                     function Value() compute) {
+        return process(key, entry -> {
+            if (entry.exists) {
                 return (entry.value, False);
-                }
+            }
 
-            if (!inPlace)
-                {
+            if (!inPlace) {
                 throw new ReadOnly();
-                }
+            }
 
             Value value = compute();
             entry.value = value;
             return (value, True);
-            });
-        }
+        });
+    }
 
 
     // ----- Entry interface -----------------------------------------------------------------------
@@ -612,8 +559,7 @@ interface Map<Key, Value>
      * be created (if it did not exist) by assigning a value, to change the value of an entry that
      * does exist, and to remove the entry if it exists.
      */
-    interface Entry
-        {
+    interface Entry {
         /**
          * The key represented by the entry.
          */
@@ -649,10 +595,9 @@ interface Map<Key, Value>
          * @throws ReadOnly  if an attempt is made to write the value of the entry and the map
          *                   is not `inPlace`, or does not support mutation
          */
-        void delete()
-            {
+        void delete() {
             throw new ReadOnly();
-            }
+        }
 
         /**
          * If the entry is a temporary object, for example an entry that can be re-used to represent
@@ -664,27 +609,24 @@ interface Map<Key, Value>
          * @return an Entry object that can be retained indefinitely; changes to the values in the
          *         map may or may not be reflected in the returned Entry
          */
-        Entry reify()
-            {
+        Entry reify() {
             return this;
-            }
+        }
 
         @Override
-        String toString()
-            {
+        String toString() {
             return $"{key}={value}";
-            }
+        }
 
         /**
          * Two entries are equal iff they contain equal keys and equal values (or neither exists).
          */
-        static <CompileType extends Entry> Boolean equals(CompileType entry1, CompileType entry2)
-            {
+        static <CompileType extends Entry> Boolean equals(CompileType entry1, CompileType entry2) {
             return entry1.key == entry2.key
                 && entry1.exists ?  entry2.exists && entry1.value == entry2.value
                                  : !entry2.exists;
-            }
         }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -698,32 +640,28 @@ interface Map<Key, Value>
             Int?                    limit       = Null,
             String?                 trunc       = "...",
             function String(Key)?   keyRender   = Null,
-            function String(Value)? valueRender = Null)
-        {
+            function String(Value)? valueRender = Null) {
         Int entryCount   = size;
         Int displayCount = limit ?: entryCount;
         Int count        = (pre?.size : 0) + (post?.size : 0) +
                            ((sep?.size : 0) + (keySep?.size : 0)) * displayCount;
 
         if (keyRender == Null && valueRender == Null &&
-                Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
-            {
+                Key.is(Type<Stringable>) && Value.is(Type<Stringable>)) {
             val iter = entries.iterator();
-            if (displayCount < entryCount)
-                {
+            if (displayCount < entryCount) {
                 iter   = iter.limit(displayCount);
                 count += trunc?.size : 0;
-                }
-            for (Entry entry : iter)
-                {
-                count += entry.key.estimateStringLength() + entry.value.estimateStringLength();
-                }
-            return count;
             }
+            for (Entry entry : iter) {
+                count += entry.key.estimateStringLength() + entry.value.estimateStringLength();
+            }
+            return count;
+        }
 
         // no inexpensive way to guess
         return count + displayCount*8;
-        }
+    }
 
 
     /**
@@ -751,50 +689,43 @@ interface Map<Key, Value>
             Int?                    limit       = Null,
             String?                 trunc       = "...",
             function String(Key)?   keyRender   = Null,
-            function String(Value)? valueRender = Null)
-        {
+            function String(Value)? valueRender = Null) {
         pre?.appendTo(buf);
 
-        function Appender<Char>(Key) appendKey = switch ()
-            {
+        function Appender<Char>(Key) appendKey = switch () {
             case keyRender != Null        : (k -> keyRender(k).appendTo(buf));
             case Key.is(Type<Stringable>) : (k -> k.appendTo(buf));
             default: (k -> k.is(Stringable) ? k.appendTo(buf) : buf.addAll(k.toString()));
-            };
+        };
 
-        function Appender<Char>(Value) appendValue = switch ()
-            {
+        function Appender<Char>(Value) appendValue = switch () {
             case valueRender != Null        : (v -> valueRender(v).appendTo(buf));
             case Value.is(Type<Stringable>) : (v -> v.appendTo(buf));
             default: (v -> v.is(Stringable) ? v.appendTo(buf) : buf.addAll(v.toString()));
-            };
+        };
 
-        if (limit == Null || limit < 0)
-            {
+        if (limit == Null || limit < 0) {
             limit = MaxValue;
+        }
+
+        Loop: for ((Key key, Value value) : this) {
+            if (!Loop.first) {
+                sep?.appendTo(buf);
             }
 
-        Loop: for ((Key key, Value value) : this)
-            {
-            if (!Loop.first)
-                {
-                sep?.appendTo(buf);
-                }
-
-            if (Loop.count >= limit)
-                {
+            if (Loop.count >= limit) {
                 trunc?.appendTo(buf);
                 break;
-                }
+            }
 
             appendKey(key);
             keySep?.appendTo(buf);
             appendValue(value);
-            }
+        }
 
         post?.appendTo(buf);
         return buf;
-        }
+    }
 
 
     // ----- equality ------------------------------------------------------------------------------
@@ -804,22 +735,18 @@ interface Map<Key, Value>
      * each key in the first map is equal to the value associated with the same key in the second
      * map.
      */
-    static <CompileType extends Map> Boolean equals(CompileType map1, CompileType map2)
-        {
-        if (map1.size != map2.size)
-            {
+    static <CompileType extends Map> Boolean equals(CompileType map1, CompileType map2) {
+        if (map1.size != map2.size) {
             return False;
-            }
+        }
 
-        for ((CompileType.Key key1, CompileType.Value value1) : map1)
-            {
-            if (CompileType.Value value2 := map2.get(key1), value2 == value1)
-                {
+        for ((CompileType.Key key1, CompileType.Value value1) : map1) {
+            if (CompileType.Value value2 := map2.get(key1), value2 == value1) {
                 continue;
-                }
-            return False;
             }
+            return False;
+        }
 
         return True;
-        }
     }
+}

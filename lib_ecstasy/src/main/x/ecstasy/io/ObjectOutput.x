@@ -3,10 +3,9 @@
  * a _serialized_ form; the ObjectOutput interface represents the act of _serialization_.
  */
 interface ObjectOutput
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * @param value  the object to write to the stream
      */
     <ObjectType> void write(ObjectType value);
-    }
+}

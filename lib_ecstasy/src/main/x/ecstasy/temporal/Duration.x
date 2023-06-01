@@ -3,8 +3,8 @@
  */
 const Duration(UInt128 picoseconds)
         implements Destringable
-        default(NONE)
-    {
+        default(NONE) {
+
     static IntLiteral PICOS_PER_NANO   = 1000;
     static IntLiteral PICOS_PER_MICRO  = 1000 * PICOS_PER_NANO;     // assume <=59 bits for micros
     static IntLiteral PICOS_PER_MILLI  = 1000 * PICOS_PER_MICRO;    // assume <=49 bits for millis
@@ -30,8 +30,7 @@ const Duration(UInt128 picoseconds)
      * @param duration  an ISO-8601 format string of the form "PnDTnHnMnS"
      */
     @Override
-    construct(String duration)
-        {
+    construct(String duration) {
         // state machine stages:
         //     P   nD  T   nH  nM  n.  nS
         //   0   1   2   3   4   5   6   7
@@ -46,235 +45,216 @@ const Duration(UInt128 picoseconds)
         Int     colons  = 0;        // count of the ':' characters encountered
         UInt128 seconds = 0;        // only used for ':' delimited string
 
-        Loop: while (index < length)
-            {
-            switch (Char ch = duration[index++])
-                {
-                case 'P', 'p':
-                    // while 'P' is required per the ISO-8601 specification, this constructor is
-                    // only used for duration values, so
-                    assert:arg stage == 0 as
-                            $|Duration must begin with 'P' and must contain no other occurrences of\
-                             | 'P': {duration.quoted()}
-                            ;
-                    stage = 1;
-                    iso   = True;
+        Loop: while (index < length) {
+            switch (Char ch = duration[index++]) {
+            case 'P', 'p':
+                // while 'P' is required per the ISO-8601 specification, this constructor is
+                // only used for duration values, so
+                assert:arg stage == 0 as
+                        $|Duration must begin with 'P' and must contain no other occurrences of\
+                         | 'P': {duration.quoted()}
+                        ;
+                stage = 1;
+                iso   = True;
+                break;
+
+            case 'T', 't':
+                assert:arg stage < 3 as
+                        $|Duration includes 'T' to separate date from time-of-day components,\
+                         | and must contain no other occurrences of 'T': {duration.quoted()}
+                        ;
+                stage = 3;
+                iso   = True;
+                break;
+
+            case '0'..'9':
+                // parse the number as an integer
+                UInt128 part   = 0;
+                Int     digits = 0;
+                do {
+                    ++digits;
+                    part = part * 10 + (ch - '0');
+
+                    if (index > last) {
+                        assert:arg !iso as
+                                $"Duration is missing a trailing indicator: {duration.quoted()}";
+
+                        // pretend we found a seconds indicator
+                        ch = 'S';
+                        break;
+                    }
+
+                    ch = duration[index++];
+                } while (ch >= '0' && ch <= '9');
+
+                Int     stageNew;
+                UInt128 factor;
+                switch (ch) {
+                case 'D', 'd':
+                    stageNew = 2;
+                    iso      = True;
+                    factor   = TimeOfDay.PICOS_PER_DAY;
                     break;
 
-                case 'T', 't':
-                    assert:arg stage < 3 as
-                            $|Duration includes 'T' to separate date from time-of-day components,\
-                             | and must contain no other occurrences of 'T': {duration.quoted()}
-                            ;
-                    stage = 3;
-                    iso   = True;
+                case 'H', 'h':
+                    stageNew = 4;
+                    iso      = True;
+                    factor   = TimeOfDay.PICOS_PER_HOUR;
                     break;
 
-                case '0'..'9':
-                    // parse the number as an integer
-                    UInt128 part   = 0;
-                    Int     digits = 0;
-                    do
-                        {
-                        ++digits;
-                        part = part * 10 + (ch - '0');
+                case 'M', 'm':
+                    stageNew = 5;
+                    iso      = True;
+                    factor   = TimeOfDay.PICOS_PER_MINUTE;
+                    break;
 
-                        if (index > last)
-                            {
-                            assert:arg !iso as
-                                    $"Duration is missing a trailing indicator: {duration.quoted()}";
+                case '.':
+                    stageNew = 6;
+                    factor   = TimeOfDay.PICOS_PER_SECOND;
+                    part    += seconds;
+                    seconds  = 0;
+                    break;
 
-                            // pretend we found a seconds indicator
-                            ch = 'S';
-                            break;
-                            }
-
-                        ch = duration[index++];
-                        }
-                    while (ch >= '0' && ch <= '9');
-
-                    Int     stageNew;
-                    UInt128 factor;
-                    switch (ch)
-                        {
-                        case 'D', 'd':
-                            stageNew = 2;
-                            iso      = True;
-                            factor   = TimeOfDay.PICOS_PER_DAY;
-                            break;
-
-                        case 'H', 'h':
-                            stageNew = 4;
-                            iso      = True;
-                            factor   = TimeOfDay.PICOS_PER_HOUR;
-                            break;
-
-                        case 'M', 'm':
-                            stageNew = 5;
-                            iso      = True;
-                            factor   = TimeOfDay.PICOS_PER_MINUTE;
-                            break;
-
-                        case '.':
-                            stageNew = 6;
-                            factor   = TimeOfDay.PICOS_PER_SECOND;
-                            part    += seconds;
-                            seconds  = 0;
-                            break;
-
-                        case 'S', 's':
-                            if (stage == 6)
-                                {
-                                // this is a fractional value
-                                while (digits > 12)
-                                    {
-                                    part /= 10;
-                                    --digits;
-                                    }
-
-                                static UInt128[] SCALE_10 = [               1_000_000_000_000,
-                                        100_000_000_000,    10_000_000_000,     1_000_000_000,
-                                            100_000_000,        10_000_000,         1_000_000,
-                                                100_000,            10_000,             1_000,
-                                                    100,                10,                 1 ];
-
-                                factor = SCALE_10[digits];
-                                }
-                            else
-                                {
-                                factor  = TimeOfDay.PICOS_PER_SECOND;
-                                part   += seconds;
-                                seconds = 0;
-                                }
-                            stageNew = 7;
-                            break;
-
-                        case ':':
-                            assert:arg !iso as $"Duration includes an unexpected character ':': {duration.quoted()}";
-                            assert:arg ++colons <= 2 as $"Too many ':' sections in Duration: {duration.quoted()}";
-                            factor   = 0;
-                            stageNew = 2 + colons;
-                            seconds  = (seconds + part) * 60;
-                            break;
-
-                        default:
-                            throw new IllegalArgument(
-                                    $"Duration includes an unexpected character {ch.quoted()}: {duration.quoted()}");
+                case 'S', 's':
+                    if (stage == 6) {
+                        // this is a fractional value
+                        while (digits > 12) {
+                            part /= 10;
+                            --digits;
                         }
 
-                    assert:arg stageNew > stage as
-                            $"Duration components are out of order: {duration.quoted()}";
+                        static UInt128[] SCALE_10 = [               1_000_000_000_000,
+                                100_000_000_000,    10_000_000_000,     1_000_000_000,
+                                    100_000_000,        10_000_000,         1_000_000,
+                                        100_000,            10_000,             1_000,
+                                            100,                10,                 1 ];
 
-                    total += part * factor;
-                    stage  = stageNew;
-                    any    = True;
+                        factor = SCALE_10[digits];
+                    } else {
+                        factor  = TimeOfDay.PICOS_PER_SECOND;
+                        part   += seconds;
+                        seconds = 0;
+                    }
+                    stageNew = 7;
+                    break;
+
+                case ':':
+                    assert:arg !iso as $"Duration includes an unexpected character ':': {duration.quoted()}";
+                    assert:arg ++colons <= 2 as $"Too many ':' sections in Duration: {duration.quoted()}";
+                    factor   = 0;
+                    stageNew = 2 + colons;
+                    seconds  = (seconds + part) * 60;
                     break;
 
                 default:
                     throw new IllegalArgument(
-                            $|Duration includes an illegal character or character\
-                             | sequence starting with {ch.quoted()}: {duration.quoted()}
-                            );
+                            $"Duration includes an unexpected character {ch.quoted()}: {duration.quoted()}");
                 }
+
+                assert:arg stageNew > stage as
+                        $"Duration components are out of order: {duration.quoted()}";
+
+                total += part * factor;
+                stage  = stageNew;
+                any    = True;
+                break;
+
+            default:
+                throw new IllegalArgument(
+                        $|Duration includes an illegal character or character\
+                         | sequence starting with {ch.quoted()}: {duration.quoted()}
+                        );
             }
+        }
 
         assert:arg stage != 6          as $"Duration is missing fractional seconds: {duration.quoted()}";
         assert:arg any                 as $"No duration information provided: {duration.quoted()}";
         assert:arg !iso || colons == 0 as $"Invalid ISO format: {duration.quoted()}";
 
         construct Duration(total);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of days.
      *
      * @param the number of days in the requested Duration
      */
-    static Duration ofDays(Int days)
-        {
+    static Duration ofDays(Int days) {
         return new Duration(days.toUInt128() * PICOS_PER_DAY);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of hours.
      *
      * @param the number of hours in the requested Duration
      */
-    static Duration ofHours(Int hours)
-        {
+    static Duration ofHours(Int hours) {
         return new Duration(hours.toUInt128() * PICOS_PER_HOUR);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of minutes.
      *
      * @param the number of minutes in the requested Duration
      */
-    static Duration ofMinutes(Int minutes)
-        {
+    static Duration ofMinutes(Int minutes) {
         return new Duration(minutes.toUInt128() * PICOS_PER_MINUTE);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of seconds.
      *
      * @param the number of seconds in the requested Duration
      */
-    static Duration ofSeconds(Int seconds)
-        {
+    static Duration ofSeconds(Int seconds) {
         return new Duration(seconds.toUInt128() * PICOS_PER_SECOND);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of milliseconds.
      *
      * @param the number of milliseconds in the requested Duration
      */
-    static Duration ofMillis(Int millis)
-        {
+    static Duration ofMillis(Int millis) {
         return new Duration(millis.toUInt128() * PICOS_PER_MILLI);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of microseconds.
      *
      * @param the number of microseconds in the requested Duration
      */
-    static Duration ofMicros(Int micros)
-        {
+    static Duration ofMicros(Int micros) {
         return new Duration(micros.toUInt128() * PICOS_PER_MICRO);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of nanoseconds.
      *
      * @param the number of nanoseconds in the requested Duration
      */
-    static Duration ofNanos(Int nanos)
-        {
+    static Duration ofNanos(Int nanos) {
         return new Duration(nanos.toUInt128() * PICOS_PER_NANO);
-        }
+    }
 
     /**
      * Create a Duration of a certain number of picoseconds.
      *
      * @param the number of picoseconds in the requested Duration
      */
-    static Duration ofPicos(Int picos)
-        {
+    static Duration ofPicos(Int picos) {
         return new Duration(picos.toUInt128());
-        }
+    }
 
     /**
      * Construct a Duration based on a total number of picoseconds.
      *
      * @param picoseconds  the total number of picoseconds in the Duration
      */
-    construct(UInt128 picoseconds)
-        {
+    construct(UInt128 picoseconds) {
         assert picoseconds >= 0;
         this.picoseconds = picoseconds;
-        }
+    }
 
     /**
      * Construct a Duration based on a total number of picoseconds.
@@ -286,8 +266,7 @@ const Duration(UInt128 picoseconds)
      * @param millis   (optional) a number of milliseconds to add to the duration
      * @param picos    (optional) a number of picoseconds to add to the duration
      */
-    construct(Int days, Int hours, Int minutes, Int seconds=0, Int millis=0, Int picos=0)
-        {
+    construct(Int days, Int hours, Int minutes, Int seconds=0, Int millis=0, Int picos=0) {
         assert days    >= 0;
         assert hours   >= 0;
         assert minutes >= 0;
@@ -298,37 +277,34 @@ const Duration(UInt128 picoseconds)
                             + minutes) * 60
                             + seconds) * 1000
                             + millis ).toUInt128() * PICOS_PER_MILLI + picos.toUInt128());
-        }
+    }
 
     /**
      * The total number of days, rounded down. This is the same as:
      *
      *   hours / 24.
      */
-    UInt32 days.get()
-        {
+    UInt32 days.get() {
         return (picoseconds / PICOS_PER_DAY).toUInt32();
-        }
+    }
 
     /**
      * The total number of hours, rounded down. This is the same as:
      *
      *   minutes / 60.
      */
-    UInt32 hours.get()
-        {
+    UInt32 hours.get() {
         return (picoseconds / PICOS_PER_HOUR).toUInt32();
-        }
+    }
 
     /**
      * The total number of minutes, rounded down. This is the same as:
      *
      *   seconds / 60
      */
-    UInt64 minutes.get()
-        {
+    UInt64 minutes.get() {
         return (picoseconds / PICOS_PER_MINUTE).toUInt64();
-        }
+    }
 
     /**
      * The total number of seconds, rounded down. This is the same as:
@@ -339,40 +315,36 @@ const Duration(UInt128 picoseconds)
      *
      *   picoseconds / 1000000000000
      */
-    UInt64 seconds.get()
-        {
+    UInt64 seconds.get() {
         return (picoseconds / PICOS_PER_SECOND).toUInt64();
-        }
+    }
 
     /**
      * The total number of milliseconds, rounded down. This is the same as:
      *
      *   microseconds / 1000
      */
-    UInt64 milliseconds.get()
-        {
+    UInt64 milliseconds.get() {
         return (picoseconds / PICOS_PER_MILLI).toUInt64();
-        }
+    }
 
     /**
      * The total number of microseconds, rounded down. This is the same as:
      *
      *   nanoseconds / 1000
      */
-    UInt64 microseconds.get()
-        {
+    UInt64 microseconds.get() {
         return (picoseconds / PICOS_PER_MICRO).toUInt64();
-        }
+    }
 
     /**
      * The total number of nanoseconds, rounded down. This is the same as:
      *
      *   picoseconds / 1000
      */
-    UInt nanoseconds.get()
-        {
+    UInt nanoseconds.get() {
         return (picoseconds / PICOS_PER_NANO).toUInt();
-        }
+    }
 
     /**
      * The total number of picoseconds.
@@ -388,10 +360,9 @@ const Duration(UInt128 picoseconds)
      *
      *   hours - (days * 24)
      */
-    UInt8 hoursPart.get()
-        {
+    UInt8 hoursPart.get() {
         return (hours % 24).toUInt8();
-        }
+    }
 
     /**
      * Exclusive of the time represented by hours, the number of minutes, rounded down. This is
@@ -399,10 +370,9 @@ const Duration(UInt128 picoseconds)
      *
      *   minutes - (hours * 60)
      */
-    UInt8 minutesPart.get()
-        {
+    UInt8 minutesPart.get() {
         return (minutes % 60).toUInt8();
-        }
+    }
 
     /**
      * Exclusive of the time represented by minutes, the number of seconds, rounded down. This
@@ -410,10 +380,9 @@ const Duration(UInt128 picoseconds)
      *
      *   seconds - (minutes * 60)
      */
-    UInt8 secondsPart.get()
-        {
+    UInt8 secondsPart.get() {
         return (seconds % 60).toUInt8();
-        }
+    }
 
     /**
      * Exclusive of the time represented by seconds, the number of milliseconds, rounded down.
@@ -425,10 +394,9 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt16 millisecondsPart.get()
-        {
+    UInt16 millisecondsPart.get() {
         return (picosecondsPart / PICOS_PER_MILLI).toUInt16();
-        }
+    }
 
     /**
      * Exclusive of the time represented by seconds, the number of microseconds, rounded down.
@@ -440,10 +408,9 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt32 microsecondsPart.get()
-        {
+    UInt32 microsecondsPart.get() {
         return (picosecondsPart / PICOS_PER_MICRO).toUInt32();
-        }
+    }
 
     /**
      * Exclusive of the time represented by seconds, the number of nanoseconds, rounded down.
@@ -455,10 +422,9 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt32 nanosecondsPart.get()
-        {
+    UInt32 nanosecondsPart.get() {
         return (picosecondsPart / PICOS_PER_NANO).toUInt32();
-        }
+    }
 
     /**
      * Exclusive of the time represented by seconds, the number of picoseconds, rounded down.
@@ -466,208 +432,176 @@ const Duration(UInt128 picoseconds)
      *
      *   picoseconds - (seconds * 1000000000000)
      */
-    UInt64 picosecondsPart.get()
-        {
+    UInt64 picosecondsPart.get() {
         return (picoseconds % PICOS_PER_SECOND).toUInt64();
-        }
+    }
 
     /**
      * Addition: return a sum of durations.
      */
-    @Op("+") Duration add(Duration duration)
-        {
+    @Op("+") Duration add(Duration duration) {
         return new Duration(this.picoseconds + duration.picoseconds);
-        }
+    }
 
     /**
      * Subtraction: return a difference of durations.
      */
-    @Op("-") Duration sub(Duration duration)
-        {
+    @Op("-") Duration sub(Duration duration) {
         return new Duration(this.picoseconds - duration.picoseconds);
-        }
+    }
 
     /**
      * Multiplication: return a multiple of this duration.
      */
-    @Op("*") Duration mul(Int factor)
-        {
+    @Op("*") Duration mul(Int factor) {
         return new Duration(this.picoseconds * factor.toUInt128());
-        }
+    }
 
     /**
      * Multiplication: return a multiple of this duration.
      */
-    @Op("*") Duration mul(Dec factor)
-        {
+    @Op("*") Duration mul(Dec factor) {
         return new Duration((this.picoseconds.toDec128() * factor.toDec128()).toUInt128());
-        }
+    }
 
     /**
      * Division: return a fraction of this duration.
      */
-    @Op("/") Duration div(Int divisor)
-        {
+    @Op("/") Duration div(Int divisor) {
         assert:bounds divisor >= 1;
         return new Duration(this.picoseconds / divisor.toUInt128());
-        }
+    }
 
 
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
-    String toString(Boolean iso8601 = False)
-        {
+    String toString(Boolean iso8601 = False) {
         return appendTo(new StringBuffer(estimateStringLength(iso8601)), iso8601).toString();
-        }
+    }
 
     @Override
-    Int estimateStringLength(Boolean iso8601 = False)
-        {
-        if (iso8601)                                            // PnDTnHnMn.nS
-            {
-            if (picoseconds == 0)
-                {
+    Int estimateStringLength(Boolean iso8601 = False) {
+        if (iso8601) {                                          // PnDTnHnMn.nS
+            if (picoseconds == 0) {
                 return 4; // PT0S
-                }
+            }
 
             Int size = 1;                                       // P
 
             Int days = this.days;
-            if (days != 0)
-                {
+            if (days != 0) {
                 size += days.estimateStringLength() + 1;        // nD
-                }
+            }
 
             Int hours   = this.hoursPart;
             Int minutes = this.minutesPart;
             Int seconds = this.secondsPart;
             Int picos   = this.picosecondsPart;
-            if (hours != 0 && minutes != 0 && seconds != 0 && picos != 0)
-                {
+            if (hours != 0 && minutes != 0 && seconds != 0 && picos != 0) {
                 ++size;                                         // T
 
-                if (hours != 0)
-                    {
+                if (hours != 0) {
                     size += hours.estimateStringLength() + 1;   // nH
-                    }
-
-                if (minutes != 0)
-                    {
-                    size += minutes.estimateStringLength() + 1; // nM
-                    }
-
-                if (seconds != 0 || picos != 0)
-                    {
-                    size += seconds.estimateStringLength() + 1; // nS
-                    if (picos != 0)
-                        {
-                        size += 1+picosFractionalLength(picos); // n.nS
-                        }
-                    }
                 }
 
-            return size;
+                if (minutes != 0) {
+                    size += minutes.estimateStringLength() + 1; // nM
+                }
+
+                if (seconds != 0 || picos != 0) {
+                    size += seconds.estimateStringLength() + 1; // nS
+                    if (picos != 0) {
+                        size += 1+picosFractionalLength(picos); // n.nS
+                    }
+                }
             }
+
+            return size;
+        }
 
         // format: ...###:00:00.###...
         // format:        ##:00.###...
         // format:           ##.###...
-        Int length = switch ()
-            {
+        Int length = switch () {
             case picoseconds >= PICOS_PER_HOUR  : hours  .estimateStringLength() + 6;
             case picoseconds >= PICOS_PER_MINUTE: minutes.estimateStringLength() + 3;
             default                             : seconds.estimateStringLength();
-            };
+        };
 
         Int picos = picosecondsPart;
-        if (picos != 0)
-            {
+        if (picos != 0) {
             length += 1 + picosFractionalLength(picos);
-            }
-        return length;
         }
+        return length;
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False)
-        {
-        if (iso8601)                                            // PnDTnHnMn.nS
-            {
-            if (picoseconds == 0)
-                {
+    Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False) {
+        if (iso8601) {                                          // PnDTnHnMn.nS
+            if (picoseconds == 0) {
                 return "PT0S".appendTo(buf);
-                }
+            }
 
             buf.add('P');
 
             Int days = this.days;
-            if (days != 0)
-                {
+            if (days != 0) {
                 days.appendTo(buf).add('D');
-                }
+            }
 
             Int hours   = this.hoursPart;
             Int minutes = this.minutesPart;
             Int seconds = this.secondsPart;
             Int picos   = this.picosecondsPart;
-            if (hours != 0 || minutes != 0 || seconds != 0 || picos != 0)
-                {
+            if (hours != 0 || minutes != 0 || seconds != 0 || picos != 0) {
                 buf.add('T');
 
-                if (hours != 0)
-                    {
+                if (hours != 0) {
                     hours.appendTo(buf).add('H');
-                    }
+                }
 
-                if (minutes != 0)
-                    {
+                if (minutes != 0) {
                     minutes.appendTo(buf).add('M');
-                    }
+                }
 
-                if (seconds != 0 || picos != 0)
-                    {
+                if (seconds != 0 || picos != 0) {
                     seconds.appendTo(buf);
                     Duration.appendPicosFractional(buf, picos);
                     buf.add('S');
-                    }
                 }
+            }
 
             return buf;
-            }
+        }
 
         Boolean zerofill = False;
 
-        if (picoseconds >= PICOS_PER_HOUR)
-            {
+        if (picoseconds >= PICOS_PER_HOUR) {
             hours.appendTo(buf);
             buf.add(':');
             zerofill = True;
-            }
+        }
 
-        if (picoseconds >= PICOS_PER_MINUTE)
-            {
+        if (picoseconds >= PICOS_PER_MINUTE) {
             Int part = minutesPart;
-            if (part < 10 && zerofill)
-                {
+            if (part < 10 && zerofill) {
                 buf.add('0');
-                }
-            else
-                {
+            } else {
                 zerofill = True;
-                }
+            }
             part.appendTo(buf);
             buf.add(':');
-            }
+        }
 
         Int part = secondsPart;
-        if (part < 10 && zerofill)
-            {
+        if (part < 10 && zerofill) {
             buf.add('0');
-            }
+        }
         part.appendTo(buf);
 
         return Duration.appendPicosFractional(buf, picosecondsPart);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -675,86 +609,72 @@ const Duration(UInt128 picoseconds)
     /**
      * Calculate the String length of an optional picosecond fraction of a second.
      */
-    static Int picosFractionalLength(Int picos)
-        {
-        if (picos == 0)
-            {
+    static Int picosFractionalLength(Int picos) {
+        if (picos == 0) {
             return 0;
-            }
+        }
 
         // add a decimal point and the picoseconds, but drop any trailing zeros
         Int length = picos.estimateStringLength();
-        if (picos % 100_000_000 == 0)
-            {
+        if (picos % 100_000_000 == 0) {
             picos  /= 100_000_000;
             length -= 8;
-            }
-        if (picos % 10_000 == 0)
-            {
+        }
+        if (picos % 10_000 == 0) {
             picos  /= 10_000;
             length -= 4;
-            }
-        if (picos % 100 == 0)
-            {
+        }
+        if (picos % 100 == 0) {
             picos  /= 100;
             length -= 2;
-            }
-        if (picos % 10 == 0)
-            {
+        }
+        if (picos % 10 == 0) {
             picos  /= 10;
             length -= 1;
-            }
-        return length;
         }
+        return length;
+    }
 
     /**
      * Calculate an Int value to use as the number to follow a decimal point to represent a
      * picosecond fraction of a second.
      */
-    static (Int leadingZeroes, Int value) picosFractional(Int picos)
-        {
+    static (Int leadingZeroes, Int value) picosFractional(Int picos) {
         assert picos > 0;
 
         Int chopped = 0;
 
         // drop any trailing zeros
-        if (picos % 100_000_000 == 0)
-            {
+        if (picos % 100_000_000 == 0) {
             picos   /= 100_000_000;
             chopped += 8;
-            }
-        if (picos % 10_000 == 0)
-            {
+        }
+        if (picos % 10_000 == 0) {
             picos   /= 10_000;
             chopped += 4;
-            }
-        if (picos % 100 == 0)
-            {
+        }
+        if (picos % 100 == 0) {
             picos /= 100;
             chopped += 2;
-            }
-        if (picos % 10 == 0)
-            {
+        }
+        if (picos % 10 == 0) {
             picos /= 10;
             ++chopped;
-            }
-
-        return 12 - picos.estimateStringLength() - chopped, picos;
         }
 
-    static Appender<Char> appendPicosFractional(Appender<Char> buf, Int picos)
-        {
-        if (picos == 0)
-            {
+        return 12 - picos.estimateStringLength() - chopped, picos;
+    }
+
+    static Appender<Char> appendPicosFractional(Appender<Char> buf, Int picos) {
+        if (picos == 0) {
             return buf;
-            }
+        }
 
         buf.add('.');
         (Int leadingZeroes, Int digits) = Duration.picosFractional(picos);
-        while (leadingZeroes-- > 0)
-            {
+        while (leadingZeroes-- > 0) {
             buf.add('0');
-            }
-        return digits.appendTo(buf);
         }
+        return digits.appendTo(buf);
     }
+}

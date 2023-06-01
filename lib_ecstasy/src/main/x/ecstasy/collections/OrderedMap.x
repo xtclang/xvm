@@ -4,8 +4,8 @@
  */
 interface OrderedMap<Key extends Orderable, Value>
         extends Map<Key, Value>
-        extends Sliceable<Key>
-    {
+        extends Sliceable<Key> {
+
     @Override
     conditional Orderer ordered();
 
@@ -77,16 +77,15 @@ interface OrderedMap<Key extends Orderable, Value>
 
     @Override
     interface Entry
-            extends Orderable
-        {
-        static <CompileType extends Entry> Ordered compare(CompileType value1, CompileType value2)
-            {
+            extends Orderable {
+
+        static <CompileType extends Entry> Ordered compare(CompileType value1, CompileType value2) {
             assert val order  := value1.outer.ordered();
             assert val order2 := value2.outer.ordered(), order == order2;
 
             return order(value1.key.as(CompileType.OuterType.Key), value2.key.as(CompileType.OuterType.Key));
-            }
         }
+    }
 
 
     // ----- equality ------------------------------------------------------------------------------
@@ -96,57 +95,43 @@ interface OrderedMap<Key extends Orderable, Value>
      * value associated with each key in the first map is equal to the value associated with the
      * same key in the second map.
      */
-    static <CompileType extends OrderedMap> Boolean equals(CompileType map1, CompileType map2)
-        {
+    static <CompileType extends OrderedMap> Boolean equals(CompileType map1, CompileType map2) {
         // some simple optimizations: two empty maps are equal, and two maps of different sizes are
         // not equal
-        if (Int size1 := map1.knownSize(), Int size2 := map2.knownSize())
-            {
-            if (size1 != size2)
-                {
+        if (Int size1 := map1.knownSize(), Int size2 := map2.knownSize()) {
+            if (size1 != size2) {
                 return False;
-                }
-            else if (size1 == 0)
-                {
+            } else if (size1 == 0) {
                 return True;
-                }
             }
-        else
-            {
-            switch (map1.empty, map2.empty)
-                {
-                case (False, False):
-                    break;
+        } else {
+            switch (map1.empty, map2.empty) {
+            case (False, False):
+                break;
 
-                case (False, True ):
-                case (True , False):
-                    return False;
+            case (False, True ):
+            case (True , False):
+                return False;
 
-                case (True , True ):
-                    return True;
-                }
+            case (True , True ):
+                return True;
             }
+        }
 
         // compare all of the entries in the two ordered maps, in the order that they appear
         using (Iterator<CompileType.Entry> iter1 = map1.entries.iterator(),
-               Iterator<CompileType.Entry> iter2 = map2.entries.iterator())
-            {
-            while (CompileType.Entry entry1 := iter1.next())
-                {
-                if (CompileType.Entry entry2 := iter2.next())
-                    {
-                    if (entry1 != entry2)
-                        {
+               Iterator<CompileType.Entry> iter2 = map2.entries.iterator()) {
+            while (CompileType.Entry entry1 := iter1.next()) {
+                if (CompileType.Entry entry2 := iter2.next()) {
+                    if (entry1 != entry2) {
                         return False;
-                        }
                     }
-                else
-                    {
+                } else {
                     return False;
-                    }
                 }
+            }
 
             return !iter2.next();
-            }
         }
     }
+}

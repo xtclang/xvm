@@ -17,8 +17,7 @@ class ListMap<Key, Value>
         implements Replicable
         incorporates CopyableMap.ReplicableCopier<Key, Value>
         incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
-        incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable>
-    {
+        incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -28,12 +27,11 @@ class ListMap<Key, Value>
      *                      number of entries
      */
     @Override
-    construct(Int initCapacity = 0)
-        {
+    construct(Int initCapacity = 0) {
         this.keyArray = new Array(initCapacity);
         this.valArray = new Array(initCapacity);
         this.inPlace  = True;
-        }
+    }
 
     /**
      * Construct a persistent (Persistent or Constant) ListMap pre-populated with the specified
@@ -42,8 +40,7 @@ class ListMap<Key, Value>
      * @param keys  the keys for the map
      * @param vals  the values for the map
      */
-    construct(Key[] keys, Value[] vals)
-        {
+    construct(Key[] keys, Value[] vals) {
         this.keyArray = keys.mutability == Persistent || keys.mutability == Constant
                             ? keys : keys.freeze(inPlace=False);
         this.valArray = vals.mutability == Persistent || vals.mutability == Constant
@@ -52,22 +49,18 @@ class ListMap<Key, Value>
 
         // TODO various checks, and do we need to copy the array(s) if they aren't immutable?
         assert keys.size == vals.size;
-        }
-    finally
-        {
-        if (this.keyArray.is(immutable Array) && this.valArray.is(immutable Array))
-            {
+    } finally {
+        if (this.keyArray.is(immutable Array) && this.valArray.is(immutable Array)) {
             makeImmutable();
-            }
         }
+    }
 
     @Override
-    construct(ListMap that)
-        {
+    construct(ListMap that) {
         this.keyArray = that.keyArray.toArray(Mutable);
         this.valArray = that.valArray.toArray(Mutable);
         this.inPlace  = True;
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -105,29 +98,25 @@ class ListMap<Key, Value>
      * @return True iff the key was found
      * @return the conditional index at which the key was found
      */
-    protected conditional Int indexOf(Key key)
-        {
-        loop: for (Key eachKey : keyArray)
-            {
-            if (eachKey == key)
-                {
+    protected conditional Int indexOf(Key key) {
+        loop: for (Key eachKey : keyArray) {
+            if (eachKey == key) {
                 return True, loop.count;
-                }
             }
-        return False;
         }
+        return False;
+    }
 
     /**
      * Delete the entry at the specified index in the map's internal lists of keys and values.
      *
      * @param index  the index of the entry
      */
-    protected void deleteEntryAt(Int index)
-        {
+    protected void deleteEntryAt(Int index) {
         keyArray.delete(index);
         valArray.delete(index);
         ++deletes;
-        }
+    }
 
     /**
      * Append an entry to the end of the map's internal lists of keys and values.
@@ -135,12 +124,11 @@ class ListMap<Key, Value>
      * @param key    the key to append
      * @param value  the value to append
      */
-    protected void appendEntry(Key key, Value value)
-        {
+    protected void appendEntry(Key key, Value value) {
         keyArray += key;
         valArray += value;
         ++appends;
-        }
+    }
 
     /**
      * Some operations require that the containing Map be mutable; this method throws an exception
@@ -150,14 +138,12 @@ class ListMap<Key, Value>
      *
      * @throws ReadOnly if the Map is not Mutable
      */
-    protected Boolean verifyInPlace()
-        {
-        if (!inPlace)
-            {
+    protected Boolean verifyInPlace() {
+        if (!inPlace) {
             throw new ReadOnly("Map operation requires inPlace==True");
-            }
-        return True;
         }
+        return True;
+    }
 
 
     // ----- Map interface -------------------------------------------------------------------------
@@ -167,191 +153,152 @@ class ListMap<Key, Value>
 //    public/private Mutability mutability = Mutable;
 
     @Override
-    Int size.get()
-        {
+    Int size.get() {
         return keyArray.size;
-        }
+    }
 
     @Override
-    Boolean contains(Key key)
-        {
+    Boolean contains(Key key) {
         return indexOf(key);
-        }
+    }
 
     @Override
-    conditional Value get(Key key)
-        {
-        if (Int index := indexOf(key))
-            {
+    conditional Value get(Key key) {
+        if (Int index := indexOf(key)) {
             return True, valArray[index];
-            }
+        }
         return False;
-        }
+    }
 
     @Override
-    @Lazy Set<Key> keys.calc()
-        {
+    @Lazy Set<Key> keys.calc() {
         return new Keys();
-        }
+    }
 
     @Override
-    @Lazy Collection<Entry> entries.calc()
-        {
+    @Lazy Collection<Entry> entries.calc() {
         return new Entries();
-        }
+    }
 
     @Override
-    @Lazy Collection<Value> values.calc()
-        {
+    @Lazy Collection<Value> values.calc() {
         return new Values();
-        }
+    }
 
     @Override
-    ListMap put(Key key, Value value)
-        {
-        if (Int index := indexOf(key))
-            {
-            if (inPlace)
-                {
+    ListMap put(Key key, Value value) {
+        if (Int index := indexOf(key)) {
+            if (inPlace) {
                 valArray[index] = value;
                 return this;
-                }
+            }
 
             // persistent
             Value[] vals = valArray.replace(index, value);
             return new ListMap(keyArray, vals);
-            }
+        }
 
-        if (inPlace)
-            {
+        if (inPlace) {
             appendEntry(key, value);
             return this;
-            }
+        }
 
         // persistent
         Key[]   keys = keyArray.add(key);
         Value[] vals = valArray.add(value);
         return new ListMap(keys, vals);
-        }
+    }
 
     @Override
-    ListMap putAll(Map<Key, Value> that)
-        {
-        if (inPlace)
-            {
-            for ((Key key, Value value) : that)
-                {
+    ListMap putAll(Map<Key, Value> that) {
+        if (inPlace) {
+            for ((Key key, Value value) : that) {
                 put(key, value);
-                }
-            return this;
             }
+            return this;
+        }
 
         // persistent
         Int thatCount = that.size;
-        if (thatCount == 0)
-            {
+        if (thatCount == 0) {
             return this;
-            }
+        }
 
         Value[] valsNew = valArray;
         Key[]   keysAdd = new Array<Key>(thatCount);
         Value[] valsAdd = new Array<Value>(thatCount);
-        for ((Key key, Value value) : that)
-            {
-            if (Int index := indexOf(key))
-                {
+        for ((Key key, Value value) : that) {
+            if (Int index := indexOf(key)) {
                 valsNew = valsNew.replace(index, value);
-                }
-            else
-                {
+            } else {
                 keysAdd += key;
                 valsAdd += value;
-                }
             }
-
-        Key[] keysNew;
-        if (keysAdd.empty)
-            {
-            keysNew = keyArray;
-            }
-        else
-            {
-            keysNew = keyArray.addAll(keysAdd);
-            valsNew = valsNew .addAll(valsAdd);
-            }
-        return new ListMap(keysNew, valsNew);
         }
 
+        Key[] keysNew;
+        if (keysAdd.empty) {
+            keysNew = keyArray;
+        } else {
+            keysNew = keyArray.addAll(keysAdd);
+            valsNew = valsNew .addAll(valsAdd);
+        }
+        return new ListMap(keysNew, valsNew);
+    }
+
     @Override
-    ListMap remove(Key key)
-        {
-        if (Int index := indexOf(key))
-            {
-            if (inPlace)
-                {
+    ListMap remove(Key key) {
+        if (Int index := indexOf(key)) {
+            if (inPlace) {
                 deleteEntryAt(index);
-                }
-            else // persistent
-                {
+            } else { // persistent
                 Key[]   keys = keyArray.delete(index);
                 Value[] vals = valArray.delete(index);
                 return new ListMap(keys, vals);
-                }
             }
-
-        return this;
         }
 
+        return this;
+    }
+
     @Override
-    conditional ListMap remove(Key key, Value value)
-        {
-        if (Int index := indexOf(key))
-            {
-            if (valArray[index] == value)
-                {
-                if (inPlace)
-                    {
+    conditional ListMap remove(Key key, Value value) {
+        if (Int index := indexOf(key)) {
+            if (valArray[index] == value) {
+                if (inPlace) {
                     deleteEntryAt(index);
                     return True, this;
-                    }
-                else // persistent
-                    {
+                } else { // persistent
                     Key[]   keys = keyArray.delete(index);
                     Value[] vals = valArray.delete(index);
                     return True, new ListMap(keys, vals);
-                    }
                 }
             }
-
-        return False;
         }
 
+        return False;
+    }
+
     @Override
-    ListMap clear()
-        {
+    ListMap clear() {
         Int count = size;
-        if (count > 0)
-            {
-            if (inPlace)
-                {
+        if (count > 0) {
+            if (inPlace) {
                 keyArray.clear();
                 valArray.clear();
                 deletes += count;
-                }
-            else // persistent
-                {
+            } else { // persistent
                 return new ListMap([], []);
-                }
             }
+        }
 
         return this;
-        }
+    }
 
     @Override
-    <Result> Result process(Key key, function Result (Entry) compute)
-        {
+    <Result> Result process(Key key, function Result (Entry) compute) {
         return compute(new CursorEntry(key));
-        }
+    }
 
 // TODO CP
 //    @Override
@@ -397,105 +344,88 @@ class ListMap<Key, Value>
      */
     class Keys
             implements Set<Key>
-            implements Freezable
-        {
-        @Override
-        Int size.get()
-            {
-            return keyArray.size;
-            }
+            implements Freezable {
 
         @Override
-        Iterator<Key> iterator()
-            {
-            return new Iterator()
-                {
+        Int size.get() {
+            return keyArray.size;
+        }
+
+        @Override
+        Iterator<Key> iterator() {
+            return new Iterator() {
                 Int index       = 0;
                 Int stop        = size;
                 Int prevDeletes = deletes;
                 @Unassigned Key key;
 
                 @Override
-                conditional Key next()
-                    {
+                conditional Key next() {
                     // the immediately previously iterated key is allowed to be deleted
-                    if (deletes != prevDeletes)
-                        {
-                        if (deletes - prevDeletes == 1 && 0 < index < stop && keyArray[index-1] != key)
-                            {
+                    if (deletes != prevDeletes) {
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && keyArray[index-1] != key) {
                             --stop;
                             --index;
                             ++prevDeletes;
-                            }
-                        else
-                            {
+                        } else {
                             throw new ConcurrentModification();
-                            }
                         }
+                    }
 
-                    if (index < stop)
-                        {
+                    if (index < stop) {
                         key = keyArray[index++];
                         return True, key;
-                        }
+                    }
 
                     return False;
-                    }
-                };
-            }
+                }
+            };
+        }
 
         @Override
-        Keys remove(Key key)
-            {
+        Keys remove(Key key) {
             verifyInPlace();
 
-            if (Int index := indexOf(key))
-                {
+            if (Int index := indexOf(key)) {
                 deleteEntryAt(index);
-                }
-
-            return this;
             }
 
+            return this;
+        }
+
         @Override
-        (Keys, Int) removeAll(function Boolean (Key) shouldRemove)
-            {
+        (Keys, Int) removeAll(function Boolean (Key) shouldRemove) {
             verifyInPlace();
 
             Int removed = 0;
-            for (Int i = 0, Int c = size; i < c; ++i)
-                {
-                if (shouldRemove(keyArray[i-removed]))
-                    {
+            for (Int i = 0, Int c = size; i < c; ++i) {
+                if (shouldRemove(keyArray[i-removed])) {
                     deleteEntryAt(i-removed);
                     ++removed;
-                    }
                 }
-
-            return this, removed;
             }
 
+            return this, removed;
+        }
+
         @Override
-        Keys clear()
-            {
+        Keys clear() {
             verifyInPlace();
             this.ListMap.clear();
             return this;
-            }
+        }
 
         @Override
-        Key[] toArray(Array.Mutability? mutability = Null)
-            {
+        Key[] toArray(Array.Mutability? mutability = Null) {
             return keyArray.toArray(mutability);
-            }
+        }
 
         @Override
-        immutable Keys freeze(Boolean inPlace = False)
-            {
+        immutable Keys freeze(Boolean inPlace = False) {
             assert this.ListMap.is(immutable ListMap);
             return makeImmutable();
-            }
         }
+    }
 
 
     // ----- Entry implementation ------------------------------------------------------------------
@@ -509,54 +439,45 @@ class ListMap<Key, Value>
      * state, and any subsequent operation on the CursorEntry will throw ConcurrentModification.
      */
     protected class CursorEntry
-            implements Entry
-        {
+            implements Entry {
         /**
          * Construct a CursorEntry for a single key that may or may not exist in the Map.
          *
          * @param key  the key for the entry
          */
-        protected construct(Key key)
-            {
+        protected construct(Key key) {
             this.key    = key;
             this.expect = appends + deletes;
-            }
-        finally
-            {
-            if (index := indexOf(key))
-                {
+        } finally {
+            if (index := indexOf(key)) {
                 exists = True;
-                }
-            else
-                {
+            } else {
                 exists = False;
-                }
             }
+        }
 
         /**
          * Construct a CursorEntry in cursor mode.
          *
          * @param cursor  True to indicate that the Entry will be used in "cursor mode"
          */
-        protected construct()
-            {
+        protected construct() {
             this.cursor = True;
-            }
+        }
 
         /**
          * For an entry in cursor mode, advance the cursor to the specified index in the ListMap.
          *
          * @param key    the key for the entry
          */
-        protected CursorEntry advance(Int index)
-            {
+        protected CursorEntry advance(Int index) {
             assert cursor;
             this.key    = keyArray[index];
             this.index  = index;
             this.exists = True;
             this.expect = appends + deletes;
             return this;
-            }
+        }
 
         /**
          * Cursor mode is the ability to be re-used over a number of entries in the Map. The
@@ -580,64 +501,51 @@ class ListMap<Key, Value>
         public/private Key key;
 
         @Override
-        public/private Boolean exists.get()
-            {
+        public/private Boolean exists.get() {
             return verifyNoSurprises() & super();
-            }
+        }
 
         @Override
-        Value value
-            {
+        Value value {
             @Override
-            Value get()
-                {
-                if (exists)
-                    {
+            Value get() {
+                if (exists) {
                     return valArray[index];
-                    }
-
-                throw new OutOfBounds("key=" + key);
                 }
 
+                throw new OutOfBounds("key=" + key);
+            }
+
             @Override
-            void set(Value value)
-                {
+            void set(Value value) {
                 verifyInPlace();
-                if (exists)
-                    {
+                if (exists) {
                     valArray[index] = value;
-                    }
-                else if (cursor)
-                    {
+                } else if (cursor) {
                     // disallow the entry from being re-added (since it lost its cursor position)
                     throw new ReadOnly();
-                    }
-                else
-                    {
+                } else {
                     appendEntry(key, value);
                     index  = keyArray.size - 1;
                     exists = True;
                     ++expect;
-                    }
                 }
             }
+        }
 
         @Override
-        void delete()
-            {
-            if (verifyInPlace() & exists)
-                {
+        void delete() {
+            if (verifyInPlace() & exists) {
                 deleteEntryAt(index);
                 exists = False;
                 ++expect;
-                }
             }
+        }
 
         @Override
-        Entry reify()
-            {
+        Entry reify() {
             return reifyEntry(key);
-            }
+        }
 
         /**
          * Check the expected modification count for the ListMap against the actual modification
@@ -648,16 +556,14 @@ class ListMap<Key, Value>
          * @throws ConcurrentModification if the Map has been subsequently modified in a manner
          *                                other than through this entry
          */
-        protected Boolean verifyNoSurprises()
-            {
-            if (appends + deletes == expect)
-                {
+        protected Boolean verifyNoSurprises() {
+            if (appends + deletes == expect) {
                 return True;
-                }
+            }
 
             throw new ConcurrentModification();
-            }
         }
+    }
 
 
     // ----- Entries Set ---------------------------------------------------------------------------
@@ -667,92 +573,76 @@ class ListMap<Key, Value>
      */
     class Entries
             implements Collection<Entry>
-            implements Freezable
-        {
+            implements Freezable {
         @Override
-        Int size.get()
-            {
+        Int size.get() {
             return keyArray.size;
-            }
+        }
 
         @Override
-        Iterator<Entry> iterator()
-            {
-            return new Iterator()
-                {
+        Iterator<Entry> iterator() {
+            return new Iterator() {
                 Int         index       = 0;
                 Int         stop        = size;
                 Int         prevDeletes = deletes;
                 CursorEntry entry       = new CursorEntry();
 
                 @Override
-                conditional Entry next()
-                    {
+                conditional Entry next() {
                     // the immediately previously iterated key is allowed to be deleted
-                    if (deletes != prevDeletes)
-                        {
-                        if (deletes - prevDeletes == 1 && 0 < index < stop && !entry.exists)
-                            {
+                    if (deletes != prevDeletes) {
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && !entry.exists) {
                             --stop;
                             --index;
                             ++prevDeletes;
-                            }
-                        else
-                            {
+                        } else {
                             throw new ConcurrentModification();
-                            }
                         }
+                    }
 
-                    if (index < stop)
-                        {
+                    if (index < stop) {
                         entry.advance(index++);
                         return True, entry;
-                        }
+                    }
 
                     return False;
-                    }
-                };
-            }
+                }
+            };
+        }
 
         @Override
-        Entries remove(Entry entry)
-            {
+        Entries remove(Entry entry) {
             verifyInPlace();
 
-            if (Int index := indexOf(entry))
-                {
+            if (Int index := indexOf(entry)) {
                 deleteEntryAt(index);
-                }
-
-            return this;
             }
 
+            return this;
+        }
+
         @Override
-        (Entries, Int) removeAll(function Boolean (Entry) shouldRemove)
-            {
+        (Entries, Int) removeAll(function Boolean (Entry) shouldRemove) {
             verifyInPlace();
 
             CursorEntry entry   = new CursorEntry();
             Int         removed = 0;
-            for (Int i = 0, Int c = size; i < c; ++i)
-                {
-                if (shouldRemove(entry.advance(i-removed)))
-                    {
+            for (Int i = 0, Int c = size; i < c; ++i) {
+                if (shouldRemove(entry.advance(i-removed))) {
                     entry.delete();
                     ++removed;
-                    }
                 }
-
-            return this, removed;
             }
 
+            return this, removed;
+        }
+
         @Override
-        Entries clear()
-            {
+        Entries clear() {
             verifyInPlace();
             this.ListMap.clear();
             return this;
-            }
+        }
 
         /**
          * Find the specified entry in the [ListMap], and return its position.
@@ -762,43 +652,37 @@ class ListMap<Key, Value>
          * @return True iff the entry is in the ListMap
          * @return (conditional) the position in the ListMap of the found Entry
          */
-        protected conditional Int indexOf(Entry entry)
-            {
+        protected conditional Int indexOf(Entry entry) {
             // first, see if the entry knows its own index
             Key     key   = entry.key;
             Int     index = -1;
             Boolean found = False;
-            if (entry.is(CursorEntry))
-                {
+            if (entry.is(CursorEntry)) {
                 index = entry.index;
-                if (0 <= index < size && keyArray[index] == key)
-                    {
+                if (0 <= index < size && keyArray[index] == key) {
                     found = True;
-                    }
                 }
+            }
 
             // otherwise, search for the entry by key
-            if (!found)
-                {
-                if (index := this.ListMap.indexOf(entry.key))
-                    {
+            if (!found) {
+                if (index := this.ListMap.indexOf(entry.key)) {
                     found = True;
-                    }
                 }
+            }
 
             // lastly, verify that the values match
             found &&= valArray[index] == entry.value;
 
             return found, index;
-            }
+        }
 
         @Override
-        immutable Entries freeze(Boolean inPlace = False)
-            {
+        immutable Entries freeze(Boolean inPlace = False) {
             assert this.ListMap.is(immutable ListMap);
             return makeImmutable();
-            }
         }
+    }
 
 
     // ----- Values Collection ---------------------------------------------------------------------
@@ -808,120 +692,100 @@ class ListMap<Key, Value>
      */
     class Values
             implements Collection<Value>
-            implements Freezable
-        {
+            implements Freezable {
         @Override
-        Int size.get()
-            {
+        Int size.get() {
             return valArray.size;
-            }
+        }
 
         @Override
-        Iterator<Value> iterator()
-            {
-            return new Iterator()
-                {
+        Iterator<Value> iterator() {
+            return new Iterator() {
                 Int index       = 0;
                 Int stop        = size;
                 Int prevDeletes = deletes;
                 @Unassigned Key key;
 
                 @Override
-                conditional Value next()
-                    {
+                conditional Value next() {
                     // the immediately previously iterated key is allowed to be deleted
-                    if (deletes != prevDeletes)
-                        {
-                        if (deletes - prevDeletes == 1 && 0 < index < stop && keyArray[index-1] != key)
-                            {
+                    if (deletes != prevDeletes) {
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && keyArray[index-1] != key) {
                             --stop;
                             --index;
                             ++prevDeletes;
-                            }
-                        else
-                            {
+                        } else {
                             throw new ConcurrentModification();
-                            }
                         }
+                    }
 
-                    if (index < stop)
-                        {
+                    if (index < stop) {
                         key = keyArray[index];
                         return True, valArray[index++];
-                        }
+                    }
 
                     return False;
-                    }
-                };
-            }
+                }
+            };
+        }
 
         @Override
-        Values remove(Value value)
-            {
+        Values remove(Value value) {
             verifyInPlace();
 
-            if (Int index := valArray.indexOf(value))
-                {
+            if (Int index := valArray.indexOf(value)) {
                 deleteEntryAt(index);
-                }
-
-            return this;
             }
 
+            return this;
+        }
+
         @Override
-        (Values, Int) removeAll(function Boolean (Value) shouldRemove)
-            {
+        (Values, Int) removeAll(function Boolean (Value) shouldRemove) {
             verifyInPlace();
 
             Int removed = 0;
-            for (Int i = 0, Int c = size; i < c; ++i)
-                {
-                if (shouldRemove(valArray[i-removed]))
-                    {
+            for (Int i = 0, Int c = size; i < c; ++i) {
+                if (shouldRemove(valArray[i-removed])) {
                     deleteEntryAt(i-removed);
                     ++removed;
-                    }
                 }
-
-            return this, removed;
             }
 
+            return this, removed;
+        }
+
         @Override
-        Values clear()
-            {
+        Values clear() {
             verifyInPlace();
             this.ListMap.clear();
             return this;
-            }
+        }
 
         @Override
-        Value[] toArray(Array.Mutability? mutability = Null)
-            {
+        Value[] toArray(Array.Mutability? mutability = Null) {
             return valArray.toArray(mutability);
-            }
+        }
 
         @Override
-        immutable Values freeze(Boolean inPlace = False)
-            {
+        immutable Values freeze(Boolean inPlace = False) {
             assert this.ListMap.is(immutable ListMap);
             return makeImmutable();
-            }
         }
+    }
 
 
     // ----- Freezable -----------------------------------------------------------------------------
 
     @Override
-    immutable ListMap makeImmutable()
-        {
-        if (this.is(immutable))
-            {
+    immutable ListMap makeImmutable() {
+        if (this.is(immutable)) {
             return this;
-            }
+        }
 
         this.inPlace = False;
         return super();
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -933,8 +797,7 @@ class ListMap<Key, Value>
      *
      * @return a newly reified `Entry`
      */
-    private Entry reifyEntry(Key key)
-        {
+    private Entry reifyEntry(Key key) {
         return new @maps.KeyEntry(key) Entry() {};
-        }
     }
+}

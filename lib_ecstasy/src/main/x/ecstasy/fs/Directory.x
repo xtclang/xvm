@@ -2,8 +2,7 @@
  * A `Directory` represents a directory inside a FileStore.
  */
 interface Directory
-        extends FileNode
-    {
+        extends FileNode {
     /**
      * Obtain an iterator of all of the names that exist immediately under this directory, including
      * names of both files and directories.
@@ -43,14 +42,12 @@ interface Directory
      *
      * @return the Directory, only if is exists
      */
-    conditional Directory findDir(String name)
-        {
-        if (Directory|File node := find(name), node.is(Directory))
-            {
+    conditional Directory findDir(String name) {
+        if (Directory|File node := find(name), node.is(Directory)) {
             return True, node;
-            }
-        return False;
         }
+        return False;
+    }
 
     /**
      * Obtain the File for the specified name.
@@ -59,14 +56,12 @@ interface Directory
      *
      * @return the File, only if is exists
      */
-    conditional File findFile(String name)
-        {
-        if (Directory|File node := find(name), node.is(File))
-            {
+    conditional File findFile(String name) {
+        if (Directory|File node := find(name), node.is(File)) {
             return True, node;
-            }
-        return False;
         }
+        return False;
+    }
 
     /**
      * Obtain a Directory object for the specified path, whether or not the directory actually
@@ -111,8 +106,7 @@ interface Directory
     Cancellable watchRecursively(FileWatcher watcher);
 
     @Override
-    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")
-        {
+    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "") {
         Boolean root = indent == "";
 
 //        created.append(buf);
@@ -121,31 +115,27 @@ interface Directory
 //        buf.addAll("  ");
 //        String bytes = size.toString()
 
-        if (recursive || !root)
-            {
+        if (recursive || !root) {
             buf.addAll(indent)
                .addAll(name)
                .add('/')
                .add('\n');
-            }
+        }
 
-        if (recursive || root)
-            {
+        if (recursive || root) {
             String nextIndent = root
                     ? "  +- "
                     : "  |  " + indent;
 
-            for (Directory dir : dirs())
-                {
+            for (Directory dir : dirs()) {
                 dir.emitListing(buf, recursive, nextIndent);
-                }
-
-            for (File file : files())
-                {
-                file.emitListing(buf, recursive, nextIndent);
-                }
             }
 
-        return buf;
+            for (File file : files()) {
+                file.emitListing(buf, recursive, nextIndent);
+            }
         }
+
+        return buf;
     }
+}

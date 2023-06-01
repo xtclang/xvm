@@ -2,8 +2,7 @@
  * A `File` represents a file inside a FileStore.
  */
 interface File
-        extends FileNode
-    {
+        extends FileNode {
     /**
      * The contents of the file, as an Array of Byte. If the File is writable, then the contents
      * can be set.
@@ -68,8 +67,7 @@ interface File
      */
     conditional FileStore openArchive();
 
-    enum ReadOption
-        {
+    enum ReadOption {
         /**
          * Disallow read access.
          *
@@ -89,10 +87,9 @@ interface File
          * file, to the extent supported by the file system.
          */
         Exclusive
-        }
+    }
 
-    enum WriteOption
-        {
+    enum WriteOption {
         /**
          * Allow write access. If neither [Ensure] nor [Create] are specified or implied, then the
          * [open] will fail if the file does not exist.
@@ -164,7 +161,7 @@ interface File
          * This is likely to be very expensive from an efficiency standpoint.
          */
         SyncAll
-        }
+    }
 
     /**
      * An empty array of WriteOption(s) is used to indicate that the file should be opened without
@@ -189,10 +186,9 @@ interface File
     FileChannel open(ReadOption read=Read, WriteOption[] write = NoWrite);
 
     @Override
-    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")
-        {
+    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "") {
         return buf.addAll(indent)
            .addAll(name)
            .add('\n');
-        }
     }
+}

@@ -1,5 +1,4 @@
-package io
-    {
+package io {
     /**
      * Indicates that an exception related to input/output has occurred.
      */
@@ -43,4 +42,4 @@ package io
      * A Writer is simply an `Appender<Char>`.
      */
     typedef Appender<Char> as Writer;
-    }
+}

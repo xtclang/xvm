@@ -4,8 +4,7 @@
  * contain method templates, and method templates can only be contained by a multi-method template.
  */
 interface MultiMethodTemplate
-        extends ComponentTemplate
-    {
+        extends ComponentTemplate {
     @Override
     MethodTemplate[] children();
-    }
+}

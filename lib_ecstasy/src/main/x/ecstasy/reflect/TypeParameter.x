@@ -11,17 +11,15 @@
  *   class HashMap<Key extends Hashable, Value>
  *           implements Map<Key, Value> {...}
  */
-const TypeParameter(String name, TypeTemplate type)
-    {
+const TypeParameter(String name, TypeTemplate type) {
     /**
      * Construct a type parameter by narrowing an existing type parameter.
      */
-    construct(TypeParameter param, TypeTemplate type)
-        {
+    construct(TypeParameter param, TypeTemplate type) {
         // this type parameter has to be a narrower type than the template that it is based on
         assert param.type.isA(type);
 
         this.name = param.name;
         this.type = type;
-        }
     }
+}

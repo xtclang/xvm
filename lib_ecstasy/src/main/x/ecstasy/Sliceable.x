@@ -2,8 +2,7 @@
  * Represents an object that can be "sliced" into smaller objects that support the same interface as
  * the original object.
  */
-interface Sliceable<Index extends Orderable>
-    {
+interface Sliceable<Index extends Orderable> {
     /**
      * Returns a slice of this Sliceable.
      *
@@ -34,10 +33,9 @@ interface Sliceable<Index extends Orderable>
      *
      * @return a reified Sliceable
      */
-    Sliceable reify()
-        {
+    Sliceable reify() {
         // this method must be overridden by any implementing class that slices by returning a view
         // of the original Sliceable, such that mutations to either would be visible from the other
         return this;
-        }
     }
+}

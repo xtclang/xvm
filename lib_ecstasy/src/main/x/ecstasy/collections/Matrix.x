@@ -1,8 +1,7 @@
 /**
  * A Matrix represents a two-dimensional container of values.
  */
-interface Matrix<Element>
-    {
+interface Matrix<Element> {
     /**
      * The width of the Matrix, which is the number of columns.
      */
@@ -21,10 +20,9 @@ interface Matrix<Element>
     /**
      * Modify the value in the specified element of the matrix.
      */
-    @Op("[]=") void setElement(Int col, Int row, Element value)
-        {
+    @Op("[]=") void setElement(Int col, Int row, Element value) {
         throw new ReadOnly();
-        }
+    }
 
     /**
      * Obtain a column vector from the matrix.
@@ -34,10 +32,9 @@ interface Matrix<Element>
     /**
      * Modify the specified column vector in the matrix.
      */
-    @Op("[_,?]=") void setCol(Int col, Element[] vector)
-        {
+    @Op("[_,?]=") void setCol(Int col, Element[] vector) {
         throw new ReadOnly();
-        }
+    }
 
     /**
      * Obtain a row vector from the matrix.
@@ -47,10 +44,9 @@ interface Matrix<Element>
     /**
      * Modify the specified row vector in the matrix.
      */
-    @Op("[?,_]=") void setRow(Int row, Element[] vector)
-        {
+    @Op("[?,_]=") void setRow(Int row, Element[] vector) {
         throw new ReadOnly();
-        }
+    }
 
     /**
      * Returns a sub-matrix of this Matrix. The new Matrix will likely be backed by this Matrix,
@@ -87,10 +83,9 @@ interface Matrix<Element>
      *
      * @return a reified Matrix
      */
-    Matrix reify()
-        {
+    Matrix reify() {
         // this must be overridden by any implementation that can represent a Matrix based on the
         // contents of (via a reference to) another Matrix
         return this;
-        }
     }
+}

@@ -1,83 +1,69 @@
 enum Boolean
-        default(False)
-    {
-    False
-        {
+        default(False) {
+
+    False {
         @Override
-        @Op("&") Boolean and(Boolean that)
-            {
+        @Op("&") Boolean and(Boolean that) {
             return this;
-            }
+        }
 
         @Override
-        @Op("|") Boolean or(Boolean that)
-            {
+        @Op("|") Boolean or(Boolean that) {
             return that;
-            }
+        }
 
         @Override
-        @Op("^") Boolean xor(Boolean that)
-            {
+        @Op("^") Boolean xor(Boolean that) {
             return that;
-            }
+        }
 
         @Override
-        @Op("~") Boolean not()
-            {
+        @Op("~") Boolean not() {
             return True;
-            }
+        }
 
         @Override
-        Bit toBit()
-            {
+        Bit toBit() {
             return 0;
-            }
+        }
 
         @Override
-        Byte toByte()
-            {
+        Byte toByte() {
             return 0;
-            }
-        },
+        }
+    },
 
-    True
-        {
+    True {
         @Override
-        @Op("&") Boolean and(Boolean that)
-            {
+        @Op("&") Boolean and(Boolean that) {
             return that;
-            }
+        }
 
         @Override
-        @Op("|") Boolean or(Boolean that)
-            {
+        @Op("|") Boolean or(Boolean that) {
             return this;
-            }
+        }
 
         @Override
-        @Op("^") Boolean xor(Boolean that)
-            {
+        @Op("^") Boolean xor(Boolean that) {
             return !that;
-            }
+        }
 
         @Override
-        @Op("~") Boolean not()
-            {
+        @Op("~") Boolean not() {
             return False;
-            }
+        }
 
         @Override
-        Bit toBit()
-            {
+        Bit toBit() {
             return 1;
-            }
+        }
 
         @Override
-        Byte toByte()
-            {
+        Byte toByte() {
             return 1;
-            }
-        };
+        }
+    };
 
 
     // ----- logical operations --------------------------------------------------------------------
@@ -105,4 +91,4 @@ enum Boolean
     UInt64  toUInt64()  {return toByte();}
     UInt128 toUInt128() {return toByte();}
     UIntN   toUIntN()   {return toByte();}
-    }
+}

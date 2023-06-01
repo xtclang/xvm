@@ -3,8 +3,7 @@
  */
 class StringWriter(Writer writer)
         implements Writer
-        implements TextPosition
-    {
+        implements TextPosition {
     // ----- TextPosition --------------------------------------------------------------------------
 
     @Override
@@ -20,24 +19,21 @@ class StringWriter(Writer writer)
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override
-    StringWriter add(Char v)
-        {
+    StringWriter add(Char v) {
         writer.add(v);
 
         ++offset;
-        if (v == '\n')
-            {
+        if (v == '\n') {
             ++lineNumber;
             lineStartOffset = offset;
-            }
+        }
 
         return this;
-        }
+    }
 
     @Override
-    StringWriter ensureCapacity(Int count)
-        {
+    StringWriter ensureCapacity(Int count) {
         writer.ensureCapacity(count);
         return this;
-        }
     }
+}

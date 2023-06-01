@@ -10,11 +10,9 @@
  *     @AutoFreezable(inPlace=False) class Message {...}
  */
 mixin AutoFreezable(Boolean inPlace=True)
-        into Freezable
-    {
+        into Freezable {
     @Override
-    immutable AutoFreezable freeze(Boolean? inPlace=Null)
-        {
+    immutable AutoFreezable freeze(Boolean? inPlace=Null) {
         return super(inPlace ?: this.inPlace);
-        }
     }
+}

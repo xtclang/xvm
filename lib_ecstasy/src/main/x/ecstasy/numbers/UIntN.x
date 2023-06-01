@@ -4,8 +4,7 @@
 const UIntN
         extends UIntNumber
         incorporates Bitwise
-        default(0)
-    {
+        default(0) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -15,11 +14,10 @@ const UIntN
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert bits.size >= 8 && bits.size.bitCount == 1;
         super(bits);
-        }
+    }
 
     /**
      * Construct a variable-length unsigned integer number from its network-portable representation.
@@ -28,11 +26,10 @@ const UIntN
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert bytes.size >= 1;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a variable-length unsigned integer number from its `String` representation.
@@ -40,120 +37,104 @@ const UIntN
      * @param text  an integer number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct UIntN(new IntLiteral(text).toUIntN().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static UIntN zero()
-        {
+    static UIntN zero() {
         return 0;
-        }
+    }
 
     @Override
-    static UIntN one()
-        {
+    static UIntN one() {
         return 1;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
+    Signum sign.get() {
         return this == 0 ? Zero : Positive;
-        }
+    }
 
 
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
     @Op("+")
-    UIntN add(UIntN! n)
-        {
+    UIntN add(UIntN! n) {
         return this + n;
-        }
+    }
 
     @Override
     @Op("-")
-    UIntN sub(UIntN! n)
-        {
+    UIntN sub(UIntN! n) {
         return this - n;
-        }
+    }
 
     @Override
     @Op("*")
-    UIntN mul(UIntN! n)
-        {
+    UIntN mul(UIntN! n) {
         return this * n;
-        }
+    }
 
     @Override
     @Op("/")
-    UIntN div(UIntN! n)
-        {
+    UIntN div(UIntN! n) {
         return this / n;
-        }
+    }
 
     @Override
     @Op("%")
-    UIntN mod(UIntN! n)
-        {
+    UIntN mod(UIntN! n) {
         return this % n;
-        }
+    }
 
     @Override
-    UIntN pow(UIntN! n)
-        {
+    UIntN pow(UIntN! n) {
         UIntN result = 1;
 
-        while (n-- > 0)
-            {
+        while (n-- > 0) {
             result *= this;
-            }
+        }
 
         return result;
-        }
+    }
 
 
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional UIntN next()
-        {
+    conditional UIntN next() {
         return True, this + 1;
-        }
+    }
 
     @Override
-    conditional UIntN prev()
-        {
-        if (this > 0)
-            {
+    conditional UIntN prev() {
+        if (this > 0) {
             return True, this - 1;
-            }
+        }
 
         return False;
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    (UIntN - Unchecked) toChecked()
-        {
+    (UIntN - Unchecked) toChecked() {
         return this.is(Unchecked) ? new UIntN(bits) : this;
-        }
+    }
 
     @Override
-    @Unchecked UIntN toUnchecked()
-        {
+    @Unchecked UIntN toUnchecked() {
         return this.is(Unchecked) ? this : new @Unchecked UIntN(bits);
-        }
+    }
 
     @Override
     Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
@@ -162,112 +143,99 @@ const UIntN
     UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= Int8.MaxValue;
         return bitLength < 8
                 ? new Int8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
                 : new Int8(bits[bitLength-8 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= Int16.MaxValue;
         return bitLength < 16
                 ? new Int16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
                 : new Int16(bits[bitLength-16 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= Int32.MaxValue;
         return bitLength < 32
                 ? new Int32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
                 : new Int32(bits[bitLength-32 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= Int64.MaxValue;
         return bitLength < 64
                 ? new Int64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
                 : new Int64(bits[bitLength-64 ..< bitLength]);
-        }
+    }
 
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= Int128.MaxValue;
         return bitLength < 128
                 ? new Int128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
                 : new Int128(bits[bitLength-128 ..< bitLength]);
-        }
+    }
 
     @Auto
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         Bit[] bits = this.bits;
-        if (bits[0] == 1)
-            {
+        if (bits[0] == 1) {
             bits = new Bit[bits.size + 8](i -> i < 8 ? 0 : bits[i-8]);
-            }
-        return new IntN(bits);
         }
+        return new IntN(bits);
+    }
 
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= UInt8.MaxValue;
         return bitLength < 8
                 ? new UInt8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
                 : new UInt8(bits[bitLength-8 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= UInt16.MaxValue;
         return bitLength < 16
                 ? new UInt16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
                 : new UInt16(bits[bitLength-16 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= UInt32.MaxValue;
         return bitLength < 32
                 ? new UInt32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
                 : new UInt32(bits[bitLength-32 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= UInt64.MaxValue;
         return bitLength < 64
                 ? new UInt64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
                 : new UInt64(bits[bitLength-64 ..< bitLength]);
-        }
+    }
 
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero)
-        {
+    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
         assert:bounds this <= UInt64.MaxValue;
         return bitLength < 128
                 ? new UInt128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
                 : new UInt128(bits[bitLength-128 ..< bitLength]);
-        }
+    }
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return this;
-        }
+    }
 
     @Auto
     @Override
@@ -291,10 +259,9 @@ const UIntN
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return toIntLiteral().toFloatN();
-        }
+    }
 
     @Auto
     @Override
@@ -310,47 +277,40 @@ const UIntN
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toIntLiteral().toDecN();
-        }
+    }
 
 
     // ----- Stringable implementation -------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
-        if (this <= UInt64.MaxValue)
-            {
+    Int estimateStringLength() {
+        if (this <= UInt64.MaxValue) {
             return toUInt64().estimateStringLength();
-            }
+        }
 
         static UIntN chunkVal = 10_000_000_000_000_000_000;
         static Int   chunkLen = 19;
 
         UIntN left     = this;
         Int   rightLen = 0;
-        do
-            {
+        do {
             (left, _) = left /% chunkVal;
             rightLen += chunkLen;
-            }
-        while (left > UInt64.MaxValue);
+        } while (left > UInt64.MaxValue);
         return left.toUInt64().estimateStringLength() + rightLen;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        if (this <= UInt64.MaxValue)
-            {
+    Appender<Char> appendTo(Appender<Char> buf) {
+        if (this <= UInt64.MaxValue) {
             return toUInt64().appendTo(buf);
-            }
+        }
 
         static UIntN chunkVal = 10_000_000_000_000_000_000;
         (UIntN dividend, UIntN remainder) = this /% chunkVal;
         dividend.appendTo(buf);
         return remainder.appendTo(buf);
-        }
     }
+}

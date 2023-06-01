@@ -23,8 +23,7 @@
  *
  * @see NaturalHasher
  */
-interface Hasher<Value>
-    {
+interface Hasher<Value> {
     /**
      * Calculate the hash value for the specified value.
      *
@@ -45,4 +44,4 @@ interface Hasher<Value>
      * `hashOf` value.
      */
     Boolean areEqual(Value value1, Value value2);
-    }
+}

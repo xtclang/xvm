@@ -21,16 +21,14 @@ import reflect.Property;
  * Despite its name, TypeTemplate may not always be immutable.
  */
 interface TypeTemplate
-        extends immutable Const
-    {
+        extends immutable Const {
     // ----- inner classes -------------------------------------------------------------------------
 
     /**
      * There are a number of different forms that a type can take. Each form has a different
      * meaning, and exposes type information that is specific to that form.
      */
-    enum Form(Boolean modifying = False, Boolean relational = False)
-        {
+    enum Form(Boolean modifying = False, Boolean relational = False) {
         /**
          * A pure interface type that only contains methods, properties, and abstract functions.
          */
@@ -99,7 +97,7 @@ interface TypeTemplate
          * [Function] interfaces.
          */
         Sequence
-        }
+    }
 
 
     // ----- state representation ------------------------------------------------------------------
@@ -115,12 +113,11 @@ interface TypeTemplate
     /**
      * A brief descriptive string for the type, intended to provide clarity for a developer.
      */
-    @RO String desc.get()
-        {
+    @RO String desc.get() {
         // this default implementation should be overridden by any type template that can provide
         // a more detailed and/or succinct description in a form well-known to a developer
         return name ?: this.TypeTemplate.toString();
-        }
+    }
 
     /**
      * The form of the type.
@@ -317,124 +314,112 @@ interface TypeTemplate
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return 0;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         Boolean fParams = False;
-        switch (form)
-            {
-            case Pure:
-                TODO
+        switch (form) {
+        case Pure:
+            TODO
 
-            case Class:
-                assert Composition cmp := fromClass();
-                while ((AnnotationTemplate annotation, cmp) := cmp.deannotate())
-                    {
-                    buf.add('@')
-                       .addAll(annotation.template.name)
-                       .add(' ');
-                    }
-                assert cmp.is(ClassTemplate);
-                buf.addAll(cmp.displayName);
-                fParams = True;
-                break;
-
-            case Child:
-                fParams = True;
-                continue;
-            case Property:
-            case FormalProperty:
-            case FormalParameter:
-            case FormalChild:
-                TODO
-
-            case Intersection:
-            case Union:
-            case Difference:
-                assert (TypeTemplate t1, TypeTemplate t2) := relational();
-                t1.appendTo(buf);
-                buf.addAll(switch (form)
-                        {
-                        case Union:        " | ";
-                        case Intersection: " + ";
-                        case Difference:   " - ";
-                        default: assert;
-                        });
-                t2.appendTo(buf);
-                break;
-
-            case Immutable:
-                assert TypeTemplate t1 := modifying();
-                buf.addAll("immutable ");
-                t1.appendTo(buf);
-                break;
-
-            case Access:
-                assert val access := accessSpecified();
-                assert TypeTemplate t1 := modifying();
-                t1.appendTo(buf);
-                buf.add(':')
-                   .addAll(access.keyword);
-                break;
-
-            case Annotated:
-                TODO
-
-            case Typedef:
-                (name ?: underlyingTypes[0]).as(Stringable).appendTo(buf);
-                break;
-
-            case Sequence:
-                TODO
-
-            default:
-                assert;
+        case Class:
+            assert Composition cmp := fromClass();
+            while ((AnnotationTemplate annotation, cmp) := cmp.deannotate()) {
+                buf.add('@')
+                   .addAll(annotation.template.name)
+                   .add(' ');
             }
+            assert cmp.is(ClassTemplate);
+            buf.addAll(cmp.displayName);
+            fParams = True;
+            break;
 
-        if (fParams, TypeTemplate[] params := parameterized())
-            {
+        case Child:
+            fParams = True;
+            continue;
+        case Property:
+        case FormalProperty:
+        case FormalParameter:
+        case FormalChild:
+            TODO
+
+        case Intersection:
+        case Union:
+        case Difference:
+            assert (TypeTemplate t1, TypeTemplate t2) := relational();
+            t1.appendTo(buf);
+            buf.addAll(switch (form) {
+            case Union:        " | ";
+            case Intersection: " + ";
+            case Difference:   " - ";
+            default: assert;
+        });
+            t2.appendTo(buf);
+            break;
+
+        case Immutable:
+            assert TypeTemplate t1 := modifying();
+            buf.addAll("immutable ");
+            t1.appendTo(buf);
+            break;
+
+        case Access:
+            assert val access := accessSpecified();
+            assert TypeTemplate t1 := modifying();
+            t1.appendTo(buf);
+            buf.add(':')
+               .addAll(access.keyword);
+            break;
+
+        case Annotated:
+            TODO
+
+        case Typedef:
+            (name ?: underlyingTypes[0]).as(Stringable).appendTo(buf);
+            break;
+
+        case Sequence:
+            TODO
+
+        default:
+            assert;
+        }
+
+        if (fParams, TypeTemplate[] params := parameterized()) {
             buf.add('<');
-            EachParam: for (TypeTemplate param : params)
-                {
-                if (!EachParam.first)
-                    {
+            EachParam: for (TypeTemplate param : params) {
+                if (!EachParam.first) {
                     buf.addAll(", ");
-                    }
-                param.appendTo(buf);
                 }
-            buf.add('>');
+                param.appendTo(buf);
             }
+            buf.add('>');
+        }
 
         return buf;
-        }
+    }
 
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 
-    static <CompileType extends TypeTemplate> Int64 hashCode(CompileType value)
-        {
+    static <CompileType extends TypeTemplate> Int64 hashCode(CompileType value) {
         TODO
-        }
+    }
 
-    static <CompileType extends TypeTemplate> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends TypeTemplate> Boolean equals(CompileType value1, CompileType value2) {
         // the definition for type equality is fairly simple: each of the two types must be
         // type-compatible with the other
         return value1.isA(value2) && value2.isA(value1);
-        }
+    }
 
-    static <CompileType extends TypeTemplate> Ordered compare(CompileType value1, CompileType value2)
-        {
-        if (value1 == value2)
-            {
+    static <CompileType extends TypeTemplate> Ordered compare(CompileType value1, CompileType value2) {
+        if (value1 == value2) {
             return Equal;
-            }
+        }
 
         TODO <=>
-        }
     }
+}

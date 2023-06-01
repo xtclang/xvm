@@ -1,7 +1,6 @@
 const DecN
-        extends DecimalFPNumber
+        extends DecimalFPNumber {
         // TODO default(0.0)
-    {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -12,11 +11,10 @@ const DecN
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert bits.size >= 32 && bits.size.bitCount == 1;
         super(bits);
-        }
+    }
 
     /**
      * Construct a variable-length decimal floating point number from its network-portable
@@ -26,11 +24,10 @@ const DecN
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert bytes.size >= 4 && bytes.size.bitCount == 1;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a variable-length decimal floating point number from its `String` representation.
@@ -38,273 +35,231 @@ const DecN
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct DecN(new FPLiteral(text).toDecN().bits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static DecN zero()
-        {
+    static DecN zero() {
         TODO return 0.0;
-        }
+    }
 
     @Override
-    static DecN one()
-        {
+    static DecN one() {
         TODO return 1.0;
-        }
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op DecN add(DecN n)
-        {
+    @Op DecN add(DecN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op DecN sub(DecN n)
-        {
+    @Op DecN sub(DecN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op DecN mul(DecN n)
-        {
+    @Op DecN mul(DecN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op DecN div(DecN n)
-        {
+    @Op DecN div(DecN n) {
         TODO
-        }
+    }
 
     @Override
-    @Op DecN mod(DecN n)
-        {
+    @Op DecN mod(DecN n) {
         TODO
-        }
+    }
 
     @Override
-    DecN abs()
-        {
+    DecN abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op DecN neg()
-        {
+    @Op DecN neg() {
         TODO
-        }
+    }
 
     @Override
-    DecN pow(DecN n)
-        {
+    DecN pow(DecN n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    @RO IntN emax.get()
-        {
+    @RO IntN emax.get() {
         // from IEEE 754-2008:
         //   w    = k/16+4
         //   emax = 3×2^(w−1)
         return 3 * (1 << byteLength / 16 + 3);
-        }
+    }
 
     @Override
-    IntN emin.get()
-        {
+    IntN emin.get() {
         return 1 - emax;
-        }
+    }
 
     @Override
-    IntN bias.get()
-        {
+    IntN bias.get() {
         // from IEEE 754-2008:
         //   emax+p−2
         return emax + precision - 2;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, IntN significand, IntN exponent) split()
-        {
+    (Boolean negative, IntN significand, IntN exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    DecN round(Rounding direction = TiesToAway)
-        {
+    DecN round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    DecN floor()
-        {
+    DecN floor() {
         TODO
-        }
+    }
 
     @Override
-    DecN ceil()
-        {
+    DecN ceil() {
         TODO
-        }
+    }
 
     @Override
-    DecN exp()
-        {
+    DecN exp() {
         TODO
-        }
+    }
 
     @Override
-    DecN scaleByPow(Int n)
-        {
+    DecN scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    DecN log()
-        {
+    DecN log() {
         TODO
-        }
+    }
 
     @Override
-    DecN log2()
-        {
+    DecN log2() {
         TODO
-        }
+    }
 
     @Override
-    DecN log10()
-        {
+    DecN log10() {
         TODO
-        }
+    }
 
     @Override
-    DecN sqrt()
-        {
+    DecN sqrt() {
         TODO
-        }
+    }
 
     @Override
-    DecN cbrt()
-        {
+    DecN cbrt() {
         TODO
-        }
+    }
 
     @Override
-    DecN sin()
-        {
+    DecN sin() {
         TODO
-        }
+    }
 
     @Override
-    DecN cos()
-        {
+    DecN cos() {
         TODO
-        }
+    }
 
     @Override
-    DecN tan()
-        {
+    DecN tan() {
         TODO
-        }
+    }
 
     @Override
-    DecN asin()
-        {
+    DecN asin() {
         TODO
-        }
+    }
 
     @Override
-    DecN acos()
-        {
+    DecN acos() {
         TODO
-        }
+    }
 
     @Override
-    DecN atan()
-        {
+    DecN atan() {
         TODO
-        }
+    }
 
     @Override
-    DecN atan2(DecN y)
-        {
+    DecN atan2(DecN y) {
         TODO
-        }
+    }
 
     @Override
-    DecN sinh()
-        {
+    DecN sinh() {
         TODO
-        }
+    }
 
     @Override
-    DecN cosh()
-        {
+    DecN cosh() {
         TODO
-        }
+    }
 
     @Override
-    DecN tanh()
-        {
+    DecN tanh() {
         TODO
-        }
+    }
 
     @Override
-    DecN asinh()
-        {
+    DecN asinh() {
         TODO
-        }
+    }
 
     @Override
-    DecN acosh()
-        {
+    DecN acosh() {
         TODO
-        }
+    }
 
     @Override
-    DecN atanh()
-        {
+    DecN atanh() {
         TODO
-        }
+    }
 
     @Override
-    DecN deg2rad()
-        {
+    DecN deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    DecN rad2deg()
-        {
+    DecN rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    DecN nextUp()
-        {
+    DecN nextUp() {
         TODO
-        }
+    }
 
     @Override
-    DecN nextDown()
-        {
+    DecN nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -325,10 +280,9 @@ const DecN
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -346,10 +300,9 @@ const DecN
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
@@ -374,10 +327,9 @@ const DecN
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return toFPLiteral().toFloatN();
-        }
+    }
 
     @Override
     Dec32 toDec32();
@@ -389,8 +341,7 @@ const DecN
     Dec128 toDec128();
 
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return this;
-        }
     }
+}

@@ -88,6 +88,5 @@
  *   to be wrong.**
  */
 mixin Operator(String? token = Null)
-        into Method
-    {
-    }
+        into Method {
+}

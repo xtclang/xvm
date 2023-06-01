@@ -5,8 +5,7 @@
  *
  * Among other things, the Iterable interface is the basis for Ecstasy collections.
  */
-interface Iterable<Element>
-    {
+interface Iterable<Element> {
     /**
      * Determine the size of the Iterable object, which is the number of elements that an iterator
      * would emit.
@@ -33,15 +32,13 @@ interface Iterable<Element>
      *
      * @return a `List` of elements from this iterable source
      */
-    Element[] toArray(Array.Mutability? mutability = Null)
-        {
+    Element[] toArray(Array.Mutability? mutability = Null) {
         Element[] result = new Element[](size); // mutable
 
-        loop: for (Element element : this)
-            {
+        loop: for (Element element : this) {
             result[loop.count] = element;
-            }
+        }
 
         return result.toArray(mutability, True);
-        }
     }
+}

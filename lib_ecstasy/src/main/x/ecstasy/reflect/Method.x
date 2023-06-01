@@ -6,8 +6,7 @@ import collections.HashSet;
  * a type containing the method) in order to obtain an invocable function.
  */
 interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
-        extends Signature<ParamTypes, ReturnTypes>
-    {
+        extends Signature<ParamTypes, ReturnTypes> {
     /**
      * Method access.
      */
@@ -31,10 +30,9 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      *
      * @return the return values from the method
      */
-    ReturnTypes invoke(Target target, ParamTypes args)
-        {
+    ReturnTypes invoke(Target target, ParamTypes args) {
         return bindTarget(target).invoke(args);
-        }
+    }
 
 
     // ----- type comparison support ---------------------------------------------------------------
@@ -47,47 +45,35 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * 2. _m_ has a parameter type that _"produces T"_.
      * 3. _m_ has a return type that _"consumes T"_;
      */
-    Boolean consumesFormalType(String typeName)
-        {
-        paramLoop: for (Int index : 0 ..< ParamTypes.size)
-            {
+    Boolean consumesFormalType(String typeName) {
+        paramLoop: for (Int index : 0 ..< ParamTypes.size) {
             Type paramType = ParamTypes[index];
 
-            if (String[] names := formalParamNames(paramLoop.count))
-                {
-                if (names.contains(typeName))
-                    {
+            if (String[] names := formalParamNames(paramLoop.count)) {
+                if (names.contains(typeName)) {
                     return True;
-                    }
                 }
-            else
-                {
-                if (paramType.producesFormalType(typeName))
-                    {
+            } else {
+                if (paramType.producesFormalType(typeName)) {
                     return True;
-                    }
                 }
             }
+        }
 
-        returnLoop: for (Int index : 0 ..< ReturnTypes.size)
-            {
+        returnLoop: for (Int index : 0 ..< ReturnTypes.size) {
             Type returnType = ParamTypes[index];
 
-            if (String[] names := formalReturnNames(returnLoop.count))
-                {
+            if (String[] names := formalReturnNames(returnLoop.count)) {
                 // may produce, but doesn't consume
-                }
-            else
-                {
-                if (returnType.consumesFormalType(typeName))
-                    {
+            } else {
+                if (returnType.consumesFormalType(typeName)) {
                     return True;
-                    }
                 }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Determine if this method _produces_ a formal type with the specified name.
@@ -97,59 +83,45 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * 2. _m_ has a return type that _"produces T"_;
      * 3. _m_ has a parameter type that _"consumes T"_.
      */
-    Boolean producesFormalType(String typeName)
-        {
-        returnLoop: for (Int index : 0 ..< ReturnTypes.size)
-            {
+    Boolean producesFormalType(String typeName) {
+        returnLoop: for (Int index : 0 ..< ReturnTypes.size) {
             Type returnType = ParamTypes[index];
 
-            if (String[] names := formalReturnNames(returnLoop.count))
-                {
-                if (names.contains(typeName))
-                    {
+            if (String[] names := formalReturnNames(returnLoop.count)) {
+                if (names.contains(typeName)) {
                     return True;
-                    }
                 }
-            else
-                {
-                if (returnType.producesFormalType(typeName))
-                    {
+            } else {
+                if (returnType.producesFormalType(typeName)) {
                     return True;
-                    }
                 }
             }
+        }
 
-        paramLoop: for (Int index : 0 ..< ParamTypes.size)
-            {
+        paramLoop: for (Int index : 0 ..< ParamTypes.size) {
             Type paramType = ParamTypes[index];
 
-            if (String[] names := formalParamNames(paramLoop.count))
-                {
+            if (String[] names := formalParamNames(paramLoop.count)) {
                 // may produce, but doesn't consume
-                }
-            else
-                {
-                if (paramType.consumesFormalType(typeName))
-                    {
+            } else {
+                if (paramType.consumesFormalType(typeName)) {
                     return True;
-                    }
                 }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Determine if this method could act as a substitute for the specified method.
      *
      * @see Type.isA
      */
-    Boolean isSubstitutableFor(Method!<> that)
-        {
-        if (this.as(Object) == that.as(Object))
-            {
+    Boolean isSubstitutableFor(Method!<> that) {
+        if (this.as(Object) == that.as(Object)) {
             return True;
-            }
+        }
 
         /*
          * Excerpt From Type#isA() documentation (where m2 == this and m1 == that):
@@ -170,64 +142,54 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
          *      1. _r2_ is assignable to _r1_
          */
 
-        if (this.name             != that.name            ||
-            this.ParamTypes.size  != that.ParamTypes.size ||
-            this.ReturnTypes.size != that.ReturnTypes.size)
-            {
+        if (    this.name             != that.name            ||
+                this.ParamTypes.size  != that.ParamTypes.size ||
+                this.ReturnTypes.size != that.ReturnTypes.size) {
             return False;
-            }
+        }
 
-        for (Int index : 0 ..< ReturnTypes.size)
-            {
+        for (Int index : 0 ..< ReturnTypes.size) {
             Type typeR2 = this.ReturnTypes[index];
             Type typeR1 = that.ReturnTypes[index];
 
-             if (!typeR2.isA(typeR1))
-                 {
-                 return False;
-                 }
-             }
+            if (!typeR2.isA(typeR1)) {
+                return False;
+            }
+        }
 
-        loop: for (Int index : 0 ..< ParamTypes.size)
-            {
+        loop: for (Int index : 0 ..< ParamTypes.size) {
             Type typeP2 = this.ParamTypes[index];
             Type typeP1 = that.ParamTypes[index];
 
-            if (typeP1.isA(typeP2))
-                {
+            if (typeP1.isA(typeP2)) {
                 continue;
-                }
+            }
 
-            if (!typeP2.isA(typeP1))
-                {
+            if (!typeP2.isA(typeP1)) {
                 return False;
-                }
+            }
 
             // if there is an number of different formal names, then at least one of them must be
             // produced by the type T1
-            if (String[] namesThis := this.formalParamNames(loop.count))
-                {
+            if (String[] namesThis := this.formalParamNames(loop.count)) {
                 Set<String> setThis = new HashSet(namesThis);
 
-                if (String[] namesThat := that.formalParamNames(loop.count))
-                    {
+                if (String[] namesThat := that.formalParamNames(loop.count)) {
                     Set<String> setThat = new HashSet(namesThat);
 
                     setThat = setThat.retainAll(setThis);
-                    for (String name : setThat)
-                        {
-                        if (that.Target.producesFormalType(name))
-                            {
+                    for (String name : setThat) {
+                        if (that.Target.producesFormalType(name)) {
                             return True;
-                            }
                         }
                     }
                 }
-            return False;
             }
+            return False;
+        }
 
         return True;
-        }
+    }
 
     /**
      * Return an array of formal type names for the parameter type at the specified index.
@@ -240,4 +202,4 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * If the return type is not a formal one, this method will return False.
      */
     conditional String[] formalReturnNames(Int i);
-    }
+}

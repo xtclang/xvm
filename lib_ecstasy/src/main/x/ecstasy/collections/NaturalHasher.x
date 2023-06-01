@@ -7,17 +7,14 @@
  * with objects whose hashing and equality is known (or overloaded) by a separate implementation.
  */
 const NaturalHasher<Value extends Hashable>
-        implements Hasher<Value>
-    {
+        implements Hasher<Value> {
     @Override
-    Int64 hashOf(Value value)
-        {
+    Int64 hashOf(Value value) {
         return Value.hashCode(value);
-        }
+    }
 
     @Override
-    Boolean areEqual(Value value1, Value value2)
-        {
+    Boolean areEqual(Value value1, Value value2) {
         return Value.equals(value1, value2);
-        }
     }
+}

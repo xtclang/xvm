@@ -19,8 +19,7 @@
  * TODO use timer instead of clock
  */
 mixin SoftVar<Referent>(function void ()? notify)
-        into Var<Referent>
-    {
+        into Var<Referent> {
     /**
      * The runtime's clock that this reference will stamp itself with on every access. The runtime
      * clock is a clock optimized for a high number of accesses, and not for correctness with
@@ -62,11 +61,9 @@ mixin SoftVar<Referent>(function void ()? notify)
     public/private Duration? lastCalcDuration;
 
     @Override
-    Referent get()
-        {
+    Referent get() {
         // soft+lazy references are unassigned after being cleared by the garbage collector
-        if (!assigned)
-            {
+        if (!assigned) {
             // TODO assert (&this).incorporates_(LazyVar);
 
             Time     start = clock.now;
@@ -78,10 +75,10 @@ mixin SoftVar<Referent>(function void ()? notify)
             lastCalcDuration = stop - start;
 
             return value;
-            }
+        }
 
         ++accessCount;
         lastAccessTime = clock.now;
         return super();
-        }
     }
+}

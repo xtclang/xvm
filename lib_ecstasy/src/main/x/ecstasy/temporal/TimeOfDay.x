@@ -6,8 +6,7 @@
  * The `TimeOfDay` has rudimentary support for representing and dealing with leap seconds.
  */
 const TimeOfDay(UInt64 picos)
-        implements Destringable
-    {
+        implements Destringable {
     static IntLiteral PICOS_PER_NANO   = 1K;
     static IntLiteral PICOS_PER_MICRO  = 1K * PICOS_PER_NANO;
     static IntLiteral PICOS_PER_MILLI  = 1K * PICOS_PER_MICRO;
@@ -23,11 +22,10 @@ const TimeOfDay(UInt64 picos)
      *
      * @param picos  the number of picoseconds elapsed since `00:00:00`
      */
-    construct(UInt64 picos)
-        {
+    construct(UInt64 picos) {
         assert picos < PICOS_PER_DAY + PICOS_PER_SECOND;  // allow for a leap-second
         this.picos = picos;
-        }
+    }
 
     /**
      * Construct a `TimeOfDay` based on number hours, minutes, seconds, and picoseconds.
@@ -38,53 +36,48 @@ const TimeOfDay(UInt64 picos)
      *                also supported
      * @param picos   the number of picoseconds, in the range `0..999999999999`
      */
-    construct(Int hour, Int minute, Int second=0, Int picos=0)
-        {
+    construct(Int hour, Int minute, Int second=0, Int picos=0) {
         assert 0 <= hour   < 24;
         assert 0 <= minute < 60;
         assert 0 <= second < 60
                 || hour == 23 && minute == 59 && second == 60; // allow for a leap-second
         assert 0 <= picos  < PICOS_PER_SECOND;
         construct TimeOfDay((((hour * 60 + minute) * 60 + second) * PICOS_PER_SECOND + picos).toUInt64());
-        }
+    }
 
     /**
      * Construct a `TimeOfDay` from an ISO-8601 time string.
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         String   hours;
         String   mins;
         String   secs  = "";
         String[] parts = text.split(':');
-        switch (parts.size)
-            {
-            case 3:
-                secs  = parts[2];
-                continue;
-            case 2:
-                hours = parts[0];
-                mins  = parts[1];
+        switch (parts.size) {
+        case 3:
+            secs  = parts[2];
+            continue;
+        case 2:
+            hours = parts[0];
+            mins  = parts[1];
+            break;
+
+        case 1:
+            Int len = text.size;
+            if (len >= 4) {
+                hours = text[0 .. 1];
+                mins  = text[2 .. 3];
+                if (len > 4) {
+                    secs = text[4 ..< len];
+                }
                 break;
-
-            case 1:
-                Int len = text.size;
-                if (len >= 4)
-                    {
-                    hours = text[0 .. 1];
-                    mins  = text[2 .. 3];
-                    if (len > 4)
-                        {
-                        secs = text[4 ..< len];
-                        }
-                    break;
-                    }
-                continue;
-
-            default:
-                throw new IllegalArgument($"invalid ISO-8601 time: \"{text}\"");
             }
+            continue;
+
+        default:
+            throw new IllegalArgument($"invalid ISO-8601 time: \"{text}\"");
+        }
 
         Int hour = new IntLiteral(hours);
         Int min  = new IntLiteral(mins );
@@ -93,35 +86,28 @@ const TimeOfDay(UInt64 picos)
 
         static Int[] SCALE_10 = [1T, 100G, 10G, 1G, 100M, 10M, 1M, 100K, 10K, 1K, 100, 10, 1];
 
-        if (secs != "")
-            {
-            if (Int dot := secs.indexOf('.'))
-                {
-                if (dot > 0)
-                    {
+        if (secs != "") {
+            if (Int dot := secs.indexOf('.')) {
+                if (dot > 0) {
                     sec = new IntLiteral(secs[0 ..< dot]);
-                    }
+                }
 
                 Int len = secs.size;
-                if (dot < len-1)
-                    {
+                if (dot < len-1) {
                     String picos = secs[dot >..< len];
-                    if (picos.size > 12)
-                        {
+                    if (picos.size > 12) {
                         picos = picos[0 ..< 12];
-                        }
+                    }
 
                     pico = new IntLiteral(picos) * SCALE_10[picos.size];
-                    }
                 }
-            else
-                {
+            } else {
                 sec = new IntLiteral(secs);
-                }
             }
+        }
 
         construct TimeOfDay(hour, min, sec, pico);
-        }
+    }
 
     /**
      * Validate the hours, minutes, seconds, and picoseconds components of a `TimeOfDay`.
@@ -134,142 +120,122 @@ const TimeOfDay(UInt64 picos)
      *
      * @return True iff the passed values are in their allowed ranges
      */
-    static Boolean validate(Int hour, Int minute, Int second=0, Int picos=0)
-        {
+    static Boolean validate(Int hour, Int minute, Int second=0, Int picos=0) {
         return 0 <= hour   < 24
             && 0 <= minute < 60
             && (0 <= second < 60
                 || hour == 23 && minute == 59 && second == 60)  // allow for a leap-second
             && 0 <= picos  < PICOS_PER_SECOND;
-        }
+    }
 
     /**
      * The hour of the day, in the range `0..23`.
      */
-    Int hour.get()
-        {
+    Int hour.get() {
         return picos >= PICOS_PER_DAY
                 ? 23
                 : picos / PICOS_PER_HOUR;
-        }
+    }
 
     /**
      * The minute of the hour, in the range `0..59`.
      */
-    Int minute.get()
-        {
+    Int minute.get() {
         return picos >= PICOS_PER_DAY
                 ? 59
                 : picos / PICOS_PER_MINUTE % 60;
-        }
+    }
 
     /**
      * The second of the minute, in the range `0..59` (or `60`, in the extremely rare case of a leap
      * second).
      */
-    Int second.get()
-        {
+    Int second.get() {
         return picos >= PICOS_PER_DAY
                 ? 60
                 : picos / PICOS_PER_SECOND % 60;
-        }
+    }
 
     /**
      * The fraction of a second, represented as milliseconds, in the range `0..999`.
      * This is the same as `microseconds / 1000`.
      */
-    Int milliseconds.get()
-        {
+    Int milliseconds.get() {
         return picoseconds / PICOS_PER_MILLI;
-        }
+    }
 
     /**
      * The fraction of a second, represented as microseconds, in the range `0..999999`.
      * This is the same as `nanoseconds / 1000`.
      */
-    Int microseconds.get()
-        {
+    Int microseconds.get() {
         return picoseconds / PICOS_PER_MICRO;
-        }
+    }
 
     /**
      * The fraction of a second, represented as nanoseconds, in the range `0..999999999`.
      * This is the same as `picoseconds / 1000`.
      */
-    Int nanoseconds.get()
-        {
+    Int nanoseconds.get() {
         return picoseconds / PICOS_PER_NANO;
-        }
+    }
 
     /**
      * The fraction of a second, represented as picoseconds, in the range `0..999999999999`.
      */
-    Int picoseconds.get()
-        {
+    Int picoseconds.get() {
         return picos % PICOS_PER_SECOND;
-        }
+    }
 
 
     // ----- operators -----------------------------------------------------------------------------
 
-    @Op("+") TimeOfDay add(Duration duration)
-        {
+    @Op("+") TimeOfDay add(Duration duration) {
         UInt64 period = (duration.picoseconds % PICOS_PER_DAY).toUInt64();
-        if (period == 0)
-            {
+        if (period == 0) {
             return this;
-            }
+        }
 
         UInt64 sum = picos + period;
-        if (sum > PICOS_PER_DAY)
-            {
+        if (sum > PICOS_PER_DAY) {
             // check if this TimeOfDay is a leap second
-            if (picos > PICOS_PER_DAY)
-                {
+            if (picos > PICOS_PER_DAY) {
                 // this TimeOfDay is a leap second, so treat the result accordingly
-                if (sum > PICOS_PER_DAY + PICOS_PER_SECOND)
-                    {
+                if (sum > PICOS_PER_DAY + PICOS_PER_SECOND) {
                     sum -= PICOS_PER_DAY + PICOS_PER_SECOND;
-                    }
                 }
-            else
-                {
+            } else {
                 sum -= PICOS_PER_DAY;
-                }
             }
+        }
 
         return new TimeOfDay(sum);
-        }
+    }
 
-    @Op("-") TimeOfDay sub(Duration duration)
-        {
+    @Op("-") TimeOfDay sub(Duration duration) {
         UInt64 minuend    = this.picos;
         UInt64 subtrahend = (duration.picoseconds % PICOS_PER_DAY).toUInt64();
-        if (subtrahend > minuend)
-            {
+        if (subtrahend > minuend) {
             minuend += PICOS_PER_DAY;
-            }
-        return new TimeOfDay(minuend - subtrahend);
         }
+        return new TimeOfDay(minuend - subtrahend);
+    }
 
-    @Op("-") Duration sub(TimeOfDay timeOfDay)
-        {
+    @Op("-") Duration sub(TimeOfDay timeOfDay) {
         UInt64 picosStop  = this.picos;
         UInt64 picosStart = timeOfDay.picos;
 
-        if (picosStart > picosStop)
-            {
+        if (picosStart > picosStop) {
             // treat the time-of-day being subtracted as being from "yesterday"
             picosStop += PICOS_PER_DAY;
 
             // check for the possibility that "yesterday" had an obvious leap second
-            if (picosStart > PICOS_PER_DAY)
-                {
+            if (picosStart > PICOS_PER_DAY) {
                 picosStop += PICOS_PER_SECOND;
-                }
             }
-        return new Duration(picosStop - picosStart);
         }
+        return new Duration(picosStop - picosStart);
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -277,48 +243,42 @@ const TimeOfDay(UInt64 picos)
     /**
      * @return the [Duration] of time since midnight represented by this `TimeOfDay` object
      */
-    Duration toDuration()
-        {
+    Duration toDuration() {
         return new Duration(picos.toUInt128());
-        }
+    }
 
 
     // ----- Stringable interface ------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         Int fraction = picoseconds;
         return fraction == 0
                 ? 8
                 : 9 + Duration.picosFractionalLength(fraction);
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         Int hour = this.hour;
-        if (hour < 10)
-            {
+        if (hour < 10) {
             buf.add('0');
-            }
+        }
         hour.appendTo(buf);
         buf.add(':');
 
         Int minute = this.minute;
-        if (minute < 10)
-            {
+        if (minute < 10) {
             buf.add('0');
-            }
+        }
         minute.appendTo(buf);
         buf.add(':');
 
         Int second = this.second;
-        if (second < 10)
-            {
+        if (second < 10) {
             buf.add('0');
-            }
+        }
         second.appendTo(buf);
         return Duration.appendPicosFractional(buf, picoseconds);
-        }
     }
+}

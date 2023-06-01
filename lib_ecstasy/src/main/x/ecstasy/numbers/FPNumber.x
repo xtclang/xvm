@@ -2,8 +2,7 @@
  * An FPNumber is a Number that represents an floating point value.
  */
 @Abstract const FPNumber
-        extends Number
-    {
+        extends Number {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -22,10 +21,9 @@
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Range<UInt8> range()
-        {
+    static conditional Range<UInt8> range() {
         TODO("implement floating point range()");
-        }
+    }
 
 
     // ----- constructors --------------------------------------------------------------------------
@@ -37,10 +35,9 @@
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         super(bits);
-        }
+    }
 
     /**
      * Construct a floating point number from its network-portable representation.
@@ -49,10 +46,9 @@
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         super(bytes);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -69,10 +65,9 @@
      * and decimal floating point values. In the standard, the sign bit is referred to as _S_.
      */
     @Override
-    @RO Boolean negative.get()
-        {
+    @RO Boolean negative.get() {
         return bits[0].toBoolean();
-        }
+    }
 
     /**
      * IEEE 754 defines the _significand_ as _a component of a finite floating-point number
@@ -83,11 +78,10 @@
      * The value of the significand is specified as an `IntNumber` due to the potential for it
      * being quite large for certain floating point types.
      */
-     @RO IntNumber significand.get()
-        {
+     @RO IntNumber significand.get() {
         (_, IntNumber significand, _) = split();
         return significand;
-        }
+    }
 
     /**
      * The exponent of this floating point number.
@@ -102,11 +96,10 @@
      * The value of the exponent is specified as an `IntNumber` due to the potential for it being
      * quite large for certain floating point types.
      */
-    @RO IntNumber exponent.get()
-        {
+    @RO IntNumber exponent.get() {
         (_, _, IntNumber exponent) = split();
         return exponent;
-        }
+    }
 
     /**
      * The radix of the significand.
@@ -366,14 +359,12 @@
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    IntLiteral toIntLiteral(Rounding direction = TowardZero)
-        {
+    IntLiteral toIntLiteral(Rounding direction = TowardZero) {
         return round(direction).toIntN().toIntLiteral();
-        }
+    }
 
     @Override
-    FPLiteral toFPLiteral()
-        {
+    FPLiteral toFPLiteral() {
         return new FPLiteral(toString());
-        }
     }
+}

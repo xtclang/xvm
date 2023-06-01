@@ -6,8 +6,7 @@
  * An immutable object is considered to be a duplicate of itself; there is generally no benefit from
  * actually duplicating an immutable object.
  */
-interface Duplicable
-    {
+interface Duplicable {
     /**
      * Construct a new duplicate of this object. This new, duplicated copy is assumed to be a
      * _shallow copy_ of the original; a shallow copy will likely share references (to other
@@ -29,10 +28,9 @@ interface Duplicable
      *
      * @return a shallow copy of `this`
      */
-    Duplicable duplicate()
-        {
+    Duplicable duplicate() {
         return this.is(immutable)
                 ? this
                 : this.new(this);
-        }
     }
+}

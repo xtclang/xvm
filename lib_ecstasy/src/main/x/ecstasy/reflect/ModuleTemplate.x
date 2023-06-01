@@ -2,8 +2,7 @@
  * A ModuleTemplate is a representation of an Ecstasy `module`.
  */
 interface ModuleTemplate
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     /**
      * The fully qualified name of the module, such as "ecstasy.xtclang.org".
      */
@@ -22,25 +21,22 @@ interface ModuleTemplate
     @RO FileTemplate parent;
 
     @Override
-    @RO ModuleTemplate containingModule.get()
-        {
+    @RO ModuleTemplate containingModule.get() {
         return this;
-        }
+    }
 
     @Override
-    @RO String path.get()
-        {
+    @RO String path.get() {
         return qualifiedName + ':';
-        }
+    }
 
     @Override
-    @RO String displayName.get()
-        {
+    @RO String displayName.get() {
         ModuleTemplate mainModule = containingFile.mainModule;
         return mainModule.qualifiedName == this.qualifiedName
                 ? name
                 : qualifiedName;
-        }
+    }
 
     /**
      * Indicates whether this template has been "resolved", which means that it is ready to answer
@@ -52,15 +48,13 @@ interface ModuleTemplate
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return qualifiedName.size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         qualifiedName.appendTo(buf);
         return buf;
-        }
     }
+}

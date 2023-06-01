@@ -5,8 +5,7 @@
  * REVIEW this interface is for evaluation and discussion, and has not been finalized/approved
  */
 interface FilterableQueue<Element>
-        extends Queue<Element>
-    {
+        extends Queue<Element> {
     typedef function Boolean (Element) as Filter;
 
     /**
@@ -53,4 +52,4 @@ interface FilterableQueue<Element>
      */
     @Override
     Cancellable pipeAll(Consumer pipe, Filter? matches = Null);
-    }
+}

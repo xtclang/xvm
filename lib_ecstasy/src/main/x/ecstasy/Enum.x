@@ -4,8 +4,7 @@
  */
 interface Enum
         extends immutable Const
-        extends Sequential
-    {
+        extends Sequential {
     /**
      * The Enumeration that contains this Enum value.
      */
@@ -28,29 +27,25 @@ interface Enum
      * Obtain the Enum value that follows this Enum in the Enumeration.
      */
     @Override
-    conditional Enum! next()
-        {
-        if (ordinal + 1 < enumeration.count)
-            {
+    conditional Enum! next() {
+        if (ordinal + 1 < enumeration.count) {
             return True, enumeration.values[ordinal + 1];
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Obtain the Enum value that precedes this Enum in the Enumeration.
      */
     @Override
-    conditional Enum! prev()
-        {
-        if (ordinal > 0)
-            {
+    conditional Enum! prev() {
+        if (ordinal > 0) {
             return True, enumeration.values[ordinal - 1];
-            }
+        }
 
         return False;
-        }
+    }
 
 
     // ----- Orderable and Hashable ----------------------------------------------------------------
@@ -58,39 +53,34 @@ interface Enum
     /**
      * Calculate a hash code for the specified Enum value.
      */
-    static <CompileType extends Enum> Int64 hashCode(CompileType value)
-        {
+    static <CompileType extends Enum> Int64 hashCode(CompileType value) {
         return value.enumeration.hashCode() + value.ordinal.toInt64();
-        }
+    }
 
     /**
      * Compare two enumerated values that belong to the same enumeration purposes of ordering.
      */
-    static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2) {
         return value1.ordinal <=> value2.ordinal;
-        }
+    }
 
     /**
      * Compare two enumerated values that belong to the same enumeration for equality.
      */
-    static <CompileType extends Enum> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Enum> Boolean equals(CompileType value1, CompileType value2) {
         return value1.ordinal == value2.ordinal;
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return name.size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         return name.appendTo(buf);
-        }
     }
+}

@@ -10,8 +10,7 @@ import maps.KeyEntry;
 class HashMap<Key extends Hashable, Value>
         extends HasherMap<Key, Value>
         implements Replicable
-        incorporates CopyableMap.ReplicableCopier<Key, Value>
-    {
+        incorporates CopyableMap.ReplicableCopier<Key, Value> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -20,28 +19,25 @@ class HashMap<Key extends Hashable, Value>
      * @param initCapacity  the number of expected entries
      */
     @Override
-    construct(Int initCapacity = 0)
-        {
+    construct(Int initCapacity = 0) {
         assert Hasher<Key> hasher := Key.hashed() as $"Type \"{Key}\" doesn't have a natural hasher";
         construct HashMap(hasher, initCapacity);
-        }
+    }
 
     /**
      * Copy constructor.
      *
      * @param that  another map to copy the contents from when constructing this HashMap
      */
-    construct(Map<Key, Value> that)
-        {
+    construct(Map<Key, Value> that) {
         assert Hasher<Key> hasher := Key.hashed();
         construct HasherMap(hasher, that);
-        }
+    }
 
     @Override
-    construct(HashMap that)
-        {
+    construct(HashMap that) {
         super(that);
-        }
+    }
 
     /**
      * [HasherMap] virtual constructor: Construct the HashMap with the specified hasher and
@@ -51,8 +47,7 @@ class HashMap<Key extends Hashable, Value>
      * @param initCapacity  the number of expected entries
      */
     @Override
-    construct(Hasher<Key> hasher, Int initCapacity = 0)
-        {
+    construct(Hasher<Key> hasher, Int initCapacity = 0) {
         super(hasher, initCapacity);
-        }
     }
+}

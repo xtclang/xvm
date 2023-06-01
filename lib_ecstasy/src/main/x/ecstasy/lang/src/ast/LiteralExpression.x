@@ -7,23 +7,19 @@ import Lexer.Token;
  * Represents a literal value in the source code.
  */
 const LiteralExpression(Token value)
-        extends Expression
-    {
+        extends Expression {
     @Override
-    TextPosition start.get()
-        {
+    TextPosition start.get() {
         return value.start;
-        }
-
-    @Override
-    TextPosition end.get()
-        {
-        return value.end;
-        }
-
-    @Override
-    String toString()
-        {
-        return value.toString();
-        }
     }
+
+    @Override
+    TextPosition end.get() {
+        return value.end;
+    }
+
+    @Override
+    String toString() {
+        return value.toString();
+    }
+}

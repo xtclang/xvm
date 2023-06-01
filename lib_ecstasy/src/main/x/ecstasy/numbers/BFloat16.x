@@ -13,8 +13,7 @@
  */
 const BFloat16
         extends BinaryFPNumber
-        default(0.0)
-    {
+        default(0.0) {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -25,11 +24,10 @@ const BFloat16
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     @Override
-    construct(Bit[] bits)
-        {
+    construct(Bit[] bits) {
         assert:bounds bits.size == 16;
         super(bits);
-        }
+    }
 
     /**
      * Construct a 16-bit "brain" floating point number from its network-portable representation.
@@ -38,11 +36,10 @@ const BFloat16
      *               as they would appear on the wire or in a file
      */
     @Override
-    construct(Byte[] bytes)
-        {
+    construct(Byte[] bytes) {
         assert:bounds bytes.size == 2;
         super(bytes);
-        }
+    }
 
     /**
      * Construct a 16-bit "brain" floating point number from its `String` representation.
@@ -50,10 +47,9 @@ const BFloat16
      * @param text  a floating point number, in text format
      */
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         construct BFloat16(new FPLiteral(text).toBFloat16().bits);
-        }
+    }
 
     /**
      * Construct the floating point number from its constituent pieces: A sign bit, a significand,
@@ -63,13 +59,11 @@ const BFloat16
      * @param significand  the significand value, in the range `0` to TODO
      * @param exponent     the exponent value, in the range [EMIN] to [EMAX]
      */
-    construct(Boolean negative, Int significand, Int exponent)
-        {
-        if (significand == 0)
-            {
+    construct(Boolean negative, Int significand, Int exponent) {
+        if (significand == 0) {
             construct BFloat16(negative ? BFloat16:-0.bits : BFloat16:0.bits);
             return;
-            }
+        }
 
         // note that this allows one more significant bit than can be stored, because IEEE754 uses
         // an implicit leading '1' bit (for non-zero, and non-sub-normal values) that is not encoded
@@ -83,88 +77,76 @@ const BFloat16
         Bit[] expBits  = (exponent + BIAS).toBitArray()[64-EXP_BITS ..< 64];
         Bit[] sigBits  = (significand.toInt16() << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS ..< 64];
         construct BFloat16(signBits + expBits + sigBits);
-        }
+    }
 
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength()
-        {
+    static conditional Int fixedBitLength() {
         return True, 16;
-        }
+    }
 
     @Override
-    static BFloat16 zero()
-        {
+    static BFloat16 zero() {
         return 0.0;
-        }
+    }
 
     @Override
-    static BFloat16 one()
-        {
+    static BFloat16 one() {
         return 1.0;
-        }
+    }
 
 
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override
-    Signum sign.get()
-        {
+    Signum sign.get() {
         TODO need to think this through carefully because there is a sign bit and both +/-0
-        }
+    }
 
 
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op BFloat16 add(BFloat16 n)
-        {
+    @Op BFloat16 add(BFloat16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op BFloat16 sub(BFloat16 n)
-        {
+    @Op BFloat16 sub(BFloat16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op BFloat16 mul(BFloat16 n)
-        {
+    @Op BFloat16 mul(BFloat16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op BFloat16 div(BFloat16 n)
-        {
+    @Op BFloat16 div(BFloat16 n) {
         TODO
-        }
+    }
 
     @Override
-    @Op BFloat16 mod(BFloat16 n)
-        {
+    @Op BFloat16 mod(BFloat16 n) {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 abs()
-        {
+    BFloat16 abs() {
         return this < 0 ? -this : this;
-        }
+    }
 
     @Override
-    @Op BFloat16 neg()
-        {
+    @Op BFloat16 neg() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 pow(BFloat16 n)
-        {
+    BFloat16 pow(BFloat16 n) {
         TODO
-        }
+    }
 
 
     // ----- FPNumber properties -------------------------------------------------------------------
@@ -195,205 +177,172 @@ const BFloat16
     static Int BIAS     = EMAX;
 
     @Override
-    Int emax.get()
-        {
+    Int emax.get() {
         return EMAX;
-        }
+    }
 
     @Override
-    Int emin.get()
-        {
+    Int emin.get() {
         return EMIN;
-        }
+    }
 
     @Override
-    Int bias.get()
-        {
+    Int bias.get() {
         return BIAS;
-        }
+    }
 
     @Override
-    Int significandBitLength.get()
-        {
+    Int significandBitLength.get() {
         return SIG_BITS;
-        }
+    }
 
     @Override
-    Int exponentBitLength.get()
-        {
+    Int exponentBitLength.get() {
         return EXP_BITS;
-        }
+    }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean negative, Int significand, Int exponent) split()
-        {
+    (Boolean negative, Int significand, Int exponent) split() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 round(Rounding direction = TiesToAway)
-        {
+    BFloat16 round(Rounding direction = TiesToAway) {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 floor()
-        {
+    BFloat16 floor() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 ceil()
-        {
+    BFloat16 ceil() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 exp()
-        {
+    BFloat16 exp() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 scaleByPow(Int n)
-        {
+    BFloat16 scaleByPow(Int n) {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 log()
-        {
+    BFloat16 log() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 log2()
-        {
+    BFloat16 log2() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 log10()
-        {
+    BFloat16 log10() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 sqrt()
-        {
+    BFloat16 sqrt() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 cbrt()
-        {
+    BFloat16 cbrt() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 sin()
-        {
+    BFloat16 sin() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 cos()
-        {
+    BFloat16 cos() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 tan()
-        {
+    BFloat16 tan() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 asin()
-        {
+    BFloat16 asin() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 acos()
-        {
+    BFloat16 acos() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 atan()
-        {
+    BFloat16 atan() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 atan2(BFloat16 y)
-        {
+    BFloat16 atan2(BFloat16 y) {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 sinh()
-        {
+    BFloat16 sinh() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 cosh()
-        {
+    BFloat16 cosh() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 tanh()
-        {
+    BFloat16 tanh() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 asinh()
-        {
+    BFloat16 asinh() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 acosh()
-        {
+    BFloat16 acosh() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 atanh()
-        {
+    BFloat16 atanh() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 deg2rad()
-        {
+    BFloat16 deg2rad() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 rad2deg()
-        {
+    BFloat16 rad2deg() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 nextUp()
-        {
+    BFloat16 nextUp() {
         TODO
-        }
+    }
 
     @Override
-    BFloat16 nextDown()
-        {
+    BFloat16 nextDown() {
         TODO
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -414,10 +363,9 @@ const BFloat16
     Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero)
-        {
+    IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
-        }
+    }
 
     @Override
     UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
@@ -435,10 +383,9 @@ const BFloat16
     UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero)
-        {
+    UIntN toUIntN(Rounding direction = TowardZero) {
         return round(direction).toUIntN();
-        }
+    }
 
     @Override
     Float8e4 toFloat8e4();
@@ -447,10 +394,9 @@ const BFloat16
     Float8e5 toFloat8e5();
 
     @Override
-    BFloat16 toBFloat16()
-        {
+    BFloat16 toBFloat16() {
         return this;
-        }
+    }
 
     @Override
     Float16 toFloat16();
@@ -469,10 +415,9 @@ const BFloat16
 
     @Auto
     @Override
-    FloatN toFloatN()
-        {
+    FloatN toFloatN() {
         return new FloatN(bits);
-        }
+    }
 
     @Auto
     @Override
@@ -488,8 +433,7 @@ const BFloat16
 
     @Auto
     @Override
-    DecN toDecN()
-        {
+    DecN toDecN() {
         return toFPLiteral().toDecN();
-        }
     }
+}

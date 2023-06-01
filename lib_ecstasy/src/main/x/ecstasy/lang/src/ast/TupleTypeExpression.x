@@ -7,24 +7,21 @@ import io.TextPosition;
 const TupleTypeExpression(TypeExpression[]       types,
                           TextPosition           start,
                           TextPosition           end)
-        extends TypeExpression
-    {
+        extends TypeExpression {
+
     @Override
-    String toString()
-        {
+    String toString() {
         StringBuffer buf = new StringBuffer();
 
         buf.add('<');
-        Loop: for (TypeExpression type : types)
-            {
-            if (!Loop.first)
-                {
+        Loop: for (TypeExpression type : types) {
+            if (!Loop.first) {
                 buf.add(',').add(' ');
-                }
-            type.appendTo(buf);
             }
+            type.appendTo(buf);
+        }
         buf.add('>');
 
         return buf.toString();
-        }
     }
+}

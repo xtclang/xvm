@@ -67,8 +67,7 @@ class Array<Element>
         incorporates conditional arrays.BitwiseArray<Element extends @Bitwise IntNumber>
         incorporates conditional arrays.FPNumberArray<Element extends FPNumber>
         incorporates conditional ArrayOrderer<Element extends Orderable>
-        incorporates conditional ArrayHasher<Element extends Hashable>
-    {
+        incorporates conditional ArrayHasher<Element extends Hashable> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -89,11 +88,10 @@ class Array<Element>
      *                  known allows the Array to pre-size itself, which can reduce the inefficiency
      *                  related to resizing
      */
-    construct(Int capacity = 0)
-        {
+    construct(Int capacity = 0) {
         assert capacity >= 0;
         construct Array(new Element[](capacity), Mutable);
-        }
+    }
 
     /**
      * Construct a fixed size array with the specified size and initial value. An initial value is
@@ -102,10 +100,9 @@ class Array<Element>
      * @param size    the size of the fixed size array
      * @param supply  the value or the supply function for initializing the elements of the array
      */
-    construct(Int size, Element | function Element (Int) supply)
-        {
+    construct(Int size, Element | function Element (Int) supply) {
         construct Array(new Element[size](supply), Fixed);
-        }
+    }
 
     /**
      * Construct an array of the specified mutability, and optionally initialized with the specified
@@ -114,64 +111,49 @@ class Array<Element>
      * @param mutability  the mutability setting for the array
      * @param elements    the elements to use to initialize the contents of the array
      */
-    construct(Mutability mutability, Iterable<Element> elements = [])
-        {
+    construct(Mutability mutability, Iterable<Element> elements = []) {
         ArrayDelegate<Element> delegate;
         Int size = elements.size;
-        if (mutability == Mutable)
-            {
+        if (mutability == Mutable) {
             delegate = new Element[](size).addAll(elements);
-            }
-        else if (size == 0)
-            {
+        } else if (size == 0) {
             delegate = new Element[0](_ -> assert);
-            }
-        else
-            {
+        } else {
             Iterator<Element> iter = elements.iterator();
-            if (mutability == Constant)
-                {
+            if (mutability == Constant) {
                 iter = iter.map(e -> frozen(e));
-                }
+            }
             delegate = new Element[elements.size](_ -> iter.take());
             assert !iter.next();
-            }
+        }
 
         construct Array(delegate, mutability);
-        }
+    }
 
     @Override
-    construct(Array that)
-        {
-        if (that.inPlace && !that.is(immutable))
-            {
+    construct(Array that) {
+        if (that.inPlace && !that.is(immutable)) {
             // make a copy of the underlying data for the new array
             construct Array(that.mutability, that);
-            }
-        else
-            {
+        } else {
             // use the existing underlying data for the new array
             construct Array(that.delegate, that.mutability);
-            }
         }
+    }
 
     /**
      * Construct an array that delegates to some other data structure (such as an array).
      *
      * @param delegate  an ArrayDelegate object that allows this array to delegate its functionality
      */
-    protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
-        {
+    protected construct(ArrayDelegate<Element> delegate, Mutability mutability) {
         this.delegate   = delegate;
         this.mutability = mutability;
-        }
-    finally
-        {
-        if (mutability == Constant)
-            {
+    } finally {
+        if (mutability == Constant) {
             makeImmutable();
-            }
         }
+    }
 
 
     // ----- ArrayDelegate -------------------------------------------------------------------------
@@ -181,8 +163,7 @@ class Array<Element>
      * representation of some other structure (such as another array).
      */
     private static interface ArrayDelegate<Element>
-            extends Duplicable
-        {
+            extends Duplicable {
         /**
          * The ArrayDelegate behaves in the manner defined by Array [Mutability].
          */
@@ -245,7 +226,7 @@ class Array<Element>
          *         represents
          */
         ArrayDelegate reify(Mutability? mutability = Null);
-        }
+    }
 
     /**
      * If the array is simply a representation of some other structure (such as another array), then
@@ -259,8 +240,7 @@ class Array<Element>
     /**
      * The levels of mutability of an array.
      */
-    enum Mutability
-        {
+    enum Mutability {
         /*
          * A _Constant_ array structure is also a persistent data structure, but additionally
          * it must be immutable, and all of its contents must be immutable.
@@ -297,7 +277,7 @@ class Array<Element>
          * may be added, removed, and replaced in-place.
          */
         Mutable
-        }
+    }
 
     /**
      * The Mutability of the array structure.
@@ -309,12 +289,11 @@ class Array<Element>
     // ----- Duplicable interface ------------------------------------------------------------------
 
     @Override
-    Array duplicate()
-        {
+    Array duplicate() {
         return this.inPlace && !this.is(immutable)
                 ? this.new(this)
                 : this;
-        }
+    }
 
 
     // ----- Freezable interface -------------------------------------------------------------------
@@ -333,49 +312,41 @@ class Array<Element>
      *         {@link Freezable}
      */
     @Override
-    immutable Array freeze(Boolean inPlace = False)
-        {
-        if (&this.isImmutable)
-            {
+    immutable Array freeze(Boolean inPlace = False) {
+        if (&this.isImmutable) {
             return this.as(immutable Array);
-            }
+        }
 
-        if (delegate.mutability == Constant)
-            {
+        if (delegate.mutability == Constant) {
             // the underlying delegate is already frozen
             assert &delegate.isImmutable;
             mutability = Constant;
             return this.makeImmutable();
-            }
+        }
 
-        if (!inPlace)
-            {
+        if (!inPlace) {
             return new Array(Constant, this).as(immutable Array);
-            }
+        }
 
         // all elements must be immutable or Freezable (or exempt, i.e. a service); do not short
         // circuit this check, since we want to fail *before* we start freezing anything if the
         // array contains *any* non-freezable elements
         Boolean convert = False;
-        loop: for (Element element : this)
-            {
+        loop: for (Element element : this) {
             convert |= requiresFreeze(element);
-            }
+        }
 
-        if (convert)
-            {
-            loop: for (Element element : this)
-                {
-                if (Element+Freezable notYetFrozen := requiresFreeze(element))
-                    {
+        if (convert) {
+            loop: for (Element element : this) {
+                if (Element+Freezable notYetFrozen := requiresFreeze(element)) {
                     this[loop.count] = notYetFrozen.freeze();
-                    }
                 }
             }
+        }
 
         mutability = Constant;
         return makeImmutable();
-        }
+    }
 
 
     // ----- Array interface -----------------------------------------------------------------------
@@ -384,27 +355,23 @@ class Array<Element>
      * The capacity of an array is the amount that the array can hold without resizing.
      */
     @Override
-    Int capacity
-        {
+    Int capacity {
         @Override
-        Int get()
-            {
+        Int get() {
             return delegate.capacity;
-            }
+        }
 
         @Override
-        void set(Int newCap)
-            {
+        void set(Int newCap) {
             Int oldCap = get();
-            if (newCap == oldCap)
-                {
+            if (newCap == oldCap) {
                 return;
-                }
+            }
 
             assert newCap >= 0 && newCap >= size && mutability == Mutable;
             delegate.capacity = newCap;
-            }
         }
+    }
 
     /**
      * Fill the specified elements of this array with the specified value.
@@ -412,485 +379,414 @@ class Array<Element>
      * @param value     the value to use to fill the array
      * @param interval  an optional interval of element indexes, defaulting to the entire array
      */
-    Array fill(Element value, Interval<Int>? interval = Null)
-        {
+    Array fill(Element value, Interval<Int>? interval = Null) {
         Interval<Int> entire = 0 ..< size;
-        if (interval == Null)
-            {
-            if (empty)
-                {
+        if (interval == Null) {
+            if (empty) {
                 return this;
-                }
-            interval = entire;
             }
-        else
-            {
+            interval = entire;
+        } else {
             assert interval.effectiveLowerBound >= 0 &&
                     (entire.covers(interval) || mutability != Fixed && interval.adjoins(entire));
-            }
+        }
 
-        if (inPlace)
-            {
-            for (Int i : interval)
-                {
+        if (inPlace) {
+            for (Int i : interval) {
                 this[i] = value;
-                }
-            return this;
             }
-        else
-            {
+            return this;
+        } else {
             Int   size   = this.size.notLessThan(interval.effectiveUpperBound + 1);
             Array result = new Element[size](i -> (interval.contains(i) ? value : this[i]));
             return mutability == Constant
                     ? result.freeze(True)
                     : result.toArray(mutability, True);
-            }
         }
+    }
 
 
     // ----- UniformIndexed interface --------------------------------------------------------------
 
     @Override
     @Op("[]")
-    Element getElement(Int index)
-        {
+    Element getElement(Int index) {
         return delegate.elementAt(index).get();
-        }
+    }
 
     @Override
     @Op("[]=")
-    void setElement(Int index, Element value)
-        {
-        if (!inPlace)
-            {
+    void setElement(Int index, Element value) {
+        if (!inPlace) {
             throw new ReadOnly();
-            }
+        }
 
         delegate.elementAt(index).set(value);
-        }
+    }
 
     @Override
-    Var<Element> elementAt(Int index)
-        {
+    Var<Element> elementAt(Int index) {
         return delegate.elementAt(index);
-        }
+    }
 
 
     // ----- Collection interface ------------------------------------------------------------------
 
     @Override
-    Boolean inPlace.get()
-        {
-        return switch (mutability)
-            {
+    Boolean inPlace.get() {
+        return switch (mutability) {
             case Mutable:
             case Fixed:      True;
 
             case Persistent:
             case Constant:   False;
-            };
-        }
+        };
+    }
 
     @Override
-    Int size.get()
-        {
+    Int size.get() {
         return delegate.size;
-        }
+    }
 
     @Override
-    Boolean contains(Element value)
-        {
+    Boolean contains(Element value) {
         // use the default implementation from the List interface
         return indexOf(value);
-        }
+    }
 
     @Override
     @Op("+")
-    Array add(Element element)
-        {
-        switch (mutability)
-            {
-            case Mutable:
-                delegate.insert(size, element);
-                return this;
+    Array add(Element element) {
+        switch (mutability) {
+        case Mutable:
+            delegate.insert(size, element);
+            return this;
 
-            case Fixed:
-                throw new ReadOnly("Fixed size array");
+        case Fixed:
+            throw new ReadOnly("Fixed size array");
 
-            case Persistent:
-            case Constant:
-                Element[] result = new Element[size + 1](i -> (i < size ? this[i] : element));
-                return mutability == Persistent
-                        ? result.toArray(Persistent, True)
-                        : result.freeze(True);
-            }
+        case Persistent:
+        case Constant:
+            Element[] result = new Element[size + 1](i -> (i < size ? this[i] : element));
+            return mutability == Persistent
+                    ? result.toArray(Persistent, True)
+                    : result.freeze(True);
         }
+    }
 
     @Override
     @Op("+")
-    Array addAll(Iterable<Element> values)
-        {
-        switch (mutability)
-            {
-            case Mutable:
-                for (Element value : values)
-                    {
-                    add(value);
-                    }
-                return this;
-
-            case Fixed:
-                throw new ReadOnly("Fixed size array");
-
-            case Persistent:
-            case Constant:
-                Iterator<Element> iter = values.iterator();
-                function Element (Int) supply = i ->
-                    {
-                    if (i < size)
-                        {
-                        return this[i];
-                        }
-                    assert Element value := iter.next();
-                    return value;
-                    };
-                Element[] result = new Element[this.size + values.size](supply);
-                return mutability == Persistent
-                        ? result.toArray(Persistent, True)
-                        : result.freeze(True);
+    Array addAll(Iterable<Element> values) {
+        switch (mutability) {
+        case Mutable:
+            for (Element value : values) {
+                add(value);
             }
-        }
+            return this;
 
-    @Override
-    (Array, Int) removeAll(function Boolean (Element) shouldRemove)
-        {
-        Int[]? indexes = Null;
-        loop: for (Element value : this)
-            {
-            if (shouldRemove(value))
-                {
-                indexes = (indexes ?: new Int[]) + loop.count;
+        case Fixed:
+            throw new ReadOnly("Fixed size array");
+
+        case Persistent:
+        case Constant:
+            Iterator<Element> iter = values.iterator();
+            function Element (Int) supply = i -> {
+                if (i < size) {
+                    return this[i];
                 }
-            }
+                assert Element value := iter.next();
+                return value;
+            };
 
-        if (indexes == Null)
-            {
+            Element[] result = new Element[this.size + values.size](supply);
+            return mutability == Persistent
+                    ? result.toArray(Persistent, True)
+                    : result.freeze(True);
+        }
+    }
+
+    @Override
+    (Array, Int) removeAll(function Boolean (Element) shouldRemove) {
+        Int[]? indexes = Null;
+        loop: for (Element value : this) {
+            if (shouldRemove(value)) {
+                indexes = (indexes ?: new Int[]) + loop.count;
+            }
+        }
+
+        if (indexes == Null) {
             return this, 0;
-            }
+        }
 
-        if (mutability == Fixed)
-            {
+        if (mutability == Fixed) {
             throw new ReadOnly("element removal unsupported");
-            }
+        }
 
-        if (indexes.size == 1)
-            {
+        if (indexes.size == 1) {
             return delete(indexes[0]), 1;
-            }
+        }
 
         // copy everything except the "shouldRemove" elements to a new array
         Int       newSize      = size - indexes.size;
         Element[] result       = new Element[](newSize);
         Int       delete       = indexes[0];
         Int       deletedCount = 0;
-        for (Int index = 0; index < size; ++index)
-            {
-            if (index == delete)
-                {
+        for (Int index = 0; index < size; ++index) {
+            if (index == delete) {
                 // obtain the next element index to delete
                 delete = ++deletedCount < indexes.size ? indexes[deletedCount] : MaxValue;
-                }
-            else
-                {
+            } else {
                 result += this[index];
-                }
-            }
-
-        switch (mutability)
-            {
-            case Mutable:
-                deleteAll(newSize ..< size);
-                for (Int i : 0 ..< newSize)
-                    {
-                    this[i] = result[i];
-                    }
-                return this, deletedCount;
-
-            case Persistent:
-                return result.toArray(Persistent, True), deletedCount;
-
-            case Constant:
-                return result.freeze(True), deletedCount;
-
-            default: assert;
             }
         }
 
+        switch (mutability) {
+        case Mutable:
+            deleteAll(newSize ..< size);
+            for (Int i : 0 ..< newSize) {
+                this[i] = result[i];
+            }
+            return this, deletedCount;
+
+        case Persistent:
+            return result.toArray(Persistent, True), deletedCount;
+
+        case Constant:
+            return result.freeze(True), deletedCount;
+
+        default: assert;
+        }
+    }
+
     @Override
-    Array clear()
-        {
-        if (empty)
-            {
+    Array clear() {
+        if (empty) {
             return this;
-            }
-
-        switch (mutability)
-            {
-            case Mutable:
-                delegate = new Element[];
-                return this;
-
-            case Fixed:
-                throw new ReadOnly("Fixed size array");
-
-            case Persistent:
-            case Constant:
-                return new Array<Element>(mutability, []);
-            }
         }
 
+        switch (mutability) {
+        case Mutable:
+            delegate = new Element[];
+            return this;
+
+        case Fixed:
+            throw new ReadOnly("Fixed size array");
+
+        case Persistent:
+        case Constant:
+            return new Array<Element>(mutability, []);
+        }
+    }
+
     @Override
-    Array sorted(Orderer? orderer = Null, Boolean inPlace = False)
-        {
+    Array sorted(Orderer? orderer = Null, Boolean inPlace = False) {
         return super(orderer, inPlace).as(Array);
-        }
+    }
 
     @Override
-    Array toArray(Mutability? mutability = Null, Boolean inPlace = False)
-        {
-        if (mutability == Null || mutability == this.mutability)
-            {
+    Array toArray(Mutability? mutability = Null, Boolean inPlace = False) {
+        if (mutability == Null || mutability == this.mutability) {
             return this;
-            }
+        }
 
-        if (mutability == Constant)
-            {
+        if (mutability == Constant) {
             return freeze(inPlace);
-            }
+        }
 
-        if (!inPlace || mutability > this.mutability)
-            {
+        if (!inPlace || mutability > this.mutability) {
             return new Array(mutability, this);  // return a copy that has the desired mutability
-            }
+        }
 
         this.mutability = mutability;
         return this;
-        }
+    }
 
     @Override
-    Array reify(Mutability? mutability = Null)
-        {
+    Array reify(Mutability? mutability = Null) {
         ArrayDelegate<Element> reifiedDelegate = delegate.reify(mutability);
         return &delegate == &reifiedDelegate
                 ? this
                 : new Array<Element>(reifiedDelegate, mutability ?: this.mutability);
-        }
+    }
 
 
     // ----- List interface ------------------------------------------------------------------------
 
     @Override
     Array filterIndexed(function Boolean(Element, Int) match,
-                        Array?                         dest = Null)
-       {
+                        Array?                         dest = Null) {
        return super(match, dest).as(Array);
-       }
+    }
 
     @Override
-    Array reversed(Boolean inPlace = False)
-        {
+    Array reversed(Boolean inPlace = False) {
         Array result = super(inPlace).as(Array);
         return result.mutability == this.mutability
                 ? result
                 : result.toArray(this.mutability, inPlace = True);
-        }
+    }
 
     @Override
-    Array shuffled(Boolean inPlace = False)
-        {
+    Array shuffled(Boolean inPlace = False) {
         return super(inPlace).as(Array);
-        }
+    }
 
     @Override
-    Array replace(Int index, Element value)
-        {
-        if (inPlace)
-            {
+    Array replace(Int index, Element value) {
+        if (inPlace) {
             this[index] = value;
             return this;
-            }
-        else
-            {
+        } else {
             Element[] result = new Element[size](i -> (i == index ? value : this[i]));
             return mutability == Persistent
                     ? result.toArray(Persistent, True)
                     : result.freeze(True);
-            }
         }
+    }
 
     @Override
-    Array insert(Int index, Element value)
-        {
-        if (index == size)
-            {
+    Array insert(Int index, Element value) {
+        if (index == size) {
             return this + value;
-            }
+        }
 
         assert:bounds index >= 0 && index < size;
 
-        switch (mutability)
-            {
-            case Mutable:
-                val newDelegate = delegate.insert(index, value);
-                assert &newDelegate == &delegate;
-                return this;
+        switch (mutability) {
+        case Mutable:
+            val newDelegate = delegate.insert(index, value);
+            assert &newDelegate == &delegate;
+            return this;
 
-            case Fixed:
-                throw new ReadOnly("Fixed size array");
+        case Fixed:
+            throw new ReadOnly("Fixed size array");
 
-            case Persistent:
-            case Constant:
-                val newDelegate = delegate.insert(index, value);
-                assert &newDelegate != &delegate;
-                return new Array<Element>(newDelegate, mutability);
-            }
+        case Persistent:
+        case Constant:
+            val newDelegate = delegate.insert(index, value);
+            assert &newDelegate != &delegate;
+            return new Array<Element>(newDelegate, mutability);
         }
+    }
 
     @Override
-    Array insertAll(Int index, Iterable<Element> values)
-        {
+    Array insertAll(Int index, Iterable<Element> values) {
         Int addSize = values.size;
-        if (addSize == 0)
-            {
+        if (addSize == 0) {
             return this;
-            }
+        }
 
-        if (addSize == 1)
-            {
+        if (addSize == 1) {
             return insert(index, values.iterator().take());
-            }
+        }
 
         Int oldSize = size;
-        if (index == oldSize)
-            {
+        if (index == oldSize) {
             return this + values;
-            }
+        }
 
         assert:bounds index >= 0 && index < oldSize;
 
         Int newSize = oldSize + addSize;
         Element[] newDelegate = new Element[](newSize);
-        for (Int from : 0 ..< index)
-            {
+        for (Int from : 0 ..< index) {
             newDelegate.insert(from, this[from]);
-            }
+        }
 
         Int to = index;
-        for (Element v : (mutability == Constant ? values.toArray(Constant) : values))
-            {
+        for (Element v : (mutability == Constant ? values.toArray(Constant) : values)) {
             newDelegate.insert(to++, v);
-            }
-
-        for (Int from : index ..< oldSize)
-            {
-            newDelegate.insert(to++, this[from]);
-            }
-
-        switch (mutability)
-            {
-            case Mutable:
-                delegate = newDelegate;
-                return this;
-
-            case Fixed:
-                throw new ReadOnly("Fixed size array");
-
-            case Persistent:
-            case Constant:
-                return new Array<Element>(newDelegate.toArray(mutability), mutability);
-            }
         }
 
+        for (Int from : index ..< oldSize) {
+            newDelegate.insert(to++, this[from]);
+        }
+
+        switch (mutability) {
+        case Mutable:
+            delegate = newDelegate;
+            return this;
+
+        case Fixed:
+            throw new ReadOnly("Fixed size array");
+
+        case Persistent:
+        case Constant:
+            return new Array<Element>(newDelegate.toArray(mutability), mutability);
+        }
+    }
+
     @Override
-    Array delete(Int index)
-        {
+    Array delete(Int index) {
         assert:bounds index >= 0 && index < size;
 
-        switch (mutability)
-            {
-            case Mutable:
-                val newDelegate = delegate.delete(index);
-                assert &newDelegate == &delegate;
-                return this;
+        switch (mutability) {
+        case Mutable:
+            val newDelegate = delegate.delete(index);
+            assert &newDelegate == &delegate;
+            return this;
 
-            case Fixed:
-                throw new ReadOnly("Fixed size array");
+        case Fixed:
+            throw new ReadOnly("Fixed size array");
 
-            case Persistent:
-            case Constant:
-                val newDelegate = delegate.delete(index);
-                assert &newDelegate != &delegate;
-                return new Array<Element>(newDelegate, mutability);
-            }
+        case Persistent:
+        case Constant:
+            val newDelegate = delegate.delete(index);
+            assert &newDelegate != &delegate;
+            return new Array<Element>(newDelegate, mutability);
         }
+    }
 
     @Override
-    Array deleteAll(Interval<Int> indexes)
-        {
+    Array deleteAll(Interval<Int> indexes) {
         Int lo = indexes.effectiveLowerBound;
         Int hi = indexes.effectiveUpperBound;
-        switch (lo <=> hi)
-            {
-            case Lesser:
-                break;
+        switch (lo <=> hi) {
+        case Lesser:
+            break;
 
-            case Equal:
-                return delete(lo);
+        case Equal:
+            return delete(lo);
 
-            case Greater:
-                // e.g. a range like [3..3)
-                return this;
-            }
+        case Greater:
+            // e.g. a range like [3..3)
+            return this;
+        }
 
         Int size = size;
         assert:bounds 0 <= lo < hi < size;
 
         Int removing = hi - lo + 1;
-        if (removing == size)
-            {
+        if (removing == size) {
             return clear();
-            }
-
-        switch (mutability)
-            {
-            case Mutable:
-                val newDelegate = new Element[];
-                if (lo > 0)
-                    {
-                    newDelegate += this[0 ..< lo];
-                    }
-                if (hi+1 < size)
-                    {
-                    newDelegate += this[hi+1 ..< size];
-                    }
-                delegate = newDelegate;
-                return this;
-
-            case Fixed:
-                throw new ReadOnly("Fixed size array");
-
-            case Persistent:
-            case Constant:
-                Element[] result = new Element[size](i -> this[i < lo ? i : i+removing]);
-                return mutability == Persistent
-                        ? result.toArray(Persistent, True)
-                        : result.freeze(True);
-            }
         }
 
+        switch (mutability) {
+        case Mutable:
+            val newDelegate = new Element[];
+            if (lo > 0) {
+                newDelegate += this[0 ..< lo];
+            }
+            if (hi+1 < size) {
+                newDelegate += this[hi+1 ..< size];
+            }
+            delegate = newDelegate;
+            return this;
+
+        case Fixed:
+            throw new ReadOnly("Fixed size array");
+
+        case Persistent:
+        case Constant:
+            Element[] result = new Element[size](i -> this[i < lo ? i : i+removing]);
+            return mutability == Persistent
+                    ? result.toArray(Persistent, True)
+                    : result.freeze(True);
+        }
+    }
+
     @Override
-    @Op("[..]") Array slice(Range<Int> indexes)
-        {
+    @Op("[..]") Array slice(Range<Int> indexes) {
         ArrayDelegate<Element> slice = indexes.effectiveFirst == 0 && indexes.size == this.size
                 ? this
                 : new SlicingDelegate<Element>(delegate, indexes);
@@ -898,78 +794,65 @@ class Array<Element>
         return new Array(slice, Fixed);
 
         static class SlicingDelegate<Element>(ArrayDelegate<Element> unsliced, Range<Int> indexes)
-                implements ArrayDelegate<Element>
-            {
+                implements ArrayDelegate<Element> {
             @Override
-            construct(SlicingDelegate that)
-                {
+            construct(SlicingDelegate that) {
                 // we're not actually copying any data here, since this is just a view on an
                 // underlying array
                 construct SlicingDelegate(that.unsliced, that.indexes);
-                }
+            }
 
             @Override
-            SlicingDelegate duplicate()
-                {
+            SlicingDelegate duplicate() {
                 return this;
-                }
+            }
 
             @Override
-            Mutability mutability.get()
-                {
+            Mutability mutability.get() {
                 Mutability underlying = unsliced.mutability;
                 return underlying == Mutable ? Fixed : underlying;
-                }
+            }
 
             @Override
-            Int capacity
-                {
+            Int capacity {
                 @Override
-                Int get()
-                    {
+                Int get() {
                     return size;
-                    }
+                }
 
                 @Override
-                void set(Int newCapacity)
-                    {
-                    if (newCapacity != get())
-                        {
+                void set(Int newCapacity) {
+                    if (newCapacity != get()) {
                         throw new ReadOnly();
-                        }
                     }
                 }
+            }
 
             @Override
-            Int size.get()
-                {
+            Int size.get() {
                 return indexes.size;
-                }
+            }
 
             @Override
-            Var<Element> elementAt(Int index)
-                {
+            Var<Element> elementAt(Int index) {
                 return unsliced.elementAt(translateIndex(index));
-                }
+            }
 
             @Override
-            Array<Element> insert(Int index, Element value)
-                {
+            Array<Element> insert(Int index, Element value) {
                 throw new ReadOnly();
-                }
+            }
 
             @Override
-            Array<Element> delete(Int index)
-                {
+            Array<Element> delete(Int index) {
                 throw new ReadOnly();
-                }
+            }
 
             @Override
-            Array<Element> reify(Mutability? mutability = Null)
-                {
+            Array<Element> reify(Mutability? mutability = Null) {
                 Element[] reified = new Element[size](i -> elementAt(i).get());
                 return new Array<Element>(reified, mutability ?: this.mutability);
-                }
+            }
 
             /**
              * Translate from an index into a slice, into an index into the underlying array.
@@ -978,15 +861,14 @@ class Array<Element>
              *
              * @return the corresponding index into the underlying array
              */
-            private Int translateIndex(Int index)
-                {
+            private Int translateIndex(Int index) {
                 assert:bounds index >= 0 && index < indexes.size;
                 return indexes.descending
                         ? indexes.effectiveUpperBound - index
                         : indexes.effectiveLowerBound + index;
-                }
             }
         }
+    }
 
 
     // ----- Comparable ----------------------------------------------------------------------------
@@ -997,69 +879,58 @@ class Array<Element>
      * @return True iff the arrays have the same size, and for each index _i_, the element at that
      *         index from each array is equal
      */
-    static <CompileType extends Array> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends Array> Boolean equals(CompileType value1, CompileType value2) {
         Int size = value1.size;
-        if (value2.size != size)
-            {
+        if (value2.size != size) {
             return False;
-            }
+        }
 
-        for (Int i : 0 ..< size)
-            {
-            if (value1[i] != value2[i])
-                {
+        for (Int i : 0 ..< size) {
+            if (value1[i] != value2[i]) {
                 return False;
-                }
             }
+        }
 
         return True;
-        }
+    }
 
 
     // ----- Orderable mixin -----------------------------------------------------------------------
 
     private static mixin ArrayOrderer<Element extends Orderable>
             into Array<Element>
-            implements Orderable
-        {
+            implements Orderable {
         /**
          * Compare two arrays of the same type for purposes of ordering.
          */
         static <CompileType extends ArrayOrderer>
-                Ordered compare(CompileType array1, CompileType array2)
-            {
-            for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++)
-                {
+                Ordered compare(CompileType array1, CompileType array2) {
+            for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++) {
                 Ordered order = array1[i] <=> array2[i];
-                if (order != Equal)
-                    {
+                if (order != Equal) {
                     return order;
-                    }
                 }
+            }
 
             return array1.size <=> array2.size;
-            }
         }
+    }
 
 
     // ----- Hashable mixin ------------------------------------------------------------------------
 
     private static mixin ArrayHasher<Element extends Hashable>
             into Array<Element>
-            implements Hashable
-        {
+            implements Hashable {
         /**
          * Calculate a hash code for a given array.
          */
-        static <CompileType extends ArrayHasher> Int64 hashCode(CompileType array)
-            {
+        static <CompileType extends ArrayHasher> Int64 hashCode(CompileType array) {
             Int64 hash = 0;
-            for (CompileType.Element el : array)
-                {
+            for (CompileType.Element el : array) {
                 hash += CompileType.Element.hashCode(el);
-                }
-            return hash;
             }
+            return hash;
         }
     }
+}

@@ -6,26 +6,20 @@ import text.Log;
  * @param console  the Console to log to
  */
 class ConsoleLog(Console console)
-        implements Log
-    {
-    construct(Console console)
-        {
+        implements Log {
+    construct(Console console) {
         this.console = console;
-        }
-    finally
-        {
-        if (&console.isService || &console.isImmutable)
-            {
+    } finally {
+        if (&console.isService || &console.isImmutable) {
             makeImmutable();
-            }
         }
+    }
 
     private Console console;
 
     @Override
-    ConsoleLog add(String v)
-        {
+    ConsoleLog add(String v) {
         console.print(v);
         return this;
-        }
     }
+}

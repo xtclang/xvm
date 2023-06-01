@@ -1,8 +1,7 @@
 /**
  * This package provides the reflection implementation for the Ecstasy language.
  */
-package reflect
-    {
+package reflect {
     /**
      * An TypeRequired exception is raised when a type is required, such as for a formal type
      * parameter.
@@ -37,13 +36,12 @@ package reflect
      * `Access` is an enumeration of the modifiers that can be used on top of a type to specify
      * a different view of the underlying type.
      */
-    enum Access(String keyword)
-        {
+    enum Access(String keyword) {
         Public   ("public"),
         Protected("protected"),
         Private  ("private"),
         Struct   ("struct")
-        }
+    }
 
     /**
      * Represents the information about an annotation, including the template representing the
@@ -56,4 +54,4 @@ package reflect
      * and the 0-based line number within that file that the relevant source code begins.
      */
     const SourceCodeInfo(String sourceFile, Int lineNumber);
-    }
+}

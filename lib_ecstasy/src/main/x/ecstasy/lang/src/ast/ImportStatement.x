@@ -11,61 +11,52 @@ import Lexer.Token;
 const ImportStatement(Token   keyword,
                       Token[] names,
                       Token?  alias)
-        extends Statement
-    {
+        extends Statement {
     @Override
-    TextPosition start.get()
-        {
+    TextPosition start.get() {
         return keyword.start;
-        }
+    }
 
     @Override
-    TextPosition end.get()
-        {
+    TextPosition end.get() {
         return (alias ?: names[names.size-1]).end;
-        }
+    }
 
     /**
      * The alias name for the import.
      */
-    String aliasName.get()
-        {
+    String aliasName.get() {
         return (alias ?: names[names.size-1]).valueText;
-        }
+    }
 
     /**
      * The qualified name for the import.
      */
-    @Lazy String qualifiedName.calc()
-        {
+    @Lazy String qualifiedName.calc() {
         return toDotDelimString(names);
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         StringBuffer buf = new StringBuffer();
 
         "import ".appendTo(buf);
 
-        Loop: for (Token token : names)
-            {
-            if (!Loop.first)
-                {
+        Loop: for (Token token : names) {
+            if (!Loop.first) {
                 buf.add('.');
-                }
-            token.valueText.appendTo(buf);
             }
+            token.valueText.appendTo(buf);
+        }
 
         Token? alias = this.alias;
-        if (alias?.valueText != names[names.size-1].valueText)
-            {
+        if (alias?.valueText != names[names.size-1].valueText) {
             " as ".appendTo(buf);
             alias.valueText.appendTo(buf);
-            }
+        }
 
         buf.add(';');
 
         return buf.toString();
-        }
     }
+}

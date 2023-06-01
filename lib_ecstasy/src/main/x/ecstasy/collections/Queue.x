@@ -22,8 +22,7 @@
  * indicating that the Queue was closed).
  */
 interface Queue<Element>
-        extends Appender<Element>
-    {
+        extends Appender<Element> {
     /**
      * Test for the presence of an element in the queue, and take the first element if the queue
      * contains any elements.
@@ -75,15 +74,13 @@ interface Queue<Element>
      *
      * @return the element taken from the queue; otherwise, the specified default element
      */
-    Element takeOrDefault(Element defaultElement)
-        {
-        if (Element e := next())
-            {
+    Element takeOrDefault(Element defaultElement) {
+        if (Element e := next()) {
             return e;
-            }
+        }
 
         return defaultElement;
-        }
+    }
 
     /**
      * Take the first element in the queue, or return the result of evaluating the provided function
@@ -96,15 +93,13 @@ interface Queue<Element>
      *         from the provided function
      */
     @Concurrent
-    Element takeOrCompute(function Element () compute)
-        {
-        if (Element e := next())
-            {
+    Element takeOrCompute(function Element () compute) {
+        if (Element e := next()) {
             return e;
-            }
+        }
 
         return compute();
-        }
+    }
 
     typedef function void (Element) as Consumer;
     typedef function void ()        as Cancellable;
@@ -139,4 +134,4 @@ interface Queue<Element>
      * @return a cancel function that allows the redirection to be canceled later
      */
     Cancellable pipeAll(Consumer pipe);
-    }
+}

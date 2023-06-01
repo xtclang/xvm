@@ -11,50 +11,40 @@ import reflect.InvalidType;
  */
 const AnnotatedTypeExpression(AnnotationExpression annotation,
                               TypeExpression       type)
-        extends TypeExpression
-    {
+        extends TypeExpression {
     @Override
-    TextPosition start.get()
-        {
+    TextPosition start.get() {
         return annotation.start;
-        }
+    }
 
     @Override
-    TextPosition end.get()
-        {
+    TextPosition end.get() {
         return type.end;
-        }
+    }
 
     @Override
-    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
-        {
+    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False) {
         // determine the type that is going to be annotated
         if (Type       annotatee  := type.resolveType(typeSystem, hideExceptions),
-            Annotation annotation := this.annotation.resolveAnnotation(typeSystem, hideExceptions))
-            {
-            try
-                {
+            Annotation annotation := this.annotation.resolveAnnotation(typeSystem, hideExceptions)) {
+            try {
                 return True, annotatee.annotate(annotation);
-                }
-            catch (InvalidType e)
-                {
-                if (hideExceptions)
-                    {
+            } catch (InvalidType e) {
+                if (hideExceptions) {
                     return False;
-                    }
+                }
 
                 throw e;
-                }
             }
-
-        return False;
         }
 
+        return False;
+    }
+
     @Override
-    String toString()
-        {
+    String toString() {
         return type.is(RelationalTypeExpression)
                 ? $"{annotation} ({type})"
                 : $"{annotation} {type}";
-        }
     }
+}
