@@ -2,14 +2,13 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.ModCon;
 import org.xvm.cc_explore.cons.Const;
-import java.io.File;
-import java.io.FileInputStream;
+
 import java.io.IOException;
 
 /**
      DAG structure containment of components
  */
-public class FileComponent extends Component {
+public class FilePart extends Part {
   /**
    * The special sequence of bytes that identifies an XVM FileStructure.
    */
@@ -53,7 +52,7 @@ public class FileComponent extends Component {
   final boolean _lazy;
 
   static final int NFLAGS =
-    (Component.Format.FILE.ordinal() << Component.Format.FORMAT_SHIFT) |
+    (Part.Format.FILE.ordinal() << Part.Format.FORMAT_SHIFT) |
     (Const.Access.PUBLIC.ordinal() << ACCESS_SHIFT) |
     ABSTRACT_BIT | 
     STATIC_BIT | 
@@ -62,7 +61,7 @@ public class FileComponent extends Component {
   
 
   // Constructor parses byte array, builds FileComponent
-  FileComponent( byte[] buf ) throws IOException {
+  FilePart( byte[] buf ) throws IOException {
     super(null,NFLAGS,null,null,null);
     _lazy = true;
     
@@ -97,7 +96,6 @@ public class FileComponent extends Component {
 
   // ------------------------------------
   // File parser utilities
-  public boolean u1() { return _buf[x++]!=0; } // boolean
   public int  u8() { return _buf[x++]&0xFF; } // Unsigned byte read as an int
   public int i64() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
   public long pack64() {
