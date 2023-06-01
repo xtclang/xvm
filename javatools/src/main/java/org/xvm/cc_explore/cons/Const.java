@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.Component;
 import java.util.ArrayList;
 
 /**
@@ -10,6 +11,18 @@ public abstract class Const {
 
   abstract public void resolve( CPool pool );
 
+  /**
+   * Recurse through the constants that make up this constant, replacing
+   * typedefs with the types that they refer to.
+   * <p/>
+   * Note: In addition to resolving typedefs, this method is also used to resolve any
+   *       {@link UnresolvedNameConstant}s used by any structure during the registration phase.
+   *
+   * @return this same type, but without any typedefs or resolvable {@link UnresolvedNameConstant}s in it
+   */
+  public Const resolveTypedefs() { return this; }
+
+  
   public enum Format {
     IntLiteral("numbers"),
     Bit       ("numbers"),
@@ -215,7 +228,7 @@ public abstract class Const {
     //    default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());
     //    };
     //}
-    
+
     /**
      * Look up a Format enum by its ordinal, without exposing the values array.
      * @param i  the ordinal
@@ -229,4 +242,33 @@ public abstract class Const {
     private final String _package;
   }
 
+
+  // ----- accessibility levels ------------------------------------------------------------------
+  /**
+   * The Access enumeration refers to the level of accessibility to a class that a reference will have:
+   * <ul>
+   * <li>{@link #STRUCT STRUCT} - direct access to the underlying data structure (but only to the data structure);</li>
+   * <li>{@link #PUBLIC PUBLIC} - access to the public members of the object's class;</li>
+   * <li>{@link #PROTECTED PROTECTED} - access to the protected members of the object's class;</li>
+   * <li>{@link #PRIVATE PRIVATE} - access to the private members of the object's class;</li>
+   * </ul>
+   */
+  public enum Access {
+    STRUCT   (0),
+    PUBLIC   (Component.ACCESS_PUBLIC   ),
+    PROTECTED(Component.ACCESS_PROTECTED),
+    PRIVATE  (Component.ACCESS_PRIVATE  );
+
+    Access(int flags) { this.FLAGS = flags; }
+    /**
+     * The integer flags used to encode the access enum.
+     * @see Component#ACCESS_MASK
+     * @see Component#ACCESS_SHIFT
+     * @see Component#ACCESS_PUBLIC
+     * @see Component#ACCESS_PROTECTED
+     * @see Component#ACCESS_PRIVATE
+     */
+    public final int FLAGS;
+  }
+  
 }
