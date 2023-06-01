@@ -172,11 +172,12 @@ public class Reformat
                         // just replace the implicit indent with an explicit indent (no change to the
                         // amount of indent because we already adjusted it)
                         implicitIndent.pop();
-                    } else {
+                        implicitIndent.push(false);
+                    } else if (Handy.countChar(trimmed, '{') > Handy.countChar(trimmed, '}')) {
                         expectIndent += 4;
                         nestedIds.push(Id.L_CURLY);
+                        implicitIndent.push(false);
                     }
-                    implicitIndent.push(false);
                     continue;
                 }
 
@@ -212,9 +213,11 @@ public class Reformat
                     if (actualIndent == 0) {
                         ++closingCurlies;
                     }
-                    buf.append('\n')
-                       .append(Handy.dup(' ', Math.max(0, actualIndent)))
-                       .append(trimmed);
+                    if (buf.length() == 0 || buf.charAt(buf.length()-1) != '{') {
+                        buf.append('\n')
+                           .append(Handy.dup(' ', Math.max(0, actualIndent)));
+                    }
+                    buf.append(trimmed);
                     continue;
                 }
 
@@ -264,16 +267,19 @@ public class Reformat
                 } else if (unlabeled.equals("else") || unlabeled.startsWith("else ")
                         || unlabeled.startsWith("catch ") || unlabeled.startsWith("catch(")
                         || unlabeled.equals("finally") || unlabeled.startsWith("finally ")) {
-                    implicitIndent.push(true);
-                    nestedIds.push(switch (unlabeled.charAt(0)) {
-                        case 'e' -> Id.ELSE;
-                        case 'c' -> Id.CATCH;
-                        case 'f' -> Id.FINALLY;
-                        default ->  Id.ANY;     // whatever
-                    });
                     buf.append(' ')
                        .append(trimmed);
-                    expectIndent += 4;
+
+                    if (!trimmed.endsWith("{}")) {
+                        implicitIndent.push(true);
+                        nestedIds.push(switch (unlabeled.charAt(0)) {
+                            case 'e' -> Id.ELSE;
+                            case 'c' -> Id.CATCH;
+                            case 'f' -> Id.FINALLY;
+                            default -> Id.ANY;     // whatever
+                        });
+                        expectIndent += 4;
+                    }
                     continue;
                 } else if (unlabeled.startsWith("case ") || unlabeled.startsWith("case(") || unlabeled.startsWith("default:")) {
                     if (nestedIds.peek() == Id.CASE && implicitIndent.peek()) {
