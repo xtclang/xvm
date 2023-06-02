@@ -64,8 +64,7 @@ import TxManager.Requirement;
  *
  * TODO provide a DBClosed exception after shutdown, instead of arbitrary assertions/exceptions
  */
-service Client<Schema extends RootSchema>
-    {
+service Client<Schema extends RootSchema> {
     /**
      * Construct a Client service, representing a connection to the database and any current
      * transaction.
@@ -81,8 +80,7 @@ service Client<Schema extends RootSchema>
               Int                    id,
               DBUser                 dbUser,
               Boolean                readOnly = False,
-              function void(Client)? notifyOnClose = Null)
-        {
+              function void(Client)? notifyOnClose = Null) {
         assert Schema == RootSchema || catalog.metadata != Null;
 
         this.id            = id;
@@ -93,15 +91,13 @@ service Client<Schema extends RootSchema>
         this.jsonSchema    = catalog.jsonSchema;
         this.readOnly      = readOnly || catalog.readOnly;
         this.notifyOnClose = notifyOnClose;
-        }
-    finally
-        {
+    } finally {
         // exclusive reentrancy is critically important: it eliminates race conditions while any
         // operation (including a commit or rollback) is in flight, while still allowing reentrancy
         // that is required to carry out that operation
         conn   = new Connection(infoFor(0)).as(Connection + Schema);
         worker = new Worker(jsonSchema);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -188,10 +184,9 @@ service Client<Schema extends RootSchema>
      * @param msg  the message to log
      */
     @Concurrent
-    protected void log(String msg)
-        {
+    protected void log(String msg) {
         catalog.log^(msg);
-        }
+    }
 
     /**
      * Helper to convert an object to a string, without allowing an exception to be raised by the
@@ -202,17 +197,13 @@ service Client<Schema extends RootSchema>
      * @return a String
      *
      */
-    static protected String safeToString(Object o)
-        {
-        try
-            {
+    static protected String safeToString(Object o) {
+        try {
             return o.toString();
-            }
-        catch (Exception _)
-            {
+        } catch (Exception _) {
             return "???";
-            }
         }
+    }
 
     /**
      * Verify that the client connection is open and can be used for reading data.
@@ -222,11 +213,10 @@ service Client<Schema extends RootSchema>
      * @throws Exception if the check fails
      */
     @Concurrent
-    Boolean checkRead()
-        {
+    Boolean checkRead() {
         assert conn != Null;
         return True;
-        }
+    }
 
     /**
      * Verify that the client connection is open and can be used for changing data.
@@ -236,11 +226,10 @@ service Client<Schema extends RootSchema>
      * @throws Exception if the check fails
      */
     @Concurrent
-    Boolean checkWrite()
-        {
+    Boolean checkWrite() {
         assert !readOnly && !tx?.txInfo.readOnly;
         return checkRead();
-        }
+    }
 
     /**
      * Obtain the current transaction, creating one if necessary, and wrapping it in a transactional
@@ -250,29 +239,26 @@ service Client<Schema extends RootSchema>
      *
      * @return the transactional context object
      */
-    TxContext ensureTransaction(DBObjectImpl dbo, Boolean allowNontransactional=False, Boolean override=False)
-        {
+    TxContext ensureTransaction(DBObjectImpl dbo, Boolean allowNontransactional=False, Boolean override=False) {
         private TxContext ctx = new TxContext();
         private TxContext ntx = new NtxContext();
 
         checkRead();
 
-        if (!dbo.transactional && allowNontransactional)
-            {
+        if (!dbo.transactional && allowNontransactional) {
             return ntx;
-            }
+        }
 
         var     tx         = this.tx;
         Boolean autocommit = False;
 
-        if (tx == Null)
-            {
+        if (tx == Null) {
             assert !internal || override;
 
             tx         = (conn?: assert).createTransaction(name="autocommit", override=override);
             this.tx    = tx;
             autocommit = True;
-            }
+        }
 
         ctx.enter(autocommit);
 
@@ -283,7 +269,7 @@ service Client<Schema extends RootSchema>
         dbo.dboProcessDeferred_();
 
         return ctx;
-        }
+    }
 
     /**
      * For the transaction manager's internal clients that emulate various stages in a transaction,
@@ -291,48 +277,41 @@ service Client<Schema extends RootSchema>
      *
      * @param txId  the transaction id to use as a read level
      */
-    void representTransaction(Int txId)
-        {
+    void representTransaction(Int txId) {
         assert internal;
 
         // update the readOnly property of the Client based on the requested transaction ID
-        readOnly = switch (TxManager.txCat(txId))
-            {
+        readOnly = switch (TxManager.txCat(txId)) {
             case ReadOnly    : True;
             case Open        : False;
             case Validating  : True;
             case Rectifying  : False;
             case Distributing: False;
-            };
+        };
 
         // two cached transaction info objects (one R/W, one RO) for internal use
         static TxInfo rwInfo = new TxInfo(id=0, name="internal", readOnly=False);
         static TxInfo roInfo = new TxInfo(id=0, name="internal", readOnly=True );
 
         TxInfo txInfo = readOnly ? roInfo : rwInfo;
-        if (tx == Null)
-            {
+        if (tx == Null) {
             // create a transaction to represent the requested transaction ID
             DboInfo dboInfo = infoFor(0); // the root schema
             tx = new Transaction(dboInfo, txInfo, txId).as(Transaction + Schema);
-            }
-        else
-            {
+        } else {
             tx?.represent_(txInfo, txId);
-            }
         }
+    }
 
     /**
      * @return the internal Client that represents the version of the database before this
      *         transaction made changes
      */
-    Client<Schema> ensurePreTxClient()
-        {
+    Client<Schema> ensurePreTxClient() {
         Client<Schema> client;
-        if (client ?= preTxView)
-            {
+        if (client ?= preTxView) {
             return client;
-            }
+        }
 
         assert internal;
 
@@ -340,16 +319,15 @@ service Client<Schema extends RootSchema>
         client.representTransaction(txManager.readIdFor(tx?.id_ : assert));
         preTxView = client;
         return client;
-        }
+    }
 
     /**
      * True if this is an internal ("system") client.
      */
     @Concurrent
-    @RO Boolean internal.get()
-        {
+    @RO Boolean internal.get() {
         return Catalog.isInternalClientId(id);
-        }
+    }
 
     /**
      * On behalf of the scheduler, create a new internal transaction.
@@ -357,19 +335,17 @@ service Client<Schema extends RootSchema>
      * @param retryCount  the number of times this transaction has been retried (zero indicates the
      *                    first attempt)
      */
-    void createProcessTx(Int retryCount)
-        {
+    void createProcessTx(Int retryCount) {
         assert internal;
 
         // roll back any previously left-over transaction (unlikely that this would ever occur)
-        if (tx != Null)
-            {
+        if (tx != Null) {
             rollbackProcessTx();
-            }
+        }
 
         assert Connection conn ?= this.conn;
         conn.createTransaction(name="async", retryCount=retryCount, override=True);
-        }
+    }
 
     /**
      * Process one pending message. Called by the Scheduler.
@@ -381,38 +357,34 @@ service Client<Schema extends RootSchema>
      * @return the elapsed processing time
      * @return the exceptional processing failure, iff the processing failed
      */
-    <Message extends immutable Const> (Range<Time>, Exception?) processMessage(Int dboId, Int pid, Message message)
-        {
+    <Message extends immutable Const> (Range<Time>, Exception?) processMessage(Int dboId, Int pid, Message message) {
         assert internal;
 
         val dbo = implFor(dboId).as(DBProcessorImpl<Message>);
 
         return dbo.process_(pid, message);
-        }
+    }
 
     /**
      * On behalf of the scheduler, commit the current internal transaction.
      *
      * @return the CommitResult
      */
-    CommitResult commitProcessTx()
-        {
+    CommitResult commitProcessTx() {
         assert internal;
         assert Transaction tx ?= this.tx;
         return tx.commit(override=True);
-        }
+    }
 
     /**
      * On behalf of the scheduler, roll back the current internal transaction.
      */
-    void rollbackProcessTx()
-        {
+    void rollbackProcessTx() {
         assert internal;
-        if (Transaction tx ?= this.tx)
-            {
+        if (Transaction tx ?= this.tx) {
             tx.rollback(override=True);
-            }
         }
+    }
 
     /**
      * Determine if the processing of the specified message should be retried, and signal the
@@ -445,70 +417,51 @@ service Client<Schema extends RootSchema>
             Range<Time>              elapsed,
             Int                      timesAttempted,
             Boolean                  abandoning,
-            )
-        {
+            ) {
         assert internal;
 
         // roll back any previously left-over transaction (unlikely, but just in case)
-        if (tx != Null)
-            {
+        if (tx != Null) {
             rollbackProcessTx();
-            }
+        }
 
         val dbo = implFor(dboId).as(DBProcessorImpl<Message>);
 
-        if (!abandoning)
-            {
-            try
-                {
-                using (val tx = ensureTransaction(dbo, override=True))
-                    {
-                    if (dbo.autoRetry(message, result, when, elapsed, timesAttempted))
-                        {
+        if (!abandoning) {
+            try {
+                using (val tx = ensureTransaction(dbo, override=True)) {
+                    if (dbo.autoRetry(message, result, when, elapsed, timesAttempted)) {
                         dbo.retrying_(message, pid, elapsed, result);
-                        }
-                    else
-                        {
+                    } else {
                         abandoning = True;
-                        }
                     }
                 }
-            catch (Exception e)
-                {
-                if (!e.is(DBClosed))
-                    {
+            } catch (Exception e) {
+                if (!e.is(DBClosed)) {
                     log($|While attempting to determine whether a message ({safeToString(message)})\
                          | should be retried for {dbo.dbPath.toString().substring(1)}, an exception\
                          | occurred: {e}
                        );
-                    }
-                abandoning = True;
                 }
+                abandoning = True;
             }
+        }
 
-        if (abandoning)
-            {
-            try
-                {
-                using (val tx = ensureTransaction(dbo, override=True))
-                    {
+        if (abandoning) {
+            try {
+                using (val tx = ensureTransaction(dbo, override=True)) {
                     dbo.abandoning_(message, pid, elapsed, result);
                     dbo.abandon(message, result, when, elapsed, timesAttempted);
-                    }
                 }
-            catch (DBClosed e)
-                {
-                }
-            catch (Exception e)
-                {
+            } catch (DBClosed e) {} catch (Exception e) {
                 log($|While notifying {dbo.dbPath.toString().substring(1)} of an abandoned message\
                      | ({safeToString(message)}), an exception occurred: {e}
                    );
-                }
             }
+        }
 
         return abandoning;
-        }
+    }
 
     /**
      * Verify that the previous requirement still holds true.
@@ -517,13 +470,12 @@ service Client<Schema extends RootSchema>
      *
      * @return True if the same result is produced as indicated in the requirement
      */
-    <Result extends immutable Const> Result evaluateRequirement(Int dboId, function Result(DBObjectImpl) test)
-        {
+    <Result extends immutable Const> Result evaluateRequirement(Int dboId, function Result(DBObjectImpl) test) {
         assert internal;
 
         DBObjectImpl dbo = implFor(dboId);
         return test(dbo);
-        }
+    }
 
     /**
      * Perform all configured validation checks on the specified DBObject.
@@ -532,21 +484,17 @@ service Client<Schema extends RootSchema>
      *
      * @return True if the validation succeeded
      */
-    Boolean validateDBObject(Int dboId)
-        {
+    Boolean validateDBObject(Int dboId) {
         assert internal;
 
         ObjectStore store = storeFor(dboId);
         store.triggerBegin(tx?.id_ : assert);
-        try
-            {
+        try {
             return implFor(dboId).validate_();
-            }
-        finally
-            {
+        } finally {
             store.triggerEnd(tx?.id_ : assert);
-            }
         }
+    }
 
     /**
      * Perform all configured data rectification steps on the specified DBObject.
@@ -555,21 +503,17 @@ service Client<Schema extends RootSchema>
      *
      * @return True if the rectification succeeded
      */
-    Boolean rectifyDBObject(Int dboId)
-        {
+    Boolean rectifyDBObject(Int dboId) {
         assert internal;
 
         ObjectStore store = storeFor(dboId);
         store.triggerBegin(tx?.id_ : assert);
-        try
-            {
+        try {
             return implFor(dboId).rectify_();
-            }
-        finally
-            {
+        } finally {
             store.triggerEnd(tx?.id_ : assert);
-            }
         }
+    }
 
     /**
      * Perform all configured data distributions steps on the specified DBObject.
@@ -578,43 +522,36 @@ service Client<Schema extends RootSchema>
      *
      * @return True if the data distribution succeeded
      */
-    Boolean distributeDBObject(Int dboId)
-        {
+    Boolean distributeDBObject(Int dboId) {
         assert internal;
 
         ObjectStore store = storeFor(dboId);
         store.triggerBegin(tx?.id_ : assert);
-        try
-            {
+        try {
             return implFor(dboId).distribute_();
-            }
-        finally
-            {
+        } finally {
             store.triggerEnd(tx?.id_ : assert);
-            }
         }
+    }
 
     /**
      * For the transaction manager's internal clients that emulate various stages in a transaction,
      * this terminates the representation of a previously-specified transaction, allowing the client
      * to be safely returned to a pool for later re-use.
      */
-    void stopRepresentingTransaction()
-        {
+    void stopRepresentingTransaction() {
         assert internal;
-        if (Transaction tx ?= this.tx)
-            {
+        if (Transaction tx ?= this.tx) {
             this.tx = Null;
             tx.id_  = NO_TX;
-            }
+        }
 
-        if (val client ?= preTxView)
-            {
+        if (val client ?= preTxView) {
             client.stopRepresentingTransaction();
             txManager.recycleClient(client);
             preTxView = Null;
-            }
         }
+    }
 
     /**
      * Obtain the DboInfo for the specified id.
@@ -624,10 +561,9 @@ service Client<Schema extends RootSchema>
      * @return the DboInfo for the specified id
      */
     @Concurrent
-    DboInfo infoFor(Int id)
-        {
+    DboInfo infoFor(Int id) {
         return catalog.infoFor(id);
-        }
+    }
 
     /**
      * Obtain the DBObjectImpl for the specified id.
@@ -636,21 +572,18 @@ service Client<Schema extends RootSchema>
      *
      * @return the DBObjectImpl for the specified id
      */
-    DBObjectImpl implFor(Int id)
-        {
+    DBObjectImpl implFor(Int id) {
         DBObjectImpl?[] impls = appObjects;
         Int             index = id;
-        if (id < 0)
-            {
+        if (id < 0) {
             impls = sysObjects;
             index = BuiltIn.byId(id).ordinal;
-            }
+        }
 
         Int size = impls.size;
-        if (index < size)
-            {
+        if (index < size) {
             return impls[index]?;
-            }
+        }
 
         DBObjectImpl impl = createImpl(id);
 
@@ -658,7 +591,7 @@ service Client<Schema extends RootSchema>
         impls[index] = impl;
 
         return impl;
-        }
+    }
 
     /**
      * Create an DBObjectImpl for the specified internal database object id.
@@ -668,13 +601,10 @@ service Client<Schema extends RootSchema>
      * @return the new DBObjectImpl
      */
     @Concurrent
-    DBObjectImpl createImpl(Int id)
-        {
-        if (id <= 0)
-            {
+    DBObjectImpl createImpl(Int id) {
+        if (id <= 0) {
             DboInfo info  = infoFor(id);
-            return switch (BuiltIn.byId(info.id))
-                {
+            return switch (BuiltIn.byId(info.id)) {
                 case Root:         new RootSchemaImpl(info);
                 case Sys:          new SystemSchemaImpl(info);
                 case Info:         TODO new DBValue<DBInfo>();              // TODO ...
@@ -693,12 +623,11 @@ service Client<Schema extends RootSchema>
                 case Transactions: TODO new DBLog<DBTransaction>();
                 case Errors:       TODO new DBLog<String>();
                 default: assert;
-                };
-            }
+            };
+        }
 
         DboInfo info = infoFor(id);
-        return switch (info.category)
-            {
+        return switch (info.category) {
             case DBSchema:    new DBSchemaImpl(info);
             case DBCounter:   new DBCounterImpl(info, storeFor(id).as(CounterStore));
             case DBValue:     createDBValueImpl(info, storeFor(id).as(ValueStore));
@@ -707,46 +636,42 @@ service Client<Schema extends RootSchema>
             case DBQueue:     TODO
             case DBProcessor: createDBProcessorImpl(info, storeFor(id).as(ProcessorStore));
             case DBLog:       createDBLogImpl  (info, storeFor(id).as(LogStore));
-            };
-        }
+        };
+    }
 
     @Concurrent
-    private DBMapImpl createDBMapImpl(DboInfo info, MapStore store)
-        {
+    private DBMapImpl createDBMapImpl(DboInfo info, MapStore store) {
         Type keyType = info.typeParams[0].type;
         Type valType = info.typeParams[1].type;
         assert keyType.is(Type<immutable Const>);
         assert valType.is(Type<immutable Const>);
 
         return new DBMapImpl<keyType.DataType, valType.DataType>(info, store);
-        }
+    }
 
     @Concurrent
-    private DBLogImpl createDBLogImpl(DboInfo info, LogStore store)
-        {
+    private DBLogImpl createDBLogImpl(DboInfo info, LogStore store) {
         Type elementType = info.typeParams[0].type;
         assert elementType.is(Type<immutable Const>);
 
         return new DBLogImpl<elementType.DataType>(info, store);
-        }
+    }
 
     @Concurrent
-    private DBProcessorImpl createDBProcessorImpl(DboInfo info, ProcessorStore store)
-        {
+    private DBProcessorImpl createDBProcessorImpl(DboInfo info, ProcessorStore store) {
         Type messageType = info.typeParams[0].type;
         assert messageType.is(Type<immutable Const>);
 
         return new DBProcessorImpl<messageType.DataType>(info, store);
-        }
+    }
 
     @Concurrent
-    private DBValueImpl createDBValueImpl(DboInfo info, ValueStore store)
-        {
+    private DBValueImpl createDBValueImpl(DboInfo info, ValueStore store) {
         Type valueType = info.typeParams[0].type;
         assert valueType.is(Type<immutable Const>);
 
         return new DBValueImpl<valueType.DataType>(info, store);
-        }
+    }
 
     /**
      * Obtain the DboInfo for the specified id.
@@ -756,10 +681,9 @@ service Client<Schema extends RootSchema>
      * @return the DboInfo for the specified id
      */
     @Concurrent
-    ObjectStore storeFor(Int id)
-        {
+    ObjectStore storeFor(Int id) {
         return catalog.storeFor(id);
-        }
+    }
 
 
     // ----- Worker --------------------------------------------------------------------------------
@@ -773,8 +697,7 @@ service Client<Schema extends RootSchema>
      * services.
      */
     @Concurrent
-    static service Worker(json.Schema jsonSchema)
-        {
+    static service Worker(json.Schema jsonSchema) {
         /**
          * Deserialize a value from a JSON string.
          *
@@ -783,10 +706,9 @@ service Client<Schema extends RootSchema>
          *
          * @return the deserialized value
          */
-        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, String jsonText)
-            {
+        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, String jsonText) {
             return mapping.read(new ObjectInputStream(jsonSchema, jsonText.toReader()).ensureElementInput());
-            }
+        }
 
         /**
          * Deserialize a value from JSON tokens.
@@ -796,10 +718,9 @@ service Client<Schema extends RootSchema>
          *
          * @return the deserialized value
          */
-        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, immutable Token[] jsonTokens)
-            {
+        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, immutable Token[] jsonTokens) {
             return mapping.read(new ObjectInputStream(jsonSchema, jsonTokens.iterator()).ensureElementInput());
-            }
+        }
 
         /**
          * Deserialize a value from a JSON string.
@@ -809,15 +730,14 @@ service Client<Schema extends RootSchema>
          *
          * @return a String containing the JSON formatted value
          */
-        <Serializable> String writeUsing(Mapping<Serializable> mapping, immutable Serializable value)
-            {
+        <Serializable> String writeUsing(Mapping<Serializable> mapping, immutable Serializable value) {
             val buf    = new StringBuffer();
             val stream = new ObjectOutputStream(jsonSchema, buf);
             mapping.write(stream.createElementOutput(), value);
             stream.close();
             return buf.toString();
-            }
         }
+    }
 
 
     // ----- TxContext -----------------------------------------------------------------------------
@@ -826,71 +746,56 @@ service Client<Schema extends RootSchema>
      * The TxContext simplifies "autocommit" transaction management on an operation-by-operation basis.
      */
     protected class TxContext
-            implements Closeable
-        {
+            implements Closeable {
+
         private Boolean autocommit;
         private Int     depth;
 
-        void enter(Boolean autocommit)
-            {
-            if (depth++ == 0)
-                {
+        void enter(Boolean autocommit) {
+            if (depth++ == 0) {
                 this.autocommit = autocommit;
-                }
             }
+        }
 
-        Int id.get()
-            {
+        Int id.get() {
             return outer.tx?.id_ : assert;
-            }
+        }
 
-        @Override void close(Exception? e = Null)
-            {
+        @Override void close(Exception? e = Null) {
             assert depth > 0;
             assert Transaction tx ?= outer.tx;
 
-            if (--depth == 0 && autocommit)
-                {
-                if (e == Null)
-                    {
+            if (--depth == 0 && autocommit) {
+                if (e == Null) {
                     val result = tx.commit();
-                    if (result != Committed)
-                        {
+                    if (result != Committed) {
                         throw new CommitFailed(tx.txInfo, result,
                             $"Failed to auto-commit {tx}; reason={result}");
-                        }
                     }
-                else
-                    {
+                } else {
                     tx.rollback();
-                    }
                 }
             }
         }
+    }
 
     /**
      * The non-transactional TxContext.
      */
     @Concurrent
     protected class NtxContext
-            extends TxContext
-        {
+            extends TxContext {
         @Override
-        void enter(Boolean autocommit)
-            {
-            }
+        void enter(Boolean autocommit) {}
 
         @Override
-        Int id.get()
-            {
+        Int id.get() {
             return NO_TX;
-            }
+        }
 
         @Override
-        void close(Exception? e = Null)
-            {
-            }
-        }
+        void close(Exception? e = Null) {}
+    }
 
 
     // ----- DBObject ------------------------------------------------------------------------------
@@ -899,8 +804,8 @@ service Client<Schema extends RootSchema>
      * The shared base implementation for all of the client DBObject representations.
      */
     @Abstract class DBObjectImpl(DboInfo info_)
-            implements DBObject
-        {
+            implements DBObject {
+
         protected DboInfo info_;
 
         /**
@@ -909,8 +814,7 @@ service Client<Schema extends RootSchema>
         class Deferred_(
                 DBObjectImpl                    dbo,
                 function Boolean(DBObjectImpl)? adjust,
-                )
-            {
+                ) {
             /**
              * The next deferred for the same transaction.
              */
@@ -920,7 +824,7 @@ service Client<Schema extends RootSchema>
              * The next Deferred for the same DBObject.
              */
             Deferred_? dboNextDeferred = Null;
-            }
+        }
 
         /**
          * The first deferred adjustment function for this DBObject in the current transaction.
@@ -933,49 +837,42 @@ service Client<Schema extends RootSchema>
         protected Deferred_? dboLastDeferred_ = Null;
 
         @Override
-        @RO (Connection + Schema) dbConnection.get()
-            {
+        @RO (Connection + Schema) dbConnection.get() {
             return outer.conn ?: assert;
-            }
+        }
 
         @Override
-        @RO (Transaction + Schema)? dbTransaction.get()
-            {
+        @RO (Transaction + Schema)? dbTransaction.get() {
             return outer.tx;
-            }
+        }
 
         @Override
         @Concurrent
-        @RO DBObject!? dbParent.get()
-            {
+        @RO DBObject!? dbParent.get() {
             return implFor(info_.parentId);
-            }
+        }
 
         @Override
         @Concurrent
-        @RO DBCategory dbCategory.get()
-            {
+        @RO DBCategory dbCategory.get() {
             return info_.category;
-            }
+        }
 
         @Override
         @Concurrent
-        @RO String dbName.get()
-            {
+        @RO String dbName.get() {
             return info_.name;
-            }
+        }
 
         @Override
         @Concurrent
-        @RO Path dbPath.get()
-            {
+        @RO Path dbPath.get() {
             return info_.path;
-            }
+        }
 
         @Override
         @Concurrent
-        @Lazy Map<String, DBObject> dbChildren.calc()
-            {
+        @Lazy Map<String, DBObject> dbChildren.calc() {
             return new DBObjectMap();
 //            return new Map()
 //                {
@@ -1010,271 +907,226 @@ service Client<Schema extends RootSchema>
 //                    return infos.freeze();
 //                    }
 //                };
-            }
+        }
 
         // TODO GG: remove and use the "inside the property" class
         private class DBObjectMap
-                implements Map<String, DBObject>
-            {
-            construct()
-                {
+                implements Map<String, DBObject> {
+
+            construct() {
                 Int[] childIds = info_.childIds;
                 Int   size     = childIds.size;
-                if (size == 0)
-                    {
+                if (size == 0) {
                     this.infos = [];
-                    }
-                else
-                    {
+                } else {
                     Client client = this.Client; // TODO GG: this should not be needed
                     ListMap<String, DboInfo> infos = new ListMap(size);
                     childIds.associate(i -> {val info = client.infoFor(i); return info.name, info;}, infos);
                     this.infos = infos.freeze();
-                    }
                 }
+            }
 
             protected Map<String, DboInfo> infos;
 
             @Override
-            conditional DBObject get(String key)
-                {
-                if (DboInfo info := infos.get(key))
-                    {
+            conditional DBObject get(String key) {
+                if (DboInfo info := infos.get(key)) {
                     return True, implFor(info.id);
-                    }
+                }
 
                 return False;
-                }
+            }
 
             @Override
-            @Lazy Set<String> keys.calc()
-                {
+            @Lazy Set<String> keys.calc() {
                 return infos.keys;
-                }
+            }
 
             @Override
             Set<DBObject> values.get() = throw new UnsupportedOperation();
 
             @Override
             Set<Map<String, DBObject>.Entry> entries.get() = throw new UnsupportedOperation();
-            }
+        }
 
         @Override
-        <Result extends immutable Const> Result require(function Result(DBObjectImpl) test)
-            {
+        <Result extends immutable Const> Result require(function Result(DBObjectImpl) test) {
             Transaction tx = requireTransaction_("require()");
             return outer.txManager.registerRequirement(tx.id_, info_.id, test);
-            }
+        }
 
         @Override
-        void defer(function Boolean(DBObjectImpl) adjust)
-            {
+        void defer(function Boolean(DBObjectImpl) adjust) {
             Transaction tx = requireTransaction_("defer()");
             Deferred_ deferred = new Deferred_(this, adjust);
             tx.txAddDeferred_(deferred);
             dboAddDeferred_(deferred);
-            }
+        }
 
         /**
          * Add a deferred adjustment to this DBObjectImpl's list of deferred adjustments.
          */
-        protected void dboAddDeferred_(Deferred_ deferred)
-            {
-            if (Deferred_ dboLastDeferred ?= dboLastDeferred_)
-                {
+        protected void dboAddDeferred_(Deferred_ deferred) {
+            if (Deferred_ dboLastDeferred ?= dboLastDeferred_) {
                 dboLastDeferred.dboNextDeferred = deferred;
                 dboLastDeferred_ = deferred;
-                }
-            else
-                {
+            } else {
                 dboFirstDeferred_ = deferred;
                 dboLastDeferred_  = deferred;
-                }
             }
+        }
 
         /**
          * Process all of this DBObjectImpl's list of deferred adjustments.
          *
          * @return True iff no deferred adjustment reported a failure
          */
-        protected Boolean dboProcessDeferred_()
-            {
-            while (Deferred_ deferred ?= dboFirstDeferred_)
-                {
+        protected Boolean dboProcessDeferred_() {
+            while (Deferred_ deferred ?= dboFirstDeferred_) {
                 dboFirstDeferred_ = deferred.dboNextDeferred;
 
-                if (function Boolean(DBObjectImpl) adjust ?= deferred.adjust)
-                    {
+                if (function Boolean(DBObjectImpl) adjust ?= deferred.adjust) {
                     // wipe out the deferred work (so it doesn't accidentally get re-run in the
                     // future)
                     deferred.adjust = Null;
 
                     Boolean failure = False;
-                    try
-                        {
-                        if (!adjust(this))
-                            {
+                    try {
+                        if (!adjust(this)) {
                             failure = True;
-                            }
                         }
-                    catch (Exception e)
-                        {
+                    } catch (Exception e) {
                         failure = True;
 
                         // log the exception (otherwise the information would be lost)
                         log($|While attempting to execute a deferred adjustment on\
                              | {dbPath.toString().substring(1)}, an exception occurred: {e}
                            );
-                        }
+                    }
 
-                    if (failure)
-                        {
+                    if (failure) {
                         // mark the transaction as rollback-only
                         assert Transaction tx ?= outer.tx;
                         tx.rollbackOnly = True;
 
                         // deferred adjustments failed
                         return False;
-                        }
                     }
                 }
+            }
 
             return True;
-            }
+        }
 
         /**
          * Reset the linked list of Deferred items on this DBObjectImpl.
          */
-        protected void dboResetDeferred_()
-            {
+        protected void dboResetDeferred_() {
             dboFirstDeferred_ = Null;
             dboLastDeferred_  = Null;
-            }
+        }
 
         /**
          * Require both that this DBObject be transactional, and that a transaction already exist.
          *
          * @param method  the method name or description to display in the assertion message
          */
-        Transaction requireTransaction_(String method)
-            {
+        Transaction requireTransaction_(String method) {
             // this DBObject must be transactional
             assert this.transactional as $|DBObject {dbPath.toString().substring(1)} is not a\
                                           | transactional object; {method} requires a transaction
                                          ;
 
             // there must already be a transaction
-            if (Transaction tx ?= outer.tx)
-                {
+            if (Transaction tx ?= outer.tx) {
                 return tx;
-                }
-            assert as "No transaction exists; {method} requires a transaction";
             }
+            assert as "No transaction exists; {method} requires a transaction";
+        }
 
         /**
          * Perform all configured validation checks on this DBObject.
          *
          * @return True if the validation succeeded
          */
-        Boolean validate_()
-            {
+        Boolean validate_() {
             TxChange change = new TxChange_(); // TODO CP cache?
 
-            for (val validator : info_.validators)
-                {
-                try
-                    {
-                    if (!validator.validate(change))
-                        {
+            for (val validator : info_.validators) {
+                try {
+                    if (!validator.validate(change)) {
                         return False;
-                        }
                     }
-                catch (Exception e)
-                    {
+                } catch (Exception e) {
                     this.Client.log($"An exception occurred while evaluating Validator \"{&validator.actualClass.displayName}\": {e}");
                     return False;
-                    }
                 }
+            }
 
             return True;
-            }
+        }
 
         /**
          * Perform all configured rectification on this DBObject.
          *
          * @return True if the rectifiers succeeded
          */
-        Boolean rectify_()
-            {
+        Boolean rectify_() {
             TxChange change = new TxChange_();
 
-            for (val rectifier : info_.rectifiers)
-                {
-                try
-                    {
-                    if (!rectifier.rectify(change))
-                        {
+            for (val rectifier : info_.rectifiers) {
+                try {
+                    if (!rectifier.rectify(change)) {
                         return False;
-                        }
                     }
-                catch (Exception e)
-                    {
+                } catch (Exception e) {
                     this.Client.log($"An exception occurred while processing Rectifier \"{&rectifier.actualClass.displayName}\": {e}");
                     return False;
-                    }
                 }
+            }
 
             return True;
-            }
+        }
 
         /**
          * Perform all configured distribution operations for this DBObject.
          *
          * @return True if the distribution succeeded
          */
-        Boolean distribute_()
-            {
+        Boolean distribute_() {
             TxChange change = new TxChange_();
 
-            for (val distributor : info_.distributors)
-                {
-                try
-                    {
-                    if (!distributor.process(change))
-                        {
+            for (val distributor : info_.distributors) {
+                try {
+                    if (!distributor.process(change)) {
                         return False;
-                        }
                     }
-                catch (Exception e)
-                    {
+                } catch (Exception e) {
                     this.Client.log($"An exception occurred while processing Distributor \"{&distributor.actualClass.displayName}\": {e}");
                     return False;
-                    }
                 }
+            }
 
             return True;
-            }
+        }
 
         /**
          * An implementation of the "before tx" and "after tx" views of the transactional changes
          * to the enclosing DBObject.
          */
         class TxChange_
-                implements TxChange
-            {
+                implements TxChange {
             @Override
-            @Lazy DBObject pre.calc()
-                {
+            @Lazy DBObject pre.calc() {
                 return ensurePreTxClient().implFor(info_.id);
-                }
+            }
 
             @Override
-            DBObject post.get()
-                {
+            DBObject post.get() {
                 return outer;
-                }
             }
         }
+    }
 
 
     // ----- DBSchema ------------------------------------------------------------------------------
@@ -1284,16 +1136,15 @@ service Client<Schema extends RootSchema>
      */
     class DBSchemaImpl(DboInfo info_)
             extends DBObjectImpl(info_)
-            implements DBSchema
-        {
+            implements DBSchema {
+
         @Override
-        @RO DBSchema? dbParent.get()
-            {
+        @RO DBSchema? dbParent.get() {
             return info_.id == 0
                     ? Null
                     : super().as(DBSchema);
-            }
         }
+    }
 
 
     // ----- RootSchema ----------------------------------------------------------------------------
@@ -1303,14 +1154,12 @@ service Client<Schema extends RootSchema>
      */
     class RootSchemaImpl(DboInfo info_)
             extends DBSchemaImpl(info_)
-            implements RootSchema
-        {
+            implements RootSchema {
         @Override
-        SystemSchema sys.get()
-            {
+        SystemSchema sys.get() {
             return this.Client.implFor(BuiltIn.Sys.id).as(SystemSchema);
-            }
         }
+    }
 
 
     // ----- SystemSchema --------------------------------------------------------------------------
@@ -1320,98 +1169,82 @@ service Client<Schema extends RootSchema>
      */
     class SystemSchemaImpl(DboInfo info_)
             extends DBSchemaImpl(info_)
-            implements SystemSchema
-        {
+            implements SystemSchema {
         @Override
-        @RO DBValue<DBInfo> info.get()
-            {
+        @RO DBValue<DBInfo> info.get() {
             return implFor(BuiltIn.Info.id).as(DBValue<DBInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBUser> users.get()
-            {
-            return implFor(BuiltIn.Users.id).as(DBMap<String, DBUser>);
-            }
-
-        @Override
-        @RO DBMap<String, Type> types.get()
-            {
-            return implFor(BuiltIn.Types.id).as(DBMap<String, Type>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> objects.get()
-            {
-            return implFor(BuiltIn.Objects.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> schemas.get()
-            {
-            return implFor(BuiltIn.Schemas.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> counters.get()
-            {
-            return implFor(BuiltIn.Counters.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> values.get()
-            {
-            return implFor(BuiltIn.Values.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> maps.get()
-            {
-            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> lists.get()
-            {
-            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> queues.get()
-            {
-            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> processors.get()
-            {
-            return implFor(BuiltIn.Processors.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBMap<String, DBObjectInfo> logs.get()
-            {
-            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBObjectInfo>);
-            }
-
-        @Override
-        @RO DBList<Pending> pending.get()
-            {
-            return implFor(BuiltIn.Pending.id).as(DBList<Pending>);
-            }
-
-        @Override
-        @RO DBLog<DBTransaction> transactions.get()
-            {
-            return implFor(BuiltIn.Transactions.id).as(DBLog<DBTransaction>);
-            }
-
-        @Override
-        @RO DBLog<String> errors.get()
-            {
-            return implFor(BuiltIn.Errors.id).as(DBLog<String>);
-            }
         }
+
+        @Override
+        @RO DBMap<String, DBUser> users.get() {
+            return implFor(BuiltIn.Users.id).as(DBMap<String, DBUser>);
+        }
+
+        @Override
+        @RO DBMap<String, Type> types.get() {
+            return implFor(BuiltIn.Types.id).as(DBMap<String, Type>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> objects.get() {
+            return implFor(BuiltIn.Objects.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> schemas.get() {
+            return implFor(BuiltIn.Schemas.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> counters.get() {
+            return implFor(BuiltIn.Counters.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> values.get() {
+            return implFor(BuiltIn.Values.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> maps.get() {
+            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> lists.get() {
+            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> queues.get() {
+            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> processors.get() {
+            return implFor(BuiltIn.Processors.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBMap<String, DBObjectInfo> logs.get() {
+            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBObjectInfo>);
+        }
+
+        @Override
+        @RO DBList<Pending> pending.get() {
+            return implFor(BuiltIn.Pending.id).as(DBList<Pending>);
+        }
+
+        @Override
+        @RO DBLog<DBTransaction> transactions.get() {
+            return implFor(BuiltIn.Transactions.id).as(DBLog<DBTransaction>);
+        }
+
+        @Override
+        @RO DBLog<String> errors.get() {
+            return implFor(BuiltIn.Errors.id).as(DBLog<String>);
+        }
+    }
 
     // TODO cut & paste from deleted source files - /sys/ stuff to sort out later
     //    @Override
@@ -1437,19 +1270,17 @@ service Client<Schema extends RootSchema>
      */
     class Connection(DboInfo info_)
             extends RootSchemaImpl(info_)
-            implements oodb.Connection<Schema>
-        {
-        @Override
-        @RO DBUser dbUser.get()
-            {
-            return outer.dbUser;
-            }
+            implements oodb.Connection<Schema> {
 
         @Override
-        @RO (Transaction + Schema)? transaction.get()
-            {
+        @RO DBUser dbUser.get() {
+            return outer.dbUser;
+        }
+
+        @Override
+        @RO (Transaction + Schema)? transaction.get() {
             return outer.tx? : Null;
-            }
+        }
 
         @Override
         (Transaction + Schema) createTransaction(UInt?                  id          = Null,
@@ -1459,8 +1290,7 @@ service Client<Schema extends RootSchema>
                                                  Duration?              timeout     = Null,
                                                  Int                    retryCount  = 0,
                                                  Boolean                override    = False,
-                                                )
-            {
+                                                ) {
             assert outer.tx == Null as "Attempted to create a transaction when one already exists";
             assert !internal || override;
 
@@ -1471,17 +1301,16 @@ service Client<Schema extends RootSchema>
 
             outer.tx = newTx;
             return newTx;
-            }
+        }
 
         @Override
-        void close(Exception? e = Null)
-            {
+        void close(Exception? e = Null) {
             super(e);
             outer.conn = Null;
             outer.tx   = Null;
             notifyOnClose?(this.Client);
-            }
         }
+    }
 
 
     // ----- Transaction ---------------------------------------------------------------------------
@@ -1491,17 +1320,14 @@ service Client<Schema extends RootSchema>
      */
     class Transaction(DboInfo info_, TxInfo txInfo)
             extends RootSchemaImpl
-            implements oodb.Transaction<Schema>
-        {
-        construct(DboInfo info_, TxInfo txInfo, Int? id=Null)
-            {
+            implements oodb.Transaction<Schema> {
+
+        construct(DboInfo info_, TxInfo txInfo, Int? id=Null) {
             construct RootSchemaImpl(info_);
             this.txInfo = txInfo;
-            }
-        finally
-            {
+        } finally {
             id_ = id ?: txManager.begin(this, worker, readOnly || txInfo.readOnly);
-            }
+        }
 
         /**
          * The set of DBObject ids with deferred transactional processing.
@@ -1519,11 +1345,10 @@ service Client<Schema extends RootSchema>
          * @param txInfo
          * @param id
          */
-        void represent_(TxInfo txInfo, Int id)
-            {
+        void represent_(TxInfo txInfo, Int id) {
             this.txInfo = txInfo;
             this.id_    = id;
-            }
+        }
 
         /**
          * The transaction ID assigned to this transaction by the TxManager.
@@ -1538,272 +1363,216 @@ service Client<Schema extends RootSchema>
         public/protected TxInfo txInfo;
 
         @Override
-        @RO (Connection + Schema) connection.get()
-            {
+        @RO (Connection + Schema) connection.get() {
             // note: this is considered to be a valid request, regardless of whether this
             // transaction is a currently valid transaction or not
             return outer.conn ?: assert;
-            }
+        }
 
         @Override
-        @RO Boolean pending.get()
-            {
+        @RO Boolean pending.get() {
             return &this == outer.&tx;
-            }
+        }
 
         @Override
-        Boolean rollbackOnly.set(Boolean value)
-            {
+        Boolean rollbackOnly.set(Boolean value) {
             assert pending;
             assert value || !get();
             super(value);
-            }
+        }
 
         @Override
-        CommitResult commit(Boolean override = False)
-            {
+        CommitResult commit(Boolean override = False) {
             Transaction? that = outer.tx;
-            if (that == Null)
-                {
+            if (that == Null) {
                 log($"Attempt to commit a previously closed transaction {this}; no current transaction.");
                 return PreviouslyClosed;
-                }
+            }
 
-            if (&this != &that)
-                {
+            if (&this != &that) {
                 log($"Attempt to commit a previously closed transaction {this}; a different transaction is now in progress.");
                 return PreviouslyClosed;
-                }
+            }
 
-            if (outer.internal && !override)
-                {
+            if (outer.internal && !override) {
                 log($"Illegal commit request for {this}.");
                 // technically, this error is not correct, but the gist is correct: this transaction
                 // is not allowed to be committed
                 return RollbackOnly;
-                }
+            }
 
             // a transaction with a NO_TX id or a ReadId hasn't done anything to commit
             CommitResult result = Committed;
-            if (id_ != NO_TX && TxManager.txCat(id_) == Open)
-                {
-                if (!txProcessDeferred_())
-                    {
+            if (id_ != NO_TX && TxManager.txCat(id_) == Open) {
+                if (!txProcessDeferred_()) {
                     return DeferredFailed;
-                    }
+                }
 
-                try
-                    {
+                try {
                     result = txManager.commit(id_);
-                    }
-                catch (DBClosed e)
-                    {
+                } catch (DBClosed e) {
                     throw e;
-                    }
-                catch (Exception e)
-                    {
+                } catch (Exception e) {
                     log($"Exception during commit of {this}: {e}");
                     result = DatabaseError;
-                    try
-                        {
+                    try {
                         txManager.rollback(id_);
-                        }
-                    catch (Exception ignore) {}
-                    }
-                finally
-                    {
+                    } catch (Exception ignore) {}
+                } finally {
                     // clearing out the transaction reference will "close" the transaction; it
                     // becomes no longer reachable internally
                     outer.tx = Null;
-                    }
                 }
+            }
 
             close();
 
             return result;
-            }
+        }
 
         @Override
-        Boolean rollback(Boolean override = False)
-            {
+        Boolean rollback(Boolean override = False) {
             Transaction? that = outer.tx;
-            if (that == Null)
-                {
+            if (that == Null) {
                 log($"Attempt to roll back a previously closed transaction {this}; no current transaction.");
                 return False;
-                }
+            }
 
-            if (&this != &that)
-                {
+            if (&this != &that) {
                 log($"Attempt to roll back a previously closed transaction {this}; a different transaction is now in progress.");
                 return False;
-                }
+            }
 
-            if (outer.internal && !override)
-                {
+            if (outer.internal && !override) {
                 log($"Illegal rollback request for {this}.");
                 return False;
-                }
+            }
 
             Boolean result = True;
-            if (id_ != NO_TX)
-                {
-                try
-                    {
+            if (id_ != NO_TX) {
+                try {
                     result = txManager.rollback(id_);
-                    }
-                catch (DBClosed e)
-                    {
-                    }
-                catch (Exception e)
-                    {
+                } catch (DBClosed e) {} catch (Exception e) {
                     log($"Exception during rollback of {this}: {e}");
                     result = False;
-                    }
-                finally
-                    {
+                } finally {
                     outer.tx = Null;
-                    }
                 }
+            }
 
             close();
 
             return result;
-            }
+        }
 
         @Override
-        void close(Exception? e = Null)
-            {
+        void close(Exception? e = Null) {
             Transaction? that = outer.tx;
-            if (&this == &that)
-                {
+            if (&this == &that) {
                 txResetDeferred_();
-                try
-                    {
+                try {
                     // this needs to eventually make its way to the implementation of close() on the
                     // Transaction interface itself, which will decide to either commit or to roll
                     // back the transaction, in the case that the transaction is still open
                     super(e);
-                    }
-                finally
-                    {
+                } finally {
                     outer.tx = Null;
-                    }
                 }
             }
+        }
 
         /**
          * Add a deferred adjustment to this Transaction's list of deferred adjustments.
          */
-        protected void txAddDeferred_(Deferred_ deferred)
-            {
-            if (Deferred_ txLastDeferred ?= txLastDeferred_)
-                {
+        protected void txAddDeferred_(Deferred_ deferred) {
+            if (Deferred_ txLastDeferred ?= txLastDeferred_) {
                 txLastDeferred.txNextDeferred = deferred;
                 txLastDeferred_ = deferred;
-                }
-            else
-                {
+            } else {
                 txFirstDeferred_ = deferred;
                 txLastDeferred_  = deferred;
-                }
             }
+        }
 
         /**
          * Process all of this DBObjectImpl's list of deferred adjustments.
          *
          * @return True iff no deferred adjustment reported a failure
          */
-        protected Boolean txProcessDeferred_()
-            {
+        protected Boolean txProcessDeferred_() {
             // fast path - nothing is deferred
-            if (txFirstDeferred_ == Null)
-                {
+            if (txFirstDeferred_ == Null) {
                 return True;
-                }
+            }
 
             Boolean       failure = False;
             DBObjectImpl? prevDbo = Null;
-            while (Deferred_ deferred ?= txFirstDeferred_)
-                {
+            while (Deferred_ deferred ?= txFirstDeferred_) {
                 txFirstDeferred_ = deferred.txNextDeferred;
 
                 DBObjectImpl dbo = deferred.dbo;
-                if (dbo != prevDbo)
-                    {
+                if (dbo != prevDbo) {
                     dbo.dboResetDeferred_();
-                    }
+                }
 
-                if (!failure, function Boolean(DBObjectImpl) adjust ?= deferred.adjust)
-                    {
+                if (!failure, function Boolean(DBObjectImpl) adjust ?= deferred.adjust) {
                     // wipe out the deferred work (so it doesn't accidentally get re-run in the
                     // future)
                     deferred.adjust = Null;
 
-                    try
-                        {
-                        if (!adjust(dbo))
-                            {
+                    try {
+                        if (!adjust(dbo)) {
                             failure = True;
-                            }
                         }
-                    catch (Exception e)
-                        {
+                    } catch (Exception e) {
                         failure = True;
 
                         // log the exception (otherwise the information would be lost)
                         log($|While attempting to execute a deferred adjustment on\
                              | {dbo.dbPath.toString().substring(1)}, an exception occurred: {e}
                            );
-                        }
                     }
                 }
+            }
 
             txResetDeferred_();
 
-            if (failure)
-                {
+            if (failure) {
                 rollbackOnly = True;
 
                 // deferred adjustments failed
                 return False;
-                }
+            }
 
             return True;
-            }
+        }
 
         /**
          * Reset the linked list of Deferred items on this DBObjectImpl.
          */
-        protected void txResetDeferred_()
-            {
-            if (DBObjectImpl.Deferred_ deferred ?= txFirstDeferred_)
-                {
+        protected void txResetDeferred_() {
+            if (DBObjectImpl.Deferred_ deferred ?= txFirstDeferred_) {
                 DBObjectImpl? prevDbo = Null;
-                do
-                    {
+                do {
                     // minor optimization: if there are a bunch of deferred adjustments in a row for
                     // the same DBObject, then only call reset once
                     DBObjectImpl dbo = deferred.dbo;
-                    if (dbo != prevDbo)
-                        {
+                    if (dbo != prevDbo) {
                         dbo.dboResetDeferred_();
                         prevDbo = dbo;
-                        }
                     }
-                while (deferred ?= deferred.txNextDeferred);
+                } while (deferred ?= deferred.txNextDeferred);
 
                 txFirstDeferred_ = Null;
                 txLastDeferred_  = Null;
-                }
-            }
-
-        @Override
-        String toString()
-            {
-            return $"Transaction(id={id_}, txInfo={txInfo})";
             }
         }
+
+        @Override
+        String toString() {
+            return $"Transaction(id={id_}, txInfo={txInfo})";
+        }
+    }
 
 
     // ----- DBValue -------------------------------------------------------------------------------
@@ -1813,28 +1582,24 @@ service Client<Schema extends RootSchema>
      */
     class DBValueImpl<Value extends immutable Const>(DboInfo info_, ValueStore<Value> store_)
             extends DBObjectImpl(info_)
-            implements DBValue<Value>
-        {
+            implements DBValue<Value> {
+
         protected ValueStore<Value> store_;
 
         @Override
-        Value get()
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
+        Value get() {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
                 return store_.load(tx.id);
-                }
-            }
-
-        @Override
-        void set(Value value)
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
-                store_.store(tx.id, value);
-                }
             }
         }
+
+        @Override
+        void set(Value value) {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
+                store_.store(tx.id, value);
+            }
+        }
+    }
 
 
     // ----- DBCounter -----------------------------------------------------------------------------
@@ -1844,81 +1609,66 @@ service Client<Schema extends RootSchema>
      */
     class DBCounterImpl
             extends DBValueImpl<Int>
-            implements DBCounter
-        {
-        construct(DboInfo info_, CounterStore store_)
-            {
+            implements DBCounter {
+
+        construct(DboInfo info_, CounterStore store_) {
             construct DBValueImpl(info_, store_);
-            }
+        }
 
         @Override
-        @RO CounterStore store_.get()
-            {
+        @RO CounterStore store_.get() {
             return super().as(CounterStore);
-            }
+        }
 
         @Override
-        Boolean transactional.get()
-            {
+        Boolean transactional.get() {
             return info_.transactional;
-            }
+        }
 
         @Override
-        Int next(Int count = 1)
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
+        Int next(Int count = 1) {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
                 return store_.adjust(tx.id, count);
-                }
-            }
-
-        @Override
-        void adjustBy(Int value)
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
-                store_.adjustBlind(tx.id, value);
-                }
-            }
-
-        @Override
-        Int preIncrement()
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
-                (_, Int after) = store_.adjust(tx.id, 1);
-                return after;
-                }
-            }
-
-        @Override
-        Int preDecrement()
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
-                (_, Int after) = store_.adjust(tx.id, -1);
-                return after;
-                }
-            }
-
-        @Override
-        Int postIncrement()
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
-                return store_.adjust(tx.id, 1);
-                }
-            }
-
-        @Override
-        Int postDecrement()
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
-                return store_.adjust(tx.id, -1);
-                }
             }
         }
+
+        @Override
+        void adjustBy(Int value) {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
+                store_.adjustBlind(tx.id, value);
+            }
+        }
+
+        @Override
+        Int preIncrement() {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
+                (_, Int after) = store_.adjust(tx.id, 1);
+                return after;
+            }
+        }
+
+        @Override
+        Int preDecrement() {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
+                (_, Int after) = store_.adjust(tx.id, -1);
+                return after;
+            }
+        }
+
+        @Override
+        Int postIncrement() {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
+                return store_.adjust(tx.id, 1);
+            }
+        }
+
+        @Override
+        Int postDecrement() {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
+                return store_.adjust(tx.id, -1);
+            }
+        }
+    }
 
 
     // ----- DBMap ---------------------------------------------------------------------------------
@@ -1930,103 +1680,86 @@ service Client<Schema extends RootSchema>
             (DboInfo info_, MapStore<Key, Value> store_)
             extends DBObjectImpl(info_)
             implements DBMap<Key, Value>
-            incorporates KeySetBasedMap<Key, Value>
-        {
+            incorporates KeySetBasedMap<Key, Value> {
+
         protected MapStore<Key, Value> store_;
 
         @Override
-        @RO Int size.get()
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        @RO Int size.get() {
+            using (val tx = ensureTransaction(this)) {
                 return store_.sizeAt(tx.id);
-                }
             }
+        }
 
         @Override
-        @RO Boolean empty.get()
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        @RO Boolean empty.get() {
+            using (val tx = ensureTransaction(this)) {
                 return store_.emptyAt(tx.id);
-                }
             }
+        }
 
         @Override
-        Boolean contains(Key key)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        Boolean contains(Key key) {
+            using (val tx = ensureTransaction(this)) {
                 return store_.existsAt(tx.id, key);
-                }
             }
+        }
 
         @Override
-        conditional Value get(Key key)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        conditional Value get(Key key) {
+            using (val tx = ensureTransaction(this)) {
                 return store_.load(tx.id, key);
-                }
             }
+        }
 
         @Override
-        DBMapImpl put(Key key, Value value)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        DBMapImpl put(Key key, Value value) {
+            using (val tx = ensureTransaction(this)) {
                 store_.store(tx.id, key, value);
                 return this;
-                }
             }
+        }
 
         @Override
-        DBMapImpl remove(Key key)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        DBMapImpl remove(Key key) {
+            using (val tx = ensureTransaction(this)) {
                 store_.delete(tx.id, key);
                 return this;
-                }
             }
+        }
 
         @Override
-        @Lazy public/private Set<Key> keys.calc()
-            {
+        @Lazy public/private Set<Key> keys.calc() {
             return new KeySet();
-            }
+        }
 
         /**
          * A representation of the Keys from the MapStore.
          */
         protected class KeySet
-                implements Set<Key>
-            {
+                implements Set<Key> {
+
             @Override
-            Int size.get()
-                {
+            Int size.get() {
                 return outer.size;
-                }
+            }
 
             @Override
-            Boolean empty.get()
-                {
+            Boolean empty.get() {
                 return outer.empty;
-                }
+            }
 
             @Override
-            Iterator<Element> iterator()
-                {
+            Iterator<Element> iterator() {
                 return new KeyIterator();
-                }
+            }
 
             /**
              * An iterator over the keys in the MapStore.
              */
             protected class KeyIterator
                     implements Iterator<Key>
-                    implements Closeable
-                {
+                    implements Closeable {
                 /**
                  * Set to true once iteration has begun.
                  */
@@ -2050,32 +1783,26 @@ service Client<Schema extends RootSchema>
                 /**
                  * Set to true once the iterator has been exhausted.
                  */
-                protected/private Boolean finished.set(Boolean done)
-                    {
-                    if (done)
-                        {
+                protected/private Boolean finished.set(Boolean done) {
+                    if (done) {
                         // make sure that the iterator has been marked as having started
                         started = True;
-                        }
-
-                    super(done);
                     }
 
-                @Override
-                conditional Element next()
-                    {
-                    while (True)
-                        {
-                        if (nextIndex < keyBlock.size)
-                            {
-                            return True, keyBlock[nextIndex++];
-                            }
+                    super(done);
+                }
 
-                        if (started && cookie == Null || finished)
-                            {
+                @Override
+                conditional Element next() {
+                    while (True) {
+                        if (nextIndex < keyBlock.size) {
+                            return True, keyBlock[nextIndex++];
+                        }
+
+                        if (started && cookie == Null || finished) {
                             close();
                             return False;
-                            }
+                        }
 
                         // if there is no transaction, then we'll be creating an auto-commit
                         // transaction, but if we already have a cookie left over from a
@@ -2089,121 +1816,105 @@ service Client<Schema extends RootSchema>
 
                         // load the next (or the first) block of keys
                         started = True;
-                        using (val tx = ensureTransaction(this.DBMapImpl))
-                            {
+                        using (val tx = ensureTransaction(this.DBMapImpl)) {
                             (keyBlock, cookie) = store_.keysAt(tx.id, cookie);
                             nextIndex = 0;
-                            }
                         }
                     }
+                }
 
                 @Override
-                Boolean knownDistinct()
-                    {
+                Boolean knownDistinct() {
                     return True;
-                    }
+                }
 
                 @Override
-                conditional Int knownSize()
-                    {
-                    if (!started)
-                        {
+                conditional Int knownSize() {
+                    if (!started) {
                         return True, outer.size;
-                        }
+                    }
 
-                    if (finished)
-                        {
+                    if (finished) {
                         return True, 0;
-                        }
+                    }
 
                     return False;
-                    }
+                }
 
                 @Override
-                void close(Exception? cause = Null)
-                    {
+                void close(Exception? cause = Null) {
                     // idempotent clean-up, and clear all unnecessary references
                     finished  = True;
                     keyBlock  = [];
                     nextIndex = 0;
                     cookie    = Null;
-                    }
-                }
-
-            @Override
-            Boolean contains(Key key)
-                {
-                return outer.contains(key);
-                }
-
-            @Override
-            KeySet remove(Key key)
-                {
-                outer.remove(key);
-                return this;
                 }
             }
+
+            @Override
+            Boolean contains(Key key) {
+                return outer.contains(key);
+            }
+
+            @Override
+            KeySet remove(Key key) {
+                outer.remove(key);
+                return this;
+            }
+        }
 
         @Override
         protected class CursorEntry
-                implements Entry
-            {
-            @Override
-            Entry reify()
-                {
-                return new ReifiedEntry(key);
-                }
+                implements Entry {
 
             @Override
-            Entry original.get()
-                {
-                TODO CP
-                }
+            Entry reify() {
+                return new ReifiedEntry(key);
             }
+
+            @Override
+            Entry original.get() {
+                TODO CP
+            }
+        }
 
         /**
          * An implementation of the Entry interface suitable for use as the "original" entry.
          */
         protected const ReifiedEntry(Key key)
                 implements Entry
-                incorporates KeyEntry<Key, Value>(key)
-            {
-            }
+                incorporates KeyEntry<Key, Value>(key) {}
 
         /**
          * An implementation of the Entry interface suitable for use as the "original" entry.
          */
         protected const HistoricalEntry
-                implements Entry
-            {
-            construct(Key key)
-                {
+                implements Entry {
+
+            construct(Key key) {
                 this.key    = key;
                 this.exists = False;
-                }
+            }
 
-            construct(Key key, Value value)
-                {
+            construct(Key key, Value value) {
                 this.key    = key;
                 this.value  = value;
                 this.exists = True;
-                }
+            }
 
             @Override
-            immutable Value value.get()
-                {
+            immutable Value value.get() {
                 return assigned
                         ? super()
                         : throw new OutOfBounds($"A value for the key \"{key}\" does not exist");
-                }
+            }
 
             @Override
-            Entry original.get()
-                {
+            Entry original.get() {
                 return this;
-                }
             }
         }
+    }
 
 
     // ----- DBMap (for sys schema) ----------------------------------------------------------------
@@ -2214,33 +1925,29 @@ service Client<Schema extends RootSchema>
     class SysMapImpl<Value extends immutable Const>(DboInfo info, DBCategory category, Catalog catalog)
             extends DBObjectImpl(info)
             implements DBMap<String, Value>
-            incorporates KeySetBasedMap<String, Value>
-        {
-        @Lazy Int[] ids_.calc()
-            {
+            incorporates KeySetBasedMap<String, Value> {
+
+        @Lazy Int[] ids_.calc() {
             DBCategory category = this.category;
             return catalog.metadata?.dbObjectInfos
                     .filter(info -> info.category == category)
                     .map(info -> info.id, new Int[])
                     .as(Int[]) : assert;
-            }
+        }
 
         @Lazy
-        Map<String, Int> pathToId_.calc()
-            {
-            if (empty)
-                {
+        Map<String, Int> pathToId_.calc() {
+            if (empty) {
                 return [];
-                }
+            }
 
             HashMap<String, Int> map = new HashMap();
-            for (Int id : ids_)
-                {
+            for (Int id : ids_) {
                 DboInfo info = infoFor(id);
                 map.put(info.path.toString(), id);
-                }
-            return map.freeze();
             }
+            return map.freeze();
+        }
 
         @Override
         @RO Int size.get() = ids_.size;
@@ -2252,15 +1959,13 @@ service Client<Schema extends RootSchema>
         Boolean contains(Key key) = pathToId_.contains(key);
 
         @Override
-        conditional Value get(Key key)
-            {
-            if (Int id := pathToId_.get(key))
-                {
+        conditional Value get(Key key) {
+            if (Int id := pathToId_.get(key)) {
                 return True, infoFor(id).as(Value);
-                }
+            }
 
             return False;
-            }
+        }
 
         @Override
         SysMapImpl put(Key key, Value value) = throw new ReadOnly();
@@ -2270,7 +1975,7 @@ service Client<Schema extends RootSchema>
 
         @Override
         Set<Key> keys.get() = pathToId_.keys;
-        }
+    }
 
 
     // ----- DBLog ---------------------------------------------------------------------------------
@@ -2280,36 +1985,32 @@ service Client<Schema extends RootSchema>
      */
     class DBLogImpl<Value extends immutable Const>(DboInfo info_, LogStore<Value> store_)
             extends DBObjectImpl(info_)
-            implements DBLog<Value>
-        {
+            implements DBLog<Value> {
+
         protected LogStore<Value> store_;
 
         @Override
-        Boolean transactional.get()
-            {
+        Boolean transactional.get() {
             return info_.transactional;
-            }
+        }
 
         @Override
-        DBLogImpl add(Value value)
-            {
-            using (val tx = ensureTransaction(this, allowNontransactional=True))
-                {
+        DBLogImpl add(Value value) {
+            using (val tx = ensureTransaction(this, allowNontransactional=True)) {
                 store_.append(tx.id, value);
-                }
-            return this;
             }
+            return this;
+        }
 
         @Override
         conditional List<Entry> select((Range<Time>|Duration)? period = Null,
                                        DBUser?                 user   = Null,
                                        (UInt|Range<UInt>)?     txIds  = Null,
-                                       String?                 txName = Null)
-            {
+                                       String?                 txName = Null) {
             // TODO
             return False;
-            }
         }
+    }
 
 
     // ----- DBProcessor ---------------------------------------------------------------------------
@@ -2319,61 +2020,51 @@ service Client<Schema extends RootSchema>
      */
     class DBProcessorImpl<Message extends immutable Const>(DboInfo info_, ProcessorStore<Message> store_)
             extends DBObjectImpl(info_)
-            implements DBProcessor<Message>
-        {
+            implements DBProcessor<Message> {
+
         protected ProcessorStore<Message> store_;
 
         @Override
-        void schedule(Message message, Schedule? when=Null)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void schedule(Message message, Schedule? when=Null) {
+            using (val tx = ensureTransaction(this)) {
                 store_.schedule(tx.id, message, when);
-                }
             }
+        }
 
         @Override
-        void scheduleAll(Iterable<Message> messages, Schedule? when=Null)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void scheduleAll(Iterable<Message> messages, Schedule? when=Null) {
+            using (val tx = ensureTransaction(this)) {
                 super(messages, when);
-                }
             }
+        }
 
         @Override
-        void reschedule(Message message, Schedule when)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void reschedule(Message message, Schedule when) {
+            using (val tx = ensureTransaction(this)) {
                 super(message, when);
-                }
             }
+        }
 
         @Override
-        void unschedule(Message message)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void unschedule(Message message) {
+            using (val tx = ensureTransaction(this)) {
                 return store_.unschedule(tx.id, message);
-                }
             }
+        }
 
         @Override
-        void unscheduleAll()
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void unscheduleAll() {
+            using (val tx = ensureTransaction(this)) {
                 store_.unscheduleAll(tx.id);
-                }
             }
+        }
 
         /**
          * Implements the list as returned from the pending() method.
          */
         class PendingList_(Int txid, Int[] pids)
-                implements List<Pending>
-            {
+                implements List<Pending> {
+
             /**
              * Cached Pending objects; the contents of this list.
              */
@@ -2382,27 +2073,23 @@ service Client<Schema extends RootSchema>
             /**
              * Checks to make sure that this list isn't used outside of its transaction.
              */
-            void checkTx()
-                {
+            void checkTx() {
                 assert txid == this.Client.tx?.id_ : False;
-                }
+            }
 
             @Override
-            Int size.get()
-                {
+            Int size.get() {
                 checkTx();
                 return pids.size;
-                }
+            }
 
             @Override
-            @Op("[]") Pending getElement(Index index)
-                {
+            @Op("[]") Pending getElement(Index index) {
                 checkTx();
                 assert:bounds 0 <= index < pids.size;
-                if (index < pendingCache.size, Pending pending ?= pendingCache[index])
-                    {
+                if (index < pendingCache.size, Pending pending ?= pendingCache[index]) {
                     return pending;
-                    }
+                }
 
                 Pending pending = store_.pending(txid, pids[index]);
 
@@ -2410,26 +2097,23 @@ service Client<Schema extends RootSchema>
                 pendingCache[index] = pending;
 
                 return pending;
-                }
-
-            @Override
-            List<Pending> reify()
-                {
-                checkTx();
-                return toArray();
-                }
             }
 
+            @Override
+            List<Pending> reify() {
+                checkTx();
+                return toArray();
+            }
+        }
+
         @Override
-        List<Pending> pending()
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        List<Pending> pending() {
+            using (val tx = ensureTransaction(this)) {
                 Int[] pids = store_.pidListAt(tx.id);
                 List<Pending> list = new PendingList_(tx.id, pids);
                 return tx.autocommit ? list.reify() : list;
-                }
             }
+        }
 
         /**
          * Process one pending message.
@@ -2440,63 +2124,53 @@ service Client<Schema extends RootSchema>
          * @return the elapsed processing time
          * @return the exceptional processing failure, iff the processing failed
          */
-        (Range<Time>, Exception?) process_(Int pid, Message message)
-            {
+        (Range<Time>, Exception?) process_(Int pid, Message message) {
             Transaction tx      = requireTransaction_("process()");
             Exception?  failure = Null;
             Time        start   = clock.now;
             Range<Time> elapsed;
-            try
-                {
+            try {
                 process(message);
-                }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 failure = e;
-                }
+            }
             elapsed = start..clock.now;
 
-            if (failure == Null)
-                {
+            if (failure == Null) {
                 // the information about the PID being successfully processed is part of the
                 // transactional record, and must be committed as part of this transaction, so
                 // the information is provided to the DBProcessor's ObjectStore at this point;
                 // if the transaction fails to commit, then the fact that the PID was processed
                 // will also be lost -- as it should be!
                 store_.processCompleted(tx.id_, message, pid, elapsed);
-                }
+            }
 
             return elapsed, failure;
-            }
+        }
 
         @Override
-        void process(Message message)
-            {
+        void process(Message message) {
             // this method must be overridden; the database schema is invalid if a DBProcessor
             // does not override this method
-            }
+        }
 
         @Override
-        void processAll(List<Message> messages)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void processAll(List<Message> messages) {
+            using (val tx = ensureTransaction(this)) {
                 super(messages);
-                }
             }
+        }
 
         @Override
         Boolean autoRetry(Message                  message,
                           CommitResult | Exception result,
                           Schedule?                when,
                           Range<Time>              elapsed,
-                          Int                      timesAttempted)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+                          Int                      timesAttempted) {
+            using (val tx = ensureTransaction(this)) {
                 return super(message, result, when, elapsed, timesAttempted);
-                }
             }
+        }
 
         /**
          * Notification of a decision to retry.
@@ -2504,11 +2178,10 @@ service Client<Schema extends RootSchema>
         void retrying_(Message                  message,
                        Int                      pid,
                        Range<Time>              elapsed,
-                       CommitResult | Exception result)
-            {
+                       CommitResult | Exception result) {
             Transaction tx = requireTransaction_("retryPending()");
             store_.retryPending(tx.id_, message, pid, elapsed, result);
-            }
+        }
 
         /**
          * Notification of a decision to abandon.
@@ -2516,50 +2189,41 @@ service Client<Schema extends RootSchema>
         void abandoning_(Message                  message,
                          Int                      pid,
                          Range<Time>              elapsed,
-                         CommitResult | Exception result)
-            {
+                         CommitResult | Exception result) {
             Transaction tx = requireTransaction_("abandonPending()");
             store_.abandonPending(tx.id_, message, pid, elapsed, result);
-            }
+        }
 
         @Override
         void abandon(Message                  message,
                      CommitResult | Exception result,
                      Schedule?                when,
                      Range<Time>              elapsed,
-                     Int                      timesAttempted)
-            {
-            using (val tx = ensureTransaction(this))
-                {
+                     Int                      timesAttempted) {
+            using (val tx = ensureTransaction(this)) {
                 super(message, result, when, elapsed, timesAttempted);
-                }
             }
+        }
 
         @Override
-        void suspend()
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void suspend() {
+            using (val tx = ensureTransaction(this)) {
                 store_.setEnabled(tx.id, False);
-                }
             }
+        }
 
         @Override
-        Boolean suspended.get()
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        Boolean suspended.get() {
+            using (val tx = ensureTransaction(this)) {
                 return store_.isEnabled(tx.id);
-                }
             }
+        }
 
         @Override
-        void resume()
-            {
-            using (val tx = ensureTransaction(this))
-                {
+        void resume() {
+            using (val tx = ensureTransaction(this)) {
                 store_.setEnabled(tx.id, True);
-                }
             }
         }
     }
+}

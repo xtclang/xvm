@@ -10,18 +10,16 @@ import model.DboInfo;
  */
 @Concurrent
 service SchemaStore
-        extends ObjectStore
-    {
-    construct(Catalog          catalog,
-              DboInfo     info,
-             )
-        {
+        extends ObjectStore {
+
+    construct(Catalog catalog,
+              DboInfo info,
+             ) {
         construct ObjectStore(catalog, info);
-        }
+    }
 
     @Override
-    Boolean quickScan()
-        {
+    Boolean quickScan() {
         return True;
-        }
     }
+}

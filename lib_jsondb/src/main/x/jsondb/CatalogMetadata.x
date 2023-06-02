@@ -26,8 +26,7 @@ import oodb.Transaction;
  * binds the DDL to the `jsonDB` database implementation.
  */
 mixin CatalogMetadata<Schema extends RootSchema>
-        into module
-    {
+        into module {
     /**
      * The "DDL" module that defines the database schema. This is the module provided by the
      * application developer, from which the code generation process works. The code generator
@@ -39,12 +38,11 @@ mixin CatalogMetadata<Schema extends RootSchema>
      * The tool-generated implementation module, that was generated to provide a JsonDB-specific
      * implementation of a developer-specified database schema.
      */
-    @RO Module implModule.get()
-        {
+    @RO Module implModule.get() {
         // unless someone provides some custom implementation, "this" *is* the module that is the
         // tool-generated code; i.e. the code for the auto-generated module incorporates this mixin
         return this;
-        }
+    }
 
     /**
      * The information about the objects that define the database schema.
@@ -64,11 +62,10 @@ mixin CatalogMetadata<Schema extends RootSchema>
     /**
      * The database schema version.
      */
-    @RO Version dbVersion.get()
-        {
+    @RO Version dbVersion.get() {
         // default database version is the module's version
         return schemaModule.version;
-        }
+    }
 
     /**
      * The `Catalog` factory. This is called by the host and the returned catalog is retained for
@@ -81,10 +78,9 @@ mixin CatalogMetadata<Schema extends RootSchema>
      * @return a new `Catalog` for accessing (or otherwise managing) the database located in the
      *         specified directory
      */
-    Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False)
-        {
+    Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False) {
         return new Catalog<Schema>(dir, this, readOnly);
-        }
+    }
 
     typedef (Connection<Schema>  + Schema) as ClientConnection;
     typedef (Transaction<Schema> + Schema) as ClientTransaction;
@@ -97,14 +93,12 @@ mixin CatalogMetadata<Schema extends RootSchema>
      *
      * @return a new `ClientConnection` factory of the database represented by the `Catalog`
      */
-    function oodb.Connection(DBUser) ensureConnectionFactory(Catalog catalog)
-        {
-        return user ->
-            {
+    function oodb.Connection(DBUser) ensureConnectionFactory(Catalog catalog) {
+        return user -> {
             Client<Schema> client = catalog.createClient(user).as(Client<Schema>);
             return client.conn ?: assert;
-            };
-        }
+        };
+    }
 
     /**
      * The `Client` factory. This is called by the Catalog when it creates a client.
@@ -123,4 +117,4 @@ mixin CatalogMetadata<Schema extends RootSchema>
                                 DBUser                 dbUser,
                                 Boolean                readOnly      = False,
                                 function void(Client)? notifyOnClose = Null);
-    }
+}

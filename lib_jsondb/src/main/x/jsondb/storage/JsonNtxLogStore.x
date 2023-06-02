@@ -8,8 +8,7 @@ import json.ObjectOutputStream;
  */
 @Concurrent
 service JsonNtxLogStore<Element extends immutable Const>
-        extends JsonLogStoreBase<Element>
-    {
+        extends JsonLogStoreBase<Element> {
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
@@ -18,18 +17,16 @@ service JsonNtxLogStore<Element extends immutable Const>
               Duration         expiry,
               Int              truncateSize,
               Int              maxFileSize,
-              )
-        {
+              ) {
         construct JsonLogStoreBase(catalog, info, elementMapping, expiry, truncateSize, maxFileSize);
-        }
+    }
 
 
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
     @Synchronized
-    void append(Int txId, Element element)
-        {
+    void append(Int txId, Element element) {
         checkWrite();
 
         StringBuffer buf = new StringBuffer(64);
@@ -46,22 +43,18 @@ service JsonNtxLogStore<Element extends immutable Const>
 
         File file   = dataFile;
         Int  length = file.exists ? file.size : 0;
-        if (length > 2)
-            {
+        if (length > 2) {
             file.truncate(length-2)
                 .append(buf.toString().utf8());
-            }
-        else
-            {
+        } else {
             // replace the opening "," with an array begin "["
             buf[0]         = '[';
             file.contents  = buf.toString().utf8();
-            }
+        }
 
         length += buf.size;
-        if (length > maxFileSize)
-            {
+        if (length > maxFileSize) {
             rotateLog();
-            }
         }
     }
+}

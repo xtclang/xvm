@@ -62,8 +62,8 @@ import storage.SchemaStore;
  * TODO version - should only be able to open the catalog with the correct TypeSystem version
  */
 service Catalog<Schema extends RootSchema>
-        implements Closeable
-    {
+        implements Closeable {
+
     typedef (Client.Connection + Schema) as Connection;
 
     // ----- constructors --------------------------------------------------------------------------
@@ -77,8 +77,7 @@ service Catalog<Schema extends RootSchema>
      *                  data store
      * @param readOnly  (optional) pass `True` to access the catalog in a read-only manner
      */
-    construct(Directory dir, CatalogMetadata<Schema>? metadata = Null, Boolean readOnly = False)
-        {
+    construct(Directory dir, CatalogMetadata<Schema>? metadata = Null, Boolean readOnly = False) {
         assert:arg dir.exists && dir.readable && (readOnly || dir.writable);
         assert metadata != Null || Schema == RootSchema;
 
@@ -88,7 +87,7 @@ service Catalog<Schema extends RootSchema>
         this.version     = metadata?.version : Null;
         this.readOnly    = readOnly;
         this.status      = Closed;
-        }
+    }
 
 
     // ----- built-in system schema ----------------------------------------------------------------
@@ -96,8 +95,7 @@ service Catalog<Schema extends RootSchema>
     /**
      * An enumeration of built-in (system) database objects.
      */
-    enum BuiltIn<ObjectType>
-        {
+    enum BuiltIn<ObjectType> {
         Root<DBSchema>,
         Sys<DBSchema>,
         Info<DBValue<DBInfo>>,
@@ -123,18 +121,16 @@ service Catalog<Schema extends RootSchema>
          * The internal id of the built-in database object. The root schema is 0, while the rest of
          * the built-in database objects use negative ids.
          */
-        Int id.get()
-            {
+        Int id.get() {
             return -ordinal;
-            }
+        }
 
         /**
          * The DboInfo for the built-in database object.
          */
-        DboInfo info.get()
-            {
+        DboInfo info.get() {
             return SystemInfos[ordinal];
-            }
+        }
 
         /**
          * Obtain the BuiltIn enum value for the specified built-in database object id.
@@ -143,12 +139,11 @@ service Catalog<Schema extends RootSchema>
          *
          * @return the BuiltIn value representing the built-in database object
          */
-        static BuiltIn byId(Int id)
-            {
+        static BuiltIn byId(Int id) {
             assert id <= 0 && id + BuiltIn.count > 0;
             return BuiltIn.values[-id];
-            }
         }
+    }
 
     static DboInfo[] SystemInfos =
         [
@@ -252,32 +247,29 @@ service Catalog<Schema extends RootSchema>
      * The JSON Schema to use.
      */
     @Concurrent
-    @Lazy json.Schema jsonSchema.calc()
-        {
+    @Lazy json.Schema jsonSchema.calc() {
         return metadata?.jsonSchema : json.Schema.DEFAULT;
-        }
+    }
 
     /**
      * The JSON Schema to use for the various classes in the database implementation itself.
      */
     @Concurrent
-    @Lazy json.Schema internalJsonSchema.calc()
-        {
+    @Lazy json.Schema internalJsonSchema.calc() {
         return new json.Schema(
             enableReflection = True,
             enableMetadata   = True,
             randomAccess     = True,     // TODO test without this (fails)
             );
-        }
+    }
 
     /**
      * A JSON Mapping to use to serialize instances of SysInfo.
      */
     @Concurrent
-    @Lazy Mapping<SysInfo> sysInfoMapping.calc()
-        {
+    @Lazy Mapping<SysInfo> sysInfoMapping.calc() {
         return internalJsonSchema.ensureMapping(SysInfo);
-        }
+    }
 
     /**
      * True iff the database was opened in read-only mode.
@@ -333,20 +325,18 @@ service Catalog<Schema extends RootSchema>
      * sequential ordered (non-concurrent) application of potentially concurrent transactions.
      */
     @Concurrent
-    @Lazy public/private TxManager txManager.calc()
-        {
+    @Lazy public/private TxManager txManager.calc() {
         return new TxManager(this);
-        }
+    }
 
     /**
      * The process scheduler for this `Catalog` object. The scheduler supports the asynchronous
      * processing by the database.
      */
     @Concurrent
-    @Lazy public/private Scheduler scheduler.calc()
-        {
+    @Lazy public/private Scheduler scheduler.calc() {
         return new Scheduler(this);
-        }
+    }
 
     /**
      * The existing client representations for this `Catalog` object. Each client may have a single
@@ -375,12 +365,11 @@ service Catalog<Schema extends RootSchema>
 
     @Override
     @Concurrent
-    String toString()
-        {
+    String toString() {
         return $|{this:class.name}:\{dir={dir}, version={version}, status={status},\
                 | readOnly={readOnly}, unique-id={timestamp}}
                 ;
-        }
+    }
 
 
     // ----- support ----------------------------------------------------------------------------
@@ -390,50 +379,40 @@ service Catalog<Schema extends RootSchema>
      *
      * @param dbModuleName  the database module name used for logging
      */
-    void ensureOpenDB(String dbModuleName)
-        {
+    void ensureOpenDB(String dbModuleName) {
         Boolean success = False;
-        try
-            {
+        try {
             success = open();
-            }
-        catch (IllegalState e)
-            {
+        } catch (IllegalState e) {
             log($"Failed to open the catalog for \"{dbModuleName}\"; reason={e.text}");
-            }
+        }
 
-        if (!success)
-            {
+        if (!success) {
             // failed to open; try to recover
-            try
-                {
+            try {
                 recover();
                 success = True;
-                }
-            catch (IllegalState e)
-                {
+            } catch (IllegalState e) {
                 log($"Failed to recover the catalog for \"{dbModuleName}\"; reason={e.text}");
-                }
             }
+        }
 
-        if (!success)
-            {
+        if (!success) {
             // failed to recover; try to create
             create(dbModuleName);
             assert open() as $"Failed to create the catalog for \"{dbModuleName}\"";
-            }
         }
+    }
 
     /**
      * An error and message log for the database.
      */
     @Concurrent
-    void log(String msg)
-        {
+    void log(String msg) {
         // TODO
         @Inject Console console;
         console.print($"*** {msg}");
-        }
+    }
 
     /**
      * Obtain the DboInfo for the specified id.
@@ -443,35 +422,30 @@ service Catalog<Schema extends RootSchema>
      * @return the DboInfo for the specified id
      */
     @Concurrent
-    DboInfo infoFor(Int id)
-        {
-        if (id < 0)
-            {
+    DboInfo infoFor(Int id) {
+        if (id < 0) {
             return BuiltIn.byId(id).info;
-            }
+        }
 
-        if (CatalogMetadata metadata ?= this.metadata)
-            {
-            if (id == 0)
-                {
+        if (CatalogMetadata metadata ?= this.metadata) {
+            if (id == 0) {
                 private DboInfo? root = Null;
                 return root?;
 
                 DboInfo raw = metadata.dbObjectInfos[0];
                 Int          sys = BuiltIn.Sys.id;
-                if (!raw.childIds.contains(sys))
-                    {
+                if (!raw.childIds.contains(sys)) {
                     raw = raw.withChild(BuiltIn.Sys.info);
-                    }
+                }
                 root = raw;
                 return raw;
-                }
-
-            return metadata.dbObjectInfos[id];
             }
 
-        TODO("create DboInfo"); // TODO
+            return metadata.dbObjectInfos[id];
         }
+
+        TODO("create DboInfo"); // TODO
+    }
 
     /**
      * Obtain the DboInfo for the specified name or path.
@@ -481,32 +455,27 @@ service Catalog<Schema extends RootSchema>
      * @return the DboInfo for the specified path
      */
     @Concurrent
-    DboInfo infoFor(String path)
-        {
+    DboInfo infoFor(String path) {
         DboInfo current = infoFor(0); // ROOT
 
-        NextPathSegment: for (String name : path.split('/'))
-            {
-            if (name == "" && NextPathSegment.first)
-                {
+        NextPathSegment: for (String name : path.split('/')) {
+            if (name == "" && NextPathSegment.first) {
                 continue NextPathSegment;
-                }
-
-            for (Int childId : current.childIds)
-                {
-                DboInfo child = infoFor(childId);
-                if (child.name == name)
-                    {
-                    current = child;
-                    continue NextPathSegment;
-                    }
-                }
-
-            assert:arg as $"Missing DboInfo for {name.quoted()} in path {path.quoted()}";
             }
 
-        return current;
+            for (Int childId : current.childIds) {
+                DboInfo child = infoFor(childId);
+                if (child.name == name) {
+                    current = child;
+                    continue NextPathSegment;
+                }
+            }
+
+            assert:arg as $"Missing DboInfo for {name.quoted()} in path {path.quoted()}";
         }
+
+        return current;
+    }
 
     /**
      * Obtain the ObjectStore for the specified id.
@@ -516,62 +485,54 @@ service Catalog<Schema extends RootSchema>
      * @return the ObjectStore for the specified id
      */
     @Concurrent
-    ObjectStore storeFor(Int id)
-        {
+    ObjectStore storeFor(Int id) {
         ObjectStore?[] stores = appStores;
         Int            index  = id;
-        if (id < 0)
-            {
+        if (id < 0) {
             stores = sysStores;
             index  = BuiltIn.byId(id).ordinal;
-            }
+        }
 
         Int size = stores.size;
-        if (index < size)
-            {
+        if (index < size) {
             return stores[index]?;
-            }
+        }
 
-        using (new SynchronizedSection())
-            {
-            if (index < stores.size)
-                {
+        using (new SynchronizedSection()) {
+            if (index < stores.size) {
                 return stores[index]?;
-                }
+            }
 
             // create the ObjectStore
             ObjectStore store = createStore(id);
 
             // whatever state the Catalog is in, the ObjectStore has to be "caught up" to that state
-            switch (status)
-                {
-                case Closed:
-                    break;
+            switch (status) {
+            case Closed:
+                break;
 
-                case Recovering:
-                    if (!store.recover())
-                        {
-                        throw new IllegalState($"Failed to recover \"{store.info.name}\" store at {store.path}");
-                        }
-                    break;
-
-                case Configuring:
-                    TODO
-
-                case Running:
-                    if (!store.open())
-                        {
-                        throw new IllegalState($"Failed to open \"{store.info.name}\" store at {store.path}");
-                        }
-                    break;
+            case Recovering:
+                if (!store.recover()) {
+                    throw new IllegalState($"Failed to recover \"{store.info.name}\" store at {store.path}");
                 }
+                break;
+
+            case Configuring:
+                TODO
+
+            case Running:
+                if (!store.open()) {
+                    throw new IllegalState($"Failed to open \"{store.info.name}\" store at {store.path}");
+                }
+                break;
+            }
 
             // save off the ObjectStore (lazy cache)
             stores[index] = store;
 
             return store;
-            }
         }
+    }
 
     /**
      * Create an ObjectStore for the specified internal database object id.
@@ -581,13 +542,10 @@ service Catalog<Schema extends RootSchema>
      * @return the new ObjectStore
      */
     @Concurrent
-    protected ObjectStore createStore(Int id)
-        {
+    protected ObjectStore createStore(Int id) {
         DboInfo info = infoFor(id);
-        if (id <= 0)
-            {
-            return switch (BuiltIn.byId(id))
-                {
+        if (id <= 0) {
+            return switch (BuiltIn.byId(id)) {
                 case Root:
                 case Sys:          new SchemaStore(this, info);
 
@@ -614,42 +572,38 @@ service Catalog<Schema extends RootSchema>
                 case TxCounter:    new JsonNtxCounterStore(this, info);
                 case PidCounter:   new JsonNtxCounterStore(this, info);
                 default:           assert as $"unsupported id={id}, BuiltIn={BuiltIn.byId(id)}, info={info}";
-                };
-            }
-        else
-            {
-            switch (info.category)
-                {
-                case DBSchema:
-                    assert;
+            };
+        } else {
+            switch (info.category) {
+            case DBSchema:
+                assert;
 
-                case DBCounter:
-                    return createCounterStore(info);
+            case DBCounter:
+                return createCounterStore(info);
 
-                case DBValue:
-                    return createValueStore(info);
+            case DBValue:
+                return createValueStore(info);
 
-                case DBMap:
-                    return createMapStore(info);
+            case DBMap:
+                return createMapStore(info);
 
-                case DBList:
-                    TODO
+            case DBList:
+                TODO
 
-                case DBQueue:
-                    TODO
+            case DBQueue:
+                TODO
 
-                case DBProcessor:
-                    return createProcessorStore(info);
+            case DBProcessor:
+                return createProcessorStore(info);
 
-                case DBLog:
-                    return createLogStore(info);
-                }
+            case DBLog:
+                return createLogStore(info);
             }
         }
+    }
 
     @Concurrent
-    private ObjectStore createMapStore(DboInfo info)
-        {
+    private ObjectStore createMapStore(DboInfo info) {
         Type keyType = info.typeParams[0].type;
         Type valType = info.typeParams[1].type;
 
@@ -659,19 +613,17 @@ service Catalog<Schema extends RootSchema>
         return new JsonMapStore<keyType.DataType, valType.DataType>(this, info,
                 jsonSchema.ensureMapping(keyType).as(Mapping<keyType.DataType>),
                 jsonSchema.ensureMapping(valType).as(Mapping<valType.DataType>));
-        }
+    }
 
     @Concurrent
-    private ObjectStore createCounterStore(DboInfo info)
-        {
+    private ObjectStore createCounterStore(DboInfo info) {
         return info.transactional
                 ? new JsonCounterStore(this, info)
                 : new JsonNtxCounterStore(this, info);
-        }
+    }
 
     @Concurrent
-    private ObjectStore createValueStore(DboInfo info)
-        {
+    private ObjectStore createValueStore(DboInfo info) {
         Type valueType = info.typeParams[0].type;
         assert valueType.is(Type<immutable Const>);
 
@@ -680,11 +632,10 @@ service Catalog<Schema extends RootSchema>
         return new JsonValueStore<valueType.DataType>(this, info,
                 jsonSchema.ensureMapping(valueType).as(Mapping<valueType.DataType>),
                 initial.as(valueType.DataType));
-        }
+    }
 
     @Concurrent
-    private ObjectStore createLogStore(DboInfo info)
-        {
+    private ObjectStore createLogStore(DboInfo info) {
         Type elementType = info.typeParams[0].type;
         assert elementType.is(Type<immutable Const>);
 
@@ -702,43 +653,38 @@ service Catalog<Schema extends RootSchema>
                     (this, info, elementMapping, expiry, truncate, maxLogSize)
                 : new JsonNtxLogStore<elementType.DataType>
                     (this, info, elementMapping, expiry, truncate, maxLogSize);
-        }
+    }
 
     @Concurrent
-    private ObjectStore createProcessorStore(DboInfo info)
-        {
+    private ObjectStore createProcessorStore(DboInfo info) {
         Type messageType = info.typeParams[0].type;
         assert messageType.is(Type<immutable Const>);
 
         return new JsonProcessorStore<messageType.DataType>(this, info,
                 jsonSchema.ensureMapping(messageType).as(Mapping<messageType.DataType>));
-        }
+    }
 
     /**
      * Called to indicate that the database appears to be idle.
      */
-    void indicateIdle()
-        {
-        if (idleSince == Null)
-            {
+    void indicateIdle() {
+        if (idleSince == Null) {
             // we were busy but now we're idle
             idleSince = clock.now;
             scheduler.databaseIdle = True;
-            }
         }
+    }
 
     /**
      * Called to indicate that the database appears to be busy.
      */
-    void indicateBusy()
-        {
-        if (idleSince != Null)
-            {
+    void indicateBusy() {
+        if (idleSince != Null) {
             // we were idle but now we're busy
             idleSince = Null;
             scheduler.databaseIdle = False;
-            }
         }
+    }
 
 
     // ----- status management ---------------------------------------------------------------------
@@ -747,10 +693,9 @@ service Catalog<Schema extends RootSchema>
      * The file used to store the "in-use" status for the database.
      */
     @Concurrent
-    @Lazy File statusFile.calc()
-        {
+    @Lazy File statusFile.calc() {
         return dir.fileFor("sys.json");
-        }
+    }
 
     /**
      * For an empty `Catalog` that is `Closed`, initialize the directory and file structures so that
@@ -762,10 +707,9 @@ service Catalog<Schema extends RootSchema>
      * @throws IllegalState  if the Catalog is not `Empty`, or is read-only
      */
     @Synchronized
-    void create(String name)
-        {
+    void create(String name) {
         transition(Closed, Configuring, snapshot -> snapshot.empty);
-        }
+    }
 
     /**
      * For an existent database, if this `Catalog` is `Closed`, `Recovering`, or `Running`, then
@@ -775,10 +719,9 @@ service Catalog<Schema extends RootSchema>
      * @throws IllegalState  if the Catalog is not `Closed` or `Running`, or is read-only
      */
     @Synchronized
-    void edit()
-        {
+    void edit() {
         transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
-        }
+    }
 
     /**
      * For an existent database, if this `Catalog` is locked-out, then assume that the previous
@@ -787,39 +730,30 @@ service Catalog<Schema extends RootSchema>
      * @throws IllegalState  if the Catalog is not locked-out or `Closed`
      */
     @Synchronized
-    void recover()
-        {
+    void recover() {
         transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
 
         Boolean success = False;
-        Recovery: try
-            {
+        Recovery: try {
             success = txManager.enable(recover=True);
-            }
-        finally
-            {
-            if (!success)
-                {
+        } finally {
+            if (!success) {
                 close();
                 throw Recovery.exception ?: assert as "Recovery failed";
-                }
             }
+        }
 
         transition(Recovering, Running, snapshot -> snapshot.owned);
 
-        StartScheduling: try
-            {
+        StartScheduling: try {
             success = scheduler.enable();
-            }
-        finally
-            {
-            if (!success)
-                {
+        } finally {
+            if (!success) {
                 close();
                 throw StartScheduling.exception ?: assert as "Scheduler failed to start after recovery";
-                }
             }
         }
+    }
 
     /**
      * For an existent database, if this `Catalog` is `Closed`, `Recovering`, or `Configuring`, then
@@ -830,52 +764,47 @@ service Catalog<Schema extends RootSchema>
      * @throws IllegalState  if the Catalog is not `Closed`, `Recovering`, or `Configuring`
      */
     @Synchronized
-    Boolean open()
-        {
+    Boolean open() {
         transition([Closed, Recovering, Configuring], Running,
                 snapshot -> snapshot.owned || snapshot.unowned,
                 allowReadOnly = True);
 
-        if (!txManager.enable())
-            {
+        if (!txManager.enable()) {
             close();
             return False;
-            }
-
-        if (!scheduler.enable())
-            {
-            close();
-            return False;
-            }
-        return True;
         }
+
+        if (!scheduler.enable()) {
+            close();
+            return False;
+        }
+        return True;
+    }
 
     /**
      * Close this `Catalog`.
      */
     @Override
     @Synchronized
-    void close(Exception? cause = Null)
-        {
-        switch (status)
-            {
-            case Configuring:
-            case Recovering:
-                transition(status, Closed, snapshot -> snapshot.owned);
-                break;
+    void close(Exception? cause = Null) {
+        switch (status) {
+        case Configuring:
+        case Recovering:
+            transition(status, Closed, snapshot -> snapshot.owned);
+            break;
 
-            case Running:
-                scheduler.disable();
-                txManager.disable();
-                continue;
-            case Closed:
-                transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
-                break;
+        case Running:
+            scheduler.disable();
+            txManager.disable();
+            continue;
+        case Closed:
+            transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
+            break;
 
-            default:
-                assert;
-            }
+        default:
+            assert;
         }
+    }
 
     /**
      * For a `Catalog` that is `Configuring` or `Closed`, remove the entirety of the database. When
@@ -884,22 +813,19 @@ service Catalog<Schema extends RootSchema>
      * @throws IllegalState  if the Catalog is not `Configuring` or `Closed`, or is read-only
      */
     @Synchronized
-    void delete()
-        {
+    void delete() {
         transition([Closed, Configuring], Configuring, snapshot -> snapshot.owned || snapshot.unowned);
 
-        for (Directory subdir : dir.dirs())
-            {
+        for (Directory subdir : dir.dirs()) {
             subdir.deleteRecursively();
-            }
+        }
 
-        for (File file : dir.files())
-            {
+        for (File file : dir.files()) {
             file.delete();
-            }
+        }
 
         transition(status, Closed, snapshot -> snapshot.empty);
-        }
+    }
 
     /**
      * Validate that the current status matches the required status, optionally verify that the
@@ -919,49 +845,39 @@ service Catalog<Schema extends RootSchema>
                               Status                    targetStatus,
                               function Boolean(Glance)? canTransition = Null,
                               Boolean                   allowReadOnly = False,
-                              Boolean                   ignoreLock    = False)
-        {
+                              Boolean                   ignoreLock    = False) {
         Status oldStatus = status;
-        if (requiredStatus.is(Status))
-            {
+        if (requiredStatus.is(Status)) {
             assert oldStatus == requiredStatus;
-            }
-        else
-            {
+        } else {
             assert requiredStatus.contains(oldStatus);
-            }
+        }
 
-        if (readOnly)
-            {
+        if (readOnly) {
             assert allowReadOnly;
             status = targetStatus;
-            }
-        else
-            {
-            using (val lock = lock(ignoreLock))
-                {
+        } else {
+            using (val lock = lock(ignoreLock)) {
                 // get a glance at the current status on disk, and verify that the requested
                 // transition is legal
                 Glance glance = glance();
-                if (!canTransition?(glance))
-                    {
+                if (!canTransition?(glance)) {
                     throw new IllegalState($"Unable to transition {dir.path} from {oldStatus} to {targetStatus}");
-                    }
+                }
 
                 // store the updated status
                 status = targetStatus;
 
                 // store the updated status (unless we're closing an empty database, in which case,
                 // nothing gets stored)
-                if (!(targetStatus == Closed && glance.empty))
-                    {
+                if (!(targetStatus == Closed && glance.empty)) {
                     statusFile.contents = toBytes(new SysInfo(this));
-                    }
+                }
 
                 // TODO is this the correct place to transition all of the already-existent ObjectStore instances?
-                }
             }
         }
+    }
 
 
     // ----- directory Glance ----------------------------------------------------------------------
@@ -970,34 +886,30 @@ service Catalog<Schema extends RootSchema>
      * A `Glance` is a snapshot view of the database status on disk, from the point of view of the
      * `Catalog` that makes the "glancing" observation of the directory containing the database.
      */
-    const Glance(SysInfo? info, Lock? lock, Exception? error)
-        {
+    const Glance(SysInfo? info, Lock? lock, Exception? error) {
         /*
          * True iff at the moment of the snapshot, the observing `Catalog` detected that the
          * directory did not appear to contain a configured database.
          */
-        Boolean empty.get()
-            {
+        Boolean empty.get() {
             return error == Null && info == Null;
-            }
+        }
 
         /**
          * True iff at the moment of the snapshot, the observing `Catalog` detected that the
          * directory was not owned.
          */
-        Boolean unowned.get()
-            {
+        Boolean unowned.get() {
             return error == Null && (info?.status == Closed : True);
-            }
+        }
 
         /**
          * True iff at the moment of the snapshot, the observing `Catalog` detected that it (and
          * not some other `Catalog` instance) was the owner of the directory.
          */
-        Boolean owned.get()
-            {
+        Boolean owned.get() {
             return error == Null && info?.status != Closed && info?.stampedBy == this.Catalog.timestamp : False;
-            }
+        }
 
         /**
          * True iff at the moment of the snapshot, that the observing `Catalog` detected the
@@ -1005,11 +917,10 @@ service Catalog<Schema extends RootSchema>
          * and is currently in use. (It is also possible that the directory was open previously,
          * and a clean shut-down did not occur.)
          */
-        Boolean lockedOut.get()
-            {
+        Boolean lockedOut.get() {
             return error != Null || (info?.status != Closed && info?.stampedBy != this.Catalog.timestamp : False);
-            }
         }
+    }
 
     /**
      * Create a snapshot `Glance` of the status of the database on disk.
@@ -1017,8 +928,7 @@ service Catalog<Schema extends RootSchema>
      * @return a point-in-time snap-shot of the status of the database on disk
      */
     @Synchronized
-    Glance glance()
-        {
+    Glance glance() {
         SysInfo?   info  = Null;
         Lock?      lock  = Null;
         Exception? error = Null;
@@ -1026,61 +936,43 @@ service Catalog<Schema extends RootSchema>
         import ecstasy.fs.FileNotFound;
 
         Byte[]? bytes = Null;
-        try
-            {
-            if (lockFile.exists)
-                {
+        try {
+            if (lockFile.exists) {
                 // this is not an atomic operation, so a FileNotFound may still occur
                 bytes = lockFile.contents;
-                }
             }
-        catch (FileNotFound e)
-            {
+        } catch (FileNotFound e) {
             // it's ok for the lock file to not exist
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             error = e;
-            }
+        }
 
-        try
-            {
+        try {
             lock = fromBytes(Lock, bytes?);
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             error ?:= e;
-            }
+        }
 
         bytes = Null;
-        try
-            {
-            if (statusFile.exists)
-                {
+        try {
+            if (statusFile.exists) {
                 // this is not an atomic operation, so a FileNotFound may still occur
                 bytes = statusFile.contents;
-                }
             }
-        catch (FileNotFound e)
-            {
+        } catch (FileNotFound e) {
             // it's ok for the status file to not exist
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             error ?:= e;
-            }
+        }
 
-        try
-            {
+        try {
             info = fromBytes(SysInfo, bytes?);
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             error ?:= e;
-            }
+        }
 
         return new Glance(info, lock, error);
-        }
+    }
 
 
     // ----- catalog lock and status file management -----------------------------------------------
@@ -1089,19 +981,17 @@ service Catalog<Schema extends RootSchema>
      * The file used to indicate a short-term lock.
      */
     @Concurrent
-    @Lazy File lockFile.calc()
-        {
+    @Lazy File lockFile.calc() {
         return dir.fileFor("sys.lock");
-        }
+    }
 
     /**
      * The directory containing the system schema data and other internal files.
      */
     @Concurrent
-    @Lazy Directory sysDir.calc()
-        {
+    @Lazy Directory sysDir.calc() {
         return dir.dirFor("sys");
-        }
+    }
 
     /**
      * Obtain the lock on the catalog.
@@ -1109,51 +999,40 @@ service Catalog<Schema extends RootSchema>
      * @return a lock, which should be closed to release it
      */
     @Synchronized
-    protected Closeable lock(Boolean ignorePreviousLock)
-        {
+    protected Closeable lock(Boolean ignorePreviousLock) {
         String           path  = lockFile.path.toString();
         Lock             lock  = new Lock(this);
         immutable Byte[] bytes = toBytes(lock);
 
-        if (lockFile.exists && !ignorePreviousLock)
-            {
+        if (lockFile.exists && !ignorePreviousLock) {
             String msg = $"Lock file ({path}) already exists";
-            try
-                {
+            try {
                 Byte[] oldBytes = lockFile.contents;
                 String text     = oldBytes.unpackUtf8();
                 msg = $"{msg}; Catalog timestamp={timestamp}; lock file contains: {text}";
-                }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 throw new IllegalState(msg, e);
-                }
+            }
 
             throw new IllegalState(msg);
-            }
-
-        if (!lockFile.create() && !ignorePreviousLock)
-            {
-            throw new IllegalState($"Failed to create lock file: {path}");
-            }
-
-        try
-            {
-            lockFile.contents = bytes;
-            }
-        catch (Exception e)
-            {
-            throw new IllegalState($"Failed to write lock file: {path}", e);
-            }
-
-        return new Closeable()
-            {
-            @Override void close(Exception? cause = Null)
-                {
-                lockFile.delete();
-                }
-            };
         }
+
+        if (!lockFile.create() && !ignorePreviousLock) {
+            throw new IllegalState($"Failed to create lock file: {path}");
+        }
+
+        try {
+            lockFile.contents = bytes;
+        } catch (Exception e) {
+            throw new IllegalState($"Failed to write lock file: {path}", e);
+        }
+
+        return new Closeable() {
+            @Override void close(Exception? cause = Null) {
+                lockFile.delete();
+            }
+        };
+    }
 
 
     // ----- Client (Connection) management --------------------------------------------------------
@@ -1165,10 +1044,9 @@ service Catalog<Schema extends RootSchema>
      *                defaults to the database super-user
      */
     @Concurrent
-    Connection createConnection(DBUser? dbUser = Null)
-        {
+    Connection createConnection(DBUser? dbUser = Null) {
         return createClient(dbUser).conn ?: assert;
-        }
+    }
 
     /**
      * Create a `Client` that will access the database represented by this `Catalog`  on behalf of
@@ -1188,8 +1066,7 @@ service Catalog<Schema extends RootSchema>
      */
     @Concurrent
     Client<Schema> createClient(DBUser? dbUser=Null, Boolean readOnly=False, Boolean system=False,
-                                Boolean autoShutdown=False)
-        {
+                                Boolean autoShutdown=False) {
         dbUser ?:= DefaultUser;
 
         Int clientId = system ? genInternalClientId() : genClientId();
@@ -1203,17 +1080,16 @@ service Catalog<Schema extends RootSchema>
 
         registerClient(client);
         return client;
-        }
+    }
 
     /**
      * Generate a unique client id. (Unique for the lifetime of this Catalog.)
      *
      * @return a new client id
      */
-    protected Int genClientId()
-        {
+    protected Int genClientId() {
         return ++clientCounter;
-        }
+    }
 
     /**
      * Generate a unique client id for an internal (system) client. These clients are pooled, so the
@@ -1221,20 +1097,18 @@ service Catalog<Schema extends RootSchema>
      *
      * @return a new client id
      */
-    protected Int genInternalClientId()
-        {
+    protected Int genInternalClientId() {
         return -(++systemCounter);
-        }
+    }
 
     /**
      * @param id  a client id
      *
      * @return True iff the id specifies an "internal" (or "system") client id
      */
-    static Boolean isInternalClientId(Int id)
-        {
+    static Boolean isInternalClientId(Int id) {
         return id < 0;
-        }
+    }
 
     /**
      * Register a Client instance.
@@ -1242,10 +1116,9 @@ service Catalog<Schema extends RootSchema>
      * @param client  the Client object to register
      */
     @Concurrent
-    protected void registerClient(Client client)
-        {
+    protected void registerClient(Client client) {
         assert clients.putIfAbsent(client.id, client);
-        }
+    }
 
     /**
      * Unregister a Client instance.
@@ -1254,14 +1127,12 @@ service Catalog<Schema extends RootSchema>
      * @param shutdown  pass True to indicate that the database should be closed
      */
     @Concurrent
-    protected void unregisterClient(Client client, Boolean shutdown)
-        {
+    protected void unregisterClient(Client client, Boolean shutdown) {
         assert client.catalog == this;
         clients.remove(client.id, client);
 
-        if (shutdown)
-            {
+        if (shutdown) {
             close();
-            }
         }
     }
+}

@@ -28,22 +28,20 @@ import TxManager.NO_TX;
 service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         extends ObjectStore
         implements MapStore<Key, Value>
-        incorporates KeyBasedStore<Key>
-    {
+        incorporates KeyBasedStore<Key> {
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
               DboInfo     info,
               Mapping<Key>     keyMapping,
               Mapping<Value>   valueMapping,
-              )
-        {
+              ) {
         construct ObjectStore(catalog, info);
 
         this.jsonSchema   = catalog.jsonSchema;
         this.keyMapping   = keyMapping;
         this.valueMapping = valueMapping;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -77,13 +75,11 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
     @Concurrent
     @Override
-    protected class Changes
-        {
+    protected class Changes {
         @Override
-        construct(Int writeId, Future<Int> pendingReadId)
-            {
+        construct(Int writeId, Future<Int> pendingReadId) {
             super(writeId, pendingReadId);
-            }
+        }
 
         /**
          * A map of inserted and updated key/value pairs.
@@ -94,30 +90,27 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
          * @return a map used to view previously collected modifications, but not intended to be
          *         modified by the caller
          */
-        OrderedMap<Key, Value|Deletion> peekMods()
-            {
+        OrderedMap<Key, Value|Deletion> peekMods() {
             return mods ?: NoChanges;
-            }
+        }
 
         /**
          * @return the read/write map used to collect modifications
          */
-        OrderedMap<Key, Value|Deletion> ensureMods()
-            {
-            return mods ?:
-                {
+        OrderedMap<Key, Value|Deletion> ensureMods() {
+            return mods ?: {
                 val map = new SkiplistMap<Key, Value|Deletion>();
                 mods = map;
                 return map;
-                };
-            }
+            };
+        }
 
         /*
          * When the transaction is sealed (or after it is sealed, but before it commits), the
          * changes in the transaction are rendered for the transaction log, and for storage on disk.
          */
         Map<Key, String>? jsonEntries;
-        }
+    }
 
     @Override
     protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
@@ -172,284 +165,235 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
-    Int sizeAt(Int txId)
-        {
+    Int sizeAt(Int txId) {
         checkRead();
 
         // the adjustments to the size of the transaction will be implied by what is in the Changes
         // record for the transaction, assuming that the transaction is a write ID; otherwise the
         // size is cached by transaction ID in the sizeByTx map
-        if (Changes tx := checkTx(txId))
-            {
+        if (Changes tx := checkTx(txId)) {
             Int readId = tx.readId;
             Int size   = sizeAt(readId);
-            for ((Key key, Value|Deletion value) : tx.peekMods())
-                {
-                if (value.is(Deletion))
-                    {
+            for ((Key key, Value|Deletion value) : tx.peekMods()) {
+                if (value.is(Deletion)) {
                     --size;
-                    }
-                else if (!existsAt(readId, key))
-                    {
+                } else if (!existsAt(readId, key)) {
                     ++size;
-                    }
                 }
-            return size;
             }
+            return size;
+        }
 
         assert isReadTx(txId);
-        if (model != Empty, Int txFloor := sizeByTx.floor(txId))
-            {
+        if (model != Empty, Int txFloor := sizeByTx.floor(txId)) {
             assert Int size := sizeByTx.get(txFloor);
             return size;
-            }
+        }
 
         return 0;
-        }
+    }
 
     @Override
-    Boolean existsAt(Int txId, Key key)
-        {
-        while (Changes tx := checkTx(txId))
-            {
-            if (Value|Deletion value := tx.peekMods().get(key))
-                {
+    Boolean existsAt(Int txId, Key key) {
+        while (Changes tx := checkTx(txId)) {
+            if (Value|Deletion value := tx.peekMods().get(key)) {
                 return value != Deleted;
-                }
+            }
 
             txId = tx.readId;
-            }
-
-        assert isReadTx(txId);
-        switch (model)
-            {
-            case Empty:
-            case Small:
-                // the entire MapStore is cached in the history map
-                if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId))
-                    {
-                    assert Value|Deletion value := valueHistory.get(txFloor);
-                    return !value.is(Deletion);
-                    }
-                return False;
-
-            case Medium:
-                TODO
-
-            case Large:
-                TODO
-            }
         }
 
-    @Override
-    (Key[] keys, immutable Const? cookie) keysAt(Int txId, immutable Const? cookie = Null)
-        {
-        if (cookie != Null)
-            {
-            TODO
+        assert isReadTx(txId);
+        switch (model) {
+        case Empty:
+        case Small:
+            // the entire MapStore is cached in the history map
+            if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId)) {
+                assert Value|Deletion value := valueHistory.get(txFloor);
+                return !value.is(Deletion);
             }
+            return False;
+
+        case Medium:
+            TODO
+
+        case Large:
+            TODO
+        }
+    }
+
+    @Override
+    (Key[] keys, immutable Const? cookie) keysAt(Int txId, immutable Const? cookie = Null) {
+        if (cookie != Null) {
+            TODO
+        }
 
         Int size = sizeAt(txId);
-        if (size == 0)
-            {
+        if (size == 0) {
             return ([], Null);
-            }
-
-        updateReadStats();
-
-        switch (model)
-            {
-            case Empty:
-            case Small:
-                // all the keys and values are in memory; just ship all the keys back in one array
-                Key[]   keys        = new Key[](size);
-                Int     readId      = txId;
-                val     histEntries = history.entries.iterator();
-                WriteTx: if (Changes tx := checkTx(txId))
-                    {
-                    readId = tx.readId;
-                    if (tx.peekMods().empty)
-                        {
-                        break WriteTx;
-                        }
-
-                    // complicated: keep an iterator of the changes to merge into the iterator of
-                    // the underlying (readId) transaction version
-                    val modEntries = tx.ensureMods().entries.iterator();
-                    assert var modEntry := modEntries.next();
-
-                    // create an iterator of the keys in the history to use as the "main" iterator
-                    NextKey: while (True)
-                        {
-                        if (val histEntry := histEntries.next())
-                            {
-                            while (True)
-                                {
-                                // determine if we are at a junction point between the history and
-                                // the transactional modifications
-                                switch (histEntry.key <=> modEntry.key)
-                                    {
-                                    case Lesser:
-                                        // this is the common case: lots more keys in the history
-                                        // than in a given transaction
-                                        History valueHistory = histEntry.value;
-                                        if (Int txFloor := valueHistory.floor(readId),
-                                                Value|Deletion value := valueHistory.get(txFloor),
-                                                !value.is(Deletion))
-                                            {
-                                            keys += histEntry.key;
-                                            }
-                                        continue NextKey;
-
-                                    case Equal:
-                                        if (!modEntry.value.is(Deletion))
-                                            {
-                                            keys += modEntry.key; // i.e. same as histEntry.key
-                                            }
-
-                                        if (modEntry := modEntries.next())
-                                            {
-                                            continue NextKey;
-                                            }
-                                        else
-                                            {
-                                            // we have exhausted the transaction's modifications;
-                                            // just break out and drain the remainder of the keys
-                                            // in the map history
-                                            break NextKey;
-                                            }
-
-                                    case Greater:
-                                        // the mod appears to be an insert
-                                        if (!modEntry.value.is(Deletion))
-                                            {
-                                            keys += modEntry.key;
-                                            }
-
-                                        if (modEntry := modEntries.next())
-                                            {
-                                            break; // do NOT go to NextKey
-                                            }
-                                        else
-                                            {
-                                            // we have exhausted the transaction's modifications;
-                                            // just break out and drain the remainder of the keys
-                                            // in the map history
-                                            break NextKey;
-                                            }
-                                    }
-                                }
-                            }
-                        else
-                            {
-                            // we have exhausted the history, so drain the remainder of the mods
-                            do
-                                {
-                                if (!modEntry.value.is(Deletion))
-                                    {
-                                    keys += modEntry.key;
-                                    }
-                                }
-                            while (modEntry := modEntries.next());
-
-                            break NextKey;
-                            }
-                        }
-                    }
-
-                // take whatever keys remain in the history iterator
-                for (val histEntry : histEntries)
-                    {
-                    History valueHistory = histEntry.value;
-
-                    if (Int txFloor := valueHistory.floor(readId),
-                            Value|Deletion value := valueHistory.get(txFloor),
-                            !value.is(Deletion))
-                        {
-                        keys += histEntry.key;
-                        }
-                    }
-
-                assert keys.size == size;
-                return keys.freeze(inPlace=True), Null;
-
-            case Medium:
-                TODO
-
-            case Large:
-                TODO
-            }
         }
 
-    @Override
-    conditional Value load(Int txId, Key key)
-        {
         updateReadStats();
-        while (Changes tx := checkTx(txId))
-            {
-            if (Value|Deletion value := tx.peekMods().get(key))
-                {
-                if (value.is(Deletion))
-                    {
-                    return False;
-                    }
-                return True, value;
+
+        switch (model) {
+        case Empty:
+        case Small:
+            // all the keys and values are in memory; just ship all the keys back in one array
+            Key[]   keys        = new Key[](size);
+            Int     readId      = txId;
+            val     histEntries = history.entries.iterator();
+            WriteTx: if (Changes tx := checkTx(txId)) {
+                readId = tx.readId;
+                if (tx.peekMods().empty) {
+                    break WriteTx;
                 }
 
-            txId = tx.readId;
+                // complicated: keep an iterator of the changes to merge into the iterator of
+                // the underlying (readId) transaction version
+                val modEntries = tx.ensureMods().entries.iterator();
+                assert var modEntry := modEntries.next();
+
+                // create an iterator of the keys in the history to use as the "main" iterator
+                NextKey: while (True) {
+                    if (val histEntry := histEntries.next()) {
+                        while (True) {
+                            // determine if we are at a junction point between the history and
+                            // the transactional modifications
+                            switch (histEntry.key <=> modEntry.key) {
+                            case Lesser:
+                                // this is the common case: lots more keys in the history
+                                // than in a given transaction
+                                History valueHistory = histEntry.value;
+                                if (Int txFloor := valueHistory.floor(readId),
+                                        Value|Deletion value := valueHistory.get(txFloor),
+                                        !value.is(Deletion)) {
+                                    keys += histEntry.key;
+                                }
+                                continue NextKey;
+
+                            case Equal:
+                                if (!modEntry.value.is(Deletion)) {
+                                    keys += modEntry.key; // i.e. same as histEntry.key
+                                }
+
+                                if (modEntry := modEntries.next()) {
+                                    continue NextKey;
+                                } else {
+                                    // we have exhausted the transaction's modifications;
+                                    // just break out and drain the remainder of the keys
+                                    // in the map history
+                                    break NextKey;
+                                }
+
+                            case Greater:
+                                // the mod appears to be an insert
+                                if (!modEntry.value.is(Deletion)) {
+                                    keys += modEntry.key;
+                                }
+
+                                if (modEntry := modEntries.next()) {
+                                    break; // do NOT go to NextKey
+                                } else {
+                                    // we have exhausted the transaction's modifications;
+                                    // just break out and drain the remainder of the keys
+                                    // in the map history
+                                    break NextKey;
+                                }
+                            }
+                        }
+                    } else {
+                        // we have exhausted the history, so drain the remainder of the mods
+                        do {
+                            if (!modEntry.value.is(Deletion)) {
+                                keys += modEntry.key;
+                            }
+                        } while (modEntry := modEntries.next());
+
+                        break NextKey;
+                    }
+                }
             }
+
+            // take whatever keys remain in the history iterator
+            for (val histEntry : histEntries) {
+                History valueHistory = histEntry.value;
+
+                if (Int txFloor := valueHistory.floor(readId),
+                        Value|Deletion value := valueHistory.get(txFloor),
+                        !value.is(Deletion)) {
+                    keys += histEntry.key;
+                }
+            }
+
+            assert keys.size == size;
+            return keys.freeze(inPlace=True), Null;
+
+        case Medium:
+            TODO
+
+        case Large:
+            TODO
+        }
+    }
+
+    @Override
+    conditional Value load(Int txId, Key key) {
+        updateReadStats();
+        while (Changes tx := checkTx(txId)) {
+            if (Value|Deletion value := tx.peekMods().get(key)) {
+                if (value.is(Deletion)) {
+                    return False;
+                }
+                return True, value;
+            }
+
+            txId = tx.readId;
+        }
 
         assert isReadTx(txId);
-        switch (model)
-            {
-            case Empty:
-            case Small:
-                // the entire MapStore is cached in the history map
-                if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId))
-                    {
-                    assert Value|Deletion value := valueHistory.get(txFloor);
-                    if (value.is(Deletion))
-                        {
-                        return False;
-                        }
-                    return True, value;
-                    }
-                return False;
-
-            case Medium:
-                TODO
-
-            case Large:
-                TODO
+        switch (model) {
+        case Empty:
+        case Small:
+            // the entire MapStore is cached in the history map
+            if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId)) {
+                assert Value|Deletion value := valueHistory.get(txFloor);
+                if (value.is(Deletion)) {
+                    return False;
+                }
+                return True, value;
             }
+            return False;
+
+        case Medium:
+            TODO
+
+        case Large:
+            TODO
         }
+    }
 
     @Override
-    void store(Int txId, Key key, Value value)
-        {
+    void store(Int txId, Key key, Value value) {
         storeImpl(txId, key, value);
-        }
+    }
 
     @Override
-    void delete(Int txId, Key key)
-        {
+    void delete(Int txId, Key key) {
         storeImpl(txId, key, Deletion.Deleted);
-        }
+    }
 
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
     @Override
-    PrepareResult prepare(Int writeId, Int prepareId)
-        {
+    PrepareResult prepare(Int writeId, Int prepareId) {
         // the transaction can be prepared if (a) no transaction has modified this value after the
         // read id, or (b) the "current" value is equal to the read id transaction's value
         assert Changes tx := checkTx(writeId);
-        if (tx.peekMods().empty)
-            {
+        if (tx.peekMods().empty) {
             inFlight.remove(writeId);
             return CommittedNoChanges;
-            }
+        }
 
         // obtain the transaction modifications (note: we already verified that modifications exist)
         OrderedMap<Key, Value|Deletion> mods = tx.mods ?: assert;
@@ -457,110 +401,90 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         // first, we need to verify that there are no conflicts, before we attempt to move the data
         // into the "prepareId" slot in the history
         Int readId = tx.readId;
-        if (readId != prepareId - 1)
-            {
+        if (readId != prepareId - 1) {
             // interleaving transactions have occurred
-            for ((Key key, Value|Deletion value) : mods)
-                {
-                if (History valueHistory := history.get(key))
-                    {
+            for ((Key key, Value|Deletion value) : mods) {
+                if (History valueHistory := history.get(key)) {
                     assert Int latestTx := valueHistory.last(), latestTx < prepareId;
-                    if (latestTx > readId)
-                        {
+                    if (latestTx > readId) {
                         assert Value|Deletion latest := valueHistory.get(latestTx);
 
                         Value|Deletion prev;
-                        if (Int prevTx := valueHistory.floor(readId))
-                            {
+                        if (Int prevTx := valueHistory.floor(readId)) {
                             assert prev := valueHistory.get(prevTx);
-                            }
-                        else
-                            {
+                        } else {
                             // the key did not exist in the readId transaction
                             prev = Deleted;
-                            }
+                        }
 
-                        if (&prev != &latest)
-                            {
+                        if (&prev != &latest) {
                             // the state that this transaction assumes as its starting point was
                             // altered, so the transaction must roll back
                             inFlight.remove(writeId);
                             return FailedRolledBack;
-                            }
                         }
                     }
                 }
             }
+        }
 
         // now that we have verified that there are no conflicts, the changes need to be "re-homed"
         // into the prepareId transaction in the history, leaving the writeId empty
         Boolean changed = False;
         Int     size    = sizeAt(prepareId-1);
-        for ((Key key, Value|Deletion value) : mods)
-            {
-            if (History valueHistory := history.get(key))
-                {
+        for ((Key key, Value|Deletion value) : mods) {
+            if (History valueHistory := history.get(key)) {
                 assert Int            latestTx := valueHistory.last();
                 assert Value|Deletion latest   := valueHistory.get(latestTx);
 
-                switch (latest.is(Deletion), value.is(Deletion))
-                    {
-                    case (False, False):
-                        if (&value != &latest)
-                            {
-                            valueHistory.put(prepareId, value);
-                            changed = True;
-                            }
-                        break;
-
-                    case (False, True):
+                switch (latest.is(Deletion), value.is(Deletion)) {
+                case (False, False):
+                    if (&value != &latest) {
                         valueHistory.put(prepareId, value);
                         changed = True;
-                        --size;
-                        break;
-
-                    case (True, False):
-                        valueHistory.put(prepareId, value);
-                        changed = True;
-                        ++size;
-                        break;
-
-                    case (True, True):
-                        // technically, this should not be possible, but we're deleting something
-                        // that doesn't exist, so the deletion modification has no effect
-                        mods.remove(key);
-                        break;
                     }
+                    break;
+
+                case (False, True):
+                    valueHistory.put(prepareId, value);
+                    changed = True;
+                    --size;
+                    break;
+
+                case (True, False):
+                    valueHistory.put(prepareId, value);
+                    changed = True;
+                    ++size;
+                    break;
+
+                case (True, True):
+                    // technically, this should not be possible, but we're deleting something
+                    // that doesn't exist, so the deletion modification has no effect
+                    mods.remove(key);
+                    break;
                 }
-            else if (value.is(Deletion))
-                {
+            } else if (value.is(Deletion)) {
                 // technically, this should not be possible, but we're deleting something that
                 // doesn't exist in the history, so the deletion modification has no effect
                 mods.remove(key);
-                }
-            else
-                {
+            } else {
                 valueHistory = new SkiplistMap();
                 valueHistory.put(prepareId, value);
                 history.put(key, valueHistory);
                 changed = True;
                 ++size;
-                }
             }
+        }
 
-        if (changed)
-            {
+        if (changed) {
             // TODO CP: when is it a "safe" time to transition from Small to Medium model, etc.
-            if (model == Empty)
-                {
+            if (model == Empty) {
                 model = Small;
-                }
             }
-        else
-            {
+        } else {
             inFlight.remove(writeId);
             return CommittedNoChanges;
-            }
+        }
 
         // store off transaction's mods and resulting size
         assert !mods.empty, size >= 0;
@@ -572,163 +496,143 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         tx.prepared = True;
         tx.mods     = Null;
         return Prepared;
-        }
+    }
 
     @Override
-    MergeResult mergePrepare(Int txId, Int prepareId)
-        {
+    MergeResult mergePrepare(Int txId, Int prepareId) {
         MergeResult result;
 
         Int writeId = writeIdFor(txId);
-        if (Changes tx := peekTx(writeId))
-            {
+        if (Changes tx := peekTx(writeId)) {
             OrderedMap<Key, Value|Deletion> oldMods = modsByTx.getOrDefault(prepareId, NoChanges);
             OrderedMap<Key, Value|Deletion> newMods = tx.peekMods();
 
-            switch (!oldMods.empty, !newMods.empty)
-                {
-                case (False, False):
-                    result = CommittedNoChanges;
-                    break;
+            switch (!oldMods.empty, !newMods.empty) {
+            case (False, False):
+                result = CommittedNoChanges;
+                break;
 
-                case (True, False):
-                    result = NoMerge;
-                    break;
+            case (True, False):
+                result = NoMerge;
+                break;
 
-                case (False, True):
-                    oldMods = new SkiplistMap<Key, Value|Deletion>();
-                    modsByTx.put(prepareId, oldMods);
-                    continue;
-                case (True, True):
-                    assert !tx.sealed;
+            case (False, True):
+                oldMods = new SkiplistMap<Key, Value|Deletion>();
+                modsByTx.put(prepareId, oldMods);
+                continue;
+            case (True, True):
+                assert !tx.sealed;
 
-                    // TODO GG or CP this is supposed to update both modsByTx and sizeByTx for prepareId
-                    for ((Key key, Value|Deletion value) : newMods)
-                        {
-                        if (Value prev := latestValue(key, prepareId-1), &value == &prev)
-                            {
-                            // this part of the transaction is un-doing itself
-                            assert History valueHistory := history.get(key);
-                            valueHistory.remove(prepareId);
-                            continue;
-                            }
+                // TODO GG or CP this is supposed to update both modsByTx and sizeByTx for prepareId
+                for ((Key key, Value|Deletion value) : newMods) {
+                    if (Value prev := latestValue(key, prepareId-1), &value == &prev) {
+                        // this part of the transaction is un-doing itself
+                        assert History valueHistory := history.get(key);
+                        valueHistory.remove(prepareId);
+                        continue;
+                    }
 
-                        History valueHistory = history.computeIfAbsent(key, () -> new SkiplistMap());
-                        valueHistory.put(prepareId, value);
-                        }
-
-                    result = Merged; // TODO GG or CP determine when this should be CommittedNoChanges
-                    break;
+                    History valueHistory = history.computeIfAbsent(key, () -> new SkiplistMap());
+                    valueHistory.put(prepareId, value);
                 }
+
+                result = Merged; // TODO GG or CP determine when this should be CommittedNoChanges
+                break;
+            }
 
             tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
             tx.prepared = True;     // remember that the changed the readId to the prepareId
             tx.mods     = Null;     // the "changes" no longer differs from the historical record
 
-            if (result == CommittedNoChanges)
-                {
+            if (result == CommittedNoChanges) {
                 inFlight.remove(writeId);
                 sizeByTx.remove(prepareId);
                 modsByTx.remove(prepareId);
-                }
             }
-        else
-            {
+        } else {
             assert !modsByTx.contains(prepareId) && !sizeByTx.contains(prepareId);
             // REVIEW should this even be possible? maybe just assert?
             result = CommittedNoChanges;
-            }
-
-        return result;
         }
 
+        return result;
+    }
+
     @Override
-    String sealPrepare(Int writeId)
-        {
-        private String buildJsonTx(Map<Key, String> jsonEntries)
-            {
-            if (jsonEntries.empty)
-                {
+    String sealPrepare(Int writeId) {
+        private String buildJsonTx(Map<Key, String> jsonEntries) {
+            if (jsonEntries.empty) {
                 return "[]";
-                }
+            }
 
             StringBuffer buf = new StringBuffer();
             buf.add('[');
-            for (String jsonEntry : jsonEntries.values)
-                {
+            for (String jsonEntry : jsonEntries.values) {
                 buf.add('{')
                    .append(jsonEntry)
                    .add('}').add(',');
-                }
-            return buf.truncate(-1).add(']').toString();
             }
+            return buf.truncate(-1).add(']').toString();
+        }
 
         assert Changes tx := checkTx(writeId), tx.prepared;
-        if (tx.sealed)
-            {
+        if (tx.sealed) {
             return buildJsonTx(tx.jsonEntries ?: assert);
-            }
+        }
 
         assert Map<Key, Value|Deletion> mods := modsByTx.get(tx.readId);
 
         HashMap<Key, String> jsonEntries = new HashMap();
         val                  worker      = tx.worker;
 
-        for ((Key key, Value|Deletion value) : mods)
-            {
+        for ((Key key, Value|Deletion value) : mods) {
             StringBuffer buf = new StringBuffer();
 
             String jsonK = worker.writeUsing(keyMapping, key);
 
             buf.append("\"k\":").append(jsonK);
 
-            if (!value.is(Deletion))
-                {
+            if (!value.is(Deletion)) {
                 buf.append(", \"v\":")
                    .append(worker.writeUsing(valueMapping, value));
-                }
+            }
 
             jsonEntries.put(key, buf.toString());
-            }
+        }
 
         tx.jsonEntries = jsonEntries;
         tx.sealed      = True;
 
         return buildJsonTx(jsonEntries);
-        }
+    }
 
     @Override
     @Synchronized
-    void commit(Int[] writeIds)
-        {
+    void commit(Int[] writeIds) {
         assert !writeIds.empty;
 
         Boolean cleanup      = !cleanupPending.empty;
         Int     lastCommitId = NO_TX;
 
         Map<String, StringBuffer> buffers = new HashMap();
-        for (Int writeId : writeIds)
-            {
+        for (Int writeId : writeIds) {
             // because the same array of writeIds are sent to all of the potentially enlisted
             // ObjectStore instances, it is possible that this ObjectStore has no changes for this
             // transaction
-            if (Changes tx := peekTx(writeId))
-                {
+            if (Changes tx := peekTx(writeId)) {
                 assert tx.prepared, tx.sealed, Map<Key, String> jsonEntries ?= tx.jsonEntries;
 
                 Int prepareId = tx.readId;
 
-                for ((Key key, String jsonEntry) : jsonEntries)
-                    {
+                for ((Key key, String jsonEntry) : jsonEntries) {
                     String fileName = nameForKey(key);
 
-                    if (cleanup && cleanupPending.contains(fileName))
-                        {
+                    if (cleanup && cleanupPending.contains(fileName)) {
                         rebuildFile(fileName);
 
                         cleanupPending.remove(fileName);
                         cleanup = !cleanupPending.empty;
-                        }
+                    }
 
                     Int fileOffset = storageOffset.getOrDefault(fileName, 0);
 
@@ -748,23 +652,20 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     EntryLayout entryLayout = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
 
                     entryLayout.put(key, startOffset ..< fileOffset + buf.size);
-                    }
+                }
 
                 modsByTx.remove(prepareId);
 
                 // remember the id of the last transaction that we process here
                 lastCommitId = prepareId;
-                }
             }
+        }
 
-        if (lastCommitId != NO_TX)
-            {
-            for ((String fileName, StringBuffer buf) : buffers)
-                {
-                storageOffset.process(fileName, e ->
-                    {
+        if (lastCommitId != NO_TX) {
+            for ((String fileName, StringBuffer buf) : buffers) {
+                storageOffset.process(fileName, e -> {
                     e.value = (e.exists ? e.value : 0) + buf.size;
-                    });
+                });
 
                 // the JSON for entries data is inside an array, so "close" the array
                 buf.add('\n').add(']');
@@ -772,8 +673,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 File file = dataDir.fileFor(fileName);
 
                 // write the changes to disk
-                if (file.exists)
-                    {
+                if (file.exists) {
                     Int length = file.size;
 
                     // TODO right now this assumes that no manual edits have occurred; must cache "last
@@ -784,9 +684,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     file.truncate(length-2)
                         .append(bytes);
                     bytesUsed += bytes.size;
-                    }
-                else
-                    {
+                } else {
                     // replace the opening "," with an array begin "["
                     buf[0] = '[';
 
@@ -795,94 +693,79 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                     bytesUsed += bytes.size;
                     filesUsed++;
-                    }
+                }
 
                 // update the stats
                 lastModified = file.modified;
-                }
+            }
 
             // remember which is the "current" value
             lastCommit = lastCommitId;
-            }
-
-        // discard the transactional records
-        for (Int writeId : writeIds)
-            {
-            inFlight.remove(writeId);
-            }
         }
 
+        // discard the transactional records
+        for (Int writeId : writeIds) {
+            inFlight.remove(writeId);
+        }
+    }
+
     @Override
-    void rollback(Int writeId)
-        {
-        if (Changes tx := peekTx(writeId))
-            {
-            if (tx.prepared)
-                {
+    void rollback(Int writeId) {
+        if (Changes tx := peekTx(writeId)) {
+            if (tx.prepared) {
                 Int prepareId = tx.readId;
 
                 // the transaction is already sprinkled all over the history
                 assert OrderedMap<Key, Value|Deletion> mods := modsByTx.get(prepareId);
-                for (Key key : mods)
-                    {
-                    if (History valueHistory := history.get(key))
-                        {
+                for (Key key : mods) {
+                    if (History valueHistory := history.get(key)) {
                         valueHistory.remove(prepareId);
-                        }
                     }
+                }
 
                 modsByTx.remove(prepareId);
                 sizeByTx.remove(prepareId);
-                }
+            }
 
             inFlight.remove(writeId);
-            }
         }
+    }
 
     @Override
-    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
-        {
-        for ((Key key, History valueHistory) : history)
-            {
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False) {
+        for ((Key key, History valueHistory) : history) {
             String fileName = nameForKey(key);
 
-            function void (Int) discard = txId ->
-                {
+            function void (Int) discard = txId -> {
                 valueHistory.remove(txId);
                 sizeByTx    .remove(txId);
 
                 if (FileLayout  fileLayout  := storageLayout.get(txId),
-                    EntryLayout entryLayout := fileLayout.get(fileName))
-                    {
+                    EntryLayout entryLayout := fileLayout.get(fileName)) {
                     entryLayout.remove(key);
-                    if (entryLayout.empty)
-                        {
+                    if (entryLayout.empty) {
                         fileLayout.remove(fileName);
-                        if (fileLayout.empty)
-                            {
+                        if (fileLayout.empty) {
                             storageLayout.remove(txId);
-                            }
                         }
+                    }
 
                     cleanupPending.add(fileName);
-                    }
-                };
+                }
+            };
 
             processDiscarded(lastCommit, valueHistory.keys.iterator(), inUseTxIds.iterator(), discard);
-            }
-
-        if (force && !cleanupPending.empty)
-            {
-            using (new SynchronizedSection())
-                {
-                for (String fileName : cleanupPending)
-                    {
-                    rebuildFile(fileName);
-                    }
-                }
-            cleanupPending.clear();
-            }
         }
+
+        if (force && !cleanupPending.empty) {
+            using (new SynchronizedSection()) {
+                for (String fileName : cleanupPending) {
+                    rebuildFile(fileName);
+                }
+            }
+            cleanupPending.clear();
+        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -896,17 +779,15 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * @return True if the key has a value
      * @return the current value
      */
-    protected conditional Value currentValue(Key key, Changes tx)
-        {
-        if (Value|Deletion value := tx.peekMods().get(key))
-            {
+    protected conditional Value currentValue(Key key, Changes tx) {
+        if (Value|Deletion value := tx.peekMods().get(key)) {
             return value.is(Deletion)
                     ? False
                     : (True, value);
-            }
+        }
 
         return latestValue(key, tx.readId);
-        }
+    }
 
     /**
      * Obtain the original value from when the transaction began.
@@ -917,18 +798,16 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * @return True if the key has a value as of the specified readId transaction
      * @return the previous value
      */
-    protected conditional Value latestValue(Key key, Int readId)
-        {
-        if (History valueHistory := history.get(key), readId := valueHistory.floor(readId))
-            {
+    protected conditional Value latestValue(Key key, Int readId) {
+        if (History valueHistory := history.get(key), readId := valueHistory.floor(readId)) {
             assert Value|Deletion value := valueHistory.get(readId);
             return value.is(Deletion)
                     ? False
                     : (True, value);
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Obtain the latest committed value.
@@ -938,52 +817,45 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * @return True if the key has a value
      * @return the latest value
      */
-    protected conditional Value latestValue(Key key)
-        {
-        if (History valueHistory := history.get(key))
-            {
+    protected conditional Value latestValue(Key key) {
+        if (History valueHistory := history.get(key)) {
             assert Int readId := valueHistory.last();
             assert Value|Deletion value := valueHistory.get(readId);
             return value.is(Deletion)
                     ? False
                     : (True, value);
-            }
+        }
 
         return False;
-        }
+    }
 
 
     // ----- IO operations -------------------------------------------------------------------------
 
     @Override
-    void initializeEmpty()
-        {
+    void initializeEmpty() {
         assert model == Empty;
         sizeByTx.put(0, 0);
         lastCommit = 0;
-        }
+    }
 
     @Override
-    void loadInitial()
-        {
+    void loadInitial() {
         Int desired = txManager.lastCommitted;
         assert desired != NO_TX && desired > 0;
 
-        private function Int (Map<Object, Int>.Entry) incrementCount(Int delta)
-            {
-            return entry ->
-                {
+        private function Int (Map<Object, Int>.Entry) incrementCount(Int delta) {
+            return entry -> {
                 Int newValue = entry.exists ? delta + entry.value : delta;
                 entry.value = newValue;
                 return newValue;
-                };
-            }
+            };
+        }
 
         Int totalBytes = 0;
         Int totalFiles = 0;
 
-        for (File file : dataDir.files())
-            {
+        for (File file : dataDir.files()) {
             String                  fileName   = file.name;
             Byte[]                  bytes      = file.contents;
             String                  jsonStr    = bytes.unpackUtf8();
@@ -994,99 +866,81 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             Map<Key, Int>           closestTx  = new HashMap();
             SkiplistMap<Int, Key[]> keysByTx   = new SkiplistMap();
 
-            using (val arrayParser = fileParser.expectArray())
-                {
-                while (!arrayParser.eof)
-                    {
+            using (val arrayParser = fileParser.expectArray()) {
+                while (!arrayParser.eof) {
                     Int startOffset = arrayParser.peek().start.offset;
 
-                    using (val changeParser = arrayParser.expectObject())
-                        {
+                    using (val changeParser = arrayParser.expectObject()) {
                         changeParser.expectKey("tx");
 
                         Int txId = changeParser.expectInt();
-                        if (txId > desired)
-                            {
+                        if (txId > desired) {
                             // this should not be happening
                             rebuild = True;
                             continue;
-                            }
+                        }
 
                         Key key;
 
                         changeParser.expectKey("k");
                         using (ObjectInputStream stream =
-                                new ObjectInputStream(jsonSchema, changeParser))
-                            {
+                                new ObjectInputStream(jsonSchema, changeParser)) {
                             key = keyMapping.read(stream.ensureElementInput());
-                            }
+                        }
 
                         fileNames.putIfAbsent(key, fileName);
 
-                        if (Int lastTx := closestTx.get(key))
-                            {
+                        if (Int lastTx := closestTx.get(key)) {
                             rebuild = True;
-                            if (txId < lastTx)
-                                {
+                            if (txId < lastTx) {
                                 // out of order transaction record; ignore
                                 continue;
-                                }
-                            keysByTx.process(lastTx, e ->
-                                {
+                            }
+                            keysByTx.process(lastTx, e -> {
                                 assert e.exists;
                                 e.value -= key;
-                                });
-                            }
+                            });
+                        }
 
                         closestTx.put(key, txId);
-                        keysByTx.process(txId, e ->
-                            {
+                        keysByTx.process(txId, e -> {
                             e.value = e.exists ? e.value + key : [key];
-                            });
+                        });
 
-                        if (changeParser.matchKey("v"))
-                            {
+                        if (changeParser.matchKey("v")) {
                             (Token first, Token last) = changeParser.skipDoc();
                             valueLoc.put(key, first.start.offset ..< last.end.offset);
-                            }
-                        else
-                            {
+                        } else {
                             valueLoc.remove(key);
-                            }
+                        }
 
                         Token endToken = changeParser.peek();
                         assert endToken.id == ObjectExit;
                         entryLoc.put(key, startOffset ..< endToken.end.offset);
-                        }
                     }
                 }
+            }
 
-            if (valueLoc.empty)
-                {
+            if (valueLoc.empty) {
                 // all the keys were removed; remove the storage
                 file.delete();
                 continue;
-                }
+            }
 
             totalFiles++;
             totalBytes += bytes.size;
 
             StringBuffer buf = new StringBuffer();
-            if (rebuild)
-                {
+            if (rebuild) {
                 buf.append("[");
-                }
+            }
 
-            for ((Int txId, Key[] keys) : keysByTx)
-                {
-                for (Key key : keys)
-                    {
-                    if (Range<Int> valueRange := valueLoc.get(key))
-                        {
+            for ((Int txId, Key[] keys) : keysByTx) {
+                for (Key key : keys) {
+                    if (Range<Int> valueRange := valueLoc.get(key)) {
                         assert Range<Int> entryRange := entryLoc.get(key);
 
-                        if (rebuild)
-                            {
+                        if (rebuild) {
                             Int startOffset = buf.size + 1;
 
                             buf.add('\n')
@@ -1098,25 +952,23 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                             FileLayout  fileLayout  = storageLayout.computeIfAbsent(txId, () -> new HashMap());
                             EntryLayout entryLayout = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
                             entryLayout.put(key, entryRange);
-                            }
+                        }
 
                         String jsonValue = jsonStr.slice(valueRange);
-                        using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonValue.toReader()))
-                            {
+                        using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonValue.toReader())) {
                             Value value = valueMapping.read(stream.ensureElementInput());
 
                             History valueHistory = new SkiplistMap();
                             valueHistory.put(txId, value);
                             history.put(key, valueHistory);
-                            }
                         }
                     }
                 }
+            }
 
             sizeByTx.process(desired, incrementCount(valueLoc.size));
 
-            if (rebuild)
-                {
+            if (rebuild) {
                 String jsonNew  = buf.truncate(-1).add('\n').add(']').toString();
                 Byte[] newBytes = jsonNew.utf8();
 
@@ -1124,131 +976,107 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                 totalBytes += newBytes.size - bytes.size;
                 storageOffset.put(fileName, jsonNew.size - 2);
-                }
-            else
-                {
+            } else {
                 // append position is before the closing "\n]"
                 storageOffset.put(fileName, jsonStr.size - 2);
-                }
             }
+        }
 
         filesUsed  = totalFiles;
         bytesUsed  = totalBytes;
         lastCommit = desired;
-        }
+    }
 
     @Override
-    Boolean quickScan()
-        {
-        if (super() && model != Empty)
-            {
-            StorageModel quantity = switch (filesUsed)
-                {
+    Boolean quickScan() {
+        if (super() && model != Empty) {
+            StorageModel quantity = switch (filesUsed) {
                 case 0x00: assert;
                 case 0x0001..0x03FF: Small;
                 case 0x0400..0xFFFF: Medium;
                 default: Large;
-                };
+            };
 
             StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
 
             // combine the two measure into the model to actually use
             model = StorageModel.maxOf(quantity, weight);
-            }
+        }
 
         return True;
-        }
+    }
 
     @Override
     @Synchronized
-    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
-        {
+    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId) {
         Map<String, StringBuffer> recoveredContents;
         Map<String, Int>          lastTxInFile;
 
         if (!((recoveredContents, lastTxInFile) :=
-                recoverContents(sealsByTxId, "k", keyMapping, jsonSchema)))
-            {
+                recoverContents(sealsByTxId, "k", keyMapping, jsonSchema))) {
             return False;
-            }
+        }
 
-        for ((Int txId, Token[] tokens) : sealsByTxId)
-            {
-            using (val sealParser = new Parser(tokens.iterator()))
-                {
-                using (val changeArrayParser = sealParser.expectArray())
-                    {
-                    while (!changeArrayParser.eof)
-                        {
-                        using (val changeParser = changeArrayParser.expectObject())
-                            {
+        for ((Int txId, Token[] tokens) : sealsByTxId) {
+            using (val sealParser = new Parser(tokens.iterator())) {
+                using (val changeArrayParser = sealParser.expectArray()) {
+                    while (!changeArrayParser.eof) {
+                        using (val changeParser = changeArrayParser.expectObject()) {
                             String fileName;
 
                             changeParser.expectKey("k");
 
                             Token[] keyTokens = changeParser.skip(new Token[]);
                             using (ObjectInputStream stream =
-                                    new ObjectInputStream(jsonSchema, keyTokens.iterator()))
-                                {
+                                    new ObjectInputStream(jsonSchema, keyTokens.iterator())) {
                                 Key key = keyMapping.read(stream.ensureElementInput());
 
                                 fileName = nameForKey(key);
-                                }
+                            }
 
                             // apply just the missing transactions
                             if (Int lastInFile := lastTxInFile.get(fileName),
-                                    lastInFile < txId || lastInFile == NO_TX)
-                                {
+                                    lastInFile < txId || lastInFile == NO_TX) {
                                 assert StringBuffer buf := recoveredContents.get(fileName);
 
                                 appendChange(buf, txId, "k", keyTokens, "v",
                                         changeParser.matchKey("v")
                                             ? changeParser.skip(new Token[])
                                             : []);
-                                }
                             }
                         }
                     }
                 }
             }
+        }
 
-        for ((String fileName, StringBuffer buf) : recoveredContents)
-            {
+        for ((String fileName, StringBuffer buf) : recoveredContents) {
             buf.truncate(-1).add('\n').add(']');
             dataDir.fileFor(fileName).contents = buf.toString().utf8();
-            }
+        }
 
         return True;
-        }
+    }
 
     // REVIEW something like this? -> protected Boolean storeImpl(Int txId, Key key, Value|Deletion value, Boolean blind)
-    protected void storeImpl(Int txId, Key key, Value|Deletion value)
-        {
+    protected void storeImpl(Int txId, Key key, Value|Deletion value) {
         assert Changes tx := checkTx(txId, writing=True);
         OrderedMap<Key, Value|Deletion> mods = tx.ensureMods();
-        if (Value|Deletion current := mods.get(key))
-            {
-            if (&value != &current)
-                {
-                if (value.is(Deletion) && !existsAt(tx.readId, key))
-                    {
+        if (Value|Deletion current := mods.get(key)) {
+            if (&value != &current) {
+                if (value.is(Deletion) && !existsAt(tx.readId, key)) {
                     mods.remove(key);
-                    }
-                else
-                    {
+                } else {
                     mods.put(key, value);
-                    }
                 }
             }
-        else if (!(value.is(Deletion) && !existsAt(tx.readId, key)))
-            {
+        } else if (!(value.is(Deletion) && !existsAt(tx.readId, key))) {
             mods.put(key, value);
-            }
         }
+    }
 
     @Override
-    void unload()
-        {
+    void unload() {
         inFlight.clear();
         modsByTx.clear();
         history.clear();
@@ -1256,7 +1084,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         storageOffset.clear();
         fileNames.clear();
         sizeByTx.clear();
-        }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -1264,8 +1092,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * Rebuild the content of the specified file.
      */
-    private void rebuildFile(String fileName)
-        {
+    private void rebuildFile(String fileName) {
         StringBuffer buf  = new StringBuffer();
         File         file = dataDir.fileFor(fileName);
 
@@ -1274,21 +1101,18 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Byte[] oldBytes = file.contents;
         String jsonStr  = oldBytes.unpackUtf8();
 
-        for ((Int txId, FileLayout fileLayout) : storageLayout)
-            {
-            if (EntryLayout entryLayout := fileLayout.get(fileName))
-                {
-                for ((Key key, Range<Int> entryRange) : entryLayout)
-                    {
+        for ((Int txId, FileLayout fileLayout) : storageLayout) {
+            if (EntryLayout entryLayout := fileLayout.get(fileName)) {
+                for ((Key key, Range<Int> entryRange) : entryLayout) {
                     Int startPos = buf.size + 2;
 
                     buf.add(',').add('\n')
                        .append(jsonStr.slice(entryRange));
 
                     entryLayout.put(key, startPos ..< buf.size);
-                    }
                 }
             }
+        }
 
         Int fileOffset = buf.size;
         storageOffset.put(fileName, fileOffset);
@@ -1301,5 +1125,5 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
         bytesUsed   += newBytes.size - oldBytes.size;
         lastModified = file.modified;
-        }
     }
+}

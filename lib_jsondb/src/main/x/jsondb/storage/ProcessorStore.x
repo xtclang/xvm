@@ -11,8 +11,7 @@ import Transaction.CommitResult;
 /**
  * A "processor" storage API, to support DBProcessor objects.
  */
-interface ProcessorStore<Message extends immutable Const>
-    {
+interface ProcessorStore<Message extends immutable Const> {
     /**
      * Schedule the specified message for processing.
      *
@@ -108,4 +107,4 @@ interface ProcessorStore<Message extends immutable Const>
      * @param result   the indication of the failure
      */
     void abandonPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result);
-    }
+}

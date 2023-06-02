@@ -2,8 +2,7 @@
  * Storage API for a database counter.
  */
 interface CounterStore
-        extends ValueStore<Int>
-    {
+        extends ValueStore<Int> {
     @Override
     Int load(Int txId);
 
@@ -20,13 +19,12 @@ interface CounterStore
      * @return before  the value before the change
      * @return after   the value after the change
      */
-    (Int before, Int after) adjust(Int txId, Int delta = 1)
-        {
+    (Int before, Int after) adjust(Int txId, Int delta = 1) {
         Int before = load(txId);
         Int after  = before + delta;
         store(txId, after);
         return before, after;
-        }
+    }
 
     /**
      * Modify the counter value _in a relative manner_ by applying the passed delta value to the
@@ -35,9 +33,8 @@ interface CounterStore
      * @param txId   the transaction identifier
      * @param delta  the relative value adjustment to make to the counter
      */
-    void adjustBlind(Int txId, Int delta = 1)
-        {
+    void adjustBlind(Int txId, Int delta = 1) {
         // this can be optimized in transactional implementations
         adjust(txId, delta);
-        }
     }
+}

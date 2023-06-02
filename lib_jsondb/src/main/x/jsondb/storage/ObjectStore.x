@@ -38,8 +38,7 @@ import oodb.DBObject.DBCategory as Category;
  */
 service ObjectStore(Catalog catalog, DboInfo info)
         implements Hashable
-        implements Closeable
-    {
+        implements Closeable {
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -60,26 +59,23 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * hopping just to get a reference to the TxManager every time that it is needed.
      */
     @Concurrent
-    protected @Lazy TxManager txManager.calc()
-        {
+    protected @Lazy TxManager txManager.calc() {
         return catalog.txManager;
-        }
+    }
 
     /**
      * The id of the `DBObject` for which this storage exists.
      */
-    Int id.get()
-        {
+    Int id.get() {
         return info.id;
-        }
+    }
 
     /**
      * The `DBCategory` of the `DBObject` for which this storage exists.
      */
-    Category category.get()
-        {
+    Category category.get() {
         return info.category;
-        }
+    }
 
     /**
      * The current [Status] of this ObjectStore.
@@ -101,10 +97,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * The path that specifies this `DBObject`, and that implies the directory location for the data
      * managed by this `ObjectStore` and represented by the corresponding `DBObject`.
      */
-    Path path.get()
-        {
+    Path path.get() {
         return info.path;
-        }
+    }
 
     /**
      * The directory within which the named ObjectStore file or directory exists. That file or
@@ -112,19 +107,16 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * ObjectStore does not use the `containingDir` directly.
      */
     @Concurrent
-    @Lazy public/private Directory containingDir.calc()
-        {
+    @Lazy public/private Directory containingDir.calc() {
         // TODO this should be a lot easier ... e.g.: return catalog.dir.apply(path);
         Directory dir = catalog.dir;
-        if (path.size > 2)
-            {
-            for (Path part : path[1 ..< path.size-1])
-                {
+        if (path.size > 2) {
+            for (Path part : path[1 ..< path.size-1]) {
                 dir = dir.dirFor(part.name);
-                }
             }
-        return dir;
         }
+        return dir;
+    }
 
     /**
      * The directory owned by this ObjectStore for purpose of its data storage. The ObjectStore may
@@ -136,10 +128,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * the file nodes named `A`, `B`, or `C`.)
      */
     @Concurrent
-    @Lazy public/private Directory dataDir.calc()
-        {
+    @Lazy public/private Directory dataDir.calc() {
         return containingDir.dirFor(info.name).ensure();
-        }
+    }
 
     /**
      * Statistics: The estimated number of bytes on disk in use by this storage object.
@@ -189,26 +180,23 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * catalog is not read only and the DBObject has not been deprecated or removed.
      */
     @Concurrent
-    protected Boolean defaultWriteable.get()
-        {
+    protected Boolean defaultWriteable.get() {
         return !catalog.readOnly && info.lifeCycle == Current
                 && (info.id > 0 ||
                     info.id == Catalog.BuiltIn.TxCounter.id ||
                     info.id == Catalog.BuiltIn.PidCounter.id);
-        }
+    }
 
     /**
      * An internal, mutable record of Changes for a specific transaction.
      */
     @Concurrent
-    protected class Changes(Int writeId, Future<Int>? pendingReadId)
-        {
-        construct(Int writeId, Future<Int> pendingReadId)
-            {
+    protected class Changes(Int writeId, Future<Int>? pendingReadId) {
+        construct(Int writeId, Future<Int> pendingReadId) {
             this.writeId       = writeId;
             this.readId        = NO_TX;
             this.pendingReadId = pendingReadId;
-            }
+        }
 
         /**
          * This txId, the "write" txId.
@@ -220,36 +208,30 @@ service ObjectStore(Catalog catalog, DboInfo info)
          * a "write" id, which will occur during the prepare phase when a Rectifier or Distributor
          * is being executed, and the thus-far-prepared transaction is visible by the read id.)
          */
-        Int readId
-            {
-            Int get()
-                {
+        Int readId {
+            Int get() {
                 Int id = super();
-                if (id == NO_TX)
-                    {
+                if (id == NO_TX) {
                     id = pendingReadId?.get() : assert;
                     set(id);
-                    }
-                return id;
                 }
+                return id;
+            }
 
-            void set(Int id)
-                {
+            void set(Int id) {
                 super(id);
-                if (id != NO_TX)
-                    {
+                if (id != NO_TX) {
                     pendingReadId = Null;
-                    }
                 }
             }
+        }
 
         /**
          * The worker to dump CPU intensive serialization and deserialization work onto.
          */
-        @Lazy Client.Worker worker.calc()
-            {
+        @Lazy Client.Worker worker.calc() {
             return txManager.workerFor(writeId);
-            }
+        }
 
         /**
          * Set to True when the transaction has been prepared. Note that the prepare phase can
@@ -264,27 +246,24 @@ service ObjectStore(Catalog catalog, DboInfo info)
         Boolean sealed;
 
         @Override
-        String toString()
-            {
+        String toString() {
             StringBuffer buf = new StringBuffer();
             buf.append("Changes(writeId=")
                .append(writeId)
                .append(", readId=")
                .append(readId);
 
-            if (prepared)
-                {
+            if (prepared) {
                 buf.append(", prepared");
-                }
+            }
 
-            if (sealed)
-                {
+            if (sealed) {
                 buf.append(", sealed");
-                }
+            }
 
             return buf.toString();
-            }
         }
+    }
 
     /**
      * In flight transactions involving this ObjectStore, keyed by "write" transaction id. This
@@ -310,22 +289,20 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
     @Synchronized
-    Boolean recover()
-        {
+    Boolean recover() {
         assert status == Closed as $"Illegal attempt to recover {info.name.quoted()} storage while {status}";
 
         status = Recovering;
-        if (deepScan(True))
-            {
+        if (deepScan(True)) {
             status    = Running;
             writeable = defaultWriteable;
             return True;
-            }
+        }
 
         status    = Closed;
         writeable = False;
         return False;
-        }
+    }
 
     /**
      * For a closed ObjectStore, quickly open the contents of the persistent storage in order to
@@ -336,72 +313,65 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
     @Synchronized
-    Boolean open()
-        {
+    Boolean open() {
         assert status == Closed as $"Illegal attempt to open {info.name.quoted()} storage while {status}";
-        if (quickScan())
-            {
+        if (quickScan()) {
             status    = Running;
             writeable = defaultWriteable;
             return True;
-            }
+        }
 
         status    = Closed;
         writeable = False;
         return False;
-        }
+    }
 
     /**
      * Close this `ObjectStore`.
      */
     @Override
     @Synchronized
-    void close(Exception? cause = Null)
-        {
-        if (status == Running)
-            {
+    void close(Exception? cause = Null) {
+        if (status == Running) {
             unload();
-            }
+        }
 
         status    = Closed;
         writeable = False;
-        }
+    }
 
     /**
      * Delete the contents of the ObjectStore's persistent data.
      */
     @Synchronized
-    void delete()
-        {
-        switch (status)
-            {
-            case Recovering:
-            case Configuring:
-            case Closed:
-                model        = Empty;
-                filesUsed    = 0;
-                bytesUsed    = 0;
+    void delete() {
+        switch (status) {
+        case Recovering:
+        case Configuring:
+        case Closed:
+            model        = Empty;
+            filesUsed    = 0;
+            bytesUsed    = 0;
 
-                Directory dir = dataDir;
-                if (dir.exists)
-                    {
-                    dir.deleteRecursively();
-                    }
-
-                // this cannot be assumed to be correct, since the filing system could run on
-                // a different clock, so make sure that the timestamp is not moving backwards
-                @Inject Clock clock;
-                lastModified = lastModified?.notLessThan(clock.now) : clock.now;
-                break;
-
-            case Running:
-                // there is nothing for the generic ObjectStore to do
-                assert as $"Illegal attempt to delete {info.name.quoted()} storage while running";
-
-            default:
-                assert as $"Illegal status: {status}";
+            Directory dir = dataDir;
+            if (dir.exists) {
+                dir.deleteRecursively();
             }
+
+            // this cannot be assumed to be correct, since the filing system could run on
+            // a different clock, so make sure that the timestamp is not moving backwards
+            @Inject Clock clock;
+            lastModified = lastModified?.notLessThan(clock.now) : clock.now;
+            break;
+
+        case Running:
+            // there is nothing for the generic ObjectStore to do
+            assert as $"Illegal attempt to delete {info.name.quoted()} storage while running";
+
+        default:
+            assert as $"Illegal status: {status}";
         }
+    }
 
 
     // ----- transaction handling ------------------------------------------------------------------
@@ -423,67 +393,56 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @return (conditional) the Changes record for the transaction
      */
     @Concurrent
-    protected conditional Changes checkTx(Int txId, Boolean writing=False)
-        {
-        if (isWriteTx(txId))
-            {
-            if (writing)
-                {
+    protected conditional Changes checkTx(Int txId, Boolean writing=False) {
+        if (isWriteTx(txId)) {
+            if (writing) {
                 checkWrite();
-                switch (val category = txCat(txId))
-                    {
-                    case ReadOnly:
-                        assert as $"Modification of {info.idString} in a read-only transaction is prohibited";
+                switch (val category = txCat(txId)) {
+                case ReadOnly:
+                    assert as $"Modification of {info.idString} in a read-only transaction is prohibited";
 
-                    case Open:
-                        break;
+                case Open:
+                    break;
 
-                    case Validating:
-                        assert as $"Modification of {info.idString} by a Validator is prohibited";
+                case Validating:
+                    assert as $"Modification of {info.idString} by a Validator is prohibited";
 
-                    case Rectifying:
-                        assert txId == triggerWriteId as $"Modification of a {info.idString} by a different DBObject's Rectifier is prohibited";
-                        break;
+                case Rectifying:
+                    assert txId == triggerWriteId as $"Modification of a {info.idString} by a different DBObject's Rectifier is prohibited";
+                    break;
 
-                    case Distributing:
-                        assert txId != triggerWriteId as $"Modification of {info.idString} by its Distributor is prohibited";
-                        break;
+                case Distributing:
+                    assert txId != triggerWriteId as $"Modification of {info.idString} by its Distributor is prohibited";
+                    break;
 
-                    default:
-                        assert as $"Unexpected Transaction category: {category}";
-                    }
+                default:
+                    assert as $"Unexpected Transaction category: {category}";
                 }
-            else
-                {
+            } else {
                 checkRead();
-                }
+            }
 
             Int     writeId = writeIdFor(txId);
             Changes changes;
-            if (changes := inFlight.get(writeId))
-                {
+            if (changes := inFlight.get(writeId)) {
                 assert !(changes.sealed && writing)
                         as $"Modification of the already-sealed {info.idString} is prohibited";
-                }
-            else
-                {
+            } else {
                 Int readId = txManager.enlist^(this.id, txId);
                 changes = new Changes(writeId, &readId);
                 inFlight.put(writeId, changes);
-                }
+            }
 
             return True, changes;
-            }
-        else
-            {
+        } else {
             assert isReadTx(txId);
             checkRead();
             assert !writing as $|Modification of {info.idString}\
                                 | within a read-only transaction ({txId}) is prohibited
                                 ;
             return False;
-            }
         }
+    }
 
     /**
      * Validate that the transaction ID is a write ID, and see if a transaction exists for that
@@ -494,10 +453,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @return True if the transaction exists on this ObjectStore
      * @return (conditional) the Changes record for the transaction
      */
-    protected conditional Changes peekTx(Int txId)
-        {
+    protected conditional Changes peekTx(Int txId) {
         return inFlight.get(writeIdFor(txId));
-        }
+    }
 
     /**
      * Possible outcomes from a [prepare] call:
@@ -540,10 +498,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @return a [PrepareResult] indicating the result of the `prepare()` operation
      */
     @Concurrent
-    PrepareResult prepare(Int writeId, Int prepareId)
-        {
+    PrepareResult prepare(Int writeId, Int prepareId) {
         TODO
-        }
+    }
 
     /**
      * Indicates that this ObjectStore is going to receive validation/rectification/distribution
@@ -553,11 +510,10 @@ service ObjectStore(Catalog catalog, DboInfo info)
      *              distribution is the trigger type that is going to be occurring
      */
     @Concurrent
-    void triggerBegin(Int txId)
-        {
+    void triggerBegin(Int txId) {
         assert isWriteTx(txId) && triggerWriteId == NO_TX;
         triggerWriteId = txId;
-        }
+    }
 
     /**
      * Indicates that the previously indicated validation/rectification/distribution phase has
@@ -566,11 +522,10 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @param writeId  the transaction ID that was previously passed to [triggerBegin]
      */
     @Concurrent
-    void triggerEnd(Int txId)
-        {
+    void triggerEnd(Int txId) {
         assert isWriteTx(txId) && triggerWriteId == txId;
         triggerWriteId = NO_TX;
-        }
+    }
 
     /**
      * Possible outcomes from a [mergePrepare] call:
@@ -602,10 +557,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @return a [MergeResult] indicating the result of the `mergePrepare()` operation
      */
     @Concurrent
-    MergeResult mergePrepare(Int writeId, Int prepareId)
-        {
+    MergeResult mergePrepare(Int writeId, Int prepareId) {
         TODO
-        }
+    }
 
     /**
      * Render a previously prepared transaction that is ready to commit into a JSON document that
@@ -621,10 +575,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      *         the JSON log format fails
      */
     @Concurrent
-    String sealPrepare(Int writeId)
-        {
+    String sealPrepare(Int writeId) {
         TODO
-        }
+    }
 
     /**
      * Commit a group of previously prepared transactions. When this method returns, the
@@ -636,13 +589,11 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception on any failure
      */
     @Concurrent
-    void commit(Int[] writeIds)
-        {
-        for (Int writeId : writeIds)
-            {
+    void commit(Int[] writeIds) {
+        for (Int writeId : writeIds) {
             commit(writeId);
-            }
         }
+    }
 
     /**
      * Commit a previously prepared transaction. When this method returns, the transactional changes
@@ -653,10 +604,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception on any failure
      */
     @Concurrent
-    void commit(Int writeId)
-        {
+    void commit(Int writeId) {
         commit([writeId]);
-        }
+    }
 
     /**
      * Roll back any transactional data associated with the specified transaction id. When this
@@ -671,10 +621,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception on hard failure
      */
     @Concurrent
-    void rollback(Int writeId)
-        {
+    void rollback(Int writeId) {
         TODO
-        }
+    }
 
     /**
      * Inform the ObjectStore of all of the read-transaction-ids that are still being relied upon
@@ -689,10 +638,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      *                    all older transactions in order to synchronously compress the storage
      */
     @Concurrent
-    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
-        {
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False) {
         TODO
-        }
+    }
 
 
     // ----- IO handling ---------------------------------------------------------------------------
@@ -703,10 +651,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @return an iterator over all of the files that are presumed to be owned by this storage
      */
     @Synchronized
-    Iterator<File> findFiles()
-        {
+    Iterator<File> findFiles() {
         return dataDir.files().filter(f -> f.name.endsWith(".json")).toArray().iterator();
-        }
+    }
 
     /**
      * Initialize the state of the ObjectStore by scanning the persistent image of the ObjectStore's
@@ -716,8 +663,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      *         False indicates that fixes are required
      */
     @Synchronized
-    Boolean quickScan()
-        {
+    Boolean quickScan() {
         model        = Empty;
         filesUsed    = 0;
         bytesUsed    = 0;
@@ -725,27 +671,25 @@ service ObjectStore(Catalog catalog, DboInfo info)
         lastModified = Null;
 
         Directory dir = dataDir;
-        if (dir.exists)
-            {
+        if (dir.exists) {
             lastAccessed = dir.accessed;
             lastModified = dir.modified;
 
-            for (File file : findFiles())
-                {
+            for (File file : findFiles()) {
                 ++filesUsed;
                 bytesUsed   += file.size;
                 lastAccessed = lastAccessed?.notLessThan(file.accessed) : file.accessed;
                 lastModified = lastModified?.notLessThan(file.modified) : file.modified;
-                }
+            }
 
             // knowledge of model categorization is owned by the ObjectStore sub-classes; this is
             // just an initial guess at this level; sub-classes should override this if there is a
             // more correct calculation
             model = filesUsed == 0 ? Empty : Small;
-            }
+        }
 
         return True;
-        }
+    }
 
     /**
      * Initialize the state of the ObjectStore by deep-scanning (and optionally fixing as necessary)
@@ -758,11 +702,10 @@ service ObjectStore(Catalog catalog, DboInfo info)
      *         any errors that it encountered)
      */
     @Synchronized
-    Boolean deepScan(Boolean fix = True)
-        {
+    Boolean deepScan(Boolean fix = True) {
         // knowledge of how to perform a deep scan is handled by specific ObjectStore sub-classes
         return quickScan();
-        }
+    }
 
     /**
      * Fill in any missing persistent state of the ObjectStore by re-applying the provided
@@ -775,10 +718,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @return True if the recovery data was applied successfully
      */
     @Synchronized
-    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
-        {
+    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId) {
         TODO
-        }
+    }
 
     /**
      * Verify that the storage is open and can read.
@@ -788,11 +730,10 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception if the check fails
      */
     @Concurrent
-    Boolean checkRead()
-        {
+    Boolean checkRead() {
         return status == Recovering || status == Running && ensureReady()
             || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
-        }
+    }
 
     /**
      * Verify that the storage is open and can write.
@@ -804,13 +745,12 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception if the check fails
      */
     @Concurrent
-    Boolean checkWrite()
-        {
+    Boolean checkWrite() {
         return (writeable
                 || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
             && (status == Recovering || status == Running && ensureReady()
                 || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"));
-        }
+    }
 
     /**
      * Ensure that the ObjectStore has loaded its initial set of data from disk.
@@ -820,15 +760,13 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception if loading the initial data fails in any way
      */
     @Concurrent
-    Boolean ensureReady()
-        {
-        if (!loaded)
-            {
+    Boolean ensureReady() {
+        if (!loaded) {
             makeReady();
-            }
+        }
 
         return True;
-        }
+    }
 
     /**
      * Ensure that the ObjectStore has loaded its initial set of data from disk.
@@ -838,50 +776,42 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception if loading the initial data fails in any way
      */
     @Synchronized
-    Boolean makeReady()
-        {
-        if (!loaded)
-            {
-            if (model == Empty)
-                {
+    Boolean makeReady() {
+        if (!loaded) {
+            if (model == Empty) {
                 initializeEmpty();
-                }
-            else
-                {
+            } else {
                 loadInitial();
-                }
-            loaded = True;
             }
+            loaded = True;
+        }
 
         return True;
-        }
+    }
 
     /**
      * Initialize the ObjectStore as empty, to its default state.
      */
     @Synchronized
-    void initializeEmpty()
-        {
+    void initializeEmpty() {
         assert model == Empty;
-        }
+    }
 
     /**
      * Load the necessary ObjectStore state from disk.
      */
     @Synchronized
-    void loadInitial()
-        {
+    void loadInitial() {
         TODO
-        }
+    }
 
     /**
      * Jettison any loaded data.
      */
     @Synchronized
-    void unload()
-        {
+    void unload() {
         TODO
-        }
+    }
 
     /**
      * Log an error description.
@@ -889,20 +819,18 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @param err  an error message to add to the log
      */
     @Concurrent
-    void log(String err)
-        {
+    void log(String err) {
         catalog.log^(err);
-        }
+    }
 
     /**
      * Update the access statistics.
      */
     @Concurrent
-    void updateReadStats()
-        {
+    void updateReadStats() {
         @Inject Clock clock;
         lastAccessed = clock.now;
-        }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -922,13 +850,12 @@ service ObjectStore(Catalog catalog, DboInfo info)
             Int                 lastCommit,
             Iterator<Int>       eachPresent,
             Iterator<Int>       eachInUse,
-            function void (Int) discard)
-        {
+            function void (Int) discard) {
+
         assert Int presentId := eachPresent.next();
-        if (presentId == lastCommit)
-            {
+        if (presentId == lastCommit) {
             return False;
-            }
+        }
 
         Int inUseId = lastCommit;
         inUseId := eachInUse.next();
@@ -936,103 +863,86 @@ service ObjectStore(Catalog catalog, DboInfo info)
         Boolean discarded        = False;
         Int     discardCandidate = -1;
 
-        while (True)
-            {
+        while (True) {
             Boolean loadNextPresent;
             Boolean loadNextInUse;
-            switch (presentId <=> inUseId)
-                {
-                case Lesser:
-                    if (discardCandidate >= 0)
-                        {
-                        discard(discardCandidate);
-                        discarded = True;
-                        }
-
-                    // advance to the next transaction in our history log
-                    discardCandidate = presentId;
-                    loadNextInUse    = False;
-                    loadNextPresent  = True;
-                    break;
-
-                case Equal:
-                    if (discardCandidate >= 0)
-                        {
-                        discard(discardCandidate);
-                        discarded = True;
-                        }
-
-                    // the current one that we're examining in our history is still in use; advance
-                    // to the next of each list
-                    discardCandidate = -1;
-                    loadNextInUse   = True;
-                    loadNextPresent = True;
-                    break;
-
-                case Greater:
-                    // determine the next transaction that we're being instructed to keep
-                    discardCandidate = -1;
-                    loadNextInUse   = True;
-                    loadNextPresent = False;
-                    break;
+            switch (presentId <=> inUseId) {
+            case Lesser:
+                if (discardCandidate >= 0) {
+                    discard(discardCandidate);
+                    discarded = True;
                 }
 
-            if (loadNextPresent)
-                {
-                if (presentId := eachPresent.next())
-                    {
-                    if (presentId >= lastCommit)
-                        {
+                // advance to the next transaction in our history log
+                discardCandidate = presentId;
+                loadNextInUse    = False;
+                loadNextPresent  = True;
+                break;
+
+            case Equal:
+                if (discardCandidate >= 0) {
+                    discard(discardCandidate);
+                    discarded = True;
+                }
+
+                // the current one that we're examining in our history is still in use; advance
+                // to the next of each list
+                discardCandidate = -1;
+                loadNextInUse   = True;
+                loadNextPresent = True;
+                break;
+
+            case Greater:
+                // determine the next transaction that we're being instructed to keep
+                discardCandidate = -1;
+                loadNextInUse   = True;
+                loadNextPresent = False;
+                break;
+            }
+
+            if (loadNextPresent) {
+                if (presentId := eachPresent.next()) {
+                    if (presentId >= lastCommit) {
                         // we need to keep this one (it's our "current" history), so we're done
                         return discarded;
-                        }
                     }
-                else
-                    {
+                } else {
                     // no more transactions to evaluate; we're done
                     return discarded;
-                    }
                 }
+            }
 
-            if (loadNextInUse)
-                {
-                if (inUseId == lastCommit)
-                    {
+            if (loadNextInUse) {
+                if (inUseId == lastCommit) {
                     // we already moved past our last transaction; we're done
                     return discarded;
-                    }
+                }
 
-                if (inUseId := eachInUse.next())
-                    {
-                    if (inUseId > lastCommit)
-                        {
+                if (inUseId := eachInUse.next()) {
+                    if (inUseId > lastCommit) {
                         // we don't have any transactions in this range
                         inUseId = lastCommit;
-                        }
                     }
-                else
-                    {
+                } else {
                     return discarded;
-                    }
                 }
             }
         }
+    }
 
     // ----- Hashable funky interface --------------------------------------------------------------
 
     @Override
-    static <CompileType extends ObjectStore> Int64 hashCode(CompileType value)
-        {
+    static <CompileType extends ObjectStore> Int64 hashCode(CompileType value) {
         // use the hash code of the path; we are not expecting ObjectStore instances from multiple
         // different databases to end up in the same hashed data structure, so this should be more
         // than sufficient
         return value.info.path.hashCode();
-        }
+    }
 
     @Override
-    static <CompileType extends ObjectStore> Boolean equals(CompileType value1, CompileType value2)
-        {
+    static <CompileType extends ObjectStore> Boolean equals(CompileType value1, CompileType value2) {
         // equality of ObjectStore references is very strict
         return &value1 == &value2;
-        }
     }
+}

@@ -108,10 +108,9 @@ import ObjectStore.PrepareResult;
  */
 @Concurrent
 service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
-        implements Closeable
-    {
-    construct(Catalog<Schema> catalog)
-        {
+        implements Closeable {
+
+    construct(Catalog<Schema> catalog) {
         this.catalog = catalog;
         this.clock   = catalog.clock;
 
@@ -129,40 +128,36 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         Boolean hasDistributors  = catalog.metadata?.dbObjectInfos.any(info -> !info.distributors .empty) : False;
         Boolean hasSyncTriggers  = hasValidators |  hasRectifiers | hasDistributors;
 
-        if (hasValidators)
-            {
+        if (hasValidators) {
             validators = catalog.metadata?.dbObjectInfos
                     .filter(info -> !info.validators.empty)
                     .map(info -> info.id, new SparseIntSet())
                     .as(Set<Int>);
-            }
+        }
 
-        if (hasRectifiers)
-            {
+        if (hasRectifiers) {
             rectifiers = catalog.metadata?.dbObjectInfos
                     .filter(info -> !info.rectifiers.empty)
                     .map(info -> info.id, new SparseIntSet())
                     .as(Set<Int>);
-            }
+        }
 
-        if (hasDistributors)
-            {
+        if (hasDistributors) {
             distributors = catalog.metadata?.dbObjectInfos
                     .filter(info -> !info.distributors.empty)
                     .map(info -> info.id, new SparseIntSet())
                     .as(Set<Int>);
-            }
+        }
 
-        if (hasSyncTriggers)
-            {
+        if (hasSyncTriggers) {
             syncTriggers = new SparseIntSet()
                     .addAll(validators)
                     .addAll(rectifiers)
                     .addAll(distributors);
-            }
+        }
 
         internalJsonSchema = catalog.internalJsonSchema;
-        }
+    }
 
     typedef Client<Schema>.DBObjectImpl as DBObjectImpl;
 
@@ -194,26 +189,20 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * "Boolean enabled" flag, but the two additional book-end states provide more clarity for
      * the terminal points of the life cycle, and thus (in theory) better assertions.
      */
-    public/private Status status
-        {
+    public/private Status status {
         @Override
-        void set(Status newStatus)
-            {
+        void set(Status newStatus) {
             Status oldStatus = get();
-            if (newStatus != oldStatus)
-                {
+            if (newStatus != oldStatus) {
                 super(newStatus);
-                if (newStatus == Enabled)
-                    {
+                if (newStatus == Enabled) {
                     startBackgroundMaintenance();
-                    }
-                else if (oldStatus == Enabled)
-                    {
+                } else if (oldStatus == Enabled) {
                     stopBackgroundMaintenance();
-                    }
                 }
             }
-        } = Initial;
+        }
+    } = Initial;
 
     /**
      * The lazily cached DboInfo for each user defined DBObject in the `Catalog`.
@@ -255,45 +244,40 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * A LogStorageSupport.
      */
-    @Lazy protected storage.LogStorageSupport support.calc()
-        {
+    @Lazy protected storage.LogStorageSupport support.calc() {
         return new storage.LogStorageSupport(sysDir, "txlog");
-        }
+    }
 
     /**
      * A snapshot of information about a transactional log file.
      */
-    static const LogFileInfo(String name, Range<Int> txIds, Int safepoint, Int size, Time timestamp)
-        {
+    static const LogFileInfo(String name, Range<Int> txIds, Int safepoint, Int size, Time timestamp) {
         LogFileInfo with(String?     name      = Null,
                          Range<Int>? txIds     = Null,
                          Int?        safepoint = Null,
                          Int?        size      = Null,
-                         Time?       timestamp = Null)
-            {
+                         Time?       timestamp = Null) {
             return new LogFileInfo(name      ?: this.name,
                                    txIds     ?: this.txIds,
                                    safepoint ?: this.safepoint,
                                    size      ?: this.size,
                                    timestamp ?: this.timestamp);
-            }
         }
+    }
 
     /**
      * A JSON Mapping to use to serialize instances of LogFileInfo.
      */
-    @Lazy protected Mapping<LogFileInfo> logFileInfoMapping.calc()
-        {
+    @Lazy protected Mapping<LogFileInfo> logFileInfoMapping.calc() {
         return internalJsonSchema.ensureMapping(LogFileInfo);
-        }
+    }
 
     /**
      * A JSON Mapping to use to serialize instances of LogFileInfo.
      */
-    @Lazy protected Mapping<LogFileInfo[]> logFileInfoArrayMapping.calc()
-        {
+    @Lazy protected Mapping<LogFileInfo[]> logFileInfoArrayMapping.calc() {
         return internalJsonSchema.ensureMapping(LogFileInfo[]);
-        }
+    }
 
     /**
      * A record of all of the existent rolled-over log files.
@@ -321,10 +305,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * transaction identities.
      */
     @Lazy
-    protected/private JsonNtxCounterStore visibleIdCounter.calc()
-        {
+    protected/private JsonNtxCounterStore visibleIdCounter.calc() {
         return catalog.storeFor(BuiltIn.TxCounter.id).as(JsonNtxCounterStore);
-        }
+    }
 
     /**
      * An illegal transaction ID used to indicate that no ID has been assigned yet.
@@ -406,19 +389,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * The last transaction id that is known to have been fully written to disk by all ObjectStores.
      */
-    Int safepoint.get()
-        {
+    Int safepoint.get() {
         Int safepoint = lastCommitted;
-        for (TxRecord rec : byWriteId.values)
-            {
-            if (rec.status == Committed && rec.commitId <= safepoint)
-                {
+        for (TxRecord rec : byWriteId.values) {
+            if (rec.status == Committed && rec.commitId <= safepoint) {
                 assert rec.commitId > 0;
                 safepoint = rec.commitId - 1;
-                }
             }
-        return safepoint;
         }
+        return safepoint;
+    }
 
     /**
      * The last recorded safepoint.
@@ -517,39 +497,33 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the TxManager was successfully enabled
      */
-    Boolean enable(Boolean recover=False)
-        {
-        switch (status)
-            {
-            case Initial:
-                using (new SynchronizedSection())
-                    {
-                    if ((statusFile.exists ? openLog() : createLog()) || recover && recoverLog())
-                        {
-                        status = Enabled;
-                        return True;
-                        }
-                    }
-                return False;
-
-            case Enabled:
-                return True;
-
-            case Disabled:
-                using (new SynchronizedSection())
-                    {
-                    if (remainingTerminating == 0 && (openLog() || recover && recoverLog()))
-                        {
-                        status = Enabled;
-                        return True;
-                        }
-                    }
-                return False;
-
-            case Closed:
-                return False;
+    Boolean enable(Boolean recover=False) {
+        switch (status) {
+        case Initial:
+            using (new SynchronizedSection()) {
+                if ((statusFile.exists ? openLog() : createLog()) || recover && recoverLog()) {
+                    status = Enabled;
+                    return True;
+                }
             }
+            return False;
+
+        case Enabled:
+            return True;
+
+        case Disabled:
+            using (new SynchronizedSection()) {
+                if (remainingTerminating == 0 && (openLog() || recover && recoverLog())) {
+                    status = Enabled;
+                    return True;
+                }
+            }
+            return False;
+
+        case Closed:
+            return False;
         }
+    }
 
     /**
      * Verify that the transaction manager is open for client requests.
@@ -558,12 +532,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @throws IllegalState iff the transaction manager is not enabled
      */
-    Boolean checkEnabled()
-        {
+    Boolean checkEnabled() {
         return status == Enabled
             ? True
             : throw new DBClosed($"TxManager is not enabled (status={status})");
-        }
+    }
 
     /**
      * Stop the transaction manager from accepting any work from clients, and roll back any
@@ -576,141 +549,123 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the TxManager was successfully disabled
      */
-    Boolean disable(Boolean abort = False)
-        {
-        switch (status)
-            {
-            case Initial:
-                status = Disabled;
-                return True;
+    Boolean disable(Boolean abort = False) {
+        switch (status) {
+        case Initial:
+            status = Disabled;
+            return True;
 
-            case Enabled:
-                using (new SynchronizedSection())
-                    {
-                    @Future Boolean result;
+        case Enabled:
+            using (new SynchronizedSection()) {
+                @Future Boolean result;
 
-                    // count down the remaining number of transactions to clean up, but start with
-                    // an extra one, to prevent the shut-down from "completing" while we're still
-                    // inside the loop below
-                    assert remainingTerminating == 0;
-                    remainingTerminating = 1;
+                // count down the remaining number of transactions to clean up, but start with
+                // an extra one, to prevent the shut-down from "completing" while we're still
+                // inside the loop below
+                assert remainingTerminating == 0;
+                remainingTerminating = 1;
 
-                    SkiplistMap<Int, TxRecord> commitOrder    = new SkiplistMap();
-                    Int                        lastCommitted  = this.lastCommitted;
-                    TxRecord?                  lastCommitting = Null;
+                SkiplistMap<Int, TxRecord> commitOrder    = new SkiplistMap();
+                Int                        lastCommitted  = this.lastCommitted;
+                TxRecord?                  lastCommitting = Null;
 
-                    Loop: for (TxRecord rec : byWriteId.values)
-                        {
-                        Boolean doCommit   = False;
-                        Boolean doRollback = False;
-                        switch (rec.status)
-                            {
-                            default:
-                            case InFlight:
-                            case Enqueued:
-                            case Preparing:
-                            case Prepared:
-                            case ReqsChecking:
-                            case ReqsChecked:
-                            case Validating:
-                            case Validated:
-                            case Rectifying:
-                            case Rectified:
-                            case Distributing:
-                            case Distributed:
-                            case Sealing:
-                                doRollback = True;
-                                break;
+                Loop: for (TxRecord rec : byWriteId.values) {
+                    Boolean doCommit   = False;
+                    Boolean doRollback = False;
+                    switch (rec.status) {
+                    default:
+                    case InFlight:
+                    case Enqueued:
+                    case Preparing:
+                    case Prepared:
+                    case ReqsChecking:
+                    case ReqsChecked:
+                    case Validating:
+                    case Validated:
+                    case Rectifying:
+                    case Rectified:
+                    case Distributing:
+                    case Distributed:
+                    case Sealing:
+                        doRollback = True;
+                        break;
 
-                            case Sealed:
-                                if (abort)
-                                    {
-                                    doRollback = True;
-                                    }
-                                else
-                                    {
-                                    doCommit = True;
-                                    }
-                                break;
-
-                            case Committing:
-                                // remember the last committing transaction
-                                if (rec.prepareId > lastCommitted)
-                                    {
-                                    lastCommitted  = rec.prepareId;
-                                    lastCommitting = rec;
-                                    }
-                                // already in progress to being "done"; no means to front-run it, so
-                                // it must be allowed to complete
-                                break;
-
-                            case RollingBack:
-                                // already in progress to being "done"; no means to front-run it, so
-                                // it must be allowed to complete
-                                break;
-
-                            case Committed:
-                            case RolledBack:
-                                // already "done"
-                                continue Loop;
-                            }
-
-                        ++remainingTerminating;
-
-                        rec.addTermination(() ->
-                            {
-                            if (finalTermination())
-                                {
-                                // this is the last transaction to finish terminating; finish
-                                // the disable() call by completing its future result
-                                result = True;
-                                }
-                            });
-
-                        if (doCommit)
-                            {
-                            assert rec.prepareId != NO_TX && commitOrder.putIfAbsent(rec.prepareId, rec);
-                            }
-
-                        if (doRollback)
-                            {
-                            rec.rollback(RollbackOnly);
-                            }
+                    case Sealed:
+                        if (abort) {
+                            doRollback = True;
+                        } else {
+                            doCommit = True;
                         }
+                        break;
 
-                    if (!commitOrder.empty)
-                        {
-                        TxRecord[] commitRecs = commitOrder.values.toArray();
-                        if (lastCommitting?.status == Committing)
-                            {
-                            lastCommitting.addTermination(() -> commit(commitRecs));
-                            }
-                        else
-                            {
-                            commit(commitRecs);
-                            }
+                    case Committing:
+                        // remember the last committing transaction
+                        if (rec.prepareId > lastCommitted) {
+                            lastCommitted  = rec.prepareId;
+                            lastCommitting = rec;
                         }
+                        // already in progress to being "done"; no means to front-run it, so
+                        // it must be allowed to complete
+                        break;
 
-                    &result.thenDo(closeLog);
-                    status = Disabled;
+                    case RollingBack:
+                        // already in progress to being "done"; no means to front-run it, so
+                        // it must be allowed to complete
+                        break;
 
-                    if (finalTermination())
-                        {
-                        // either there was nothing to close down, or it already finished before we
-                        // could return the future that would close the log; either way, the future
-                        // is now
-                        result = True;
-                        }
-
-                    // still some futures that need to finish before the log gets closed
-                    return result;
+                    case Committed:
+                    case RolledBack:
+                        // already "done"
+                        continue Loop;
                     }
 
-            case Disabled:
-            case Closed:
-                return True;
+                    ++remainingTerminating;
+
+                    rec.addTermination(() -> {
+                        if (finalTermination()) {
+                            // this is the last transaction to finish terminating; finish
+                            // the disable() call by completing its future result
+                            result = True;
+                        }
+                    });
+
+                    if (doCommit) {
+                        assert rec.prepareId != NO_TX && commitOrder.putIfAbsent(rec.prepareId, rec);
+                    }
+
+                    if (doRollback) {
+                        rec.rollback(RollbackOnly);
+                    }
+                }
+
+                if (!commitOrder.empty) {
+                    TxRecord[] commitRecs = commitOrder.values.toArray();
+                    if (lastCommitting?.status == Committing) {
+                        lastCommitting.addTermination(() -> commit(commitRecs));
+                    } else {
+                        commit(commitRecs);
+                    }
+                }
+
+                &result.thenDo(closeLog);
+                status = Disabled;
+
+                if (finalTermination()) {
+                    // either there was nothing to close down, or it already finished before we
+                    // could return the future that would close the log; either way, the future
+                    // is now
+                    result = True;
+                }
+
+                // still some futures that need to finish before the log gets closed
+                return result;
             }
+
+        case Disabled:
+        case Closed:
+            return True;
         }
+    }
 
     /**
      * Check the transaction wind-down process and reset the transaction manager state after it has
@@ -718,13 +673,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True once there are no more transactions to terminate
      */
-    protected Boolean finalTermination()
-        {
+    protected Boolean finalTermination() {
         assert remainingTerminating >= 1;
 
         Boolean last = remainingTerminating == 1;
-        if (last)
-            {
+        if (last) {
             // the transactions have already terminated (or there were none to
             // terminate), so the "shut down" is done; reset the TxManager
             assert status == Disabled;
@@ -733,7 +686,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             byReadId.clear();
             pendingPrepare.clear();
             currentlyPreparing = NO_TX;
-            }
+        }
 
         // only after having done the reset (on the last one) do we decrement the remaining count,
         // because the remaining count prevents enable() from accidentally proceeding; in other
@@ -742,18 +695,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         --remainingTerminating;
 
         return last;
-        }
+    }
 
     @Override
-    void close(Exception? cause = Null)
-        {
-        if (status == Enabled)
-            {
+    void close(Exception? cause = Null) {
+        if (status == Enabled) {
             disable(abort = cause != Null);
-            }
+        }
 
         status = Closed;
-        }
+    }
 
 
     // ----- transactional API ---------------------------------------------------------------------
@@ -763,10 +714,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *         through the oodb API, and not related to either the `readId` or `writeId` used
      *         internally by this jsonDB implementation
      */
-    UInt generateTxId()
-        {
+    UInt generateTxId() {
         return visibleIdCounter.next().toUInt();
-        }
+    }
 
     /**
      * Begin a new transaction when it performs its first operation.
@@ -795,8 +745,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return  the "write" transaction ID to use
      */
-    Int begin(Client.Transaction tx, Client.Worker worker, Boolean readOnly)
-        {
+    Int begin(Client.Transaction tx, Client.Worker worker, Boolean readOnly) {
         checkEnabled();
 
         Int clientId = tx.outer.id;
@@ -809,7 +758,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         byWriteId .put(writeId , rec);
 
         return writeId;
-        }
+    }
 
     /**
      * Register the specified requirement for the specified transaction.
@@ -818,8 +767,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @param req      the Requirement
      */
     <Result extends immutable Const> Result
-            registerRequirement(Int writeId, Int dboId, function Result(DBObjectImpl) test)
-        {
+            registerRequirement(Int writeId, Int dboId, function Result(DBObjectImpl) test) {
         checkEnabled();
 
         // validate the transaction
@@ -828,18 +776,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         Client client = rec.ensureClient(ReadOnly);
         Result result;
-        try
-            {
+        try {
             result = client.evaluateRequirement(dboId, test);
-            }
-        finally
-            {
+        } finally {
             rec.releaseClient();
-            }
+        }
 
         rec.registerRequirement(new Requirement(dboId, test, result));
         return result;
-        }
+    }
 
     /**
      * Attempt to commit an in-flight transaction.
@@ -851,8 +796,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return True if the transaction was committed; False if the transaction was rolled back for
      *         any reason
      */
-    CommitResult commit(Int writeId)
-        {
+    CommitResult commit(Int writeId) {
         checkEnabled();
 
         // validate the transaction
@@ -870,8 +814,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         Boolean backlogged = !pendingPrepare.empty;
 
         // if there is already a transaction in the prepare phase, then get in line
-        if (occupied || backlogged)
-            {
+        if (occupied || backlogged) {
             // stick the transaction into the queue of transactions to prepare
             pendingPrepare.add(rec);
 
@@ -886,13 +829,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             // registering the fact that this transaction needs to be committed); instead, we
             // simply return the future result to the client, and trust that it will get processed
             // as soon as the TxManager can get to it
-            if (!occupied)
-                {
+            if (!occupied) {
                 processBacklog(stopAfterId=writeId);
-                }
+            }
 
             return result;
-            }
+        }
 
         currentlyPreparing = writeId;   // prevent concurrent transaction prepare
 
@@ -900,216 +842,179 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         static Future<Boolean> eval(Future<Boolean>      previousResult,
                                     function Boolean()   nextStep,
                                     CommitResult         stepFailed,
-                                    Future<CommitResult> result)
-            {
-            return previousResult.transform(ok ->
-                {
-                if (ok)
-                    {
-                    if (nextStep())
-                        {
+                                    Future<CommitResult> result) {
+            return previousResult.transform(ok -> {
+                if (ok) {
+                    if (nextStep()) {
                         // proceed
                         return True;
-                        }
-
-                    // this step killed the pipeline; deliver the result back to the client
-                    if (!result.assigned)
-                        {
-                        result.complete(stepFailed);
-                        }
                     }
 
+                    // this step killed the pipeline; deliver the result back to the client
+                    if (!result.assigned) {
+                        result.complete(stepFailed);
+                    }
+                }
+
                 return False;
-                });
-            }
+            });
+        }
 
         @Future Boolean start; // we just need some Future Boolean to chain from
         FutureVar<Boolean> proceed = eval(&start, rec.prepare, ConcurrentConflict, &result);
         &start.complete(True); // kick off the prepare
 
         // "require" the transaction
-        if (!rec.requirements.empty)
-            {
+        if (!rec.requirements.empty) {
             proceed = eval(proceed, rec.require, ConcurrentConflict, &result);
-            }
+        }
 
         // "validate" the transaction
-        if (!validators.empty)
-            {
+        if (!validators.empty) {
             proceed = eval(proceed, rec.validate, ValidatorFailed, &result);
-            }
+        }
 
         // "rectify" the transaction
-        if (!rectifiers.empty)
-            {
+        if (!rectifiers.empty) {
             proceed = eval(proceed, rec.rectify, RectifierFailed, &result);
-            }
+        }
 
         // "distribute" the transaction
-        if (!distributors.empty)
-            {
+        if (!distributors.empty) {
             proceed = eval(proceed, rec.distribute, DistributorFailed, &result);
-            }
+        }
 
         // "seal" the transaction
         proceed = eval(proceed, rec.seal, DatabaseError, &result);
 
         // handle any exception that occurred in any of the above steps (implying a failure)
-        proceed = proceed.handle(e ->
-                {
-                log($"Exception occurred while preparing transaction {rec.idString}: {e}");
-                if (!&result.assigned)
-                    {
-                    result = DatabaseError;
-                    }
-                return False;
-                });
+        proceed = proceed.handle(e -> {
+            log($"Exception occurred while preparing transaction {rec.idString}: {e}");
+            if (!&result.assigned) {
+                result = DatabaseError;
+            }
+            return False;
+        });
 
         // this is the end of the line (even though it is still far in the future, and won't be
         // executed until all of the other futures above get evaluated); our job here is to either
         // do the final commit or roll back of the transaction
-        proceed = proceed.transform(ok ->
-            {
+        proceed = proceed.transform(ok -> {
             // whether or not the prepare succeeded, it is done and we need to allow another
             // transaction to prepare
             currentlyPreparing = NO_TX;
 
             // check if any transactions showed up while this transaction was preparing, and start
             // a new fiber to process the backlog, if one exists
-            if (!pendingPrepare.empty && status == Enabled)
-                {
+            if (!pendingPrepare.empty && status == Enabled) {
                 this:service.callLater(processBacklog);
-                }
+            }
 
             // if everything thus far has succeeded, then we attempt to commit the transaction
-            if (rec.status == Sealed)
-                {
-                try
-                    {
+            if (rec.status == Sealed) {
+                try {
                     Boolean success = rec.commit();
-                    if (!&result.assigned)
-                        {
+                    if (!&result.assigned) {
                         result = success ? Committed : DatabaseError;
-                        }
+                    }
                     return success;
-                    }
-                catch (Exception e)
-                    {
+                } catch (Exception e) {
                     log($"Exception occurred while committing transaction {rec.idString}: {e}");
-                    }
                 }
+            }
 
             // if we didn't successfully commit (for any reason), then we roll back
-            try
-                {
+            try {
                 rec.rollback();
-                }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 log($|Exception occurred while rolling back transaction {rec.idString}\
                      | after it failed to {ok ? "commit" : "prepare"}: {e}
                     );
-                }
+            }
 
             Boolean success = rec.status == Committed;
-            if (!&result.assigned)
-                {
+            if (!&result.assigned) {
                 result = success ? Committed : DatabaseError;
-                }
+            }
             return success;
-            });
+        });
 
         return result;
-        }
+    }
 
     /**
      * This method processes all of the transactions that have queued to prepare.
      *
      * @param stopAfterId  (optional)
      */
-    protected void processBacklog(Int? stopAfterId = Null)
-        {
-        if (currentlyPreparing != NO_TX)
-            {
+    protected void processBacklog(Int? stopAfterId = Null) {
+        if (currentlyPreparing != NO_TX) {
             // excellent! another fiber is already processing the backlog
             return;
-            }
+        }
 
         // transactions that are have prepared but have not yet been committed to disk (or that
         // failed to prepare and need to be rolled back)
         TxRecord[] pendingCommit   = new TxRecord[];
         TxRecord[] pendingRollback = new TxRecord[];
 
-        while (TxRecord rec := pendingPrepare.first())
-            {
+        while (TxRecord rec := pendingPrepare.first()) {
             Int writeId = rec.writeId;
             currentlyPreparing = rec.writeId;
             pendingPrepare.delete(0);
 
-            if (rec.status != Enqueued)
-                {
+            if (rec.status != Enqueued) {
                 // some other fiber has already done something with the transaction
                 continue;
-                }
+            }
 
             Boolean successfullyPrepared = False;
-            try
-                {
+            try {
                 successfullyPrepared = rec.prepare()
                         && (validators  .empty || rec.validate  ())
                         && (rectifiers  .empty || rec.rectify   ())
                         && (distributors.empty || rec.distribute())
                         && rec.seal();
-                }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 log($"Exception occurred while preparing transaction {rec.idString}: {e}");
-                }
+            }
 
             (successfullyPrepared ? pendingCommit : pendingRollback).add(rec);
 
             // the backlog processing may be limited, such that it only processes up to a specified
             // transaction
-            if (writeId == stopAfterId)
-                {
+            if (writeId == stopAfterId) {
                 break;
-                }
             }
+        }
 
         // release the "prepare pipeline" so another fiber can do prepares
         currentlyPreparing = NO_TX;
 
         // if this was only processing up to "stopAfterId", then more transactions may have shown
         // up since then, and they need to be processed (but not by this fiber)
-        if (stopAfterId != Null && !pendingPrepare.empty)
-            {
+        if (stopAfterId != Null && !pendingPrepare.empty) {
             this:service.callLater(processBacklog);
-            }
+        }
 
         // first, process the important stuff (the pending commits)
-        if (!pendingCommit.empty)
-            {
-            try
-                {
-                if (!commit(pendingCommit))
-                    {
+        if (!pendingCommit.empty) {
+            try {
+                if (!commit(pendingCommit)) {
                     log($"Unable to successfully commit a batch of transactions: {pendingCommit}");
                     panic();
-                    }
                 }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 log($"An error occurred committing a batch of transactions: {e}");
                 panic();
-                }
-            }
-
-        // lastly, process the pending rollbacks
-        for (TxRecord rec : pendingRollback)
-            {
-            rec.rollback();
             }
         }
+
+        // lastly, process the pending rollbacks
+        for (TxRecord rec : pendingRollback) {
+            rec.rollback();
+        }
+    }
 
     /**
      * Attempt to commit an array of fully prepared transactions.
@@ -1118,47 +1023,43 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff all of the Transactions were successfully committed
      */
-    protected Boolean commit(TxRecord[] recs)
-        {
+    protected Boolean commit(TxRecord[] recs) {
         Boolean success = True;
 
         // bundle the results of "sealPrepare()" into a buffer
         StringBuffer buf       = new StringBuffer();
         Int          lastAdded = NO_TX;
         TxRecord[]   processed = new TxRecord[];
-        NextTx: for (TxRecord rec : recs)
-            {
-            switch (rec.status)
-                {
-                case Sealed:
-                    assert rec.prepareId > lastAdded;
-                    rec.status = Committing;
-                    break;
+        NextTx: for (TxRecord rec : recs) {
+            switch (rec.status) {
+            case Sealed:
+                assert rec.prepareId > lastAdded;
+                rec.status = Committing;
+                break;
 
-                case Committing:
-                case Committed:
-                    // assume that another fiber had a reason to commit the transaction
-                    continue NextTx;
+            case Committing:
+            case Committed:
+                // assume that another fiber had a reason to commit the transaction
+                continue NextTx;
 
-                case RollingBack:
-                case RolledBack:
-                    // assume that another fiber had a reason to roll back the transaction
-                    success = False;
-                    continue NextTx;
+            case RollingBack:
+            case RolledBack:
+                // assume that another fiber had a reason to roll back the transaction
+                success = False;
+                continue NextTx;
 
-                default:
-                    throw new IllegalState($"Unexpected status for transaction {rec.idString}: {rec.status}");
-                }
+            default:
+                throw new IllegalState($"Unexpected status for transaction {rec.idString}: {rec.status}");
+            }
 
             rec.addSeal(buf);
             lastAdded  = rec.prepareId;
             processed += rec;
-            }
+        }
 
-        if (processed.empty)
-            {
+        if (processed.empty) {
             return success;
-            }
+        }
 
         // append all of the commits to the log (this officially "commits" the transactions)
         buf.append("\n]");
@@ -1166,61 +1067,54 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert lastCommitted < lastAdded;
         lastCommitted = lastAdded;
 
-        if (logFile.size > maxLogSize)
-            {
+        if (logFile.size > maxLogSize) {
             rotateLog();
-            }
+        }
 
         // notify the clients that their transactions have committed
-        for (TxRecord rec : processed)
-            {
+        for (TxRecord rec : processed) {
             rec.complete(Committed);
-            }
+        }
 
         // direct the ObjectStores to write (i.e. asynchronously catch up to the transaction log),
         // and clean up the transaction records
         @Future Boolean initialResult = success;
         Future<Boolean> finalResult   = &initialResult;
-        for (TxRecord rec : processed)
-            {
+        for (TxRecord rec : processed) {
             Set<Int> storeIds = rec.enlisted;
-            if (storeIds.empty)
-                {
+            if (storeIds.empty) {
                 continue;
-                }
+            }
 
             Future<Tuple<>>? storeAll = Null;
             Int              writeId  = rec.writeId;
-            for (Int storeId : storeIds)
-                {
+            for (Int storeId : storeIds) {
                 @Future Tuple<> storeOne = storeFor(storeId).commit(writeId);
                 storeAll = storeAll?.and(&storeOne, (_, _) -> Tuple:()) : &storeOne;
-                }
+            }
             assert storeAll != Null;
 
-            Future<Boolean> incrementalResult = storeAll.transformOrHandle((t, e) ->
-                {
+            Future<Boolean> incrementalResult = storeAll.transformOrHandle((t, e) -> {
                 Boolean localSuccess = True;
 
-                if (e != Null)
-                    {
+                if (e != Null) {
                     log($"HeuristicException during commit of {rec} caused by: {e}");
                     // REVIEW should this panic() right here?
                     localSuccess = False;
-                    }
+                }
 
                 // the existence of this transaction prevents the safepoint from advancing, so once
                 // it completes, it needs to be removed
                 rec.release();
 
                 return localSuccess;
-                });
+            });
 
             finalResult = finalResult.and(incrementalResult, (ok1, ok2) -> ok1 & ok2);
-            }
+        }
 
         return finalResult;
-        }
+    }
 
     /**
      * Attempt to roll back an in-flight transaction.
@@ -1231,21 +1125,19 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the Transaction was rolled back
      */
-    Boolean rollback(Int writeId)
-        {
+    Boolean rollback(Int writeId) {
         // validate the transaction
-        if (writeId == NO_TX || txCat(writeId) == ReadOnly)
-            {
+        if (writeId == NO_TX || txCat(writeId) == ReadOnly) {
             // nothing to roll back, so consider it a success
             return True;
-            }
+        }
 
         checkEnabled();
 
         TxRecord rec = txFor(writeId);
         assert rec.status == InFlight;
         return rec.rollback();
-        }
+    }
 
 
     // ----- transactional ID helpers --------------------------------------------------------------
@@ -1257,10 +1149,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     *
     * @return the corresponding readId
     */
-    Int readIdFor(Int txId)
-        {
+    Int readIdFor(Int txId) {
         return txFor(txId).readId;
-        }
+    }
 
     /**
     * Obtain the `Open` (not `Validating`, `Rectifying`, or `Distributing`) writeId for the
@@ -1270,11 +1161,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     *
     * @return the corresponding writeId
     */
-    static Int writeIdFor(Int txId)
-        {
+    static Int writeIdFor(Int txId) {
         assert isWriteTx(txId);
         return -(-txId & ~0b11);
-        }
+    }
 
     /**
      * Determine if the specified txId indicates a read ID, versus a write ID.
@@ -1283,10 +1173,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the txId is in the range reserved for read transaction IDs
      */
-    static Boolean isReadTx(Int txId)
-        {
+    static Boolean isReadTx(Int txId) {
         return txId >= 0;
-        }
+    }
 
     /**
      * Determine if the specified txId indicates a write ID, versus a read ID.
@@ -1295,10 +1184,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the txId is in the range reserved for write transaction IDs
      */
-    static Boolean isWriteTx(Int txId)
-        {
+    static Boolean isWriteTx(Int txId) {
         return NO_TX < txId < 0;
-        }
+    }
 
     /**
      * Categories of transaction IDs.
@@ -1312,12 +1200,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the TxCat for the specified transaction ID
      */
-    static TxCat txCat(Int txId)
-        {
+    static TxCat txCat(Int txId) {
         return txId >= 0
                 ? ReadOnly
                 : TxCat.values[1 + (-txId & 0b11)];
-        }
+    }
 
     /**
      * Obtain the transaction counter that was used to create the specified writeId.
@@ -1327,11 +1214,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the original transaction counter
      */
-    protected static Int writeTxCounter(Int writeId)
-        {
+    protected static Int writeTxCounter(Int writeId) {
         assert isWriteTx(writeId);
         return -writeId >> 2;
-        }
+    }
 
     /**
      * Given a transaction counter, produce a transaction ID of type `WriteId`.
@@ -1340,36 +1226,32 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the writeId for the transaction counter
      */
-    protected static Int generateWriteId(Int counter)
-        {
+    protected static Int generateWriteId(Int counter) {
         assert counter >= 1;
         return -(counter<<2);
-        }
+    }
 
     /**
      * Given a transaction `writeId`, generate a transaction id for the specified phase
      */
-    protected static Int generateTxId(Int txId, TxCat txCat)
-        {
-        if (isReadTx(txId))
-            {
+    protected static Int generateTxId(Int txId, TxCat txCat) {
+        if (isReadTx(txId)) {
             assert txCat == ReadOnly;
             return txId;
-            }
+        }
 
         assert isWriteTx(txId);
         return -((-txId & ~0b11) | txCat.ordinal - 1);
-        }
+    }
 
     /**
      * Generate a write transaction ID.
      *
      * @return the new write id
      */
-    protected Int genWriteId()
-        {
+    protected Int genWriteId() {
         return generateWriteId(++txCount);
-        }
+    }
 
 
     // ----- internal: TxRecord --------------------------------------------------------------------
@@ -1381,18 +1263,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the TxRecord for the transaction
      */
-    TxRecord txFor(Int txId)
-        {
+    TxRecord txFor(Int txId) {
         return txCat(txId) == ReadOnly
                 ? assert as $"Transaction {txId} is a ReadOnly transaction"
                 : byWriteId[writeIdFor(txId)] ?: assert as $"Missing TxRecord for txId={txId}";
-        }
+    }
 
     /**
      * This is the information that the TxManager maintains about each in flight transaction.
      */
-    @Concurrent protected class TxRecord
-        {
+    @Concurrent protected class TxRecord {
         /**
          * Construct a TxRecord.
          */
@@ -1402,8 +1282,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                   Client.Worker       worker,
                   Int                 writeId,
                   Boolean             readOnly,
-                 )
-            {
+                 ) {
             this.clientTx = clientTx;
             this.txInfo   = txInfo;
             this.clientId = clientId;
@@ -1411,7 +1290,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             this.writeId  = writeId;
             this.readId   = NO_TX;
             this.readOnly = readOnly;
-            }
+        }
 
         /**
          * Transaction status.
@@ -1433,8 +1312,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          * * RollingBack - the transaction has begun the rollback process
          * * RolledBack - the transaction has successfully rolled back
          */
-        enum Status
-            {
+        enum Status {
             InFlight,
             Enqueued,
             Preparing,
@@ -1453,7 +1331,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             Committed,
             RollingBack,
             RolledBack,
-            }
+        }
 
         /**
          * The transactional status.
@@ -1489,46 +1367,35 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         /**
          * The underlying "read" transaction ID.
          */
-        Int readId
-            {
+        Int readId {
             @Override
-            void set(Int newId)
-                {
+            void set(Int newId) {
                 Int oldId = get();
-                if (newId != oldId)
-                    {
-                    if (oldId != NO_TX)
-                        {
-                        byReadId.process(oldId, entry ->
-                            {
-                            if (entry.exists && --entry.value <= 0)
-                                {
+                if (newId != oldId) {
+                    if (oldId != NO_TX) {
+                        byReadId.process(oldId, entry -> {
+                            if (entry.exists && --entry.value <= 0) {
                                 entry.delete();
-                                }
+                            }
                             return True;
-                            });
-                        }
+                        });
+                    }
 
-                    if (newId != NO_TX)
-                        {
-                        byReadId.process(newId, entry ->
-                            {
-                            if (entry.exists)
-                                {
+                    if (newId != NO_TX) {
+                        byReadId.process(newId, entry -> {
+                            if (entry.exists) {
                                 ++entry.value;
-                                }
-                            else
-                                {
+                            } else {
                                 entry.value = 1;
-                                }
+                            }
                             return True;
-                            });
-                        }
+                        });
+                    }
 
                     super(newId);
-                    }
                 }
             }
+        }
 
         /**
          * Generate the next "prepare" transaction ID. This alters the transaction's read-id, by
@@ -1536,48 +1403,45 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @return the new prepare id
          */
-        Int selectPrepareId()
-            {
+        Int selectPrepareId() {
             readId = lastPrepared;
             return prepareId;
-            }
+        }
 
         /**
          * The ID that the transaction is planning to commit to.
          */
-        Int prepareId.get()
-            {
-            switch (status)
-                {
-                case Preparing:
-                case Prepared:
-                case ReqsChecking:
-                case ReqsChecked:
-                case Validating:
-                case Validated:
-                case Rectifying:
-                case Rectified:
-                case Distributing:
-                case Distributed:
-                case Sealing:
-                    // prepare is re-homed "on top of" the previously committed (or previously
-                    // prepared) transaction
-                    return readId + 1;
+        Int prepareId.get() {
+            switch (status) {
+            case Preparing:
+            case Prepared:
+            case ReqsChecking:
+            case ReqsChecked:
+            case Validating:
+            case Validated:
+            case Rectifying:
+            case Rectified:
+            case Distributing:
+            case Distributed:
+            case Sealing:
+                // prepare is re-homed "on top of" the previously committed (or previously
+                // prepared) transaction
+                return readId + 1;
 
-                case Sealed:
-                case Committing:
-                case Committed:
-                    assert commitId >= 0 as $"Illegal commitId {commitId}, status={status}";
-                    return commitId;
+            case Sealed:
+            case Committing:
+            case Committed:
+                assert commitId >= 0 as $"Illegal commitId {commitId}, status={status}";
+                return commitId;
 
-                case InFlight:
-                case Enqueued:
-                case RollingBack:
-                case RolledBack:
-                default:
-                    return NO_TX;
-                }
+            case InFlight:
+            case Enqueued:
+            case RollingBack:
+            case RolledBack:
+            default:
+                return NO_TX;
             }
+        }
 
         /**
          * The permanent id assigned to a committed transaction. This property does not have a real
@@ -1593,14 +1457,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         /**
          * Add a requirement to the list of requirements that have occurred within this transaction.
          */
-        void registerRequirement(Requirement req)
-            {
-            if (requirements.empty)
-                {
+        void registerRequirement(Requirement req) {
+            if (requirements.empty) {
                 requirements = new Requirement[];
-                }
-            requirements.add(req);
             }
+            requirements.add(req);
+        }
 
         /**
          * This is the Client object that is used to do all of the validate/rectify/distribute work.
@@ -1614,33 +1476,29 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @return the client to use
          */
-        Client<Schema> ensureClient(TxCat txCat)
-            {
+        Client<Schema> ensureClient(TxCat txCat) {
             assert txCat != Open;
 
             Client<Schema>? client = prepareClient;
-            if (client == Null)
-                {
+            if (client == Null) {
                 client = allocateClient();
                 prepareClient = client;
-                }
+            }
 
             client.representTransaction(txCat == ReadOnly ? readId : generateTxId(writeId, txCat));
             return client;
-            }
+        }
 
         /**
          * Release the previously obtained Client, if any.
          */
-        void releaseClient()
-            {
-            if (Client<Schema> client ?= prepareClient)
-                {
+        void releaseClient() {
+            if (Client<Schema> client ?= prepareClient) {
                 prepareClient = Null;
                 client.stopRepresentingTransaction();
                 recycleClient(client);
-                }
             }
+        }
 
         /**
          * The "seal" for each modified ObjectStore, keyed by ObjectStore id.
@@ -1668,59 +1526,52 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @param store  the resource to enlist
          */
-        void enlist(Int storeId)
-            {
-            switch (status)
-                {
-                case Validating:
-                case Rectifying:
-                case Distributing:
-                    if (newlyEnlisted.empty)
-                        {
-                        newlyEnlisted = new SparseIntSet();
-                        }
-                    newlyEnlisted.add(storeId);
-                    continue;
-                case InFlight:
-                    if (sealById.empty && sealById.is(immutable))
-                        {
-                        sealById = new SkiplistMap();
-                        }
-                    assert sealById.putIfAbsent(storeId, Null);
-                    lastActivity = clock.now;
-                    break;
-
-                default:
-                    assert as $"Attempt to enlist ObjectStore ID {storeId} into a {status} transaction";
+        void enlist(Int storeId) {
+            switch (status) {
+            case Validating:
+            case Rectifying:
+            case Distributing:
+                if (newlyEnlisted.empty) {
+                    newlyEnlisted = new SparseIntSet();
                 }
+                newlyEnlisted.add(storeId);
+                continue;
+            case InFlight:
+                if (sealById.empty && sealById.is(immutable)) {
+                    sealById = new SkiplistMap();
+                }
+                assert sealById.putIfAbsent(storeId, Null);
+                lastActivity = clock.now;
+                break;
+
+            default:
+                assert as $"Attempt to enlist ObjectStore ID {storeId} into a {status} transaction";
             }
+        }
 
         /**
          * The set of enlisted stores.
          */
-        Set<Int> enlisted.get()
-            {
+        Set<Int> enlisted.get() {
             return sealById.keys;
-            }
+        }
 
         /**
          * @return the ObjectStore ids **in a predictable order** that were enlisted in one of the
          *         Validating/Rectifying/Distributing phases, and since the last call to this method
          */
-        Set<Int> takeNewlyEnlisted()
-            {
+        Set<Int> takeNewlyEnlisted() {
             Set<Int> result = newlyEnlisted;
             newlyEnlisted = [];
             return result;
-            }
+        }
 
         /**
          * A string describing the transaction's identity.
          */
-        String idString.get()
-            {
+        String idString.get() {
             return $"{writeId} ({txInfo} for client {clientId})";
-            }
+        }
 
         /**
          * True if the transaction is known to be read-only.
@@ -1732,299 +1583,268 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @return True iff the Transaction was successfully prepared
          */
-        protected Boolean prepare()
-            {
+        protected Boolean prepare() {
             checkEnabled();
-            if (status != Enqueued || currentlyPreparing != writeId)
-                {
+            if (status != Enqueued || currentlyPreparing != writeId) {
                 return status == Committed;
-                }
+            }
 
             status = Preparing;
 
             Set<Int> storeIds = enlisted;
-            if (storeIds.empty)
-                {
+            if (storeIds.empty) {
                 // an empty transaction is considered committed
                 complete(Committed);
                 return status == Committed;
-                }
+            }
 
             // prepare phase
             FutureVar<Boolean>? preparedAll = Null;
 
             Int destinationId = selectPrepareId();
-            for (Int storeId : storeIds)
-                {
+            for (Int storeId : storeIds) {
                 ObjectStore     store         = storeFor(storeId);
                 PrepareResult   prepareResult = store.prepare^(writeId, destinationId);
-                Future<Boolean> preparedOne   = &prepareResult.transform(result ->
-                    {
-                    switch (result)
-                        {
-                        case FailedRolledBack:
-                            storeIds.remove(storeId);
-                            return False;
+                Future<Boolean> preparedOne   = &prepareResult.transform(result -> {
+                    switch (result) {
+                    case FailedRolledBack:
+                        storeIds.remove(storeId);
+                        return False;
 
-                        case CommittedNoChanges:
-                            storeIds.remove(storeId);
-                            return True;
+                    case CommittedNoChanges:
+                        storeIds.remove(storeId);
+                        return True;
 
-                        case Prepared:
-                            return True;
-                        }
-                    });
+                    case Prepared:
+                        return True;
+                    }
+                });
 
                 preparedAll = preparedAll?.and(preparedOne, (ok1, ok2) -> ok1 & ok2) : preparedOne;
-                }
+            }
 
             assert preparedAll != Null;
 
             // handle any exception that occurred in the ObjectStore prepare steps
-            return preparedAll.handle(e ->
-                    {
-                    log($"Exception occurred while preparing transaction {this.TxRecord.idString}: {e}");
+            return preparedAll.handle(e -> {
+                log($"Exception occurred while preparing transaction {this.TxRecord.idString}: {e}");
+                return False;
+            }).transform(ok -> {
+                // check for successful prepare, and whether anything is left enlisted
+                switch (ok, storeIds.empty) {
+                case (False, True):
+                    // failed; already rolled back
+                    complete(ConcurrentConflict);
                     return False;
-                    })
-                .transform(ok ->
-                    {
-                    // check for successful prepare, and whether anything is left enlisted
-                    switch (ok, storeIds.empty)
-                        {
-                        case (False, True):
-                            // failed; already rolled back
-                            complete(ConcurrentConflict);
-                            return False;
 
-                        default:
-                        case (False, False):
-                            // failed; remaining stores need to be rolled back
-                            rollback(ConcurrentConflict);
-                            return False;
+                default:
+                case (False, False):
+                    // failed; remaining stores need to be rolled back
+                    rollback(ConcurrentConflict);
+                    return False;
 
-                        case (True, True):
-                            // succeeded; already committed
-                            complete(Committed);
-                            release();
-                            return status == Committed;
+                case (True, True):
+                    // succeeded; already committed
+                    complete(Committed);
+                    release();
+                    return status == Committed;
 
-                        case (True, False):
-                            status = Prepared;
-                            return True;
-                        }
-                    });
-            }
+                case (True, False):
+                    status = Prepared;
+                    return True;
+                }
+            });
+        }
 
         /**
          * Evaluate all of the requirements that have been registered for this transaction.
          *
          * @return True iff the Transaction requirements were all met
          */
-        protected Boolean require()
-            {
-            switch (status)
-                {
-                case Prepared:
-                    checkEnabled();
-                    assert currentlyPreparing == writeId && !enlisted.empty;
-                    status = ReqsChecking;
-                    break;
+        protected Boolean require() {
+            switch (status) {
+            case Prepared:
+                checkEnabled();
+                assert currentlyPreparing == writeId && !enlisted.empty;
+                status = ReqsChecking;
+                break;
 
-                case Committed:
-                    // assume that the transaction already short-circuited to a committed state
-                    assert enlisted.empty;
-                    return True;
+            case Committed:
+                // assume that the transaction already short-circuited to a committed state
+                assert enlisted.empty;
+                return True;
 
-                case RollingBack:
-                case RolledBack:
-                    // assume that another fiber had a reason to roll back the transaction
-                    return False;
+            case RollingBack:
+            case RolledBack:
+                // assume that another fiber had a reason to roll back the transaction
+                return False;
 
-                default:
-                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
-                }
+            default:
+                throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
+            }
 
             // recheck any requirements on a fake client using the most recently committed data
-            if (!requirements.empty)
-                {
+            if (!requirements.empty) {
                 Client<Schema> client = ensureClient(ReadOnly);
-                for (Requirement req : requirements)
-                    {
+                for (Requirement req : requirements) {
                     req.Result oldVal = req.result;
                     req.Result newVal = client.evaluateRequirement(req.dboId, req.test);
-                    if (oldVal != newVal)
-                        {
+                    if (oldVal != newVal) {
                         return False;
-                        }
                     }
                 }
+            }
 
             status = ReqsChecked;
             return True;
-            }
+        }
 
         /**
          * Evaluate all of the validators that have been triggered by this transaction.
          *
          * @return True iff the Transaction was successfully validated
          */
-        protected Boolean validate()
-            {
-            switch (status)
-                {
-                case Prepared:
-                case ReqsChecked:
-                    checkEnabled();
-                    assert currentlyPreparing == writeId && !enlisted.empty;
-                    status = Validating;
-                    break;
+        protected Boolean validate() {
+            switch (status) {
+            case Prepared:
+            case ReqsChecked:
+                checkEnabled();
+                assert currentlyPreparing == writeId && !enlisted.empty;
+                status = Validating;
+                break;
 
-                case Committed:
-                    // assume that the transaction already short-circuited to a committed state
-                    assert enlisted.empty;
-                    return True;
+            case Committed:
+                // assume that the transaction already short-circuited to a committed state
+                assert enlisted.empty;
+                return True;
 
-                case RollingBack:
-                case RolledBack:
-                    // assume that another fiber had a reason to roll back the transaction
-                    return False;
+            case RollingBack:
+            case RolledBack:
+                // assume that another fiber had a reason to roll back the transaction
+                return False;
 
-                default:
-                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
-                }
+            default:
+                throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
+            }
 
-            if (validators.empty)
-                {
+            if (validators.empty) {
                 status = Validated;
                 return True;
-                }
+            }
 
             Client<Schema> client = ensureClient(Validating);
-            for (Int storeId : enlisted)
-                {
-                if (validators.contains(storeId) && !client.validateDBObject(storeId))
-                    {
+            for (Int storeId : enlisted) {
+                if (validators.contains(storeId) && !client.validateDBObject(storeId)) {
                     return False;
-                    }
                 }
+            }
 
             // sweep any newly enlisted stores (no changes were permitted in this phase)
-            for (Int storeId : takeNewlyEnlisted())
-                {
+            for (Int storeId : takeNewlyEnlisted()) {
                 // changes are not permitted to occur during the validate phase
                 assert storeFor(storeId).mergePrepare(writeId, prepareId) == CommittedNoChanges;
                 sealById.remove(storeId);
-                }
+            }
 
             status = Validated;
             return True;
-            }
+        }
 
         /**
          * Evaluate all of the rectifiers that have been triggered by this transaction.
          *
          * @return True iff the Transaction was successfully rectified
          */
-        protected Boolean rectify()
-            {
-            switch (status)
-                {
-                case Prepared:
-                case ReqsChecked:
-                case Validated:
-                    checkEnabled();
-                    assert currentlyPreparing == writeId;
-                    status = Rectifying;
-                    break;
+        protected Boolean rectify() {
+            switch (status) {
+            case Prepared:
+            case ReqsChecked:
+            case Validated:
+                checkEnabled();
+                assert currentlyPreparing == writeId;
+                status = Rectifying;
+                break;
 
-                case Committed:
-                    // assume that the transaction already short-circuited to a committed state
-                    assert enlisted.empty;
-                    return True;
+            case Committed:
+                // assume that the transaction already short-circuited to a committed state
+                assert enlisted.empty;
+                return True;
 
-                case RollingBack:
-                case RolledBack:
-                    // assume that another fiber had a reason to roll back the transaction
-                    return False;
+            case RollingBack:
+            case RolledBack:
+                // assume that another fiber had a reason to roll back the transaction
+                return False;
 
-                default:
-                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
-                }
+            default:
+                throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
+            }
 
-            if (rectifiers.empty)
-                {
+            if (rectifiers.empty) {
                 status = Rectified;
                 return True;
-                }
+            }
 
             Client<Schema> client = ensureClient(Rectifying);
-            for (Int storeId : enlisted)
-                {
-                if (rectifiers.contains(storeId) && !client.rectifyDBObject(storeId))
-                    {
+            for (Int storeId : enlisted) {
+                if (rectifiers.contains(storeId) && !client.rectifyDBObject(storeId)) {
                     return False;
-                    }
                 }
+            }
 
             // sweep any newly enlisted stores (changes may have occurred in this phase)
-            for (Int storeId : takeNewlyEnlisted())
-                {
+            for (Int storeId : takeNewlyEnlisted()) {
                 ObjectStore store  = storeFor(storeId);
                 MergeResult result = store.mergePrepare(writeId, prepareId);
-                switch (result)
-                    {
-                    case CommittedNoChanges:
-                        sealById.remove(storeId);
-                        break;
+                switch (result) {
+                case CommittedNoChanges:
+                    sealById.remove(storeId);
+                    break;
 
-                    case NoMerge:
-                    case Merged:
-                        sealById.put(storeId, store.sealPrepare(writeId));
-                        break;
-                    }
+                case NoMerge:
+                case Merged:
+                    sealById.put(storeId, store.sealPrepare(writeId));
+                    break;
                 }
+            }
 
             status = Rectified;
             return True;
-            }
+        }
 
         /**
          * Evaluate all of the distributors that have been triggered by this transaction.
          *
          * @return True iff the Transaction was successfully distributed
          */
-        protected Boolean distribute()
-            {
-            switch (status)
-                {
-                case Prepared:
-                case ReqsChecked:
-                case Validated:
-                case Rectified:
-                    checkEnabled();
-                    assert currentlyPreparing == writeId;
-                    status = Distributing;
-                    break;
+        protected Boolean distribute() {
+            switch (status) {
+            case Prepared:
+            case ReqsChecked:
+            case Validated:
+            case Rectified:
+                checkEnabled();
+                assert currentlyPreparing == writeId;
+                status = Distributing;
+                break;
 
-                case Committed:
-                    // assume that the transaction already short-circuited to a committed state
-                    assert enlisted.empty;
-                    return True;
+            case Committed:
+                // assume that the transaction already short-circuited to a committed state
+                assert enlisted.empty;
+                return True;
 
-                case RollingBack:
-                case RolledBack:
-                    // assume that another fiber had a reason to roll back the transaction
-                    return False;
+            case RollingBack:
+            case RolledBack:
+                // assume that another fiber had a reason to roll back the transaction
+                return False;
 
-                default:
-                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
-                }
+            default:
+                throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
+            }
 
-            if (distributors.empty)
-                {
+            if (distributors.empty) {
                 status = Distributed;
                 return True;
-                }
+            }
 
             // distribution is a potentially-cascading process, so start by assuming that everything
             // already modified in the transaction needs to be distributed, and then having done so,
@@ -2032,45 +1852,39 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             // distributed as well; repeat until done
             Client<Schema> client = ensureClient(Distributing);
             Set<Int> mayNeedDistribution = enlisted;
-            while (!mayNeedDistribution.empty)
-                {
+            while (!mayNeedDistribution.empty) {
                 // first, seal everything that may need distribution (so we don't accidentally
                 // overwrite any DBObjects that were already modified, and so we don't cascade
                 // forever)
-                sealById.processAll(mayNeedDistribution, entry ->
-                    {
+                sealById.processAll(mayNeedDistribution, entry -> {
                     assert entry.exists;
                     entry.value ?:= storeFor(entry.key).sealPrepare(writeId);
                     return True;
-                    });
+                });
 
                 // now distribute the changes
-                for (Int storeId : mayNeedDistribution)
-                    {
-                    if (distributors.contains(storeId) && !client.distributeDBObject(storeId))
-                        {
+                for (Int storeId : mayNeedDistribution) {
+                    if (distributors.contains(storeId) && !client.distributeDBObject(storeId)) {
                         return False;
-                        }
                     }
+                }
 
                 // now collect the newly enlisted (and possibly modified) set of stores
                 mayNeedDistribution = takeNewlyEnlisted();
 
                 // sweep any newly enlisted stores (get rid of the ones with no changes)
-                for (Int storeId : mayNeedDistribution)
-                    {
+                for (Int storeId : mayNeedDistribution) {
                     ObjectStore store  = storeFor(storeId);
-                    if (store.mergePrepare(writeId, prepareId) == CommittedNoChanges)
-                        {
+                    if (store.mergePrepare(writeId, prepareId) == CommittedNoChanges) {
                         sealById.remove(storeId);
                         mayNeedDistribution.remove(storeId);
-                        }
                     }
                 }
+            }
 
             status = Distributed;
             return True;
-            }
+        }
 
         /**
          * Seal the transaction, which generates the pieces of data that will go into the
@@ -2078,51 +1892,47 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @return True iff the Transaction was successfully sealed
          */
-        protected Boolean seal()
-            {
-            switch (status)
-                {
-                case Prepared:
-                case ReqsChecked:
-                case Validated:
-                case Rectified:
-                case Distributed:
-                    checkEnabled();
+        protected Boolean seal() {
+            switch (status) {
+            case Prepared:
+            case ReqsChecked:
+            case Validated:
+            case Rectified:
+            case Distributed:
+                checkEnabled();
 
-                    // this has to be the transaction that is currently preparing
-                    assert currentlyPreparing == writeId;
+                // this has to be the transaction that is currently preparing
+                assert currentlyPreparing == writeId;
 
-                    // if there were nothing enlisted, this would have already "committed"
-                    assert !enlisted.empty;
+                // if there were nothing enlisted, this would have already "committed"
+                assert !enlisted.empty;
 
-                    status = Sealing;
-                    break;
+                status = Sealing;
+                break;
 
-                case Committed:
-                    // assume that the transaction already short-circuited to a committed state
-                    return True;
+            case Committed:
+                // assume that the transaction already short-circuited to a committed state
+                return True;
 
-                case RollingBack:
-                case RolledBack:
-                    // assume that another fiber had a reason to roll back the transaction
-                    return False;
+            case RollingBack:
+            case RolledBack:
+                // assume that another fiber had a reason to roll back the transaction
+                return False;
 
-                default:
-                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
-                }
+            default:
+                throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
+            }
 
             // now past all of the prepare stages that need an internal client
             releaseClient();
 
-            for (val entry : sealById.entries)
-                {
+            for (val entry : sealById.entries) {
                 Int     storeId = entry.key;
                 String? seal    = entry.value;
-                if (seal == Null)
-                    {
+                if (seal == Null) {
                     entry.value = storeFor(storeId).sealPrepare(writeId);
-                    }
                 }
+            }
 
             Int prepareId = this.prepareId;
             assert prepareId > 0;
@@ -2130,73 +1940,66 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             commitId     = prepareId;
             status       = Sealed;
             return True;
-            }
+        }
 
         /**
          * Attempt to commit a fully prepared transaction.
          *
          * @return True iff the Transaction was successfully committed
          */
-        protected Boolean commit()
-            {
-            switch (status)
-                {
-                case Sealed:
-                    // this status is the necessary and exact pre-condition for commit
-                    break;
+        protected Boolean commit() {
+            switch (status) {
+            case Sealed:
+                // this status is the necessary and exact pre-condition for commit
+                break;
 
-                case Committing:
+            case Committing:
+                @Future Boolean result;
+                addTermination(() -> {result=status==Committed;});
+                return result;
+
+            case Committed:
+                return True;
+
+            case RollingBack:
+            case RolledBack:
+                return False;
+
+            default:
+                assert as $"Unexpected status: {status}";
+            }
+
+            switch (commitId <=> lastCommitted + 1) {
+            case Lesser:
+                log($"Attempting to commit transaction {commitId}, but transaction {lastCommitted} was already committed");
+                panic();
+                assert;
+
+            case Equal:
+                // this is the next transaction in line
+                status = Committing;
+                break;
+
+            case Greater:
+                log($"Attempting to commit transaction {commitId}, but the last transaction committed was {lastCommitted}");
+                if (TxRecord prevTx := byWriteId.values.any(tx -> tx.prepareId+1 == commitId)) {
                     @Future Boolean result;
-                    addTermination(() -> {result=status==Committed;});
+                    prevTx.addTermination(() -> {result=this.commit();});
                     return result;
-
-                case Committed:
-                    return True;
-
-                case RollingBack:
-                case RolledBack:
-                    return False;
-
-                default:
-                    assert as $"Unexpected status: {status}";
-                }
-
-            switch (commitId <=> lastCommitted + 1)
-                {
-                case Lesser:
-                    log($"Attempting to commit transaction {commitId}, but transaction {lastCommitted} was already committed");
+                } else {
+                    log($"Unable to locate pending commit transaction {commitId-1}");
                     panic();
                     assert;
-
-                case Equal:
-                    // this is the next transaction in line
-                    status = Committing;
-                    break;
-
-                case Greater:
-                    log($"Attempting to commit transaction {commitId}, but the last transaction committed was {lastCommitted}");
-                    if (TxRecord prevTx := byWriteId.values.any(tx -> tx.prepareId+1 == commitId))
-                        {
-                        @Future Boolean result;
-                        prevTx.addTermination(() -> {result=this.commit();});
-                        return result;
-                        }
-                    else
-                        {
-                        log($"Unable to locate pending commit transaction {commitId-1}");
-                        panic();
-                        assert;
-                        }
                 }
+            }
 
-            if (enlisted.empty)
-                {
+            if (enlisted.empty) {
                 // we should not have gotten this far, if nothing is enlisted; the transaction
                 // should have already been "pretend-committed" if it had nothing enlisted; now
                 // we have no choice but to go through with it, and file an "empty transaction",
                 // because otherwise there will be a gap in the numbering
                 log($"Error: An empty transaction transaction {idString} was sealed");
-                }
+            }
 
             // bundle the results of "sealPrepare()" into a transaction log entry; this is the
             // "official commit" of the transaction
@@ -2206,10 +2009,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             appendLog(buf.toString());
             lastCommitted = commitId;
 
-            if (logFile.size > maxLogSize)
-                {
+            if (logFile.size > maxLogSize) {
                 rotateLog();
-                }
+            }
 
             // notify the client that the transaction committed
             complete(Committed);
@@ -2217,27 +2019,24 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             // now get the ObjectStores to asynchronously write all of their transactional changes
             // to disk
             FutureVar<Tuple<>>? commitAll = Null;
-            for (Int storeId : enlisted)
-                {
+            for (Int storeId : enlisted) {
                 Tuple<> commitOne = storeFor(storeId).commit^(writeId);
                 commitAll = commitAll?.and(&commitOne, (_, _) -> Tuple:()) : &commitOne;
-                }
+            }
             assert commitAll != Null;
-            commitAll.whenComplete((t, e) ->
-                {
-                if (e != Null)
-                    {
+            commitAll.whenComplete((t, e) -> {
+                if (e != Null) {
                     log($"Heuristic Commit Exception: During commit of {idString}: {e}");
                     panic();
-                    }
+                }
 
                 // the writes completed, so advance the safepoint by unregistering the in-flight
                 // transaction
                 release();
-                });
+            });
 
             return True;
-            }
+        }
 
         /**
          * Add the transaction record to the passed buffer.
@@ -2246,203 +2045,175 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @return the passed buffer
          */
-        protected StringBuffer addSeal(StringBuffer buf)
-            {
+        protected StringBuffer addSeal(StringBuffer buf) {
             buf.append(",\n{\"_v\":")
                .append(prepareId)
                .append(", \"_tx\":")
                .append(txInfo.id);
 
-            if (String name ?= txInfo.name)
-                {
+            if (String name ?= txInfo.name) {
                 buf.append(", \"_name\":");
                 printString(name, buf);
-                }
+            }
 
             buf.append(", \"_ts\":\"")
                .append(clock.now.toString(True))
                .add('\"');
 
-            if (txInfo.retryCount > 0)
-                {
+            if (txInfo.retryCount > 0) {
                 buf.append(", \"_rc\":")
                    .append(txInfo.retryCount);
-                }
+            }
 
-            Loop: for ((Int storeId, String? json) : sealById)
-                {
+            Loop: for ((Int storeId, String? json) : sealById) {
                 assert storeId > 0 && json != Null;
 
                 buf.append(", \"")
                    .append(infoFor(storeId).path.toString().substring(1))   // skip the leading '/'
                    .append("\":")
                    .append(json);
-                }
+            }
 
             return buf.append('}');
-            }
+        }
 
         /**
          * Attempt to roll back a transaction.
          *
          * @return True iff the Transaction was rolled back
          */
-        protected Boolean rollback(CommitResult? reason = Null)
-            {
-            switch (status)
-                {
-                case InFlight:
-                case Enqueued:
-                case Preparing:
-                case Prepared:
-                case ReqsChecking:
-                case ReqsChecked:
-                case Validating:
-                case Validated:
-                case Rectifying:
-                case Rectified:
-                case Distributing:
-                case Distributed:
-                case Sealing:
-                case Sealed:
-                    break;
+        protected Boolean rollback(CommitResult? reason = Null) {
+            switch (status) {
+            case InFlight:
+            case Enqueued:
+            case Preparing:
+            case Prepared:
+            case ReqsChecking:
+            case ReqsChecked:
+            case Validating:
+            case Validated:
+            case Rectifying:
+            case Rectified:
+            case Distributing:
+            case Distributed:
+            case Sealing:
+            case Sealed:
+                break;
 
-                case RollingBack:
-                case Committing:
-                    @Future Boolean result;
-                    addTermination(() -> {result=status!=Committed;});
-                    return result;
+            case RollingBack:
+            case Committing:
+                @Future Boolean result;
+                addTermination(() -> {result=status!=Committed;});
+                return result;
 
-                case Committed:
-                    return False;
+            case Committed:
+                return False;
 
-                case RolledBack:
-                    return True;
+            case RolledBack:
+                return True;
 
-                default:assert;
-                }
+            default:assert;
+            }
 
             status = RollingBack;
-            try
-                {
-                for (Int storeId : enlisted)
-                    {
+            try {
+                for (Int storeId : enlisted) {
                     Tuple<> result = storeFor(storeId).rollback^(writeId);
-                    &result.handle(e ->
-                        {
+                    &result.handle(e -> {
                         log($"Exception occurred while rolling back transaction {idString} in store {storeId}: {e}");
                         return Tuple:();
-                        });
-                    }
+                    });
+                }
 
                 return True;
-                }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 log($"Exception occurred while rolling back transaction {idString}: {e}");
                 return False;
-                }
-            finally
-                {
+            } finally {
                 complete(reason ?: RollbackOnly);
-                }
             }
+        }
 
         /**
          * Add a callback that will be invoked when the transaction terminates.
          *
          * @param callback  the function to call
          */
-        void addTermination(function void() callback)
-            {
+        void addTermination(function void() callback) {
             function void()? callback2 = terminated;
             terminated = callback2 == Null
                     ? callback
-                    : () ->
-                        {
-                        try
-                            {
+                    : () -> {
+                        try {
                             callback();
-                            }
-                        catch (Exception e)
-                            {
+                        } catch (Exception e) {
                             log($"Exception in termination callback: {e}");
-                            }
+                        }
 
-                        try
-                            {
+                        try {
                             callback2();
-                            }
-                        catch (Exception e)
-                            {
+                        } catch (Exception e) {
                             log($"Exception in termination callback: {e}");
-                            }
-                        };
-            }
+                        }
+                    };
+        }
 
         /**
          * Finish the transaction.
          *
          * @param status  the terminal status of the transaction
          */
-        protected void complete(CommitResult result)
-            {
+        protected void complete(CommitResult result) {
             // check if the TxRecord already completed
-            if (status == Committed || status == RolledBack)
-                {
+            if (status == Committed || status == RolledBack) {
                 assert pending == Null && terminated == Null;
                 assert (result == Committed) == (status == Committed)
                         || this.TxManager.remainingTerminating > 0          // shutting down
                         || this.TxManager.status == Disabled;               // shut down
                 return;
-                }
+            }
 
             status = result == Committed ? Committed : RolledBack;
 
-            if (FutureVar<CommitResult> pending ?= this.pending, !pending.assigned)
-                {
+            if (FutureVar<CommitResult> pending ?= this.pending, !pending.assigned) {
                 pending.complete(result);
                 this.pending = Null;
-                }
+            }
 
             byClientId.remove(clientId);
 
             // if the transaction is still being committed asynchronously by any enlisted
             // ObjectStore instances, then do not unregister the transaction (until they have
             // finished writing to disk)
-            if (result != Committed || enlisted.empty)
-                {
+            if (result != Committed || enlisted.empty) {
                 release();
-                }
+            }
 
             releaseClient();
 
-            if (function void() notify ?= terminated)
-                {
+            if (function void() notify ?= terminated) {
                 terminated = Null;
                 notify();
-                }
+            }
 
             // clearing the readId will unregister it from the count byReadId
             readId = NO_TX;
 
             lastActivity = clock.now;
-            }
+        }
 
         /**
          * Unregister the transaction. This occurs only after the enlisted ObjectStore instances
          * confirm that the commit has completed writing to disk.
          */
-        protected void release()
-            {
+        protected void release() {
             assert status == Committed || status ==  RolledBack;
 
             byWriteId.remove(writeId);
-            }
+        }
 
         @Override
-        String toString()
-            {
+        String toString() {
             StringBuffer buf = new StringBuffer();
             buf.append("TxRecord(writeId=")
                .append(writeId)
@@ -2454,43 +2225,36 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             buf.append(", txInfo=")
                .append(txInfo);
 
-            if (!sealById.empty)
-                {
+            if (!sealById.empty) {
                 buf.append(", enlisted={");
-                Loop: for ((Int storeId, String? seal) : sealById)
-                    {
-                    if (!Loop.first)
-                        {
+                Loop: for ((Int storeId, String? seal) : sealById) {
+                    if (!Loop.first) {
                         buf.append(", ");
-                        }
+                    }
 
                     buf.append(storeId);
-                    if (seal != Null)
-                        {
+                    if (seal != Null) {
                         buf.append('*');
-                        }
                     }
                 }
+            }
 
-            if (!newlyEnlisted.empty)
-                {
+            if (!newlyEnlisted.empty) {
                 buf.append(", newlyEnlisted=")
                    .append(newlyEnlisted);
-                }
+            }
 
-            if (prepareClient != Null)
-                {
+            if (prepareClient != Null) {
                 buf.append(", hasClient");
-                }
+            }
 
-            if (terminated != Null)
-                {
+            if (terminated != Null) {
                 buf.append(", hasTermination");
-                }
+            }
 
             return buf.append(')').toString();
-            }
         }
+    }
 
 
     // ----- API for ObjectStore instances ---------------------------------------------------------
@@ -2510,16 +2274,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @throws IllegalState if the transaction state does not allow an ObjectStore to be enlisted,
      *         for example during rollback processing, or after a commit/rollback completes
      */
-    Int enlist(Int storeId, Int txId)
-        {
+    Int enlist(Int storeId, Int txId) {
         assert isWriteTx(txId);
         checkEnabled();
 
         TxRecord tx = txFor(txId);
 
         Int readId = tx.readId;
-        if (readId == NO_TX)
-            {
+        if (readId == NO_TX) {
             // an enlist into a nascent transaction cannot occur while disabling the transaction
             // manager, or once it has disabled
             checkEnabled();
@@ -2535,24 +2297,23 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             readId = lastPrepared;
             assert readId != NO_TX;
             tx.readId = readId;
-            }
+        }
 
-        switch (tx.status)
-            {
-            case InFlight:
-            case Validating:
-            case Rectifying:
-            case Distributing:
-                break;
+        switch (tx.status) {
+        case InFlight:
+        case Validating:
+        case Rectifying:
+        case Distributing:
+            break;
 
-            default:
-                assert as $"Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
-            }
+        default:
+            assert as $"Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
+        }
 
         tx.enlist(storeId);
 
         return readId;
-        }
+    }
 
     /**
      * Obtain a [Client.Worker] for the specified transaction. A `Worker` allows CPU-intensive
@@ -2563,11 +2324,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return worker  the [Client.Worker] to offload serialization and deserialization work onto
      */
-    Client.Worker workerFor(Int txId)
-        {
+    Client.Worker workerFor(Int txId) {
         assert TxRecord tx := byWriteId.get(txId);
         return tx.worker;
-        }
+    }
 
 
     // ----- file management  ----------------------------------------------------------------------
@@ -2577,66 +2337,55 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the mutable array of LogFileInfo records from the status file, from oldest to newest
      */
-    protected conditional LogFileInfo[] readStatus()
-        {
-        if (!statusFile.exists)
-            {
+    protected conditional LogFileInfo[] readStatus() {
+        if (!statusFile.exists) {
             return False;
-            }
+        }
 
-        try
-            {
+        try {
             String            json   = statusFile.contents.unpackUtf8();
             ObjectInputStream stream = new ObjectInputStream(internalJsonSchema, json.toReader());
             LogFileInfo[]     infos  = logFileInfoArrayMapping.read(stream.ensureElementInput());
             return True, infos.toArray(Mutable, True);
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             log($"Exception reading TxManager status file: {e}");
             return False;
-            }
         }
+    }
 
     /**
      * Read the TxManager status file.
      *
      * @return the array of LogFileInfo records from the status file, from oldest to newest
      */
-    protected void writeStatus()
-        {
+    protected void writeStatus() {
         // render all of the LogFileInfo records as JSON, but put each on its own line
         StringBuffer buf = new StringBuffer();
-        using (ObjectOutputStream stream = new ObjectOutputStream(internalJsonSchema, buf))
-            {
-            Loop: for (LogFileInfo info : logInfos)
-                {
-                using (ElementOutput out = stream.createElementOutput())
-                    {
+        using (ObjectOutputStream stream = new ObjectOutputStream(internalJsonSchema, buf)) {
+            Loop: for (LogFileInfo info : logInfos) {
+                using (ElementOutput out = stream.createElementOutput()) {
                     buf.append(",\n");
                     logFileInfoMapping.write(out, info);
-                    }
                 }
             }
+        }
 
         // wrap it as a JSON array and write it out
         buf[0] = '[';
         buf.append("\n]");
         statusFile.contents = buf.toString().utf8();
-        }
+    }
 
     /**
      * Create the transaction log.
      *
      * @return True if the transaction log did not exist, and now it does
      */
-    protected Boolean createLog()
-        {
+    protected Boolean createLog() {
         // neither the log nor the status file should exist
-        if (logFile.exists || statusFile.exists)
-            {
+        if (logFile.exists || statusFile.exists) {
             return False;
-            }
+        }
 
         assert lastCommitted == 0;
         assert logInfos.empty;
@@ -2649,13 +2398,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         writeStatus();
 
         return True;
-        }
+    }
 
     /**
      * Initialize the "current" transaction log file.
      */
-    protected void initLogFile()
-        {
+    protected void initLogFile() {
         Int safepoint = safepoint;
         logFile.contents = $|[
                             |\{"_op":"created", "_ts":"{clock.now.toString(True)}",\
@@ -2663,31 +2411,27 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             |]
                             .utf8();
         logUpdated(safepoint);
-        }
+    }
 
     /**
      * Open the transaction log.
      *
      * @return True if the transaction log did exist, and was successfully opened
      */
-    protected Boolean openLog()
-        {
+    protected Boolean openLog() {
         // need to have both the log and the status file
         // load the status file to get a last-known snapshot of the log files
         if (logFile.exists, statusFile.exists, LogFileInfo[] logInfos := readStatus(),
-                !logInfos.empty)
-            {
+                !logInfos.empty) {
             // if the current log file is as-expected, then assume that we're good to go
             LogFileInfo current = logInfos[logInfos.size-1];
-            if (current.size == logFile.size && current.timestamp == logFile.modified)
-                {
+            if (current.size == logFile.size && current.timestamp == logFile.modified) {
                 Int lastCommitted = current.txIds.effectiveUpperBound;
                 Int safepoint     = current.safepoint;
                 assert safepoint <= lastCommitted;
-                if (safepoint < lastCommitted)
-                    {
+                if (safepoint < lastCommitted) {
                     return False;
-                    }
+                }
 
                 // remember the timestamp on the log, as if we just updated it
                 logUpdated();
@@ -2707,11 +2451,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 this.previousSafepoint = safepoint;
 
                 return True;
-                }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Make a "best attempt" to automatically recover the transaction log and the database.
@@ -2719,153 +2463,118 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return True if the transaction log did exist, and was successfully recovered, and the
      *         impacted ObjectStore instances were also recovered
      */
-    protected Boolean recoverLog()
-        {
+    protected Boolean recoverLog() {
         // start by trying to read the status file
         LogFileInfo[] logInfos;
         Int           lastTx    = -1;
         Int           safepoint = -1;
-        if (logInfos := readStatus())
-            {
+        if (logInfos := readStatus()) {
             // validate the LogFileInfo entries; assume that older files may have been deleted, and
             // that the latest size/timestamp for the current logFile may not have been recorded
             Int firstIndex = 0;
-            Loop: for (LogFileInfo oldInfo : logInfos)
-                {
+            Loop: for (LogFileInfo oldInfo : logInfos) {
                 File infoFile = sysDir.fileFor(oldInfo.name);
-                if (infoFile.exists)
-                    {
+                if (infoFile.exists) {
                     LogFileInfo newInfo;
-                    try
-                        {
+                    try {
                         newInfo = loadLog(infoFile);
-                        }
-                    catch (Exception e)
-                        {
+                    } catch (Exception e) {
                         log($|TxManager was unable to load the log file {logFile} due to an\
                              | exception; abandoning automatic recovery; exception: {e}
                            );
                         return False;
-                        }
+                    }
 
-                    if (newInfo.txIds.size > 0)
-                        {
+                    if (newInfo.txIds.size > 0) {
                         Int firstSegmentTx = newInfo.txIds.effectiveFirst;
                         Int lastSegmentTx  = newInfo.txIds.effectiveUpperBound;
                         if (lastTx < 0 || firstSegmentTx == lastTx+1
-                                && (newInfo.txIds.size == 0 || lastSegmentTx > lastTx))
-                            {
-                            if (newInfo.txIds.size > 0)
-                                {
+                                && (newInfo.txIds.size == 0 || lastSegmentTx > lastTx)) {
+                            if (newInfo.txIds.size > 0) {
                                 lastTx = lastSegmentTx;
-                                }
                             }
-                        else
-                            {
+                        } else {
                             log($|TxManager log files {logInfos[Loop.count-1].name} and {newInfo.name} do\
                                  | not hold contiguous transaction ranges; abandoning automatic recovery
                                );
                             return False;
-                            }
                         }
+                    }
 
                     safepoint = newInfo.safepoint;
                     logInfos[Loop.count] = newInfo;
-                    }
-                else
-                    {
-                    if (Loop.count == firstIndex)
-                        {
-                        if (infoFile.name == logFile.name)
-                            {
+                } else {
+                    if (Loop.count == firstIndex) {
+                        if (infoFile.name == logFile.name) {
                             log($|TxManager automatic recovery was unable to load the current\
                                  | segment of the transaction log, because it does not exist;\
                                  | an empty file will be created automatically
                                );
-                            }
-                        else
-                            {
+                        } else {
                             log($|TxManager was unable to load a historical segment of the\
                                  | transaction log from file {infoFile}, because the file does not\
                                  | exist; the missing information is assumed to have been archived\
                                  | or purged; recovery will continue
                                );
-                            }
+                        }
 
                         ++firstIndex;
-                        }
-                    else if (oldInfo.txIds.size > 0)
-                        {
+                    } else if (oldInfo.txIds.size > 0) {
                         log($|TxManager was unable to load the log file {infoFile}, because the file\
                              | does not exist; abandoning automatic recovery
                            );
                         return False;
-                        }
-                    else
-                        {
+                    } else {
                         log($|TxManager was unable to load the log file {infoFile}, because the\
                              | file does not exist; however, it contained no transactional records,\
                              | so recovery will continue
                            );
-                        }
                     }
                 }
+            }
 
-             if (firstIndex > 0)
-                {
+             if (firstIndex > 0) {
                 logInfos = firstIndex == logInfos.size
                         ? logInfos.clear()
                         : logInfos.slice(firstIndex ..< logInfos.size).reify(Mutable);
-                }
             }
-        else
-            {
+        } else {
             log("TxManager status file was not recoverable");
 
             // scan the directory for log files
             File[] logFiles = support.findLogs();
-            if (logFiles.empty)
-                {
+            if (logFiles.empty) {
                 log("TxManager failed to locate any log files to recover; abandoning automatic recovery");
                 return False;
-                }
+            }
 
             // parse and order the log files
             logInfos = loadLogs(logFiles);
 
             // verify that the transactions are ordered and contiguous
-            Loop: for (LogFileInfo info : logInfos)
-                {
-                if (lastTx >= 0)
-                    {
-                    if (lastTx == info.txIds.effectiveFirst-1)
-                        {
-                        if (info.txIds.size > 0)
-                            {
+            Loop: for (LogFileInfo info : logInfos) {
+                if (lastTx >= 0) {
+                    if (lastTx == info.txIds.effectiveFirst-1) {
+                        if (info.txIds.size > 0) {
                             lastTx = info.txIds.effectiveUpperBound;
-                            }
                         }
-                    else
-                        {
+                    } else {
                         log($|TxManager log files {logInfos[Loop.count-1].name} and {info.name} do\
                              | not hold contiguous transaction ranges; abandoning automatic recovery
                            );
                         return False;
-                        }
                     }
-                else
-                    {
+                } else {
                     lastTx = info.txIds.effectiveUpperBound;
                     assert lastTx >= 0;
-                    }
+                }
 
                 safepoint = info.safepoint;
-                }
             }
+        }
 
         // create the "current" log file, if one does not exist
-        if (logFile.exists)
-            {
+        if (logFile.exists) {
             assert lastTx >= 0 && safepoint >= 0;
 
             // remember the timestamp on the log, as if we just updated it
@@ -2877,9 +2586,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                        , safepoint);
             logInfos[logInfos.size-1] = logInfos[logInfos.size-1].with(size=logFile.size,
                                                                        timestamp=logFile.modified);
-            }
-        else
-            {
+        } else {
             log("TxManager current segment of transaction log is missing, so one will be created");
             String timestamp = clock.now.toString(True);
             logFile.contents = $|[
@@ -2892,15 +2599,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             safepoint = safepoint.notLessThan(0);
             LogFileInfo info = new LogFileInfo(logFile.name, lastTx+1 ..< lastTx+1,
                                         safepoint, logFile.size, logFile.modified);
-            if (logInfos[logInfos.size-1].name == logFile.name)
-                {
+            if (logInfos[logInfos.size-1].name == logFile.name) {
                 logInfos[logInfos.size-1] = info;
-                }
-            else
-                {
+            } else {
                 logInfos += info;
-                }
             }
+        }
 
         // rebuild the status file
         this.logInfos          = logInfos;
@@ -2909,10 +2613,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         writeStatus();
 
         // rebuild the ObjectStore instances
-        if (safepoint < lastTx)
-            {
-            if (recoverStores(safepoint, lastTx))
-                {
+        if (safepoint < lastTx) {
+            if (recoverStores(safepoint, lastTx)) {
                 safepoint = lastTx;
 
                 // append a database recovery message to the log (the safepoint is now caught up)
@@ -2925,19 +2627,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                                      size=logFile.size,
                                                      timestamp=logFile.modified);
                 writeStatus();
-                }
-            else
-                {
+            } else {
                 log($|TxManager failed to replay log from known safepoint {safepoint} to latest\
                      | transaction {lastTx}
                    );
                 return False;
-                }
             }
+        }
 
         log("TxManager automatic recovery completed");
         return openLog();
-        }
+    }
 
     /**
      * Load the transaction log that ranges from the `safepoint` to the `lastTx`, and apply those
@@ -2948,52 +2648,38 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return True if the transaction log did exist, and was successfully recovered, and the
      *         impacted ObjectStore instances were also recovered
      */
-    protected Boolean recoverStores(Int safepoint, Int lastTx)
-        {
+    protected Boolean recoverStores(Int safepoint, Int lastTx) {
         SkiplistMap<Int, SkiplistMap<Int, Token[]>> replayByDboId = new SkiplistMap();
         SkiplistMap<String, Int>                    dboIdByPath   = new SkiplistMap();
 
         // first, determine all of the impacted ObjectStores, and load all of the transactions in
         // the recovery range that need to be replayed to those ObjectStores
         Int firstTx = safepoint+1;
-        if (Int logInfoIndex := findLogInfoIndex(firstTx))
-            {
+        if (Int logInfoIndex := findLogInfoIndex(firstTx)) {
             log($"Loading transactions {firstTx}..{lastTx} for replay");
-            for ( ; logInfoIndex < logInfos.size; ++logInfoIndex)
-                {
+            for ( ; logInfoIndex < logInfos.size; ++logInfoIndex) {
                 log($"Loading transaction log file {logInfos[logInfoIndex].name}");
                 assert File logFile := sysDir.findFile(logInfos[logInfoIndex].name);
                 String json = logFile.contents.unpackUtf8();
-                using (Parser logParser = new Parser(json.toReader()))
-                    {
-                    using (val arrayParser = logParser.expectArray())
-                        {
-                        NextEntry: while (!arrayParser.eof)
-                            {
-                            using (val objectParser = arrayParser.expectObject())
-                                {
-                                if (objectParser.matchKey("_v"))
-                                    {
+                using (Parser logParser = new Parser(json.toReader())) {
+                    using (val arrayParser = logParser.expectArray()) {
+                        NextEntry: while (!arrayParser.eof) {
+                            using (val objectParser = arrayParser.expectObject()) {
+                                if (objectParser.matchKey("_v")) {
                                     Int txId = objectParser.expectInt();
-                                    if (txId >= firstTx && txId <= lastTx)
-                                        {
+                                    if (txId >= firstTx && txId <= lastTx) {
                                         // every non-"_" key is a path to a DBObject
-                                        while (Token token := objectParser.matchKey())
-                                            {
+                                        while (Token token := objectParser.matchKey()) {
                                             String name = token.value.toString();
-                                            if (name.startsWith('_'))
-                                                {
+                                            if (name.startsWith('_')) {
                                                 objectParser.skip();
-                                                }
-                                            else
-                                                {
+                                            } else {
                                                 Int dboId = dboIdByPath.computeIfAbsent(name,
                                                         () -> catalog.infoFor(name).id);
                                                 Token[] seal = objectParser.skip(new Token[]);
                                                 assert replayByDboId.computeIfAbsent(dboId,
                                                         ()->new SkiplistMap())
                                                         .putIfAbsent(txId, seal.freeze(inPlace=True));
-                                                }
                                             }
                                         }
                                     }
@@ -3003,98 +2689,79 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     }
                 }
             }
-        else
-            {
+        } else {
             log($"Could not locate transaction {firstTx} in the transaction log");
             return False;
-            }
+        }
         replayByDboId.freeze(inPlace=True);
 
         // scan the effected ObjectStore images
         ObjectStore[] repair = new ObjectStore[];
-        for (Int dboId : replayByDboId.keys)
-            {
+        for (Int dboId : replayByDboId.keys) {
             DboInfo info = catalog.infoFor(dboId);
-            if (info.lifeCycle != Removed)
-                {
+            if (info.lifeCycle != Removed) {
                 // get the storage
                 ObjectStore store = storeFor(info.id);
 
                 // validate the storage
-                try
-                    {
-                    if (store.deepScan())
-                        {
+                try {
+                    if (store.deepScan()) {
                         continue;
-                        }
+                    }
 
                     log($"During recovery, corruption was detected in \"{info.path}\"");
-                    }
-                catch (Exception e)
-                    {
+                } catch (Exception e) {
                     log($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
-                    }
+                }
 
                 repair += store;
-                }
             }
+        }
 
         // try to repair any damaged ObjectStore images
         Boolean error = False;
-        for (ObjectStore store : repair)
-            {
-            try
-                {
+        for (ObjectStore store : repair) {
+            try {
                 // repair the storage
-                if (store.deepScan(fix=True))
-                    {
+                if (store.deepScan(fix=True)) {
                     continue;
-                    }
+                }
 
                 log($"During recovery, unable to fix \"{store.info.path}\"");
-                }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 log($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
-                }
+            }
 
             error = True;
-            }
-        if (error)
-            {
+        }
+        if (error) {
             return False;
-            }
+        }
 
         // finally, for each ObjectStores impacted by any of those transactions, instruct it to
         // apply all transactions from the recovery range that it was enlisted in
-        for ((Int dboId, SkiplistMap<Int, Token[]> seals) : replayByDboId)
-            {
+        for ((Int dboId, SkiplistMap<Int, Token[]> seals) : replayByDboId) {
             DboInfo info = catalog.infoFor(dboId);
-            if (info.lifeCycle != Removed)
-                {
+            if (info.lifeCycle != Removed) {
                 // get the storage
                 ObjectStore store = storeFor(info.id);
-                try
-                    {
+                try {
                     // recover the storage by applying all the potentially missing tx data
-                    if (store.recover(seals))
-                        {
+                    if (store.recover(seals)) {
                         continue;
-                        }
+                    }
 
                     log($"During recovery, unable to recover \"{store.info.path}\"");
-                    }
-                catch (Exception e)
-                    {
+                } catch (Exception e) {
                     log($"During recovery, unable to recover \"{store.info.path}\" due to an error: {e}");
-                    }
+                }
 
                 error = True;
-                }
             }
+        }
 
         return !error;
-        }
+    }
 
     /**
      * Obtain corresponding LogFileInfo objects for each of the specified log files.
@@ -3103,10 +2770,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return a mutable array of [LogFileInfo]
      */
-    protected LogFileInfo[] loadLogs(File[] logFiles)
-        {
+    protected LogFileInfo[] loadLogs(File[] logFiles) {
         return logFiles.map(f -> loadLog(f), new LogFileInfo[]).as(LogFileInfo[]);
-        }
+    }
 
     /**
      * Obtain the LogFileInfo for the specified log file.
@@ -3115,61 +2781,48 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the [LogFileInfo] for the file
      */
-    protected LogFileInfo loadLog(File logFile)
-        {
+    protected LogFileInfo loadLog(File logFile) {
         String json = logFile.contents.unpackUtf8();
 
         Int first = -1;
         Int last  = -1;
         Int safe  = -1;
-        using (Parser logParser = new Parser(json.toReader()))
-            {
-            using (val arrayParser = logParser.expectArray())
-                {
-                NextEntry: while (!arrayParser.eof)
-                    {
-                    using (val objectParser = arrayParser.expectObject())
-                        {
+        using (Parser logParser = new Parser(json.toReader())) {
+            using (val arrayParser = logParser.expectArray()) {
+                NextEntry: while (!arrayParser.eof) {
+                    using (val objectParser = arrayParser.expectObject()) {
                         Int txId = -1;
-                        if (objectParser.matchKey("_v"))
-                            {
+                        if (objectParser.matchKey("_v")) {
                             txId = objectParser.expectInt();
-                            }
-                        else if (objectParser.matchKey("_op"))
-                            {
-                            switch (objectParser.expectString())
-                                {
-                                case "created":
-                                    if (objectParser.findKey("_prev_v"))
-                                        {
-                                        txId = objectParser.expectInt() + 1;
-                                        }
-                                    continue;
-                                default:
-                                    if (objectParser.findKey("safepoint"))
-                                        {
-                                        safe = objectParser.expectInt();
-                                        }
-                                    break;
+                        } else if (objectParser.matchKey("_op")) {
+                            switch (objectParser.expectString()) {
+                            case "created":
+                                if (objectParser.findKey("_prev_v")) {
+                                    txId = objectParser.expectInt() + 1;
                                 }
+                                continue;
+                            default:
+                                if (objectParser.findKey("safepoint")) {
+                                    safe = objectParser.expectInt();
+                                }
+                                break;
                             }
+                        }
 
-                        if (txId > last)
-                            {
-                            if (first < 0)
-                                {
+                        if (txId > last) {
+                            if (first < 0) {
                                 first = txId;
-                                }
-                            last = txId;
                             }
+                            last = txId;
                         }
                     }
                 }
             }
+        }
 
         assert first >= 0 && safe >= 0 as $"Log file \"{logFile.name}\" is missing required header information";
         return new LogFileInfo(logFile.name, first .. last, safe, logFile.size, logFile.modified);
-        }
+    }
 
     /**
      * Find the log file that contains the specified transaction.
@@ -3179,29 +2832,25 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return True iff the `txId` exists in the log
      * @return (conditional) the log file index that contains the `txId`
      */
-    protected conditional Int findLogInfoIndex(Int txId)
-        {
+    protected conditional Int findLogInfoIndex(Int txId) {
         LogFileInfo[] logInfos = logInfos;
         if (logInfos.empty || txId < logInfos[0].txIds.effectiveLowerBound
-                || txId > logInfos[logInfos.size-1].txIds.effectiveUpperBound)
-            {
+                || txId > logInfos[logInfos.size-1].txIds.effectiveUpperBound) {
             return False;
-            }
+        }
 
         // search backward through the log
         Int logInfoIndex = logInfos.size-1;
-        while (logInfoIndex >= 0)
-            {
+        while (logInfoIndex >= 0) {
             Range<Int> txIds = logInfos[logInfoIndex].txIds;
-            if (txIds.contains(txId))
-                {
+            if (txIds.contains(txId)) {
                 return True, logInfoIndex;
-                }
-            --logInfoIndex;
             }
+            --logInfoIndex;
+        }
 
         return False;
-            }
+    }
 
     /**
      * Append a log entry to the log file.
@@ -3209,10 +2858,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @param entry      a JSON object, rendered as a string, to append to the log
      * @param safepoint  non-null iff the safepoint is being updated as part of the log update
      */
-    protected void addLogEntry(String entry, Int? safepoint=Null)
-        {
+    protected void addLogEntry(String entry, Int? safepoint=Null) {
         appendLog($",\n{entry}\n]", safepoint);
-        }
+    }
 
     /**
      * Append a buffer to the log file.
@@ -3220,8 +2868,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @param buf        the buffer containing the text to append to the log
      * @param safepoint  non-null iff the safepoint is being updated as part of the log update
      */
-    protected void appendLog(String s, Int? safepoint=Null)
-        {
+    protected void appendLog(String s, Int? safepoint=Null) {
         validateLog();
 
         File file   = logFile;
@@ -3232,36 +2879,32 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             .append(s.utf8());
 
         logUpdated(safepoint);
-        }
+    }
 
     /**
      * Make sure that the log is safe to append to.
      */
-    protected void validateLog()
-        {
-        if (expectedLogTimestamp != logFile.modified)
-            {
+    protected void validateLog() {
+        if (expectedLogTimestamp != logFile.modified) {
             log($"Log file {logFile.name} appears to have been modified externally; the expected timestamp was {expectedLogTimestamp} (TODO)");
             // TODO this is where the log file is "rebuilt automatically" like in the log recovery stage
-            }
         }
+    }
 
     /**
      * Record the timestamp on the log after it was updated.
      *
      * @param safepoint  non-null iff the safepoint was updated as part of the log update
      */
-    protected void logUpdated(Int? safepoint=Null)
-        {
+    protected void logUpdated(Int? safepoint=Null) {
         expectedLogTimestamp = logFile.modified;
         previousSafepoint    = safepoint?;
-        }
+    }
 
     /**
      * Move the current log to an archived state, and create a new, empty log.
      */
-    protected void rotateLog()
-        {
+    protected void rotateLog() {
         assert !logInfos.empty;
 
         String timestamp = clock.now.toString(True);
@@ -3283,13 +2926,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         logInfos[logInfos.size-1] = rotatedInfo;
         logInfos += currentInfo;
         writeStatus();
-        }
+    }
 
     /**
      * Mark the transaction log as being closed.
      */
-    protected void closeLog()
-        {
+    protected void closeLog() {
         // the database should have quiesced by now
         assert lastCommitted == safepoint;
 
@@ -3297,23 +2939,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                    );
 
         // update the "current log file" status record
-        if (!logInfos.empty)
-            {
+        if (!logInfos.empty) {
             LogFileInfo oldInfo = logInfos[logInfos.size-1];
             assert oldInfo.name == logFile.name;
 
             Range<Int> txIds = oldInfo.txIds;
-            if (lastCommitted > txIds.effectiveUpperBound)
-                {
+            if (lastCommitted > txIds.effectiveUpperBound) {
                 txIds = txIds.effectiveLowerBound .. lastCommitted;
-                }
+            }
 
             LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, safepoint, logFile.size, logFile.modified);
             logInfos[logInfos.size-1] = newInfo;
             writeStatus();
             logInfos.clear();
-            }
         }
+    }
 
 
     // ----- background maintenance ----------------------------------------------------------------
@@ -3321,8 +2961,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Schedule background maintenance work to happen periodically.
      */
-    protected void startBackgroundMaintenance()
-        {
+    protected void startBackgroundMaintenance() {
         assert cancelMaintenance == Null;
 
         // pretend we just cleaned up; this is not technically correct, but it does avoid having an
@@ -3331,105 +2970,86 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         lastCleanupTx   = lastCommitted;
 
         cancelMaintenance = timer.schedule(MaintenanceInterval, doMaintenance);
-        }
+    }
 
     /**
      * Stop the periodic background maintenance work.
      */
-    protected void stopBackgroundMaintenance()
-        {
-        if (Timer.Cancellable cancel ?= cancelMaintenance)
-            {
+    protected void stopBackgroundMaintenance() {
+        if (Timer.Cancellable cancel ?= cancelMaintenance) {
             cancelMaintenance = Null;
             cancel();
-            }
         }
+    }
 
     /**
      * Do the periodic background maintenance work, if applicable.
      */
-    protected void doMaintenance()
-        {
+    protected void doMaintenance() {
         cancelMaintenance = Null;
         if (status == Enabled                         // not shut down
-                && remainingTerminating == 0)         // not shutting down
-            {
-            try
-                {
+                && remainingTerminating == 0) {       // not shutting down
+            try {
                 // the database is considered idle if no transactions are in the pipeline, and the
                 // most recent activity occurred sufficiently in the past
                 Time    now  = clock.now;
                 Boolean idle = currentlyPreparing == NO_TX && pendingPrepare.empty
                         && now - lastActivity > MaintenanceInterval;
-                if (idle)
-                    {
+                if (idle) {
                     backgroundIdle();
-                    }
-                else
-                    {
+                } else {
                     backgroundBusy();
-                    }
+                }
 
                 // tell the various ObjectStores to purge old transactions after a certain time
                 // period, or after so many transactions have gone through, or some combination
                 Int seconds = (now - lastCleanupTime).seconds;
                 Int txCount = lastCommitted - lastCleanupTx;
-                if (seconds * txCount > 10k)
-                    {
+                if (seconds * txCount > 10k) {
                     lastCleanupTime = now;
                     lastCleanupTx   = lastCommitted;
                     cleanUpStorages();
-                    }
                 }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 log($"Exception occurred during background maintenance: {e}");
-                }
-            finally
-                {
-                if (cancelMaintenance == Null && status == Enabled)
-                    {
+            } finally {
+                if (cancelMaintenance == Null && status == Enabled) {
                     cancelMaintenance = timer.schedule(MaintenanceInterval, doMaintenance);
-                    }
                 }
             }
         }
+    }
 
     /**
      * Called during background maintenance when the database appears to be idle.
      */
-    protected void backgroundIdle()
-        {
+    protected void backgroundIdle() {
         catalog.indicateIdle^();
-        }
+    }
 
     /**
      * Called during background maintenance when the database appears to **not** be idle.
      */
-    protected void backgroundBusy()
-        {
+    protected void backgroundBusy() {
         catalog.indicateBusy^();
-        }
+    }
 
     /**
      * Called during background maintenance when it appears that the time has come to clean up the
      * various ObjectStore histories by purging old transactions.
      */
-    protected void cleanUpStorages()
-        {
+    protected void cleanUpStorages() {
         Set<Int> cleanupRetained = byReadId.keys;
-        if (cleanupRetained != lastCleanupRetained)
-            {
+        if (cleanupRetained != lastCleanupRetained) {
             immutable ArrayOrderedSet<Int> txSet = new ArrayOrderedSet<Int>(
                     cleanupRetained.toArray(Constant)).freeze(inPlace=True);
             lastCleanupRetained = txSet;
 
-            for (ObjectStore? store : appStores)
-                {
+            for (ObjectStore? store : appStores) {
                 store?.retainTx^(txSet);
-                }
             }
         }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -3439,19 +3059,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param msg  the message to log
      */
-    protected void log(String msg)
-        {
+    protected void log(String msg) {
         catalog.log^(msg);
-        }
+    }
 
     /**
      * Calmly respond to an irrecoverable disaster.
      */
-    protected void panic()
-        {
+    protected void panic() {
         // TODO halt the db before anything gets corrupted
         log("TxManager PANIC!!!");
-        }
+    }
 
     /**
      * Obtain the DboInfo for the specified id.
@@ -3460,19 +3078,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the DboInfo for the specified id
      */
-    protected DboInfo infoFor(Int id)
-        {
-        if (id < 0)
-            {
+    protected DboInfo infoFor(Int id) {
+        if (id < 0) {
             // these are non-transactional, so there is no expectation that this will ever occur
             return BuiltIn.byId(id).info;
-            }
+        }
 
         Int size = infos.size;
-        if (id < size)
-            {
+        if (id < size) {
             return infos[id]?;
-            }
+        }
 
         DboInfo info = catalog.infoFor(id);
 
@@ -3480,7 +3095,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         infos[id] = info;
 
         return info;
-        }
+    }
 
     /**
      * Obtain the DboInfo for the specified id.
@@ -3489,21 +3104,18 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the ObjectStore for the specified id
      */
-    protected ObjectStore storeFor(Int id)
-        {
+    protected ObjectStore storeFor(Int id) {
         ObjectStore?[] stores = appStores;
         Int            index  = id;
-        if (id < 0)
-            {
+        if (id < 0) {
             stores = sysStores;
             index  = BuiltIn.byId(id).ordinal;
-            }
+        }
 
         Int size = stores.size;
-        if (index < size)
-            {
+        if (index < size) {
             return stores[index]?;
-            }
+        }
 
         ObjectStore store = catalog.storeFor(id);
 
@@ -3511,7 +3123,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         stores[index] = store;
 
         return store;
-        }
+    }
 
     /**
      * Obtain a Client object from an internal pool of Client objects. These Client objects are used
@@ -3520,18 +3132,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return an "internal" Client object
      */
-    Client<Schema> allocateClient()
-        {
+    Client<Schema> allocateClient() {
         return clientCache.takeOrCompute(() -> catalog.createClient(system=True));
-        }
+    }
 
     /**
      * Return the passed Client object to the internal pool of Client objects.
      *
      * @param client  an "internal" Client object previously obtained from [allocateClient]
      */
-    void recycleClient(Client<Schema> client)
-        {
+    void recycleClient(Client<Schema> client) {
         return clientCache.reversed.add(client);
-        }
     }
+}

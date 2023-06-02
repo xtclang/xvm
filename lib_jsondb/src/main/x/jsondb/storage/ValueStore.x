@@ -1,8 +1,7 @@
 /**
  * A value storage API.
  */
-interface ValueStore<Value extends immutable Const>
-    {
+interface ValueStore<Value extends immutable Const> {
     /**
      * Obtain the single value as it existed immediately after the specified transaction finished
      * committing, or as it exists within the transaction (if it has not yet committed).
@@ -22,4 +21,4 @@ interface ValueStore<Value extends immutable Const>
      * @param value  the new single value
      */
     void store(Int txId, Value value);
-    }
+}

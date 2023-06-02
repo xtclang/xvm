@@ -1,8 +1,7 @@
 /**
  * A log storage API.
  */
-interface LogStore<Element extends immutable Const>
-    {
+interface LogStore<Element extends immutable Const> {
     /**
      * Append the specified value to the log.
      *
@@ -10,4 +9,4 @@ interface LogStore<Element extends immutable Const>
      * @param value  the value to append
      */
     void append(Int txId, Element value);
-    }
+}

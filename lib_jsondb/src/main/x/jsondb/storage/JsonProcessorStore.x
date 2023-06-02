@@ -37,21 +37,19 @@ import TxManager.NO_TX;
 service JsonProcessorStore<Message extends immutable Const>
         extends ObjectStore(catalog, info)
         implements ProcessorStore<Message>
-        incorporates KeyBasedStore<Message>
-    {
+        incorporates KeyBasedStore<Message> {
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
               DboInfo     info,
               Mapping<Message> messageMapping,
-              )
-        {
+              ) {
         construct ObjectStore(catalog, info);
 
         this.messageMapping = messageMapping;
         this.jsonSchema     = catalog.jsonSchema;
         this.clock          = catalog.clock;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -62,10 +60,9 @@ service JsonProcessorStore<Message extends immutable Const>
      * hopping just to get a reference to the TxManager every time that it is needed.
      */
     @Concurrent
-    protected @Lazy Scheduler scheduler.calc()
-        {
+    protected @Lazy Scheduler scheduler.calc() {
         return catalog.scheduler;
-        }
+    }
 
     public/private Clock clock;
 
@@ -102,13 +99,11 @@ service JsonProcessorStore<Message extends immutable Const>
 
     @Concurrent
     @Override
-    protected class Changes
-        {
+    protected class Changes {
         @Override
-        construct(Int writeId, Future<Int> pendingReadId)
-            {
+        construct(Int writeId, Future<Int> pendingReadId) {
             super(writeId, pendingReadId);
-            }
+        }
 
         /**
          * A map of inserted and updated processing requests.
@@ -119,23 +114,20 @@ service JsonProcessorStore<Message extends immutable Const>
          * @return a map used to view previously collected modifications, but not intended to be
          *         modified by the caller
          */
-        OrderedMap<Message, PidSet> peekProcessMods()
-            {
+        OrderedMap<Message, PidSet> peekProcessMods() {
             return processMods ?: NoChanges;
-            }
+        }
 
         /**
          * @return the read/write map used to collect processing modifications
          */
-        OrderedMap<Message, PidSet> ensureProcessMods()
-            {
-            return processMods ?:
-                {
+        OrderedMap<Message, PidSet> ensureProcessMods() {
+            return processMods ?: {
                 val map = new SkiplistMap<Message, PidSet>();
                 processMods = map;
                 return map;
-                };
-            }
+            };
+        }
 
         /**
          * A map of inserted and updated scheduling or unscheduling requests.
@@ -146,23 +138,20 @@ service JsonProcessorStore<Message extends immutable Const>
          * @return a map used to view previously collected modifications, but not intended to be
          *         modified by the caller
          */
-        OrderedMap<Message, PidSet> peekScheduleMods()
-            {
+        OrderedMap<Message, PidSet> peekScheduleMods() {
             return scheduleMods ?: NoChanges;
-            }
+        }
 
         /**
          * @return the read/write map used to collect scheduling modifications
          */
-        OrderedMap<Message, PidSet> ensureScheduleMods()
-            {
-            return scheduleMods ?:
-                {
+        OrderedMap<Message, PidSet> ensureScheduleMods() {
+            return scheduleMods ?: {
                 val map = new SkiplistMap<Message, PidSet>();
                 scheduleMods = map;
                 return map;
-                };
-            }
+            };
+        }
 
         /**
          * Tracks whether the transaction explicitly retrieved the pids via [pidListAt] API.
@@ -178,7 +167,7 @@ service JsonProcessorStore<Message extends immutable Const>
         Map<Message, String>? jsonMessages;
         Map<Message, String>? jsonProcessedEntries;
         Map<Message, String>? jsonScheduledEntries;
-        }
+    }
 
     @Override
     protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
@@ -218,158 +207,132 @@ service JsonProcessorStore<Message extends immutable Const>
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
-    void schedule(Int txId, Message message, Schedule? when)
-        {
+    void schedule(Int txId, Message message, Schedule? when) {
         assert Changes tx := checkTx(txId, writing=True);
 
         Pid pid = scheduler.generatePid(this.id, when);
 
         scheduleByPid.put(pid, when);
 
-        tx.ensureScheduleMods().process(message, e ->
-            {
+        tx.ensureScheduleMods().process(message, e -> {
             e.value = e.exists ? addPid(e.value, pid) : pid;
-            });
-        }
+        });
+    }
 
     @Override
-    void unschedule(Int txId, Message message)
-        {
+    void unschedule(Int txId, Message message) {
         assert Changes tx := checkTx(txId, writing=True);
 
         Map<Message, PidSet> mods = tx.ensureScheduleMods();
-        if (PidSet pids := mods.get(message))
-            {
+        if (PidSet pids := mods.get(message)) {
             clearSchedules(pids);
             mods.put(message, Cancel);
-            }
         }
+    }
 
     @Override
-    void unscheduleAll(Int txId)
-        {
+    void unscheduleAll(Int txId) {
         TODO
-        }
+    }
 
     @Override
-    Int[] pidListAt(Int txId)
-        {
+    Int[] pidListAt(Int txId) {
         TODO
-        }
+    }
 
     @Override
-    Pending pending(Int txId, Int pid)
-        {
+    Pending pending(Int txId, Int pid) {
         TODO
-        }
+    }
 
     @Override
-    Boolean isEnabled(Int txId)
-        {
+    Boolean isEnabled(Int txId) {
         TODO
-        }
+    }
 
     @Override
-    void setEnabled(Int txId, Boolean enable)
-        {
+    void setEnabled(Int txId, Boolean enable) {
         TODO
-        }
+    }
 
     @Override
-    void processCompleted(Int txId, Message message, Int pid, Range<Time> elapsed)
-        {
+    void processCompleted(Int txId, Message message, Int pid, Range<Time> elapsed) {
         assert Changes tx := checkTx(txId, writing=True);
 
-        tx.ensureProcessMods().process(message, e ->
-            {
-            if (e.exists)
-                {
+        tx.ensureProcessMods().process(message, e -> {
+            if (e.exists) {
                 PidSet pids = e.value;
                 assert !pids.is(Unschedule);
                 e.value = addPid(pids, pid);
-                }
-            else
-                {
+            } else {
                 e.value = pid;
-                }
-            });
-        }
+            }
+        });
+    }
 
     @Override
-    void retryPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result)
-        {
+    void retryPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result) {
         TODO
-        }
+    }
 
     @Override
-    void abandonPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result)
-        {
+    void abandonPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result) {
         TODO
-        }
+    }
 
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
     @Override
-    PrepareResult prepare(Int writeId, Int prepareId)
-        {
+    PrepareResult prepare(Int writeId, Int prepareId) {
         // the transaction can be prepared if (a) no transaction has modified this value after the
         // read id, or (b) the "current" value is equal to the read id transaction's value
         assert Changes tx := checkTx(writeId);
         Boolean processed = !tx.peekProcessMods().empty;
         Boolean scheduled = !tx.peekScheduleMods().empty;
 
-        if (!processed && !scheduled)
-            {
+        if (!processed && !scheduled) {
             inFlight.remove(writeId);
             return CommittedNoChanges;
-            }
+        }
 
-        if (processed)
-            {
+        if (processed) {
             // obtain and store the transaction modifications (note: we already verified that
             // modifications exist)
             OrderedMap<Message, PidSet> processMods = tx.processMods ?: assert;
             processModsByTx.put(prepareId, processMods);
-            }
+        }
 
-        if (scheduled)
-            {
+        if (scheduled) {
             // obtain the transaction modifications (note: we already verified that modifications exist)
             OrderedMap<Message, PidSet> scheduleMods = tx.scheduleMods ?: assert;
 
             Boolean checkConflicts = tx.askedForPids;
             Int     readId         = tx.readId;
-            if (checkConflicts && readId != prepareId - 1)
-                {
+            if (checkConflicts && readId != prepareId - 1) {
                 // interleaving transactions have occurred
                 // TODO: what could be possible conflicts between different transactions?
-                }
+            }
 
-            for ((Message message, PidSet pids) : scheduleMods)
-                {
+            for ((Message message, PidSet pids) : scheduleMods) {
                 History messageHistory;
-                if (messageHistory := scheduleHistory.get(message))
-                    {
-                    if (checkConflicts)
-                        {
+                if (messageHistory := scheduleHistory.get(message)) {
+                    if (checkConflicts) {
                         assert Int    latestTx := messageHistory.last();
                         assert PidSet latest   := messageHistory.get(latestTx);
 
                         TODO process the changes
-                        }
                     }
-                else
-                    {
+                } else {
                     messageHistory = new History();
                     scheduleHistory.put(message, messageHistory);
-                    }
-                messageHistory.put(prepareId, pids);
                 }
+                messageHistory.put(prepareId, pids);
+            }
 
             // store off transaction's mods
             scheduleModsByTx.put(prepareId, scheduleMods);
-            }
+        }
 
         // re-do the write transaction to point to the prepared transaction
         tx.readId       = prepareId;
@@ -377,89 +340,75 @@ service JsonProcessorStore<Message extends immutable Const>
         tx.processMods  = Null;
         tx.scheduleMods = Null;
         return Prepared;
-        }
+    }
 
     @Override
-    MergeResult mergePrepare(Int txId, Int prepareId)
-        {
+    MergeResult mergePrepare(Int txId, Int prepareId) {
         MergeResult result;
         TODO
-        }
+    }
 
     @Override
-    String sealPrepare(Int writeId)
-        {
+    String sealPrepare(Int writeId) {
         private String buildJsonTx(Map<Message, String> jsonMessages,
                                    Map<Message, String> jsonProcessedEntries,
-                                   Map<Message, String> jsonScheduledEntries)
-            {
+                                   Map<Message, String> jsonScheduledEntries) {
             StringBuffer buf = new StringBuffer();
             buf.add('[');
 
-            for ((Message message, String jsonProcessed) : jsonProcessedEntries)
-                {
+            for ((Message message, String jsonProcessed) : jsonProcessedEntries) {
                 assert String jsonMsg := jsonMessages.get(message);
                 buf.append("{\"m\":").append(jsonMsg)
                    .add(',').add(' ')
                    .append(jsonProcessed);
 
-                if (String jsonScheduled := jsonScheduledEntries.get(message))
-                    {
+                if (String jsonScheduled := jsonScheduledEntries.get(message)) {
                     buf.add(',').add(' ')
                        .append(jsonScheduled);
-                    }
-                buf.add('}').add(',');
                 }
+                buf.add('}').add(',');
+            }
 
-            for ((Message message, String jsonScheduled) : jsonScheduledEntries)
-                {
-                if (jsonProcessedEntries.contains(message))
-                    {
+            for ((Message message, String jsonScheduled) : jsonScheduledEntries) {
+                if (jsonProcessedEntries.contains(message)) {
                     continue;
-                    }
+                }
                 assert String jsonMsg := jsonMessages.get(message);
 
                 buf.append("{\"m\":").append(jsonMsg)
                    .add(',').add(' ')
                    .append(jsonScheduled)
                    .add('}').add(',');
-                }
-
-            return buf.truncate(-1).add(']').toString();
             }
 
-        private String buildJsonProcessed(PidSet pids)
-            {
+            return buf.truncate(-1).add(']').toString();
+        }
+
+        private String buildJsonProcessed(PidSet pids) {
             assert !pids.is(Unschedule);
 
             StringBuffer buf = new StringBuffer();
             buf.append("\"p\":[");
-            if (pids.is(Int))
-                {
+            if (pids.is(Int)) {
                 pids.appendTo(buf);
-                }
-            else
-                {
-                Loop: for (Pid pid : pids)
-                    {
+            } else {
+                Loop: for (Pid pid : pids) {
                     pid.appendTo(buf);
-                    if (!Loop.last)
-                        {
+                    if (!Loop.last) {
                         buf.add(',');
-                        }
                     }
                 }
+            }
             buf.add(']');
             return buf.toString();
-            }
+        }
 
         assert Changes tx := checkTx(writeId), tx.prepared;
-        if (tx.sealed)
-            {
+        if (tx.sealed) {
             return buildJsonTx(tx.jsonMessages         ?: assert,
                                tx.jsonProcessedEntries ?: assert,
                                tx.jsonScheduledEntries ?: assert);
-            }
+        }
 
         Int readId = tx.readId;
 
@@ -473,21 +422,19 @@ service JsonProcessorStore<Message extends immutable Const>
         HashMap<Message, String> jsonScheduledEntries = new HashMap();
         val                      worker               = tx.worker;
 
-        for ((Message message, PidSet processPids) : processMods)
-            {
+        for ((Message message, PidSet processPids) : processMods) {
             jsonMessages.computeIfAbsent(message,
                     () -> worker.writeUsing(messageMapping, message));
 
             jsonProcessedEntries.put(message, buildJsonProcessed(processPids));
-            }
+        }
 
-        for ((Message message, PidSet schedulePids) : scheduleMods)
-            {
+        for ((Message message, PidSet schedulePids) : scheduleMods) {
             jsonMessages.computeIfAbsent(message,
                     () -> worker.writeUsing(messageMapping, message));
 
             jsonScheduledEntries.put(message, buildJsonScheduled(schedulePids));
-            }
+        }
 
         tx.jsonMessages         = jsonMessages;
         tx.jsonProcessedEntries = jsonProcessedEntries;
@@ -495,29 +442,25 @@ service JsonProcessorStore<Message extends immutable Const>
         tx.sealed               = True;
 
         return buildJsonTx(jsonMessages, jsonProcessedEntries, jsonScheduledEntries);
-        }
+    }
 
     @Override
     @Synchronized
-    void commit(Int[] writeIds)
-        {
+    void commit(Int[] writeIds) {
         assert !writeIds.empty;
 
-        if (cleanupPending)
-            {
+        if (cleanupPending) {
             TODO
-            }
+        }
 
         Int lastCommitId = NO_TX;
 
         Map<String, StringBuffer> buffers = new HashMap();
-        for (Int writeId : writeIds)
-            {
+        for (Int writeId : writeIds) {
             // because the same array of writeIds are sent to all of the potentially enlisted
             // ObjectStore instances, it is possible that this ObjectStore has no changes for this
             // transaction
-            if (Changes tx := peekTx(writeId))
-                {
+            if (Changes tx := peekTx(writeId)) {
                 assert tx.prepared, tx.sealed,
                     Map<Message, String> jsonMessages         ?= tx.jsonMessages,
                     Map<Message, String> jsonProcessedEntries ?= tx.jsonProcessedEntries,
@@ -525,8 +468,7 @@ service JsonProcessorStore<Message extends immutable Const>
 
                 Int prepareId = tx.readId;
 
-                for ((Message message, String jsonEntry) : jsonProcessedEntries)
-                    {
+                for ((Message message, String jsonEntry) : jsonProcessedEntries) {
                     StringBuffer buf = buffers.computeIfAbsent(nameForKey(message),
                             () -> new StringBuffer());
 
@@ -534,19 +476,16 @@ service JsonProcessorStore<Message extends immutable Const>
                     //      {"tx":14, "m":{...}, "p":[...]}
                     assert String jsonMsg := jsonMessages.get(message);
                     appendJsonEntry(buf, prepareId, jsonMsg, jsonEntry);
-                    }
+                }
 
                  // clean up processed schedules (they are no longer "pending")
-                if (Map<Message, PidSet> processMods := processModsByTx.get(prepareId))
-                    {
-                    for (PidSet pids : processMods.values)
-                        {
+                if (Map<Message, PidSet> processMods := processModsByTx.get(prepareId)) {
+                    for (PidSet pids : processMods.values) {
                         clearSchedules(pids);
-                        }
                     }
+                }
 
-                for ((Message message, String jsonEntry) : jsonScheduledEntries)
-                    {
+                for ((Message message, String jsonEntry) : jsonScheduledEntries) {
                     StringBuffer buf = buffers.computeIfAbsent(nameForKey(message),
                             () -> new StringBuffer());
 
@@ -556,155 +495,128 @@ service JsonProcessorStore<Message extends immutable Const>
                     appendJsonEntry(buf, prepareId, jsonMsg, jsonEntry);
 
                     // register/unregister requests with the scheduler
-                    if (Map<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId))
-                        {
+                    if (Map<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId)) {
                         assert PidSet pids := scheduleMods.get(message);
 
-                        if (pids.is(Int))
-                            {
+                        if (pids.is(Int)) {
                             assert Schedule? schedule := scheduleByPid.get(pids);
                             scheduler.registerPid(id, pids, clock.now,
                                     new Pending(path, message, schedule));
-                            }
-                        else if (pids.is(Int[]))
-                            {
-                            for (Pid pid : pids)
-                                {
+                        } else if (pids.is(Int[])) {
+                            for (Pid pid : pids) {
                                 assert Schedule? schedule := scheduleByPid.get(pid);
                                 scheduler.registerPid(id, pid, clock.now,
                                         new Pending(path, message, schedule));
-                                }
                             }
-                        else // Cancel
-                            {
-                            if (History messageHistory := scheduleHistory.get(message))
-                                {
+                        } else { // Cancel
+                            if (History messageHistory := scheduleHistory.get(message)) {
                                 assert PidSet prevPids := messageHistory.get(prepareId);
 
-                                if (prevPids.is(Int))
-                                    {
+                                if (prevPids.is(Int)) {
                                     scheduler.unregisterPid(id, prevPids);
-                                    }
-                                else if (prevPids.is(Int[]))
-                                    {
+                                } else if (prevPids.is(Int[])) {
                                     scheduler.unregisterPids(id, prevPids);
-                                    }
                                 }
                             }
                         }
                     }
+                }
 
                 processModsByTx .remove(prepareId);
                 scheduleModsByTx.remove(prepareId);
 
                 // remember the id of the last transaction that we process here
                 lastCommitId = prepareId;
-                }
             }
+        }
 
-        if (lastCommitId != NO_TX || cleanupPending)
-            {
+        if (lastCommitId != NO_TX || cleanupPending) {
             // the "for" loop below is an exact copy of the corresponding part from JsonMapStore
-            for ((String fileName, StringBuffer buf) : buffers)
-                {
+            for ((String fileName, StringBuffer buf) : buffers) {
                 // the JSON for entries data is inside an array, so "close" the array
                 buf.add('\n').add(']');
 
                 File file = dataDir.fileFor(fileName);
 
                 // write the changes to disk
-                if (file.exists && !cleanupPending)
-                    {
+                if (file.exists && !cleanupPending) {
                     Int length = file.size;
 
                     assert length >= 6;
 
                     file.truncate(length-2)
                         .append(buf.toString().utf8());
-                    }
-                else
-                    {
+                } else {
                     // replace the opening "," with an array begin "["
                     buf[0]         = '[';
                     file.contents  = buf.toString().utf8();
                     filesUsed++;
-                    }
+                }
 
                 // update the stats
                 bytesUsed    += buf.size;
                 lastModified = file.modified;
-                }
+            }
 
             cleanupPending = False;
 
             // remember which is the "current" value
             lastCommit = lastCommitId;
-            }
-
-        // discard the transactional records
-        for (Int writeId : writeIds)
-            {
-            inFlight.remove(writeId);
-            }
         }
 
+        // discard the transactional records
+        for (Int writeId : writeIds) {
+            inFlight.remove(writeId);
+        }
+    }
+
     @Override
-    void rollback(Int writeId)
-        {
-        if (Changes tx := peekTx(writeId))
-            {
-            if (tx.prepared)
-                {
+    void rollback(Int writeId) {
+        if (Changes tx := peekTx(writeId)) {
+            if (tx.prepared) {
                 Int prepareId = tx.readId;
 
                 // the transaction is already sprinkled all over the history
-                if (OrderedMap<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId))
-                    {
-                    for ((Message message, PidSet pids) : scheduleMods)
-                        {
-                        if (History messageHistory := scheduleHistory.get(message))
-                            {
+                if (OrderedMap<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId)) {
+                    for ((Message message, PidSet pids) : scheduleMods) {
+                        if (History messageHistory := scheduleHistory.get(message)) {
                             messageHistory.remove(prepareId);
-                            }
-                        clearSchedules(pids);
                         }
+                        clearSchedules(pids);
                     }
+                }
 
                 processModsByTx .remove(prepareId);
                 scheduleModsByTx.remove(prepareId);
-                }
+            }
 
             inFlight.remove(writeId);
-            }
         }
+    }
 
     @Override
-    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
-        {
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False) {
         // TODO
-        }
+    }
 
 
     // ----- IO operations -------------------------------------------------------------------------
 
     @Override
-    void initializeEmpty()
-        {
+    void initializeEmpty() {
         assert model == Empty;
         lastCommit = 0;
-        }
+    }
 
     @Override
-    void loadInitial()
-        {
+    void loadInitial() {
         Int desired = txManager.lastCommitted;
         assert desired != NO_TX && desired > 0;
 
         Int totalBytes = 0;
         Int totalFiles = 0;
 
-        for (File file : dataDir.files())
-            {
+        for (File file : dataDir.files()) {
             String  fileName   = file.name;
             Byte[]  bytes      = file.contents;
             String  jsonStr    = bytes.unpackUtf8();
@@ -722,31 +634,26 @@ service JsonProcessorStore<Message extends immutable Const>
             totalFiles++;
             totalBytes += bytes.size;
 
-            using (val arrayParser = fileParser.expectArray())
-                {
-                while (!arrayParser.eof)
-                    {
-                    using (val changeParser = arrayParser.expectObject())
-                        {
+            using (val arrayParser = fileParser.expectArray()) {
+                while (!arrayParser.eof) {
+                    using (val changeParser = arrayParser.expectObject()) {
                         changeParser.expectKey("tx");
 
                         Int txId = changeParser.expectInt();
-                        if (txId > desired)
-                            {
+                        if (txId > desired) {
                             // this should not be happening
                             rebuild = True;
                             continue;
-                            }
+                        }
 
                         Message message;
 
                         changeParser.expectKey("m");
                         Token[] messageTokens = changeParser.skip(new Token[]);
                         using (ObjectInputStream stream =
-                                new ObjectInputStream(jsonSchema, messageTokens.iterator()))
-                            {
+                                new ObjectInputStream(jsonSchema, messageTokens.iterator())) {
                             message = messageMapping.read(stream.ensureElementInput());
-                            }
+                        }
 
                         Int startPos = messageTokens[0].start.offset;
                         Int endPos   = messageTokens[messageTokens.size-1].end.offset;
@@ -754,67 +661,46 @@ service JsonProcessorStore<Message extends immutable Const>
                         messageLoc.putIfAbsent(message, startPos ..< endPos);
                         fileNames.putIfAbsent(message, fileName);
 
-                        messagesByTx.process(txId, e ->
-                            {
-                            if (e.exists)
-                                {
-                                if (!e.value.contains(message))
-                                    {
+                        messagesByTx.process(txId, e -> {
+                            if (e.exists) {
+                                if (!e.value.contains(message)) {
                                     e.value += message;
-                                    }
                                 }
-                            else
-                                {
+                            } else {
                                 e.value = [message];
-                                }
-                            });
+                            }
+                        });
 
-                        if (changeParser.matchKey("p")) // processed
-                            {
-                            using (val pidParser = changeParser.expectArray())
-                                {
-                                while (!pidParser.eof)
-                                    {
+                        if (changeParser.matchKey("p")) { // processed
+                            using (val pidParser = changeParser.expectArray()) {
+                                while (!pidParser.eof) {
                                     Pid pid = pidParser.expectInt();
 
                                     closestTx.remove(pid);
                                     closestSchedule.remove(pid);
 
-                                    scheduledByMessage.process(message, e ->
-                                        {
-                                        if (e.exists)
-                                            {
+                                    scheduledByMessage.process(message, e -> {
+                                        if (e.exists) {
                                             PidSet pids = removePids(e.value, pid);
-                                            if (pids == Cancel)
-                                                {
+                                            if (pids == Cancel) {
                                                 e.delete();
-                                                }
-                                            else
-                                                {
+                                            } else {
                                                 e.value = pids;
-                                                }
                                             }
-                                        });
+                                        }
+                                    });
                                     rebuild = True;
-                                    }
                                 }
                             }
-                        else if (changeParser.matchKey("s")) // scheduled
-                            {
-                            using (val schedulesParser = changeParser.expectArray())
-                                {
-                                if (schedulesParser.eof)
-                                    {
+                        } else if (changeParser.matchKey("s")) { // scheduled
+                            using (val schedulesParser = changeParser.expectArray()) {
+                                if (schedulesParser.eof) {
                                     // this is an "unschedule" request
                                     scheduledByMessage.remove(message);
                                     rebuild = True;
-                                    }
-                                else
-                                    {
-                                    do
-                                        {
-                                        using (val scheduleParser = schedulesParser.expectObject())
-                                            {
+                                } else {
+                                    do {
+                                        using (val scheduleParser = schedulesParser.expectObject()) {
                                             scheduleParser.expectKey("pid");
                                             Pid pid = scheduleParser.expectInt();
 
@@ -823,44 +709,36 @@ service JsonProcessorStore<Message extends immutable Const>
                                             closestTx.put(pid, txId);
                                             closestSchedule.put(pid, tokens);
 
-                                            scheduledByMessage.process(message, e ->
-                                                {
+                                            scheduledByMessage.process(message, e -> {
                                                 e.value = e.exists ? addPid(e.value, pid) : pid;
-                                                });
-                                            }
+                                            });
                                         }
-                                    while (!schedulesParser.eof);
-                                    }
+                                    } while (!schedulesParser.eof);
                                 }
                             }
                         }
                     }
                 }
+            }
 
-            if (scheduledByMessage.empty)
-                {
+            if (scheduledByMessage.empty) {
                 // all the messages were processed; remove the storage
                 file.delete();
                 totalFiles--;
                 bytesUsed -= bytes.size;
                 continue;
-                }
+            }
 
             StringBuffer buf = new StringBuffer();
 
-            for ((Int txId, Message[] messages) : messagesByTx)
-                {
-                for (Message message : messages)
-                    {
-                    if (PidSet pids := scheduledByMessage.get(message))
-                        {
+            for ((Int txId, Message[] messages) : messagesByTx) {
+                for (Message message : messages) {
+                    if (PidSet pids := scheduledByMessage.get(message)) {
                         assert !pids.is(Unschedule);
 
-                        if (pids.is(Int))
-                            {
+                        if (pids.is(Int)) {
                             assert Int txLast := closestTx.get(pids);
-                            if (txLast == txId)
-                                {
+                            if (txLast == txId) {
                                 assert Token[] tokens := closestSchedule.get(pids);
                                 // TODO: reconstruct the Schedule
 
@@ -869,52 +747,41 @@ service JsonProcessorStore<Message extends immutable Const>
 
                                 scheduler.registerPid(id, pids, clock.now,
                                         new Pending(path, message, schedule));
-                                }
-                            else
-                                {
+                            } else {
                                 continue;
-                                }
                             }
-                        else
-                            {
-                            for (Pid pid : pids)
-                                {
+                        } else {
+                            for (Pid pid : pids) {
                                 assert Int txLast := closestTx.get(pid);
-                                if (txLast == txId)
-                                    {
+                                if (txLast == txId) {
                                     // TODO: reconstruct the Schedule
                                     Schedule? schedule = Null;
                                     scheduleByPid.put(pid, schedule);
 
                                     scheduler.registerPid(id, pid, clock.now,
                                             new Pending(path, message, schedule));
-                                    }
-                                else
-                                    {
+                                } else {
                                     pids = pids - pid;
-                                    }
-                                }
-                            if (pids.empty)
-                                {
-                                continue;
                                 }
                             }
+                            if (pids.empty) {
+                                continue;
+                            }
+                        }
 
                         History messageHistory = scheduleHistory.computeIfAbsent(
                                 message, () -> new History());
                         messageHistory.put(txId, pids);
 
-                        if (rebuild)
-                            {
+                        if (rebuild) {
                             assert Range<Int> loc := messageLoc.get(message);
                             appendJsonEntry(buf, txId, jsonStr.slice(loc), buildJsonScheduled(pids));
-                            }
                         }
                     }
                 }
+            }
 
-            if (rebuild)
-                {
+            if (rebuild) {
                 buf[0] = '[';
 
                 String jsonNew  = buf.add('\n').add(']').toString();
@@ -923,180 +790,149 @@ service JsonProcessorStore<Message extends immutable Const>
                 file.contents = bytesNew;
 
                 bytesUsed += bytesNew.size - bytes.size;
-                }
             }
+        }
 
         filesUsed  = totalFiles;
         lastCommit = desired;
-        }
+    }
 
     @Override
     @Synchronized
-    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
-        {
+    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId) {
         Map<String, StringBuffer> recoveredContents;
         Map<String, Int>          lastTxInFile;
 
         if (!((recoveredContents, lastTxInFile) :=
-                recoverContents(sealsByTxId, "m", messageMapping, jsonSchema)))
-            {
+                recoverContents(sealsByTxId, "m", messageMapping, jsonSchema))) {
             return False;
-            }
+        }
 
-        for ((Int txId, Token[] tokens) : sealsByTxId)
-            {
-            using (val sealParser = new Parser(tokens.iterator()))
-                {
-                using (val changeArrayParser = sealParser.expectArray())
-                    {
-                    while (!changeArrayParser.eof)
-                        {
-                        using (val changeParser = changeArrayParser.expectObject())
-                            {
+        for ((Int txId, Token[] tokens) : sealsByTxId) {
+            using (val sealParser = new Parser(tokens.iterator())) {
+                using (val changeArrayParser = sealParser.expectArray()) {
+                    while (!changeArrayParser.eof) {
+                        using (val changeParser = changeArrayParser.expectObject()) {
                             String fileName;
 
                             changeParser.expectKey("m");
 
                             Token[] messageTokens = changeParser.skip(new Token[]);
                             using (ObjectInputStream stream =
-                                    new ObjectInputStream(jsonSchema, messageTokens.iterator()))
-                                {
+                                    new ObjectInputStream(jsonSchema, messageTokens.iterator())) {
                                 Message message = messageMapping.read(stream.ensureElementInput());
 
                                 fileName = nameForKey(message);
-                                }
+                            }
 
                             // apply just the missing transactions
                             if (Int lastInFile := lastTxInFile.get(fileName),
-                                    lastInFile < txId || lastInFile == NO_TX)
-                                {
+                                    lastInFile < txId || lastInFile == NO_TX) {
                                 assert StringBuffer buf := recoveredContents.get(fileName);
 
-                                if (changeParser.matchKey("p"))
-                                    {
+                                if (changeParser.matchKey("p")) {
                                     appendChange(buf, txId, "m", messageTokens,
                                             "p", changeParser.skip(new Token[]));
-                                    }
+                                }
 
-                                if (changeParser.matchKey("s"))
-                                    {
+                                if (changeParser.matchKey("s")) {
                                     appendChange(buf, txId, "m", messageTokens,
                                             "s", changeParser.skip(new Token[]));
-                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-
-        for ((String fileName, StringBuffer buf) : recoveredContents)
-            {
-            buf.truncate(-1).add('\n').add(']');
-            dataDir.fileFor(fileName).contents = buf.toString().utf8();
-            }
-
-        return True;
         }
 
+        for ((String fileName, StringBuffer buf) : recoveredContents) {
+            buf.truncate(-1).add('\n').add(']');
+            dataDir.fileFor(fileName).contents = buf.toString().utf8();
+        }
+
+        return True;
+    }
+
     @Override
-    void unload()
-        {
+    void unload() {
         inFlight.clear();
         scheduleHistory.clear();
         scheduleByPid.clear();
         processModsByTx.clear();
         scheduleModsByTx.clear();
         fileNames.clear();
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
-    protected static PidSet addPid(PidSet pids, Pid pid)
-        {
+    protected static PidSet addPid(PidSet pids, Pid pid) {
         return pids.is(Unschedule)
                 ? pid
                 : pids.is(Int)
                     ? [pids, pid]
                     : pids + pid;
+    }
+
+    protected static PidSet removePids(PidSet pidsOrig, PidSet pidsRemove) {
+        if (pidsOrig.is(Unschedule) || pidsRemove.is(Unschedule)) {
+            return Cancel;
         }
 
-    protected static PidSet removePids(PidSet pidsOrig, PidSet pidsRemove)
-        {
-        if (pidsOrig.is(Unschedule) || pidsRemove.is(Unschedule))
-            {
-            return Cancel;
-            }
-
-        if (pidsOrig.is(Int))
-            {
+        if (pidsOrig.is(Int)) {
             Boolean match = pidsRemove.is(Int)
                     ? pidsOrig == pidsRemove
                     : pidsRemove.contains(pidsOrig);
             return match ? Cancel : pidsOrig;
-            }
+        }
 
         pidsOrig = pidsRemove.is(Int)
                 ? pidsOrig.remove(pidsRemove)
                 : pidsOrig.removeAll(pid -> pidsRemove.contains(pid));
 
-        return switch (pidsOrig.size)
-            {
+        return switch (pidsOrig.size) {
             case 0:  Cancel;
             case 1:  pidsOrig[0];
             default: pidsOrig;
-            };
-        }
+        };
+    }
 
-    protected void clearSchedules(PidSet pids)
-        {
-        if (pids.is(Int))
-            {
+    protected void clearSchedules(PidSet pids) {
+        if (pids.is(Int)) {
             scheduleByPid.remove(pids);
-            }
-        else if (pids.is(Int[]))
-            {
+        } else if (pids.is(Int[])) {
             scheduleByPid.keys.removeAll(pids);
-            }
         }
+    }
 
-    private String buildJsonScheduled(PidSet pids)
-        {
+    private String buildJsonScheduled(PidSet pids) {
         StringBuffer buf = new StringBuffer();
         buf.append("\"s\":[");
-        if (!pids.is(Unschedule))
-            {
-            if (pids.is(Int))
-                {
+        if (!pids.is(Unschedule)) {
+            if (pids.is(Int)) {
                 assert Schedule? schedule := scheduleByPid.get(pids);
                 appendJsonSchedule(buf, pids, schedule);
-                }
-            else
-                {
-                Loop: for (Pid pid : pids)
-                    {
+            } else {
+                Loop: for (Pid pid : pids) {
                     assert Schedule? schedule := scheduleByPid.get(pid);
                     appendJsonSchedule(buf, pid, schedule);
-                    if (!Loop.last)
-                        {
+                    if (!Loop.last) {
                         buf.add(',');
-                        }
                     }
                 }
             }
+        }
         buf.add(']');
         return buf.toString();
-        }
+    }
 
-    private void appendJsonSchedule(StringBuffer buf, Pid pid, Schedule? schedule)
-        {
+    private void appendJsonSchedule(StringBuffer buf, Pid pid, Schedule? schedule) {
         // {"pid":[Int],"s":{"at":[Time],"daily":[TimeOfDay],"repeat":[Duration],"policy":[Policy],"priority":[Priority]}}
-        if (schedule == Null)
-            {
+        if (schedule == Null) {
             buf.append($"\{\"pid\":{pid}}");
             return;
-            }
+        }
 
         Time?      scheduledAt    = schedule.scheduledAt;
         TimeOfDay? scheduledDaily = schedule.scheduledDaily;
@@ -1108,60 +944,50 @@ service JsonProcessorStore<Message extends immutable Const>
 
         Boolean needComma = False;
 
-        if (scheduledAt != Null)
-            {
+        if (scheduledAt != Null) {
             buf.append("\"at\":\"");
             scheduledAt.appendTo(buf, True);
             buf.add('"');
             needComma = True;
-            }
-        if (scheduledDaily != Null)
-            {
-            if (needComma)
-                {
+        }
+        if (scheduledDaily != Null) {
+            if (needComma) {
                 buf.add(',');
-                }
+            }
             buf.append("\"daily\":\"");
             scheduledDaily.appendTo(buf);
             buf.add('"');
             needComma = True;
-            }
-        if (repeatInterval != Null)
-            {
-            if (needComma)
-                {
+        }
+        if (repeatInterval != Null) {
+            if (needComma) {
                 buf.add(',');
-                }
+            }
             buf.append("\"repeat\":\"");
             repeatInterval.appendTo(buf);
             buf.add('"');
             needComma = True;
-            }
-        if (repeatPolicy != AllowOverlapping)
-            {
-            if (needComma)
-                {
+        }
+        if (repeatPolicy != AllowOverlapping) {
+            if (needComma) {
                 buf.add(',');
-                }
+            }
             buf.append("\"repeat\":");
             repeatPolicy.ordinal.appendTo(buf);
             needComma = True;
-            }
-        if (priority != Normal)
-            {
-            if (needComma)
-                {
+        }
+        if (priority != Normal) {
+            if (needComma) {
                 buf.add(',');
-                }
+            }
             buf.append("\"priority\":");
             priority.ordinal.appendTo(buf);
             needComma = True;
-            }
-        buf.add('}');
         }
+        buf.add('}');
+    }
 
-    private void appendJsonEntry(StringBuffer buf, Int txId, String jsonMsg, String jsonEntry)
-        {
+    private void appendJsonEntry(StringBuffer buf, Int txId, String jsonMsg, String jsonEntry) {
         buf.append(",\n{\"tx\":")
            .append(txId)
            .add(',').add(' ')
@@ -1170,14 +996,13 @@ service JsonProcessorStore<Message extends immutable Const>
            .add(',').add(' ')
            .append(jsonEntry)
            .add('}');
-        }
+    }
 
-    protected void rotateLog()
-        {
+    protected void rotateLog() {
         // TODO
 //        String timestamp   = clock.now.toString(True);
 //        String rotatedName = $"log_{timestamp}.json";
 //
 //        assert File rotatedFile := dataFile.renameTo(rotatedName);
-        }
     }
+}

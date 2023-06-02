@@ -189,8 +189,7 @@
  *         it decides that the `commit()` of the previous one will complete, even before it issues
  *         the completion instruction to the various DSS, and long before it unblocks the client.
  */
-module jsondb.xtclang.org
-    {
+module jsondb.xtclang.org {
     package oodb import oodb.xtclang.org;
     package json import json.xtclang.org;
     package aggregate   import aggregate.xtclang.org;
@@ -199,34 +198,30 @@ module jsondb.xtclang.org
 
     // ----- temporary helpers ---------------------------------------------------------------------
 
-    static <Serializable> immutable Byte[] toBytes(Serializable value)
-        {
+    static <Serializable> immutable Byte[] toBytes(Serializable value) {
         import ecstasy.io.*;
         val raw = new ByteArrayOutputStream();
         json.Schema.DEFAULT.createObjectOutput(new UTF8Writer(raw)).write(value);
         return raw.bytes.freeze(True);
-        }
+    }
 
-    static <Serializable> Serializable fromBytes(Type<Serializable> type, Byte[] bytes)
-        {
+    static <Serializable> Serializable fromBytes(Type<Serializable> type, Byte[] bytes) {
         import ecstasy.io.*;
         return json.Schema.DEFAULT.createObjectInput(new UTF8Reader(new ByteArrayInputStream(bytes))).read();
-        }
+    }
 
-    static void dump(String desc, Object o)
-        {
+    static void dump(String desc, Object o) {
         @Inject Console console;
-        String s = switch ()
-            {
+        String s = switch () {
             case o.is(Byte[]): o.all(b -> b >= 32 && b <= 127 || new Char(b).isWhitespace())
                     ? new String(new Char[o.size](i -> new Char(o[i])))
                     : o.toString();
 
             default: o.toString();
-            };
+        };
 
         console.print($"{desc}={s}");
-        }
+    }
 
     /**
      * Back up a file.
@@ -237,55 +232,45 @@ module jsondb.xtclang.org
      *
      * @return the newly created backup file
      */
-    static File createBackup(File file, Boolean move = False)
-        {
+    static File createBackup(File file, Boolean move = False) {
         // in theory, a backup could fail because some other file operation could be happening
         // concurrently, so allow the backup operation to be automatically retried a few times
         // before giving up with a failure; this is one of those failures that could only happen in
         // a production system, and is the type of failure that is impossible to reproduce
         Exception failure;
         Int       retry = 3;
-        do
-            {
-            try
-                {
+        do {
+            try {
                 String name = file.name;
-                if (Int dot := name.lastIndexOf('.'))
-                    {
+                if (Int dot := name.lastIndexOf('.')) {
                     name = name[0 ..< dot];
-                    }
+                }
 
                 Directory dir   = file.parent ?: assert;
                 Int       count = 0;
-                while (True)
-                    {
+                while (True) {
                     String test = $"{name}.bak{count > 0 ? count : ""}";
-                    if (!dir.find(test))
-                        {
+                    if (!dir.find(test)) {
                         name = test;
                         break;
-                        }
                     }
+                }
 
-                if (move, File newFile := file.renameTo(name))
-                    {
+                if (move, File newFile := file.renameTo(name)) {
                     return newFile;
-                    }
+                }
 
                 File newFile = dir.fileFor(name);
                 assert !newFile.exists;
                 file.store.copy(file.path, newFile.path);
                 return newFile;
-                }
-            catch (Exception e)
-                {
+            } catch (Exception e) {
                 failure = e;
-                }
             }
-        while (--retry > 0);
+        } while (--retry > 0);
 
         throw failure;
-        }
+    }
 
     /**
      * Create a connection for the specified database module.
@@ -301,8 +286,7 @@ module jsondb.xtclang.org
      * @param buildDir      the directory to use for the auto-generated classes and modules
      */
     static oodb.Connection createConnection(String dbModuleName, Directory dataDir, Directory buildDir,
-                                            oodb.DBUser? user = Null)
-        {
+                                            oodb.DBUser? user = Null) {
         import ecstasy.annotations.InjectedRef;
 
         import ecstasy.lang.src.Compiler;
@@ -328,11 +312,10 @@ module jsondb.xtclang.org
         Log              log  = new SimpleLog();
 
         ModuleTemplate dbTemplate;
-        if (!(dbTemplate := gen.ensureDBModule(repo, buildDir, log)))
-            {
+        if (!(dbTemplate := gen.ensureDBModule(repo, buildDir, log))) {
             log.add($"Error: Failed to create a host for: {dbModuleName}");
             throw new Exception(log.toString());
-            }
+        }
 
         Container       container = new Container(dbTemplate, Lightweight, repo, new Injector(dataDir));
         CatalogMetadata meta      = container.innerTypeSystem.primaryModule.as(CatalogMetadata);
@@ -349,57 +332,53 @@ module jsondb.xtclang.org
          * maps all * Directory resources as relative to the specified home directory.
          */
         service Injector(Directory homeDir)
-                extends BasicResourceProvider
-            {
-            @Lazy FileStore store.calc()
-                {
+                extends BasicResourceProvider {
+
+            @Lazy FileStore store.calc() {
                 import ecstasy.fs.DirectoryFileStore;
 
                 return new DirectoryFileStore(homeDir);
-                }
+            }
 
             @Override
-            Supplier getResource(Type type, String name)
-                {
-                switch (type, name)
-                    {
-                    case (FileStore, "storage"):
-                        return &store.maskAs(FileStore);
+            Supplier getResource(Type type, String name) {
+                switch (type, name) {
+                case (FileStore, "storage"):
+                    return &store.maskAs(FileStore);
 
-                    case (Directory, _):
-                        switch (name)
-                            {
-                            case "rootDir":
-                                Directory root = store.root;
-                                return &root.maskAs(Directory);
+                case (Directory, _):
+                    switch (name) {
+                    case "rootDir":
+                        Directory root = store.root;
+                        return &root.maskAs(Directory);
 
-                            case "homeDir":
-                                Directory root = store.root;
-                                return &root.maskAs(Directory);
+                    case "homeDir":
+                        Directory root = store.root;
+                        return &root.maskAs(Directory);
 
-                            case "curDir":
-                                Directory root = store.root;
-                                return &root.maskAs(Directory);
+                    case "curDir":
+                        Directory root = store.root;
+                        return &root.maskAs(Directory);
 
-                            case "tmpDir":
-                                Directory temp = store.root.find("_temp").as(Directory).ensure();
-                                return &temp.maskAs(Directory);
+                    case "tmpDir":
+                        Directory temp = store.root.find("_temp").as(Directory).ensure();
+                        return &temp.maskAs(Directory);
 
-                            default:
-                                throw new Exception($"Invalid Directory resource: \"{name}\"");
-                            }
-
-                    case (Compiler, "compiler"):
-                        @Inject Compiler compiler;
-                        return compiler;
-
-                    case (ModuleRepository, "repository"):
-                        @Inject ModuleRepository repository;
-                        return repository;
+                    default:
+                        throw new Exception($"Invalid Directory resource: \"{name}\"");
                     }
 
+                case (Compiler, "compiler"):
+                    @Inject Compiler compiler;
+                    return compiler;
+
+                case (ModuleRepository, "repository"):
+                    @Inject ModuleRepository repository;
+                    return repository;
+                }
+
                 return super(type, name);
-               }
             }
         }
     }
+}

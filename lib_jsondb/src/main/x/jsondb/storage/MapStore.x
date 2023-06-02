@@ -1,8 +1,7 @@
 /**
  * A key/value storage API.
  */
-interface MapStore<Key extends immutable Const, Value extends immutable Const>
-    {
+interface MapStore<Key extends immutable Const, Value extends immutable Const> {
     // ----- Map operations support ----------------------------------------------------------------
 
     /**
@@ -13,10 +12,9 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const>
      *
      * @return True iff no key/value pairs exist in the DBMap as of the specified transaction
      */
-    Boolean emptyAt(Int txId)
-        {
+    Boolean emptyAt(Int txId) {
         return sizeAt(txId) == 0;
-        }
+    }
 
     /**
      * Determine the size of the Map at the completion of the specified transaction id.
@@ -38,10 +36,9 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const>
      *
      * @return the True iff the specified key exists in the map
      */
-    Boolean existsAt(Int txId, Key key)
-        {
+    Boolean existsAt(Int txId, Key key) {
         return load(txId, key);
-        }
+    }
 
     /**
      * Obtain an iterator over all of the keys that exist for the specified transaction.
@@ -132,4 +129,4 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const>
 //     * @return (conditional) the value associated with the specified key
 //     */
 //    conditional Value loadByUri(Int txId, String uri);
-    }
+}
