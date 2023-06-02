@@ -2,8 +2,7 @@
  * Represents a network interface, sometimes referred to as a "NIC" (Network Interface Card). Each
  * entry displayed by the UNIX "ifconfig" command is a network interface.
  */
-interface NetworkInterface
-    {
+interface NetworkInterface {
     /**
      * The name of the NetworkInterface, as it is know within the [Network]. Examples might be "lo0"
      * and "en0".
@@ -90,4 +89,4 @@ interface NetworkInterface
      * @return (conditional) the ServerSocket listening on the specified address
      */
     conditional ServerSocket listen(SocketAddress localAddress);
-    }
+}

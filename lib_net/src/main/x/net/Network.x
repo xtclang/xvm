@@ -12,8 +12,7 @@ import crypto.Algorithms;
  *
  * The names are intended to clearly specify the risk.
  */
-interface Network
-    {
+interface Network {
     /**
      * The [NameService] for the network. This allows names to be resolved to addresses, and vice
      * versa.
@@ -62,17 +61,14 @@ interface Network
      * @return `True` iff there is a `NetworkInterface` that has the specified name
      * @return (conditional) the `NetworkInterface`  with the specified name
      */
-    conditional NetworkInterface interfaceByName(String name)
-        {
-        for (NetworkInterface nic : interfaces)
-            {
-            if (nic.name == name)
-                {
+    conditional NetworkInterface interfaceByName(String name) {
+        for (NetworkInterface nic : interfaces) {
+            if (nic.name == name) {
                 return True, nic;
-                }
             }
-        return False;
         }
+        return False;
+    }
 
     /**
      * Obtain a [NetworkInterface] that is bound to the specified `IPAddress`. It is possible that
@@ -86,17 +82,14 @@ interface Network
      *         `IPAddress` bound to it
      * @return (conditional) a `NetworkInterface` with the specified address
      */
-    conditional NetworkInterface interfaceByAddress(IPAddress address)
-        {
-        for (NetworkInterface nic : interfaces)
-            {
-            if (nic.addresses.contains(address))
-                {
+    conditional NetworkInterface interfaceByAddress(IPAddress address) {
+        for (NetworkInterface nic : interfaces) {
+            if (nic.addresses.contains(address)) {
                 return True, nic;
-                }
             }
-        return False;
         }
+        return False;
+    }
 
     /**
      * Create a stream-based socket that connects to the specified address. The determination of
@@ -147,4 +140,4 @@ interface Network
      * @return (conditional) the ServerSocket listening on the specified address
      */
     conditional ServerSocket listen(SocketAddress localAddress);
-    }
+}

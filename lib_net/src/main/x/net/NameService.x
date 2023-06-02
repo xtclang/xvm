@@ -1,8 +1,7 @@
 /**
  * Represents a name service, such as DNS.
  */
-interface NameService
-    {
+interface NameService {
     /**
      * Resolve the specified name to one or more `IPAddress`. This process is often called a
      * "name resolve" or a "DNS lookup".
@@ -24,4 +23,4 @@ interface NameService
      * @return (conditional) the name that the address is associated with
      */
     conditional String reverseLookup(IPAddress address);
-    }
+}

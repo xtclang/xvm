@@ -1,8 +1,7 @@
 /**
  * The Ecstasy standard module for basic networking support.
  */
-module net.xtclang.org
-    {
+module net.xtclang.org {
     package crypto import crypto.xtclang.org;
 
     /**
@@ -16,4 +15,4 @@ module net.xtclang.org
      * [IPAddress].
      */
     typedef Tuple<IPAddress, UInt16> as SocketAddress;
-    }
+}

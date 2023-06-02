@@ -3,8 +3,7 @@
  * _accept_ incoming connections. Each incoming connection, when it is accepted, becomes a [Socket].
  */
 interface ServerSocket
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * This is the local [SocketAddress] at which the underlying listening socket is bound; it is an
      * address and port on this machine.
@@ -30,4 +29,4 @@ interface ServerSocket
     Socket accept();
 
     // TODO options (backlog etc.)
-    }
+}

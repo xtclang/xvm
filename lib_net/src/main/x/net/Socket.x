@@ -2,8 +2,7 @@
  * Represents a socket.
  */
 interface Socket
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * This is the remote [SocketAddress] to which the underlying socket is connected; it is an
      * address and port somewhere on the network (even including this machine).
@@ -22,9 +21,7 @@ interface Socket
      * non-blocking I/O capability.
      */
     interface Channel
-            extends ecstasy.io.Channel
-        {
-        }
+            extends ecstasy.io.Channel {}
 
     /**
      * Obtain the `Channel` for the `Socket`, which provides an advanced non-blocking read and
@@ -59,4 +56,4 @@ interface Socket
     // TODO options: (and/or some of these could be on the channel)
     // SO_TIMEOUT, SO_LINGER, TCP_NODELAY, SO_SNDBUF, SO_RCVBUF, SO_OOBINLINE,
     // SO_REUSEADDR/SO_REUSEPORT, SO_KEEPALIVE, SO_RCVTIMEO/SO_SNDTIMEO, IPTOS_*, etc.
-    }
+}
