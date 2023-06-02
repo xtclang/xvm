@@ -2,8 +2,7 @@
  * Represents a verifier of cryptographic signatures.
  */
 interface Verifier
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * The algorithm implemented by this verifier.
      */
@@ -36,10 +35,9 @@ interface Verifier
      *
      * @return True iff the signature is valid for the contents of the InputStream
      */
-    Boolean verify(Digest signature, InputStream in)
-        {
+    Boolean verify(Digest signature, InputStream in) {
         return verify(signature, in.readBytes(in.remaining));
-        }
+    }
 
     /**
      * Verify that the provided signature is valid for the contents of the passed `Byte` array.
@@ -74,14 +72,13 @@ interface Verifier
      * stream, and then uses that information to verify a previously-provided Signature.
      */
     static interface OutputVerifier
-            extends BinaryOutput
-        {
+            extends BinaryOutput {
         /**
          * Determine if the signature being verified matches the data that has been written to (or
          * through) the `OutputVerifier`.
          */
         Boolean signatureMatches();
-        }
+    }
 
     /**
      * Create an input stream that will verify a signature using all of the data read through it.
@@ -100,8 +97,7 @@ interface Verifier
      * then uses that information to verify the passed Signature.
      */
     static interface InputVerifier
-            extends BinaryInput
-        {
+            extends BinaryInput {
         /**
          * Determine if the signature being verified matches the data that has been read through the
          * InputVerifier.
@@ -112,5 +108,5 @@ interface Verifier
          *         `InputVerifier` has not been tampered with
          */
         Boolean signatureMatches(Digest signature);
-        }
     }
+}

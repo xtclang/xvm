@@ -17,8 +17,7 @@
  * to be that the `Authority` available by injection is likely to be one that delegates trust
  * decisions and verification to "the host".
  */
-interface Authority
-    {
+interface Authority {
     /**
      * A human-comprehensible name or short description of the Authority. Not intended as a unique
      * key or any other reliable mechanism of identification. For example, "host-based" could
@@ -30,8 +29,7 @@ interface Authority
     /**
      * Potential reasons why a certificate may be untrusted.
      */
-    enum TrustFailure
-        {
+    enum TrustFailure {
         /**
          * The certificate is not active at the specified time.
          */
@@ -73,7 +71,7 @@ interface Authority
          * without a specified begin and expiry date should be considered invalid for most uses.
          */
         NoExpiry,
-        }
+    }
 
     /**
      * Test a certificate to determine if it can be trusted.
@@ -92,4 +90,4 @@ interface Authority
      * and any cached Certificates that chain back to those roots, via this `KeyStore`.
      */
     @RO KeyStore trustedRoots;
-    }
+}

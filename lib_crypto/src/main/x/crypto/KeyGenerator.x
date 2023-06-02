@@ -1,8 +1,7 @@
 /**
  * Represents a generator of `Secret` keys used for symmetrical encryption/decryption algorithms.
  */
-interface KeyGenerator
-    {
+interface KeyGenerator {
     /**
      * The algorithm implemented by this KeyGenerator.
      */
@@ -16,4 +15,4 @@ interface KeyGenerator
      * @return a [CryptoKey] that is knows to be of the `Secret` form
      */
     CryptoKey generateSecretKey(String name);
-    }
+}

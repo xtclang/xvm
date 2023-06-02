@@ -3,8 +3,7 @@
  * optional indication (via a "certificate chain") of how the desired trust can be verified.
  * Additionally, the certificate may contain significant related metadata.
  */
-interface Certificate
-    {
+interface Certificate {
     /**
      * The name of the standard that the certificate complies to. For example: "X.509".
      */
@@ -24,8 +23,7 @@ interface Certificate
     /**
      * Possible usages of the certificate, as defined by X.509.
      */
-    enum KeyUsage(Set<KeyUsage>? extendedCompat = Null)
-        {
+    enum KeyUsage(Set<KeyUsage>? extendedCompat = Null) {
         // from x.509 via https://www.itu.int/rec/T-REC-X.509/en
         DigitalSignature,
         ContentCommitment, // aka "Non-Repudiation"
@@ -49,11 +47,10 @@ interface Certificate
         /**
          * True iff the KeyUsage value is an "extended key usage" value.
          */
-        @RO Boolean extended.get()
-            {
+        @RO Boolean extended.get() {
             return extendedCompat != Null;
-            }
         }
+    }
 
     /**
      * The purposes for which the certificate is intended to be used for; all other purposes are
@@ -84,4 +81,4 @@ interface Certificate
      * @return (conditional) the key, iff the Certificate contains one
      */
     conditional CryptoKey containsKey();
-    }
+}

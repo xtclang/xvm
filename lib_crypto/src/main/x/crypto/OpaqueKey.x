@@ -3,11 +3,10 @@
  * the key material (the raw bytes) to be visible within that container.
  */
 const OpaqueKey(CryptoKey actualKey)
-        delegates CryptoKey(actualKey)
-    {
+        delegates CryptoKey(actualKey) {
+
     @Override
-    conditional Byte[] isVisible()
-        {
+    conditional Byte[] isVisible() {
         return False;
-        }
     }
+}

@@ -1,8 +1,7 @@
 /**
  * A representation of a store of cryptographic keys and certificates.
  */
-interface KeyStore
-    {
+interface KeyStore {
     /**
      * The key names in this KeyStore.
      */
@@ -47,4 +46,4 @@ interface KeyStore
      * The KeyStore resource information.
      */
     static const Info(Byte[] content, Password password);
-    }
+}

@@ -5,8 +5,7 @@
  * to an [Algorithm] that was also injected, despite the key's internal value itself being locally
  * unavailable.
  */
-interface CryptoKey
-    {
+interface CryptoKey {
     /**
      * A human-comprehensible name or short description of the CryptoKey. Not intended as a unique
      * key or any other reliable mechanism of identification, but useful for organization of a
@@ -39,4 +38,4 @@ interface CryptoKey
      * @return (conditional) the key's value, as an array of bytes
      */
     conditional Byte[] isVisible();
-    }
+}

@@ -3,8 +3,7 @@
  * some input of binary data.
  */
 interface Signer
-        extends Verifier
-    {
+        extends Verifier {
     /**
      * The private key used by the `Signer` algorithm, if the `Signer` has a private key and is
      * allowed to expose it. A `Null` indicates either that the `Signer` has no key (it is a keyless
@@ -20,10 +19,9 @@ interface Signer
      *
      * @return the [Signature] that corresponds to the contents of the InputStream
      */
-    Signature sign(InputStream in)
-        {
+    Signature sign(InputStream in) {
         return sign(in.readBytes(in.remaining));
-        }
+    }
 
     /**
      * Produce a signature for the contents of the passed array. To produce a signature for the
@@ -51,8 +49,7 @@ interface Signer
      * and then uses that information to produce a Signature.
      */
     static interface OutputSigner
-            extends BinaryOutput
-        {
+            extends BinaryOutput {
         /**
          * Produces a signature from the data that has cumulatively been written to (or thru) the
          * `OutputSigner`.
@@ -60,5 +57,5 @@ interface Signer
          * @return the [Signature]
          */
         Signature sign();
-        }
     }
+}

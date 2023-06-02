@@ -3,11 +3,10 @@
  * allowing the password material (the raw `String`) to be visible within that container.
  */
 const OpaquePassword(CryptoPassword actualPassword)
-        delegates CryptoPassword(actualPassword)
-    {
+        delegates CryptoPassword(actualPassword) {
+
     @Override
-    conditional String isVisible()
-        {
+    conditional String isVisible() {
         return False;
-        }
     }
+}

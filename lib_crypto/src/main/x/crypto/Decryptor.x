@@ -2,8 +2,7 @@
  * Represents the ability to decrypt a previously cryptographically encrypted message.
  */
 interface Decryptor
-        extends Encryptor
-    {
+        extends Encryptor {
     /**
      * The private key used by the `Decryptor` algorithm. This is either a symmetric key or a
      * public/private key pair, as indicated by the [algorithm].
@@ -44,4 +43,4 @@ interface Decryptor
      */
     BinaryInput createInputDecryptor(BinaryInput  source,
                                      Annotations? annotations=Null);
-    }
+}

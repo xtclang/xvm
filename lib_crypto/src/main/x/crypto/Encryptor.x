@@ -2,8 +2,7 @@
  * Represents the ability to cryptographically encrypt a message.
  */
 interface Encryptor
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * The algorithm name implemented by this `Encryptor`.
      */
@@ -55,4 +54,4 @@ interface Encryptor
      */
     BinaryOutput createOutputEncryptor(BinaryOutput destination,
                                        Annotations? annotations=Null);
-    }
+}

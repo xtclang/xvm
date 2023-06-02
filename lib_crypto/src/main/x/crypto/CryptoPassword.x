@@ -10,8 +10,7 @@
  * necessary secrets to be provided to an application, without allowing the application to actually
  * "see" the secrets, which helps to prevent the accidental leak of the secrets' contents.
  */
-interface CryptoPassword
-    {
+interface CryptoPassword {
     /**
      * A human-comprehensible name or short description of the CryptoPassword. Not intended as a
      * unique key or any other reliable mechanism of identification, but useful for organization of
@@ -28,4 +27,4 @@ interface CryptoPassword
      * @return (conditional) the password's text, as a String
      */
     conditional String isVisible();
-    }
+}

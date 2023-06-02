@@ -22,8 +22,7 @@
  *   produce an [Encryptor] object. An example of an encryption algorithm is the `ChaCha20-Poly1305`
  *   algorithm used by TLS 1.3 (and no, we did not just make that name up).
  */
-interface Algorithm
-    {
+interface Algorithm {
     /**
      * The name of the algorithm. The algorithm names are expected to be both unique and obvious (at
      * least to those acquainted with the dark arts of cryptography).
@@ -99,4 +98,4 @@ interface Algorithm
      *         [category] and [keyRequired] of the `Algorithm`, and the contents of the passed key
      */
     Encryptor|Decryptor|Verifier|Signer|KeyGenerator allocate(CryptoKey? key);
-    }
+}

@@ -1,8 +1,7 @@
 /**
  * The Ecstasy standard module for basic cryptographic algorithm support.
  */
-module crypto.xtclang.org
-    {
+module crypto.xtclang.org {
     import ecstasy.reflect.Annotation;
 
     /**
@@ -28,4 +27,4 @@ module crypto.xtclang.org
      *   protected.
      */
     enum KeyForm {Secret, Public, Pair}
-    }
+}
