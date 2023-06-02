@@ -13,8 +13,7 @@ import ecstasy.collections.SizeLimited;
  * to use LIFO instead of FIFO, obtain the [lifoQueue].
  */
 class ArrayDeque<Element>
-        implements Queue<Element>
-    {
+        implements Queue<Element> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -23,13 +22,12 @@ class ArrayDeque<Element>
      * @param initialCapacity  the number of elements to initially allocate storage for
      * @param maxCapacity      the maximum number of elements to allow storage for
      */
-    construct(Int initialCapacity = 0, Int maxCapacity = MaxValue)
-        {
+    construct(Int initialCapacity = 0, Int maxCapacity = MaxValue) {
         array = new CircularArray(initialCapacity);
 
         assert maxCapacity > 0;
         this.maxCapacity = maxCapacity;
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -60,15 +58,13 @@ class ArrayDeque<Element>
      *
      * @return True
      */
-    protected Boolean verifyNoDrain()
-        {
-        if (drain != Null)
-            {
+    protected Boolean verifyNoDrain() {
+        if (drain != Null) {
             throw new IllegalState("Queue has a pipeAll() operation active");
-            }
+        }
 
         return True;
-        }
+    }
 
     /**
      * Determine if the next element to be added to the queue needs to be piped, and if so, what the
@@ -77,42 +73,36 @@ class ArrayDeque<Element>
      * @return True iff the next element added to the queue will need to be piped
      * @return the Consumer to pipe to (conditional)
      */
-    protected conditional Consumer pendingPipe()
-        {
-        if (piping)
-            {
+    protected conditional Consumer pendingPipe() {
+        if (piping) {
             // check for "pipeAll"
-            if (array.empty)
-                {
+            if (array.empty) {
                 return True, drain.as(Consumer);
-                }
+            }
 
             // it's a "pipeNext"; see if this is the last pending piping operation
-            if (array.size <= 1 && drain == Null)
-                {
+            if (array.size <= 1 && drain == Null) {
                 piping = False;
-                }
+            }
             Consumer pipe = array[0].as(Consumer);
             array.delete(0);
             return True, pipe;
-            }
-
-        return False;
         }
 
-    protected Element takeFirst()
-        {
+        return False;
+    }
+
+    protected Element takeFirst() {
         Element value = array[0].as(Element);
         array.delete(0);
         return value;
-        }
+    }
 
-    protected Element takeLast()
-        {
+    protected Element takeLast() {
         Element value = array[size-1].as(Element);
         array.delete(size-1);
         return value;
-        }
+    }
 
 
     // ----- double-ended queue interface ----------------------------------------------------------
@@ -120,26 +110,23 @@ class ArrayDeque<Element>
     /**
      * The number of items currently in the ArrayDeque.
      */
-    Int size.get()
-        {
+    Int size.get() {
         return piping ? 0 : array.size;
-        }
+    }
 
     /**
      * True iff the ArrayDeque is empty.
      */
-    Boolean empty.get()
-        {
+    Boolean empty.get() {
         return piping | array.empty;
-        }
+    }
 
     /**
      * The allocated storage capacity of the ArrayDeque.
      */
-    Int capacity.get()
-        {
+    Int capacity.get() {
         return array.capacity;
-        }
+    }
 
     /**
      * If there is unused capacity in the ArrayDeque, then release as much of that excess capacity
@@ -147,105 +134,86 @@ class ArrayDeque<Element>
      *
      * @return the ArrayDeque
      */
-    ArrayDeque trimCapacity()
-        {
+    ArrayDeque trimCapacity() {
         array.trimCapacity();
         return this;
-        }
+    }
 
     /**
      * The potential maximum storage capacity of the ArrayDeque. Attempt to grow beyond this size
      * will result in an exception.
      */
-    Int maxCapacity.set(Int max)
-        {
+    Int maxCapacity.set(Int max) {
         assert max >= 0;
-        if (max < size)
-            {
+        if (max < size) {
             throw new SizeLimited("size=" + size + ", requested-max=" + max+ ", old-max=" + maxCapacity);
-            }
-        super(max);
         }
+        super(max);
+    }
 
     /**
      * A LIFO view of the dequeue; it adds to the head and takes from the tail.
      */
-    @Lazy Queue<Element> reversed.calc()
-        {
+    @Lazy Queue<Element> reversed.calc() {
         return new LifoQueue();
-        }
+    }
 
 
     // ----- Appender interface ------------------------------------------------------------------
 
     @Override
-    ArrayDeque add(Element v)
-        {
-        if (Consumer consume := pendingPipe())
-            {
+    ArrayDeque add(Element v) {
+        if (Consumer consume := pendingPipe()) {
             consume(v);
-            }
-        else
-            {
+        } else {
             ensureCapacity(1);
             array.add(v);
-            }
-
-        return this;
         }
 
+        return this;
+    }
+
     @Override
-    ArrayDeque addAll(Iterable<Element> iterable)
-        {
-        if (piping)
-            {
+    ArrayDeque addAll(Iterable<Element> iterable) {
+        if (piping) {
             super(iterable);
-            }
-        else
-            {
+        } else {
             ensureCapacity(iterable.size);
             array.addAll(iterable);
-            }
+        }
 
         return this;
-        }
+    }
 
     @Override
-    ArrayDeque ensureCapacity(Int count)
-        {
+    ArrayDeque ensureCapacity(Int count) {
         Int newSize = size + count;
-        if (newSize > capacity)
-            {
-            if (newSize > maxCapacity)
-                {
+        if (newSize > capacity) {
+            if (newSize > maxCapacity) {
                 throw new SizeLimited("max=" + maxCapacity + ", requested=" + newSize);
-                }
-
-            array.ensureCapacity(count);
             }
 
-        return this;
+            array.ensureCapacity(count);
         }
+
+        return this;
+    }
 
 
     // ----- Queue interface -----------------------------------------------------------------------
 
     @Override
-    conditional Element next()
-        {
-        if (empty)
-            {
+    conditional Element next() {
+        if (empty) {
             verifyNoDrain();
             return False;
-            }
-        return True, takeFirst();
         }
+        return True, takeFirst();
+    }
 
     @Override
-    Element take()
-        {
-        if (empty)
-            {
+    Element take() {
+        if (empty) {
             // since the queue is empty, we need to create a future result that will get fulfilled
             // when an element gets added to the queue; we use a similar mechanism to what happens
             // with a call to pipeNext() when the queue is empty, which is to add a Consumer to the
@@ -263,68 +231,57 @@ class ArrayDeque<Element>
             // the future being closed, or for whatever other exceptional reason), then we'll erase
             // the note reminding us to fulfill the promise, because at that point it will no longer
             // be possible to fulfill the promise
-            &promisedElement.whenComplete((v, e) ->
-                {
-                if (e != Null)
-                    {
+            &promisedElement.whenComplete((v, e) -> {
+                if (e != Null) {
                     array.remove(promisedElement);
-                    }
-                });
+                }
+            });
 
             return promisedElement;
-            }
-
-        return takeFirst();
         }
 
+        return takeFirst();
+    }
+
     @Override
-    Cancellable pipeNext(Consumer pipe)
-        {
-        if (empty)
-            {
+    Cancellable pipeNext(Consumer pipe) {
+        if (empty) {
             verifyNoDrain();
             array.add(pipe);
             piping = True;
-            return () ->
-                {
-                if (piping)
-                    {
+            return () -> {
+                if (piping) {
                     array.remove(pipe);
-                    if (array.empty && drain == Null)
-                        {
+                    if (array.empty && drain == Null) {
                         piping = False;
-                        }
                     }
-                };
-            }
+                }
+            };
+        }
 
         pipe(takeFirst());
         return () -> {};
-        }
+    }
 
     @Override
-    Cancellable pipeAll(Consumer pipe)
-        {
+    Cancellable pipeAll(Consumer pipe) {
         verifyNoDrain();
         drain = pipe;
 
         // drain the queue
-        while (!empty)
-            {
+        while (!empty) {
             pipe(takeFirst());
-            }
+        }
         trimCapacity();
 
         piping = True;
-        return () ->
-            {
-            if (drain == pipe)
-                {
+        return () -> {
+            if (drain == pipe) {
                 drain  = Null;
                 piping = !array.empty;
-                }
-            };
-        }
+            }
+        };
+    }
 
 
     // ----- LIFO Queue inner class ----------------------------------------------------------------
@@ -334,102 +291,84 @@ class ArrayDeque<Element>
      * array.
      */
     protected class LifoQueue
-            implements Queue<Element>
-        {
+            implements Queue<Element> {
+
         @Override
-        LifoQueue add(Element v)
-            {
-            if (Consumer consume := pendingPipe())
-                {
+        LifoQueue add(Element v) {
+            if (Consumer consume := pendingPipe()) {
                 consume(v);
-                }
-            else
-                {
+            } else {
                 ensureCapacity(1);
                 array.insert(0, v);
-                }
-
-            return this;
             }
 
+            return this;
+        }
+
         @Override
-        LifoQueue ensureCapacity(Int count)
-            {
+        LifoQueue ensureCapacity(Int count) {
             this.ArrayDeque.ensureCapacity(count);
             return this;
-            }
+        }
 
         @Override
-        conditional Element next()
-            {
-            if (empty)
-                {
+        conditional Element next() {
+            if (empty) {
                 verifyNoDrain();
                 return False;
-                }
+            }
 
             return True, takeLast();
-            }
+        }
 
         @Override
-        Element take()
-            {
-            if (empty)
-                {
+        Element take() {
+            if (empty) {
                 // the take() implementation on the FIFO queue will create a future result
                 return this.ArrayDeque.take();
-                }
-
-            return takeLast();
             }
 
+            return takeLast();
+        }
+
         @Override
-        Cancellable pipeNext(Consumer pipe)
-            {
-            if (empty)
-                {
+        Cancellable pipeNext(Consumer pipe) {
+            if (empty) {
                 verifyNoDrain();
                 array.add(pipe);
                 piping = True;
-                return () ->
-                    {
-                    if (piping)
-                        {
+                return () -> {
+                    if (piping) {
                         array.remove(pipe);
-                        if (array.empty && drain == Null)
-                            {
+                        if (array.empty && drain == Null) {
                             piping = False;
-                            }
                         }
-                    };
-                }
+                    }
+                };
+            }
 
             pipe(takeLast());
             return () -> {};
-            }
+        }
 
         @Override
-        Cancellable pipeAll(Consumer pipe)
-            {
+        Cancellable pipeAll(Consumer pipe) {
             verifyNoDrain();
             drain = pipe;
 
             // drain the queue
-            while (!empty)
-                {
+            while (!empty) {
                 pipe(takeLast());
-                }
+            }
             trimCapacity();
 
             piping = True;
-            return () ->
-                {
-                if (drain == pipe)
-                    {
+            return () -> {
+                if (drain == pipe) {
                     drain  = Null;
                     piping = !array.empty;
-                    }
-                };
-            }
+                }
+            };
         }
     }
+}

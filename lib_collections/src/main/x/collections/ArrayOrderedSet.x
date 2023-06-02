@@ -12,48 +12,41 @@ import ecstasy.Duplicable;
 class ArrayOrderedSet<Element>
         implements OrderedSet<Element>
         implements Duplicable
-        implements Freezable
-    {
+        implements Freezable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Create an ArrayOrderedSet from an array of values.
      */
-    construct(Element[] elements, Orderer? compare=Null)
-        {
+    construct(Element[] elements, Orderer? compare=Null) {
         // if you cannot afford a compare function, one will be provided for you
         compare ?:= (v1, v2) -> v1 <=> v2;
 
-        assert:test
-            {
-            if (elements.size <= 1)
-                {
+        assert:test {
+            if (elements.size <= 1) {
                 return True;
-                }
+            }
 
             val iter = elements.iterator();
             assert Element prev := iter.next();
-            while (Element value := iter.next())
-                {
-                if (compare(prev, value) != Lesser)
-                    {
+            while (Element value := iter.next()) {
+                if (compare(prev, value) != Lesser) {
                     return False;
-                    }
-                prev = value;
                 }
+                prev = value;
+            }
             return True;
-            } as $"elements are not provided in order: {elements}";
+        } as $"elements are not provided in order: {elements}";
 
         this.array   = elements;
         this.compare = compare;
-        }
+    }
 
     @Override
-    construct(ArrayOrderedSet that)
-        {
+    construct(ArrayOrderedSet that) {
         this.array   = that.array.duplicate();
         this.compare = that.compare;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -72,130 +65,109 @@ class ArrayOrderedSet<Element>
     // ----- read operations -----------------------------------------------------------------------
 
     @Override
-    Int size.get()
-        {
+    Int size.get() {
         return array.size;
-        }
+    }
 
     @Override
-    Iterator<Element> iterator()
-        {
+    Iterator<Element> iterator() {
         return array.iterator();
-        }
+    }
 
     @Override
-    conditional Orderer ordered()
-        {
+    conditional Orderer ordered() {
         return True, compare;
-        }
+    }
 
     @Override
-    Boolean contains(Element value)
-        {
+    Boolean contains(Element value) {
         return find(value);
-        }
+    }
 
     @Override
-    conditional Element first()
-        {
+    conditional Element first() {
         return array.first();
-        }
+    }
 
     @Override
-    conditional Element last()
-        {
+    conditional Element last() {
         return array.last();
-        }
+    }
 
     @Override
-    conditional Element next(Element value)
-        {
+    conditional Element next(Element value) {
         (Boolean found, Int index) = find(value);
-        if (found)
-            {
+        if (found) {
             ++index;
-            }
+        }
 
-        if (index >= array.size)
-            {
+        if (index >= array.size) {
             return False;
-            }
+        }
 
         return True, array[index];
-        }
+    }
 
     @Override
-    conditional Element prev(Element value)
-        {
+    conditional Element prev(Element value) {
         (_, Int index) = find(value);
 
-        if (--index < 0)
-            {
+        if (--index < 0) {
             return False;
-            }
-
-        return True, array[index];
         }
 
-    @Override
-    conditional Element ceiling(Element value)
-        {
-        (Boolean found, Int index) = find(value);
-        if (found)
-            {
-            return True, value;
-            }
-
-        if (index >= array.size)
-            {
-            return False;
-            }
-
         return True, array[index];
+    }
+
+    @Override
+    conditional Element ceiling(Element value) {
+        (Boolean found, Int index) = find(value);
+        if (found) {
+            return True, value;
         }
 
-    @Override
-    conditional Element floor(Element value)
-        {
-        (Boolean found, Int index) = find(value);
-        if (found)
-            {
-            return True, value;
-            }
-
-        if (index == 0)
-            {
+        if (index >= array.size) {
             return False;
-            }
+        }
+
+        return True, array[index];
+    }
+
+    @Override
+    conditional Element floor(Element value) {
+        (Boolean found, Int index) = find(value);
+        if (found) {
+            return True, value;
+        }
+
+        if (index == 0) {
+            return False;
+        }
 
         return True, array[--index];
-        }
+    }
 
     @Override
-    @Op("[..]") OrderedSet<Element> slice(Range<Element> indexes)
-        {
+    @Op("[..]") OrderedSet<Element> slice(Range<Element> indexes) {
         return new OrderedSetSlice<Element>(this, indexes);
-        }
+    }
 
 
     // ----- Freezable interface -------------------------------------------------------------------
 
     @Override
-    immutable ArrayOrderedSet freeze(Boolean inPlace = False)
-        {
-        if (this.is(immutable ArrayOrderedSet))
-            {
+    immutable ArrayOrderedSet freeze(Boolean inPlace = False) {
+        if (this.is(immutable ArrayOrderedSet)) {
             return this;
-            }
+        }
 
-        if (inPlace)
-            {
+        if (inPlace) {
             array = array.freeze(True);
             return makeImmutable();
-            }
+        }
 
         return new ArrayOrderedSet(this).freeze(True);
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -208,32 +180,29 @@ class ArrayOrderedSet<Element>
      * @return True if the element value was found
      * @return the index of the value, if it was found, otherwise the insertion point for the value
      */
-    (Boolean found, Int index) find(Element value)
-        {
+    (Boolean found, Int index) find(Element value) {
         Element[] array = this.array;
 
         Int lo = 0;
         Int hi = array.size - 1;
-        while (lo <= hi)
-            {
+        while (lo <= hi) {
             Int mid = (lo + hi) >> 1;
-            switch (compare(value, array[mid]))
-                {
-                case Lesser:
-                    // go left
-                    hi = mid - 1;
-                    break;
+            switch (compare(value, array[mid])) {
+            case Lesser:
+                // go left
+                hi = mid - 1;
+                break;
 
-                case Equal:
-                    return True, mid;
+            case Equal:
+                return True, mid;
 
-                case Greater:
-                    // go right
-                    lo = mid + 1;
-                    break;
-                }
+            case Greater:
+                // go right
+                lo = mid + 1;
+                break;
             }
+        }
 
         return False, lo;
-        }
     }
+}

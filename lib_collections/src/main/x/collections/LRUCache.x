@@ -1,12 +1,10 @@
 /**
  * A simple LRU cache implementation.
  */
-service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int maxSize)
-    {
-    assert()
-        {
+service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int maxSize) {
+    assert() {
         assert:arg maxSize > 0;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -32,10 +30,9 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
     /**
      *The number of entries (key/value pairs) in the cache.
      */
-    Int size.get()
-        {
+    Int size.get() {
         return map.size;
-        }
+    }
 
     /**
      * Obtain the value associated with the specified key, iff that key is present in the cache. If
@@ -46,16 +43,13 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
      * @return a True iff the value associated with the specified key exists in the cache
      * @return (conditional) the value associated with the specified key
      */
-    conditional Value get(Key key)
-        {
-        if (Node node := map.get(key))
-            {
+    conditional Value get(Key key) {
+        if (Node node := map.get(key)) {
             touch(node);
             return True, node.value;
-            }
-
-        return False;
         }
+        return False;
+    }
 
     /**
      * Obtain the value associated with the specified key, or the value `Null` if the key is
@@ -67,15 +61,12 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
      *
      * @return the value for the associated key if it exists in the cache; otherwise Null
      */
-    @Op("[]") Value? getOrNull(Key key)
-        {
-        if (Value value := get(key))
-            {
+    @Op("[]") Value? getOrNull(Key key) {
+        if (Value value := get(key)) {
             return value;
-            }
-
-        return Null;
         }
+        return Null;
+    }
 
     /**
      * For an in-place Map, store a mapping of the specified key to the specified value, regardless
@@ -89,45 +80,36 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-    @Op("[]=") void put(Key key, Value value)
-        {
-        if (Node node := map.get(key))
-            {
+    @Op("[]=") void put(Key key, Value value) {
+        if (Node node := map.get(key)) {
             node.value = value;
             touch(node);
-            }
-        else
-            {
-            if (map.size >= maxSize)
-                {
+        } else {
+            if (map.size >= maxSize) {
                 // recycle the least recently used node
                 assert node ?= lruHead;
                 map.remove(node.key);
                 node.key   = key;
                 node.value = value;
-                }
-            else
-                {
+            } else {
                 node = new Node(key, value);
-                }
+            }
             map.put(key, node);
             touch(node);
-            }
         }
+    }
 
     /**
      * Remove the specified key and any associated value from the cache.
      *
      * @param key  the key to remove from the cache
      */
-    void remove(Key key)
-        {
-        if (Node node := map.get(key))
-            {
+    void remove(Key key) {
+        if (Node node := map.get(key)) {
             map.remove(key);
             unlink(node);
-            }
         }
+    }
 
 
     // ----- Node class ----------------------------------------------------------------------------
@@ -136,9 +118,7 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
      * The class that holds a single cache entry.
      */
     protected static class Entry<Key, Value>
-            (Key key, Value value, Entry? nextLRU = Null, Entry? prevLRU = Null)
-        {
-        }
+            (Key key, Value value, Entry? nextLRU = Null, Entry? prevLRU = Null) {}
 
     /**
      * An easier name for referring to `Entry<Key,Value>`.
@@ -150,43 +130,37 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
      *
      * This method will link the node into the LRU, if the node is not already linked.
      */
-    protected void touch(Node node)
-        {
-        if (&node != &lruTail)
-            {
+    protected void touch(Node node) {
+        if (&node != &lruTail) {
             // unlink node from present position
             node.nextLRU?.prevLRU = node.prevLRU;
             node.prevLRU?.nextLRU = node.nextLRU;
 
-            if (&node == &lruHead)
-                {
+            if (&node == &lruHead) {
                 lruHead = node.nextLRU;
-                }
+            }
 
             // place the node on the end of the tail
             lruTail?.nextLRU = node;
             node.prevLRU = lruTail;
             node.nextLRU = Null;
             lruTail = node;
-            }
         }
+    }
 
     /**
      * Completely unlink the node from the LRU list.
      */
-    protected void unlink(Node node)
-        {
+    protected void unlink(Node node) {
         node.nextLRU?.prevLRU = node.prevLRU;
         node.prevLRU?.nextLRU = node.nextLRU;
 
-        if (&node == &lruHead)
-            {
+        if (&node == &lruHead) {
             lruHead = node.nextLRU;
-            }
+        }
 
-        if (&node == &lruTail)
-            {
+        if (&node == &lruTail) {
             lruTail = node.prevLRU;
-            }
         }
     }
+}

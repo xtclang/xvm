@@ -14,8 +14,7 @@ import ecstasy.collections.Hasher;
  */
 const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
         extends ConcurrentHasherMap<Key, Value>
-        implements Replicable
-    {
+        implements Replicable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -25,11 +24,10 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
      * @param parallelism   the target parallelism to optimize for
      */
     @Override
-    construct(Int initCapacity = 0, Int parallelism = 16)
-        {
+    construct(Int initCapacity = 0, Int parallelism = 16) {
         assert Hasher<Key> hasher := Key.hashed();
         construct ConcurrentHasherMap(hasher, initCapacity, parallelism);
-        }
+    }
 
     /**
      * Copy constructor.
@@ -38,11 +36,10 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
      *                      ConcurrentHashMap
      * @param parallelism   the target parallelism to optimize for
      */
-    construct(Map<Key, Value> that, Int parallelism = 16)
-        {
+    construct(Map<Key, Value> that, Int parallelism = 16) {
         assert Hasher<Key> hasher := Key.hashed();
         construct ConcurrentHasherMap(hasher, that, parallelism);
-        }
+    }
 
     /**
      * Duplicable constructor.
@@ -51,8 +48,7 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
      * @param parallelism   the target parallelism to optimize for
      */
     @Override
-    construct(ConcurrentHashMap<Key, Value> that, Int parallelism = 16)
-        {
+    construct(ConcurrentHashMap<Key, Value> that, Int parallelism = 16) {
         super(that, parallelism);
-        }
     }
+}
