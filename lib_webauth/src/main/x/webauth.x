@@ -14,8 +14,7 @@
  *
  * TODO initialize database automatically if necessary
  */
-module webauth.xtclang.org
-    {
+module webauth.xtclang.org {
     package crypto import crypto.xtclang.org;
     package net    import net.xtclang.org;         // TODO "for this module, I want to override injection of ..."
     package oodb   import oodb.xtclang.org;
@@ -287,4 +286,4 @@ module webauth.xtclang.org
 //        {
 //        return this.with(enabled=True, clearNote=True);
 //        }
-    }
+}

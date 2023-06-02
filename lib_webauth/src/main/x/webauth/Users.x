@@ -14,8 +14,7 @@ import User.HashInfo;
  * TODO need to protect uniqueness of name
  */
 mixin Users
-        into DBMap<Int, User>
-    {
+        into DBMap<Int, User> {
     /**
      * Create a user with the specified attributes.
      *
@@ -30,12 +29,10 @@ mixin Users
     conditional User createUser(DBRealm         realm,
                                 String          userName,
                                 String?         password = Null,
-                                String|String[] roleName = [])
-        {
-        if (findByName(userName))
-            {
+                                String|String[] roleName = []) {
+        if (findByName(userName)) {
             return False;
-            }
+        }
 
         // hash the user and password data; this is performing the same work as Realm.userHash()
         // and Realm.passwordHash() for each of the (up to) three supported algorithms
@@ -46,21 +43,19 @@ mixin Users
         Signer?  md5        = Null;
         Signer?  sha256     = Null;
         Signer?  sha512_256 = Null;
-        for (Signer signer : hashers)
-            {
-            switch (signer.algorithm.name)
-                {
-                case "MD5":
-                    md5 = signer;
-                    break;
-                case "SHA-256":
-                    sha256 = signer;
-                    break;
-                case "SHA-512-256":
-                    sha512_256 = signer;
-                    break;
-                }
+        for (Signer signer : hashers) {
+            switch (signer.algorithm.name) {
+            case "MD5":
+                md5 = signer;
+                break;
+            case "SHA-256":
+                sha256 = signer;
+                break;
+            case "SHA-512-256":
+                sha512_256 = signer;
+                break;
             }
+        }
 
         @Inject Clock clock;
         Time creation = clock.now;
@@ -81,21 +76,18 @@ mixin Users
         Int[]      roleIds;
         String[]   roleNames = [roleName.is(String)?] : roleName;
         AuthSchema schema    = dbParent.as(AuthSchema);
-        if (Role[] roleList := schema.roles.findByNames(roleNames))
-            {
+        if (Role[] roleList := schema.roles.findByNames(roleNames)) {
             roleIds = roleList.map(r -> r.roleId, new Int[](roleList.size)).as(Int[]);
-            }
-        else
-            {
+        } else {
             return False;
-            }
+        }
 
         Int  userId = schema.userId.next();
         User user   = new User(userId, userName, userHashes, pwdHashes, roleIds);
         return putIfAbsent(userId, user)
                 ? (True, user)
                 : False;
-        }
+    }
 
     /**
      * Find the user with the specified name:
@@ -104,10 +96,9 @@ mixin Users
      *
      * @param name  the User's `userName`
      */
-    conditional User findByName(String name)
-        {
+    conditional User findByName(String name) {
         return values.any(u -> u.userName == name);
-        }
+    }
 
     /**
      * Find the users with the specified user hash:
@@ -116,14 +107,12 @@ mixin Users
      *
      * @param name  a hash that must be present in the User's `userHashes`
      */
-    User[] findByUserHash(Hash hash)
-        {
-        return switch(hash.size)
-            {
+    User[] findByUserHash(Hash hash) {
+        return switch(hash.size) {
             case 128 / 8: values.filter(u -> u.userHashes.md5 == hash, new User[]).as(User[]);
             case 256 / 8: values.filter(u -> u.userHashes.sha256     == hash
                                           || u.userHashes.sha512_256 == hash, new User[]).as(User[]);
             default: [];
-            };
-        }
+        };
     }
+}

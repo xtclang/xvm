@@ -4,8 +4,7 @@
  * @see [RFC 2616 §10](https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html)
  * @see [RFC 7231 §8.2.3](https://datatracker.ietf.org/doc/html/rfc7231#section-8.2.3)
  */
-const HttpStatus(Int code, String reason)
-    {
+const HttpStatus(Int code, String reason) {
     static HttpStatus Continue                         = new HttpStatus(100, "Continue");
     static HttpStatus SwitchingProtocols               = new HttpStatus(101, "Switching Protocols");
     static HttpStatus Processing                       = new HttpStatus(102, "Processing");                // note: WEBDAV
@@ -83,10 +82,8 @@ const HttpStatus(Int code, String reason)
      *
      * @return the corresponding HttpStatus object
      */
-    static HttpStatus of(Int status)
-        {
-        return switch (status)
-            {
+    static HttpStatus of(Int status) {
+        return switch (status) {
             case 100: Continue;
             case 101: SwitchingProtocols;
             case 102: Processing;
@@ -157,6 +154,6 @@ const HttpStatus(Int code, String reason)
             case 511: NetworkAuthenticationRequired;
             case 522: ConnectionTimedOut;
             default: assert as $"Unknown status: {status}";
-            };
-        }
+        };
     }
+}

@@ -11,8 +11,7 @@ import oodb.NoTx;
  * to implement the web authentication support (which also is part of this module).
  */
 interface AuthSchema
-        extends DBSchema
-    {
+        extends DBSchema {
     /**
      * The configuration for the authorization mechanism.
      */
@@ -47,4 +46,4 @@ interface AuthSchema
      * The roles that can be associated with a user.
      */
     @RO Roles roles;
-    }
+}

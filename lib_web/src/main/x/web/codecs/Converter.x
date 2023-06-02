@@ -1,8 +1,7 @@
 /**
  * Encapsulates the process of converting from one type to another.
  */
-@Abstract const Converter<FromType, ToType>
-    {
+@Abstract const Converter<FromType, ToType> {
     static const Key(Type FromType, Type ToType);
 
     /**
@@ -18,4 +17,4 @@
      * @return the converted value, of type `ToType`
      */
     ToType convert(FromType input);
-    }
+}

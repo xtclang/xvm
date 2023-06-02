@@ -1,8 +1,7 @@
 /**
  * Types that handle binding of values to a parameter.
  */
-package binders
-    {
+package binders {
     /**
      * The result of a binding.
      */
@@ -17,4 +16,4 @@ package binders
      * @param value  the optional value being converted
      */
     const ConversionError(Exception cause, Object? value = Null);
-    }
+}

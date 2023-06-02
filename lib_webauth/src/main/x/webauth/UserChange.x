@@ -9,13 +9,11 @@ const UserChange
         String?   desc     = Null,
         Int       byUserId = 0,
         Details?  details  = Null,
-        )
-    {
+        ) {
     /**
      * The form of the user change record.
      */
-    enum Form
-        {
+    enum Form {
         Create,
         Destroy,
         Enable,
@@ -23,7 +21,7 @@ const UserChange
         ChangePassword,
         ClearPassword,
         SetPassword,
-        }
+    }
 
     /**
      * The form of the user change record.
@@ -35,9 +33,8 @@ const UserChange
      *
      * @return True iff this specific change record is related to the specified user id
      */
-    Boolean appliesTo(Int userId)
-        {
+    Boolean appliesTo(Int userId) {
         Int|Int[] userIds = this.userId;
         return userIds.is(Int[])?.contains(userId) : userIds == userId;
-        }
     }
+}

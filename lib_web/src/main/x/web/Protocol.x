@@ -2,8 +2,7 @@
  * A representation of a protocol used for web services.
  */
 const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=Null,
-               Protocol? upgradeToTls=Null)
-    {
+               Protocol? upgradeToTls=Null) {
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -119,10 +118,9 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
      * True iff the protocol provides "transport layer security", which is the case for HTTPS and
      * WSS.
      */
-    Boolean TLS.get()
-        {
+    Boolean TLS.get() {
         return scheme.tls;
-        }
+    }
 
     /**
      * The Application-Layer Protocol Negotiation (ALPN) identifier for the protocol.
@@ -133,4 +131,4 @@ const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=N
      * The related protocol that provides "transport layer security", or Null iff `TLS==True`.
      */
     Protocol? upgradeToTls;
-    }
+}

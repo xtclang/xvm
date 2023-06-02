@@ -93,8 +93,7 @@ import TimeOfDay.PICOS_PER_SECOND;
  *   persistent (and TLS) session ID is used, possibly with a few details lifted from the non-TLS
  *   session before it is discarded, and all three cookies are then re-written.
  */
-const SessionCookie
-    {
+const SessionCookie {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -103,20 +102,15 @@ const SessionCookie
      * @param manager  the SessionManager
      * @param text     the entire text of the cookie value
      */
-    construct(SessionManager manager, String text)
-        {
+    construct(SessionManager manager, String text) {
         // if the text is the entire toString() value, then just extract the cookie value from it
-        if (Int assign := text.indexOf('='))
-            {
-            if (Int semi := text.indexOf(';'))
-                {
+        if (Int assign := text.indexOf('=')) {
+            if (Int semi := text.indexOf(';')) {
                 text = text[assign >..< semi];
-                }
-            else
-                {
+            } else {
                 text = text.substring(assign+1);
-                }
             }
+        }
 
         // cache the cookie text
         text = text.trim();
@@ -124,11 +118,10 @@ const SessionCookie
 
         // check if this is the consent cookie (it will have some plain text up front)
         String? plain = Null;
-        if (Int div := text.lastIndexOf(ConsentSeparator))
-            {
+        if (Int div := text.lastIndexOf(ConsentSeparator)) {
             plain = text[0 ..< div];
             text  = text.substring(div+1);
-            }
+        }
 
         // decrypt and deserialize the cookie value
         assert:arg String plaintext := manager.decryptCookie(text);
@@ -147,13 +140,12 @@ const SessionCookie
         this.salt         = new UInt16(parts[8]);
 
         // make sure that the plain text wasn't tampered with
-        if (plain != Null)
-            {
+        if (plain != Null) {
             assert cookieId == Consent && knownCookies == CookieId.All;
             CookieConsent checkConsent = new CookieConsent(plain);
             assert consent == checkConsent;
-            }
         }
+    }
 
     /**
      * Construct a SessionCookie from its constituent members.
@@ -181,8 +173,7 @@ const SessionCookie
               Int?           version = Null,
               UInt16?        salt    = Null,
               String?        text    = Null,
-             )
-        {
+             ) {
         this.manager      = manager;
         this.sessionId    = sessionId;
         this.cookieId     = cookieId;
@@ -194,7 +185,7 @@ const SessionCookie
         this.version      = version ?: 1;
         this.salt         = salt == Null || salt == 0 ? makeSalt() : salt;
         this.text        ?= text;
-        }
+    }
 
     /**
      * Construct a copy of this SessionCookie with the specified changes.
@@ -222,8 +213,7 @@ const SessionCookie
                        Int?           version      = Null,
                        UInt16?        salt         = Null,
                        String?        text         = Null,
-                      )
-        {
+                      ) {
         return new SessionCookie(manager      =                 this.manager,
                                  sessionId    = sessionId    ?: this.sessionId,
                                  cookieId     = cookieId     ?: this.cookieId,
@@ -236,7 +226,7 @@ const SessionCookie
                                  salt         = salt         ?: makeSalt(this.salt),
                                  text         = text,
                                 );
-        }
+    }
 
 
     // ----- CookieId enumeration ------------------------------------------------------------------
@@ -244,31 +234,26 @@ const SessionCookie
     /**
      * CookieId identifies which of the three possible cookies a session cookie is.
      */
-    enum CookieId(String cookieName, Boolean tlsOnly, Boolean persistent, String attributes)
-        {
+    enum CookieId(String cookieName, Boolean tlsOnly, Boolean persistent, String attributes) {
         PlainText(       "xplaintext", False, False, "; Path=/; SameSite=Strict; HttpOnly"),
         Encrypted("__Host-xtemporary", True , False, "; Path=/; SameSite=Strict; HttpOnly; Secure"),
         Consent  ("__Host-xconsented", True , True , "; Path=/; SameSite=Strict; HttpOnly; Secure");
 
-        static conditional CookieId lookupCookie(String cookieName)
-            {
-            return switch (cookieName)
-                {
+        static conditional CookieId lookupCookie(String cookieName) {
+            return switch (cookieName) {
                 case        "xplaintext": (True, PlainText);
                 case "__Host-xtemporary": (True, Encrypted);
                 case "__Host-xconsented": (True, Consent  );
 
                 default: False;
-                };
-            }
+            };
+        }
 
         /**
          * Turn a bitmask of cookie ID ordinals into an array of corresponding cookie IDs.
          */
-        static CookieId[] from(Int mask)
-            {
-            return switch (mask)
-                {
+        static CookieId[] from(Int mask) {
+            return switch (mask) {
                 case 0b000: [                             ];
                 case 0b001: [PlainText,                   ];
                 case 0b010: [           Encrypted,        ];
@@ -278,8 +263,8 @@ const SessionCookie
                 case 0b110: [           Encrypted, Consent];
                 case 0b111: [PlainText, Encrypted, Consent];
                 default: assert;
-                };
-            }
+            };
+        }
 
         /**
          * A response header value that will erase this CookieId from the user agent.
@@ -290,10 +275,9 @@ const SessionCookie
         /**
          * The bitmask for this CookieId.
          */
-        Byte mask.get()
-            {
+        Byte mask.get() {
             return 1 << ordinal;
-            }
+        }
 
         /**
          * A bitset representing no cookies.
@@ -329,7 +313,7 @@ const SessionCookie
          * A bitset representing all three cookies.
          */
         static Byte All = 0b111;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -395,14 +379,13 @@ const SessionCookie
      * The text of the cookie, as passed in by the user agent, or as rendered from the provided
      * information.
      */
-    @Lazy String text.calc()
-        {
+    @Lazy String text.calc() {
         // render the portion to encrypt that contains the session ID etc.
         String raw = $|{sessionId},{cookieId.ordinal},{knownCookies},{consent},\
                       |{encodeTime(expires)},{lastIp},{encodeTime(created)},{version},{salt}
                      ;
         return manager.encryptCookie(raw);
-        }
+    }
 
     /**
      * The consent cookie begins with the consent information in plain text, followed by this
@@ -421,12 +404,11 @@ const SessionCookie
      *
      * @return the UTC time value rounded to the nearest second
      */
-    static Time roundTime(Time time)
-        {
+    static Time roundTime(Time time) {
         return time.timezone == UTC && time.epochPicos % PICOS_PER_SECOND == 0
                 ? time
                 : new Time(time.epochPicos / PICOS_PER_SECOND * PICOS_PER_SECOND);
-        }
+    }
 
     /**
      * Produce a string that represents the passed time value.
@@ -435,10 +417,9 @@ const SessionCookie
      *
      * @return a compact string representation of the time value
      */
-    static String encodeTime(Time? time)
-        {
+    static String encodeTime(Time? time) {
         return (time?.epochPicos/PICOS_PER_SECOND).toString() : "";
-        }
+    }
 
     /**
      * Parse a string returned from [encodeTime] into a time value.
@@ -447,22 +428,17 @@ const SessionCookie
      *
      * @return  the time value
      */
-    static Time? decodeTime(String seconds)
-        {
-        if (seconds == "" || seconds == "0")
-            {
+    static Time? decodeTime(String seconds) {
+        if (seconds == "" || seconds == "0") {
             return Null;
-            }
-
-        try
-            {
-            return new Time(new Int128(seconds) * PICOS_PER_SECOND);
-            }
-        catch (Exception e)
-            {
-            return Null;
-            }
         }
+
+        try {
+            return new Time(new Int128(seconds) * PICOS_PER_SECOND);
+        } catch (Exception e) {
+            return Null;
+        }
+    }
 
     /**
      * Obtain the "cookie text" from a raw cookie string. In the case of the persistent cookie,
@@ -473,15 +449,13 @@ const SessionCookie
      *
      * @return the "cookie text" portion of the raw cookie string
      */
-    static String textFromCookie(String cookie)
-        {
-        if (Int div := cookie.lastIndexOf(ConsentSeparator))
-            {
+    static String textFromCookie(String cookie) {
+        if (Int div := cookie.lastIndexOf(ConsentSeparator)) {
             return cookie.substring(div+1);
-            }
+        }
 
         return cookie;
-        }
+    }
 
     /**
      * Create a new salt value.
@@ -490,43 +464,37 @@ const SessionCookie
      *
      * @return the new salt value, never equal to either zero or the previous salt value
      */
-    static UInt16 makeSalt(UInt16 oldSalt = 0)
-        {
+    static UInt16 makeSalt(UInt16 oldSalt = 0) {
         UInt16 salt;
-        do
-            {
+        do {
             salt = rnd.uint(0xFFFF).toUInt16();
-            }
-        while (salt == 0 || salt == oldSalt);
+        } while (salt == 0 || salt == oldSalt);
         return salt;
-        }
+    }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
-        {
+    Int estimateStringLength() {
         return cookieId.cookieName.size
              + 1
              + text.size
              + cookieId.attributes.size;
-        }
+    }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
+    Appender<Char> appendTo(Appender<Char> buf) {
         cookieId.cookieName.appendTo(buf);
         buf.add('=');
 
-        if (cookieId.persistent)
-            {
+        if (cookieId.persistent) {
             consent.appendTo(buf)
                    .add(ConsentSeparator);
-            }
+        }
 
         text.appendTo(buf);
         cookieId.attributes.appendTo(buf);
         return buf;
-        }
     }
+}

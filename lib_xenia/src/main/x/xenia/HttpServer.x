@@ -8,8 +8,7 @@ import web.Scheme;
  * An injectable server.
  */
 interface HttpServer
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * An opaque native immutable object that represents an http request.
      */
@@ -18,10 +17,9 @@ interface HttpServer
     /**
      * HttpRequest handler.
      */
-    static interface Handler
-        {
+    static interface Handler {
         void handle(RequestContext context, String uri, String method, Boolean tls);
-        }
+    }
 
     /**
      * The host name that was used to start the HttpServer.
@@ -181,67 +179,60 @@ interface HttpServer
     /**
      * An object that provides access to information about a request.
      */
-    static const RequestInfo(HttpServer server, RequestContext context, Boolean tls)
-        {
+    static const RequestInfo(HttpServer server, RequestContext context, Boolean tls) {
         /**
          * Obtain the IP address that the request was sent from.
          *
          * @return the client IP address, in either v4 or v6 form
          */
-        IPAddress getClientAddress()
-            {
+        IPAddress getClientAddress() {
             return new IPAddress(server.getClientAddressBytes(context));
-            }
+        }
 
         /**
          * Obtain the port number on the client that the request was sent from.
          *
          * @return the client port number
          */
-        UInt16 getClientPort()
-            {
+        UInt16 getClientPort() {
             return server.getClientPort(context);
-            }
+        }
 
         /**
          * Obtain the IP address that the request was received on.
          *
          * @return the server IP address, in either v4 or v6 form
          */
-        IPAddress getServerAddress()
-            {
+        IPAddress getServerAddress() {
             return new IPAddress(server.getServerAddressBytes(context));
-            }
+        }
 
         /**
          * Obtain the port number on the server that the request was received on.
          *
          * @return the server port number
          */
-        UInt16 getServerPort()
-            {
+        UInt16 getServerPort() {
             return server.getServerPort(context);
-            }
+        }
 
         /**
          * Obtain the HTTP method name (such as "GET" or "PUT") that is indicated by the request.
          *
          * @return the HTTP method name
          */
-        HttpMethod getMethod()
-            {
+        HttpMethod getMethod() {
             return HttpMethod.of(server.getMethodString(context));
-            }
+        }
 
         /**
          * Obtain the HTTP URI that is indicated by the request.
          *
          * @return the URI from the request
          */
-        Uri getUri()
-            {
+        Uri getUri() {
             return new Uri(server.getUriString(context));
-            }
+        }
 
         /**
          * Obtain the HTTP protocol name (such as "HTTP/1.1") that is indicated by the request. In HTTP
@@ -249,38 +240,33 @@ interface HttpServer
          *
          * @return the HTTP protocol name
          */
-        String getProtocolString()
-            {
+        String getProtocolString() {
             return server.getProtocolString(context);
-            }
+        }
 
         /**
          * Obtain the HTTP protocol that is indicated by the request.
          *
          * @return the HTTP protocol
          */
-        Protocol getProtocol()
-            {
-            if (Protocol protocol := Protocol.byProtocolString.get(getProtocolString()))
-                {
-                if (tls && !protocol.TLS)
-                    {
+        Protocol getProtocol() {
+            if (Protocol protocol := Protocol.byProtocolString.get(getProtocolString())) {
+                if (tls && !protocol.TLS) {
                     assert protocol ?= protocol.upgradeToTls;
-                    }
-                return protocol;
                 }
-            assert as $"Unknown protocol: {getProtocolString().quoted()}";
+                return protocol;
             }
+            assert as $"Unknown protocol: {getProtocolString().quoted()}";
+        }
 
         /**
          * Obtain all the header names.
          *
          * @return the array of all header names
          */
-        String[] getHeaderNames()
-            {
+        String[] getHeaderNames() {
             return server.getHeaderNames(context);
-            }
+        }
 
         /**
          * Obtain all of the values for the specified header name.
@@ -290,10 +276,9 @@ interface HttpServer
          * @return True if there is at least one header for the specified name
          * @return (conditional) an array of one or more values associated with the specified name
          */
-        conditional String[] getHeaderValuesForName(String name)
-            {
+        conditional String[] getHeaderValuesForName(String name) {
             return server.getHeaderValuesForName(context, name);
-            }
+        }
 
         /**
          * Obtain all of the bytes in the request body.
@@ -301,10 +286,9 @@ interface HttpServer
          * @return True if there is a body
          * @return (conditional) an array of `Byte` representing the body content
          */
-        conditional Byte[] getBodyBytes()
-            {
+        conditional Byte[] getBodyBytes() {
             return server.getBodyBytes(context);
-            }
+        }
 
         /**
          * Determine if the body contains nested information (e.g. multi-part) with its own headers,
@@ -314,23 +298,20 @@ interface HttpServer
          * @return (conditional) an array of `context` objects, each representing the one nested
          *         body
          */
-        conditional RequestInfo[] containsNestedBodies()
-            {
-            if (RequestContext[] contexts := server.containsNestedBodies(context))
-                {
+        conditional RequestInfo[] containsNestedBodies() {
+            if (RequestContext[] contexts := server.containsNestedBodies(context)) {
                 return True, new RequestInfo[contexts.size](ctx -> new RequestInfo(server, ctx, tls));
-                }
+            }
 
             return False;
-            }
+        }
 
         /**
          * Obtain the URL that converts this request to the corresponding TLS request.
          *
          * @return the URL string representing the TLS request
          */
-        String convertToTlsUrl()
-            {
+        String convertToTlsUrl() {
             assert !tls as "already a TLS request";
 
             Scheme scheme    = getProtocol().scheme;
@@ -341,6 +322,6 @@ interface HttpServer
                     |{{if (tlsPort!=443) {$.add(':').append(tlsPort);}}}\
                     |{server.getUriString(context)}
                     ;
-            }
         }
     }
+}

@@ -213,8 +213,7 @@ import net.IPAddress;
  * TODO specify how sessions are persisted to storage; define events (e.g. "loaded") for the same
  */
 interface Session
-        extends service
-    {
+        extends service {
     // ----- session properties --------------------------------------------------------------------
 
     /**
@@ -499,11 +498,10 @@ interface Session
      *
      * @return the suggested new `TrustLevel` for the session, based on the TLS interruption
      */
-    TrustLevel tlsChanged()
-        {
+    TrustLevel tlsChanged() {
         // trust on a single-user device only degrades to the normal level
         return trustLevel.notGreaterThan(exclusiveAgent ? Normal : None);
-        }
+    }
 
     /**
      * This event is invoked when the user agent's IP address changes. This most commonly occurs
@@ -518,11 +516,10 @@ interface Session
      *
      * @return the suggested new `TrustLevel` for the session, based on the IP address change
      */
-    TrustLevel ipAddressChanged(IPAddress oldAddress, IPAddress newAddress)
-        {
+    TrustLevel ipAddressChanged(IPAddress oldAddress, IPAddress newAddress) {
         // trust on a single-user device only degrades to the normal level
         return trustLevel.notGreaterThan(exclusiveAgent ? Normal : None);
-        }
+    }
 
     /**
      * This event is invoked when the user's `User-Agent` changes.
@@ -534,25 +531,20 @@ interface Session
      *
      * @return the suggested new `TrustLevel` for the session, based on the `User-Agent` change
      */
-    TrustLevel userAgentChanged(String oldAgent, String newAgent)
-        {
-        if (exclusiveAgent)
-            {
+    TrustLevel userAgentChanged(String oldAgent, String newAgent) {
+        if (exclusiveAgent) {
             // if it's more than a version change, then require re-authentication
-            if (oldAgent.split('/')[0] != newAgent.split('/')[0])
-                {
+            if (oldAgent.split('/')[0] != newAgent.split('/')[0]) {
                 return None;
-                }
+            }
 
             return trustLevel.notGreaterThan(Normal);
-            }
-        else
-            {
+        } else {
             // a user agent change on a shared device is very suspect, because the session cookie
             // should have been lost e.g. if the browser was upgraded
             return None;
-            }
         }
+    }
 
     /**
      * This event is invoked when the user agent fingerprint (something other than the user agent
@@ -573,11 +565,10 @@ interface Session
      *         change
      *
      */
-    TrustLevel fingerprintChanged()
-        {
+    TrustLevel fingerprintChanged() {
         // trust on a single-user device only degrades to the normal level
         return trustLevel.notGreaterThan(exclusiveAgent ? Normal : None);
-        }
+    }
 
     /**
      * This event is invoked when the behavior of a user agent(s) appears to have violated the
@@ -593,11 +584,10 @@ interface Session
      *
      * @return the suggested new `TrustLevel` for the session, based on the suspect communication
      */
-    TrustLevel protocolViolated()
-        {
+    TrustLevel protocolViolated() {
         // trust is assumed to be destroyed
         return None;
-        }
+    }
 
     /**
      * This method is not an event, but it answers the question: "Has any significant session event
@@ -610,4 +600,4 @@ interface Session
      * @return `True` iff session events have occurred since the specified time
      */
     Boolean anyEventsSince(Time time);
-    }
+}

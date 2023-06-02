@@ -7,7 +7,6 @@ const Role
         String   roleName,
         String[] altNames,      // REVIEW  this would allow us to collapse several Roles into one
         String   description,
-        )
-    {
+        ) {
     // TODO
-    }
+}

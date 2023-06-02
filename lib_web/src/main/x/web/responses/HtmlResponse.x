@@ -3,15 +3,13 @@
  */
 @AutoFreezable
 class HtmlResponse
-        extends SimpleResponse
-    {
-    construct(String html)
-        {
-        construct SimpleResponse(OK, HTML, html.utf8());
-        }
+        extends SimpleResponse {
 
-    construct(File file)
-        {
-        construct SimpleResponse(OK, HTML, file.contents);
-        }
+    construct(String html) {
+        construct SimpleResponse(OK, HTML, html.utf8());
     }
+
+    construct(File file) {
+        construct SimpleResponse(OK, HTML, file.contents);
+    }
+}

@@ -4,24 +4,21 @@
  */
 const BasicFormat<Value extends Destringable>
         implements Format<Value>
-        incorporates conditional StringableFormat<Value extends Stringable>
-    {
+        incorporates conditional StringableFormat<Value extends Stringable> {
     // ----- Format interface ----------------------------------------------------------------------
 
     @Override
     String name = Value.toString();
 
     @Override
-    Value decode(String text)
-        {
+    Value decode(String text) {
         return new Value(text);
-        }
+    }
 
     @Override
-    String encode(Value value)
-        {
+    String encode(Value value) {
         return value.toString();
-        }
+    }
 
 
     // ----- StringableFormat mixin ----------------------------------------------------------------
@@ -31,12 +28,10 @@ const BasicFormat<Value extends Destringable>
      * is available.
      */
     static mixin StringableFormat<Value extends Stringable>
-            into Format<Value>
-        {
+            into Format<Value> {
         @Override
-        void write(Value value, Appender<Char> stream)
-            {
+        void write(Value value, Appender<Char> stream) {
             value.appendTo(stream);
-            }
         }
     }
+}

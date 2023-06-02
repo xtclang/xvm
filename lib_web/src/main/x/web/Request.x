@@ -16,8 +16,7 @@ import net.UriTemplate;
  * TODO doc how to get a request passed to an end point
  */
 interface Request
-        extends HttpMessage
-    {
+        extends HttpMessage {
     /**
      * The HTTP method ("GET", "POST", etc.)
      */
@@ -31,28 +30,25 @@ interface Request
     /**
      * Corresponds to the ":scheme" pseudo-header field in HTTP/2.
      */
-    @RO Scheme scheme.get()
-        {
+    @RO Scheme scheme.get() {
         return Scheme.byName.getOrNull(uri.scheme?)? : assert;
-        }
+    }
 
     /**
      * Corresponds to the ":authority" pseudo-header field in HTTP/2. This includes the authority
      * portion of the target URI.
      */
-    @RO String authority.get()
-        {
+    @RO String authority.get() {
         return uri.authority ?: assert;
-        }
+    }
 
     /**
      * Corresponds to the ":path" pseudo-header field in HTTP/2. This includes the path and query
      * parts of the target URI.
      */
-    @RO String path.get()
-        {
+    @RO String path.get() {
         return uri.path?.toString() : "";
-        }
+    }
 
     /**
      * The protocol over which the request was received, if the protocol is known.
@@ -60,15 +56,13 @@ interface Request
      * For an out-going request, the protocol is the requested protocol to use to send the request;
      * a client implementation may choose to use a different protocol if necessary.
      */
-    @RO Protocol? protocol.get()
-        {
-        if (String scheme ?= uri.scheme)
-            {
+    @RO Protocol? protocol.get() {
+        if (String scheme ?= uri.scheme) {
             return Protocol.byProtocolString.getOrCompute(scheme,
                     () -> throw new IllegalState($"unknown protocol: {scheme}"));
-            }
-        return Null;
         }
+        return Null;
+    }
 
     /**
      * The accepted media types.
@@ -78,11 +72,10 @@ interface Request
     /**
      * @return an iterator of all cookie names and values in this request
      */
-    Iterator<Tuple<String, String>> cookies()
-        {
+    Iterator<Tuple<String, String>> cookies() {
         return header.valuesOf(Header.Cookie, ';')
                      .map(kv -> (kv.extract('=', 0, "???").trim(), kv.extract('=', 1).trim()));
-        }
+    }
 
     /**
      * Obtain the value of the specified cookie, if it is included in this request.
@@ -90,22 +83,18 @@ interface Request
      * @return True iff the specified cookie name is in the header
      * @return (conditional) the specified cookie
      */
-    conditional String getCookieValue(String name)
-        {
-        for (String value : header.valuesOf(Header.Cookie, ';'))
-            {
-            if (name == value.extract('=', 0, "???"))
-                {
+    conditional String getCookieValue(String name) {
+        for (String value : header.valuesOf(Header.Cookie, ';')) {
+            if (name == value.extract('=', 0, "???")) {
                 return True, value.extract('=', 1);
-                }
             }
-        return False;
         }
+        return False;
+    }
 
     @Override
-    Iterator<String> cookieNames()
-        {
+    Iterator<String> cookieNames() {
         return header.valuesOf(Header.Cookie, ';')
                      .map(kv -> kv.extract('=', 0, "???").trim());
-        }
     }
+}

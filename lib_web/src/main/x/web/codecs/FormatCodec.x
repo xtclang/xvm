@@ -6,54 +6,46 @@
  * converted to or from a JSON document.
  */
 const FormatCodec<Value>(Codec<String> codec, Format<Value> format)
-        implements Codec<Value>
-    {
-    assert()
-        {
+        implements Codec<Value> {
+
+    assert() {
         name = $"{codec.name}->{format.name}";
-        }
+    }
 
     @Override
-    <OtherValue> conditional Codec<OtherValue> forType(Type<OtherValue> type, Registry registry)
-        {
-        if (Codec<OtherValue> newCodec := codec.forType(type, registry))
-            {
+    <OtherValue> conditional Codec<OtherValue> forType(Type<OtherValue> type, Registry registry) {
+        if (Codec<OtherValue> newCodec := codec.forType(type, registry)) {
             return True, newCodec;
-            }
+        }
 
-        if (Format<OtherValue> newFormat := format.forType(type, registry))
-            {
+        if (Format<OtherValue> newFormat := format.forType(type, registry)) {
             return True, new FormatCodec<OtherValue>(codec, newFormat);
-            }
+        }
 
         return False;
-        }
+    }
 
     @Override
-    Value read(InputStream stream)
-        {
+    Value read(InputStream stream) {
         String text = codec.read(stream);
         return format.decode(text);
-        }
+    }
 
     @Override
-    Value decode(Byte[] bytes)
-        {
+    Value decode(Byte[] bytes) {
         String text = codec.decode(bytes);
         return format.decode(text);
-        }
+    }
 
     @Override
-    void write(Value value, OutputStream stream)
-        {
+    void write(Value value, OutputStream stream) {
         String text = format.encode(value);
         codec.write(text, stream);
-        }
+    }
 
     @Override
-    Byte[] encode(Value value)
-        {
+    Byte[] encode(Value value) {
         String text = format.encode(value);
         return codec.encode(text);
-        }
     }
+}

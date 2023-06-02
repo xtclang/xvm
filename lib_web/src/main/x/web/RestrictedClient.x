@@ -8,8 +8,7 @@
  * Note: the caller should *always* mask the created `RestrictedClient` prior to returning it.
  */
 const RestrictedClient(Client underlying)
-        implements Client
-    {
+        implements Client {
     /**
      * Construct a `Client` that restricts access based on the specified lists.
      *
@@ -22,13 +21,12 @@ const RestrictedClient(Client underlying)
               RestrictMode        mode,
               HostPort|HostPort[] hostPorts = [],
               Protocol|Protocol[] protocols = [],
-              )
-        {
+              ) {
         this.underlying = underlying;
         this.mode       = mode;
         this.hostPorts  = hostPorts;
         this.protocols  = protocols;
-        }
+    }
 
     /**
      * The restriction mode.
@@ -51,24 +49,21 @@ const RestrictedClient(Client underlying)
     // ----- Client interface ----------------------------------------------------------------------
 
     @Override
-    ResponseIn send(RequestOut request)
-        {
+    ResponseIn send(RequestOut request) {
         return allowed(request.uri)
                 ? underlying.send(request)
                 : new responses.SimpleResponse(Forbidden);
-        }
+    }
 
     /**
      * @return True if the specified Uri is allowed to be connected to
      */
-    Boolean allowed(Uri uri)
-        {
+    Boolean allowed(Uri uri) {
         TODO
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         return $|RestrictedClient {mode} \
                 |  {{
                 |  if (!(hostPorts.is(HostPort[]) && hostPorts.empty))
@@ -81,5 +76,5 @@ const RestrictedClient(Client underlying)
                 |    }
                 |  }}
                 ;
-        }
     }
+}

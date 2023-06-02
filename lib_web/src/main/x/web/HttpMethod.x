@@ -3,8 +3,7 @@
  *
  * @see [RFC 2616 §9.2](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html.
  */
-const HttpMethod(String name, BodyRule body=Permitted)
-    {
+const HttpMethod(String name, BodyRule body=Permitted) {
     enum BodyRule {Forbidden, Permitted, Required}
 
     /**
@@ -59,10 +58,8 @@ const HttpMethod(String name, BodyRule body=Permitted)
      *
      * @return the HttpMethod, or [OTHER] if none matches the name.
      */
-    static HttpMethod of(String name)
-        {
-        return switch (name)
-            {
+    static HttpMethod of(String name) {
+        return switch (name) {
             case "OPTIONS": OPTIONS;
             case "GET":     GET;
             case "HEAD":    HEAD;
@@ -73,6 +70,6 @@ const HttpMethod(String name, BodyRule body=Permitted)
             case "CONNECT": CONNECT;
             case "PATCH":   PATCH;
             default: new HttpMethod(name);
-            };
-        }
+        };
     }
+}

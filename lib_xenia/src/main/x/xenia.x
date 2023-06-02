@@ -1,8 +1,7 @@
 /**
  * The Web Server implementation.
  */
-module xenia.xtclang.org
-    {
+module xenia.xtclang.org {
     // external module dependencies
     package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
@@ -91,8 +90,7 @@ module xenia.xtclang.org
      * @return a function that allows to shutdown the server
      */
     function void () createServer(WebApp webApp, String hostName, KeyStore keystore,
-                                  UInt16 httpPort = 80, UInt16 httpsPort = 443)
-        {
+                                  UInt16 httpPort = 80, UInt16 httpsPort = 443) {
         @Inject HttpServer server;
 
         server.configure(hostName, keystore, httpPort, httpsPort);
@@ -102,7 +100,7 @@ module xenia.xtclang.org
         server.start(handler);
 
         return () -> handler.shutdown();
-        }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -110,21 +108,18 @@ module xenia.xtclang.org
     /**
      * TODO this is temporary, but we do need a permanent way to log
      */
-    static void log(String text)
-        {
+    static void log(String text) {
         @Inject Console console;
         console.print($"**Log: {text}");
-        }
+    }
 
     /**
      * Obtain the user agent string.
      */
-    static String extractUserAgent(HttpServer.RequestInfo requestInfo)
-        {
-        if (String[] values := requestInfo.getHeaderValuesForName(web.Header.UserAgent))
-            {
+    static String extractUserAgent(HttpServer.RequestInfo requestInfo) {
+        if (String[] values := requestInfo.getHeaderValuesForName(web.Header.UserAgent)) {
             return values[0];
-            }
-        return "";
         }
+        return "";
     }
+}

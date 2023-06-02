@@ -3,8 +3,7 @@
  *
  * TODO pre and post examples, and how to configure
  */
-module web.xtclang.org
-    {
+module web.xtclang.org {
     package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
     package crypto      import crypto.xtclang.org;
@@ -432,4 +431,4 @@ module web.xtclang.org
      */
     const RequestAborted(HttpStatus status, String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
-    }
+}

@@ -5,22 +5,17 @@ import json.Schema;
 /**
  * A registry for codecs, formats, media types etc.
  */
-service Registry
-    {
+service Registry {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Default constructor.
      */
-    construct()
-        {
-        }
-    finally
-        {
+    construct() {} finally {
         DefaultCodecs.entries.forEach(e -> registerCodec(e.key, e.value));
         DefaultFormats.forEach(registerFormat);
         MediaType.Predefined.forEach(registerMediaType);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -66,25 +61,21 @@ service Registry
     /**
      * The JSON Schema held by this registry.
      */
-    Schema jsonSchema
-        {
+    Schema jsonSchema {
         @Override
-        Schema get()
-            {
-            if (val schema := resources.get("jsonSchema"))
-                {
+        Schema get() {
+            if (val schema := resources.get("jsonSchema")) {
                 return schema.as(Schema);
-                }
+            }
 
             return Schema.DEFAULT;
-            }
+        }
 
         @Override
-        void set(Schema schema)
-            {
+        void set(Schema schema) {
             resources.put("jsonSchema", schema);
-            }
         }
+    }
 
     /**
      * These codecs are known to the system and automatically registered.
@@ -174,13 +165,12 @@ service Registry
      * @param mediaType  the `MediaType` to register the `Codec` under
      * @param codec      the `Codec` to register
      */
-    void registerCodec(MediaType mediaType, Codec codec)
-        {
+    void registerCodec(MediaType mediaType, Codec codec) {
         Map<Type, Codec?> codecsByType = codecsByMedia.computeIfAbsent(mediaType, () -> new HashMap());
         assert codecsByType.putIfAbsent(codec.Value, codec)
             || codecsByType.replace(codec.Value, Null, codec);
         codecsByName.putIfAbsent(codec.name, codec);
-        }
+    }
 
     /**
      * Look up a `Codec` by a name.
@@ -191,23 +181,19 @@ service Registry
      * @return `True` iff there exists a `Codec` for the specified name
      * @return (conditional) the `Codec` for the specified name
      */
-    <Value> conditional Codec<Value> findCodec(String name, Type<Value>? type=Null)
-        {
-        if (Codec codec := codecsByName.get(name))
-            {
-            if (type == Null)
-                {
+    <Value> conditional Codec<Value> findCodec(String name, Type<Value>? type=Null) {
+        if (Codec codec := codecsByName.get(name)) {
+            if (type == Null) {
                 return True, codec.as(Codec<Value>);
-                }
-
-            if (codec.Value.isA(type))
-                {
-                return True, codec.as(Codec<Value>);
-                }
             }
 
-        return False;
+            if (codec.Value.isA(type)) {
+                return True, codec.as(Codec<Value>);
+            }
         }
+
+        return False;
+    }
 
     /**
      * Look up a `Codec` first by the `MediaType` that describes the raw data, and then by the
@@ -219,48 +205,41 @@ service Registry
      * @return `True` iff there exists a `Codec` for the specified `MediaType` and `Type`
      * @return (conditional) the `Codec` for the `Type`
      */
-    <Value> conditional Codec<Value> findCodec(MediaType mediaType, Type<Value> type)
-        {
-        if (Map<Type, Codec?> codecsByType := codecsByMedia.get(mediaType))
-            {
-            if (Codec? codec := codecsByType.get(type))
-                {
+    <Value> conditional Codec<Value> findCodec(MediaType mediaType, Type<Value> type) {
+        if (Map<Type, Codec?> codecsByType := codecsByMedia.get(mediaType)) {
+            if (Codec? codec := codecsByType.get(type)) {
                 return codec == Null
                         ? False
                         : (True, codec.as(Codec<Value>));
-                }
+            }
 
-            for (Codec? codec : codecsByType.values)
-                {
-                if (Codec<Value> newCodec := codec?.forType(type, this))
-                    {
+            for (Codec? codec : codecsByType.values) {
+                if (Codec<Value> newCodec := codec?.forType(type, this)) {
                     registerCodec(mediaType, newCodec);
                     return True, newCodec;
-                    }
                 }
             }
+        }
 
         if (String formatName ?= mediaType.format,
-                Format<Value> format := findFormat(formatName, type))
-            {
+                Format<Value> format := findFormat(formatName, type)) {
             Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
             registerCodec(mediaType, newCodec);
             return True, newCodec;
-            }
+        }
 
-        if (Format<Value> format := findFormat(type.toString(), type))
-            {
+        if (Format<Value> format := findFormat(type.toString(), type)) {
             Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
             registerCodec(mediaType, newCodec);
             return True, newCodec;
-            }
+        }
 
         // cache the miss
         Map<Type, Codec?> codecsByType =
             codecsByMedia.computeIfAbsent(mediaType, () -> new HashMap());
         codecsByType.put(type, Null);
         return False;
-        }
+    }
 
     /**
      * Look up a `Codec` by the `Type` that it can encode and decode, and throw an exception if
@@ -271,13 +250,12 @@ service Registry
      *
      * @return the `Codec` for the specified `Type`
      */
-    <Value> Codec<Value> requireCodec(MediaType mediaType, Type<Value> type)
-        {
+    <Value> Codec<Value> requireCodec(MediaType mediaType, Type<Value> type) {
         assert Codec<Value> codec := findCodec(mediaType, type)
                 as $"Unable to find Codec for Type {type} on MediaType {mediaType}";
 
         return codec;
-        }
+    }
 
 
     // ----- Format support ------------------------------------------------------------------------
@@ -288,15 +266,13 @@ service Registry
      *
      * @param format  the `Format` to register
      */
-    void registerFormat(Format format)
-        {
+    void registerFormat(Format format) {
         formatsByName.putIfAbsent(format.name, format);
 
-        if (!Null.is(format.Value))
-            {
+        if (!Null.is(format.Value)) {
             registerFormat(new NullableFormat<format.Value>(format));
-            }
         }
+    }
 
     /**
      * Look up a `Format` by a name.
@@ -307,34 +283,29 @@ service Registry
      * @return `True` iff there exists a `Format` for the specified name
      * @return (conditional) the `Format` for the specified name
      */
-    <Value> conditional Format<Value> findFormat(String name, Type<Value>? type=Null)
-        {
-        if (Format format := formatsByName.get(name))
-            {
-            if (type == Null || format.Value == type)
-                {
+    <Value> conditional Format<Value> findFormat(String name, Type<Value>? type=Null) {
+        if (Format format := formatsByName.get(name)) {
+            if (type == Null || format.Value == type) {
                 return True, format.as(Format<Value>);
-                }
+            }
 
             Map<Type, Format?> derivedFormats =
                     derivedFormatsByType.computeIfAbsent(name, () -> new HashMap());
-            if (Format? derivedFormat := derivedFormats.get(type))
-                {
+            if (Format? derivedFormat := derivedFormats.get(type)) {
                 return derivedFormat == Null
                         ? False
                         : (True, derivedFormat.as(Format<Value>));
-                }
-
-            if (Format<Value> newFormat := format.forType(type, this))
-                {
-                derivedFormats.put(type, newFormat);
-                return True, newFormat;
-                }
-            derivedFormats.put(type, Null);
             }
 
-        return False;
+            if (Format<Value> newFormat := format.forType(type, this)) {
+                derivedFormats.put(type, newFormat);
+                return True, newFormat;
+            }
+            derivedFormats.put(type, Null);
         }
+
+        return False;
+    }
 
 
     // ----- Converter support ---------------------------------------------------------------------
@@ -349,16 +320,14 @@ service Registry
      *
      * @param mediaType  the `MediaType` to register
      */
-    void registerMediaType(MediaType mediaType)
-        {
-        for (String extension : mediaType.extensions)
-            {
+    void registerMediaType(MediaType mediaType) {
+        for (String extension : mediaType.extensions) {
             assert mediaTypeByExtension.putIfAbsent(extension, mediaType) as
                 $|Extension {extension.quoted()} has already been registered by
                  |{mediaTypeByExtension.getOrNull(extension)}"
                  ;
-            }
         }
+    }
 
     /**
      * Look up a `MediaType` for the file name extension.
@@ -368,48 +337,41 @@ service Registry
      * @return `True` iff there exists a `MediaType` for the specified file name
      * @return (conditional) the `MediaType` for the file name
      */
-    conditional MediaType findMediaType(String fileName)
-        {
-        if (Int of := fileName.lastIndexOf('.'))
-            {
+    conditional MediaType findMediaType(String fileName) {
+        if (Int of := fileName.lastIndexOf('.')) {
             return mediaTypeByExtension.get(fileName.substring(of+1));
-            }
-        return False;
         }
+        return False;
+    }
 
     /**
      * Find a `MediaType` that best fits the specified data type.
      */
-    conditional MediaType inferMediaType(Object content)
-        {
-        switch (content.is(_))
-            {
-            case json.Doc, Number:
-                return True, Json;
+    conditional MediaType inferMediaType(Object content) {
+        switch (content.is(_)) {
+        case json.Doc, Number:
+            return True, Json;
 
-            case File:
-                return findMediaType(content.name);
-            }
+        case File:
+            return findMediaType(content.name);
+        }
 
         Type type = &content.actualType;
 
-        if (jsonSchema.findMapping(type))
-            {
+        if (jsonSchema.findMapping(type)) {
             // there's a Json schema for this type, so it's convertible (serializable) as Json
             return True, Json;
-            }
+        }
 
         // look for a format; if there is one, then we can turn the content into a String and return
         // as Json
-        for (Format format : formatsByName.values)
-            {
-            if (format.Value == type)
-                {
+        for (Format format : formatsByName.values) {
+            if (format.Value == type) {
                 return True, Json;
-                }
             }
-        return False;
         }
+        return False;
+    }
 
 
     // ----- resources support ---------------------------------------------------------------------
@@ -417,16 +379,14 @@ service Registry
     /**
      * TODO
      */
-    void registerResource(String name, Shareable resource)
-        {
+    void registerResource(String name, Shareable resource) {
         resources.put(name, resource);
-        }
+    }
 
     /**
      * TODO
      */
-    conditional Shareable getResource(String name)
-        {
+    conditional Shareable getResource(String name) {
         return resources.get(name);
-        }
     }
+}

@@ -21,42 +21,35 @@
  *         }
  */
 mixin WebService(String path)
-        into service
-    {
+        into service {
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The [WebApp] containing this `WebService`. If no `WebApp` is explicitly configured, then the
      * module containing the `WebService` is used.
      */
-    WebApp webApp
-        {
+    WebApp webApp {
         @Override
-        WebApp get()
-            {
+        WebApp get() {
             WebApp app;
-            if (assigned)
-                {
+            if (assigned) {
                 app = super();
-                }
-            else
-                {
+            } else {
                 assert var moduleObject := this:class.baseTemplate.containingModule.ensureClass().isSingleton()
                         as $"Unable to obtain containing module for {this}";
                 assert app := moduleObject.is(WebApp) as $"Unable to obtain the WebApp for {this}";
                 set(app);
-                }
+            }
 
             return app;
-            }
+        }
 
         @Override
-        void set(WebApp app)
-            {
+        void set(WebApp app) {
             assert !assigned as $"The WebApp containing this WebService cannot be modified";
             super(app);
-            }
         }
+    }
 
     /**
      * The session related to the currently executing handler within this service.
@@ -88,33 +81,24 @@ mixin WebService(String path)
      *
      * @return the [ResponseOut] to send back to the caller
      */
-    ResponseOut route(Session session, RequestIn request, Handler handle, ErrorHandler? onError)
-        {
+    ResponseOut route(Session session, RequestIn request, Handler handle, ErrorHandler? onError) {
         assert this.request == Null;
 
         // store the request and session for the duration of the request processing
         this.request = request;
         this.session = session;
 
-        try
-            {
+        try {
             return handle(session, request).freeze(True);
-            }
-        catch (Exception e)
-            {
-            if (onError == Null)
-                {
+        } catch (Exception e) {
+            if (onError == Null) {
                 throw e;
-                }
-            else
-                {
+            } else {
                 return onError(session, request, e).freeze(True);
-                }
             }
-        finally
-            {
+        } finally {
             this.request = Null;
             this.session = Null;
-            }
         }
     }
+}

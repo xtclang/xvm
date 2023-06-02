@@ -6,59 +6,51 @@ class SimpleResponse
         implements ResponseIn
         implements ResponseOut
         implements Header
-        implements Body
-    {
+        implements Body {
+
     construct(HttpStatus status    = OK,
               MediaType? mediaType = Null,
               Byte[]?    bytes     = Null,
-             )
-        {
-        if (WebService svc := this:service.is(WebService))
-            {
+             ) {
+        if (WebService svc := this:service.is(WebService)) {
             this.request = svc.request;
-            }
+        }
 
         this.status    = status;
         this.mediaType = mediaType ?: Json;
         this.bytes     = bytes ?: [];
-        }
-    finally
-        {
-        if (mediaType != Null || bytes != Null)
-            {
+    } finally {
+        if (mediaType != Null || bytes != Null) {
             this.body = this;
-            }
         }
+    }
 
 
     // ----- HttpMessage interface -----------------------------------------------------------------
 
     @Override
-    Header header.get()
-        {
+    Header header.get() {
         return this;
-        }
+    }
 
     @Override
     Body? body;
 
     @Override
-    Body ensureBody(MediaType mediaType, Boolean streaming=False)
-        {
+    Body ensureBody(MediaType mediaType, Boolean streaming=False) {
         // this is a simple response; it does not support streaming
         assert:TODO !streaming;
 
         Body? body = this.body;
-        if (body == Null || mediaType != body.mediaType)
-            {
+        if (body == Null || mediaType != body.mediaType) {
             this.mediaType = mediaType;
             this.bytes     = [];
             this.body      = this;
             return this;
-            }
+        }
 
         return body;
-        }
+    }
 
 
     // ----- Response interface --------------------------------------------------------------------
@@ -73,31 +65,27 @@ class SimpleResponse
     // ----- Header interface ----------------------------------------------------------------------
 
     @Override
-    @RO Boolean isRequest.get()
-        {
+    @RO Boolean isRequest.get() {
         return False;
-        }
+    }
 
     @Override
-    List<Entry> entries.get()
-        {
-        if (assigned)
-            {
+    List<Entry> entries.get() {
+        if (assigned) {
             return super();
-            }
+        }
 
         // an unassigned list of entries on an immutable response means that we froze without adding
         // any
-        if (this.is(immutable))
-            {
+        if (this.is(immutable)) {
             return [];
-            }
+        }
 
         // need to create a mutable (but freezable) List of Entry
         // TODO could make a "safe" wrapper that validates the entries
         set(new Entry[]);
         return super();
-        }
+    }
 
 
     // ----- Body interface ------------------------------------------------------------------------
@@ -109,17 +97,15 @@ class SimpleResponse
     Byte[] bytes;
 
     @Override
-    Body from(Object content)
-        {
+    Body from(Object content) {
         throw new UnsupportedOperation();
-        }
+    }
 
 
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override
-    String toString()
-        {
+    String toString() {
         return status.toString();
-        }
     }
+}

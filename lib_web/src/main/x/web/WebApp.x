@@ -16,15 +16,13 @@ import security.NeverAuthenticator;
  *      - can the package be annotated as "@Trusted" or something like that?
  */
 mixin WebApp
-        into module
-    {
+        into module {
     /**
      * The registry for this WebApp.
      */
-    @Lazy Registry registry_.calc()
-        {
+    @Lazy Registry registry_.calc() {
         return new Registry();
-        }
+    }
 
     /**
      * Handle an otherwise-unhandled exception or other error that occurred during [Request]
@@ -39,22 +37,20 @@ mixin WebApp
      *
      * @return the [Response] to send back to the caller
      */
-    ResponseOut handleUnhandledError(Session? session, RequestIn request, Exception|String|HttpStatus error)
-        {
+    ResponseOut handleUnhandledError(Session? session, RequestIn request, Exception|String|HttpStatus error) {
         // TODO CP: does the exception need to be logged?
         HttpStatus status = error.is(RequestAborted) ? error.status :
                             error.is(HttpStatus)     ? error
                                                      : InternalServerError;
 
         return new responses.SimpleResponse(status=status, bytes=error.toString().utf8());
-        }
+    }
 
     /**
      * A Webapp that knows how to provide an `Authenticator` should implement this interface in
      * order to do so.
      */
-    static interface AuthenticatorFactory
-        {
+    static interface AuthenticatorFactory {
         /**
          * Create (or otherwise provide) the `Authenticator` that this WebApp will use. It is
          * expected that this method will only be called once.
@@ -62,35 +58,30 @@ mixin WebApp
          * @return the `Authenticator` for this WebApp
          */
         Authenticator createAuthenticator();
-        }
+    }
 
     /**
      * The [Authenticator] for the web application.
      */
-    @Lazy Authenticator authenticator.calc()
-        {
+    @Lazy Authenticator authenticator.calc() {
         // use the Authenticator provided by injection, which allows a deployer to select a specific
         // form of authentication; if one is injected, use it, otherwise, use the one specified by
         // this application
         @Inject Authenticator? providedAuthenticator;
         return providedAuthenticator?;
 
-        try
-            {
+        try {
             // allow a module to implement the factory method createAuthenticator()
-            if (this.is(AuthenticatorFactory))
-                {
+            if (this.is(AuthenticatorFactory)) {
                 return createAuthenticator();
-                }
             }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             // TODO this is temporary, we do need to expose a unified log API
             @Inject Console console;
             console.print($"An exception occurred while creating an Authenticator: {e}");
-            }
+        }
 
         // disable authentication, since no authenticator was found
         return new NeverAuthenticator();
-        }
     }
+}

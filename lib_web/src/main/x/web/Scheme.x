@@ -1,12 +1,10 @@
 /**
  * A representation of an HTTP-related scheme.
  */
-const Scheme(String name, Boolean tls, Scheme? upgradeToTls = Null)
-    {
-    assert()
-        {
+const Scheme(String name, Boolean tls, Scheme? upgradeToTls = Null) {
+    assert() {
         assert tls ^ (upgradeToTls != Null);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -63,8 +61,7 @@ const Scheme(String name, Boolean tls, Scheme? upgradeToTls = Null)
     /**
      * Obtain the scheme that is the same as this one, but has TLS enabled.
      */
-    Scheme tlsScheme.get()
-        {
+    Scheme tlsScheme.get() {
         return upgradeToTls ?: this;
-        }
     }
+}

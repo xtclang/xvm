@@ -3,8 +3,7 @@
  *
  * TODO explain why NOT concurrent
  */
-service SessionPurger(Duration cycleTime=Duration:1M)
-    {
+service SessionPurger(Duration cycleTime=Duration:1M) {
     // ----- properties ----------------------------------------------------------------------------
 
     @Inject Timer timer;
@@ -36,42 +35,34 @@ service SessionPurger(Duration cycleTime=Duration:1M)
      * This is a notification from the SessionManager that the specified session ID needs to be
      * tracked (managed) by the purger.
      */
-    void track(Int id)
-        {
+    void track(Int id) {
         newIds.add(id);
 
-        if (cancelNextScan == Null)
-            {
+        if (cancelNextScan == Null) {
             cancelNextScan = timer.schedule(cycleTime, scan);
-            }
         }
+    }
 
     /**
      * Ask the SessionPurger to shut down nicely.
      */
-    void stopPurging()
-        {
-        if (!stopping)
-            {
+    void stopPurging() {
+        if (!stopping) {
             cancelNextScan?();
             stopping = True;
-            }
         }
+    }
 
 
     // ----- internal -----------------------------------------------------------------------
 
-    void scan()
-        {
+    void scan() {
         Time scanStart = clock.now;
-        try
-            {
+        try {
             // TODO
-            }
-        finally
-            {
+        } finally {
             // schedule the next time to run the purge processing
             // TODO
-            }
         }
     }
+}

@@ -4,43 +4,36 @@ import oodb.DBMap;
  * Represents a table of user Role objects.
  */
 mixin Roles
-        into DBMap<Int, Role>
-    {
+        into DBMap<Int, Role> {
     /**
      * TODO
      */
     conditional Role createRole(String|String[] roleName,
                                 String?         description = Null
-                               )
-        {
+                               ) {
         // split the passed in names into a primary and alternatives
         String   primaryName;
         String[] altNames = [];
-        if (roleName.is(String))
-            {
+        if (roleName.is(String)) {
             primaryName = roleName;
-            }
-        else
-            {
-            switch (Int n = roleName.size)
-                {
-                default:
-                    altNames = roleName[1..<n];
-                    continue;
-                case 1:
-                    primaryName = roleName[0];
-                    break;
+        } else {
+            switch (Int n = roleName.size) {
+            default:
+                altNames = roleName[1..<n];
+                continue;
+            case 1:
+                primaryName = roleName[0];
+                break;
 
-                case 0:
-                    return False;
-                }
+            case 0:
+                return False;
             }
+        }
 
         // make sure none of the names is already taken
-        if (findByName(primaryName) || !altNames.empty && findByNames(altNames))
-            {
+        if (findByName(primaryName) || !altNames.empty && findByNames(altNames)) {
             return False;
-            }
+        }
 
         AuthSchema schema = dbParent.as(AuthSchema);
         Int        roleId = schema.roleId.next();
@@ -48,7 +41,7 @@ mixin Roles
         return putIfAbsent(roleId, role)
                 ? (True, role)
                 : False;
-        }
+    }
 
     /**
      * Find the role with the specified name:
@@ -60,10 +53,9 @@ mixin Roles
      * @return True iff the specified role name was found
      * @return (conditional) the Role with the specified name
      */
-    conditional Role findByName(String name)
-        {
+    conditional Role findByName(String name) {
         return values.any(r -> r.roleName == name || r.altNames.contains(name));
-        }
+    }
 
     /**
      * Find the roles with the specified names:
@@ -75,27 +67,22 @@ mixin Roles
      * @return True iff the specified role names were found
      * @return (conditional) an array with one Role for each specified name
      */
-    conditional Role[] findByNames(Iterable<String> names)
-        {
+    conditional Role[] findByNames(Iterable<String> names) {
         Role[]  roles = new Role[];
         Boolean any   = False;
-        for (String name : names)
-            {
+        for (String name : names) {
             any = True;
 
-            if (Role role := findByName(name))
-                {
+            if (Role role := findByName(name)) {
                 roles += role;
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
+        }
 
         return any
                 ? (True, roles)
                 : False;
-        }
     }
+}
 

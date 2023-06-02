@@ -26,8 +26,7 @@ const User
         HashInfo passwordHashes,
         Int[]    roleIds = [],
         Boolean  enabled = True,
-        )
-    {
+        ) {
     /**
      * A group of hashes, one for each of the supported hash algorithms. If a hash algorithm is not
      * configured to be used, then its hash will be a zero-length byte array.
@@ -38,34 +37,31 @@ const User
             Hash md5,
             Hash sha256,
             Hash sha512_256,
-            )
-        {
-        conditional Hash hashFor(Signer hasher)
-            {
+            ) {
+        conditional Hash hashFor(Signer hasher) {
             Hash hash;
-            switch (hasher.algorithm.name)
-                {
-                case "MD5":
-                    hash = md5;
-                    break;
+            switch (hasher.algorithm.name) {
+            case "MD5":
+                hash = md5;
+                break;
 
-                case "SHA-256":
-                    hash = sha256;
-                    break;
+            case "SHA-256":
+                hash = sha256;
+                break;
 
-                case "SHA-512-256":
-                    hash = sha512_256;
-                    break;
+            case "SHA-512-256":
+                hash = sha512_256;
+                break;
 
-                default:
-                    return False;
-                }
+            default:
+                return False;
+            }
 
             return hash.empty
                     ? False
                     : (True, hash);
-            }
         }
+    }
 
     /**
      * Create a new User object based on this User object, but with specific properties modified
@@ -91,17 +87,15 @@ const User
             Int|Int[]? addRoleIds     = Null,
             Int|Int[]? removeRoleIds  = Null,
             Boolean?   enabled        = Null,
-            )
-        {
-        if (roleIds != Null || addRoleIds != Null || removeRoleIds != Null)
-            {
+            ) {
+        if (roleIds != Null || addRoleIds != Null || removeRoleIds != Null) {
             HashSet<Int> roleIdSet = new HashSet(roleIds ?: this.roleIds);
             roleIdSet.add(addRoleIds?.is(Int)?);
             roleIdSet.addAll(addRoleIds?.is(Int[])?);
             roleIdSet.remove(removeRoleIds?.is(Int)?);
             roleIdSet.removeAll(removeRoleIds?.is(Int[])?);
             roleIds = roleIdSet.toArray(Constant);
-            }
+        }
 
         return new User(
                 userId         = userId         ?: this.userId,
@@ -111,6 +105,6 @@ const User
                 roleIds        = roleIds        ?: this.roleIds,
                 enabled        = enabled        ?: this.enabled,
                 );
-        }
     }
+}
 

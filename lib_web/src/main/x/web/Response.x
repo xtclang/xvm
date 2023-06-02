@@ -2,8 +2,7 @@
  * A representation of an HTTP response.
  */
 interface Response
-        extends HttpMessage
-    {
+        extends HttpMessage {
     /**
      * The reference to the corresponding `Request`.
      */
@@ -15,11 +14,10 @@ interface Response
     @RO HttpStatus status;
 
     @Override
-    Iterator<String> cookieNames()
-        {
+    Iterator<String> cookieNames() {
         return header.valuesOf(Header.SetCookie, ';')
                      .map(kv -> kv.extract('=', 0, "???").trim());
-        }
+    }
 
     /**
      * Obtain the value of the specified cookie, if it is included in the response.
@@ -27,14 +25,12 @@ interface Response
      * @return True iff the specified cookie name is present
      * @return (conditional) the value associated with the specified cookie
      */
-    conditional Cookie getCookie(String name)
-        {
-        for (String value : header.valuesOf(Header.SetCookie))
-            {
+    conditional Cookie getCookie(String name) {
+        for (String value : header.valuesOf(Header.SetCookie)) {
             // TODO CP parse name, and if it matches, build the Cookie object
-            }
-        return False;
         }
+        return False;
+    }
 
 
     // ----- cookie support ------------------------------------------------------------------------
@@ -85,16 +81,14 @@ interface Response
                         SameSite         sameSite   = Strict,
                         Boolean          exposeToJS = False,
                         Boolean          requireTLS = True,
-                       )
-        {
+                       ) {
         enum SameSite {Strict, Lax, None}
 
         // ----- constructors --------------------------------------------------------------------------
 
-        assert()
-            {
+        assert() {
             // TODO validate properties
-            }
+        }
 
         /**
          * Copy this Cookie to make a new Cookie, with only the specified changes.
@@ -121,8 +115,7 @@ interface Response
                     SameSite?        sameSite   = Null,
                     Boolean?         exposeToJS = Null,
                     Boolean?         requireTLS = Null,
-                   )
-            {
+                   ) {
             return new Cookie(name       ?: this.name,
                               value      ?: this.value,
                               expires    ?: this.expires,
@@ -132,54 +125,46 @@ interface Response
                               exposeToJS ?: this.exposeToJS,
                               requireTLS ?: this.requireTLS,
                              );
-            }
+        }
 
         @Override
-        String toString()
-            {
+        String toString() {
             StringBuffer buf = new StringBuffer();
 
             name.appendTo(buf);
             buf.append('=');
             value.appendTo(buf);
 
-            if (Time time := expires.is(Time))
-                {
+            if (Time time := expires.is(Time)) {
                 "; Expires=".appendTo(buf);
                 http.formatImfFixDate(time).appendTo(buf);
-                }
-            else if (Duration duration := expires.is(Duration))
-                {
+            } else if (Duration duration := expires.is(Duration)) {
                 "; Max-Age=".appendTo(buf);
                 duration.seconds.appendTo(buf);
-                }
+            }
 
-            if (String path ?= path)
-                {
+            if (String path ?= path) {
                 "; Path=".appendTo(buf);
                 path.appendTo(buf);
-                }
+            }
 
-            if (String domain ?= domain)
-                {
+            if (String domain ?= domain) {
                 "; Domain=".appendTo(buf);
                 domain.appendTo(buf);
-                }
+            }
 
             "; SameSite=".appendTo(buf);
             sameSite.appendTo(buf);
 
-            if (!exposeToJS)
-                {
+            if (!exposeToJS) {
                 "; HttpOnly".appendTo(buf);
-                }
+            }
 
-            if (requireTLS)
-                {
+            if (requireTLS) {
                 "; Secure".appendTo(buf);
-                }
+            }
 
             return buf.toString();
-            }
         }
     }
+}

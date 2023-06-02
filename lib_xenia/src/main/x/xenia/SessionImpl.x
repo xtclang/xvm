@@ -28,8 +28,7 @@ import SessionCookie.CookieId;
  * unpredictable latencies, and each session is a natural bottleneck in a concurrent system.
  */
 service SessionImpl
-        implements Session
-    {
+        implements Session {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -39,10 +38,9 @@ service SessionImpl
      * @param sessionId    the internal session identifier
      * @param requestInfo  the request information
      */
-    construct(SessionManager manager, Int64 sessionId, RequestInfo requestInfo)
-        {
+    construct(SessionManager manager, Int64 sessionId, RequestInfo requestInfo) {
         initialize(this, manager, sessionId, requestInfo);
-        }
+    }
 
     /**
      * Construction helper, used directly by the constructor, but also via reflection.
@@ -56,8 +54,7 @@ service SessionImpl
     static void initialize((struct SessionImpl) structure,
                            SessionManager       manager,
                            Int64                sessionId,
-                           RequestInfo          requestInfo)
-        {
+                           RequestInfo          requestInfo) {
         Time now = clock.now;
 
         structure.manager_        = manager;
@@ -72,7 +69,7 @@ service SessionImpl
         structure.internalId_     = sessionId;
         structure.sessionId       = idToString_(sessionId);
         structure.prevTLS_        = requestInfo.tls;
-        }
+    }
 
 
     // ----- session implementation properties -----------------------------------------------------
@@ -197,10 +194,9 @@ service SessionImpl
      * session attributes.
      */
     class AttributeMap_
-            delegates Map<String, Shareable>(actualMap)
-        {
+            delegates Map<String, Shareable>(actualMap) {
         Map<String, Shareable> actualMap.get() = attributes_;
-        }
+    }
 
     /**
      * Information about a SessionCookie related to this session.
@@ -214,11 +210,10 @@ service SessionImpl
     protected static class SessionCookieInfo_(SessionCookie cookie,
                                               Time?         sent     = Null,
                                               Time?         verified = Null,
-                                             )
-        {
+                                             ) {
         @Override
         String toString() = $"{cookie=}, {sent=}, {verified=}";
-        }
+    }
 
     /**
      * A record of access to this session from a particular `IPAddress`.
@@ -244,8 +239,7 @@ service SessionImpl
     /**
      * When matching a session cookie
      */
-    enum Match_
-        {
+    enum Match_ {
         Correct,
         WrongSession,   // session ID doesn't match
         Older,          // should be considered to be "suspect"
@@ -253,13 +247,12 @@ service SessionImpl
         Corrupt,        // could not deserialize
         WrongCookieId,  // cookie was copied from one name to another (an attempted hack!)
         Unexpected,     // cookie should not have been sent
-        }
+    }
 
     /**
      * Possible session events.
      */
-    enum Event_
-        {
+    enum Event_ {
         SessionCreated,
         SessionDestroyed,
         SessionMergedFrom,
@@ -271,28 +264,25 @@ service SessionImpl
         UserAgentChanged,
         FingerprintChanged,
         ProtocolViolated,
-        }
+    }
 
     /**
      * In flight event tracking.
      */
-    private class InFlight_(Event_ event, InFlight_? next)
-        {
+    private class InFlight_(Event_ event, InFlight_? next) {
         Boolean reached;
-        }
+    }
 
 
     // ----- session implementation API ------------------------------------------------------------
 
-    void requestBegin_(RequestIn request)
-        {
+    void requestBegin_(RequestIn request) {
         assert requests_.addIfAbsent(request);
-        }
+    }
 
-    void requestEnd_(RequestIn request)
-        {
+    void requestEnd_(RequestIn request) {
         assert requests_.removeIfPresent(request);
-        }
+    }
 
 
     // ----- session interface ---------------------------------------------------------------------
@@ -323,28 +313,24 @@ service SessionImpl
     public/private String userAgent;
 
     @Override
-    Boolean exclusiveAgent.set(Boolean exclusive)
-        {
+    Boolean exclusiveAgent.set(Boolean exclusive) {
         Boolean pre = usePersistentCookie_;
         super(exclusive);
         Boolean post = usePersistentCookie_;
-        if (pre != post)
-            {
+        if (pre != post) {
             incrementVersion_();
-            }
         }
+    }
 
     @Override
-    CookieConsent cookieConsent.set(CookieConsent consent)
-        {
+    CookieConsent cookieConsent.set(CookieConsent consent) {
         Boolean pre = usePersistentCookie_;
         super(consent);
         Boolean post = usePersistentCookie_;
-        if (pre != post)
-            {
+        if (pre != post) {
             incrementVersion_();
-            }
         }
+    }
 
     @Override
     public/private String? userId;
@@ -366,21 +352,18 @@ service SessionImpl
                       Boolean     exclusiveAgent = False,
                       TrustLevel  trustLevel     = Highest,
                       Set<String> roles          = [],
-                     )
-        {
+                     ) {
         if (   this.userId         != userId
             || this.exclusiveAgent != exclusiveAgent
             || this.trustLevel     != trustLevel
             || this.roles          != roles
-           )
-            {
-            if (String oldUser ?= this.userId, oldUser != userId)
-                {
+           ) {
+            if (String oldUser ?= this.userId, oldUser != userId) {
                 issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldUser),
                             () -> $|An exception in session {this.internalId_} occurred during a\
                                    | deauthentication event for user {oldUser.quoted()}
                            );
-                }
+            }
 
             this.userId            = userId;
             this.exclusiveAgent    = exclusiveAgent;
@@ -397,24 +380,21 @@ service SessionImpl
                         () -> $|An exception in session {this.internalId_} occurred during an\
                                | authentication event for user {userId.quoted()}
                        );
-            }
         }
+    }
 
     @Override
-    Boolean authenticationFailed(String? userId)
-        {
+    Boolean authenticationFailed(String? userId) {
         // accumulate failure information, both in absolute terms (number of attempts), and per
         // user id
         // TODO
 
         return False;
-        }
+    }
 
     @Override
-    void deauthenticate()
-        {
-        if (String oldUser ?= userId)
-            {
+    void deauthenticate() {
+        if (String oldUser ?= userId) {
             userId            = Null;
             exclusiveAgent    = False;
             trustLevel        = None;
@@ -424,12 +404,11 @@ service SessionImpl
                         () -> $|An exception in session {this.internalId_} occurred during a\
                                | deauthentication event for user {oldUser.quoted()}
                        );
-            }
         }
+    }
 
     @Override
-    void destroy()
-        {
+    void destroy() {
         issueEvent_(SessionDestroyed, Void, &sessionDestroyed(),
                     () -> $|An exception in session {this.internalId_} occurred during a\
                            | session-destroyed event
@@ -440,78 +419,67 @@ service SessionImpl
                                    sessionCookieInfos_[1]?.cookie : Null,
                                    sessionCookieInfos_[2]?.cookie : Null,
                                   );
-        }
+    }
 
     @Override
-    void sessionCreated()
-        {
+    void sessionCreated() {
         confirmReached_(SessionCreated);
-        }
+    }
 
     @Override
-    void sessionDestroyed()
-        {
+    void sessionDestroyed() {
         confirmReached_(SessionDestroyed);
-        }
+    }
 
     @Override
-    void sessionMergedFrom(Session temp)
-        {
+    void sessionMergedFrom(Session temp) {
         confirmReached_(SessionMergedFrom);
-        }
+    }
 
     @Override
-    void sessionForked()
-        {
+    void sessionForked() {
         confirmReached_(SessionForked);
-        }
+    }
 
     @Override
-    void sessionAuthenticated(String user)
-        {
+    void sessionAuthenticated(String user) {
         confirmReached_(SessionAuthenticated);
-        }
+    }
 
     @Override
-    void sessionDeauthenticated(String user)
-        {
+    void sessionDeauthenticated(String user) {
         confirmReached_(SessionDeauthenticated);
-        }
+    }
 
     @Override
-    TrustLevel tlsChanged()
-        {
+    TrustLevel tlsChanged() {
         confirmReached_(TlsChanged);
         return super();
-        }
+    }
 
     @Override
-    TrustLevel ipAddressChanged(IPAddress oldAddress, IPAddress newAddress)
-        {
+    TrustLevel ipAddressChanged(IPAddress oldAddress, IPAddress newAddress) {
         confirmReached_(IPAddressChanged);
         return super(oldAddress, newAddress);
-        }
+    }
 
     @Override
-    TrustLevel userAgentChanged(String oldAgent, String newAgent)
-        {
+    TrustLevel userAgentChanged(String oldAgent, String newAgent) {
         confirmReached_(UserAgentChanged);
         return super(oldAgent, newAgent);
-        }
+    }
 
     @Override
-    TrustLevel fingerprintChanged()
-        {
+    TrustLevel fingerprintChanged() {
         confirmReached_(FingerprintChanged);
         return super();
-        }
+    }
 
     @Override
-    TrustLevel protocolViolated()
-        {
+    TrustLevel protocolViolated() {
         confirmReached_(ProtocolViolated);
         return super();
-        }
+    }
 
     @Override
     Boolean anyEventsSince(Time time) = time < versionChanged_;
@@ -533,41 +501,36 @@ service SessionImpl
     conditional (SessionCookie cookie,
                  Time?         sent,
                  Time?         verified,
-                ) getCookie_(CookieId cookieId)
-        {
+                ) getCookie_(CookieId cookieId) {
         SessionCookieInfo_? info = sessionCookieInfos_[cookieId.ordinal];
         return info == Null
                 ? False
                 : (True, info.cookie, info.sent, info.verified);
-        }
+    }
 
     /**
      * Record that the specified cookie was sent to the user agent.
      *
      * @param cookie  one of the session cookies
      */
-    void cookieSent_(SessionCookie cookie)
-        {
+    void cookieSent_(SessionCookie cookie) {
         if (SessionCookieInfo_ info ?= sessionCookieInfos_[cookie.cookieId.ordinal],
-                cookie.version == info.cookie.version)
-            {
+                cookie.version == info.cookie.version) {
             info.sent = clock.now;
-            }
         }
+    }
 
     /**
      * Record that the specified cookie was received by the user agent.
      *
      * @param cookie  one of the session cookies
      */
-    void cookieVerified_(SessionCookie cookie)
-        {
+    void cookieVerified_(SessionCookie cookie) {
         if (SessionCookieInfo_ info ?= sessionCookieInfos_[cookie.cookieId.ordinal],
-                cookie.version == info.cookie.version)
-            {
+                cookie.version == info.cookie.version) {
             info.verified = clock.now;
-            }
         }
+    }
 
 
     /**
@@ -580,42 +543,34 @@ service SessionImpl
      * @return a cookie, if the `Match_` value was `Correct`, `Older`, `Newer`, or `WrongId`, and
      *         sometimes `Corrupt`; otherwise, `Null`
      */
-    (Match_ match, SessionCookie? cookie) cookieMatches_(CookieId cookieId, String value)
-        {
+    (Match_ match, SessionCookie? cookie) cookieMatches_(CookieId cookieId, String value) {
         SessionCookieInfo_? info = sessionCookieInfos_[cookieId.ordinal];
-        if (SessionCookie.textFromCookie(value) == info?.cookie.text)
-            {
+        if (SessionCookie.textFromCookie(value) == info?.cookie.text) {
             info.verified ?:= clock.now;
             return Correct, info.cookie;
-            }
+        }
 
         SessionCookie cookie;
-        try
-            {
+        try {
             cookie = new SessionCookie(manager_, value);
-            }
-        catch (Exception _)
-            {
+        } catch (Exception _) {
             return Corrupt, Null;
-            }
+        }
 
-        if (cookie.cookieId != cookieId)
-            {
+        if (cookie.cookieId != cookieId) {
             return WrongCookieId, cookie;
-            }
+        }
 
-        if (cookie.sessionId != this.internalId_)
-            {
+        if (cookie.sessionId != this.internalId_) {
             return WrongSession, cookie;
-            }
+        }
 
-        return switch (cookie.version <=> this.version_)
-            {
+        return switch (cookie.version <=> this.version_) {
             case Lesser : (Older, cookie);
             case Greater: (Newer, cookie);
             case Equal  : (Corrupt, cookie); // everything "seems" right, but something didn't match
-            };
-        }
+        };
+    }
 
     /**
      * Indicates whether the persistent cookie should be used for this session.
@@ -629,31 +584,28 @@ service SessionImpl
      *
      * @return a bitmask indicating the session cookies that the user agent should have
      */
-    Byte desiredCookies_(Boolean tls)
-        {
+    Byte desiredCookies_(Boolean tls) {
         return tls
                 ? usePersistentCookie_
                         ? CookieId.All
                         : CookieId.BothTemp
                 : CookieId.NoTls;
-        }
+    }
 
     /**
      * Make sure that the specified cookies exist.
      *
      * @param cookieId  which session cookie to ask for
      */
-    void ensureCookies_(Int requiredCookies)
-        {
-        if (requiredCookies & knownCookies_ == requiredCookies)
-            {
+    void ensureCookies_(Int requiredCookies) {
+        if (requiredCookies & knownCookies_ == requiredCookies) {
             return;
-            }
+        }
 
         // cookies need to be created, which causes the session version to change
         knownCookies_ |= requiredCookies;
         incrementVersion_();
-        }
+    }
 
     /**
      * Check to see if the connection associated with the session has been modified.
@@ -663,84 +615,73 @@ service SessionImpl
      *
      * @return True iff the connection has been modified
      */
-    Boolean updateConnection_(String userAgent, IPAddress ipAddress)
-        {
+    Boolean updateConnection_(String userAgent, IPAddress ipAddress) {
         String    oldAgent   = this.userAgent;
         IPAddress oldAddress = this.ipAddress;
-        if (userAgent == oldAgent && ipAddress == oldAddress)
-            {
+        if (userAgent == oldAgent && ipAddress == oldAddress) {
             return False;
-            }
+        }
 
         TrustLevel oldTrust = this.trustLevel;
         TrustLevel newTrust = oldTrust;
 
-        if (userAgent != oldAgent)
-            {
+        if (userAgent != oldAgent) {
             newTrust = issueEvent_(UserAgentChanged, None, &userAgentChanged(oldAgent, userAgent),
                                    () -> $|An exception in session {this.internalId_} occurred during\
                                           | a user agent change event from {oldAgent.quoted()} to\
                                           | {userAgent.quoted()}
                                   ).notGreaterThan(newTrust);
-            }
+        }
 
-        if (ipAddress != oldAddress)
-            {
+        if (ipAddress != oldAddress) {
             newTrust = issueEvent_(IPAddressChanged, None, &ipAddressChanged(oldAddress, ipAddress),
                                    () -> $|An exception in session {this.internalId_} occurred during\
                                           | an IPAddress change event from {oldAddress} to {ipAddress}
                                   ).notGreaterThan(newTrust);
-            }
+        }
 
         this.userAgent  = userAgent;
         this.ipAddress  = ipAddress;
         this.trustLevel = newTrust;
         incrementVersion_();
         return True;
-        }
+    }
 
     /**
      * Increment the session version as the result of a significant change to the session.
      *
      * @param newVersion  (optional) the suggested new version number
      */
-    void incrementVersion_(Int? newVersion=Null)
-        {
+    void incrementVersion_(Int? newVersion=Null) {
         assert knownCookies_ != 0;
 
         version_ = version_ + 1;
-        if (newVersion? > version_)
-            {
+        if (newVersion? > version_) {
             version_ = newVersion;
-            }
+        }
 
         Time now     = clock.now;
         Time expires = now + manager_.persistentCookieDuration;
         Byte desired = desiredCookies_(knownCookies_ & CookieId.BothTls != 0);
-        for (CookieId cookieId : CookieId.values)
-            {
+        for (CookieId cookieId : CookieId.values) {
             Int i = cookieId.ordinal;
 
-            if (SessionCookieInfo_ oldInfo ?= sessionCookieInfos_[i])
-                {
+            if (SessionCookieInfo_ oldInfo ?= sessionCookieInfos_[i]) {
                 manager_.removeSessionCookie(this, oldInfo.cookie);
-                }
+            }
 
-            if (desired & cookieId.mask == 0)
-                {
+            if (desired & cookieId.mask == 0) {
                 sessionCookieInfos_[i] = Null;
-                }
-            else
-                {
+            } else {
                 // create the session cookie
                 SessionCookie cookie = new SessionCookie(manager_, internalId_, cookieId,
                         knownCookies_, cookieConsent, cookieId.persistent ? expires : Null,
                         ipAddress, now, version_);
                 sessionCookieInfos_[i] = new SessionCookieInfo_(cookie);
                 manager_.addSessionCookie(this, cookie);
-                }
             }
         }
+    }
 
     /**
      * Check if the session needs to be replaced.
@@ -751,12 +692,11 @@ service SessionImpl
      * @return (conditional) the session object, or a `4xx`-range `HttpStatus` that indicates a
      *         failure
      */
-    conditional SessionImpl|HttpStatus isAbandoned_(RequestInfo requestInfo)
-        {
+    conditional SessionImpl|HttpStatus isAbandoned_(RequestInfo requestInfo) {
         return abandoned_
                 ? (True, split_(requestInfo))
                 : False;
-        }
+    }
 
     /**
      * When a user agent cannot prove that it owns the session that it has a cookie for, it's
@@ -771,10 +711,8 @@ service SessionImpl
      * @return (conditional) the session object, or a `4xx`-range `HttpStatus` that indicates a
      *         failure
      */
-    HttpStatus|SessionImpl split_(RequestInfo requestInfo)
-        {
-        if (!abandoned_)
-            {
+    HttpStatus|SessionImpl split_(RequestInfo requestInfo) {
+        if (!abandoned_) {
             // the first thing to do is to notify the session that an apparent theft was attempted;
             // if desired, the application can strip information out of the session or take other
             // actions appropriate to the level of concern
@@ -788,13 +726,12 @@ service SessionImpl
             // likelihood of repeated attacks is significant (so it's a good idea to completely
             // abandon the old session id altogether)
             abandoned_ = True;
-            }
+        }
 
         // create the new session
         HttpStatus|SessionImpl result = manager_.cloneSession(this, requestInfo);
 
-        if (result.is(SessionImpl))
-            {
+        if (result.is(SessionImpl)) {
             // keep track of splits
             this.splits_ += new SessionSplit_(requestInfo.getClientAddress(), version_, result.internalId_);
 
@@ -806,20 +743,19 @@ service SessionImpl
                                () -> $|An exception occurred in session {result.internalId_} during\
                                       | the processing of a session-forked event
                               );
-            }
+        }
 
         return result;
-        }
+    }
 
     /**
      * Copy the contents of the passed session into this session.
      *
      * @param that  a session that this session is cloning
      */
-    void cloneFrom_(SessionImpl that)
-        {
+    void cloneFrom_(SessionImpl that) {
         // TODO CP
-        }
+    }
 
     /**
      * Merge the passed temporary session into this session.
@@ -827,23 +763,21 @@ service SessionImpl
      * @param temp  a session that will be discarded, because it was determined to be a temporary
      *              session that was being used in lieu of this session
      */
-    void merge_(SessionImpl temp)
-        {
+    void merge_(SessionImpl temp) {
         this.lastUse         = this.lastUse.notLessThan(temp.lastUse);
         this.exclusiveAgent |= temp.exclusiveAgent;
 
         Date? tempConsent = temp.cookieConsent.lastConsent;
         Date? thisConsent = this.cookieConsent.lastConsent;
-        if (tempConsent != Null && (thisConsent == Null || tempConsent > thisConsent))
-            {
+        if (tempConsent != Null && (thisConsent == Null || tempConsent > thisConsent)) {
             this.cookieConsent = temp.cookieConsent;
-            }
+        }
 
         issueEvent_(SessionMergedFrom, Void, &sessionMergedFrom(temp),
                 () -> $"An exception occurred merging session {temp.internalId_} into {this.internalId_}");
 
         temp.destroy();
-        }
+    }
 
     /**
      * @param info  the current request
@@ -852,15 +786,13 @@ service SessionImpl
      *         will permit a redirect to occur; otherwise the HttpStatus for an error that must be
      *         returned as a response to the provided `RequestInfo`
      */
-    Int|HttpStatus prepareRedirect_(RequestInfo info)
-        {
+    Int|HttpStatus prepareRedirect_(RequestInfo info) {
         // get rid of any excess pending redirects (size limit the array of "in flight" redirects)
-        if (PendingRedirect_[] pending ?= pendingRedirects_, pending.size > MaxRedirects_)
-            {
+        if (PendingRedirect_[] pending ?= pendingRedirects_, pending.size > MaxRedirects_) {
             // keep the most recent redirects, but one less than MaxRedirects_ to make room for the
             // new one we're about to add
             pendingRedirects_ = pending[pending.size-MaxRedirects_ >..< MaxRedirects_];
-            }
+        }
 
         // prune any old redirects
         Time now     = clock.now;
@@ -869,17 +801,15 @@ service SessionImpl
 
         // allocate a unique id
         Int64 id;
-        do
-            {
+        do {
             id = rnd.int(100k).toInt64() + 1;
-            }
-        while (pendingRedirects_?.any(r -> r.id == id));
+        } while (pendingRedirects_?.any(r -> r.id == id));
 
         PendingRedirect_ pending = new PendingRedirect_(id, info.getUri(), now);
         pendingRedirects_ = pendingRedirects_? + pending : [pending];
 
         return id;
-        }
+    }
 
     /**
      * Claim (and clean up) a previously prepared redirect.
@@ -889,23 +819,19 @@ service SessionImpl
      * @return True iff the specified id is a redirect that is registered on this session
      * @return (conditional) the Uri that caused the redirect
      */
-    conditional Uri claimRedirect_(Int64 id)
-        {
-        if (PendingRedirect_[] redirects ?= pendingRedirects_)
-            {
-            for (PendingRedirect_ redirect : redirects)
-                {
-                if (redirect.id == id)
-                    {
+    conditional Uri claimRedirect_(Int64 id) {
+        if (PendingRedirect_[] redirects ?= pendingRedirects_) {
+            for (PendingRedirect_ redirect : redirects) {
+                if (redirect.id == id) {
                     // don't delete the redirect at this point; let it time out (in case some
                     // response gets lost, and the user agent resubmits the same request again)
                     return True, redirect.uri;
-                    }
                 }
             }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Wrapper around event dispatch to handle exceptions, logging, and ensuring that the events
@@ -923,35 +849,30 @@ service SessionImpl
                                           Result            defaultResult,
                                           function Result() handleEvent,
                                           function String() renderLogText,
-                                         )
-        {
+                                         ) {
         Result result = defaultResult;
 
         InFlight_ inFlight = new InFlight_(event, currentInFlight_);
         currentInFlight_ = inFlight;
 
-        try
-            {
+        try {
             result = handleEvent();
-            if (!inFlight.reached && manager_.shouldReport(event))
-                {
+            if (!inFlight.reached && manager_.shouldReport(event)) {
                 log($|An override on the session {event} event handler did not call its "super" as\
                      | required. This is an error with unknown side-effects, and must be corrected\
                      | by the application developer. This error is likely to occur every time that\
                      | the event occurs, and so this message will not be repeated.
                    );
-                }
             }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             log($"{renderLogText()}: {e}");
-            }
+        }
 
         assert currentInFlight_ == inFlight;
         currentInFlight_ = inFlight.next;
 
         return result;
-        }
+    }
 
     /**
      * This method is used to confirm that event dispatching wasn't improperly terminated by someone
@@ -959,20 +880,17 @@ service SessionImpl
      *
      * @param event  the event being confirmed as having executed correctly
      */
-    private void confirmReached_(Event_ event)
-        {
+    private void confirmReached_(Event_ event) {
         // the event to confirm will always be the first in the linked list, but since developers
         // do crazy things, be tolerant of unexpected things here
-        for (InFlight_? current = currentInFlight_; current != Null; current = current.next)
-            {
-            if (current.event == event)
-                {
+        for (InFlight_? current = currentInFlight_; current != Null; current = current.next) {
+            if (current.event == event) {
                 current.reached = True;
                 return;
-                }
             }
-        // no assertion
         }
+        // no assertion
+    }
 
     /**
      * Convert an integer session id to a generic-looking (external) string identifier.
@@ -981,11 +899,10 @@ service SessionImpl
      *
      * @return the session identifier string
      */
-    static String idToString_(Int64 id)
-        {
+    static String idToString_(Int64 id) {
         Byte[] bytes = id == 0 ? [0] : id.toByteArray()[id.leadingZeroCount / 8 ..< 8];
         return Base64Format.Instance.encode(bytes);
-        }
+    }
 
     /**
      * Convert a generic-looking (external) session id string to an implementation-specific internal
@@ -995,8 +912,7 @@ service SessionImpl
      *
      * @return the internal session id
      */
-    static Int stringToId_(String str)
-        {
+    static Int stringToId_(String str) {
         // the string contains a base-64 encoded set of up to 8 bytes, which are the 8 bytes of the
         // int session id
         Byte[] bytes = Base64Format.Instance.decode(str);
@@ -1006,5 +922,5 @@ service SessionImpl
         assert bytes.size <= 8 as $"Invalid session {str.quoted()}, byte length={bytes.size}";
 
         return bytes.toInt64();
-        }
     }
+}

@@ -17,30 +17,27 @@ import responses.SimpleResponse;
  */
 @Concurrent
 service DigestAuthenticator(Realm realm)
-        implements Authenticator
-    {
-    assert()
-        {
+        implements Authenticator {
+
+    assert() {
         Signer[] hashers = realm.hashers;
         assert !hashers.empty as $|The "{realm.name}" realm must specify at least one hashing\
                                   | algorithm
                                  ;
-        for (Signer hasher : hashers)
-            {
-            switch (String name = hasher.algorithm.name)
-                {
-                case "MD5":
-                case "SHA-256":
-                case "SHA-512-256":
-                    break;
+        for (Signer hasher : hashers) {
+            switch (String name = hasher.algorithm.name) {
+            case "MD5":
+            case "SHA-256":
+            case "SHA-512-256":
+                break;
 
-                default:
-                    assert as $|The "{realm.name}" realm specifies an unsupported hash algorithm:\
-                               | {name}
-                              ;
-                }
+            default:
+                assert as $|The "{realm.name}" realm specifies an unsupported hash algorithm:\
+                           | {name}
+                          ;
             }
         }
+    }
 
     /**
      * The Realm that contains the user/password information
@@ -51,8 +48,7 @@ service DigestAuthenticator(Realm realm)
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    Boolean|ResponseOut authenticate(RequestIn request, Session session, Endpoint endpoint)
-        {
+    Boolean|ResponseOut authenticate(RequestIn request, Session session, Endpoint endpoint) {
         // TLS is a pre-requisite for authentication in the Xenia design
         assert request.scheme.tls;
 
@@ -60,11 +56,9 @@ service DigestAuthenticator(Realm realm)
 
         // first, check to see if the incoming request includes the necessary authentication
         // information, which will be in one or more "Authorization" header entries
-        NextAuthAttempt: for (String auth : request.header.valuesOf("Authorization"))
-            {
+        NextAuthAttempt: for (String auth : request.header.valuesOf("Authorization")) {
             auth = auth.trim();
-            if (CaseInsensitive.stringStartsWith(auth, "Digest "))
-                {
+            if (CaseInsensitive.stringStartsWith(auth, "Digest ")) {
                 if ((UserId userId,
                      Hash   responseHash,
                      Signer hasher,
@@ -73,48 +67,42 @@ service DigestAuthenticator(Realm realm)
                      String uri,
                      String cnonce,
                      String ncText,
-                     Int    nc          ) := parseDigest(auth.substring(7)))
-                    {
+                     Int    nc          ) := parseDigest(auth.substring(7))) {
                     // verify that the server nonce is still acceptable; the client nonce and its
                     // count isn't checked here, since the communication is over TLS, and any
                     // noteworthy changes to the session or the connection will automatically make
                     // the server nonce stale
-                    switch (lookupNonce(session, nonce))
-                        {
-                        case Unknown:
-                            continue NextAuthAttempt;
+                    switch (lookupNonce(session, nonce)) {
+                    case Unknown:
+                        continue NextAuthAttempt;
 
-                        case Stale:
-                            stale = True;
-                            continue NextAuthAttempt;
+                    case Stale:
+                        stale = True;
+                        continue NextAuthAttempt;
 
-                        case Valid:
-                            break;
-                        }
+                    case Valid:
+                        break;
+                    }
 
                     Hash[]  hashes  = realm.hashesFor(userId, hasher);
                     String? badUser = Null;
-                    for (Hash pwdHash : hashes)
-                        {
+                    for (Hash pwdHash : hashes) {
                         String user;
-                        if (userId.is(String))
-                            {
+                        if (userId.is(String)) {
                             user      = userId;
                             badUser ?:= user;
-                            }
                         // obtain the plain text user name (which we need to reproduce the hash) by
                         // "validating" the password hash that we just got from the realm when we
                         // looked up the hashed user id; in other words,  this is not "validating"
                         // anything; it's just looking up a plain text user name
-                        else if (!(user := realm.authenticateHash(userId, pwdHash, hasher)))
-                            {
+                        } else if (!(user := realm.authenticateHash(userId, pwdHash, hasher))) {
                             // somehow, when we went to look up the user name for the password hash
                             // that the realm just gave us, the user hash/password hash combination
                             // disappeared; in theory, someone could have just changed the password
                             // for that user or something similar, so just pretend that we didn't
                             // even know about that user hash/password hash combo
                             continue;
-                            }
+                        }
 
                         // create what a response digest would look like, using the hashed password
                         // and other information that we parsed from the digest auth:
@@ -142,31 +130,26 @@ service DigestAuthenticator(Realm realm)
                         Hash expected = toHash($|{toString(hashA1)}:{nonce}:{ncText}\
                                                 |:{cnonce}:auth:{toString(hashA2)}
                                                                                       , hasher);
-                        if (responseHash == expected)
-                            {
+                        if (responseHash == expected) {
                             session.authenticate(user);
                             return True;
-                            }
                         }
+                    }
 
-                    if (session.authenticationFailed(badUser))
-                        {
+                    if (session.authenticationFailed(badUser)) {
                         return False;
-                        }
                     }
-                else
-                    {
+                } else {
                     return new SimpleResponse(BadRequest);
-                    }
                 }
             }
+        }
 
         // to cause the client to request the user for a name and password, we need to return an
         // "Unauthorized" error code with a header that directs the client to use Digest auth
         ResponseOut response = new SimpleResponse(Unauthorized);
         String nonce  = createNonce(session);
-        for (Signer hasher : realm.hashers)
-            {
+        for (Signer hasher : realm.hashers) {
             response.header.put("WWW-Authenticate", $|Digest realm="{realm.name}",\
                                                      |qop="auth",\
                                                      |algorithm={hasher.algorithm.name}-sess,\
@@ -175,9 +158,9 @@ service DigestAuthenticator(Realm realm)
                                                      |charset=UTF-8\
                                                      |{stale ? ",stale=true" : ""}
                                );
-            }
-        return response.freeze(inPlace=True);
         }
+        return response.freeze(inPlace=True);
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -201,32 +184,26 @@ service DigestAuthenticator(Realm realm)
      *
      * @return the new nonce
      */
-    protected String createNonce(Session session)
-        {
-        return session.attributes.process(ActiveNonces, entry ->
-            {
+    protected String createNonce(Session session) {
+        return session.attributes.process(ActiveNonces, entry -> {
             @Inject Random rnd;
             String nonce = Base64Format.Instance.encode(rnd.fill(new Byte[9]));
 
             NonceTable nonces;
-            if (entry.exists, nonces := entry.value.is(NonceTable))
-                {
-                while (nonces.size >= 20)
-                    {
+            if (entry.exists, nonces := entry.value.is(NonceTable)) {
+                while (nonces.size >= 20) {
                     nonces = nonces.remove(nonces.keys.iterator().take());
-                    }
                 }
-            else
-                {
+            } else {
                 nonces = new NonceTable(20);
-                }
+            }
 
             @Inject Clock clock;
             entry.value = nonces.put(nonce, clock.now);
 
             return nonce;
-            });
-        }
+        });
+    }
 
     /**
      * The current status of a previously created nonce:
@@ -246,20 +223,17 @@ service DigestAuthenticator(Realm realm)
      *
      * @return the nonce status
      */
-    protected NonceStatus lookupNonce(Session session, String nonce)
-        {
-        return session.attributes.process(ActiveNonces, entry ->
-            {
+    protected NonceStatus lookupNonce(Session session, String nonce) {
+        return session.attributes.process(ActiveNonces, entry -> {
             if (entry.exists, NonceTable nonces := entry.value.is(NonceTable),
-                    Time nonceCreated := nonces.get(nonce))
-                {
+                    Time nonceCreated := nonces.get(nonce)) {
                 return session.anyEventsSince(nonceCreated)
                         ? Stale
                         : Valid;
-                }
+            }
             return Unknown;
-            });
-        }
+        });
+    }
 
     /**
      * Parse the text that follows "Digest " in the "Authorization" header.
@@ -341,32 +315,24 @@ service DigestAuthenticator(Realm realm)
                  String uri,
                  String cnonce,
                  String ncText,
-                 Int    nc          ) parseDigest(String text)
-        {
+                 Int    nc          ) parseDigest(String text) {
         val props = text.trim().splitMap();
 
         // realm name is optional, but it should match the name previously provided
-        if (String realmName := props.get("realm"))
-            {
-            if (realmName := unquote(realmName), realmName == realm.name)
-                {
+        if (String realmName := props.get("realm")) {
+            if (realmName := unquote(realmName), realmName == realm.name) {
                 // realm name matches
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
+        }
 
         // qop is required, and only one qop is supported ("auth")
-        if (String qop := props.get("qop"), qop == "auth" || qop == "\"auth\"")
-            {
+        if (String qop := props.get("qop"), qop == "auth" || qop == "\"auth\"") {
             // qop matches
-            }
-        else
-            {
+        } else {
             return False;
-            }
+        }
 
         // the things that need to be parsed and returned
         UserId userId;
@@ -382,63 +348,48 @@ service DigestAuthenticator(Realm realm)
         // encoded differently in a similarly named key with a star on the end, because why TF
         // not? -- is required
         Boolean userHashed = False;
-        if (String userhash := props.get("userhash")) // optional
-            {
-            if (userhash == "true")
-                {
+        if (String userhash := props.get("userhash")) { // optional
+            if (userhash == "true") {
                 userHashed = True;
-                }
-            else if (userhash != "false")
-                {
+            } else if (userhash != "false") {
                 return False;
-                }
             }
+        }
 
-        if (String username := props.get("username"))
-            {
+        if (String username := props.get("username")) {
             // the presence of both "username" and "username*" is illegal
-            if (props.contains("username*"))
-                {
+            if (props.contains("username*")) {
                 return False;
-                }
-
-            if (!(userId := unquote(username)))
-                {
-                return False;
-                }
             }
-        else if (username := props.get("username*"))
-            {
+
+            if (!(userId := unquote(username))) {
+                return False;
+            }
+        } else if (username := props.get("username*")) {
             // user hashing is not compatible with the use of the "username*" MIME parameter
-            if (userHashed)
-                {
+            if (userHashed) {
                 return False;
-                }
+            }
 
-            if (!(userId := decodeUtf8MimeHeader(username)))
-                {
+            if (!(userId := decodeUtf8MimeHeader(username))) {
                 return False;
-                }
             }
-        else
-            {
+        } else {
             return False;
-            }
+        }
 
         // a helper function to grab required header properties
-        static conditional String require(Map<String, String> props, String name, Boolean? quoted)
-            {
-            if (String val := props.get(name))
-                {
+        static conditional String require(Map<String, String> props, String name, Boolean? quoted) {
+            if (String val := props.get(name)) {
                 return quoted?
                         ? unquote(val)
                         : (True, val);
 
                 val := unquote(val);
                 return True, val;
-                }
-            return False;
             }
+            return False;
+        }
 
         // a few more required pieces of information from the header properties
         String algorithm;
@@ -451,76 +402,58 @@ service DigestAuthenticator(Realm realm)
             uri       := require(props, "uri"      , True ),
             cnonce    := require(props, "cnonce"   , True ),
             ncHex     := require(props, "nc"       , False),
-            response  := require(props, "response" , True ))
-            {
+            response  := require(props, "response" , True )) {
             // all required props found
-            }
-        else
-            {
+        } else {
             return False;
-            }
+        }
 
         // figure out which hashing algorithm (Signer) to use
         static String Suffix = "-sess";
-        FindHasher: if (algorithm.endsWith(Suffix))
-            {
+        FindHasher: if (algorithm.endsWith(Suffix)) {
             algorithm = algorithm[0 ..< algorithm.size-Suffix.size];
-            for (hasher : realm.hashers)
-                {
-                if (hasher.algorithm.name == algorithm)
-                    {
+            for (hasher : realm.hashers) {
+                if (hasher.algorithm.name == algorithm) {
                     break FindHasher;
-                    }
                 }
-            return False;
             }
-        else
-            {
             return False;
-            }
+        } else {
+            return False;
+        }
 
         // the nc value must be 8 hex chars (because why TF not?); they get turned into an Int
-        if (ncHex.size != 8)
-            {
+        if (ncHex.size != 8) {
             return False;
-            }
-        for (Char ch : ncHex)
-            {
-            if (Nibble n := ch.isNibble())
-                {
+        }
+        for (Char ch : ncHex) {
+            if (Nibble n := ch.isNibble()) {
                 nc = nc << 4 | n;
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
+        }
 
 
         // response (which contains the password information) is required
         // the response is a hex string
-        if (response.size & 1 == 1)
-            {
+        if (response.size & 1 == 1) {
             // weird, but the spec of course doesn't have an opinion on whether the size should be
             // evenly divisible by 2, so it's probably worth right justifying it
             response = $"0{response}";
-            }
+        }
         Byte[] hash = new Byte[](response.size / 2);
-        for (Int offset = 0, Int length = response.size; offset < length; offset += 2)
-            {
-            if (Nibble n0 := response[offset].isNibble(), Nibble n1 := response[offset+1].isNibble())
-                {
+        for (Int offset = 0, Int length = response.size; offset < length; offset += 2) {
+            if (Nibble n0 := response[offset].isNibble(), Nibble n1 := response[offset+1].isNibble()) {
                 hash += n0.toByte() << 4 | n1.toByte();
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
+        }
         responseHash = hash.freeze(inPlace=True);
 
         return True, userId, responseHash, hasher, opaque, nonce, uri, cnonce, ncHex, nc;
-        }
+    }
 
     /**
      * Remove the required quotes from a String, and return the contents
@@ -530,15 +463,13 @@ service DigestAuthenticator(Realm realm)
      * @return `True` iff the passed String started and ended with double quotes
      * @return (conditional) the contents of the passed quoted String
      */
-    static conditional String unquote(String s)
-        {
-        if (s.size >= 2 && s.startsWith('"') && s.endsWith('"'))
-            {
+    static conditional String unquote(String s) {
+        if (s.size >= 2 && s.startsWith('"') && s.endsWith('"')) {
             return True, s[0 >..< s.size-1];
-            }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Decode a MIME header encoded using UTF-8.
@@ -553,82 +484,64 @@ service DigestAuthenticator(Realm realm)
      * @return `True` iff the String contents were successfull decoded
      * @return (conditional) the decoded String contents
      */
-    static conditional String decodeUtf8MimeHeader(String text)
-        {
+    static conditional String decodeUtf8MimeHeader(String text) {
         // helper function to turn regular chars into ASCII bytes
-        static conditional Byte isAttrChar(Char ch)
-            {
-            return switch (ch)
-                {
+        static conditional Byte isAttrChar(Char ch) {
+            return switch (ch) {
                 case 'A'..'Z', 'a'..'z', '0'..'9':
                 case '!', '#', '$', '&', '+', '-', '.':
                 case '^', '_', '`', '|', '~':
                     (True, ch.toByte());
 
                 default: False;
-                };
-            }
+            };
+        }
 
         // helper function to turn "percent encoded" sequences into ASCII bytes
-        static conditional (Byte, Int) decodePctEncoded(String s, Int offset)
-            {
+        static conditional (Byte, Int) decodePctEncoded(String s, Int offset) {
             Int length = s.size;
-            if (offset + 2 > length)
-                {
+            if (offset + 2 > length) {
                 return False;
-                }
+            }
 
-            if (Nibble n0 := s[offset++].isNibble(), Nibble n1 := s[offset++].isNibble())
-                {
+            if (Nibble n0 := s[offset++].isNibble(), Nibble n1 := s[offset++].isNibble()) {
                 return True, n0.toByte() << 4 | n1.toByte(), offset;
-                }
+            }
 
             return False;
-            }
+        }
 
         static String Prefix = "UTF-8'";
-        if (!text.startsWith(Prefix))
-            {
+        if (!text.startsWith(Prefix)) {
             return False;
-            }
+        }
 
         Int offset;
-        if (offset := text.indexOf('\'', Prefix.size))
-            {
+        if (offset := text.indexOf('\'', Prefix.size)) {
             ++offset;
-            }
-        else
-            {
+        } else {
             return False;
-            }
+        }
 
         Int    length = text.size;
         Byte[] bytes  = new Byte[](length-offset);
-        while (offset < length)
-            {
+        while (offset < length) {
             Char ch = text[offset++];
-            if (Byte b := isAttrChar(ch))
-                {
+            if (Byte b := isAttrChar(ch)) {
                 bytes += b;
-                }
-            else if (ch == '%', (b, offset) := decodePctEncoded(text, offset))
-                {
+            } else if (ch == '%', (b, offset) := decodePctEncoded(text, offset)) {
                 bytes += b;
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
+        }
 
-        try
-            {
+        try {
             return True, bytes.unpackUtf8();
-            }
-        catch (Exception e) {}
+        } catch (Exception e) {}
 
         return False;
-        }
+    }
 
     /**
      * Hash to hash-string conversion. Hashes are often converted to strings of lowercase hexits,
@@ -639,11 +552,10 @@ service DigestAuthenticator(Realm realm)
      *
      * @return the hash string
      */
-    static String toString(Hash hash)
-        {
+    static String toString(Hash hash) {
         StringBuffer buf = new StringBuffer(hash.size * 2);
         return hash.appendTo(buf, pre="").toString().toLowercase();
-        }
+    }
 
     /**
      * String to hash calculation.
@@ -653,8 +565,7 @@ service DigestAuthenticator(Realm realm)
      *
      * @return the hash
      */
-    static Hash toHash(String s, Signer hasher)
-        {
+    static Hash toHash(String s, Signer hasher) {
         return hasher.sign(s.utf8()).bytes;
-        }
     }
+}

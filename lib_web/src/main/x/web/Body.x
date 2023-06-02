@@ -2,8 +2,7 @@
  * A representation of the body of an HTTP message.
  */
 interface Body
-        extends Freezable
-    {
+        extends Freezable {
     /**
      * The headers for this body and -- if available -- for the message containing this body.
      */
@@ -25,12 +24,11 @@ interface Body
      * @return True iff the size of the body is known
      * @return (conditional) the size in bytes of the body
      */
-    conditional Int knownSize()
-        {
+    conditional Int knownSize() {
         // this should be overridden by any Body implementation that may not have the contents
         // stored in the `bytes` property
         return bytes.knownSize();
-        }
+    }
 
     /**
      * The bytes of the body.
@@ -62,10 +60,9 @@ interface Body
      * @return True iff the content was successfully turned into a result of the desired type
      * @return (conditional) the result
      */
-    <Result> conditional Result to(Type<Result> type)
-        {
+    <Result> conditional Result to(Type<Result> type) {
         return False;
-        }
+    }
 
     /**
      * In order to _consume_ the body as a stream of bytes, the caller can use this method to obtain
@@ -76,10 +73,9 @@ interface Body
      *
      * @return a BinaryInput that provides the body as a stream
      */
-    BinaryInput bodyReader()
-        {
+    BinaryInput bodyReader() {
         return new ecstasy.io.ByteArrayInputStream(bytes);
-        }
+    }
 
     /**
      * In order to _consume_ the body as a stream of bytes, the caller can use this method to
@@ -90,10 +86,9 @@ interface Body
      *
      * @param receiver  the BinaryOutput stream that the bytes of the body will written to
      */
-    void streamBodyTo(BinaryOutput receiver)
-        {
+    void streamBodyTo(BinaryOutput receiver) {
         receiver.writeBytes(bytes);
-        }
+    }
 
     /**
      * In order to _provide_ the body as a stream of bytes, the caller can use this method, passing
@@ -104,8 +99,7 @@ interface Body
      *
      * @param source  the InputStream that provides the bytes of the body
      */
-    void streamBodyFrom(InputStream source)
-        {
+    void streamBodyFrom(InputStream source) {
         bytes = source.readBytes(source.size);
-        }
     }
+}

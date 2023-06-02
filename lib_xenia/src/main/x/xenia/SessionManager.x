@@ -43,8 +43,7 @@ import SessionStore.IOResult;
  * either anonymity or privacy.
  */
 @Concurrent
-service SessionManager(SessionStore store, SessionProducer instantiateSession)
-    {
+service SessionManager(SessionStore store, SessionProducer instantiateSession) {
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -71,12 +70,11 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     /**
      * The most recently generated session id.
      */
-    protected/private Int64 previousId =
-        {
+    protected/private Int64 previousId = {
         // initialize to a random session id
         @Inject Random rnd;
         return rnd.int64() & ID_LIMIT;
-        };
+    };
 
     /**
      * The total number of sessions created.
@@ -99,13 +97,12 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *   storage
      * * `InMemory` - the session is cached in memory
      */
-    protected enum SessionStatus
-        {
+    protected enum SessionStatus {
         Unknown,
         Nonexistent,
         OnDisk,
         InMemory,
-        }
+    }
 
     /**
      * [Session] by id, or the [SessionStatus] if the `Session` is not `InMemory` but the status is
@@ -155,11 +152,10 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
 
     // ----- cookie encoding support ---------------------------------------------------------------
 
-    void configureEncryption(Decryptor cookieDecryptor)
-        {
+    void configureEncryption(Decryptor cookieDecryptor) {
         assert this.&cookieDecryptor.assigned == False;
         this.cookieDecryptor = cookieDecryptor;
-        }
+    }
 
     /**
      * Encrypt the passed readable string into an unreadable, tamper-proof, BASE-64 string
@@ -168,14 +164,13 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *
      * @return the encrypted string in BASE-64 format
      */
-    String encryptCookie(String text)
-        {
+    String encryptCookie(String text) {
         Byte[] bytes = text.utf8();
 
         bytes = cookieDecryptor.encrypt(bytes);
 
         return Base64Format.Instance.encode(bytes);
-        }
+    }
 
     /**
      * Decrypt the passed string back into a readable String
@@ -184,21 +179,17 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *
      * @return the readable string
      */
-    conditional String decryptCookie(String text)
-        {
-        try
-            {
+    conditional String decryptCookie(String text) {
+        try {
             Byte[] bytes = Base64Format.Instance.decode(text);
 
             bytes = cookieDecryptor.decrypt(bytes);
 
             return True, bytes.unpackUtf8();
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             return False;
-            }
         }
+    }
 
 
     // ----- session control -----------------------------------------------------------------------
@@ -210,19 +201,15 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *
      * @return the session status
      */
-    SessionStatus getStatusById(Int id)
-        {
-        if (SessionImpl|SessionStatus status := sessions.get(id))
-            {
+    SessionStatus getStatusById(Int id) {
+        if (SessionImpl|SessionStatus status := sessions.get(id)) {
             return status.is(SessionImpl)
                     ? InMemory
                     : status;
-            }
-        else
-            {
+        } else {
             return Unknown;
-            }
         }
+    }
 
     /**
      * Add the session to the quick lookup by cookie.
@@ -230,10 +217,9 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * @param session  the `Session`
      * @param cookie   the `SessionCookie` to use to look up the `Session`
      */
-    void addSessionCookie(SessionImpl session, SessionCookie cookie)
-        {
+    void addSessionCookie(SessionImpl session, SessionCookie cookie) {
         assert sessionByCookie.putIfAbsent(cookie.text, session);
-        }
+    }
 
     /**
      * Remove the session from the quick lookup by cookie.
@@ -241,10 +227,9 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * @param session  the `Session`
      * @param cookie   the previously registered `SessionCookie`
      */
-    void removeSessionCookie(SessionImpl session, SessionCookie cookie)
-        {
+    void removeSessionCookie(SessionImpl session, SessionCookie cookie) {
         assert sessionByCookie.remove(cookie.text, session);
-        }
+    }
 
     /**
      * Quick lookup of a session based on an opaque cookie value, or a slightly slower lookup based
@@ -256,34 +241,27 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * @return `True` iff the session exists
      * @return (conditional) the session
      */
-    conditional SessionImpl getSessionByCookie(String cookieText)
-        {
+    conditional SessionImpl getSessionByCookie(String cookieText) {
         if (SessionImpl|SessionStatus session := sessionByCookie.get(
-                SessionCookie.textFromCookie(cookieText)))
-            {
-            if (session.is(SessionImpl))
-                {
+                SessionCookie.textFromCookie(cookieText))) {
+            if (session.is(SessionImpl)) {
                 return True, session;
-                }
+            }
 
-            if (session == Nonexistent)
-                {
+            if (session == Nonexistent) {
                 return False;
-                }
+            }
 
             // fall through to default handling
-            }
+        }
 
-        try
-            {
+        try {
             SessionCookie cookie = new SessionCookie(this, cookieText);
             return getSessionById(cookie.sessionId);
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             return False;
-            }
         }
+    }
 
     /**
      * Obtain the session for the specified session id.
@@ -293,54 +271,46 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * @return `True` iff the session exists
      * @return (conditional) the session
      */
-    conditional SessionImpl getSessionById(Int id)
-        {
-        if (SessionImpl|SessionStatus session := sessions.get(id))
-            {
-            if (session.is(SessionImpl))
-                {
+    conditional SessionImpl getSessionById(Int id) {
+        if (SessionImpl|SessionStatus session := sessions.get(id)) {
+            if (session.is(SessionImpl)) {
                 return True, session;
-                }
-
-            switch (session)
-                {
-                case Nonexistent:
-                    return False;
-
-                case Unknown:
-                case OnDisk:
-                    SessionImpl|IOResult result = store.load(id);
-                    if (result.is(SessionImpl))
-                        {
-                        return True, result;
-                        }
-                    else
-                        {
-                        switch (result)
-                            {
-                            case Success:
-                            case SerializationIncomplete:
-                                // TODO how would this information be reported? incomplete would have to return the session
-                                assert;
-
-                            case NoSuchSession:
-                                sessions.put(id, Nonexistent);
-                                return False;
-
-                            case SerializationFailure:
-                            case IOFailure:
-                                // TODO should there be an "error" placed in the session cache?
-                                return False;
-                            }
-                        }
-
-                case InMemory:
-                    assert;
-                }
             }
 
-        return False;
+            switch (session) {
+            case Nonexistent:
+                return False;
+
+            case Unknown:
+            case OnDisk:
+                SessionImpl|IOResult result = store.load(id);
+                if (result.is(SessionImpl)) {
+                    return True, result;
+                } else {
+                    switch (result) {
+                    case Success:
+                    case SerializationIncomplete:
+                        // TODO how would this information be reported? incomplete would have to return the session
+                        assert;
+
+                    case NoSuchSession:
+                        sessions.put(id, Nonexistent);
+                        return False;
+
+                    case SerializationFailure:
+                    case IOFailure:
+                        // TODO should there be an "error" placed in the session cache?
+                        return False;
+                    }
+                }
+
+            case InMemory:
+                assert;
+            }
         }
+
+        return False;
+    }
 
     /**
      * Determine if the specified id has session data in persistent storage.
@@ -349,11 +319,10 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *
      * @return True iff the specified id has session data in persistent storage
      */
-    Boolean sessionExistsInStorage(Int id)
-        {
+    Boolean sessionExistsInStorage(Int id) {
         // TODO check sessions, and add flag to SessionImpl as well "on disk" vs. not and "up to date" vs not
         return False;
-        }
+    }
 
     /**
      * Instantiate a new [SessionImpl] object, including any [Session] mix-ins that the [WebApp]
@@ -364,8 +333,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * @return a new [SessionImpl] object, including any mixins declared by the application, or the
      *         [HttpStatus] describing why the session could not be created
      */
-    HttpStatus|SessionImpl createSession(RequestInfo requestInfo)
-        {
+    HttpStatus|SessionImpl createSession(RequestInfo requestInfo) {
         Int64       id      = generateId();
         SessionImpl session = instantiateSession(this, id, requestInfo);
         sessions.put(id, session);
@@ -373,7 +341,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
         purger.track^(id);
 
         return session;
-        }
+    }
 
     /**
      * Instantiate a copy of the passed [SessionImpl] object.
@@ -384,69 +352,61 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * @return a clone of the [SessionImpl] object, or the [HttpStatus] describing why the session
      *         could not be cloned
      */
-    HttpStatus|SessionImpl cloneSession(SessionImpl oldSession, RequestInfo requestInfo)
-        {
+    HttpStatus|SessionImpl cloneSession(SessionImpl oldSession, RequestInfo requestInfo) {
         HttpStatus|SessionImpl result = createSession(requestInfo);
-        if (result.is(HttpStatus))
-            {
+        if (result.is(HttpStatus)) {
             return result;
-            }
+        }
 
         SessionImpl newSession = result;
         newSession.cloneFrom_(oldSession);
         return newSession;
-        }
+    }
 
     /**
      * Generate a session ID.
      *
      * @return an unused session ID
      */
-    Int64 generateId()
-        {
-        while (True)
-            {
+    Int64 generateId() {
+        while (True) {
             Int64 id = previousId + ID_GAP & ID_LIMIT;
             previousId = id;
 
-            switch (getStatusById(id))
-                {
-                case Nonexistent:
-                    return id;
+            switch (getStatusById(id)) {
+            case Nonexistent:
+                return id;
 
-                case Unknown:
-                    if (!sessionExistsInStorage(id))
-                        {
-                        return id;
-                        }
-                    continue;
-                case OnDisk:
-                case InMemory:
-                    // strange but not impossible: we have collided with an existing session; to
-                    // compensate, increment the base by a different prime value than the gap; note
-                    // that we have to assume that this method is concurrent, i.e. not running all
-                    // at once (so the previousId may have already been changed by someone else,
-                    // after we changed it above)
-                    @Inject Random rnd;
-                    Int64 adjust = HashMap.PRIMES[rnd.int(HashMap.PRIMES.size)];
-                    previousId = previousId + adjust & ID_LIMIT;
-                    break;
+            case Unknown:
+                if (!sessionExistsInStorage(id)) {
+                    return id;
                 }
+                continue;
+            case OnDisk:
+            case InMemory:
+                // strange but not impossible: we have collided with an existing session; to
+                // compensate, increment the base by a different prime value than the gap; note
+                // that we have to assume that this method is concurrent, i.e. not running all
+                // at once (so the previousId may have already been changed by someone else,
+                // after we changed it above)
+                @Inject Random rnd;
+                Int64 adjust = HashMap.PRIMES[rnd.int(HashMap.PRIMES.size)];
+                previousId = previousId + adjust & ID_LIMIT;
+                break;
             }
         }
+    }
 
     /**
      * Explicitly destroy the specified session.
      *
      * @param id  the session id
      */
-    void destroySession(Int id)
-        {
-        if (SessionImpl session := getSessionById(id))
-            {
+    void destroySession(Int id) {
+        if (SessionImpl session := getSessionById(id)) {
             session.destroy^();
-            }
         }
+    }
 
     /**
      * Unregister the specified session.
@@ -457,14 +417,13 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
                            SessionCookie? txtCookie,
                            SessionCookie? tlsCookie,
                            SessionCookie? consentCookie,
-                          )
-        {
+                          ) {
         sessions.put(id, Nonexistent);
         sessionByCookie.remove(txtCookie?.text);
         sessionByCookie.remove(tlsCookie?.text);
         sessionByCookie.remove(consentCookie?.text);
         store.erase^(id);
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -476,14 +435,12 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *
      * @return True iff the event has not previously been reported
      */
-    Boolean shouldReport(Event_ event)
-        {
-        if (reported[event.ordinal])
-            {
+    Boolean shouldReport(Event_ event) {
+        if (reported[event.ordinal]) {
             return False;
-            }
+        }
 
         reported[event.ordinal] = True;
         return True;
-        }
     }
+}

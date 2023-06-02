@@ -19,11 +19,10 @@ const CookieConsent(Boolean necessary       = False,
                     Boolean blockThirdParty = False,
                     Date?   lastConsent     = Null,
                    )
-        implements Destringable
-    {
+        implements Destringable {
+
     @Override
-    construct(String text)
-        {
+    construct(String text) {
         assert:arg (Boolean necessary,
                     Boolean functionality,
                     Boolean performance,
@@ -42,7 +41,7 @@ const CookieConsent(Boolean necessary       = False,
         this.allowFirstParty = allowFirstParty;
         this.blockThirdParty = blockThirdParty;
         this.lastConsent     = lastConsent;
-        }
+    }
 
     /**
      * Copy this `CookieConsent`, changing the specified items.
@@ -68,8 +67,7 @@ const CookieConsent(Boolean necessary       = False,
                        Boolean? allowFirstParty = Null,
                        Boolean? blockThirdParty = Null,
                        Date?    lastConsent     = Null,
-                      )
-        {
+                      ) {
         return new CookieConsent(necessary       = necessary       ?: this.necessary,
                                  functionality   = functionality   ?: this.functionality,
                                  performance     = performance     ?: this.performance,
@@ -79,7 +77,7 @@ const CookieConsent(Boolean necessary       = False,
                                  blockThirdParty = blockThirdParty ?: this.blockThirdParty,
                                  lastConsent     = lastConsent     ?: this.lastConsent,
                                 );
-        }
+    }
 
 
     // ----- pre-built Consents --------------------------------------------------------------------
@@ -123,8 +121,7 @@ const CookieConsent(Boolean necessary       = False,
      * * Marketing     - explicitly allow "Marketing"/"Targeting" cookies
      * * SocialMedia   - explicitly allow "SocialMedia" (Third Party) cookies
      */
-    enum Category(Char abbreviation)
-        {
+    enum Category(Char abbreviation) {
         Necessary('N'), Functionality('F'), Performance('P'), Marketing('M'), SocialMedia('S');
 
         /**
@@ -134,19 +131,17 @@ const CookieConsent(Boolean necessary       = False,
          *
          * @return the specified `Category`
          */
-        conditional Category from(Char abbreviation)
-            {
-            switch (abbreviation)
-                {
-                case 'N': return True, Necessary;
-                case 'F': return True, Functionality;
-                case 'P': return True, Performance;
-                case 'M': return True, Marketing;
-                case 'S': return True, SocialMedia;
-                default: return False;
-                }
+        conditional Category from(Char abbreviation) {
+            switch (abbreviation) {
+            case 'N': return True, Necessary;
+            case 'F': return True, Functionality;
+            case 'P': return True, Performance;
+            case 'M': return True, Marketing;
+            case 'S': return True, SocialMedia;
+            default: return False;
             }
         }
+    }
 
     /**
      * Query the CookieConsent to see if a particular `Category` is explicitly consented to.
@@ -160,27 +155,23 @@ const CookieConsent(Boolean necessary       = False,
      * @return `True` iff a cookie with the specified `Category` and specified third party status is
      *         consented to
      */
-    Boolean allows(Category category, Boolean thirdParty=False)
-        {
-        if (!thirdParty && allowFirstParty)
-            {
+    Boolean allows(Category category, Boolean thirdParty=False) {
+        if (!thirdParty && allowFirstParty) {
             return True;
-            }
+        }
 
-        if (thirdParty && blockThirdParty)
-            {
+        if (thirdParty && blockThirdParty) {
             return False;
-            }
+        }
 
-        return switch (category)
-            {
+        return switch (category) {
             case Necessary    : necessary;
             case Functionality: functionality;
             case Performance  : performance;
             case Marketing    : marketing;
             case SocialMedia  : socialMedia;
-            };
-        }
+        };
+    }
 
     /**
      * Add one or more categories of explicitly allowed cookies to the `CookieConsent`, producing a
@@ -190,8 +181,7 @@ const CookieConsent(Boolean necessary       = False,
      *
      * @return a new CookieConsent
      */
-    CookieConsent allow(Category|Category[] category)
-        {
+    CookieConsent allow(Category|Category[] category) {
         return category.is(Category[])
                 ? this.with(
                     necessary     = necessary     || category.contains(Necessary),
@@ -207,7 +197,7 @@ const CookieConsent(Boolean necessary       = False,
                     marketing     = marketing     || category == Marketing,
                     socialMedia   = socialMedia   || category == SocialMedia,
                     );
-        }
+    }
 
     /**
      * Remove one or more categories of explicitly allowed cookies from the `CookieConsent`,
@@ -217,8 +207,7 @@ const CookieConsent(Boolean necessary       = False,
      *
      * @return a new CookieConsent
      */
-    CookieConsent block(Category|Category[] category)
-        {
+    CookieConsent block(Category|Category[] category) {
         return category.is(Category[])
                 ? this.with(
                     necessary     = necessary     && !category.contains(Necessary),
@@ -234,7 +223,7 @@ const CookieConsent(Boolean necessary       = False,
                     marketing     = marketing     && category != Marketing,
                     socialMedia   = socialMedia   && category != SocialMedia,
                     );
-        }
+    }
 
 
     // ----- compact persistent form ---------------------------------------------------------------
@@ -248,14 +237,12 @@ const CookieConsent(Boolean necessary       = False,
      * @return True iff the text was successfully parsed
      * @return (conditional) the CookieConsent that matches the parsed information
      */
-    static conditional CookieConsent fromString(String text)
-        {
+    static conditional CookieConsent fromString(String text) {
         import ecstasy.collections.CaseInsensitive;
 
-        if (text == "" || CaseInsensitive.areEqual(text, "None"))
-            {
+        if (text == "" || CaseInsensitive.areEqual(text, "None")) {
             return True, None;
-            }
+        }
 
         if ((Boolean necessary,
              Boolean functionality,
@@ -265,8 +252,7 @@ const CookieConsent(Boolean necessary       = False,
              Boolean allowFirstParty,
              Boolean blockThirdParty,
 // TODO CP   Date?   lastConsent,    ) := parse(text))
-             Date?   lastConsent     ) := parse(text))
-           {
+             Date?   lastConsent     ) := parse(text)) {
            return True, new CookieConsent(necessary,
                                           functionality,
                                           performance,
@@ -276,10 +262,10 @@ const CookieConsent(Boolean necessary       = False,
                                           blockThirdParty,
                                           lastConsent,
                                          );
-           }
+        }
 
         return False;
-        }
+    }
 
     /**
      * Parse the format of the [toString] method to create a `CookieConsent` instance that would
@@ -304,8 +290,7 @@ const CookieConsent(Boolean necessary       = False,
                         Boolean socialMedia,
                         Boolean allowFirstParty,
                         Boolean blockThirdParty,
-                        Date?   lastConsent,    ) parse(String text)
-        {
+                        Date?   lastConsent,    ) parse(String text) {
         import ecstasy.collections.CaseInsensitive;
 
         Boolean necessary       = False;
@@ -317,93 +302,75 @@ const CookieConsent(Boolean necessary       = False,
         Boolean blockThirdParty = False;
         Date?   lastConsent     = Null;
 
-        if (Int div := text.indexOf('@'))
-            {
+        if (Int div := text.indexOf('@')) {
             String date = text.substring(div+1);
-            if (date.size != 10 || date[4] != '-' || date[7] != '-')
-                {
+            if (date.size != 10 || date[4] != '-' || date[7] != '-') {
                 return False;
-                }
+            }
 
             // TODO CP - call conditional parse() not try/catch
-            try
-                {
+            try {
                 lastConsent = new Date(date);
-                }
-            catch (IllegalArgument e)
-                {
+            } catch (IllegalArgument e) {
                 return False;
-                }
+            }
 
             text = text[0 ..< div];
-            }
+        }
 
-        if (text != "" && !CaseInsensitive.areEqual(text, "None"))
-            {
-            for (String part : text.split('/'))
-                {
-                switch (part.trim())
-                    {
-                    case "N"    : necessary       = True; break;
-                    case "F"    : functionality   = True; break;
-                    case "P"    : performance     = True; break;
-                    case "M"    : marketing       = True; break;
-                    case "S"    : socialMedia     = True; break;
-                    case "Ok1st": allowFirstParty = True; break;
-                    case "No3rd": blockThirdParty = True; break;
+        if (text != "" && !CaseInsensitive.areEqual(text, "None")) {
+            for (String part : text.split('/')) {
+                switch (part.trim()) {
+                case "N"    : necessary       = True; break;
+                case "F"    : functionality   = True; break;
+                case "P"    : performance     = True; break;
+                case "M"    : marketing       = True; break;
+                case "S"    : socialMedia     = True; break;
+                case "Ok1st": allowFirstParty = True; break;
+                case "No3rd": blockThirdParty = True; break;
 
-                    default:
-                        return False;
-                    }
+                default:
+                    return False;
                 }
             }
+        }
 
         return True, necessary, functionality, performance, marketing, socialMedia, allowFirstParty,
                 blockThirdParty, lastConsent;
-        }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         StringBuffer buf = new StringBuffer();
 
-        for (Category category : Category.values)
-            {
-            if (allows(category))
-                {
-                if (buf.size > 0)
-                    {
+        for (Category category : Category.values) {
+            if (allows(category)) {
+                if (buf.size > 0) {
                     buf.add('/');
-                    }
+                }
                 buf.add(category.abbreviation);
-                }
             }
+        }
 
-        if (allowFirstParty)
-            {
-            if (buf.size > 0)
-                {
+        if (allowFirstParty) {
+            if (buf.size > 0) {
                 buf.add('/');
-                }
+            }
             "Ok1st".appendTo(buf);
-            }
+        }
 
-        if (blockThirdParty)
-            {
-            if (buf.size > 0)
-                {
+        if (blockThirdParty) {
+            if (buf.size > 0) {
                 buf.add('/');
-                }
+            }
             "No3rd".appendTo(buf);
-            }
+        }
 
-        if (buf.size == 0)
-            {
+        if (buf.size == 0) {
             "None".appendTo(buf);
-            }
+        }
 
-        if (Date date ?= lastConsent)
-            {
+        if (Date date ?= lastConsent) {
             UInt32 year  = date.year .toUInt32();
             UInt32 month = date.month.toUInt32();
             UInt32 day   = date.day  .toUInt32();
@@ -419,8 +386,8 @@ const CookieConsent(Boolean necessary       = False,
                .add('-')
                .add('0' + day / 10)
                .add('0' + day % 10);
-            }
+        }
 
         return buf.toString();
-        }
     }
+}

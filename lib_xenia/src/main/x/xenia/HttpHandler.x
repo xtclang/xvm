@@ -14,16 +14,14 @@ import HttpServer.RequestContext;
  */
 @Concurrent
 service HttpHandler
-        implements Handler
-    {
+        implements Handler {
     /**
      * Construct an HttpHandler for a specific application using a provided HttpServer.
      *
      * @param httpServer  the HttpServer
      * @param app         the application
      */
-    construct(HttpServer httpServer, WebApp app)
-        {
+    construct(HttpServer httpServer, WebApp app) {
         Catalog catalog = buildCatalog(app);
 
         this.httpServer     = httpServer;
@@ -37,7 +35,7 @@ service HttpHandler
         Registry registry = app.registry_;
         registry.registerResource("sessionManager", this.sessionManager);
         registry.registerResource("catalog"       , this.catalog);
-        }
+    }
 
     /**
      * The HttpServer.
@@ -87,64 +85,54 @@ service HttpHandler
     /**
      * The total number of pending requests.
      */
-    Int pendingRequests.get()
-        {
+    Int pendingRequests.get() {
         return dispatchers.map(Dispatcher.pendingRequests).reduce(new aggregate.Sum<Int>());
-        }
+    }
 
 
     // ----- Handler API ---------------------------------------------------------------------------
 
     @Override
-    void handle(RequestContext context, String uriString, String methodName, Boolean tls)
-        {
-        if (closing)
-            {
+    void handle(RequestContext context, String uriString, String methodName, Boolean tls) {
+        if (closing) {
             httpServer.send(context, HttpStatus.Gone.code, [], [], []);
             return;
-            }
+        }
 
         Int   index  = ensureDispatcher();
         Tuple result = dispatchers[index].dispatch^(httpServer, context, tls, uriString, methodName);
-        &result.whenComplete((response, e) ->
-            {
-            if (e != Null)
-                {
+        &result.whenComplete((response, e) -> {
+            if (e != Null) {
                 httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
 
                 // temporary
                 @Inject Console console;
                 console.print(e);
-                }
+            }
             busy[index] = False;
-            });
-        }
+        });
+    }
 
     /**
      * Shutdown this HttpHandler.
      */
     @Synchronized
-    void shutdown()
-        {
+    void shutdown() {
         closing = True;
 
-        if (pendingRequests == 0)
-            {
+        if (pendingRequests == 0) {
             httpServer.close();
-            }
-        else
-            {
+        } else {
             // wait a second (TODO: repeat a couple of times)
             @Inject Timer timer;
             timer.schedule(SECOND, () -> httpServer.close());
-            }
         }
+    }
 
     @Override
-    String toString()
-        {
+    String toString() {
         return $"HttpHandler@{httpServer}";
-        }
+    }
 
 
     // ----- internal helpers ----------------------------------------------------------------------
@@ -157,44 +145,39 @@ service HttpHandler
      *
      * @return a dispatcher index
      */
-    private Int ensureDispatcher()
-        {
+    private Int ensureDispatcher() {
         private Int lastIndex = -1;
 
         Dispatcher[] dispatchers = this.dispatchers;
         Int          count       = dispatchers.size;
-        if (count == 0)
-            {
+        if (count == 0) {
             dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
             busy.add(True);
             lastIndex = 0;
             return 0;
-            }
+        }
 
         Boolean[] busy = this.busy;
         Int       next = lastIndex + 1;
-        for (Int i : 0 ..< count)
-            {
+        for (Int i : 0 ..< count) {
             Int index = (i + next) % count;
-            if (!busy[index])
-                {
+            if (!busy[index]) {
                 lastIndex = index;
                 return index;
-                }
             }
+        }
 
-        if (count < maxCount)
-            {
+        if (count < maxCount) {
             dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
             busy.add(True);
             return count; // don't change the lastIndex to retain some fairness
-            }
+        }
 
         // TODO: check the total number of pending requests and throw a "reject" if over the limit
 
         // we are at the max; add the overload evenly
         return lastIndex++;
-        }
+    }
 
     /**
      * Instantiate a SessionManager for the application described by the provided [Catalog] using
@@ -203,8 +186,7 @@ service HttpHandler
      * @param httpServer  the HttpServer
      * @param catalog     the application's Catalog
      */
-    private static SessionManager createSessionManager(HttpServer httpServer, Catalog catalog)
-        {
+    private static SessionManager createSessionManager(HttpServer httpServer, Catalog catalog) {
         import ecstasy.reflect.Annotation;
         import SessionManager.SessionProducer;
 
@@ -213,28 +195,24 @@ service HttpHandler
         Class[] sessionMixins = catalog.sessionMixins;
         Int     mixinCount    = sessionMixins.size;
 
-        if (mixinCount == 0)
-            {
+        if (mixinCount == 0) {
             sessionProducer = (mgr, id, info) -> new SessionImpl(mgr, id, info);
-            }
-        else
-            {
+        } else {
             Annotation[] annotations  = new Annotation[mixinCount] (i -> new Annotation(sessionMixins[i]));
             Class        sessionClass = SessionImpl.annotate(annotations);
 
-            sessionProducer = (mgr, id, info) ->
-                {
+            sessionProducer = (mgr, id, info) -> {
                 assert Struct structure := sessionClass.allocate();
                 assert structure.is(struct SessionImpl);
 
                 SessionImpl.initialize(structure, mgr, id, info);
 
                 return sessionClass.instantiate(structure).as(SessionImpl);
-                };
-            }
+            };
+        }
 
         SessionManager mgr = new SessionManager(new SessionStore(), sessionProducer);
         httpServer.configureService(mgr);
         return mgr;
-        }
     }
+}

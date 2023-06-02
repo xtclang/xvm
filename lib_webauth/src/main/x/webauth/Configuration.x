@@ -21,12 +21,11 @@ const Configuration
         // TODO other config for 2FA, email verification, password requirements, etc.
         Boolean              configured    = True,
         )
-        default(new Configuration([], configured=False))
-    {
-    assert()
-        {
+        default(new Configuration([], configured=False)) {
+
+    assert() {
         assert useMD5 | useSHA256 | useSHA512_256 as "At least one hashing algorithm is required";
-        }
+    }
 
     /**
      * Create a copy of this Configuration, with the specified properties modified.
@@ -48,8 +47,7 @@ const Configuration
             Boolean?              useSHA256     = Null,
             Boolean?              useSHA512_256 = Null,
             Boolean?              configured    = Null,
-            )
-        {
+            ) {
         return new Configuration(initUserPass  = initUserPass  ?: this.initUserPass,
                                  initRoleUsers = initRoleUsers ?: this.initRoleUsers,
                                  useMD5        = useMD5        ?: this.useMD5,
@@ -57,5 +55,5 @@ const Configuration
                                  useSHA512_256 = useSHA512_256 ?: this.useSHA512_256,
                                  configured    = configured    ?: this.configured,
                                 );
-        }
     }
+}

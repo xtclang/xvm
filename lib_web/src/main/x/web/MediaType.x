@@ -18,8 +18,7 @@ import codecs.Format;
  * @see [Media Types](https://www.iana.org/assignments/media-types/media-types.xhtml)
  * @see [RFC 2046](https://tools.ietf.org/html/rfc2046)
  */
-const MediaType
-    {
+const MediaType {
     // ----- standard and/or common predefined media types -----------------------------------------
 
     static MediaType Json        = predefine("application/json",                              ["json", "map"], "json");
@@ -87,21 +86,18 @@ const MediaType
               Map<String, String> params     = [],
               String[]            extensions = [],
               String?             format     = Null,
-             )
-        {
+             ) {
         // check type / subtype / params
         assert:arg http.validToken(type) as $"Invalid type: {type.quoted()}";
         assert:arg http.validToken(subtype) as $"Invalid type: {subtype.quoted()}";
-        for (String key : params)
-            {
+        for (String key : params) {
             assert:arg key != "q" && http.validToken(key) as $"Invalid parameter name: {key.quoted()}";
-            }
+        }
 
         // check extensions
-        for (String ext : extensions)
-            {
+        for (String ext : extensions) {
             assert:arg http.validExtension(ext) as $"Invalid file extension: {ext.quoted()}";
-            }
+        }
 
         this.type       = type;
         this.subtype    = subtype;
@@ -110,12 +106,11 @@ const MediaType
         this.format     = format;
         this.text       = $"{type}/{subtype}";
 
-        if (!params.empty)
-            {
+        if (!params.empty) {
             // TODO CP escape value portion if necessary as HTTP "quoted-string"
             this.text += params.appendTo(new StringBuffer(), sep=";", pre=";", post="");
-            }
         }
+    }
 
     /**
      * Internal constructor for a MediaType parsed from a string.
@@ -135,8 +130,7 @@ const MediaType
                       String[]            extensions   = [],
                       String?             format       = Null,
                       MediaType[]         alternatives = [],
-                     )
-        {
+                     ) {
         this.text         = text;
         this.type         = type;
         this.subtype      = subtype;
@@ -144,7 +138,7 @@ const MediaType
         this.extensions   = extensions;
         this.format       = format;
         this.alternatives = alternatives;
-        }
+    }
 
     /**
      * Given the passed text containing MediaType information, obtain the corresponding MediaType
@@ -155,30 +149,26 @@ const MediaType
      * @return True if the MediaType could be successfully parsed
      * @return (conditional) the parsed MediaType
      */
-    static conditional MediaType of(String text)
-        {
-        if (MediaType mediaType := knownTypes.get(text))
-            {
+    static conditional MediaType of(String text) {
+        if (MediaType mediaType := knownTypes.get(text)) {
             return True, mediaType;
-            }
+        }
 
-        if (Marker|MediaType result := cache.get(text))
-            {
+        if (Marker|MediaType result := cache.get(text)) {
             return result.is(MediaType)
                     ? (True, result)
                     : False;
-            }
+        }
 
-        if ((String type, String subtype, Map<String, String> params) := parseMediaType(text))
-            {
+        if ((String type, String subtype, Map<String, String> params) := parseMediaType(text)) {
             MediaType mediaType = new MediaType(text, type, subtype, params);
             cache.put(text, mediaType);
             return True, mediaType;
-            }
+        }
 
         cache.put(text, Invalid);
         return False;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -225,19 +215,16 @@ const MediaType
     /**
      * A cache of predefined MediaType objects keyed by the text used to create the MediaType.
      */
-    private static HashMap<String, MediaType> knownTypes =
-        {
+    private static HashMap<String, MediaType> knownTypes = {
         HashMap<String, MediaType> map = new HashMap(Predefined.size);
-        for (MediaType mt : Predefined)
-            {
+        for (MediaType mt : Predefined) {
             map.put(mt.text, mt);
-            for (MediaType alt : mt.alternatives)
-                {
+            for (MediaType alt : mt.alternatives) {
                 map.put(alt.text, alt);
-                }
             }
+        }
         return map.freeze(True);
-        };
+    };
 
     /**
      * A token used to indicate a negative cache result.
@@ -253,10 +240,9 @@ const MediaType
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    String toString()
-        {
+    String toString() {
         return text;
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -268,21 +254,18 @@ const MediaType
      * @param extension  (optional) one or more file extensions to associate with this `MediaType`
      * @param format     (optional) the format name for the text associated with this `MediaType`
      */
-    private static MediaType predefine(String|String[] name, String|String[] extension = [], String? format=Null)
-        {
+    private static MediaType predefine(String|String[] name, String|String[] extension = [], String? format=Null) {
         MediaType[] alternatives = [];
-        if (name.is(String[]))
-            {
+        if (name.is(String[])) {
             alternatives = new MediaType[];
-            for (Int index = 1, Int count = name.size; index < count; ++index)
-                {
+            for (Int index = 1, Int count = name.size; index < count; ++index) {
                 String altName = name[index];
                 assert (String type, String subtype, Map<String, String> params) := parseMediaType(altName);
                 MediaType altType = new MediaType(altName, type, subtype, params);
                 alternatives.add(altType);
-                }
-            name = name[0];
             }
+            name = name[0];
+        }
 
         assert (String type, String subtype, Map<String, String> params) := parseMediaType(name);
         String[] extensions = extension.is(String[])
@@ -290,7 +273,7 @@ const MediaType
                 : [extension];
 
         return new MediaType(name, type, subtype, params, extensions, format, alternatives);
-        }
+    }
 
     /**
      * Given the passed text containing MediaType information, validate that the text is correctly
@@ -303,71 +286,55 @@ const MediaType
      * @return subtype  (conditional) the sub-type, such as "html" in `text/html`
      * @return params   (conditional) the MediaType parameters (almost always empty)
      */
-    static conditional (String type, String subtype, Map<String, String> params) parseMediaType(String text)
-        {
+    static conditional (String type, String subtype, Map<String, String> params) parseMediaType(String text) {
         String              type;
         String              subtype;
         Map<String, String> params  = [];
 
         String part;
         String rest;
-        if (Int semi := text.indexOf(';'))
-            {
+        if (Int semi := text.indexOf(';')) {
             part = text[0 ..< semi];
             rest = text[semi >..< text.size];
-            }
-        else
-            {
+        } else {
             part = text;
             rest = "";
-            }
+        }
 
-        if (Int slash := part.indexOf('/'))
-            {
+        if (Int slash := part.indexOf('/')) {
             type    = part[0 ..< slash].trim();
             subtype = part[slash >..< part.size].trim();
-            if (!(http.validToken(type) && http.validToken(subtype)))
-                {
+            if (!(http.validToken(type) && http.validToken(subtype))) {
                 return False;
-                }
             }
-        else
-            {
+        } else {
             return False;
-            }
+        }
 
-        while (rest.size > 0)
-            {
-            if (Int semi := rest.indexOf(';'))
-                {
+        while (rest.size > 0) {
+            if (Int semi := rest.indexOf(';')) {
                 part = rest[0 ..< semi];
                 rest = rest[semi >..< rest.size];
-                }
-            else
-                {
+            } else {
                 part = rest;
                 rest = "";
-                }
+            }
 
-            if (Int eq := part.indexOf('='))
-                {
+            if (Int eq := part.indexOf('=')) {
                 String key = part[0 ..< eq].trim();
                 String val = part[eq >..< part.size].trim();
-                if (key.size == 0 || key == "q" || key == "Q" || !http.validToken(key))
-                    {
+                if (key.size == 0 || key == "q" || key == "Q" || !http.validToken(key)) {
                     // the quality key ("q") is reserved for use by the Accept header, and must not
                     // exist as a parameter
                     return False;
-                    }
+                }
 
                 (params.empty ? new ListMap<String, String>() : params).put(key, val);
-                }
-            else
-                {
+            } else {
                 return False;
-                }
             }
+        }
 
         return True, type, subtype, params;
-        }
     }
+}

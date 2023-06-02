@@ -29,8 +29,7 @@
  *     is a response that is returned from the Authenticator.
  */
 interface Authenticator
-            extends service
-    {
+            extends service {
     /**
      * Authenticate the client (or user) using the provided request, session, and endpoint.
      * Authentication requires both an established session and a TLS connection, and is triggered by
@@ -50,4 +49,4 @@ interface Authenticator
      *         authentication
      */
     Boolean|ResponseOut authenticate(RequestIn request, Session session, Endpoint endpoint);
-    }
+}

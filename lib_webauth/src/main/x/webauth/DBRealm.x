@@ -12,8 +12,7 @@ import User.HashInfo;
  * A DBRealm is a realm implementation on top of an [AuthSchema].
  */
 const DBRealm
-        implements Realm
-    {
+        implements Realm {
     /**
      * Construct a `DBRealm` from plain text user names and passwords, using an optional list
      * of [hashing algorithms](Signer).
@@ -22,67 +21,60 @@ const DBRealm
      * @param connectionName  (optional) the name of the injected database (in case there are more
      *                        than one) to look for the AuthSchema
      */
-    construct(String realmName, String? connectionName=Null)
-        {
+    construct(String realmName, String? connectionName=Null) {
         // obtain a connection to the database, and find the AuthSchema inside the database
         @Inject(resourceName=connectionName) Connection dbc;
         String?     path       = Null;
         AuthSchema? authSchema = Null;
-        for ((String pathStr, DBObjectInfo info) : dbc.sys.schemas)
-            {
+        for ((String pathStr, DBObjectInfo info) : dbc.sys.schemas) {
             // find the AuthSchema; it must occur exactly-once
             assert DBObject schema ?= info.lookupUsing(dbc);
-            if (schema.is(AuthSchema))
-                {
+            if (schema.is(AuthSchema)) {
                 assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
                                         | locations within the database:\
                                         | {pathStr.quoted()} and {path.quoted()}
                                        ;
                 path       = pathStr;
                 authSchema = schema;
-                }
             }
+        }
         assert path != Null && authSchema != Null as "The database does not contain an \"AuthSchema\"";
 
         Configuration cfg = authSchema.config.get();
-        if (!cfg.configured)
-            {
+        if (!cfg.configured) {
             // the database has not yet been configured, so we need an initial configuration to be
             // injected, and we'll configure the database in the constructor's finally block
             // (because we need the realm to exist in order to configure the database)
             @Inject Configuration startingCfg;
             this.createCfg = startingCfg;
             cfg            = startingCfg;
-            }
+        }
 
         @Inject crypto.Algorithms algorithms;
         Signer[]  hashers          = new Signer[];
         Signer?[] supportedHashers = new Signer?[3];
         Signer?   weakestHasher    = Null;
 
-        if (cfg.useSHA512_256)
-            {
+        if (cfg.useSHA512_256) {
             Signer hasher = hasherByName("SHA-512-256");
             hashers            += hasher;
             supportedHashers[2] = hasher;
             weakestHasher       = hasher;
-            }
+        }
 
-        if (cfg.useSHA256)
-            {
+        if (cfg.useSHA256) {
             Signer hasher = hasherByName("SHA-256");
             hashers            += hasher;
             supportedHashers[1] = hasher;
             weakestHasher       = hasher;
-            }
+        }
 
-        if (cfg.useMD5)
-            {
+        if (cfg.useMD5) {
             Signer hasher = hasherByName("MD5");
             hashers            += hasher;
             supportedHashers[0] = hasher;
             weakestHasher       = hasher;
-            }
+        }
 
         assert weakestHasher != Null as "No hasher configured; at least one is required";
 
@@ -91,45 +83,37 @@ const DBRealm
         this.hashers          = hashers;
         this.supportedHashers = supportedHashers;
         this.weakestHasher    = weakestHasher;
-        }
-    finally
-        {
-        if (Configuration cfg ?= this.createCfg)
-            {
-            using (authSchema.dbConnection.createTransaction())
-                {
+    } finally {
+        if (Configuration cfg ?= this.createCfg) {
+            using (authSchema.dbConnection.createTransaction()) {
                 // create the user roles
                 Roles                 roles         = authSchema.roles;
                 Map<String, String[]> initUserRoles = new HashMap();
-                for ((String roleName, String[] userNames) : cfg.initRoleUsers)
-                    {
+                for ((String roleName, String[] userNames) : cfg.initRoleUsers) {
                     assert roles.createRole(roleName);
-                    for (String userName : userNames)
-                        {
-                        if (!initUserRoles.putIfAbsent(userName, [roleName]))
-                            {
+                    for (String userName : userNames) {
+                        if (!initUserRoles.putIfAbsent(userName, [roleName])) {
                             initUserRoles[userName] = initUserRoles.getOrDefault(userName, []) + roleName;
-                            }
                         }
                     }
+                }
 
                 // create the user records
                 Users users = authSchema.users;
                 ListMap<String, String> initUserNoPass = new ListMap(cfg.initUserPass.size);
-                for ((String userName, String password) : cfg.initUserPass)
-                    {
+                for ((String userName, String password) : cfg.initUserPass) {
                     assert users.createUser(this, userName, password,
                             initUserRoles.getOrDefault(userName, []));
-                    }
+                }
 
                 // store the configuration (but remove the passwords), and specify that the database
                 // has now been configured (so we don't repeat the db configuration the next time)
                 initUserNoPass.entries.forEach(e -> {e.value = "???";});
                 authSchema.config.set(cfg.with(initUserPass = initUserNoPass,
                                                configured   = True));
-                }
             }
         }
+    }
 
     /**
      * The configuration to write to the database the first time the database and realm are created.
@@ -163,91 +147,76 @@ const DBRealm
     conditional Set<String> validUser(String userName) = loadUserRoles(userName);
 
     @Override
-    conditional Set<String> authenticate(String user, String password)
-        {
+    conditional Set<String> authenticate(String user, String password) {
         if ((_, Set<String> roles) := authenticateHash(
-                user, passwordHash(user, name, password, weakestHasher), weakestHasher))
-            {
+                user, passwordHash(user, name, password, weakestHasher), weakestHasher)) {
             return True, roles;
-            }
-        return False;
         }
+        return False;
+    }
 
     @Override
     Signer[] hashers;
 
     @Override
-    Hash[] hashesFor(UserId userId, Signer hasher)
-        {
-        if (userId.is(String))
-            {
+    Hash[] hashesFor(UserId userId, Signer hasher) {
+        if (userId.is(String)) {
             Hash? hash = Null;
-            if (User user := loadUserByName(userId))
-                {
+            if (User user := loadUserByName(userId)) {
                 hash := user.passwordHashes.hashFor(hasher);
-                }
+            }
             return [hash?] : [];
-            }
-
-        User[] users = loadUsersByHash(userId);
-        switch (users.size)
-            {
-            case 0:
-                return [];
-
-            case 1:
-                return [users[0].passwordHashes.hashFor(hasher)?] : [];
-
-            default:
-                Hash[] pwdHashes = new Hash[];
-                for (User user : users)
-                    {
-                    if (Hash pwdHash := user.passwordHashes.hashFor(hasher))
-                        {
-                        pwdHashes += pwdHash;
-                        }
-                    }
-                return pwdHashes.freeze(inPlace=True);
-            }
         }
 
+        User[] users = loadUsersByHash(userId);
+        switch (users.size) {
+        case 0:
+            return [];
+
+        case 1:
+            return [users[0].passwordHashes.hashFor(hasher)?] : [];
+
+        default:
+            Hash[] pwdHashes = new Hash[];
+            for (User user : users) {
+                if (Hash pwdHash := user.passwordHashes.hashFor(hasher)) {
+                    pwdHashes += pwdHash;
+                }
+            }
+            return pwdHashes.freeze(inPlace=True);
+        }
+    }
+
     @Override
-    conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher)
-        {
-        conditional (String, Set<String>) authenticateUser(User user, Hash pwdHash, Signer hasher)
-            {
+    conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher) {
+        conditional (String, Set<String>) authenticateUser(User user, Hash pwdHash, Signer hasher) {
             if (user.enabled,
                     Hash actualHash := user.passwordHashes.hashFor(hasher),
-                    pwdHash == actualHash)
-                {
+                    pwdHash == actualHash) {
                 return True, user.userName, loadUserRoles(user) ?: assert;
-                }
-
-            return False;
             }
 
-        if (userId.is(String))
-            {
-            if (User user := loadUserByName(userId))
-                {
+            return False;
+        }
+
+        if (userId.is(String)) {
+            if (User user := loadUserByName(userId)) {
                 return authenticateUser(user, pwdHash, hasher);
-                }
+            }
 
             return False;
-            }
+        }
 
         // look up the user by the user hash
         User[] users = loadUsersByHash(userId);
-        for (User user : users)
-            {
-            if ((String userName, Set<String> roleNames) := authenticateUser(user, pwdHash, hasher))
-                {
+        for (User user : users) {
+            if ((String userName, Set<String> roleNames) := authenticateUser(user, pwdHash, hasher)) {
                 return True, userName, roleNames;
-                }
             }
+        }
 
         return False;
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -259,12 +228,11 @@ const DBRealm
      *
      * @return the requested hasher
      */
-    static protected Signer hasherByName(String algorithm)
-        {
+    static protected Signer hasherByName(String algorithm) {
         @Inject crypto.Algorithms algorithms;
         return algorithms.hasherFor(algorithm)?;
         TODO CP alternative if algorithm unavailable
-        }
+    }
 
     /**
      * Load the specified user from the database.
@@ -274,13 +242,11 @@ const DBRealm
      * @return True iff the user was found and loaded
      * @return (conditional) the user
      */
-    protected conditional User loadUserByName(String userName)
-        {
-        using (authSchema.dbConnection.createTransaction(readOnly=True))
-            {
+    protected conditional User loadUserByName(String userName) {
+        using (authSchema.dbConnection.createTransaction(readOnly=True)) {
             return authSchema.users.findByName(userName);
-            }
         }
+    }
 
     /**
      * Load any users from the database that have the specified user hash. (Some authentication
@@ -291,13 +257,11 @@ const DBRealm
      *
      * @return the users corresponding to the specified hash
      */
-    protected User[] loadUsersByHash(Hash hash)
-        {
-        using (authSchema.dbConnection.createTransaction(readOnly=True))
-            {
+    protected User[] loadUsersByHash(Hash hash) {
+        using (authSchema.dbConnection.createTransaction(readOnly=True)) {
             return authSchema.users.findByUserHash(hash);
-            }
         }
+    }
 
     /**
      * Given a user name or user object, obtain a set of role names that correspond to that user.
@@ -307,35 +271,28 @@ const DBRealm
      * @return True iff the specified user exists
      * @return (conditional) a set of role names for the user
      */
-    protected conditional Set<String> loadUserRoles(User|String user)
-        {
-        using (authSchema.dbConnection.createTransaction(readOnly=True))
-            {
-            if (user.is(String))
-                {
-                if (!(user := authSchema.users.findByName(user)))
-                    {
+    protected conditional Set<String> loadUserRoles(User|String user) {
+        using (authSchema.dbConnection.createTransaction(readOnly=True)) {
+            if (user.is(String)) {
+                if (!(user := authSchema.users.findByName(user))) {
                     return False;
-                    }
                 }
+            }
 
             Int[] roleIds = user.roleIds;
-            if (roleIds.empty)
-                {
+            if (roleIds.empty) {
                 return True, [];
-                }
+            }
 
             Roles roles = authSchema.roles;
             HashSet<String> roleNames = new HashSet();
-            for (Int roleId : roleIds)
-                {
-                if (Role role := roles.get(roleId))
-                    {
+            for (Int roleId : roleIds) {
+                if (Role role := roles.get(roleId)) {
                     roleNames += role.roleName;
                     roleNames += role.altNames;
-                    }
                 }
-            return True, roleNames.freeze(True);
             }
+            return True, roleNames.freeze(True);
         }
     }
+}

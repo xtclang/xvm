@@ -2,8 +2,7 @@
  * The base class for HTTP requests and responses.
  */
 interface HttpMessage
-        extends Freezable
-    {
+        extends Freezable {
     /**
      * The header portion of this message. Note that the name is used in the singular, because it
      * does not refer to a single key/value pair, as the name "HTTP header" refers to, but rather
@@ -35,21 +34,19 @@ interface HttpMessage
     Body ensureBody(MediaType mediaType, Boolean streaming=False);
 
     @Override
-    immutable HttpMessage freeze(Boolean inPlace = True)
-        {
-        if (this.is(immutable))
-            {
+    immutable HttpMessage freeze(Boolean inPlace = True) {
+        if (this.is(immutable)) {
             return this;
-            }
+        }
 
         // the interface for the message objects are designed to be freezable in-place; sub-classes
         // that cannot do so must override this method
         assert inPlace;
         return makeImmutable();
-        }
+    }
 
     /**
      * @return an `Iterator` of all cookie names in this message
      */
     Iterator<String> cookieNames();
-    }
+}

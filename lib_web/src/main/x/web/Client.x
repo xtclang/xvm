@@ -8,8 +8,7 @@ import requests.SimpleRequest;
  * TODO how to secure? need to be able to restrict which algos can be used
  * TODO patch method
  */
-interface Client
-    {
+interface Client {
     // ----- Client configuration ------------------------------------------------------------------
 
     /**
@@ -21,11 +20,10 @@ interface Client
      * @param protocols    the [Protocol]s that the new Client is allowed to use; if empty, no
      *                     restrictions are placed
      */
-    Client allow(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols)
-        {
+    Client allow(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols) {
         Client restricted = new RestrictedClient(this, Allow, hostPorts, protocols);
         return &restricted.maskAs(Client);
-        }
+    }
 
     /**
      * Create a "restricted" client that disallows communication to any the specified ports and/or
@@ -36,37 +34,33 @@ interface Client
      * @param protocols    the [Protocol]s that the new Client is disallowed to use; if empty, no
      *                     restrictions are placed
      */
-    Client deny(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols)
-        {
+    Client deny(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols) {
         Client restricted = new RestrictedClient(this, Deny, hostPorts, protocols);
         return &restricted.maskAs(Client);
-        }
+    }
 
     /**
      * Create a `Client` that restricts access to URIs "under" the specified [Uri].
      */
-    Client restrictTo(Uri baseUri)
-        {
+    Client restrictTo(Uri baseUri) {
         String   host = baseUri.host ?: assert as "host must be specified";
         UInt16   port = baseUri.port ?: 0;
 
         Protocol|Protocol[] protocol = [];
-        if (String scheme ?= baseUri.scheme)
-            {
+        if (String scheme ?= baseUri.scheme) {
             assert protocol := Protocol.byProtocolString.get(scheme) as $"unknown protocol: {scheme}";
-            }
+        }
 
         Client restricted = new RestrictedClient(this, Allow, (host, port), protocol);
         return &restricted.maskAs(Client);
-        }
+    }
 
     /**
      * Create a `Client` that is connected (and limited) to the specified [Uri].
      */
-    Client connectTo(Uri site)
-        {
+    Client connectTo(Uri site) {
         TODO
-        }
+    }
 
     /**
      * The registry for codecs.
@@ -88,11 +82,10 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    ResponseIn get(String | Uri uri)
-        {
+    ResponseIn get(String | Uri uri) {
         RequestOut request = createRequest(GET, uri.is(String) ? new Uri(uri) : uri);
         return send(request);
-        }
+    }
 
     /**
      * Put the specified resource.
@@ -103,11 +96,10 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    ResponseIn put(String | Uri uri, Object content, MediaType? mediaType=Null)
-        {
+    ResponseIn put(String | Uri uri, Object content, MediaType? mediaType=Null) {
         RequestOut request = createRequest(PUT, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
         return send(request);
-        }
+    }
 
     /**
      * Post the specified resource.
@@ -119,11 +111,10 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    ResponseIn post(String | Uri uri, Object content, MediaType? mediaType=Null)
-        {
+    ResponseIn post(String | Uri uri, Object content, MediaType? mediaType=Null) {
         RequestOut request = createRequest(POST, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
         return send(request);
-        }
+    }
 
     /**
      * Delete the specified resource.
@@ -132,11 +123,10 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    ResponseIn delete(String | Uri uri)
-        {
+    ResponseIn delete(String | Uri uri) {
         RequestOut request = createRequest(DELETE, uri.is(String) ? new Uri(uri) : uri);
         return send(request);
-        }
+    }
 
 
     // ---- request handling -----------------------------------------------------------------------
@@ -152,26 +142,22 @@ interface Client
      *
      * @return a new Request object
      */
-    RequestOut createRequest(HttpMethod method, Uri uri, Object? content=Null, MediaType? mediaType=Null)
-        {
+    RequestOut createRequest(HttpMethod method, Uri uri, Object? content=Null, MediaType? mediaType=Null) {
         SimpleRequest request = new SimpleRequest(this, method, uri);
         defaultHeaders.entries.forEach(entry -> request.add(entry));
 
-        if (content != Null || mediaType != Null)
-            {
+        if (content != Null || mediaType != Null) {
             assert method.body != Forbidden;
 
-            if (mediaType == Null)
-                {
-                if (!(mediaType := registry.inferMediaType(content)))
-                    {
+            if (mediaType == Null) {
+                if (!(mediaType := registry.inferMediaType(content))) {
                     throw new IllegalArgument($"Unable to find MediaType for: {&content.actualType}");
-                    }
                 }
-            request.ensureBody(mediaType).from(content?);
             }
-        return request;
+            request.ensureBody(mediaType).from(content?);
         }
+        return request;
+    }
 
     /**
      * Send a request.
@@ -183,4 +169,4 @@ interface Client
      * TODO document failure modes (does it return a response? or throw?)
      */
     ResponseIn send(RequestOut request);
-    }
+}

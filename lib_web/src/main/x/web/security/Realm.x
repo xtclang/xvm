@@ -5,8 +5,7 @@ import crypto.Signer;
  * A Realm is a named security domain, and an implementation of this interface is responsible
  * for the validation of user credentials, specifically the user name and password.
  */
-interface Realm
-    {
+interface Realm {
     typedef immutable Byte[] as Hash;
 
     /**
@@ -71,10 +70,9 @@ interface Realm
      * many clients still only support MD5 because it has only been a few decades since the other
      * options were added.
      */
-    @RO Signer[] hashers.get()
-        {
+    @RO Signer[] hashers.get() {
         return [];
-        }
+    }
 
     /**
      * Given a user (either plain text or hashed) and a [hasher](Signer), obtain the corresponding
@@ -123,10 +121,9 @@ interface Realm
      * @return (conditional) the user identity in plain text
      * @return (conditional) the role names associated with the user, if any, otherwise `[]`
      */
-    conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher)
-        {
+    conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher) {
         TODO User identity and password hashing are not supported by this Realm
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -148,12 +145,11 @@ interface Realm
      * @return the digest that represents the user information that is used by the FixedRealm as a
      *         key to the password digest
      */
-    static Hash userHash(UserId user, String realm, Signer hasher)
-        {
+    static Hash userHash(UserId user, String realm, Signer hasher) {
         return user.is(String)
                 ? hasher.sign($"{user}:{realm}".utf8()).bytes
                 : user;
-        }
+    }
 
     /**
      * Produce a password digest.
@@ -169,8 +165,7 @@ interface Realm
      *
      * @return the digest that represents the password information as it is held by the FixedRealm
      */
-    static Hash passwordHash(String user, String realm, String password, Signer hasher)
-        {
+    static Hash passwordHash(String user, String realm, String password, Signer hasher) {
         return hasher.sign($"{user}:{realm}:{password}".utf8()).bytes;
-        }
     }
+}

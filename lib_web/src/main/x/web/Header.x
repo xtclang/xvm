@@ -4,8 +4,7 @@
  * Note: HTTP header keys are case-**in**sensitive.
  */
 interface Header
-        extends Freezable
-    {
+        extends Freezable {
     /**
     * Tha header names as specified by HTTP/1.1
     *
@@ -50,10 +49,9 @@ interface Header
      * not modifiable, and when sending a request or a response, there is a point at which the
      * headers are no longer modifiable.
      */
-    @RO Boolean modifiable.get()
-        {
+    @RO Boolean modifiable.get() {
         return !this.is(immutable);
-        }
+    }
 
     /**
      * Each `Entry` that appears in the header portion of an [HttpMessage] is simply a `String` name
@@ -66,12 +64,11 @@ interface Header
      *
      * @return a list of names of the HTTP headers
      */
-    @RO List<String> names.get()
-        {
+    @RO List<String> names.get() {
         List<Entry> entries = this.entries;
 
         return entries.map(e -> e[0], new String[](entries.size)).as(List<String>);
-        }
+    }
 
     /**
      * Obtain the HTTP headers as list of [Entry] objects.
@@ -91,19 +88,17 @@ interface Header
      * @return True iff the specified name is found at least once
      * @return (conditional) all of the corresponding values from the HTTP header
      */
-    Iterator<String> valuesOf(String name, Char? expandDelim=Null)
-        {
+    Iterator<String> valuesOf(String name, Char? expandDelim=Null) {
         import ecstasy.collections.CaseInsensitive;
         Iterator<String> iter = entries.iterator().filter(e -> CaseInsensitive.areEqual(e[0], name))
                                                   .map(e -> e[1]);
 
-        if (expandDelim != Null)
-            {
+        if (expandDelim != Null) {
             iter = iter.flatMap(s -> s.split(expandDelim).iterator());
-            }
+        }
 
         return iter.map(s -> s.trim());
-        }
+    }
 
     /**
      * Obtain the header value, as-is (not comma-expanded) for the specified case-insensitive header
@@ -118,10 +113,9 @@ interface Header
      * @return True iff the specified name is found
      * @return (conditional) the corresponding value from the HTTP header
      */
-    conditional String firstOf(String name, Char? expandDelim=Null)
-        {
+    conditional String firstOf(String name, Char? expandDelim=Null) {
         return valuesOf(name, expandDelim).next();
-        }
+    }
 
     /**
      * Obtain the header value, as-is (not comma-expanded) for the specified case-insensitive header
@@ -136,10 +130,9 @@ interface Header
      * @return True iff the specified name is found
      * @return (conditional) the corresponding value from the HTTP header
      */
-    conditional String lastOf(String name, Char? expandDelim=Null)
-        {
+    conditional String lastOf(String name, Char? expandDelim=Null) {
         return valuesOf(name, expandDelim).reversed().next();
-        }
+    }
 
     /**
      * Erase all HTTP headers for the specified name.
@@ -148,25 +141,19 @@ interface Header
      *
      * @throws IllegalState  if [headersModifiable] is `False`
      */
-    void removeAll(String name)
-        {
+    void removeAll(String name) {
         List<Entry> entries = this.entries;
-        if (!entries.empty)
-            {
+        if (!entries.empty) {
             val cursor = entries.cursor();
-            while (cursor.exists)
-                {
-                if (cursor.value[0] == name)
-                    {
+            while (cursor.exists) {
+                if (cursor.value[0] == name) {
                     cursor.delete();
-                    }
-                else
-                    {
+                } else {
                     cursor.advance();
-                    }
                 }
             }
         }
+    }
 
     /**
      * Add or replace the value of the specified header name. (Any and all previously existent
@@ -175,11 +162,10 @@ interface Header
      * @param name   the case-insensitive header name
      * @param value  the value or values to use for the header name
      */
-    void put(String name, String|String[] value)
-        {
+    void put(String name, String|String[] value) {
         removeAll(name);
         add(name, value);
-        }
+    }
 
     /**
      * Add the specified header entry. (Any previously existent headers with the same name will be
@@ -187,10 +173,9 @@ interface Header
      *
      * @param entry   the header entry to add
      */
-    void add(Entry entry)
-        {
+    void add(Entry entry) {
         entries.add(entry);
-        }
+    }
 
     /**
      * Add the specified header entry. (Any previously existent headers with the same name will be
@@ -199,14 +184,12 @@ interface Header
      * @param name   the case-insensitive header name
      * @param value  the value or values to use for the header name
      */
-    void add(String name, String|String[] value)
-        {
-        if (value.is(String[]))
-            {
+    void add(String name, String|String[] value) {
+        if (value.is(String[])) {
             value = value.appendTo(new StringBuffer(value.estimateStringLength(",", "", "")), ",", "", "").toString();
-            }
-        entries.add((name, value));
         }
+        entries.add((name, value));
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -225,10 +208,8 @@ interface Header
      * @return True iff the name is a header name that is known to allow a comma as part of its
      *         textual format
      */
-    static Boolean isCommaAllowedInValue(String name)
-        {
-        return switch (name)
-            {
+    static Boolean isCommaAllowedInValue(String name) {
+        return switch (name) {
             case Authorization:                 // comma delimited sub-values
             case AuthorizationResponse:        // comma delimited sub-values
             case Date:                          // unquoted date containing a comma
@@ -243,8 +224,8 @@ interface Header
 
             default:
                 False;
-            };
-        }
+        };
+    }
 
     /**
      * Test the specified header name against the rules of the HTTP specification.
@@ -254,31 +235,26 @@ interface Header
      * @return True iff the name does not meet the rules of the HTTP specification
      * @return (conditional) an explanation of what is wrong with the passed name
      */
-    static conditional String isInvalidHeaderName(String name)
-        {
-        if (name.size == 0)
-            {
+    static conditional String isInvalidHeaderName(String name) {
+        if (name.size == 0) {
             return True, "Header name is blank";
-            }
+        }
 
-        for (Char char : name)
-            {
-            switch (char)
-                {
-                case '\0'..' ', '\d':                               // "CTL" chars, and space
-                case '(', ')', '<', '>', '@', ',', ';', ':':        // "separators"
-                case '\\', '\"', '/', '[', ']', '?', '=', '{', '}': // "separators"
-                    return True, $"Header name {name.quoted()} contains a prohibited character: {char.quoted()}";
+        for (Char char : name) {
+            switch (char) {
+            case '\0'..' ', '\d':                               // "CTL" chars, and space
+            case '(', ')', '<', '>', '@', ',', ';', ':':        // "separators"
+            case '\\', '\"', '/', '[', ']', '?', '=', '{', '}': // "separators"
+                return True, $"Header name {name.quoted()} contains a prohibited character: {char.quoted()}";
 
-                default:
-                    if (char.codepoint > 0x7F)
-                        {
-                        return True, $"Header name {name.quoted()} contains a non-ASCII character: {char.quoted()}";
-                        }
-                    break;
+            default:
+                if (char.codepoint > 0x7F) {
+                    return True, $"Header name {name.quoted()} contains a non-ASCII character: {char.quoted()}";
                 }
+                break;
             }
+        }
 
         return False;
-        }
     }
+}

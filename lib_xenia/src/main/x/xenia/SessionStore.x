@@ -3,8 +3,7 @@
  *
  * TODO concurrent or not?
  */
-service SessionStore
-    {
+service SessionStore {
     /**
      * * `Success` - the operation completed successfully
      * * `NoSuchSession` - the operation could not complete because the specified session was not
@@ -16,14 +15,13 @@ service SessionStore
      * * `IOFailure` - the operation could not complete because of an underlying persistent storage
      *   failure
      */
-    enum IOResult
-        {
+    enum IOResult {
         Success,
         NoSuchSession,
         SerializationIncomplete,
         SerializationFailure,
         IOFailure,
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -41,11 +39,10 @@ service SessionStore
      *
      * @return True iff the specified id has session data in persistent storage
      */
-    Boolean exists(Int id)
-        {
+    Boolean exists(Int id) {
         // TODO check sessions, and add flag to SessionImpl as well "on disk" vs. not and "up to date" vs not
         return False;
-        }
+    }
 
     /**
      * Read the specified session from persistent storage.
@@ -55,11 +52,10 @@ service SessionStore
      * @return either the session, or an indicator of the reason why the specified session could
      *         not be loaded
      */
-    SessionImpl|IOResult load(Int id)
-        {
+    SessionImpl|IOResult load(Int id) {
         // TODO
         return NoSuchSession;
-        }
+    }
 
     /**
      * Write the specified session to persistent storage.
@@ -68,11 +64,10 @@ service SessionStore
      *
      * @return an indicator of the success or failure of the store operation
      */
-    IOResult store(SessionImpl session)
-        {
+    IOResult store(SessionImpl session) {
         // TODO
         return IOFailure;
-        }
+    }
 
     /**
      * Erase the specified session from the persistent storage.
@@ -81,13 +76,12 @@ service SessionStore
      *
      * @return an indicator of the success or failure of the erase operation
      */
-    IOResult erase(Int id)
-        {
+    IOResult erase(Int id) {
         // TODO
         return NoSuchSession;
-        }
+    }
 
 
     // ----- internal -----------------------------------------------------------------------
 
-    }
+}

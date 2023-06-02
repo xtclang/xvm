@@ -6,8 +6,7 @@ import collections.LRUCache;
  *
  *     Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*\/*;q=0.8
  */
-const AcceptList
-    {
+const AcceptList {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -15,8 +14,7 @@ const AcceptList
      *
      * @param accepts  the array of AcceptTypes
      */
-    construct(AcceptType[] accepts)
-        {
+    construct(AcceptType[] accepts) {
         // render the types as they would appear in an "Accept:" header
         String text = accepts.appendTo(new StringBuffer(
                 accepts.estimateStringLength(",", "", "")), ",", "", "").toString();
@@ -25,31 +23,26 @@ const AcceptList
         AcceptType[] always = [];
         AcceptType[] maybes = [];
         AcceptType[] nevers = [];
-        if (accepts.all(a -> a.quality == 1.0))
-            {
+        if (accepts.all(a -> a.quality == 1.0)) {
             always = accepts;
-            }
-        else
-            {
-            for (AcceptType accept : accepts)
-                {
-                switch (accept.quality)
-                    {
-                    case 1.0:
-                        always = (always.empty ? new AcceptType[] : always).add(accept);
-                        break;
-                    default:
-                        maybes = (maybes.empty ? new AcceptType[] : maybes).add(accept);
-                        break;
-                    case 0.0:
-                        nevers = (nevers.empty ? new AcceptType[] : nevers).add(accept);
-                        break;
-                    }
+        } else {
+            for (AcceptType accept : accepts) {
+                switch (accept.quality) {
+                case 1.0:
+                    always = (always.empty ? new AcceptType[] : always).add(accept);
+                    break;
+                default:
+                    maybes = (maybes.empty ? new AcceptType[] : maybes).add(accept);
+                    break;
+                case 0.0:
+                    nevers = (nevers.empty ? new AcceptType[] : nevers).add(accept);
+                    break;
                 }
             }
+        }
 
         construct AcceptList(text, always, maybes, nevers);
-        }
+    }
 
     /**
      * Internal constructor.
@@ -59,13 +52,12 @@ const AcceptList
      * @param maybes  the array of AcceptTypes with quality between 0 and 1, exclusive
      * @param nevers  the array of AcceptTypes with quality 0.0
      */
-    private construct(String text, AcceptType[] always, AcceptType[] maybes,  AcceptType[] nevers)
-        {
+    private construct(String text, AcceptType[] always, AcceptType[] maybes,  AcceptType[] nevers) {
         this.text   = text;
         this.always = always;
         this.maybes = maybes.size <= 1 ? maybes : maybes.sorted((a1, a2) -> a2.quality <=> a1.quality, inPlace=True);
         this.nevers = nevers;
-        }
+    }
 
     /**
      * Given the passed text containing comma-separated AcceptType information, obtain the
@@ -76,52 +68,44 @@ const AcceptList
      * @return True if the AcceptList could be successfully parsed
      * @return (conditional) the parsed AcceptList of AcceptTypes
      */
-    static conditional AcceptList of(String text)
-        {
-        if (text == "")
-            {
+    static conditional AcceptList of(String text) {
+        if (text == "") {
             return True, Nothing;
-            }
+        }
 
-        if (Marker|AcceptList result := cache.get(text))
-            {
+        if (Marker|AcceptList result := cache.get(text)) {
             return result.is(AcceptList)
                     ? (True, result)
                     : False;
-            }
+        }
 
         // parse the text into AcceptType objects
         AcceptType[] always = [];
         AcceptType[] maybes = [];
         AcceptType[] nevers = [];
-        for (String part : text.split(','))
-            {
-            if (AcceptType accept := AcceptType.of(part))
-                {
-                switch (accept.quality)
-                    {
-                    case 1.0:
-                        always = (always.empty ? new AcceptType[] : always).add(accept);
-                        break;
-                    default:
-                        maybes = (maybes.empty ? new AcceptType[] : maybes).add(accept);
-                        break;
-                    case 0.0:
-                        nevers = (nevers.empty ? new AcceptType[] : nevers).add(accept);
-                        break;
-                    }
+        for (String part : text.split(',')) {
+            if (AcceptType accept := AcceptType.of(part)) {
+                switch (accept.quality) {
+                case 1.0:
+                    always = (always.empty ? new AcceptType[] : always).add(accept);
+                    break;
+                default:
+                    maybes = (maybes.empty ? new AcceptType[] : maybes).add(accept);
+                    break;
+                case 0.0:
+                    nevers = (nevers.empty ? new AcceptType[] : nevers).add(accept);
+                    break;
                 }
-            else
-                {
+            } else {
                 cache.put(text, Invalid);
                 return False;
-                }
             }
+        }
 
         AcceptList accepts = new AcceptList(text, always, maybes, nevers);
         cache.put(text, accepts);
         return True, accepts;
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -187,10 +171,8 @@ const AcceptList
      *                 is a separate "quality" preference, where 1.0 indicates "perfect" and 0.0
      *                 indicates "absolutely not", and everything in between is a gradient thereof
      */
-    static const AcceptType(String type, String subtype, Map<String, String> params=[], Dec quality=1.0)
-        {
-        construct(String type, String subtype, Map<String, String> params=[], Dec quality=1.0)
-            {
+    static const AcceptType(String type, String subtype, Map<String, String> params=[], Dec quality=1.0) {
+        construct(String type, String subtype, Map<String, String> params=[], Dec quality=1.0) {
             assert:arg type == "*" || http.validToken(type) as $"Invalid media type: {type.quoted()}";
             assert:arg subtype == "*" || http.validToken(subtype) as $"Invalid media subtype: {subtype.quoted()}";
             assert:arg type != "*" || subtype == "*" as $"Invalid usage of wildcard: \"{type}/{subtype}\"";
@@ -201,7 +183,7 @@ const AcceptList
             this.subtype = subtype;
             this.params  = params;
             this.quality = quality;
-            }
+        }
 
         /**
          * Produce an AcceptType for the passed String.
@@ -211,42 +193,35 @@ const AcceptList
          * @return True if the AcceptType could be successfully parsed
          * @return (conditional) the parsed AcceptType
          */
-        static conditional AcceptType of(String text)
-            {
+        static conditional AcceptType of(String text) {
             // we don't bother to cache AcceptType objects; it's expected to be extremely rare to
             // ever see new ones, once a few AcceptList objects are cached
-            if ((String type, String subtype, Map<String, String> params, Dec quality) := parseAcceptType(text))
-                {
+            if ((String type, String subtype, Map<String, String> params, Dec quality) := parseAcceptType(text)) {
                 return True, new AcceptType(type, subtype, params, quality);
-                }
+            }
 
             return False;
-            }
+        }
 
         /**
          * Determine if this AcceptType matches a MediaType.
          */
-        conditional Dec matches(MediaType that)
-            {
-            if (this.type == "*")
-                {
+        conditional Dec matches(MediaType that) {
+            if (this.type == "*") {
                 return True, quality;
-                }
+            }
 
-            if (this.type != that.type)
-                {
+            if (this.type != that.type) {
                 return False;
-                }
+            }
 
-            if (this.subtype == "*")
-                {
+            if (this.subtype == "*") {
                 return True, quality;
-                }
+            }
 
-            if (this.subtype != that.subtype)
-                {
+            if (this.subtype != that.subtype) {
                 return False;
-                }
+            }
 
             // the specifications do not have any indication how params are to be matched, e.g.
             // does the integer "level" value indicate that higher should cover lower or vice-versa?
@@ -254,21 +229,19 @@ const AcceptList
             return this.params == that.params
                     ? (True, quality)
                     : False;
-            }
+        }
 
         @Override
-        Int estimateStringLength()
-            {
+        Int estimateStringLength() {
             return type.size + 1 + subtype.size;
-            }
+        }
 
         @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
+        Appender<Char> appendTo(Appender<Char> buf) {
             type.appendTo(buf)
                 .add('/');
             return subtype.appendTo(buf);
-            }
+        }
 
         /**
          * Given the passed text containing AcceptType information, validate that the text is
@@ -282,8 +255,7 @@ const AcceptList
          * @return params   (conditional) the MediaType parameters (almost always empty)
          * @return quality  (conditional) a quality value between 0 and 1, inclusive
          */
-        static conditional (String type, String subtype, Map<String, String> params, Dec quality) parseAcceptType(String text)
-            {
+        static conditional (String type, String subtype, Map<String, String> params, Dec quality) parseAcceptType(String text) {
             String              type;
             String              subtype;
             Map<String, String> params  = [];
@@ -291,84 +263,63 @@ const AcceptList
 
             String part;
             String rest;
-            if (Int semi := text.indexOf(';'))
-                {
+            if (Int semi := text.indexOf(';')) {
                 part = text[0 ..< semi];
                 rest = text[semi >..< text.size];
-                }
-            else
-                {
+            } else {
                 part = text;
                 rest = "";
-                }
+            }
 
-            if (Int slash := part.indexOf('/'))
-                {
+            if (Int slash := part.indexOf('/')) {
                 type    = part[0 ..< slash].trim();
                 subtype = part[slash >..< part.size].trim();
                 if (!(type == "*" && subtype == "*"
-                        || http.validToken(type) && (subtype == "*" || http.validToken(subtype))))
-                    {
+                        || http.validToken(type) && (subtype == "*" || http.validToken(subtype)))) {
                     return False;
-                    }
                 }
-            else
-                {
+            } else {
                 return False;
-                }
+            }
 
-            while (rest.size > 0)
-                {
-                if (Int semi := rest.indexOf(';'))
-                    {
+            while (rest.size > 0) {
+                if (Int semi := rest.indexOf(';')) {
                     part = rest[0 ..< semi];
                     rest = rest[semi >..< rest.size];
-                    }
-                else
-                    {
+                } else {
                     part = rest;
                     rest = "";
-                    }
+                }
 
-                if (Int eq := part.indexOf('='))
-                    {
+                if (Int eq := part.indexOf('=')) {
                     String key = part[0 ..< eq].trim();
                     String val = part[eq >..< part.size].trim();
-                    if (key.size == 0 || !http.validToken(key))
-                        {
+                    if (key.size == 0 || !http.validToken(key)) {
                         return False;
-                        }
-                    else if (key == "q" || key == "Q")
-                        {
+                    } else if (key == "q" || key == "Q") {
                         // the quality key ("q") is reserved for use by the Accept header
-                        try
-                            {
+                        try {
                             quality = new FPLiteral(val).toDec();
-                            }
-                        catch (Exception e)
-                            {
+                        } catch (Exception e) {
                             return False;
-                            }
-                        if (!(0.0 <= quality <= 1.0))
-                            {
+                        }
+                        if (!(0.0 <= quality <= 1.0)) {
                             return False;
-                            }
+                        }
                         // no parameters are after quality; there's some other stuff in the spec
                         // that can theoretically be present, but no one uses that capability
                         break;
-                        }
+                    }
 
                     (params.empty ? new ListMap<String, String>() : params).put(key, val);
-                    }
-                else
-                    {
+                } else {
                     return False;
-                    }
                 }
+            }
 
             return True, type, subtype, params, quality;
-            }
         }
+    }
 
 
     // ----- methods -------------------------------------------------------------------------------
@@ -384,65 +335,51 @@ const AcceptList
      *         case of an alternative MediaType being selected)
      * @return (conditional) the AcceptType that matched the MediaType
      */
-    conditional (MediaType selected, AcceptType matched) matches(MediaType required)
-        {
+    conditional (MediaType selected, AcceptType matched) matches(MediaType required) {
         Boolean mightMatch = True;
-        for (AcceptType accept : nevers)
-            {
-            if (accept.matches(required))
-                {
+        for (AcceptType accept : nevers) {
+            if (accept.matches(required)) {
                 mightMatch = False;
                 break;
-                }
             }
+        }
 
-        if (mightMatch)
-            {
-            for (AcceptType accept : always)
-                {
-                if (accept.matches(required))
-                    {
+        if (mightMatch) {
+            for (AcceptType accept : always) {
+                if (accept.matches(required)) {
                     return True, required, accept;
-                    }
                 }
             }
+        }
 
         // check alternatives
         MediaType?  bestAlt    = Null;
         AcceptType? altMatched = Null;
-        for (MediaType alt : required.alternatives)
-            {
-            if ((MediaType selected, AcceptType matched) := matches(alt))
-                {
-                if (matched.quality == 1.0)
-                    {
+        for (MediaType alt : required.alternatives) {
+            if ((MediaType selected, AcceptType matched) := matches(alt)) {
+                if (matched.quality == 1.0) {
                     return True, selected, matched;
-                    }
-                else if (matched.quality > (altMatched?.quality : 0))
-                    {
+                } else if (matched.quality > (altMatched?.quality : 0)) {
                     bestAlt    = selected;
                     altMatched = matched;
-                    }
                 }
             }
+        }
 
-        if (mightMatch)
-            {
-            for (AcceptType accept : maybes)
-                {
-                if (accept.matches(required))
-                    {
+        if (mightMatch) {
+            for (AcceptType accept : maybes) {
+                if (accept.matches(required)) {
                     return altMatched != Null && altMatched.quality > accept.quality
                             ? (True, bestAlt.as(MediaType), altMatched)
                             : (True, required, accept);
-                    }
                 }
             }
+        }
 
         return bestAlt == Null || altMatched == Null
                 ? False
                 : (True, bestAlt, altMatched);
-        }
+    }
 
     /**
      * Determine if the any of the required MediaTypes matches an AcceptType in this AcceptList.
@@ -454,28 +391,22 @@ const AcceptList
      *         the case of an alternative MediaType being selected)
      * @return (conditional) the AcceptType that matched the MediaType
      */
-    conditional (MediaType selected, AcceptType matched) matches(MediaType|MediaType[] required)
-        {
+    conditional (MediaType selected, AcceptType matched) matches(MediaType|MediaType[] required) {
         MediaType?  bestMediaType  = Null;
         AcceptType? bestAcceptType = Null;
         MediaType[] requiredTypes  = required.is(MediaType[]) ? required : [required];
-        for (MediaType mediaType : requiredTypes)
-            {
-            if ((MediaType selected, AcceptType matched) := matches(mediaType))
-                {
-                if (matched.quality == 1.0)
-                    {
+        for (MediaType mediaType : requiredTypes) {
+            if ((MediaType selected, AcceptType matched) := matches(mediaType)) {
+                if (matched.quality == 1.0) {
                     return True, selected, matched;
-                    }
-                else if (matched.quality > (bestAcceptType?.quality : 0.0))
-                    {
+                } else if (matched.quality > (bestAcceptType?.quality : 0.0)) {
                     bestMediaType  = selected;
                     bestAcceptType = matched;
-                    }
                 }
             }
+        }
 
         return True, bestMediaType?, bestAcceptType?;
         return False;
-        }
     }
+}
