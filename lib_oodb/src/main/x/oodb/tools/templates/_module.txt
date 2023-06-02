@@ -1,6 +1,5 @@
 module %appName%_jsondb%qualifier%
-        incorporates jsondb_.CatalogMetadata<RootSchema_>
-    {
+        incorporates jsondb_.CatalogMetadata<RootSchema_> {
     package oodb_   import oodb.xtclang.org;
     package json_   import json.xtclang.org;
     package jsondb_ import jsondb.xtclang.org;
@@ -16,25 +15,22 @@ module %appName%_jsondb%qualifier%
     import %appName%_.%appSchema% as RootSchema_;
 
     @Override
-    @RO Module schemaModule.get()
-        {
+    @RO Module schemaModule.get() {
         assert Module m := %appName%_.isModuleImport();
         return m;
-        }
+    }
 
     @Override
-    @Lazy immutable DboInfo_[] dbObjectInfos.calc()
-        {
+    @Lazy immutable DboInfo_[] dbObjectInfos.calc() {
         return
             [
             new DboInfo_(ROOT, DBSchema, 0, 0, [%ChildrenIds%], [%ChildrenNames%], False),
 %PropertyInfos%
             ];
-        }
+    }
 
     @Override
-    Map<String, Type> dbTypes.get()
-        {
+    Map<String, Type> dbTypes.get() {
         return Map:
             [
 %PropertyTypes%
@@ -42,11 +38,10 @@ module %appName%_jsondb%qualifier%
 //            "String"=String,
 //            "AddressBookDB_:Contact"=AddressBookDB_.Contact,
             ];
-        }
+    }
 
     @Override
-    @Lazy json_.Schema jsonSchema.calc()
-        {
+    @Lazy json_.Schema jsonSchema.calc() {
         return new json_.Schema(
                 schemaMappings   = [], // TODO use dbTypes?
                 version          = dbVersion,
@@ -56,13 +51,12 @@ module %appName%_jsondb%qualifier%
                 enableReflection = True,
                 typeSystem       = &this.actualType.typeSystem,
                 );
-        }
+    }
 
     @Override
-    Catalog_<RootSchema_> createCatalog(Directory dir, Boolean readOnly = False)
-        {
+    Catalog_<RootSchema_> createCatalog(Directory dir, Boolean readOnly = False) {
         return new Catalog_<RootSchema_>(dir, this, readOnly);
-        }
+    }
 
     @Override
     Client_<RootSchema_> createClient(
@@ -70,36 +64,31 @@ module %appName%_jsondb%qualifier%
             Int                     clientId,
             DBUser_                 dbUser,
             Boolean                 readOnly      = False,
-            function void(Client_)? notifyOnClose = Null)
-        {
+            function void(Client_)? notifyOnClose = Null) {
         return new %appName%Client_(catalog, clientId, dbUser, readOnly, notifyOnClose);
-        }
+    }
 
     service %appName%Client_
-                extends Client_<RootSchema_>
-        {
+                extends Client_<RootSchema_> {
         construct(Catalog_<RootSchema_>   catalog,
                   Int                     clientId,
                   DBUser_                 dbUser,
                   Boolean                 readOnly = False,
-                  function void(Client_)? notifyOnClose = Null)
-            {
+                  function void(Client_)? notifyOnClose = Null) {
             construct Client_(catalog, clientId, dbUser, readOnly, notifyOnClose);
-            }
+        }
 
         @Override
-        DBObjectImpl createImpl(Int id)
-            {
-            switch (id)
-                {
+        DBObjectImpl createImpl(Int id) {
+            switch (id) {
 %CustomInstantiations%
-                default:
-                    break;
-                }
+            default:
+                break;
+            }
 
             return super(id);
-            }
+        }
 %CustomDeclarations%
 %RootSchema%
-        }
     }
+}

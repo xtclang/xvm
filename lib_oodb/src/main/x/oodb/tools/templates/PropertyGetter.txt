@@ -1,7 +1,6 @@
 
             @Override
-            %propertyType% %propertyName%.get()
-                {
+            %propertyType% %propertyName%.get() {
                 %propertyType% impl = this.%appName%Client_.implFor(%propertyId%).as(%propertyType%);
                 return &impl.maskAs(%propertyType%);
-                }
+            }

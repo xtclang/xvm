@@ -1,9 +1,8 @@
 
         @Override
         class RootSchemaImpl(DboInfo_ info_)
-                implements RootSchema_
-            {
+                implements RootSchema_ {
 %PropertyGetters%
 %SchemaMethods%
-            }
+        }
 %ChildSchemas%
