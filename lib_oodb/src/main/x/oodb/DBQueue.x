@@ -9,8 +9,7 @@
  */
 interface DBQueue<Element extends immutable Const>
         extends Queue<Element>
-        extends DBObject
-    {
+        extends DBObject {
     /**
      * Obtain all of the contents of the `Queue` as a `List`. This method is potentially an
      * incredibly expensive operation, so it should only be used if the size of the `Queue` is
@@ -33,10 +32,9 @@ interface DBQueue<Element extends immutable Const>
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
-    @RO DBCategory dbCategory.get()
-        {
+    @RO DBCategory dbCategory.get() {
         return DBQueue;
-        }
+    }
 
 
     // ----- transactional information -------------------------------------------------------------
@@ -49,8 +47,7 @@ interface DBQueue<Element extends immutable Const>
      * `TxChange` interface, it can provide both the change information, and a before/after view of
      * the data.
      */
-    static interface DBChange<Element>
-        {
+    static interface DBChange<Element> {
         /**
          * The elements appended to the `Queue`.
          *
@@ -66,7 +63,7 @@ interface DBQueue<Element extends immutable Const>
          * any items subsequently taken within the transaction _may_ appear in the list.
          */
         List<Element> removed;
-        }
+    }
 
     /**
      * Represents a transactional change to a database queue.
@@ -78,9 +75,7 @@ interface DBQueue<Element extends immutable Const>
      */
     @Override
     interface TxChange
-            extends DBChange<Element>
-        {
-        }
+            extends DBChange<Element> {}
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -95,4 +90,4 @@ interface DBQueue<Element extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBObject.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    }
+}

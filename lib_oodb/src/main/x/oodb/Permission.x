@@ -2,8 +2,7 @@
  * A `Permission` represents a targeted action that can be allowed (permitted) or disallowed
  * (revoked).
  */
-const Permission(String target, String action)
-    {
+const Permission(String target, String action) {
     /**
      * A wild-card representing all targets (database objects) that a permission may apply to.
      */
@@ -23,9 +22,8 @@ const Permission(String target, String action)
      *
      * @return True iff the scope of `this` Permission fully covers `that` Permission
      */
-    Boolean covers(Permission that)
-        {
+    Boolean covers(Permission that) {
         return (this.action == AllActions || this.action == that.action)
             && (this.target == AllTargets || this.target == that.target);
-        }
     }
+}

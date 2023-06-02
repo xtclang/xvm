@@ -30,8 +30,7 @@
  * execution.)
  */
 interface DBCounter
-        extends DBValue<Int>
-    {
+        extends DBValue<Int> {
     // ----- DBValue methods -----------------------------------------------------------------------
 
     /**
@@ -78,14 +77,13 @@ interface DBCounter
      *
      * @return the first generated value, which is the old value of the counter
      */
-    Int next(Int count = 1)
-        {
+    Int next(Int count = 1) {
         assert count >= 1;
         Int oldValue = get();
         Int newValue = oldValue + count;
         set(newValue);
         return oldValue;
-        }
+    }
 
 
     // ----- blind updates -------------------------------------------------------------------------
@@ -103,19 +101,17 @@ interface DBCounter
      * Increment the count. This method is a "blind update", which is designed to maximize
      * concurrency by being composable with other blind updates.
      */
-    void increment()
-        {
+    void increment() {
         adjustBy(1);
-        }
+    }
 
     /**
      * Decrement the count. This method is a "blind update", which is designed to maximize
      * concurrency by being composable with other blind updates.
      */
-    void decrement()
-        {
+    void decrement() {
         adjustBy(-1);
-        }
+    }
 
 
     // ----- read plus update operations -----------------------------------------------------------
@@ -127,11 +123,10 @@ interface DBCounter
      *
      * @return the counter value after the increment
      */
-    Int preIncrement()
-        {
+    Int preIncrement() {
         increment();
         return get();
-        }
+    }
 
     /**
      * Decrement the count and return the new decremented counter value. This method will negatively
@@ -140,11 +135,10 @@ interface DBCounter
      *
      * @return the counter value after the decrement
      */
-    Int preDecrement()
-        {
+    Int preDecrement() {
         decrement();
         return get();
-        }
+    }
 
     /**
      * Increment the count and return the counter value from before the increment. This method will
@@ -153,12 +147,11 @@ interface DBCounter
      *
      * @return the counter value before the increment
      */
-    Int postIncrement()
-        {
+    Int postIncrement() {
         Int result = get();
         increment();
         return result;
-        }
+    }
 
     /**
      * Decrement the count and return the counter value from before the decrement. This method will
@@ -167,21 +160,19 @@ interface DBCounter
      *
      * @return the counter value before the decrement
      */
-    Int postDecrement()
-        {
+    Int postDecrement() {
         Int result = get();
         decrement();
         return result;
-        }
+    }
 
 
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
-    @RO DBCategory dbCategory.get()
-        {
+    @RO DBCategory dbCategory.get() {
         return DBCounter;
-        }
+    }
 
 
     // ----- transactional information -------------------------------------------------------------
@@ -191,8 +182,7 @@ interface DBCounter
      */
     @Override
     static interface DBChange
-            extends DBValue.DBChange<Int>
-        {
+            extends DBValue.DBChange<Int> {
         /**
          * True iff the change represents a counter modification that was able to avoid reading the
          * previous value. In theory, a change to a counter may be possible without reading the
@@ -211,11 +201,10 @@ interface DBCounter
          * size of the adjustment (which allows the transaction to be composed with, and re-ordered
          * vis-a-vis other similar transactions).
          */
-        @RO Int adjustment.get()
-            {
+        @RO Int adjustment.get() {
             return newValue - oldValue;
-            }
         }
+    }
 
     /**
      * Represents a transactional change to a database counter.
@@ -225,9 +214,7 @@ interface DBCounter
      */
     @Override
     interface TxChange
-            extends DBChange
-        {
-        }
+            extends DBChange {}
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -242,4 +229,4 @@ interface DBCounter
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBCounter.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    }
+}

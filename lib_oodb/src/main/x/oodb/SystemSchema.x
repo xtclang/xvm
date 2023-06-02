@@ -25,8 +25,7 @@
  * * `sys/errors` - a [DBLog] of errors REVIEW String
  */
 interface SystemSchema
-        extends DBSchema
-    {
+        extends DBSchema {
     /**
      * The [DBValue] containing the [DBInfo] value for this Database.
      */
@@ -110,4 +109,4 @@ interface SystemSchema
      * not be relied upon for application purposes.
      */
     @RO DBLog<String> errors;
-    }
+}

@@ -8,7 +8,7 @@
  * regardless of the database implementation:
  */
 interface RootSchema
-        extends DBSchema
-    {
+        extends DBSchema {
+
     @RO SystemSchema sys;
-    }
+}

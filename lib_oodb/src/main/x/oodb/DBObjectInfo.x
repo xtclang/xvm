@@ -7,8 +7,7 @@ import DBObject.Distributor;
  * Metadata information about a particular `DBObject`.
  */
 interface DBObjectInfo
-        extends immutable Const
-    {
+        extends immutable Const {
     /**
      * Represents the life cycle state of a DBObject in the database.
      */
@@ -38,10 +37,9 @@ interface DBObjectInfo
     /**
      * The simple name of the DBObject.
      */
-    @RO String name.get()
-        {
+    @RO String name.get() {
         return path == ROOT ? "" : path.name;
-        }
+    }
 
     /**
      * The absolute path of the DBObject within the database.
@@ -51,10 +49,9 @@ interface DBObjectInfo
     /**
      * The path of the parent of the DBObject, or `Null` iff this is the info for the `RootSchema`.
      */
-    @RO Path? parentPath.get()
-        {
+    @RO Path? parentPath.get() {
         return path.parent;
-        }
+    }
 
     /**
      * The names of the child DBObjects, if any.
@@ -64,10 +61,9 @@ interface DBObjectInfo
     /**
      * The paths of the child DBObjects, if any.
      */
-    @RO Path[] childPaths.get()
-        {
+    @RO Path[] childPaths.get() {
         return new Path[childNames.size](s -> path + name).freeze(inPlace=True);
-        }
+    }
 
     /**
      * The category of the DBObject.
@@ -112,8 +108,7 @@ interface DBObjectInfo
      *
      * @return the DBObject indicated by this `DBObjectInfo`, or `Null` if it could not be obtained
      */
-    DBObject? lookupUsing(DBObject obj)
-        {
+    DBObject? lookupUsing(DBObject obj) {
         return obj.dbRoot.dbObjectFor(path);
-        }
     }
+}

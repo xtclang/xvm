@@ -17,15 +17,13 @@ const ObjectInfo(
         Distributor[]                 distributors    = [],
         LifeCycle                     lifeCycle       = Current,
         )
-        implements DBObjectInfo
-    {
-    assert()
-        {
+        implements DBObjectInfo {
+
+    assert() {
         path = path.normalize();
-        if (!path.absolute)
-            {
+        if (!path.absolute) {
             assert:arg path[0].form == Name;
             path = ROOT + path;
-            }
         }
     }
+}

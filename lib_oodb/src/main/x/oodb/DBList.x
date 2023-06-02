@@ -6,15 +6,13 @@
  */
 interface DBList<Element extends immutable Const>
         extends List<Element>
-        extends DBObject
-    {
+        extends DBObject {
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
-    @RO DBCategory dbCategory.get()
-        {
+    @RO DBCategory dbCategory.get() {
         return DBList;
-        }
+    }
 
 
     // ----- transactional information -------------------------------------------------------------
@@ -30,8 +28,7 @@ interface DBList<Element extends immutable Const>
      * and cannot provide a before and after view on its own; when combined with the `TxChange`
      * interface, it can provide both the change information, and a before/after view of the data.
      */
-    static interface DBChange<Element>
-        {
+    static interface DBChange<Element> {
         /**
          * The elements added to the `List`. The key of this map is the index of the added element
          * in the [post] list, and the value of this map is the added element value.
@@ -58,7 +55,7 @@ interface DBList<Element extends immutable Const>
          * specified by [added] into that list.
          */
         @RO Map<Int, Element> removed;
-        }
+    }
 
     /**
      * Represents a change to a database list. Most list changes are extremely compact, representing
@@ -74,9 +71,7 @@ interface DBList<Element extends immutable Const>
      */
     @Override
     interface TxChange
-            extends DBChange<Element>
-        {
-        }
+            extends DBChange<Element> {}
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -91,4 +86,4 @@ interface DBList<Element extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBList.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    }
+}

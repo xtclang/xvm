@@ -6,15 +6,13 @@
  */
 interface DBMap<Key extends immutable Const, Value extends immutable Const>
         extends Map<Key, Value>
-        extends DBObject
-    {
+        extends DBObject {
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
-    @RO DBCategory dbCategory.get()
-        {
+    @RO DBCategory dbCategory.get() {
         return DBMap;
-        }
+    }
 
     /**
      * Perform an requirement-test against a specific entry in the DBMap. Despite the naive default
@@ -27,10 +25,9 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
      *
      * @return the `Result` of evaluating the function against the specified entry
      */
-    <Result extends immutable Const> Result require(Key key, function Result(Entry) test)
-        {
+    <Result extends immutable Const> Result require(Key key, function Result(Entry) test) {
         return require(map -> map.process(key, test));
-        }
+    }
 
     /**
      * Perform a blind adjustment of a specific entry in the DBMap. Despite the naive default
@@ -42,24 +39,22 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
      * @param key     the key of the entry to apply the blind adjustment to
      * @param adjust  a function that operates against (and may both read and modify) the entry
      */
-    void defer(Key key, function Boolean(Entry) adjust)
-        {
+    void defer(Key key, function Boolean(Entry) adjust) {
         defer(map -> map.process(key, adjust));
-        }
+    }
 
 
     // ----- Map.Entry extensions ------------------------------------------------------------------
 
     @Override
-    interface Entry
-        {
+    interface Entry {
         /**
          * The Entry as it existed at the start of the current transaction; if no transaction is
          * active, then this will be the same Entry as `this`. No changes are possible through the
          * returned Entry.
          */
         @RO Entry original;
-        }
+    }
 
 
     // ----- transactional information -------------------------------------------------------------
@@ -76,8 +71,7 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
      * and cannot provide a before and after view on its own; when combined with the `TxChange`
      * interface, it can provide both the change information, and a before/after view of the data.
      */
-    static interface DBChange<Key, Value>
-        {
+    static interface DBChange<Key, Value> {
         /**
          * The key/value pairs inserted-into/updated-in the `DBMap`.
          *
@@ -102,7 +96,7 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
          * specified by [added] into that map.
          */
         @RO Map<Key, Value> removed;
-        }
+    }
 
     /**
      * Represents a transactional change to a database `Map`.
@@ -114,9 +108,7 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
      */
     @Override
     interface TxChange
-            extends DBChange<Key, Value>
-        {
-        }
+            extends DBChange<Key, Value> {}
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -131,4 +123,4 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBMap.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    }
+}

@@ -81,8 +81,7 @@
  * API, yet are still able to support those customizations as if they were built into the database
  * engine itself.
  */
-interface DBObject
-    {
+interface DBObject {
     /**
      * The "current" Connection.
      */
@@ -91,18 +90,16 @@ interface DBObject
     /**
      * The "current" Transaction, if any.
      */
-    @RO Transaction? dbTransaction.get()
-        {
+    @RO Transaction? dbTransaction.get() {
         return dbConnection.transaction;
-        }
+    }
 
     /**
      * The root database object.
      */
-    @RO RootSchema dbRoot.get()
-        {
+    @RO RootSchema dbRoot.get() {
         return dbParent?.dbRoot : this.as(RootSchema);
-        }
+    }
 
     /**
      * The parent database object, or `Null` if this is the root (the database itself).
@@ -129,10 +126,9 @@ interface DBObject
     /**
      * Each `DBObject` has a uniquely identifying path that identifies it within its database.
      */
-    @RO Path dbPath.get()
-        {
+    @RO Path dbPath.get() {
         return dbParent?.dbPath + dbName : Path.ROOT;
-        }
+    }
 
     /**
      * Each `DBObject` potentially contains nested database objects. This `Map` represents all of
@@ -148,39 +144,34 @@ interface DBObject
      *
      * @return the specified `DBObject`, or `Null` if the path did not identify a `DBObject`
      */
-    DBObject!? dbObjectFor(Path path)
-        {
+    DBObject!? dbObjectFor(Path path) {
         DBObject! result = this;
-        for (Path sub : path)
-            {
-            switch (sub.form)
-                {
-                case Root:
-                    result = dbRoot;
-                    break;
+        for (Path sub : path) {
+            switch (sub.form) {
+            case Root:
+                result = dbRoot;
+                break;
 
-                case Parent:
-                    val parent = result.dbParent;
-                    if (parent == Null)
-                        {
-                        return Null;
-                        }
-                    result = parent;
-                    break;
-
-                case Current:
-                    break;
-
-                case Name:
-                    if (!(result := dbChildren.get(sub.name)))
-                        {
-                        return Null;
-                        }
-                    break;
+            case Parent:
+                val parent = result.dbParent;
+                if (parent == Null) {
+                    return Null;
                 }
+                result = parent;
+                break;
+
+            case Current:
+                break;
+
+            case Name:
+                if (!(result := dbChildren.get(sub.name))) {
+                    return Null;
+                }
+                break;
             }
-        return result;
         }
+        return result;
+    }
 
     /**
      * Obtain the specified `DBCounter` by its [dbName], or by its [dbPath] relative to the `dbPath`
@@ -194,15 +185,13 @@ interface DBObject
      *        `DBCounter`
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    DBCounter dbCounterFor(Path path)
-        {
-        if (DBObject dbo ?= dbObjectFor(path))
-            {
+    DBCounter dbCounterFor(Path path) {
+        if (DBObject dbo ?= dbObjectFor(path)) {
             return dbo.as(DBCounter);
-            }
+        }
 
         throw new IllegalArgument($"No DBCounter exists for path={path}");
-        }
+    }
 
     /**
      * Obtain the specified `DBValue` by its [dbName], or by its [dbPath] relative to the `dbPath`
@@ -216,15 +205,13 @@ interface DBObject
      *        `DBValue`
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Value extends immutable Const> DBValue<Value> dbValueFor(Path path)
-        {
-        if (DBObject dbo ?= dbObjectFor(path))
-            {
+    <Value extends immutable Const> DBValue<Value> dbValueFor(Path path) {
+        if (DBObject dbo ?= dbObjectFor(path)) {
             return dbo.as(DBValue<Value>);
-            }
+        }
 
         throw new IllegalArgument($"No DBValue exists for path={path}");
-        }
+    }
 
     /**
      * Obtain the specified `DBMap` by its [dbName], or by its [dbPath] relative to the `dbPath` of
@@ -238,15 +225,13 @@ interface DBObject
      *        `DBMap` of the indicated `Key` and `Value` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Key extends immutable Const, Value extends immutable Const> DBMap<Key, Value> dbMapFor(Path path)
-        {
-        if (DBObject dbo ?= dbObjectFor(path))
-            {
+    <Key extends immutable Const, Value extends immutable Const> DBMap<Key, Value> dbMapFor(Path path) {
+        if (DBObject dbo ?= dbObjectFor(path)) {
             return dbo.as(DBMap<Key, Value>);
-            }
+        }
 
         throw new IllegalArgument($"No DBMap exists for path={path}");
-        }
+    }
 
     /**
      * Obtain the specified `DBList` by its [dbName], or by its [dbPath] relative to the `dbPath`
@@ -260,15 +245,13 @@ interface DBObject
      *        `DBList` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element extends immutable Const> DBList<Element> dbListFor(Path path)
-        {
-        if (DBObject dbo ?= dbObjectFor(path))
-            {
+    <Element extends immutable Const> DBList<Element> dbListFor(Path path) {
+        if (DBObject dbo ?= dbObjectFor(path)) {
             return dbo.as(DBList<Element>);
-            }
+        }
 
         throw new IllegalArgument($"No DBList exists for path={path}");
-        }
+    }
 
     /**
      * Obtain the specified `DBQueue` by its [dbName], or by its [dbPath] relative to the `dbPath`
@@ -282,15 +265,13 @@ interface DBObject
      *        `DBQueue` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element extends immutable Const> DBQueue<Element> dbQueueFor(Path path)
-        {
-        if (DBObject dbo ?= dbObjectFor(path))
-            {
+    <Element extends immutable Const> DBQueue<Element> dbQueueFor(Path path) {
+        if (DBObject dbo ?= dbObjectFor(path)) {
             return dbo.as(DBQueue<Element>);
-            }
+        }
 
         throw new IllegalArgument($"No DBQueue exists for path={path}");
-        }
+    }
 
     /**
      * Obtain the specified `DBProcessor` by its [dbName], or by its [dbPath] relative to the
@@ -304,15 +285,13 @@ interface DBObject
      *        `DBProcessor` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element extends immutable Const> DBProcessor<Element> dbProcessorFor(Path path)
-        {
-        if (DBObject dbo ?= dbObjectFor(path))
-            {
+    <Element extends immutable Const> DBProcessor<Element> dbProcessorFor(Path path) {
+        if (DBObject dbo ?= dbObjectFor(path)) {
             return dbo.as(DBProcessor<Element>);
-            }
+        }
 
         throw new IllegalArgument($"No DBProcessor exists for path={path}");
-        }
+    }
 
     /**
      * Obtain the specified `DBLog` by its [dbName], or by its [dbPath] relative to the `dbPath`
@@ -326,15 +305,13 @@ interface DBObject
      *        `DBLog` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element extends immutable Const> DBLog<Element> dbLogFor(Path path)
-        {
-        if (DBObject dbo ?= dbObjectFor(path))
-            {
+    <Element extends immutable Const> DBLog<Element> dbLogFor(Path path) {
+        if (DBObject dbo ?= dbObjectFor(path)) {
             return dbo.as(DBLog<Element>);
-            }
+        }
 
         throw new IllegalArgument($"No DBLog exists for path={path}");
-        }
+    }
 
 
     // ----- transactionally composable operations -------------------------------------------------
@@ -422,10 +399,9 @@ interface DBObject
      *   such as would be expected from an "error log" use case;
      * * A [DBSchema] is stateless, and thus it is non-transactional.
      */
-    @RO Boolean transactional.get()
-        {
+    @RO Boolean transactional.get() {
         return True;
-        }
+    }
 
     /**
      * Represents a change within a transactional database object.
@@ -435,8 +411,7 @@ interface DBObject
      * expensive operation, particularly for a historical `TxChange` (one pulled from some previous
      * point in the a commit history).
      */
-    interface TxChange
-        {
+    interface TxChange {
         /**
          * The state of the `DBObject`, before this change was made.
          *
@@ -454,7 +429,7 @@ interface DBObject
          * When evaluating a historical change, this property may be expensive to obtain.
          */
         @RO DBObject post;
-        }
+    }
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -475,8 +450,7 @@ interface DBObject
      * (The term "user transaction" refers to changes from an application, as opposed to changes
      * that occur from automatic trigger processing.)
      */
-    static interface Validator<TxChange extends DBObject.TxChange>
-        {
+    static interface Validator<TxChange extends DBObject.TxChange> {
         /**
          * Validate a transactional change.
          *
@@ -489,7 +463,7 @@ interface DBObject
          * @return True iff the change is valid; False will cause the transaction to roll back
          */
         Boolean validate(TxChange change);
-        }
+    }
 
     /**
      * Represents an automatic processing of any changes that occurred to the DBObject within a user
@@ -503,8 +477,7 @@ interface DBObject
      * to understand some changes being rectified may have originated in the user transaction, and
      * some may have originated from other `Validators` and `Rectifiers`.
      */
-    static interface Rectifier<TxChange extends DBObject.TxChange>
-        {
+    static interface Rectifier<TxChange extends DBObject.TxChange> {
         /**
          * Rectify the contents of a transactional change to the containing DBObject.
          *
@@ -517,7 +490,7 @@ interface DBObject
          * @return True iff the change is valid; False will cause the transaction to roll back
          */
         Boolean rectify(TxChange change);
-        }
+    }
 
     /**
      * Represents an automatic processing of any changes that occurred to the DBObject, allowing
@@ -530,8 +503,7 @@ interface DBObject
      * To prevent infinite loops, the [DBLog], [DBQueue], and [DBProcessor] objects are not
      * permitted to have a `Distributor` attached to them.
      */
-    static interface Distributor<TxChange extends DBObject.TxChange>
-        {
+    static interface Distributor<TxChange extends DBObject.TxChange> {
         /**
          * Distribute changes from the transactional change to this containing DBObject, to other
          * DBObjects.
@@ -552,5 +524,5 @@ interface DBObject
          * @return True iff the change is valid; False will cause the transaction to roll back
          */
         Boolean process(TxChange change);
-        }
     }
+}

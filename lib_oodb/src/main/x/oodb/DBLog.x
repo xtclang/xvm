@@ -6,21 +6,18 @@
  */
 interface DBLog<Element extends immutable Const>
         extends Appender<Element>
-        extends DBObject
-    {
+        extends DBObject {
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
-    @RO DBCategory dbCategory.get()
-        {
+    @RO DBCategory dbCategory.get() {
         return DBLog;
-        }
+    }
 
     /**
      * A representation of information that is present in the `DBLog`.
      */
-    interface Entry
-        {
+    interface Entry {
         /**
          * The `Time` that the item was logged.
          */
@@ -47,7 +44,7 @@ interface DBLog<Element extends immutable Const>
          * The element that was logged.
          */
         @RO Element value;
-        }
+    }
 
     /**
      * If the application is permitted to access the log contents, then this method allows the
@@ -78,8 +75,7 @@ interface DBLog<Element extends immutable Const>
      * and cannot provide a before and after view on its own; when combined with the `TxChange`
      * interface, it can provide both the change information, and a before/after view of the data.
      */
-    static interface DBChange<Element>
-        {
+    static interface DBChange<Element> {
         /**
          * The elements appended to the `Log`.
          *
@@ -87,7 +83,7 @@ interface DBLog<Element extends immutable Const>
          * any items subsequently logged within the transaction _may_ appear in the list.
          */
         List<Element> added;
-        }
+    }
 
     /**
      * Represents a transactional change to a database log.
@@ -99,9 +95,7 @@ interface DBLog<Element extends immutable Const>
      */
     @Override
     interface TxChange
-            extends DBChange<Element>
-        {
-        }
+            extends DBChange<Element> {}
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -116,4 +110,4 @@ interface DBLog<Element extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBLog.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    }
+}

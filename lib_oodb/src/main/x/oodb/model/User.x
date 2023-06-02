@@ -8,8 +8,7 @@ const User(UInt            id,
            Set<User>       groups      = Set:[],
            Set<Permission> permissions = Set:[],
            Set<Permission> revocations = Set:[])
-        implements DBUser
-    {
+        implements DBUser {
     User with(UInt?            id          = Null,
               String?          name        = Null,
               Boolean?         active      = Null,
@@ -17,8 +16,7 @@ const User(UInt            id,
               Set<User>?       groups      = Null,
               Set<Permission>? permissions = Null,
               Set<Permission>? revocations = Null,
-             )
-        {
+             ) {
         return new User(id          ?: this.id,
                         name        ?: this.name,
                         active      ?: this.active,
@@ -27,7 +25,7 @@ const User(UInt            id,
                         permissions ?: this.permissions,
                         revocations ?: this.revocations,
                        );
-        }
+    }
 
     @Override
     UInt id;
@@ -49,4 +47,4 @@ const User(UInt            id,
 
     @Override
     Set<Permission> revocations;
-    }
+}

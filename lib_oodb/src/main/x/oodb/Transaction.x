@@ -7,8 +7,7 @@
  */
 interface Transaction<Schema extends RootSchema>
         extends RootSchema
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * The database connection. This property is only guaranteed to be available from within a
      * [pending] transaction.
@@ -36,48 +35,41 @@ interface Transaction<Schema extends RootSchema>
                         Boolean                readOnly    = False,
                         Duration?              timeout     = Null,
                         Int                    retryCount  = 0,
-                       )
-        {
+                       ) {
         @Override
-        String toString()
-            {
+        String toString() {
             StringBuffer buf = new StringBuffer().append("TxInfo(");
 
             buf.append("id=")
                .append(id);
 
-            if (name != Null)
-                {
+            if (name != Null) {
                 buf.append(", name=")
                    .append(name);
-                }
+            }
 
-            if (priority != Normal)
-                {
+            if (priority != Normal) {
                 buf.append(", priority=")
                    .append(priority);
-                }
+            }
 
-            if (readOnly)
-                {
+            if (readOnly) {
                 buf.append(", readOnly");
-                }
+            }
 
-            if (timeout != Null)
-                {
+            if (timeout != Null) {
                 buf.append(", timeout=")
                    .append(timeout);
-                }
+            }
 
-            if (retryCount != 0)
-                {
+            if (retryCount != 0) {
                 buf.append(", retryCount=")
                    .append(retryCount);
-                }
+            }
 
             return buf.append(')').toString();
-            }
         }
+    }
 
     /**
      * The transaction parameters used to create this Transaction object.
@@ -117,8 +109,7 @@ interface Transaction<Schema extends RootSchema>
      * can be retried (by replaying the same steps in a new transaction); for example, the
      * `ConcurrentConflict` result clearly indicates that a transaction can be retried.
      */
-    enum CommitResult
-        {
+    enum CommitResult {
         Committed,
         PreviouslyClosed,
         RollbackOnly,
@@ -128,7 +119,7 @@ interface Transaction<Schema extends RootSchema>
         RectifierFailed,
         DistributorFailed,
         DatabaseError,
-        }
+    }
 
     /**
      * Attempt to commit the transaction. Committing the transaction involves a sequence of steps,
@@ -167,38 +158,28 @@ interface Transaction<Schema extends RootSchema>
     Boolean rollback();
 
     @Override
-    void close(Exception? e = Null)
-        {
-        if (pending)
-            {
+    void close(Exception? e = Null) {
+        if (pending) {
             Exception? failure = Null;
 
-            if (e == Null && !rollbackOnly)
-                {
-                try
-                    {
+            if (e == Null && !rollbackOnly) {
+                try {
                     commit();
-                    }
-                catch (Exception commitFailed)
-                    {
+                } catch (Exception commitFailed) {
                     failure = commitFailed;
-                    }
                 }
+            }
 
-            if (pending)
-                {
-                try
-                    {
+            if (pending) {
+                try {
                     rollback();
-                    }
-                catch (Exception rollbackFailed)
-                    {
+                } catch (Exception rollbackFailed) {
                     failure ?:= rollbackFailed;
-                    }
                 }
+            }
 
             throw failure?;
             assert !pending;
-            }
         }
     }
+}

@@ -1,8 +1,7 @@
 /**
  * A database user or group.
  */
-interface DBUser
-    {
+interface DBUser {
     /**
      * The perpetual-unique id of the DBUser within this database.
      */
@@ -45,46 +44,38 @@ interface DBUser
      *
      * @return `True` iff this `DBUser` is permitted to execute the specified request
      */
-    Boolean isAllowed(Permission request)
-        {
+    Boolean isAllowed(Permission request) {
         // check the local permissions for an exact match
-        if (permissions.contains(request))
-            {
+        if (permissions.contains(request)) {
             return True;
-            }
+        }
 
         // check the local revocations for an exact match
-        if (revocations.contains(request))
-            {
+        if (revocations.contains(request)) {
             return False;
-            }
+        }
 
         // evaluate the local permissions
-        NextPermission: for (Permission permission : permissions)
-            {
-            if (permission.covers(request))
-                {
+        NextPermission: for (Permission permission : permissions) {
+            if (permission.covers(request)) {
                 // make sure that there is no even-more-specific revocation that would override the
                 // permission (and note that permissions take precedence over identical revocations)
-                for (Permission revocation : revocations)
-                    {
-                    if (revocation.covers(permission) && revocation != permission)
-                        {
+                for (Permission revocation : revocations) {
+                    if (revocation.covers(permission) && revocation != permission) {
                         continue NextPermission;
-                        }
                     }
-                return True;
                 }
+                return True;
             }
+        }
 
         // evaluate the local revocations
-        if (revocations.any(revocation -> revocation.covers(request)))
-            {
+        if (revocations.any(revocation -> revocation.covers(request))) {
             return False;
-            }
+        }
 
         // if this user is a member of any group that is allowed that permission, then this user
         // also is allowed that permission
         return groups.any(group -> group.isAllowed(request));
-        }
     }
+}

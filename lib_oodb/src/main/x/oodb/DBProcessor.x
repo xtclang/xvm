@@ -10,8 +10,7 @@ import DBTransaction.Priority;
  * A `DBProcessor` is always transactional.
  */
 interface DBProcessor<Message extends immutable Const>
-        extends DBObject
-    {
+        extends DBObject {
     // ----- message scheduling --------------------------------------------------------------------
 
     /**
@@ -30,13 +29,11 @@ interface DBProcessor<Message extends immutable Const>
      * @param messages  the messages to process
      * @param when      (optional) the schedule for processing; `Null` indicates "immediately"
      */
-    void scheduleAll(Iterable<Message> messages, Schedule? when=Null)
-        {
-        for (Message el : messages)
-            {
+    void scheduleAll(Iterable<Message> messages, Schedule? when=Null) {
+        for (Message el : messages) {
             schedule(el, when);
-            }
         }
+    }
 
     /**
      * Remove all scheduled instances of the specified message, then re-schedule that message to be
@@ -45,11 +42,10 @@ interface DBProcessor<Message extends immutable Const>
      * @param message   the message to reschedule the processing of
      * @param when      the new schedule for processing the message
      */
-    void reschedule(Message message, Schedule when)
-        {
+    void reschedule(Message message, Schedule when) {
         unschedule(message);
         schedule(message, when);
-        }
+    }
 
     /**
      * Remove all scheduled instances of the specified message.
@@ -133,13 +129,11 @@ interface DBProcessor<Message extends immutable Const>
      * @param messages  the previously scheduled messages to process; note that there are no
      *                  guarantees of uniqueness in the list of messages
      */
-    void processAll(List<Message> messages)
-        {
-        for (Message message : messages)
-            {
+    void processAll(List<Message> messages) {
+        for (Message message : messages) {
             process(message);
-            }
         }
+    }
 
     /**
      * The specified message has failed to [process]; determine if the processing for the message
@@ -169,40 +163,37 @@ interface DBProcessor<Message extends immutable Const>
                       CommitResult | Exception result,
                       Schedule?                when,
                       Range<Time>              elapsed,
-                      Int                      timesAttempted)
-        {
+                      Int                      timesAttempted) {
         // TODO check repeating schedule+policy against start time and current time (abandon if it
         //      is ripe to run again)
 
-        if (result.is(CommitResult))
-            {
-            switch (result)
-                {
-                case Committed:
-                case DeferredFailed:
-                case ConcurrentConflict:
-                    // allow concurrency conflicts to retry indefinitely (up to the limit of the
-                    // patience of the database engine)
-                    return True;
+        if (result.is(CommitResult)) {
+            switch (result) {
+            case Committed:
+            case DeferredFailed:
+            case ConcurrentConflict:
+                // allow concurrency conflicts to retry indefinitely (up to the limit of the
+                // patience of the database engine)
+                return True;
 
-                case PreviouslyClosed:
-                case RollbackOnly:
-                case ValidatorFailed:
-                case RectifierFailed:
-                case DistributorFailed:
-                    break;
+            case PreviouslyClosed:
+            case RollbackOnly:
+            case ValidatorFailed:
+            case RectifierFailed:
+            case DistributorFailed:
+                break;
 
-                default:
-                case DatabaseError:
-                    return False;
-                }
+            default:
+            case DatabaseError:
+                return False;
             }
+        }
 
         // the default implementation of this method assumes that some number of retries may be
         // necessary due to concurrent transactions colliding or some other factor that could
         // (wishfully) disappear if the process is repeated
         return timesAttempted < maxAttempts;
-        }
+    }
 
     /**
      * A suggested limit for the number of auto-retries to successfully [process] a message.
@@ -233,24 +224,20 @@ interface DBProcessor<Message extends immutable Const>
                  CommitResult | Exception result,
                  Schedule?                when,
                  Range<Time>              elapsed,
-                 Int                      timesAttempted)
-        {
+                 Int                      timesAttempted) {
         String messageString;
-        try
-            {
+        try {
             messageString = message.toString();
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             messageString = $"??? (Exception={e.text})";
-            }
+        }
 
         dbLogFor<DBLog<String>>(Path:/sys/errors).add(
                 $|Failed to process {messageString} due to\
                  | {result.is(CommitResult) ? "commit error" : "exception"} {result};\
                  | abandoning after {timesAttempted} attempts
                 );
-        }
+    }
 
 
     // ----- runtime management methods ------------------------------------------------------------
@@ -296,9 +283,7 @@ interface DBProcessor<Message extends immutable Const>
      * the argument to [processAll], or some combination of the two).
      */
     static mixin Dedupe
-            into DBProcessor
-        {
-        }
+            into DBProcessor {}
 
     /**
      * The `@Sequential` annotation indicates that the `DBProcessor` should not be run in parallel
@@ -313,9 +298,7 @@ interface DBProcessor<Message extends immutable Const>
      * to reduce the backlog.
      */
     static mixin Sequential
-            into DBProcessor
-        {
-        }
+            into DBProcessor {}
 
     /**
      * The `@Individual` annotation indicates that the `DBProcessor` should **not** process more
@@ -328,9 +311,7 @@ interface DBProcessor<Message extends immutable Const>
      * _all_) `Pending` entries for this `DBProcessor`, inside of the same transaction.
      */
     static mixin Individual
-            into DBProcessor
-        {
-        }
+            into DBProcessor {}
 
     /**
      * The `@Isolated` annotation indicates that the processing of this `DBProcessor` should not be
@@ -342,9 +323,7 @@ interface DBProcessor<Message extends immutable Const>
      * processing of multiple `DBProcessor` objects within a single transaction, for efficiency.
      */
     static mixin Isolated
-            into DBProcessor
-        {
-        }
+            into DBProcessor {}
 
 
     // ----- pending message representation --------------------------------------------------------
@@ -357,8 +336,7 @@ interface DBProcessor<Message extends immutable Const>
             Path      processor,
             Message   message,
             Schedule? schedule = Null,
-            )
-        {
+            ) {
         /**
          * The path of the `DBProcessor`.
          */
@@ -386,19 +364,17 @@ interface DBProcessor<Message extends immutable Const>
          *         processing of the same message (i.e. this same `Pending` object) has not yet
          *         completed
          */
-        conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating()
-            {
+        conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating() {
             return schedule?.isRepeating() : False;
-            }
+        }
 
         /**
          * Determine the priority of the pending message processing.
          */
-        Priority priority.get()
-            {
+        Priority priority.get() {
             return schedule?.priority : Normal;
-            }
         }
+    }
 
 
     // ----- schedule representation ---------------------------------------------------------------
@@ -429,13 +405,12 @@ interface DBProcessor<Message extends immutable Const>
      *   a message if that same message is already being concurrently processed as the result of
      *   the same schedule.
      */
-    enum Policy
-        {
+    enum Policy {
         AllowOverlapping,
         SkipOverlapped,
         SuggestedMinimum,
         MeasureFromCommit,
-        }
+    }
 
     /**
      * Represents the schedule for a message to be processed.
@@ -445,24 +420,18 @@ interface DBProcessor<Message extends immutable Const>
                           Duration?  repeatInterval = Null,
                           Policy     repeatPolicy   = AllowOverlapping,
                           Priority   priority       = Normal,
-                         )
-        {
-        assert()
-            {
-            if (scheduledDaily != Null)
-                {
-                if (repeatInterval == Null)
-                    {
+                         ) {
+        assert() {
+            if (scheduledDaily != Null) {
+                if (repeatInterval == Null) {
                     repeatInterval = Duration:24h;
-                    }
-                else
-                    {
+                } else {
                     assert repeatInterval == Duration:24h;
-                    }
                 }
+            }
 
             assert repeatInterval?.picoseconds > 0;
-            }
+        }
 
         /**
          * Create a new Schedule from this Schedule with only the specified properties modified.
@@ -472,15 +441,14 @@ interface DBProcessor<Message extends immutable Const>
                       Duration?  repeatInterval = Null,
                       Policy?    repeatPolicy   = Null,
                       Priority?  priority       = Null,
-                     )
-            {
+                     ) {
             return new Schedule(scheduledAt    ?: this.scheduledAt,
                                 scheduledDaily ?: this.scheduledDaily,
                                 repeatInterval ?: this.repeatInterval,
                                 repeatPolicy   ?: this.repeatPolicy,
                                 priority       ?: this.priority,
                                );
-            }
+        }
 
         /**
          * Determine if a specific time is set for the message to be processed.
@@ -488,10 +456,9 @@ interface DBProcessor<Message extends immutable Const>
          * @return True iff the schedule indicates a specific point-in-time or time-of-day that the
          *         pending message should be processed
          */
-        Boolean isScheduled()
-            {
+        Boolean isScheduled() {
             return scheduledAt != Null || scheduledDaily != Null;
-            }
+        }
 
         /**
          * Determine if the message processing is scheduled to repeat automatically.
@@ -501,15 +468,13 @@ interface DBProcessor<Message extends immutable Const>
          * @return (conditional) the policy governing the repetition, for example when the previous
          *         message processing has not completed before the next iteration would begin
          */
-        conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating()
-            {
-            if (repeatInterval != Null)
-                {
+        conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating() {
+            if (repeatInterval != Null) {
                 return True, repeatInterval, repeatPolicy;
-                }
+            }
 
             return False;
-            }
+        }
 
         /**
          * Create a processing schedule that indicates immediate processing. This is slightly
@@ -523,11 +488,10 @@ interface DBProcessor<Message extends immutable Const>
          *
          * @return the new schedule
          */
-        Schedule now()
-            {
+        Schedule now() {
             @Inject Clock clock;
             return this.with(scheduledAt=clock.now);
-            }
+        }
 
         /**
          * Create a schedule that indicates a specific point in time.
@@ -538,10 +502,9 @@ interface DBProcessor<Message extends immutable Const>
          *
          * @return the new schedule
          */
-        Schedule at(Time when)
-            {
+        Schedule at(Time when) {
             return this.with(scheduledAt=when);
-            }
+        }
 
         /**
          * Create a schedule that indicates some initial delay from the present point in time.
@@ -552,11 +515,10 @@ interface DBProcessor<Message extends immutable Const>
          *
          * @return the new schedule
          */
-        Schedule after(Duration delay)
-            {
+        Schedule after(Duration delay) {
             @Inject Clock clock;
             return this.with(scheduledAt=clock.now+delay);
-            }
+        }
 
         /**
          * Configure a scheduled item to repeat its processing repeatedly, based on the specified
@@ -567,11 +529,10 @@ interface DBProcessor<Message extends immutable Const>
          * @param policy    the policy to use for scheduling a periodic process when the previous
          *                  execution is still running
          */
-        Schedule every(Duration interval, Policy? policy=Null)
-            {
+        Schedule every(Duration interval, Policy? policy=Null) {
             return this.with(repeatInterval = interval,
                              repeatPolicy   = policy ?: this.repeatPolicy);
-            }
+        }
 
         /**
          * Schedule the work to occur on a daily basis, at the specified time-of-day.
@@ -586,31 +547,28 @@ interface DBProcessor<Message extends immutable Const>
          *
          * @return an interface that allows the work to be prioritized
          */
-        Schedule dailyAt(TimeOfDay timeOfDay, Policy? policy=Null)
-            {
+        Schedule dailyAt(TimeOfDay timeOfDay, Policy? policy=Null) {
             return this.with(scheduledDaily = timeOfDay,
                              repeatPolicy   = policy ?: this.repeatPolicy);
-            }
+        }
 
         /**
          * Modify the priority of the scheduled item.
          *
          * @param priority  the new priority for the scheduled item
          */
-        Schedule prioritize(Priority priority)
-            {
+        Schedule prioritize(Priority priority) {
             return this.with(priority = priority);
-            }
         }
+    }
 
 
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
-    @RO DBCategory dbCategory.get()
-        {
+    @RO DBCategory dbCategory.get() {
         return DBProcessor;
-        }
+    }
 
 
     // ----- transactional information -------------------------------------------------------------
@@ -623,8 +581,7 @@ interface DBProcessor<Message extends immutable Const>
      * `TxChange` interface, it can provide both the change information, and a before/after view of
      * the data.
      */
-    static interface DBChange<Message>
-        {
+    static interface DBChange<Message> {
         /**
          * The messages scheduled in this transaction to be processed later.
          *
@@ -640,7 +597,7 @@ interface DBProcessor<Message extends immutable Const>
          * any items subsequently taken within the transaction _may_ appear in the list.
          */
         List<Message> removed;
-        }
+    }
 
     /**
      * Represents a transactional change to a database processor.
@@ -651,9 +608,7 @@ interface DBProcessor<Message extends immutable Const>
      */
     @Override
     interface TxChange
-            extends DBChange<Message>
-        {
-        }
+            extends DBChange<Message> {}
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -668,4 +623,4 @@ interface DBProcessor<Message extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBObject.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    }
+}

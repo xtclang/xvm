@@ -19,8 +19,7 @@
  */
 interface Connection<Schema extends RootSchema>
         extends RootSchema
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * The [DBUser] that this `Connection` represents.
      */
@@ -59,15 +58,12 @@ interface Connection<Schema extends RootSchema>
                                                     );
 
     @Override
-    void close(Exception? e = Null)
-        {
-        if (Transaction tx ?= transaction)
-            {
-            if (tx.pending)
-                {
+    void close(Exception? e = Null) {
+        if (Transaction tx ?= transaction) {
+            if (tx.pending) {
                 tx.rollback();
-                }
-            tx.close(e);
             }
+            tx.close(e);
         }
     }
+}

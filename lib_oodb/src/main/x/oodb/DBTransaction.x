@@ -2,8 +2,7 @@
  * A database transaction, as viewed from within the database.
  */
 interface DBTransaction<Schema extends RootSchema>
-        extends immutable Const
-    {
+        extends immutable Const {
     /**
      * The root database schema. The difference between `DBObject`s obtained from this `Schema` and
      * `DBObject`s obtained from the [connection] property is that the DBObjects obtained from this
@@ -117,4 +116,4 @@ interface DBTransaction<Schema extends RootSchema>
      * value is the
      */
     @RO Map<String, DBObject.TxChange> contents;
-    }
+}

@@ -10,8 +10,7 @@
  *     DBValue<Person?> admin;
  */
 interface DBValue<Value extends immutable Const>
-        extends DBObject
-    {
+        extends DBObject {
     /**
      * Obtain the value.
      *
@@ -26,19 +25,17 @@ interface DBValue<Value extends immutable Const>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-    void set(Value value)
-        {
+    void set(Value value) {
         throw new ReadOnly($"The value at \"{dbPath}\" cannot be modified");
-        }
+    }
 
 
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
-    @RO DBCategory dbCategory.get()
-        {
+    @RO DBCategory dbCategory.get() {
         return DBValue;
-        }
+    }
 
 
     // ----- transactional information -------------------------------------------------------------
@@ -46,8 +43,7 @@ interface DBValue<Value extends immutable Const>
     /**
      * Represents specific database changes that occurred to a transactional database value.
      */
-    static interface DBChange<Value>
-        {
+    static interface DBChange<Value> {
         /**
          * The value that precedes this transaction.
          */
@@ -57,7 +53,7 @@ interface DBValue<Value extends immutable Const>
          * The value as it was modified during the transaction.
          */
         @RO Value newValue;
-        }
+    }
 
     /**
      * Represents a transactional change to a database `DBValue`.
@@ -67,9 +63,7 @@ interface DBValue<Value extends immutable Const>
      */
     @Override
     interface TxChange
-            extends DBChange<Value>
-        {
-        }
+            extends DBChange<Value> {}
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
@@ -84,4 +78,4 @@ interface DBValue<Value extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBValue.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    }
+}
