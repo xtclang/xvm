@@ -11,8 +11,7 @@
  * supported by the [FieldOutput] interface.
  */
 interface DocOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
-        extends Closeable
-    {
+        extends Closeable {
     /**
      * The JSON [Schema] that provides the genericized Ecstasy-to-JSON [Mappings].
      * A default Schema is used when no custom mappings are provided.
@@ -118,4 +117,4 @@ interface DocOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     @Override
     ParentOutput close(Exception? cause = Null);
-    }
+}

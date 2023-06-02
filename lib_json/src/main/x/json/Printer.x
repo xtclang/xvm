@@ -1,8 +1,7 @@
 /**
  * A "printer" for JSON objects.
  */
-const Printer(Boolean showNulls = False, Boolean pretty = False)
-    {
+const Printer(Boolean showNulls = False, Boolean pretty = False) {
     // ----- pre-configured instances --------------------------------------------------------------
 
     /**
@@ -30,12 +29,11 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      *
      * @return the document rendered as a `String`
      */
-    String render(Doc doc)
-        {
+    String render(Doc doc) {
         StringBuffer buf = new StringBuffer(estimatePrintLength(doc));
         print(doc, buf);
         return buf.toString();
-        }
+    }
 
     /**
      * Calculate the String length of the specified JSON document as it would be printed by this
@@ -43,10 +41,9 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      *
      * @return an estimated number of characters necessary to hold the resulting rendered document
      */
-    Int estimatePrintLength(Doc doc)
-        {
+    Int estimatePrintLength(Doc doc) {
         return estimateInternal(doc, showNulls=showNulls, pretty=pretty);
-        }
+    }
 
     /**
      * Print the specified JSON document to the provided [Appender].
@@ -54,10 +51,9 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      * @param doc  the JSON document to print
      * @param buf  the [Appender] to render the character data into
      */
-    void print(Doc doc, Appender<Char> buf)
-        {
+    void print(Doc doc, Appender<Char> buf) {
         printInternal(doc, buf, alreadyIndented=True, showNulls=showNulls, pretty=pretty);
-        }
+    }
 
 
     // ----- rendering -----------------------------------------------------------------------------
@@ -82,62 +78,46 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
                                    Int     indent          = 0,
                                    Boolean alreadyIndented = False,
                                    Boolean showNulls       = False,
-                                   Boolean pretty          = False)
-        {
-        if (doc.is(Enum))
-            {
+                                   Boolean pretty          = False) {
+        if (doc.is(Enum)) {
             // "null", "true", "false"
             return doc.name.size;
-            }
-        else if (doc.is(String))
-            {
+        } else if (doc.is(String)) {
             Int total = 2 + doc.size;
-            for (Char ch : doc)
-                {
-                if (String s := escaped(ch))
-                    {
+            for (Char ch : doc) {
+                if (String s := escaped(ch)) {
                     total += s.size - 1;
-                    }
                 }
+            }
             return total;
-            }
-        else if (doc.is(IntLiteral) || doc.is(FPLiteral))
-            {
+        } else if (doc.is(IntLiteral) || doc.is(FPLiteral)) {
             return doc.as(Stringable).estimateStringLength();
-            }
-        else if (doc.is(Array))
-            {
+        } else if (doc.is(Array)) {
             Doc[] array = doc.as(Doc[]);
-            if (pretty && containsObject(array))
-                {
+            if (pretty && containsObject(array)) {
                 Int count = array.size;
                 Int total = (count + (alreadyIndented ? 1 : 2)) * (1 + indent)  // newlines+indents
                             + count + 1;                                        // commas+brackets
-                for (Doc value : array)
-                    {
+                for (Doc value : array) {
                     total += estimateInternal(value, indent=indent, alreadyIndented=True,
                                               pretty=True, showNulls=showNulls);
-                    }
-                return total;
                 }
+                return total;
+            }
 
             // "[" + value + "," + value + "," ... + "]"
             // (pretty uses ", " instead of ",")
             Int total = (array.size - 1) * (pretty ? 2 : 1) + 2;
-            for (Doc value : array)
-                {
+            for (Doc value : array) {
                 // nulls must be shown in the array, because the array structure is not sparse
                 total += estimateInternal(value, indent=indent, pretty=pretty);
-                }
-            return total;
             }
-        else
-            {
+            return total;
+        } else {
             Map<String, Doc> map = doc.as(Map<String, Doc>);
-            if (map.empty || !showNulls && containsOnlyNulls(map))
-                {
+            if (map.empty || !showNulls && containsOnlyNulls(map)) {
                 return 2; // "{}"
-                }
+            }
 
             Int count  = map.size;
             Int margin = pretty ? 1 + indent : 0;               // newline + indent
@@ -145,22 +125,18 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
             Int total  = 1 + count * (margin + seps)            // '{' + entries
                        + (alreadyIndented ? 1 : 2) * margin;    // newline and indent for curlies
             Int deeper = indent + 2;
-            for ((String name, Doc value) : map)
-                {
-                if (value == Null && !showNulls)
-                    {
+            for ((String name, Doc value) : map) {
+                if (value == Null && !showNulls) {
                     // this entry will be omitted
                     total -= indent + seps;
-                    }
-                else
-                    {
+                } else {
                     total += estimateInternal(name , indent=deeper, showNulls=showNulls, pretty=pretty)
                            + estimateInternal(value, indent=deeper, showNulls=showNulls, pretty=pretty);
-                    }
                 }
-            return total;
             }
+            return total;
         }
+    }
 
     /**
      * Render the specified JSON document into an `Appender`.
@@ -182,171 +158,129 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
                                  Int            indent          = 0,
                                  Boolean        alreadyIndented = False,
                                  Boolean        showNulls       = False,
-                                 Boolean        pretty          = False)
-        {
-        if (doc.is(Enum))
-            {
-            (switch (doc)
-                {
+                                 Boolean        pretty          = False) {
+        if (doc.is(Enum)) {
+            (switch (doc) {
                 case Null: "null";
                 case True: "true";
                 case False: "false";
                 default: assert;
-                }).appendTo(buf);
-            }
-        else if (doc.is(String))
-            {
+            }).appendTo(buf);
+        } else if (doc.is(String)) {
             printString(doc, buf);
-            }
-        else if (doc.is(IntLiteral) || doc.is(FPLiteral))
-            {
+        } else if (doc.is(IntLiteral) || doc.is(FPLiteral)) {
             doc.appendTo(buf);
-            }
-        else if (doc.is(Array))
-            {
+        } else if (doc.is(Array)) {
             Doc[] array = doc.as(Doc[]);
-            if (pretty && containsObject(array))
-                {
+            if (pretty && containsObject(array)) {
                 printMultiLineArray(array, buf, indent, alreadyIndented, showNulls);
-                }
-            else
-                {
+            } else {
                 printSingleLineArray(array, buf, pretty);
-                }
             }
-        else
-            {
+        } else {
             Map<String, Doc> map = doc.as(Map<String, Doc>);
-            if (map.empty || !showNulls && containsOnlyNulls(map))
-                {
+            if (map.empty || !showNulls && containsOnlyNulls(map)) {
                 "{}".appendTo(buf);
-                }
-            else if (pretty)
-                {
+            } else if (pretty) {
                 printPrettyObject(map, buf, indent, alreadyIndented, showNulls);
-                }
-            else
-                {
+            } else {
                 printUglyObject(map, buf, showNulls);
-                }
             }
         }
+    }
 
-    protected void printSingleLineArray(Doc[] values, Appender<Char> buf, Boolean pretty)
-        {
+    protected void printSingleLineArray(Doc[] values, Appender<Char> buf, Boolean pretty) {
         buf.add('[');
-        Loop: for (Doc value : values)
-            {
-            if (!Loop.first)
-                {
+        Loop: for (Doc value : values) {
+            if (!Loop.first) {
                 buf.add(',');
-                if (pretty)
-                    {
+                if (pretty) {
                     buf.add(' ');
-                    }
                 }
-            printInternal(value, buf, pretty=pretty, showNulls=True);
             }
-        buf.add(']');
+            printInternal(value, buf, pretty=pretty, showNulls=True);
         }
+        buf.add(']');
+    }
 
     protected void printMultiLineArray(Doc[]          values,
                                        Appender<Char> buf,
                                        Int            indent,
                                        Boolean        alreadyIndented,
-                                       Boolean        showNulls)
-        {
-        if (!alreadyIndented)
-            {
+                                       Boolean        showNulls) {
+        if (!alreadyIndented) {
             indentLine(buf, indent);
-            }
+        }
         buf.add('[');
 
-        Loop: for (Doc value : values)
-            {
-            if (!Loop.first)
-                {
+        Loop: for (Doc value : values) {
+            if (!Loop.first) {
                 buf.add(',');
-                }
+            }
 
             indentLine(buf, indent);
             printInternal(value, buf, indent=indent, alreadyIndented=True, pretty=True, showNulls=showNulls);
-            }
+        }
 
         indentLine(buf, indent);
         buf.add(']');
-        }
+    }
 
-    protected void printUglyObject(Map<String, Doc> map, Appender<Char> buf, Boolean showNulls)
-        {
+    protected void printUglyObject(Map<String, Doc> map, Appender<Char> buf, Boolean showNulls) {
         buf.add('{');
         Boolean comma = False;
-        for ((String name, Doc value) : map)
-            {
-            if (value != Null || showNulls)
-                {
-                if (comma)
-                    {
+        for ((String name, Doc value) : map) {
+            if (value != Null || showNulls) {
+                if (comma) {
                     buf.add(',');
-                    }
-                else
-                    {
+                } else {
                     comma = True;
-                    }
+                }
 
                 printString(name, buf);
                 buf.add(':');
                 printInternal(value, buf, showNulls=showNulls);
-                }
             }
-        buf.add('}');
         }
+        buf.add('}');
+    }
 
     protected void printPrettyObject(Map<String, Doc> map,
                                      Appender<Char>   buf,
                                      Int              indent,
                                      Boolean          alreadyIndented,
-                                     Boolean          showNulls)
-        {
-        if (!alreadyIndented)
-            {
+                                     Boolean          showNulls) {
+        if (!alreadyIndented) {
             indentLine(buf, indent);
-            }
+        }
         buf.add('{');
 
         Boolean comma = False;
-        for ((String name, Doc value) : map)
-            {
-            if (value != Null || showNulls)
-                {
-                if (comma)
-                    {
+        for ((String name, Doc value) : map) {
+            if (value != Null || showNulls) {
+                if (comma) {
                     buf.add(',');
-                    }
-                else
-                    {
+                } else {
                     comma = True;
-                    }
+                }
 
                 indentLine(buf, indent);
                 printString(name, buf);
                 ": ".appendTo(buf);
                 printInternal(value, buf, indent=indent+2, pretty=True, showNulls=showNulls);
-                }
             }
+        }
 
         indentLine(buf, indent);
         buf.add('}');
-        }
+    }
 
-    protected static void indentLine(Appender<Char> buf, Int indent)
-        {
+    protected static void indentLine(Appender<Char> buf, Int indent) {
         buf.add('\n');
-        for (Int i = 0; i < indent; ++i)
-            {
+        for (Int i = 0; i < indent; ++i) {
             buf.add(' ');
-            }
         }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -359,23 +293,19 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      * @return True iff there is any non-empty JSON object contained (at any nested depth) with the
      *         JSON array
      */
-    static Boolean containsObject(Doc[] docs)
-        {
-        for (Doc doc : docs)
-            {
-            if (doc.is(Map) && !doc.empty)
-                {
+    static Boolean containsObject(Doc[] docs) {
+        for (Doc doc : docs) {
+            if (doc.is(Map) && !doc.empty) {
                 return True;
-                }
-
-            if (doc.is(Doc[]))
-                {
-                return containsObject(doc);
-                }
             }
 
-        return False;
+            if (doc.is(Doc[])) {
+                return containsObject(doc);
+            }
         }
+
+        return False;
+    }
 
     /**
      * Determine if the specified JSON object contains only null values.
@@ -385,34 +315,26 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      * @return True iff the JSON object has no name/value pairs, or if all of the names are
      *         associated with null values
      */
-    static Boolean containsOnlyNulls(Map<String, Doc> map)
-        {
-        for (Doc doc : map.values)
-            {
-            if (doc != Null)
-                {
+    static Boolean containsOnlyNulls(Map<String, Doc> map) {
+        for (Doc doc : map.values) {
+            if (doc != Null) {
                 return False;
-                }
             }
+        }
         return True;
-        }
+    }
 
-    static void printString(String value, Appender<Char> buf)
-        {
+    static void printString(String value, Appender<Char> buf) {
         buf.add('"');
-        for (Char ch : value)
-            {
-            if (String s := escaped(ch))
-                {
+        for (Char ch : value) {
+            if (String s := escaped(ch)) {
                 s.appendTo(buf);
-                }
-            else
-                {
+            } else {
                 buf.add(ch);
-                }
             }
-        buf.add('"');
         }
+        buf.add('"');
+    }
 
     /**
      * Determine if the specified character should be escaped, and if so, escape it.
@@ -422,21 +344,17 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      * @return True iff the character needs to be escaped in a JSON string
      * @return (conditional) the String representing the escaped character
      */
-    static conditional String escaped(Char ch)
-        {
-        if (ch <= '\\')                             // '\'=92=0x5C
-            {
-            if (ch < ' ' || ch == '"')              // ' '=32=0x20, '"'=34=0x22
-                {
+    static conditional String escaped(Char ch) {
+        if (ch <= '\\') {                           // '\'=92=0x5C
+            if (ch < ' ' || ch == '"') {            // ' '=32=0x20, '"'=34=0x22
                 return True, ESCAPES[ch.toInt()];
-                }
-            if (ch == '\\')
-                {
-                return True, "\\\\";
-                }
             }
-        return False;
+            if (ch == '\\') {
+                return True, "\\\\";
+            }
         }
+        return False;
+    }
 
     /**
      * The pre-computed JSON escape sequences for the first 34 Unicode code-points. (Note that
@@ -480,4 +398,4 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
         "!",            //  21  33
         "\\\""          //  22  34
         ];
-    }
+}

@@ -4,12 +4,11 @@ import ecstasy.numbers;
  * A JSON [Mapping] implementation for Ecstasy integer types.
  */
 const IntNumberMapping<Serializable extends IntNumber>
-        implements Mapping<Serializable>
-    {
-    construct()
-        {
+        implements Mapping<Serializable> {
+
+    construct() {
         assert convert := CONVERSION.get(Serializable);
-        }
+    }
 
     /**
      * The function that converts an IntLiteral to the desired integer type.
@@ -17,22 +16,19 @@ const IntNumberMapping<Serializable extends IntNumber>
     function IntNumber(IntLiteral) convert;
 
     @Override
-    String typeName.get()
-        {
+    String typeName.get() {
         return Serializable.toString();
-        }
+    }
 
     @Override
-    Serializable read(ElementInput in)
-        {
+    Serializable read(ElementInput in) {
         return convert(in.readIntLiteral()).as(Serializable);
-        }
+    }
 
     @Override
-    void write(ElementOutput out, Serializable value)
-        {
+    void write(ElementOutput out, Serializable value) {
         out.add(value.toIntLiteral());
-        }
+    }
 
     static Map<Type, function IntNumber(IntLiteral)> CONVERSION =
         Map:
@@ -67,4 +63,4 @@ const IntNumberMapping<Serializable extends IntNumber>
             @Unchecked numbers.IntN       = (lit) -> lit.toIntN()   .toUnchecked(),
             @Unchecked numbers.UIntN      = (lit) -> lit.toUIntN()  .toUnchecked(),
             ];
-    }
+}

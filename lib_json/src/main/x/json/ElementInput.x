@@ -3,8 +3,7 @@
  * values.
  */
 interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
-        extends DocInput<ParentInput>
-    {
+        extends DocInput<ParentInput> {
     // ----- nesting values ------------------------------------------------------------------------
 
     /**
@@ -54,23 +53,20 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is `null` and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    Boolean readBoolean(Boolean? defaultValue = Null)
-        {
+    Boolean readBoolean(Boolean? defaultValue = Null) {
         Doc doc = readDoc();
-        if (doc.is(Boolean))
-            {
+        if (doc.is(Boolean)) {
             return doc;
-            }
+        }
 
-        if (doc == Null)
-            {
+        if (doc == Null) {
             return defaultValue?;
-            }
+        }
 
         throw new IllegalJSON($|Boolean value required at "{pointer}";\
                                | {doc == Null ? "no value" : &doc.actualType} found
                              );
-        }
+    }
 
     /**
      * Read the element value as a `String`.
@@ -82,23 +78,20 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    String readString(String? defaultValue = Null)
-        {
+    String readString(String? defaultValue = Null) {
         Doc doc = readDoc();
-        if (doc.is(String))
-            {
+        if (doc.is(String)) {
             return doc;
-            }
+        }
 
-        if (doc == Null)
-            {
+        if (doc == Null) {
             return defaultValue?;
-            }
+        }
 
         throw new IllegalJSON($|String value required at "{pointer}";\
                                | {doc == Null ? "no value" : &doc.actualType} found
                              );
-        }
+    }
 
     /**
      * Read the element value as an `IntLiteral`.
@@ -110,23 +103,20 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    IntLiteral readIntLiteral((IntLiteral|Number)? defaultValue = Null)
-        {
+    IntLiteral readIntLiteral((IntLiteral|Number)? defaultValue = Null) {
         Doc doc = readDoc();
-        if (doc.is(IntLiteral))
-            {
+        if (doc.is(IntLiteral)) {
             return doc;
-            }
+        }
 
-        if (doc == Null)
-            {
+        if (doc == Null) {
             return ensureIntLiteral(defaultValue?);
-            }
+        }
 
         throw new IllegalJSON($|IntLiteral value required at "{pointer}";\
                                | {doc == Null ? "no value" : &doc.actualType} found
                              );
-        }
+    }
 
     /**
      * Read the element value as an `FPLiteral`.
@@ -138,28 +128,24 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    FPLiteral readFPLiteral((IntLiteral|FPLiteral|Number)? defaultValue = Null)
-        {
+    FPLiteral readFPLiteral((IntLiteral|FPLiteral|Number)? defaultValue = Null) {
         Doc doc = readDoc();
-        if (doc.is(FPLiteral))
-            {
+        if (doc.is(FPLiteral)) {
             return doc;
-            }
+        }
 
-        if (doc.is(IntLiteral))
-            {
+        if (doc.is(IntLiteral)) {
             return doc.toFPLiteral();
-            }
+        }
 
-        if (doc == Null)
-            {
+        if (doc == Null) {
             return ensureFPLiteral(defaultValue?);
-            }
+        }
 
         throw new IllegalJSON($|FPLiteral value required at "{pointer}";\
                                | {doc == Null ? "no value" : &doc.actualType} found
                              );
-        }
+    }
 
     /**
      * Read the element value as an `Int`.
@@ -171,23 +157,20 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    Int readInt(Int? defaultValue = Null)
-        {
+    Int readInt(Int? defaultValue = Null) {
         Doc doc = readDoc();
-        if (doc.is(IntLiteral))
-            {
+        if (doc.is(IntLiteral)) {
             return doc;
-            }
+        }
 
-        if (doc == Null)
-            {
+        if (doc == Null) {
             return defaultValue?;
-            }
+        }
 
         throw new IllegalJSON($|Int value required at "{pointer}";\
                                | {doc == Null ? "no value" : &doc.actualType} found
                              );
-        }
+    }
 
     /**
      * Read the element value as a `Dec`.
@@ -199,28 +182,24 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    Dec readDec(Dec? defaultValue = Null)
-        {
+    Dec readDec(Dec? defaultValue = Null) {
         Doc doc = readDoc();
-        if (doc.is(FPLiteral))
-            {
+        if (doc.is(FPLiteral)) {
             return doc;
-            }
+        }
 
-        if (doc.is(IntLiteral))
-            {
+        if (doc.is(IntLiteral)) {
             return doc;
-            }
+        }
 
-        if (doc == Null)
-            {
+        if (doc == Null) {
             return defaultValue?;
-            }
+        }
 
         throw new IllegalJSON($|Dec value required at "{pointer}";\
                                | {doc == Null ? "no value" : &doc.actualType} found
                              );
-        }
+    }
 
     /**
      * Read the element value, deserializing it using the available [Schema] information.
@@ -234,24 +213,21 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *                         value is not of the requested type
      * @throws MissingMapping  if no appropriate mapping can be located
      */
-    <Serializable> Serializable readObject(Serializable? defaultValue = Null)
-        {
-        if (isNull())
-            {
+    <Serializable> Serializable readObject(Serializable? defaultValue = Null) {
+        if (isNull()) {
             return defaultValue?;
 
-            if (Serializable.is(Type<Nullable>))
-                {
+            if (Serializable.is(Type<Nullable>)) {
                 return Null;
-                }
+            }
 
             throw new IllegalJSON($|Value required at "{pointer}" of type "{Serializable}";\
                                    | no value found
                                  );
-            }
+        }
 
         return readUsing(schema.ensureMapping(Serializable), defaultValue);
-        }
+    }
 
     /**
      * Read the element value using the specified deserialization function.
@@ -266,33 +242,29 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *                      is not of the requested type
      */
     <Serializable> Serializable readUsing(Mapping<Serializable> mapping,
-                                          Serializable?         defaultValue = Null)
-        {
-        if (isNull())
-            {
+                                          Serializable?         defaultValue = Null) {
+        if (isNull()) {
             return defaultValue?;
 
-            if (Serializable.is(Type<Nullable>))
-                {
+            if (Serializable.is(Type<Nullable>)) {
                 return Null;
-                }
+            }
 
             throw new IllegalJSON($|Value required at "{pointer}" of type "{Serializable}";\
                                    | no value found
                                  );
-            }
+        }
 
         if (schema.enableMetadata,
                 Doc typeName ?= peekMetadata(schema.typeKey),
-                typeName.is(String) && typeName != mapping.typeName)
-            {
+                typeName.is(String) && typeName != mapping.typeName) {
             Type type = schema.typeForName(typeName);
 
             return schema.ensureMapping(type).read(this).as(Serializable);
-            }
+        }
 
         return mapping.read(this);
-        }
+    }
 
 
     // ----- array values --------------------------------------------------------------------------
@@ -306,12 +278,10 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @throws IllegalJSON  if the value is not of the requested type
      */
-    Doc[] readDocArray(Doc[] defaultValue = [])
-        {
-        if (isNull())
-            {
+    Doc[] readDocArray(Doc[] defaultValue = []) {
+        if (isNull()) {
             return defaultValue;
-            }
+        }
 
         Doc value = readDoc();
         return value.is(Doc[])
@@ -319,7 +289,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
                 : throw new IllegalJSON($|Doc[] value required at "{pointer}";\
                                          | {&value.actualType} found
                                        );
-        }
+    }
 
     /**
      * Read the element array value as an array of `Boolean` values.
@@ -330,23 +300,19 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @throws IllegalJSON  if the value is not of the requested type
      */
-    Boolean[] readBooleanArray(Boolean[] defaultValue = [])
-        {
-        if (isNull())
-            {
+    Boolean[] readBooleanArray(Boolean[] defaultValue = []) {
+        if (isNull()) {
             return defaultValue;
-            }
+        }
 
         Boolean[] values = new Boolean[];
-        using (ElementInput<ElementInput> elements = openArray())
-            {
-            while (elements.canRead)
-                {
+        using (ElementInput<ElementInput> elements = openArray()) {
+            while (elements.canRead) {
                 values.add(elements.readBoolean());
-                }
             }
-        return values;
         }
+        return values;
+    }
 
     /**
      * Read the element array value as an array of `String` values.
@@ -357,23 +323,19 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @throws IllegalJSON  if the value is not of the requested type
      */
-    String[] readStringArray(String[] defaultValue = [])
-        {
-        if (isNull())
-            {
+    String[] readStringArray(String[] defaultValue = []) {
+        if (isNull()) {
             return defaultValue;
-            }
+        }
 
         String[] values = new String[];
-        using (ElementInput<ElementInput> elements = openArray())
-            {
-            while (elements.canRead)
-                {
+        using (ElementInput<ElementInput> elements = openArray()) {
+            while (elements.canRead) {
                 values.add(elements.readString());
-                }
             }
-        return values;
         }
+        return values;
+    }
 
     /**
      * Read the element array value as an array of `Int` values.
@@ -384,23 +346,19 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @throws IllegalJSON  if the value is not of the requested type
      */
-    Int[] readIntArray(Int[] defaultValue = [])
-        {
-        if (isNull())
-            {
+    Int[] readIntArray(Int[] defaultValue = []) {
+        if (isNull()) {
             return defaultValue;
-            }
+        }
 
         Int[] values = new Int[];
-        using (ElementInput<ElementInput> elements = openArray())
-            {
-            while (elements.canRead)
-                {
+        using (ElementInput<ElementInput> elements = openArray()) {
+            while (elements.canRead) {
                 values.add(elements.readInt());
-                }
             }
-        return values;
         }
+        return values;
+    }
 
     /**
      * Read the element array value as an array of `Dec` values.
@@ -411,23 +369,19 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @throws IllegalJSON  if the value is not of the requested type
      */
-    Dec[] readDecArray(Dec[] defaultValue = [])
-        {
-        if (isNull())
-            {
+    Dec[] readDecArray(Dec[] defaultValue = []) {
+        if (isNull()) {
             return defaultValue;
-            }
+        }
 
         Dec[] values = new Dec[];
-        using (ElementInput<ElementInput> elements = openArray())
-            {
-            while (elements.canRead)
-                {
+        using (ElementInput<ElementInput> elements = openArray()) {
+            while (elements.canRead) {
                 values.add(elements.readDec());
-                }
             }
-        return values;
         }
+        return values;
+    }
 
     /**
      * Read the element array value as an array of values, deserialized using the available
@@ -443,23 +397,19 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    <Serializable> Serializable[] readArray(Serializable[]? defaultValue = Null)
-        {
-        if (isNull())
-            {
+    <Serializable> Serializable[] readArray(Serializable[]? defaultValue = Null) {
+        if (isNull()) {
             return defaultValue ?: [];
-            }
+        }
 
         Serializable[] values = new Serializable[];
-        using (ElementInput<ElementInput> elements = openArray())
-            {
-            while (elements.canRead)
-                {
+        using (ElementInput<ElementInput> elements = openArray()) {
+            while (elements.canRead) {
                 values.add(elements.readObject<Serializable>());
-                }
             }
-        return values;
         }
+        return values;
+    }
 
     /**
      * Read the element array value as an array of values resulting from the specified
@@ -476,21 +426,17 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *                      is not of the requested type
      */
     <Serializable> Serializable[] readArrayUsing(Mapping<Serializable> mapping,
-                                                 Serializable[]?       defaultValue = Null)
-        {
-        if (isNull())
-            {
+                                                 Serializable[]?       defaultValue = Null) {
+        if (isNull()) {
             return defaultValue ?: [];
-            }
+        }
 
         Serializable[] values = new Serializable[];
-        using (ElementInput<ElementInput> elements = openArray())
-            {
-            while (elements.canRead)
-                {
+        using (ElementInput<ElementInput> elements = openArray()) {
+            while (elements.canRead) {
                 values.add(elements.readUsing(mapping));
-                }
             }
-        return values;
         }
+        return values;
     }
+}

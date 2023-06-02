@@ -4,12 +4,11 @@ import ecstasy.numbers;
  * A JSON [Mapping] implementation for Ecstasy floating point types.
  */
 const FPNumberMapping<Serializable extends FPNumber>
-        implements Mapping<Serializable>
-    {
-    construct()
-        {
+        implements Mapping<Serializable> {
+
+    construct() {
         assert convert := CONVERSION.get(Serializable);
-        }
+    }
 
     /**
      * The function that converts an FPLiteral to the desired floating point type.
@@ -17,22 +16,19 @@ const FPNumberMapping<Serializable extends FPNumber>
     function FPNumber(FPLiteral) convert;
 
     @Override
-    String typeName.get()
-        {
+    String typeName.get() {
         return Serializable.toString();
-        }
+    }
 
     @Override
-    Serializable read(ElementInput in)
-        {
+    Serializable read(ElementInput in) {
         return convert(in.readFPLiteral()).as(Serializable);
-        }
+    }
 
     @Override
-    void write(ElementOutput out, Serializable value)
-        {
+    void write(ElementOutput out, Serializable value) {
         out.add(value.toFPLiteral());
-        }
+    }
 
     static Map<Type, function FPNumber(FPLiteral)> CONVERSION =
         Map:
@@ -54,4 +50,4 @@ const FPNumberMapping<Serializable extends FPNumber>
             numbers.Float128        = (lit) -> lit.toFloat128(),
             numbers.FloatN          = (lit) -> lit.toFloatN(),
             ];
-    }
+}

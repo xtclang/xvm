@@ -12,8 +12,7 @@
  * a name/value pair as an [ElementInput] as well.)
  */
 interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
-        extends Closeable
-    {
+        extends Closeable {
     // ----- schema --------------------------------------------------------------------------------
 
     /**
@@ -158,12 +157,11 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @return an IntLiteral
      */
-    static IntLiteral ensureIntLiteral(IntLiteral | Number value)
-        {
+    static IntLiteral ensureIntLiteral(IntLiteral | Number value) {
         return value.is(IntLiteral)
                 ? value
                 : value.toIntLiteral();
-        }
+    }
 
     /**
      * Convert a number or literal to an FPLiteral.
@@ -172,15 +170,13 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @return an FPLiteral
      */
-    static FPLiteral ensureFPLiteral(FPLiteral | IntLiteral | Number value)
-        {
-        if (value.is(FPLiteral))
-            {
+    static FPLiteral ensureFPLiteral(FPLiteral | IntLiteral | Number value) {
+        if (value.is(FPLiteral)) {
             return value;
-            }
+        }
 
         return value.is(Number)
             ? value.toFPLiteral()
             : value.toFPLiteral();
-        }
     }
+}

@@ -1,6 +1,6 @@
 module json.xtclang.org
-        delegates ecstasy.io.TextFormat(Schema.DEFAULT)
-    {
+        delegates ecstasy.io.TextFormat(Schema.DEFAULT) {
+
     import ecstasy.io.IOException;
 
     /**
@@ -25,4 +25,4 @@ module json.xtclang.org
      * JSON types include primitive types, array types, and map types.
      */
     typedef (Primitive | Map<String, Doc> | Array<Doc>) as Doc;
-    }
+}

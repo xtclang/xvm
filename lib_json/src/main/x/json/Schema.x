@@ -11,8 +11,7 @@ import ecstasy.io.TextFormat;
  * textual data from and to Ecstasy object graphs.
  */
 const Schema
-        implements TextFormat
-    {
+        implements TextFormat {
     /**
      * Construct a schema for a specified set of Mappings.
      *
@@ -47,20 +46,16 @@ const Schema
               Boolean     enableReflection = False,
               TypeSystem? typeSystem       = Null,
               Boolean     retainNulls      = False,
-              Boolean     storeRemainders  = False)
-        {
+              Boolean     storeRemainders  = False) {
         import mappings.*;
 
         // verify that the type system is the TypeSystem that includes this class, or a TypeSystem
         // that derives from the TypeSystem that includes this class
-        if (typeSystem == Null)
-            {
+        if (typeSystem == Null) {
             typeSystem = &this.actualType.typeSystem;
-            }
-        else
-            {
+        } else {
             assert typeSystem == &this.actualType.typeSystem || &this.actualClass.pathWithin(typeSystem);
-            }
+        }
 
         // use the module version if no version is specified
         version ?:= typeSystem.primaryModule.version;
@@ -85,24 +80,22 @@ const Schema
         schemaMappings = schemaMappings.empty
                 ? defaultMappings
                 : (new Mapping[]) + schemaMappings + defaultMappings;
-        for (Mapping mapping : schemaMappings)
-            {
+        for (Mapping mapping : schemaMappings) {
             mappingByType.putIfAbsent(mapping.Serializable, mapping);
             typeByName.putIfAbsent(mapping.typeName, mapping.Serializable);
-            }
+        }
 
-        if (enableReflection)
-            {
+        if (enableReflection) {
             // add a reflection mapping that "handles" any object (by providing a more specific
             // mapping for whatever object type is requested)
             Mapping<Object> mapping = new @Narrowable ReflectionMapping("Object", Object, []);
             mappingByType.putIfAbsent(Object, mapping);
             typeByName.putIfAbsent("Object", Object);
-            }
+        }
 
         this.mappingByType = mappingByType;
         this.typeByName    = typeByName.makeImmutable();
-        }
+    }
 
     /**
      * The "default" Schema, which is not aware of any custom serialization or deserialization
@@ -118,22 +111,19 @@ const Schema
     // ----- TextFormat interface ------------------------------------------------------------------
 
     @Override
-    @RO String name.get()
-        {
+    @RO String name.get() {
         return "JSON";
-        }
+    }
 
     @Override
-    ObjectInput createObjectInput(Reader reader)
-        {
+    ObjectInput createObjectInput(Reader reader) {
         return new ObjectInputStream(this, reader);
-        }
+    }
 
     @Override
-    ObjectOutput createObjectOutput(Writer writer)
-        {
+    ObjectOutput createObjectOutput(Writer writer) {
         return new ObjectOutputStream(this, writer);
-        }
+    }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -240,10 +230,9 @@ const Schema
      * A lazily instantiated type mapping service.
      */
     @Lazy
-    MappingService mapper.calc()
-        {
+    MappingService mapper.calc() {
         return new MappingService();
-        }
+    }
 
 
     // ----- Mapping look-up -----------------------------------------------------------------------
@@ -256,16 +245,14 @@ const Schema
      *
      * @return a string representation of the passed type
      */
-    String nameForType(Type type)
-        {
+    String nameForType(Type type) {
         // strip off the "immutable " prefix from the type string
-        if (type.form == Immutable)
-            {
+        if (type.form == Immutable) {
             type := type.modifying();
-            }
+        }
 
         return type.toString();
-        }
+    }
 
     /**
      * Helper to "deserialize" a previously serialized type string into an Ecstasy type. Failure to
@@ -275,11 +262,10 @@ const Schema
      *
      * @return a type corresponding to the passed string
      */
-    Type typeForName(String typeName)
-        {
+    Type typeForName(String typeName) {
         assert Type type := typeSystem.typeForName(typeName);
         return type;
-        }
+    }
 
     /**
      * Find or create a mapping for the specified type.
@@ -289,15 +275,13 @@ const Schema
      * @return True iff a Mapping was found for the specified type
      * @return (conditional) the Mapping for the specified type
      */
-    <Serializable> conditional Mapping<Serializable> findMapping(Type<Serializable> type)
-        {
-        if (val mapping := mappingByType.get(type))
-            {
+    <Serializable> conditional Mapping<Serializable> findMapping(Type<Serializable> type) {
+        if (val mapping := mappingByType.get(type)) {
             return True, mapping.as(Mapping<Serializable>);
-            }
+        }
 
         return mapper.findMapping(type);
-        }
+    }
 
     /**
      * Find or create a mapping for the specified type.
@@ -308,26 +292,22 @@ const Schema
      *
      * @throws MissingMapping  if no appropriate mapping can be provided
      */
-    <Serializable> Mapping<Serializable> ensureMapping(Type<Serializable> type)
-        {
-        if (val mapping := findMapping(type))
-            {
+    <Serializable> Mapping<Serializable> ensureMapping(Type<Serializable> type) {
+        if (val mapping := findMapping(type)) {
             return mapping;
-            }
+        }
 
         throw new MissingMapping($"Unable to identify a potential mapping for type {type}");
-        }
+    }
 
     /**
      * A service that handles the Mapping lookups (and if necessary, creation) when the Mapping is
      * not obvious or present in the Schema.
      */
-    service MappingService
-        {
-        construct()
-            {
+    service MappingService {
+        construct() {
             allMappingsByType = new HashMap<Type, Mapping>().putAll(mappingByType);
-            }
+        }
 
         /**
          * A lookup cache from Ecstasy type to JSON Mapping.
@@ -343,53 +323,45 @@ const Schema
          *
          * @throws MissingMapping  if no appropriate mapping can be provided
          */
-        <Serializable> conditional Mapping<Serializable> findMapping(Type<Serializable> type)
-            {
+        <Serializable> conditional Mapping<Serializable> findMapping(Type<Serializable> type) {
             Mapping<Serializable>? backupPlan = Null;
 
-            if (val mapping := allMappingsByType.get(type))
-                {
+            if (val mapping := allMappingsByType.get(type)) {
                 return True, mapping.as(Mapping<Serializable>);
-                }
+            }
 
             // to avoid the chicken-and-the-egg problem with recursion, register a temporary mapping
             // for this type
-            allMappingsByType.put(type, new mappings.ChickenOrEggMapping<Serializable>(() ->
-                {
+            allMappingsByType.put(type, new mappings.ChickenOrEggMapping<Serializable>(() -> {
                 assert Mapping<Serializable> mapping := findMapping(type);
                 return mapping;
-                }));
+            }));
 
             // go through the original list of mappings (ordered by precedence) and see if any of
             // them could apply to the requested type; the first one to provide a specific type
             // mapping for the requested type wins, otherwise the first one that matches at all wins
-            for (Mapping mapping : mappingByType.values)
-                {
-                if (type.is(Type<mapping.Serializable>))
-                    {
-                    if (val narrowedMapping := mapping.narrow(this.Schema, type))
-                        {
+            for (Mapping mapping : mappingByType.values) {
+                if (type.is(Type<mapping.Serializable>)) {
+                    if (val narrowedMapping := mapping.narrow(this.Schema, type)) {
                         allMappingsByType.put(type, narrowedMapping);
                         return True, narrowedMapping.as(Mapping<Serializable>);
-                        }
+                    }
 
-                    if (mapping.is(Mapping<Serializable>))
-                        {
+                    if (mapping.is(Mapping<Serializable>)) {
                         backupPlan ?:= mapping;
-                        }
                     }
                 }
+            }
 
-            if (backupPlan != Null)
-                {
+            if (backupPlan != Null) {
                 allMappingsByType.put(type, backupPlan);
                 return True, backupPlan;
-                }
+            }
 
             allMappingsByType.remove(type);
             return False;
-            }
         }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -402,16 +374,14 @@ const Schema
      *
      * @return True iff the name/value pair should be treated as metadata
      */
-    Boolean isMetadata(String name)
-        {
-        return name.size >= 1 && switch (name[0])
-            {
+    Boolean isMetadata(String name) {
+        return name.size >= 1 && switch (name[0]) {
             case '$': True;
             case '@': True;
             case '_': True;
             default : False;
-            };
-        }
+        };
+    }
 
     /**
      * Convert a JSON pointer to a String that can be used as part of a URI fragment.
@@ -420,13 +390,12 @@ const Schema
      *
      * @return the corresponding ASCII string that can be used in the "fragment" portion of a URI
      */
-    static String pointerToUri(String pointer)
-        {
+    static String pointerToUri(String pointer) {
         Int length = estimatePointerUriLength(pointer);
         return length == pointer.size
                 ? pointer
                 : appendPointerUri(pointer, new StringBuffer(length)).toString();
-        }
+    }
 
     /**
      * For each ASCII code 0-127, this specifies if the ASCII code is permitted in the "fragment"
@@ -446,28 +415,22 @@ const Schema
      * @return the number of ASCII characters necessary to encode the JSON pointer into the fragment
      *         portion of a URI
      */
-    static Int estimatePointerUriLength(String pointer)
-        {
+    static Int estimatePointerUriLength(String pointer) {
         Int length = pointer.size;
-        for (Char ch : pointer)
-            {
+        for (Char ch : pointer) {
             Int n = ch.toInt();
-            if (n <= 0x7F)
-                {
-                if (!FRAGMENT_ALLOW[n])
-                    {
+            if (n <= 0x7F) {
+                if (!FRAGMENT_ALLOW[n]) {
                     length += 2;
-                    }
                 }
-            else
-                {
+            } else {
                 // first encode the character as UTF8, then convert each non-ASCII byte (i.e. all of
                 // them) to the %-encoded form
                 length += ch.calcUtf8Length() * 3;
-                }
             }
-        return length;
         }
+        return length;
+    }
 
     /**
      * Encode a JSON pointer into a sequence of ASCII characters that can be used in the fragment
@@ -478,32 +441,23 @@ const Schema
      *
      * @return the Char Appender
      */
-    static <Buf extends Appender<Char>> Buf appendPointerUri(String pointer, Buf buf)
-        {
-        for (Char ch : pointer)
-            {
+    static <Buf extends Appender<Char>> Buf appendPointerUri(String pointer, Buf buf) {
+        for (Char ch : pointer) {
             UInt32 n = ch.codepoint;
-            if (n <= 0x7F)
-                {
-                if (FRAGMENT_ALLOW[n])
-                    {
+            if (n <= 0x7F) {
+                if (FRAGMENT_ALLOW[n]) {
                     buf.add(ch);
-                    }
-                else
-                    {
+                } else {
                     buf.add('%').add((n >> 4).toHexit()).add(n.toHexit());
-                    }
                 }
-            else
-                {
+            } else {
                 // first encode the character as UTF8, then convert each non-ASCII byte (i.e. all of
                 // them) to the %-encoded form
-                for (Byte b : ch.utf8())
-                    {
+                for (Byte b : ch.utf8()) {
                     buf.add('%').add((b >>> 4).toHexit()).add(b.toHexit());
-                    }
                 }
             }
-        return buf;
         }
+        return buf;
     }
+}

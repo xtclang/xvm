@@ -3,8 +3,7 @@
  * from/to a JSON document format.
  */
 interface Mapping<Serializable>
-        extends immutable Const
-    {
+        extends immutable Const {
     /**
      * The name of the type for the mapping. This name helps to identify a Mapping from JSON
      * metadata, or allows the Mapping to be identified in the metadata related to objects
@@ -43,8 +42,7 @@ interface Mapping<Serializable>
      * @return True iff a more specific Mapping is available for the specified type
      * @return (optional) a more specific Mapping for the specified type
      */
-    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
-        {
+    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type) {
         return False;
-        }
     }
+}

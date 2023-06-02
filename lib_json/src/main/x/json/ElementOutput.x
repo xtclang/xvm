@@ -2,8 +2,7 @@
  * An interface for building a JSON document. TODO
  */
 interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
-        extends DocOutput<ParentOutput>
-    {
+        extends DocOutput<ParentOutput> {
     // ----- nesting values ------------------------------------------------------------------------
 
     /**
@@ -50,10 +49,9 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    ElementOutput add(IntNumber value)
-        {
+    ElementOutput add(IntNumber value) {
         return add(value.toIntLiteral());
-        }
+    }
 
     /**
      * Store the specified floating point value in this JSON element.
@@ -62,10 +60,9 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    ElementOutput add(FPNumber value)
-        {
+    ElementOutput add(FPNumber value) {
         return add(value.toFPLiteral());
-        }
+    }
 
     /**
      * Store the serialized form of the specified value in this JSON element.
@@ -76,10 +73,9 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @throws MissingMapping  if no appropriate mapping can be located
      */
-    <Serializable> ElementOutput addObject(Serializable value)
-        {
+    <Serializable> ElementOutput addObject(Serializable value) {
         return addUsing(schema.ensureMapping(Serializable), value);
-        }
+    }
 
     /**
      * Store the serialized form of the specified value in this JSON element.
@@ -89,30 +85,26 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    <Serializable> ElementOutput addUsing(Mapping<Serializable> mapping, Serializable value)
-        {
-        if (value == Null)
-            {
+    <Serializable> ElementOutput addUsing(Mapping<Serializable> mapping, Serializable value) {
+        if (value == Null) {
             return add(Null);
-            }
+        }
 
         val type = &value.actualType;
-        if (type != mapping.Serializable)
-            {
+        if (type != mapping.Serializable) {
             // the "mapping.Serializable" type could be narrower than "Serializable";
             // we should not pass "Serializable" to the "narrow()" method, which expects a matching
             // narrower sub-type
             mapping := mapping.narrow(schema, type);
 
-            if (schema.enableMetadata)
-                {
+            if (schema.enableMetadata) {
                 prepareMetadata(schema.typeKey, schema.nameForType(type));
-                }
             }
+        }
 
         mapping.write(this, value);
         return this;
-        }
+    }
 
 
     // ----- array values --------------------------------------------------------------------------
@@ -124,10 +116,9 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    ElementOutput addArray(Iterable<Doc> values)
-        {
+    ElementOutput addArray(Iterable<Doc> values) {
         return add(values.toArray());
-        }
+    }
 
     /**
      * Store an array of the specified values in this JSON element.
@@ -136,15 +127,13 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    ElementOutput addArray(Iterable<IntNumber> values)
-        {
+    ElementOutput addArray(Iterable<IntNumber> values) {
         val iter = values.iterator();
-        return add(new IntLiteral[values.size]((_) ->
-                {
+        return add(new IntLiteral[values.size]((_) -> {
                 assert val num := iter.next();
                 return num.toIntLiteral();
-                }));
-        }
+        }));
+    }
 
     /**
      * Store an array of the specified values in this JSON element.
@@ -153,15 +142,13 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    ElementOutput addArray(Iterable<FPNumber> values)
-        {
+    ElementOutput addArray(Iterable<FPNumber> values) {
         val iter = values.iterator();
-        return add(new FPLiteral[values.size](_ ->
-                {
+        return add(new FPLiteral[values.size](_ -> {
                 assert val num := iter.next();
                 return num.toFPLiteral();
-                }));
-        }
+        }));
+    }
 
     /**
      * Store an array of the specified values in this JSON element, with each value being serialized
@@ -171,14 +158,12 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    <Serializable> ElementOutput addObjectArray(Iterable<Serializable> values)
-        {
+    <Serializable> ElementOutput addObjectArray(Iterable<Serializable> values) {
         val array = openArray();
-        for (Serializable value : values)
-            {
+        for (Serializable value : values) {
             array.addObject(value);
-            }
+        }
         array.close();
         return this;
-        }
     }
+}

@@ -2,23 +2,20 @@
  * A mapping for Path values.
  */
 const PathMapping
-        implements Mapping<Path>
-    {
+        implements Mapping<Path> {
+
     @Override
-    String typeName.get()
-        {
+    String typeName.get() {
         return "Path";
-        }
-
-    @Override
-    Serializable read(ElementInput in)
-        {
-        return new Path(in.readString());
-        }
-
-    @Override
-    void write(ElementOutput out, Serializable value)
-        {
-        out.add(value.toString());
-        }
     }
+
+    @Override
+    Serializable read(ElementInput in) {
+        return new Path(in.readString());
+    }
+
+    @Override
+    void write(ElementOutput out, Serializable value) {
+        out.add(value.toString());
+    }
+}

@@ -1,5 +1,4 @@
-package mappings
-    {
+package mappings {
     Mapping[] DEFAULT_MAPPINGS =
         [
         new LiteralMapping<Nullable>(),
@@ -63,4 +62,4 @@ package mappings
         new @Narrowable RangeMapping(new GenericMapping<Orderable>()),
         // TODO other container types...
         ];
-    }
+}

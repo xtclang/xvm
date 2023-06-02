@@ -5,12 +5,11 @@
  * type which has deferred the realization of the actual (chicken) Mapping.
  */
 const ChickenOrEggMapping<Serializable>(function Mapping<Serializable>() egg)
-        delegates Mapping<Serializable>(chicken)
-    {
+        delegates Mapping<Serializable>(chicken) {
+
     private function Mapping<Serializable>() egg;
 
-    private @Lazy Mapping<Serializable> chicken.calc()
-        {
+    private @Lazy Mapping<Serializable> chicken.calc() {
         return egg();
-        }
     }
+}

@@ -60,8 +60,7 @@
  * type.
  */
 interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
-        extends DocOutput<ParentOutput>
-    {
+        extends DocOutput<ParentOutput> {
     // ----- nesting values ------------------------------------------------------------------------
 
     /**
@@ -104,14 +103,12 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    FieldOutput add(String name, Doc value)
-        {
-        using (val field = openField(name))
-            {
+    FieldOutput add(String name, Doc value) {
+        using (val field = openField(name)) {
             field.add(value);
-            }
-        return this;
         }
+        return this;
+    }
 
     /**
      * Add the name/value pair to the current JSON object.
@@ -121,10 +118,9 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    FieldOutput add(String name, IntNumber value)
-        {
+    FieldOutput add(String name, IntNumber value) {
         return add(name, value.toIntLiteral());
-        }
+    }
 
     /**
      * Add the name/value pair to the current JSON object.
@@ -134,10 +130,9 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    FieldOutput add(String name, FPNumber value)
-        {
+    FieldOutput add(String name, FPNumber value) {
         return add(name, value.toFPLiteral());
-        }
+    }
 
     /**
      * Add a name/value pair to the current JSON object, using the provided name and emitting a
@@ -152,20 +147,17 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    <Serializable> FieldOutput addObject(String name, Serializable value)
-        {
-        if (value == Null)
-            {
+    <Serializable> FieldOutput addObject(String name, Serializable value) {
+        if (value == Null) {
             return add(name, Null);
-            }
+        }
 
-        using (val nested = openField(name))
-            {
+        using (val nested = openField(name)) {
             nested.addObject(value);
-            }
+        }
 
         return this;
-        }
+    }
 
     /**
      * Add a name/value pair to the current JSON object, using the provided name and emitting a
@@ -177,20 +169,17 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    <Serializable> FieldOutput addUsing(Mapping<Serializable> mapping, String name, Serializable value)
-        {
-        if (value == Null)
-            {
+    <Serializable> FieldOutput addUsing(Mapping<Serializable> mapping, String name, Serializable value) {
+        if (value == Null) {
             return add(name, value);
-            }
+        }
 
-        using (val nested = openField(name))
-            {
+        using (val nested = openField(name)) {
             nested.addUsing(mapping, value);
-            }
+        }
 
         return this;
-        }
+    }
 
 
     // ----- array values --------------------------------------------------------------------------
@@ -203,10 +192,9 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    FieldOutput addArray(String name, Iterable<Doc> values)
-        {
+    FieldOutput addArray(String name, Iterable<Doc> values) {
         return add(name, values.toArray());
-        }
+    }
 
     /**
      * Add a name/value pair to the current JSON object, with the value being an array of values.
@@ -216,15 +204,13 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    FieldOutput addArray(String name, Iterable<IntNumber> values)
-        {
+    FieldOutput addArray(String name, Iterable<IntNumber> values) {
         val iter = values.iterator();
-        return add(name, new IntLiteral[values.size]((_) ->
-                {
+        return add(name, new IntLiteral[values.size]((_) -> {
                 assert val num := iter.next();
                 return num.toIntLiteral();
-                }));
-        }
+        }));
+    }
 
     /**
      * Add a name/value pair to the current JSON object, with the value being an array of values.
@@ -234,15 +220,13 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    FieldOutput addArray(String name, Iterable<FPNumber> values)
-        {
+    FieldOutput addArray(String name, Iterable<FPNumber> values) {
         val iter = values.iterator();
-        return add(name, new FPLiteral[values.size](_ ->
-                {
+        return add(name, new FPLiteral[values.size](_ -> {
                 assert val num := iter.next();
                 return num.toFPLiteral();
-                }));
-        }
+        }));
+    }
 
     /**
      * Add a name/value pair to the current JSON object, with the value being a JSON array with each
@@ -253,15 +237,12 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    <Serializable> FieldOutput addObjectArray(String name, Iterable<Serializable> values)
-        {
-        using (val array = openArray(name))
-            {
-            for (Serializable value : values)
-                {
+    <Serializable> FieldOutput addObjectArray(String name, Iterable<Serializable> values) {
+        using (val array = openArray(name)) {
+            for (Serializable value : values) {
                 array.addObject(value);
-                }
             }
-        return this;
         }
+        return this;
     }
+}
