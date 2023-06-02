@@ -1,8 +1,7 @@
 /**
  * Test of the BasicResourceProvider.
  */
-module TestContainer
-    {
+module TestContainer {
     import ecstasy.mgmt.*;
     import ecstasy.reflect.ModuleTemplate;
 
@@ -10,23 +9,19 @@ module TestContainer
 
     @Inject Console console;
 
-    void run(Int depth=0)
-        {
+    void run(Int depth=0) {
         console.print($"Running at depth {depth}");
 
         @Inject("repository") ModuleRepository repository;
 
         // run itself
-        if (depth < 3)
-            {
+        if (depth < 3) {
             ModuleTemplate template = repository.getResolvedModule("TestContainer");
             Container container =
                 new Container(template, Lightweight, repository, SimpleResourceProvider);
 
             container.invoke("run", Tuple:(depth+1));
-            }
-        else
-            {
+        } else {
             // run TestSimple
             ModuleTemplate   template = repository.getResolvedModule("TestSimple");
             ResourceProvider injector = new BasicResourceProvider();
@@ -36,34 +31,31 @@ module TestContainer
 
             // run TestContained
             contained.run();
-            }
-        }
-
-    static service SimpleResourceProvider
-            extends BasicResourceProvider
-        {
-        @Override
-        Supplier getResource(Type type, String name)
-            {
-            import Container.Linker;
-
-            switch (type, name)
-                {
-                case (String, _):
-                    return "hello";
-
-                case (Int, "value"):
-                    return Int:42;
-
-                case (Linker, "linker"):
-                    @Inject Linker linker;
-                    return linker;
-
-                case (ModuleRepository, "repository"):
-                    @Inject ModuleRepository repository;
-                    return repository;
-                }
-            return super(type, name);
-            }
         }
     }
+
+    static service SimpleResourceProvider
+            extends BasicResourceProvider {
+        @Override
+        Supplier getResource(Type type, String name) {
+            import Container.Linker;
+
+            switch (type, name) {
+            case (String, _):
+                return "hello";
+
+            case (Int, "value"):
+                return Int:42;
+
+            case (Linker, "linker"):
+                @Inject Linker linker;
+                return linker;
+
+            case (ModuleRepository, "repository"):
+                @Inject ModuleRepository repository;
+                return repository;
+            }
+            return super(type, name);
+        }
+    }
+}

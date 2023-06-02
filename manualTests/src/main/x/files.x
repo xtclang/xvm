@@ -1,5 +1,4 @@
-module TestFiles
-    {
+module TestFiles {
     import ecstasy.fs.Directory;
     import ecstasy.fs.File;
     import ecstasy.fs.FileWatcher;
@@ -9,15 +8,13 @@ module TestFiles
     @Inject            Console   console;
     @Inject("storage") FileStore store;
 
-    void run()
-        {
+    void run() {
         testPaths();
         testInject();
         testModify();
-        }
+    }
 
-    void testPaths()
-        {
+    void testPaths() {
         console.print("\n** testPaths()");
         console.print($"root={Path.ROOT}");
         console.print($"parent={Path.PARENT}");
@@ -32,15 +29,13 @@ module TestFiles
         path = new Path(path, "more");
         console.print($"path={path}");
 
-        for (Int i : 0..2)
-            {
+        for (Int i : 0..2) {
             console.print($"path[{i}]={path[i]}");
-            }
+        }
 
-        Loop: for (Path each : path)
-            {
+        Loop: for (Path each : path) {
             console.print($"iterating path[{Loop.count}]={each}");
-            }
+        }
         console.print($"path[]={path.toArray()}");
 
         console.print($"path[1..2]={path[1..2]}");
@@ -57,10 +52,9 @@ module TestFiles
         console.print($"relativize root to path = {path.relativize(Path.ROOT)}");
         console.print($"relativize /a/b/c to /a/p/d/q = {new Path("/a/p/d/q").relativize(new Path("/a/b/c"))}");
         console.print($"relativize /a/p/d/q to /a/b/c = {new Path("/a/b/c").relativize(new Path("/a/p/d/q"))}");
-        }
+    }
 
-    void testInject()
-        {
+    void testInject() {
         console.print("\n** testInject()");
 
         console.print($"readOnly={store.readOnly}");
@@ -78,52 +72,42 @@ module TestFiles
         console.print($"curDir={curDir}");
 
         console.print($"{curDir.name} content:");
-        for (String name : curDir.names())
-            {
-            if (File|Directory node := curDir.find(name))
-                {
-                if (node.is(File))
-                    {
-                    if (!name.indexOf('.'))
-                        {
+        for (String name : curDir.names()) {
+            if (File|Directory node := curDir.find(name)) {
+                if (node.is(File)) {
+                    if (!name.indexOf('.')) {
                         console.print($"\tf {name} {node.size} bytes");
-                        }
                     }
-                else
-                    {
+                } else {
                     console.print($"\td {name}");
-                    }
                 }
             }
         }
+    }
 
-    void testModify()
-        {
+    void testModify() {
         console.print("\n** testModify()");
 
         @Inject Directory tmpDir;
         @Inject Timer timer;
 
-        FileWatcher watcher = new FileWatcher()
-            {
+        FileWatcher watcher = new FileWatcher() {
             @Override
-            Boolean onEvent(Event event, Directory dir)
-                {
+            Boolean onEvent(Event event, Directory dir) {
                 console.print($|[{this:service}]: Directory event: \"{event}\" {dir.name}\
                                  | after {timer.elapsed.seconds} sec
                                 );
                 return False;
-                }
+            }
 
             @Override
-            Boolean onEvent(Event event, File file)
-                {
+            Boolean onEvent(Event event, File file) {
                 console.print($|[{this:service}]: File event: \"{event}\" {file.name}\
                                  | after {timer.elapsed.seconds} sec
                                 );
                 return False;
-                }
-            };
+            }
+        };
 
         File file = tmpDir.fileFor("test.dat");
 
@@ -141,8 +125,7 @@ module TestFiles
         // on Mac OS the WatchService implementation simply polls every 10 seconds;
         // increase the "wait" value to see the events
         Int wait = 1;
-        timer.schedule(Duration.ofSeconds(wait), () ->
-            {
+        timer.schedule(Duration.ofSeconds(wait), () -> {
             console.print($|[{this:service}]: deleting {file.name}\
                              | after {timer.elapsed.seconds} sec
                             );
@@ -150,14 +133,13 @@ module TestFiles
             file.delete();
             assert !file.exists;
 
-            timer.schedule(Duration.ofSeconds(wait), () ->
-                {
+            timer.schedule(Duration.ofSeconds(wait), () -> {
                 @Inject Clock clock;
                 assert tmpDir.modified.date == clock.now.date;
 
                 console.print($"[{this:service}]: tmpDir={tmpDir}");
                 cancel();
-                });
             });
-        }
+        });
     }
+}

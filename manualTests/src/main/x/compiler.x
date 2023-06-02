@@ -1,10 +1,8 @@
-module TestCompiler
-    {
+module TestCompiler {
     @Inject ecstasy.lang.src.Compiler compiler;
     @Inject Console console;
 
-    void run()
-        {
+    void run() {
         @Inject Directory curDir;
 
         assert File|Directory sourceFile := curDir.find("src/main/x/errors.x");
@@ -19,10 +17,9 @@ module TestCompiler
         assert sourceFile.is(File);
 
         compile(sourceFile, buildDir);
-        }
+    }
 
-    void compile(File sourceModule, Directory buildDir)
-        {
+    void compile(File sourceModule, Directory buildDir) {
         console.print($|
                          |compile module : {sourceModule.path}
                          |build directory: {buildDir}
@@ -33,9 +30,8 @@ module TestCompiler
         (Boolean success, String[] errors) = compiler.compile([sourceModule]);
 
         console.print(success ? "Compiled successfully" : "Compilation failed:");
-        for (String error : errors)
-            {
+        for (String error : errors) {
             console.print(error);
-            }
         }
     }
+}

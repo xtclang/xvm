@@ -1,33 +1,27 @@
-module TestDefAsn
-    {
+module TestDefAsn {
     @Inject ecstasy.io.Console console;
 
-    void run()
-        {
+    void run() {
         testDefAssignment();
         testShort();
         testNameHiding();
         testWhileLoop(0);
         testForLoop(0);
-        }
+    }
 
-    Boolean gimmeTrue()
-        {
+    Boolean gimmeTrue() {
         return True;
-        }
-    String? maybeNull()
-        {
+    }
+    String? maybeNull() {
         return Null;
-        }
+    }
 
-    void testDefAssignment()
-        {
+    void testDefAssignment() {
         console.print("\n** testDefAssignment()");
 
-        static (String, Int) name()
-            {
+        static (String, Int) name() {
             return "hello", 5;
-            }
+        }
 
         String n;
         Int    c;
@@ -40,24 +34,20 @@ module TestDefAsn
         Boolean f2 = gimmeTrue();
 
         // vary this test as necessary (do vs. while; break vs. continue; && vs. ||, etc.)
-        L1: do
-            {
-            if (f1 && {i=3; return True;})
-                {
+        L1: do {
+            if (f1 && {i=3; return True;}) {
                 //i = 3;
                 break L1;
-                }
+            }
 
             i = 1;
             continue L1;
-            }
-        while (f2);
+        } while (f2);
 
         console.print("i=" + i);
-        }
+    }
 
-    void testShort()
-        {
+    void testShort() {
         console.print("\n** testShort()");
 
         Int i;
@@ -65,68 +55,52 @@ module TestDefAsn
         Boolean f2 = gimmeTrue();
         String? s  = maybeNull();
 
-        if (s?.size > 1 && {i=3; return True;})
-            {
+        if (s?.size > 1 && {i=3; return True;}) {
             //i = 3;
-            }
-        else
-            {
+        } else {
             i = 4;
-            }
+        }
 
         console.print("i=" + i);
-        }
+    }
 
     String name = "top-level property";
 
-    void testNameHiding()
-        {
-        static conditional (String, Int) name()
-            {
+    void testNameHiding() {
+        static conditional (String, Int) name() {
             return True, "hello", 5;
-            }
+        }
 
-        if ((String name, Int count) := name())
-            {
+        if ((String name, Int count) := name()) {
             assert name.size == count;
-            }
-        }
-
-    void testWhileLoop(Int? in)
-        {
-        Int i;
-        while (True)
-            {
-            if (in.is(Int))
-                {
-                i = in;
-                break;
-                }
-            else
-                {
-                throw new IllegalState();
-                }
-            }
-
-        assert i >= 0;
-        }
-
-    void testForLoop(Int? in)
-        {
-        Int i;
-        for (;;)
-            {
-            if (in.is(Int))
-                {
-                i = in;
-                break;
-                }
-            else
-                {
-                return;
-                }
-            }
-
-        assert i >= 0;
         }
     }
+
+    void testWhileLoop(Int? in) {
+        Int i;
+        while (True) {
+            if (in.is(Int)) {
+                i = in;
+                break;
+            } else {
+                throw new IllegalState();
+            }
+        }
+
+        assert i >= 0;
+    }
+
+    void testForLoop(Int? in) {
+        Int i;
+        for (;;) {
+            if (in.is(Int)) {
+                i = in;
+                break;
+            } else {
+                return;
+            }
+        }
+
+        assert i >= 0;
+    }
+}

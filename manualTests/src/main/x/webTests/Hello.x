@@ -16,8 +16,7 @@
  *    xec build/Hello.xtc password
  */
 module Hello
-        incorporates WebApp
-    {
+        incorporates WebApp {
     package crypto import crypto.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
@@ -31,22 +30,18 @@ module Hello
     import web.responses.*;
     import web.security.*;
 
-    void run(String[] args=["password"])
-        {
+    void run(String[] args=["password"]) {
         @Inject Console console;
         @Inject Directory curDir;
 
         File   store = /resources/hello/https.p12;
         String password;
-        if (args.size == 0)
-            {
+        if (args.size == 0) {
             console.print("Enter password:", suppressNewline=True);
             password = console.readLine(suppressEcho=True);
-            }
-        else
-            {
+        } else {
             password = args[0];
-            }
+        }
 
         @Inject(opts=new Info(store.contents, password)) KeyStore keystore;
 
@@ -65,84 +60,70 @@ module Hello
                        |
                        |Use Ctrl-C to stop.
                      );
-        }
+    }
 
     // TODO GG this cannot be protected or private?
-    Authenticator createAuthenticator()
-        {
+    Authenticator createAuthenticator() {
         return new DigestAuthenticator(new FixedRealm("Hello", ["admin"="addaya"]));
-        }
+    }
 
-    package inner
-        {
+    package inner {
         @WebService("/")
-        service Simple
-            {
-            SimpleData simpleData.get()
-                {
+        service Simple {
+            SimpleData simpleData.get() {
                 return session?.as(SimpleData) : assert;
-                }
+            }
 
             @Get
-            ResponseOut hello()
-                {
+            ResponseOut hello() {
                 return new HtmlResponse(/resources/hello/index.html);
-                }
+            }
 
             @HttpsRequired
             @Get("s")
-            String secure()
-                {
+            String secure() {
                 return "secure";
-                }
+            }
 
             @Get("user")
             @Produces(Text)
-            String getUser(Session session)
-                {
+            String getUser(Session session) {
                 return session.userId ?: "";
-                }
+            }
 
             @LoginRequired
             @Get("l")
-            ResponseOut logMeIn(Session session)
-                {
+            ResponseOut logMeIn(Session session) {
                 return hello();
-                }
+            }
 
             @Get("d")
-            ResponseOut logMeOut()
-                {
+            ResponseOut logMeOut() {
                 session?.deauthenticate();
                 return hello();
-                }
+            }
 
             @Get("c")
-            Int count(SimpleData sessionData)
-                {
+            Int count(SimpleData sessionData) {
                 return sessionData.counter++;
-                }
+            }
 
             @Default @Get
             @Produces(Text)
-            String askWhat()
-                {
+            String askWhat() {
                 return "what?";
-                }
-
-            static mixin SimpleData
-                    into Session
-                {
-                Int counter;
-                }
             }
 
+            static mixin SimpleData
+                    into Session {
+                Int counter;
+            }
+        }
+
         @WebService("/e")
-        service Echo
-            {
+        service Echo {
             @Get("{path}")
-            String[] echo(String path)
-                {
+            String[] echo(String path) {
                 assert:debug path != "debug";
 
                 assert RequestIn request ?= this.request;
@@ -161,16 +142,14 @@ module Hello
                         $"query={request.queryParams}",
                         $"user={session?.userId? : "<anonymous>"}",
                        ];
-                }
             }
+        }
 
         @WebService("/settings")
-        service Settings
-            {
+        service Settings {
             @LoginRequired
             @Get("allow-cookies")
-            ResponseOut turnOnPersistentCookies(Session session)
-                {
+            ResponseOut turnOnPersistentCookies(Session session) {
                 Boolean       oldExclusiveAgent = session.exclusiveAgent;
                 CookieConsent oldCookieConsent  = session.cookieConsent;
 
@@ -186,12 +165,11 @@ module Hello
                                          | (was {oldCookieConsent})
                                          |<br><a href="/">home</a>
                                        );
-                }
+            }
 
             @HttpsRequired
             @Get("disallow-cookies")
-            ResponseOut turnOffPersistentCookies(Session session)
-                {
+            ResponseOut turnOffPersistentCookies(Session session) {
                 Boolean       oldExclusiveAgent = session.exclusiveAgent;
                 CookieConsent oldCookieConsent  = session.cookieConsent;
 
@@ -205,12 +183,10 @@ module Hello
                                          | (was {oldCookieConsent})
                                          |<br><a href="/">home</a>
                                        );
-                }
-            }
-
-        @StaticContent("/static", /resources/hello)
-        service Content
-            {
             }
         }
+
+        @StaticContent("/static", /resources/hello)
+        service Content {}
     }
+}

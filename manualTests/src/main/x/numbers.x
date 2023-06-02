@@ -1,9 +1,7 @@
-module TestNumbers
-    {
+module TestNumbers {
     @Inject ecstasy.io.Console console;
 
-    void run()
-        {
+    void run() {
         testUInt64();
         testByte();
         testInt128();
@@ -15,10 +13,9 @@ module TestNumbers
         testInfinity();
         testConverter();
         testAggregator();
-        }
+    }
 
-    void testUInt64()
-        {
+    void testUInt64() {
         console.print("\n** testUInt()");
 
         UInt64 n1 = 42;
@@ -41,14 +38,10 @@ module TestNumbers
         console.print("d3=" + d3);
         console.print("n3=" + (d3*1000 + n2 % 1000));
 
-        try
-            {
+        try {
             n2++;
             assert;
-            }
-        catch (Exception e)
-            {
-            }
+        } catch (Exception e) {}
 
         Int64 un1 = Int64.MaxValue.toInt64().toUnchecked();
         Int64 un2 = un1 + 1;
@@ -61,10 +54,9 @@ module TestNumbers
         assert un4 == 0;
 
         assert un4.is(@Unchecked UInt64);
-        }
+    }
 
-    void testByte()
-        {
+    void testByte() {
         console.print("\n** testByte()");
 
         Byte n1 = 42;
@@ -79,14 +71,10 @@ module TestNumbers
         console.print("d3=" + d3);
         console.print("n3=" + (d3*10 + n2 % 10));
 
-        try
-            {
+        try {
             n2++;
             assert;
-            }
-        catch (Exception e)
-            {
-            }
+        } catch (Exception e) {}
 
         // Byte == UInt8
         Byte un1 = Byte.MaxValue.toUInt8().toUnchecked();
@@ -100,10 +88,9 @@ module TestNumbers
         assert un4 == Int8.MinValue;
 
         assert un4.is(@Unchecked Int8);
-        }
+    }
 
-    void testInt128()
-        {
+    void testInt128() {
         console.print("\n** testInt128()");
 
         Int128 n1 = 42;
@@ -129,18 +116,13 @@ module TestNumbers
         console.print("d4=" + d4);
         console.print("n4=" + (d4*1000 + n4 % 1000));
 
-        try
-            {
+        try {
             n2++;
             assert;
-            }
-        catch (Exception e)
-            {
-            }
-        }
+        } catch (Exception e) {}
+    }
 
-    void testUInt128()
-        {
+    void testUInt128() {
         console.print("\n** testUInt128()");
 
         UInt128 n1 = 42;
@@ -155,18 +137,13 @@ module TestNumbers
         console.print("d3=" + d3);
         console.print("n3=" + (d3*1000 + n2 % 1000));
 
-        try
-            {
+        try {
             n2++;
             assert;
-            }
-        catch (Exception e)
-            {
-            }
-        }
+        } catch (Exception e) {}
+    }
 
-    void testFloat64()
-        {
+    void testFloat64() {
         console.print("\n** testFloat64()");
 
         Float64 n1 = 4.2;
@@ -198,14 +175,12 @@ module TestNumbers
         console.print();
         console.print("value\tround\tfloor\tceil\ttoZero");
         console.print("-----\t-----\t-----\t----\t-----");
-        for (Float64 f : floats)
-            {
+        for (Float64 f : floats) {
             console.print($"{f},\t{f.round()},\t{f.floor()},\t{f.ceil()},\t{f.round(TowardZero)}");
-            }
         }
+    }
 
-    void testFloat32()
-        {
+    void testFloat32() {
         console.print("\n** testFloat32()");
 
         Float32 n1 = 4.2;
@@ -221,10 +196,9 @@ module TestNumbers
 
         Float32 pi32 = FPNumber.PI;
         console.print("pi32=" + pi32);
-        }
+    }
 
-    void testFloat16()
-        {
+    void testFloat16() {
         console.print("\n** testFloat16()");
 
         Float16 n1 = 4.2;
@@ -240,10 +214,9 @@ module TestNumbers
 
         Float16 pi16 = FPNumber.PI;
         console.print("pi16=" + pi16);
-        }
+    }
 
-    void testDec64()
-        {
+    void testDec64() {
         console.print("\n** testDec64()");
 
         Dec64 n1 = 4.2;
@@ -275,23 +248,19 @@ module TestNumbers
         console.print();
         console.print("value\tround\tfloor\tceil\ttoZero");
         console.print("-----\t-----\t-----\t----\t-----");
-        for (Dec64 d : numbers)
-            {
+        for (Dec64 d : numbers) {
             console.print($"{d},\t{d.round()},\t{d.floor()},\t{d.ceil()},\t{d.round(TowardZero)}");
-            }
         }
+    }
 
-    void testInfinity()
-        {
+    void testInfinity() {
         console.print("\n** testInfinity()");
 
         Float64 f = -123456789.987654321;
         Dec64   d = f.toDec64();
-        while (True)
-            {
+        while (True) {
             console.print($"f={f} d={d}");
-            if (f.infinity)
-                {
+            if (f.infinity) {
                 console.print($"++: {f + f)}\t{d + d}");
                 console.print($"--: {f - f)}\t{d - d}");
                 console.print($"**: {f * f)}\t{d * d}");
@@ -302,16 +271,15 @@ module TestNumbers
 
                 console.print($"ln: {f.log()}\t{d.log()}");
                 break;
-                }
+            }
 
             d = f.toDec64();
             f = -f*f;
             d = -d*d;
-            }
         }
+    }
 
-    void testConverter()
-        {
+    void testConverter() {
         function Byte(Int) convert = Number.converterFor(Int, Byte);
 
         assert convert(3) == Byte:3;
@@ -346,12 +314,11 @@ module TestNumbers
 
         bytes[0] = 255;
         assert bytes.asInt8Array()[0] == -1;
-        }
+    }
 
     package agg import aggregate.xtclang.org;
 
-    void testAggregator()
-        {
+    void testAggregator() {
         import agg.*;
 
         console.print("\n** testAggregator()");
@@ -380,104 +347,85 @@ module TestNumbers
         val finishMMx = mmx.finalAggregator.init();
         Int remainMMx = partitions.size;
 
-        Loop: for (Partition partition : partitions)
-            {
+        Loop: for (Partition partition : partitions) {
             @Future sum.Partial pendingSum = partition.exec(sum);
             @Future avg.Partial pendingAvg = partition.exec(avg);
             @Future min.Partial pendingMin = partition.exec(min);
             @Future max.Partial pendingMax = partition.exec(max);
             @Future mmx.Partial pendingMMx = partition.exec(mmx);
 
-            &pendingSum.handle(e ->
-                    {
+            &pendingSum.handle(e -> {
                     console.print($"exception during partition {partition.id} processing: {e}");
                     return 0;
-                    })
-                .passTo(partial ->
-                    {
+            })
+                .passTo(partial -> {
                     finishSum.add(partial);
-                    if (--remainSum <= 0)
-                        {
+                    if (--remainSum <= 0) {
                         console.print($"sum result={sum.finalAggregator.reduce(finishSum)}");
-                        }
-                    });
+                }
+            });
 
-            &pendingAvg.handle(e ->
-                    {
+            &pendingAvg.handle(e -> {
                     console.print($"exception during partition {partition.id} processing: {e}");
                     return avg.elementAggregator.reduce(avg.elementAggregator.init());
-                    })
-                .passTo(partial ->
-                    {
+            })
+                .passTo(partial -> {
                     finishAvg.add(partial);
-                    if (--remainAvg <= 0)
-                        {
+                    if (--remainAvg <= 0) {
                         console.print($"avg result={avg.finalAggregator.reduce(finishAvg)}");
-                        }
-                    });
+                }
+            });
 
-            &pendingMin.handle(e ->
-                    {
+            &pendingMin.handle(e -> {
                     console.print($"exception during partition {partition.id} processing: {e}");
                     return min.elementAggregator.reduce(min.elementAggregator.init());
-                    })
-                .passTo(partial ->
-                    {
+            })
+                .passTo(partial -> {
                     finishMin.add(partial);
-                    if (--remainMin <= 0)
-                        {
+                    if (--remainMin <= 0) {
                         console.print($"min result={min.finalAggregator.reduce(finishMin)}");
-                        }
-                    });
+                }
+            });
 
-            &pendingMax.handle(e ->
-                    {
+            &pendingMax.handle(e -> {
                     console.print($"exception during partition {partition.id} processing: {e}");
                     return max.elementAggregator.reduce(max.elementAggregator.init());
-                    })
-                .passTo(partial ->
-                    {
+            })
+                .passTo(partial -> {
                     finishMax.add(partial);
-                    if (--remainMax <= 0)
-                        {
+                    if (--remainMax <= 0) {
                         console.print($"max result={max.finalAggregator.reduce(finishMax)}");
-                        }
-                    });
+                }
+            });
 
-            &pendingMMx.handle(e ->
-                    {
+            &pendingMMx.handle(e -> {
                     console.print($"exception during partition {partition.id} processing: {e}");
                     return mmx.elementAggregator.reduce(mmx.elementAggregator.init());
-                    })
-                .passTo(partial ->
-                    {
+            })
+                .passTo(partial -> {
                     finishMMx.add(partial);
-                    if (--remainMMx <= 0)
-                        {
+                    if (--remainMMx <= 0) {
                         console.print($"min/max result={mmx.finalAggregator.reduce(finishMMx)}");
-                        }
-                    });
-            }
+                }
+            });
         }
+    }
 
-    service Partition(Int id)
-        {
+    service Partition(Int id) {
         import ecstasy.collections.ParallelAggregator;
 
-        construct(Int id)
-            {
+        construct(Int id) {
             this.id = id;
 
             Random rnd = new ecstasy.numbers.PseudoRandom(id.toUInt64()+1);
             data = new Int[10](_ -> rnd.int(0..100));
-            }
+        }
 
         public/private Int id;
         public/private Int[] data;
 
-        <Partial> Partial exec(ParallelAggregator<Int, Partial> parallel)
-            {
+        <Partial> Partial exec(ParallelAggregator<Int, Partial> parallel) {
             return data.reduce(parallel.elementAggregator);
-            }
         }
     }
+}

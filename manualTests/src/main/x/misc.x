@@ -1,9 +1,7 @@
-module TestMisc
-    {
+module TestMisc {
     @Inject Console console;
 
-    void run()
-        {
+    void run() {
         console.print("hello world!");
 
         testBools();
@@ -40,10 +38,9 @@ module TestMisc
         testSideEffects();
 
         countdown();
-        }
+    }
 
-    void testInts()
-        {
+    void testInts() {
         console.print("\n** testInts()");
 
         Int a0 = -1217;
@@ -74,10 +71,9 @@ module TestMisc
         console.print("a   = " + a);
         console.print("--a = " + --a);
         console.print("a   = " + a);
-        }
+    }
 
-    void testBools()
-        {
+    void testBools() {
         console.print("\n** testBools()");
 
         console.print("!True=" + !True);
@@ -91,34 +87,30 @@ module TestMisc
         console.print("!b=" + !b);
         console.print("~a=" + ~a);
         console.print("~b=" + ~b);
-        }
+    }
 
-    void testChars()
-        {
+    void testChars() {
         console.print("\n** testChars()");
 
         Char[] chars = "1aA!\n$£€".toCharArray();
-        for (Char ch : chars)
-            {
+        for (Char ch : chars) {
             String dec = "";
-            if (Int value := ch.decimalValue())
-                {
+            if (Int value := ch.decimalValue()) {
                 dec = $"\'{value}\'";
-                }
+            }
 
             console.print($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
                              | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
                              | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
                              );
-            }
+        }
 
         // this also tests the conditional UInt8 to Int conversion
         assert Int n := chars[0].asciiDigit(), n == 1;
         assert !chars[1].asciiDigit();
-        }
+    }
 
-    void testCast()
-        {
+    void testCast() {
         console.print("\n** testCast()");
 
         Int    i = 42;
@@ -130,18 +122,14 @@ module TestMisc
         Object o2 = Int:4;
         console.print("o2=" + o2);
 
-        try
-            {
+        try {
             console.print("i.as(String) should throw " + i.as(String));
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             console.print("i.as(String) failed correctly: \"" + e.text + '"');
-            }
         }
+    }
 
-    void testTernary()
-        {
+    void testTernary() {
         console.print("\n** testTernary()");
 
         Int i = 42;
@@ -150,19 +138,17 @@ module TestMisc
 
         console.print("i>40?greater:not -> " + (i > 40 ? "greater" : "not greater"));
         console.print("i%2==0?even:odd  -> " + (i % 2 == 0 ? "even" : "odd"));
-        }
+    }
 
-    void testSpaceship()
-        {
+    void testSpaceship() {
         console.print("\n** testSpaceship()");
 
         Int a = 42;
         Int b = 45;
         console.print("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
-        }
+    }
 
-    void testElvis()
-        {
+    void testElvis() {
         console.print("\n** testElvis()");
 
         Int a = 42;
@@ -172,17 +158,15 @@ module TestMisc
         Int? c = a;
         console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
 
-        static Int? trustMeItMightNotBeNull()
-            {
+        static Int? trustMeItMightNotBeNull() {
             return Null;
-            }
+        }
 
         c = trustMeItMightNotBeNull();
         console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
-        }
+    }
 
-    void testElseExpr()
-        {
+    void testElseExpr() {
         console.print("\n** testElseExpr()");
 
         IntLiteral? a = Null;
@@ -198,10 +182,9 @@ module TestMisc
         // [18] :else1: MOV #1, #2                                      // else: move int to int (ok!)
         // [19] :end1: GP_ADD this:stack, #2, this:stack                // all done; do some string concat (ok!)
 
-        if (b==7)
-            {
+        if (b==7) {
             a = 4;
-            }
+        }
         console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
         // [28] VAR #-238, ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
         // [29] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)
@@ -215,57 +198,49 @@ module TestMisc
         //
         // Line [33] generates:
         //      Suspicious assignment from: ecstasy:Int64 to: ecstasy:Nullable | ecstasy:IntLiteral
-        }
+    }
 
-    void testLoop()
-        {
+    void testLoop() {
         console.print("\n** testLoop()");
 
         Int i = 10;
-        while (i > 0)
-            {
+        while (i > 0) {
             console.print(i--);
-            }
-        console.print("We Have Lift-Off!!!");
         }
+        console.print("We Have Lift-Off!!!");
+    }
 
-    void testSwitchStmt(Int value=4)
-        {
+    void testSwitchStmt(Int value=4) {
         console.print("\n** testSwitchStmt()");
 
-        switch (value)
-            {
-            case 2, 3:
-                console.print("2 or 3");
-                break;
+        switch (value) {
+        case 2, 3:
+            console.print("2 or 3");
+            break;
 
-            case 4..5:
-                console.print("4");
-                if (value == 4)
-                    {
-                    continue;
-                    }
-                break;
-
-            case 7:
-                console.print("7");
-                break;
-
-            default:
-                console.print("other");
-                break;
+        case 4..5:
+            console.print("4");
+            if (value == 4) {
+                continue;
             }
-        }
+            break;
 
-    void testSwitchExpr()
-        {
+        case 7:
+            console.print("7");
+            break;
+
+        default:
+            console.print("other");
+            break;
+        }
+    }
+
+    void testSwitchExpr() {
         console.print("\n** testSwitchExpr()");
 
         Int i = 0;
-        while (i++ < 10)
-            {
-            console.print("result for " + i + "=" + switch (i)
-                {
+        while (i++ < 10) {
+            console.print("result for " + i + "=" + switch (i) {
                 // default: "other";
                 case 2, 3:
                 case 4:    "between 2 and 4";
@@ -274,53 +249,44 @@ module TestMisc
                 case 7: "sieben";
 
                 default: "other";
-                });
-            }
+            });
         }
+    }
 
-    void testSwitchExpr2()
-        {
+    void testSwitchExpr2() {
         console.print("\n** testSwitchExpr2()");
 
         Int i = 0;
-        while (i++ < 10)
-            {
-            console.print("result for " + i + "=" + switch ()
-                {
+        while (i++ < 10) {
+            console.print("result for " + i + "=" + switch () {
                 case i >= 2 && i <= 4: "between 2 and 4";
 
                 case i == 7: "sieben";
 
                 default: "other";
-                });
-            }
+            });
         }
+    }
 
-    void testSwitchExpr3()
-        {
+    void testSwitchExpr3() {
         console.print("\n** testSwitchExpr3()");
 
         Int i = 0;
-        while (++i < 6)
-            {
-            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3)
-                {
+        while (++i < 6) {
+            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3) {
                 case Lesser:  "less";
                 case Equal:   "same";
                 case Greater: "more";
-                });
-            }
+            });
         }
+    }
 
-    void testSwitchExpr4()
-        {
+    void testSwitchExpr4() {
         console.print("\n** testSwitchExpr4()");
 
         Int i = 0;
-        while (++i < 8)
-            {
-            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3, i)
-                {
+        while (++i < 8) {
+            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3, i) {
                 case (Lesser, 2):       "less #2";
                 case (Lesser, _):       "less";
                 case (Equal, 3):        "same #3";
@@ -329,12 +295,11 @@ module TestMisc
                 case (Greater, 4):      "more #4";
                 case (Greater, 2..6):   "more #2..6";
                 default:                "default";
-                });
-            }
+            });
         }
+    }
 
-    void testSwitchNatural()
-        {
+    void testSwitchNatural() {
         console.print("\n** testSwitchNatural()");
 
         assert test(new Point(0, 0)) == "min";
@@ -345,61 +310,50 @@ module TestMisc
         static Point MIN = new Point(0, 0);
         static Point MAX = new Point(4, 4);
 
-        static String test(Point p)
-            {
-            return switch (p)
-                {
+        static String test(Point p) {
+            return switch (p) {
                 case MIN: "min";
                 case MAX: "max";
                 default : MIN < p < MAX ? "between" : "outside";
-                };
-            }
+            };
         }
+    }
 
-    void testStmtExpr()
-        {
+    void testStmtExpr() {
         console.print("\n** testStmtExpr()");
         console.print("5+3=" + {return Int:5 + 3;});
-        }
+    }
 
-    void testAssertTrue()
-        {
+    void testAssertTrue() {
         console.print("\n** testAssertTrue()");
         assert True;
         console.print("(done)");
-        }
+    }
 
-    void testAssertTrueExpr()
-        {
+    void testAssertTrueExpr() {
         console.print("\n** testAssertTrueExpr()");
         assert True != False;
         console.print("(done)");
-        }
+    }
 
-    void testAssertFalseExpr()
-        {
+    void testAssertFalseExpr() {
         console.print("\n** testAssertFalseExpr()");
-        try
-            {
+        try {
             assert True == False;
-            }
-        catch (IllegalState e)
-            {
+        } catch (IllegalState e) {
             console.print("(done)");
-            }
         }
+    }
 
-    void testAssertDecl()
-        {
+    void testAssertDecl() {
         console.print("\n** testAssertDecl()");
         Int[] array = [1];
         Iterator<Int> iter = array.iterator();
         assert Int i := iter.next();
         console.print("i=" + i);
-        }
+    }
 
-    void testInterval()
-        {
+    void testInterval() {
         console.print("\n** testInterval()");
 
         Int a = 2;
@@ -409,10 +363,9 @@ module TestMisc
 
         Interval<Int> r = a+1..b+1;
         console.print("interval=" + r);
-        }
+    }
 
-    void testException()
-        {
+    void testException() {
         console.print("\n** testException()");
 
         Exception e = new Exception("test");
@@ -420,21 +373,18 @@ module TestMisc
 
         e = new IllegalArgument("test");
         console.print("e=" + e);
+    }
+
+    void testConditional() {
+        console.print("\n** testConditional()");
+        if (String s := checkPositive(17)) {
+            console.print($"should be positive: {s}");
         }
 
-    void testConditional()
-        {
-        console.print("\n** testConditional()");
-        if (String s := checkPositive(17))
-            {
-            console.print($"should be positive: {s}");
-            }
-
-        if (String s := checkPositive(-17))
-            {
+        if (String s := checkPositive(-17)) {
             console.print($"should be negative: {s} (but this cannot happen)");
             assert;
-            }
+        }
 
         String s = "negative";
         s := checkPositive(-99);
@@ -443,20 +393,16 @@ module TestMisc
         console.print($"99 => {s}");
 
         String? s2 = s;
-        if (String s3 ?= s2)
-            {
+        if (String s3 ?= s2) {
             console.print($"value is not Null: {s3}");
-            }
-        else
-            {
+        } else {
             console.print($"value is Null: {s2}");
             assert;
-            }
+        }
 
-        static String? foolCompiler(String s)
-            {
+        static String? foolCompiler(String s) {
             return s;
-            }
+        }
 
         s2 = foolCompiler(s2); // reintroduce possibility that s2 is Null
 
@@ -468,15 +414,13 @@ module TestMisc
 
         // this will not assert
         assert s2?.size>=0, True;
-        }
+    }
 
-    private conditional String checkPositive(Int i)
-        {
+    private conditional String checkPositive(Int i) {
         return i < 0 ? False : (True, "positive");
-        }
+    }
 
-    void testAssignOps()
-        {
+    void testAssignOps() {
         console.print("\n** testAssignOps()");
 
         Int? n = Null;
@@ -512,10 +456,9 @@ module TestMisc
         Boolean f6 = False;
         f6 ||= False;
         console.print("f6=" + f6 + " (should be False)");
-        }
+    }
 
-    void testBind()
-        {
+    void testBind() {
         console.print("\n** testBind()");
 
         foo(y="a", x=3);
@@ -537,19 +480,16 @@ module TestMisc
         function void (Int, Int) fn4 = &bar(3);
         fn4(2, 4);
 
-        private void foo(Int x = 0, String y = "")
-            {
+        private void foo(Int x = 0, String y = "") {
             console.print($"foo: x={x}, y={y}");
-            }
-
-        private void bar(Int x, Int y, Int z = 1)
-            {
-            console.print($"bar: x={x}, y={y}, z={z}");
-            }
         }
 
-    void testConstants()
-        {
+        private void bar(Int x, Int y, Int z = 1) {
+            console.print($"bar: x={x}, y={y}, z={z}");
+        }
+    }
+
+    void testConstants() {
         import ecstasy.collections.Hasher;
         import ecstasy.collections.NaturalHasher;
 
@@ -582,58 +522,49 @@ module TestMisc
         AnyValue foo = new AnyValue(1, "foo");
         AnyValue bar = new AnyValue(1, "bar");
         assert foo == bar;
-        }
+    }
 
-    const Point(Int x, Int y)
-        {
+    const Point(Int x, Int y) {
         @Lazy(() -> x*x + y*y) Int hypo;
-        }
+    }
 
     const NamedPoint(String name, Int x, Int y)
-            extends Point(2*y, x + 1)
-        {
+            extends Point(2*y, x + 1) {
         @Override
-        Int estimateStringLength()
-            {
+        Int estimateStringLength() {
             return super() + name.size;
-            }
+        }
 
         @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
+        Appender<Char> appendTo(Appender<Char> buf) {
             name.appendTo(buf.add('('));
             x.appendTo(buf.addAll(": x="));
             y.appendTo(buf.addAll(", y="));
             return buf.add(')');
-            }
         }
+    }
 
-    const AnyValue(Int key, String value)
-        {
+    const AnyValue(Int key, String value) {
         @Override
-        static <CompileType extends AnyValue> Boolean equals(CompileType value1, CompileType value2)
-            {
+        static <CompileType extends AnyValue> Boolean equals(CompileType value1, CompileType value2) {
             return value1.key == value2.key;
-            }
-
-        @Override
-        static <CompileType extends AnyValue> Ordered compare(CompileType value1, CompileType value2)
-            {
-            return value1.key <=> value2.key;
-            }
         }
 
-    void testImport()
-        {
+        @Override
+        static <CompileType extends AnyValue> Ordered compare(CompileType value1, CompileType value2) {
+            return value1.key <=> value2.key;
+        }
+    }
+
+    void testImport() {
         console.print("\n** testImport()");
 
         import Int as Q;
         Q x = 42;
         console.print("x=" + x);
-        }
+    }
 
-    void testRecursiveType()
-        {
+    void testRecursiveType() {
         console.print("\n** testRecursiveType()");
 
         typedef (Nullable | Int | List<Manifold>) as Manifold;
@@ -648,22 +579,18 @@ module TestMisc
 
         console.print(report(m3));
 
-        static String report(Manifold m)
-            {
-            if (m == Null)
-                {
+        static String report(Manifold m) {
+            if (m == Null) {
                 return "Null";
-                }
-            if (m.is(Int))
-                {
-                return "Integer";
-                }
-            return $"array of {report(m[0])}";
             }
+            if (m.is(Int)) {
+                return "Integer";
+            }
+            return $"array of {report(m[0])}";
         }
+    }
 
-    void testChild()
-        {
+    void testChild() {
         console.print("\n** testChild()");
 
         Order order = new Order("Order-17");
@@ -675,145 +602,133 @@ module TestMisc
         order = new EnhancedOrder("Order-18");
         line = order.addLine("item-6");
         console.print("line=" + line);
-        }
+    }
 
-    class Order(String id)
-        {
+    class Order(String id) {
         Int lineCount;
 
         @Override
-        String toString()
-            {
+        String toString() {
             return id;
-            }
+        }
 
-        OrderLine addLine(String descr)
-            {
+        OrderLine addLine(String descr) {
             return new OrderLine(++lineCount, descr);
-            }
+        }
 
-        class OrderLine(Int lineNumber, String descr)
-            {
+        class OrderLine(Int lineNumber, String descr) {
             @Override
-            String toString()
-                {
+            String toString() {
                 return this.Order.toString() + ": " + descr;
-                }
             }
         }
+    }
 
     class EnhancedOrder(String id)
-            extends Order(id)
-        {
+            extends Order(id) {
         @Override
-        class OrderLine(Int lineNumber, String descr)
-            {
+        class OrderLine(Int lineNumber, String descr) {
             @Override
-            String toString()
-                {
+            String toString() {
                 return this.EnhancedOrder.toString() +
                     ": " + lineNumber + ") " + descr;
-                }
             }
         }
+    }
 
-    void testSideEffects()
-        {
+    void testSideEffects() {
         console.print("** testSideEffects()");
 
         // tuple
-            {
+        {
             Int x = 3;
             function Int() fn = () -> (x, ++x)[0];
             assert fn() == 3 as "tuple side-effect";
-            }
+        }
 
         // invoke
-            {
+        {
             Int x = 3;
             function Int() fn = () -> x.minOf(++x);
             assert fn() == 3 as "invoke side-effect";
-            }
+        }
 
         // new
-            {
+        {
             static const Point(Int x, Int y);
 
             Int x = 3;
             function Int() fn = () -> (new Point(x, ++x)).x;
             assert fn() == 3 as "new side-effect";
-            }
+        }
 
         // cmp
-            {
+        {
             Int x = 3;
             function Boolean() fn = () -> (x < ++x);
             assert fn() as "cmp side-effect";
-            }
+        }
 
         // cmp2
-            {
+        {
             Int x = 3;
             function Boolean() fn = () -> (++x < ++x);
             assert fn() as "cmp2 side-effect";
-            }
+        }
 
         // cmp chain
-            {
+        {
             Int x = 3;
             function Boolean() fn = () -> x <= 3 < ++x;
             assert fn() as "cmpChain side-effect";
-            }
+        }
 
         // relOp
-            {
+        {
             Int x = 3;
             function Int() fn = () -> x + ++x;
             assert fn() == 7 as "relOp side-effect";
-            }
+        }
 
         // list
-            {
+        {
             Int x = 3;
             function Int() fn = () -> [x, ++x, ++x][0];
             assert fn() == 3 as "list side-effect";
-            }
+        }
 
         // map
-            {
+        {
             Int x = 3;
             function Int?() fn = () -> Map<String, Int>:["a"=x, "b"=++x, "c"=++x].getOrNull("a");
             assert fn() == 3 as "map side-effect";
-            }
+        }
 
         // unpack
-            {
+        {
             Int x = 3;
             function (Int, Int)() fn = () -> (x, ++x);
             assert fn() == 3 as "unpacked side-effect";
-            }
+        }
 
         // return
-            {
-            static (Int, Int) fn()
-                {
+        {
+            static (Int, Int) fn() {
                 function void (Int) log = (Int v) -> {};
 
                 @Watch(log) Int x = 3;
                 return x, x++;
-                }
+            }
             (Int x, Int y) = fn();
             assert x == 3 as "return side-effect";
-            }
-        }
-
-    void countdown()
-        {
-        console.print("Countdown!");
-        for (Int i : 10..1)
-            {
-            console.print($"{i} ...");
-            }
-        console.print("We have lift-off!");
         }
     }
+
+    void countdown() {
+        console.print("Countdown!");
+        for (Int i : 10..1) {
+            console.print($"{i} ...");
+        }
+        console.print("We have lift-off!");
+    }
+}

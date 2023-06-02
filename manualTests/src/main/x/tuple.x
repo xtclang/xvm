@@ -1,9 +1,7 @@
-module TestTuples
-    {
+module TestTuples {
     @Inject ecstasy.io.Console console;
 
-    void run()
-        {
+    void run() {
         console.print("Tuple tests:");
 
         testSimple();
@@ -12,18 +10,16 @@ module TestTuples
         testConstSlice();
         testMultiAssign();
         testMutability();
-        }
+    }
 
-    void testSimple()
-        {
+    void testSimple() {
         console.print("\n** testSimple()");
 
         Tuple<String, String, Int> t = ("hello", "world", 17);
         console.print($"t={t}");
-        for (Int i = 0; i < 3; ++i)
-            {
+        for (Int i = 0; i < 3; ++i) {
             console.print($"tuple[{i}]={t[i]}");
-            }
+        }
 
         String s0 = t[0];
         String s1 = t[1];
@@ -36,14 +32,12 @@ module TestTuples
         Tuple<String, Map<Int, String>> t3 = Tuple:(BYE, [4="now"]);
         assert t3 == t2;
 
-        private @Lazy String BYE.calc()
-            {
+        private @Lazy String BYE.calc() {
             return "goodbye";
-            }
         }
+    }
 
-    void testConv()
-        {
+    void testConv() {
         console.print("\n** testConv()");
 
         Tuple tv = getVoid();
@@ -61,28 +55,22 @@ module TestTuples
         // TODO: should the following compile?
         // Tuple<String, Int> tsiT2 = getTupleSI();
 
-        private static void getVoid()
-            {
-            }
+        private static void getVoid() {}
 
-        private static Int getInt()
-            {
+        private static Int getInt() {
             return 4;
-            }
-
-        private static (String, Int) getSI()
-            {
-            return "Hello", 4;
-            }
-
-        private static Tuple<String, IntLiteral> getTupleSI()
-            {
-            return ("Hello", 4);
-            }
         }
 
-    void testConstElement()
-        {
+        private static (String, Int) getSI() {
+            return "Hello", 4;
+        }
+
+        private static Tuple<String, IntLiteral> getTupleSI() {
+            return ("Hello", 4);
+        }
+    }
+
+    void testConstElement() {
         console.print("\n** testConstElement()");
 
         String blind = (3, "blind", "mice", "!") [1];
@@ -90,10 +78,9 @@ module TestTuples
 
         Int num = (3, "blind", "mice", "!") [0];
         console.print("tuple(0)=" + num);
-        }
+    }
 
-    void testConstSlice()
-        {
+    void testConstSlice() {
         console.print("\n** testConstSlice()");
 
         Tuple<Int, String> blind = (3, "blind", "mice", "!") [0..1];
@@ -101,17 +88,15 @@ module TestTuples
 
         Tuple<String, Int> blind2 = (3, "blind", "mice", "!") [1..0];
         console.print("tuple[1..0]=" + blind2);
-        }
+    }
 
-    void testMultiAssign()
-        {
+    void testMultiAssign() {
         console.print("\n** testMultiAssign()");
         (String s, Int i) = ("hello", 3);
         console.print("s=" + s + ", i=" + i);
-        }
+    }
 
-    void testMutability()
-        {
+    void testMutability() {
         console.print("\n** testMutability()");
 
         Tuple<Int, String, Char> t1 = (1, "big", '?');
@@ -132,5 +117,5 @@ module TestTuples
 
         Tuple t5 = Tuple:(1.toInt()).addAll(t4); // 1, "small", ?
         assert t5 == t2;
-        }
     }
+}

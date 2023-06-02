@@ -1,5 +1,4 @@
-module TestQueues
-    {
+module TestQueues {
     package collections import collections.xtclang.org;
 
     import collections.ArrayDeque;
@@ -7,21 +6,18 @@ module TestQueues
 
     @Inject ecstasy.io.Console console;
 
-    void run()
-        {
+    void run() {
         testSimple();
-        }
+    }
 
-    void testSimple()
-        {
+    void testSimple() {
         console.print("\n** testSimple()");
 
         ArrayDeque<String> deque = new ArrayDeque();
         deque.add("hello");
         deque.add("world");
-        while (String s := deque.next())
-            {
+        while (String s := deque.next()) {
             console.print("next()=" + s);
-            }
         }
     }
+}

@@ -12,16 +12,14 @@
  *            -keystore src/main/x/resources/test_store.p12 -storepass password
  *
  */
-module TestCrypto
-    {
+module TestCrypto {
     @Inject Console console;
 
     package crypto import crypto.xtclang.org;
 
     import crypto.*;
 
-    void run(String[] args = ["password"])
-        {
+    void run(String[] args = ["password"]) {
         File   store    = File:./resources/test_store.p12;
         String pairName = "test_pair";
         String symName  = "test_sym";
@@ -65,12 +63,10 @@ module TestCrypto
 
         PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.fill(new Byte[8]));
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
-        }
+    }
 
-    void testDecryptor(Algorithms algorithms, String name, CryptoKey key, String text)
-        {
-        if (Decryptor decryptor := algorithms.decryptorFor(name, key))
-            {
+    void testDecryptor(Algorithms algorithms, String name, CryptoKey key, String text) {
+        if (Decryptor decryptor := algorithms.decryptorFor(name, key)) {
             console.print($"*** {decryptor} for {key}");
 
             Byte[] bytes = decryptor.encrypt(text.utf8());
@@ -78,46 +74,36 @@ module TestCrypto
 
             Byte[] data = decryptor.decrypt(bytes);
             assert data.unpackUtf8() == text;
-            }
-        else
-            {
+        } else {
             console.print($"Cannot find decryptor for {name.quoted()} with {key}");
-            }
         }
+    }
 
-    void testHasher(Algorithms algorithms, String name, String text)
-        {
-        if (Signer hasher := algorithms.hasherFor(name))
-            {
+    void testHasher(Algorithms algorithms, String name, String text) {
+        if (Signer hasher := algorithms.hasherFor(name)) {
             console.print($"*** {hasher}");
 
             Signature hash = hasher.sign(text.utf8());
             console.print(hash.bytes.toHexDump());
 
             assert hasher.verify(hash, text.utf8());
-            }
-        else
-            {
+        } else {
             console.print($"Cannot find hasher for {name.quoted()}");
-            }
         }
+    }
 
-    void testSigner(Algorithms algorithms, String name, CryptoKey key, String text)
-        {
-        if (Signer signer := algorithms.signerFor(name, key))
-            {
+    void testSigner(Algorithms algorithms, String name, CryptoKey key, String text) {
+        if (Signer signer := algorithms.signerFor(name, key)) {
             console.print($"*** {signer}");
 
             Signature sig = signer.sign(text.utf8());
             console.print(sig.bytes.toHexDump());
 
             assert signer.verify(sig, text.utf8());
-            }
-        else
-            {
+        } else {
             console.print($"Cannot find signer for {name.quoted()}");
-            }
         }
+    }
 
     static String SMALL_TEXT =
             \|The RSA encryption is meant to be used only for small data chunks; \
@@ -125,4 +111,4 @@ module TestCrypto
              ;
 
     static String BIG_TEXT = $./crypto.x;
-    }
+}

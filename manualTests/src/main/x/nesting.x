@@ -1,110 +1,86 @@
-module TestNesting
-    {
+module TestNesting {
     @Inject ecstasy.io.Console console;
 
-    void run()
-        {
+    void run() {
         testSimple();
         testInsane();
-        }
+    }
 
-    void testSimple()
-        {
+    void testSimple() {
         console.print("\n** testSimple()");
         new BOuter().bar();
         new DOuter().bar();
         new BOuter().new InnerC().foo();
-        }
+    }
 
-    class BOuter
-        {
-        void bar()
-            {
+    class BOuter {
+        void bar() {
             new InnerC().foo();
-            }
+        }
 
-        class InnerC
-            {
-            void foo()
-                {
+        class InnerC {
+            void foo() {
                 console.print("inner foo of B; this=" + this);
-                }
             }
         }
+    }
 
     class DOuter
-            extends BOuter
-        {
+            extends BOuter {
         @Override
-        class InnerC
-            {
+        class InnerC {
             @Override
-            void foo()
-                {
+            void foo() {
                 console.print("inner foo of D; this=" + this);
-                }
             }
         }
+    }
 
-    void testInsane()
-        {
+    void testInsane() {
         console.print("\n** testInsane()");
         new PB().new C().foo();
         new DC().new P().new C().foo();
+    }
+
+    class PB {              // P is for "parent" and B is for Base
+        class A {            // A is for "abstract"
+            void foo() {
+                console.print("PB.A.foo() this=" + this);
+            }
         }
 
-    class PB                // P is for "parent" and B is for Base
-        {
-        class A             // A is for "abstract"
-            {
-            void foo()
-                {
-                console.print("PB.A.foo() this=" + this);
-                }
-            }
-
-        interface I
-            {
-            void foo()
-                {
+        interface I {
+            void foo() {
                 console.print("PB.I.foo() this=" + this);
-                }
             }
+        }
 
-        mixin M into A
-            {
+        mixin M into A {
             @Override
-            void foo()
-                {
+            void foo() {
                 console.print("PB.M.foo() this=" + this);
                 super();
-                }
-            }
-
-        @M
-        class C extends A implements I   // C is for "child"
-            {
-            @Override
-            void foo()
-                {
-                console.print("PB.C.foo() this=" + this);
-                super();
-                }
             }
         }
 
-    interface BI
-        {
-        class P extends PB
-            {
-            @Override class A
-                {
+        @M
+        class C extends A implements I {  // C is for "child"
+            @Override
+            void foo() {
+                console.print("PB.C.foo() this=" + this);
+                super();
+            }
+        }
+    }
+
+    interface BI {
+        class P extends PB {
+            @Override class A {
                 @Override
-                void foo()
-                    {
+                void foo() {
                     console.print("BI.P.A.foo() this=" + this);
-                    }
                 }
+            }
 
             // implied class A
             //     {
@@ -131,72 +107,58 @@ module TestNesting
             // 6) PB.A.foo()
             // 7) Object.foo() (doesn't exist)
             // 8) <default> I.foo()
-            }
         }
+    }
 
-    interface DI1 extends BI
-        {
+    interface DI1 extends BI {
         // implied class P
         //    {
         //    implied class C
         //        {
         //        }
         //    }
-        }
+    }
 
-    interface DI2 extends BI
-        {
-        @Override class P
-            {
+    interface DI2 extends BI {
+        @Override class P {
             // implied class C
             //     {
             //     }
-            }
         }
+    }
 
-    interface DI3 extends BI
-        {
-        @Override class P
-            {
-            @Override class C
-                {
-                }
-            }
+    interface DI3 extends BI {
+        @Override class P {
+            @Override class C {}
         }
+    }
 
-    class BC implements DI1
-        {
+    class BC implements DI1 {
         // implied class P
         //    {
         //    implied class C
         //        {
         //        }
         //    }
-        }
+    }
 
-    class DC extends BC
-        {
-        @Override class P
-            {
-            @Override class A
-                {
+    class DC extends BC {
+        @Override class P {
+            @Override class A {
                 @Override
-                void foo()
-                    {
+                void foo() {
                     console.print("DC.P.A.foo() this=" + this);
                     super();
-                    }
                 }
+            }
 
-            @Override class C // CANNOT SAY: extends BC.P.C
-                {
+            @Override class C { // CANNOT SAY: extends BC.P.C
                 @Override
-                void foo()
-                    {
+                void foo() {
                     console.print("DC.P.C.foo() this=" + this);
                     super();
-                    }
                 }
             }
         }
     }
+}
