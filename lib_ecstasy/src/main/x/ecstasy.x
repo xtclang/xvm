@@ -16,15 +16,13 @@
  *
  * @Copyright 2016-2022 xqiz.it
  */
-module ecstasy.xtclang.org
-    {
+module ecstasy.xtclang.org {
     /**
      * The `Nullable` type is the only type that can contain the value [Null].
      *
      * `Nullable` is an [Enumeration] whose only value is the singleton [Enum] value `Null`.
      */
-    enum Nullable
-        {
+    enum Nullable {
         Null;
 
         /**
@@ -36,22 +34,20 @@ module ecstasy.xtclang.org
          * @return `True` iff the value is not the `Null` value
          * @return (conditional) the `NotNullable` value
          */
-        static <NotNullable> conditional NotNullable notNull(NotNullable? value)
-            {
+        static <NotNullable> conditional NotNullable notNull(NotNullable? value) {
             return value == Null
                     ? False
                     : (True, value);
-            }
         }
+    }
 
     /**
      * The `Ordered` enumeration describes the result of comparing two items for the purpose of
      * ordering.
      */
-    enum Ordered(String symbol, Ordered reversed)
-        {
+    enum Ordered(String symbol, Ordered reversed) {
         Lesser("<", Greater), Equal("=", Equal), Greater(">", Lesser);
-        }
+    }
 
     /**
      * A `Deadlock` exception is raised by the runtime in response to a situation in which
@@ -148,8 +144,7 @@ module ecstasy.xtclang.org
      * The interface associated with objects that are automatically closed by the `using` and
      * `try`-with-resources blocks.
      */
-    interface Closeable
-        {
+    interface Closeable {
         /**
          * This method is invoked to mark the end of the use of an object. The object may release
          * its resources at this point, and may subsequently be cantankerous and/or unusable as a
@@ -158,7 +153,7 @@ module ecstasy.xtclang.org
          * @param e  (optional) an exception that occurred that triggered the call to `close()`
          */
         void close(Exception? cause = Null);
-        }
+    }
 
     /**
      * `Shareable` is a type that represents an object that can be passed across a service boundary,
@@ -173,4 +168,4 @@ module ecstasy.xtclang.org
      * 4. A _virtual child_ object of a `service` object.
      */
     typedef (service | immutable | Freezable) as Shareable;
-    }
+}
