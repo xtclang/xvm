@@ -11,11 +11,9 @@
  *
  *     xec HelloWorld
  */
-module HelloWorld
-    {
-    void run()
-        {
+module HelloWorld {
+    void run() {
         @Inject Console console;
         console.print("Hello, World!");
-        }
     }
+}

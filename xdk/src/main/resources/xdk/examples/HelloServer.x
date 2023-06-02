@@ -15,16 +15,14 @@
  *     http://localhost:8080/
  */
 @WebApp
-module HelloServer
-    {
+module HelloServer {
     package crypto import crypto.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
     import web.*;
 
-    void run()
-        {
+    void run() {
         import crypto.KeyStore;
         @Inject(opts=new KeyStore.Info(#./https.p12, "password")) KeyStore keystore;
         xenia.createServer(this, "localhost", keystore, httpPort=8080, httpsPort=8090);
@@ -40,12 +38,11 @@ module HelloServer
                        |
                        |Use Ctrl-C to stop.
                      );
-        }
+    }
 
     @WebService("/")
-    service SiteRoot
-        {
+    service SiteRoot {
         @Get
         String sayHello() = "Hello, World!";
-        }
     }
+}

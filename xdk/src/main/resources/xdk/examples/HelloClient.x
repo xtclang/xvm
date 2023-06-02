@@ -11,14 +11,12 @@
  *
  *     xec HelloClient
  */
-module HelloClient
-    {
+module HelloClient {
     package web import web.xtclang.org;
 
     @Inject Console console;
 
-    void run(String[] args=["http://localhost:8080"])
-        {
+    void run(String[] args=["http://localhost:8080"]) {
         @Inject web.Client client;
 
         String uri = args[0];
@@ -26,5 +24,5 @@ module HelloClient
 
         assert String result := client.get(uri).to(String) as $"Request to {uri.quoted()} failed";
         console.print($"The server returned: {result}");
-        }
     }
+}
