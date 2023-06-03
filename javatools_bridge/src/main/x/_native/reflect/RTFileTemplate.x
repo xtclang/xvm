@@ -66,7 +66,7 @@ class RTFileTemplate
             }
 
             assert ModuleTemplate unresolved := repository.getModule(nextName)
-                as $"Missing module {nextName}";
+                as $"Missing module {nextName.quoted()}";
 
             unresolvedModules += unresolved;
             moduleNamesTodo.addAll(unresolved.parent.as(FileTemplate).moduleNames);

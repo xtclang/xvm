@@ -31,7 +31,7 @@ interface ModuleRepository {
      * @throws Exception       if the module cannot be resolved
      */
     ModuleTemplate getResolvedModule(String name) {
-        assert ModuleTemplate template := getModule(name) as $"Missing module {name}";
+        assert ModuleTemplate template := getModule(name) as $"Missing module {name.quoted()}";
         return template.parent.resolve(this).mainModule;
     }
 
