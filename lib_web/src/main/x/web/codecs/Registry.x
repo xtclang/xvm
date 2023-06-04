@@ -46,6 +46,11 @@ service Registry {
     private Map<String, Map<Type, Format?>> derivedFormatsByType = new HashMap();
 
     /**
+     * The internal registry-by-type of `Format` objects.
+     */
+    private Map<Type, Format> formatsByType = new HashMap();
+
+    /**
      * The internal registry-by-from-and-to-type of the `Converter` objects.
      */
     // private Map<Converter.Key, Converter> converters = new HashMap();
@@ -267,7 +272,8 @@ service Registry {
      * @param format  the `Format` to register
      */
     void registerFormat(Format format) {
-        formatsByName.putIfAbsent(format.name, format);
+        formatsByName.putIfAbsent(format.name,  format);
+        formatsByType.putIfAbsent(format.Value, format);
 
         if (!Null.is(format.Value)) {
             registerFormat(new NullableFormat<format.Value>(format));
@@ -299,11 +305,27 @@ service Registry {
 
             if (Format<Value> newFormat := format.forType(type, this)) {
                 derivedFormats.put(type, newFormat);
+                formatsByType.putIfAbsent(type, format);
                 return True, newFormat;
             }
             derivedFormats.put(type, Null);
         }
 
+        return False;
+    }
+
+    /**
+     * Look up a `Format` by its `Value` type.
+     *
+     * @param type  the `Value` type for the `Format`
+     *
+     * @return `True` iff there exists a `Format` for the specified type
+     * @return (conditional) the `Format` for the specified type
+     */
+    <Value> conditional Format<Value> findFormatByType(Type<Value> type) {
+        if (Format format := formatsByType.get(type)) {
+            return True, format.as(Format<Value>);
+        }
         return False;
     }
 

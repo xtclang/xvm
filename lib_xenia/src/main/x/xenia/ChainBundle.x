@@ -340,12 +340,16 @@ service ChainBundle {
         }
 
         Format<type.DataType> format;
-        if (formatName != Null) {
-            if (!(format := registry.findFormat(formatName, type))) {
-                throw new IllegalState($"Unsupported format: {formatName.quoted} for type {type}");
+        if (formatName == Null) {
+            if (!(format := registry.findFormatByType(type))) {
+                throw new IllegalState($|Unsupported type: "{type}"
+                                      );
             }
         } else {
-            TODO // format ?:= registry.findFormatByType(type);
+            if (!(format := registry.findFormat(formatName, type))) {
+                throw new IllegalState($|Unsupported format: "{formatName}" for type "{type}"
+                                      );
+            }
         }
 
         if (value.is(String)) {
