@@ -488,6 +488,10 @@ public abstract class ClassTemplate
 
         if (typeProxy.isInterfaceType())
             {
+            if (typeProxy.containsGenericType(true))
+                {
+                typeProxy = typeProxy.resolveGenerics(frame.poolContext(), hTarget.getType());
+                }
             assert hTarget.getType().isA(typeProxy);
 
             ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
