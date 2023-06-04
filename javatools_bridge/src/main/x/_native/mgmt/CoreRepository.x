@@ -11,6 +11,11 @@ const CoreRepository
 
     @Override
     void storeModule(ModuleTemplate template) {
-        throw new UnsupportedOperation();
+        throw new ReadOnly();
+    }
+
+    @Override
+    String toString() {
+        return "CoreRepository";
     }
 }

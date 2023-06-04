@@ -70,6 +70,11 @@ class OSFileStore
     @Override
     @RO Int bytesFree;
 
+    @Override
+    String toString() {
+        return $"FileStore: {root}";
+    }
+
 
     // ----- internal ------------------------------------------------------------------------------
 
