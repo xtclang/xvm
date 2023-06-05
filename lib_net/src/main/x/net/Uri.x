@@ -1176,6 +1176,12 @@ const Uri
                 case '@':
                     atSign = offset;
                     ++atSigns;
+
+                    // it's legal for colons to appear in the user; the @ sign indicates the end of
+                    // the user info, and so all of those colons are ignored, because we're looking
+                    // for the colon(s) that come after the IPv6 address
+                    colon  = -1;
+                    colons = 0;
                     break;
 
                 case '[':
@@ -1210,7 +1216,8 @@ const Uri
 
             authority = text[start ..< offset];
 
-            // test if the authority appears to contain server info
+            // test if the authority appears to contain a "server" string, which can include user
+            // info, ip address, port, etc.
             if (error == Null && atSigns <= 1 && leftSquares <= 1 && rightSquares == leftSquares
                     && (leftSquares == 0 || rightSquare > leftSquare > atSign)
                     && colons <= 1 && (colons == 0 || colon > rightSquare && colon > atSign)) {
