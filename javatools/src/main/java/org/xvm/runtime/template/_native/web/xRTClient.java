@@ -70,14 +70,6 @@ public class xRTClient
         extends xService
     {
     public static xRTClient INSTANCE;
-    /**
-     * Global handler.
-     */
-    private static GlobalCookieHandler s_handlerGlobal;
-    /**
-     * Cached canonical type.
-     */
-    private TypeConstant m_typeCanonical;
 
     public xRTClient(Container container, ClassStructure structure, boolean fInstance)
         {
@@ -353,9 +345,6 @@ public class xRTClient
         return new CookieManager(null, CookiePolicy.ACCEPT_ALL);
         }
 
-
-    // ----- data fields and constants -------------------------------------------------------------
-
     /**
      * Global CookieHandler.
      */
@@ -422,4 +411,16 @@ public class xRTClient
             return "Client";
             }
         }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * Global handler.
+     */
+    private static GlobalCookieHandler s_handlerGlobal;
+    /**
+     * Cached canonical type.
+     */
+    private TypeConstant m_typeCanonical;
     }
