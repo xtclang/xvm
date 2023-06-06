@@ -7,5 +7,4 @@ import org.xvm.cc_explore.*;
  */
 public class CondCon extends NamedCon {
   public CondCon( FilePart X ) { super(X); throw XEC.TODO(); }
-  @Override public void resolve( CPool pool ) { throw XEC.TODO(); }  
 }
