@@ -2,13 +2,12 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
 import org.xvm.cc_explore.FilePart;
-import java.io.IOException;
 
 /**
   Exploring XEC Constants
  */
 public class MMethodCon extends NamedCon {
-  public MMethodCon( FilePart X ) throws IOException {
+  public MMethodCon( FilePart X ) {
     super(X);
   }
   @Override public void resolve( CPool pool ) { }  

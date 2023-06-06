@@ -6,7 +6,6 @@ import org.xvm.cc_explore.FilePart;
 /**
   Exploring XEC Constants
  */
-public class ClassCon extends NamedCon {
-  public ClassCon( FilePart X ) { super(X); }
-  @Override public void resolve( CPool pool ) { }  
+public class UnionTCon extends RelTCon {
+  public UnionTCon( FilePart X ) { super(X); }
 }

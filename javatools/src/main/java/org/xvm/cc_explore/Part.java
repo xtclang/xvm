@@ -2,7 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -29,7 +28,7 @@ abstract public class Part {
   // The actual buffer is in the FilePart at the Part root.
   int _lazy_off, _lazy_len;
   
-  Part( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) throws IOException {
+  Part( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
     _par = par;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
     assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
@@ -54,7 +53,7 @@ abstract public class Part {
     }
   }
 
-  void parseKids( FilePart X ) throws IOException {
+  void parseKids( FilePart X ) {
     int cnt = X.u31();
     for( int i=0; i<cnt; i++ ) {
       int n = X.u8();
@@ -113,7 +112,7 @@ abstract public class Part {
   public class Contrib {
     final Composition _comp;
     final TCon _tContrib;
-    protected Contrib( FilePart X) throws IOException  {
+    protected Contrib( FilePart X) {
       _comp = Composition.valueOf(X.u8());
       _tContrib = (TCon)X._pool.get(X.u31());
       assert _tContrib!=null;
@@ -170,7 +169,7 @@ abstract public class Part {
      * @param X      file parser support
      * @return the new component
      */
-    Part parse( Part par, Const con, int nFlags, CondCon cond, FilePart X ) throws IOException {
+    Part parse( Part par, Const con, int nFlags, CondCon cond, FilePart X ) {
       assert par!=null;
       return switch( this ) {
       case MODULE   -> new ModPart(par, nFlags, (ModCon) con, cond, X);
@@ -180,7 +179,7 @@ abstract public class Part {
       //case PROPERTY -> throw XEC.TODO(); // new PropertyComponent(par, nFlags, (PropCon) con, cond);
       //case MULTIMETHOD -> throw XEC.TODO(); //  new MMethodComponent(par, nFlags, (MMthodCon) con, cond);
       case METHOD   -> new MethodPart(par, nFlags, (MethodCon) con, cond, X);
-      default ->  throw new IOException("uninstantiable format: " + this);
+      default ->  throw new IllegalArgumentException("uninstantiable format: " + this);
       };
     }
 

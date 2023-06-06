@@ -2,7 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 
-import java.io.IOException;
 import java.util.HashMap;
 
 /**
@@ -11,14 +10,14 @@ import java.util.HashMap;
 class ClassPart extends Part {
   final HashMap<StringCon,TCon> _params; // String->Type mapping
   final LitCon _path;           // File name compiling this file
-  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) throws IOException {
+  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
     super(par,nFlags,id,cond,X);
     _params = parseTypeParams(X);
     _path = (LitCon)X._pool.get(X.u31());
   }
 
   // Helper method to read a collection of type parameters.
-  HashMap<StringCon, TCon> parseTypeParams(FilePart X) throws IOException {
+  HashMap<StringCon, TCon> parseTypeParams(FilePart X) {
     int c = X.u31();
     if( c <= 0 ) return null;
 

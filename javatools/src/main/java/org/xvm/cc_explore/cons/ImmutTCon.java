@@ -2,7 +2,6 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
 import org.xvm.cc_explore.FilePart;
-import java.io.IOException;
 
 /**
   Exploring XEC Constants
@@ -10,7 +9,7 @@ import java.io.IOException;
 public class ImmutTCon extends TCon {
   private transient int _tx;  // Type index for type
   TCon _icon;
-  public ImmutTCon( FilePart X ) throws IOException {
+  public ImmutTCon( FilePart X ) {
     _tx = X.u31();
   }
   @Override public void resolve( CPool pool ) {

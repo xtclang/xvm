@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
-import java.io.IOException;
 
 /**
   Exploring XEC Constants
@@ -12,7 +11,7 @@ public class AryCon extends Const {
   private transient int[] _txs; // Type index for each element
   private Const[] _cons;
   
-  public AryCon( FilePart X, Const.Format f ) throws IOException {
+  public AryCon( FilePart X, Const.Format f ) {
     _f = f;
     _tx  = X.u31();
     _txs = X.idxAry();
@@ -24,5 +23,4 @@ public class AryCon extends Const {
       _cons[i] = pool.get(_txs[i]);
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
-
 }
