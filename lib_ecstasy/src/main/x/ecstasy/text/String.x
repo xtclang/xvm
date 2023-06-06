@@ -944,6 +944,21 @@ const String
         }
     }
 
+    /**
+     * Remove quotes from this string, and return the unquoted contents.
+     *
+     * @return `True` iff this string started and ended with double quotes
+     * @return (conditional) the contents of the quoted String
+     */
+    conditional String unquote() {
+        Int size = this.size;
+        if (size >= 2 && chars[0] == '"' && chars[size-1] == '"') {
+            return True, this[0 >..< size-1];
+        }
+
+        return False;
+    }
+
 
     // ----- Hashable functions --------------------------------------------------------------------
 

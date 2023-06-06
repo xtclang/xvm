@@ -1,5 +1,5 @@
-import codecs.Utf8Codec;
 import codecs.Base64Format;
+import codecs.Utf8Codec;
 
 import crypto.Signer;
 
@@ -320,7 +320,7 @@ service DigestAuthenticator(Realm realm)
 
         // realm name is optional, but it should match the name previously provided
         if (String realmName := props.get("realm")) {
-            if (realmName := unquote(realmName), realmName == realm.name) {
+            if (realmName := realmName.unquote(), realmName == realm.name) {
                 // realm name matches
             } else {
                 return False;
@@ -362,7 +362,7 @@ service DigestAuthenticator(Realm realm)
                 return False;
             }
 
-            if (!(userId := unquote(username))) {
+            if (!(userId := username.unquote())) {
                 return False;
             }
         } else if (username := props.get("username*")) {
@@ -380,13 +380,13 @@ service DigestAuthenticator(Realm realm)
 
         // a helper function to grab required header properties
         static conditional String require(Map<String, String> props, String name, Boolean? quoted) {
-            if (String val := props.get(name)) {
+            if (String value := props.get(name)) {
                 return quoted?
-                        ? unquote(val)
-                        : (True, val);
+                        ? value.unquote()
+                        : (True, value);
 
-                val := unquote(val);
-                return True, val;
+                value := value.unquote();
+                return True, value;
             }
             return False;
         }
@@ -453,22 +453,6 @@ service DigestAuthenticator(Realm realm)
         responseHash = hash.freeze(inPlace=True);
 
         return True, userId, responseHash, hasher, opaque, nonce, uri, cnonce, ncHex, nc;
-    }
-
-    /**
-     * Remove the required quotes from a String, and return the contents
-     *
-     * @param s  a String that must be quoted with double quotes
-     *
-     * @return `True` iff the passed String started and ended with double quotes
-     * @return (conditional) the contents of the passed quoted String
-     */
-    static conditional String unquote(String s) {
-        if (s.size >= 2 && s.startsWith('"') && s.endsWith('"')) {
-            return True, s[0 >..< s.size-1];
-        }
-
-        return False;
     }
 
     /**

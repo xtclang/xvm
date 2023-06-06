@@ -1,5 +1,5 @@
-import codecs.Utf8Codec;
 import codecs.Base64Format;
+import codecs.Utf8Codec;
 
 import responses.SimpleResponse;
 
