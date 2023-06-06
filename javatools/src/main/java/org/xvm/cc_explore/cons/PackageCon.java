@@ -10,5 +10,4 @@ public class PackageCon extends NamedCon {
   public PackageCon( FilePart X ) {
     super(X);
   }
-  @Override public void resolve( CPool pool ) { }  
 }

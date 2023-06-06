@@ -8,5 +8,4 @@ import org.xvm.cc_explore.FilePart;
  */
 public class ClassCon extends NamedCon {
   public ClassCon( FilePart X ) { super(X); }
-  @Override public void resolve( CPool pool ) { }  
 }

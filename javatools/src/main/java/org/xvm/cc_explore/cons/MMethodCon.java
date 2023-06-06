@@ -10,5 +10,4 @@ public class MMethodCon extends NamedCon {
   public MMethodCon( FilePart X ) {
     super(X);
   }
-  @Override public void resolve( CPool pool ) { }  
 }
