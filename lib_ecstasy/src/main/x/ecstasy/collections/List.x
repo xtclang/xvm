@@ -245,6 +245,33 @@ interface List<Element>
     }
 
     /**
+     * Search the list using the supplied function.
+     *
+     * @param match    the match function to use
+     * @param startAt  the first index to search from (optional)
+     *
+     * @return True iff a match was found
+     * @return the index at which the specified value was found
+     */
+    conditional Int indexOf(function Boolean(Element) match, Int startAt = 0) {
+        if (indexed, Int size := knownSize()) {
+            for (Int i = startAt.notLessThan(0); i < size; ++i) {
+                if (match(this[i])) {
+                    return True, i;
+                }
+            }
+            return False;
+        }
+
+        Loop: for (Element e : iterator()) {
+            if (Loop.count >= startAt && match(e)) {
+                return True, Loop.count;
+            }
+        }
+        return False;
+    }
+
+    /**
      * Determine if `this` list _contains_ `that` list, and at what index `that` list
      * first occurs.
      *
@@ -313,6 +340,39 @@ interface List<Element>
                 break;
             }
             if (e == value) {
+                last = Loop.count;
+            }
+        }
+        return last >= 0
+                ? (True, last)
+                : False;
+    }
+
+    /**
+     * Search backwards the list using the supplied function.
+     *
+     * @param match    the match function to use
+     * @param startAt  (optional) the index to start searching backwards from
+     *
+     * @return True iff a match was found
+     * @return the index at which the specified value was found
+     */
+    conditional Int lastIndexOf(function Boolean(Element) match, Int startAt = 0) {
+        if (indexed) {
+            for (Int i = startAt.notGreaterThan(size-1); i >= 0; --i) {
+                if (match(this[i])) {
+                    return True, i;
+                }
+            }
+            return False;
+        }
+
+        Int last = -1;
+        Loop: for (Element e : iterator()) {
+            if (Loop.count > startAt) {
+                break;
+            }
+            if (match(e)) {
                 last = Loop.count;
             }
         }
