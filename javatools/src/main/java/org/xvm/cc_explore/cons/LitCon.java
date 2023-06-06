@@ -15,8 +15,6 @@ public class LitCon extends Const {
     _x = X.u31();
   }
 
-  @Override public void resolve( CPool pool ) {
-    _str = (StringCon)pool.get(_x);
-  }
+  @Override public void resolve( CPool pool ) { _str = (StringCon)pool.get(_x); }
 
 }

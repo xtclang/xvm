@@ -14,7 +14,5 @@ public class SingleCon extends Const {
     _f = f;
     _x = X.u31();
   }
-  @Override public void resolve( CPool pool ) {
-    _clz = (IdCon)pool.get(_x);
-  }
+  @Override public void resolve( CPool pool ) { _clz = (IdCon)pool.get(_x); }
 }
