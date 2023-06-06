@@ -13,5 +13,4 @@ public class TParmCon extends FormalCon {
     super(X);
     _reg = X.u31();
   }
-  @Override public void resolve( CPool pool ) { }  
 }
