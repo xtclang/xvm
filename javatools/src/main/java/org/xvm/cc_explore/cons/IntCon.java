@@ -12,7 +12,7 @@ public class IntCon extends Const {
     _f = f;
     _x = X.pack64();        // TODO: larger numbers need more support here
     
-    int c = switch( f ) {
+    int c = switch( f ) {   // Size in bytes of int constant
     case Int -> 16;
     default -> throw XEC.TODO();
     };

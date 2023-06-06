@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
-import java.io.IOException;
 
 /**
   Exploring XEC Constants
@@ -10,7 +9,7 @@ public class MatchAnyCon extends Const {
   final Format _f;
   private transient int _tx;    // Type index for later
   private Const _con;
-  public MatchAnyCon( FilePart X, Const.Format f ) throws IOException {
+  public MatchAnyCon( FilePart X, Const.Format f ) {
     _f = f;
     _tx = X.u31();
   }  
