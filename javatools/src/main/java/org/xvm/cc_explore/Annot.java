@@ -2,7 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.cons.ClassCon;
-import java.io.IOException;
 
 /**
   Exploring XEC Constants
@@ -12,7 +11,7 @@ public class Annot extends Const {
   private transient int[] _parmxs; // Type index for each parameter
   ClassCon _clz;
   Const[] _cons;
-  Annot( FilePart X ) throws IOException {
+  Annot( FilePart X ) {
     _clzx = X.u31();
     _parmxs = X.idxAry();
   }

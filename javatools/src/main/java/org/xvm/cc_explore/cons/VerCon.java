@@ -1,14 +1,13 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
-import java.io.IOException;
 
 /**
  * Represent a version number.
  */
 public class VerCon extends LitCon {
   private Version _ver;
-  public VerCon( FilePart X, Format format  ) throws IOException {
+  public VerCon( FilePart X, Format format  ) {
     super(X, format);
   }
 

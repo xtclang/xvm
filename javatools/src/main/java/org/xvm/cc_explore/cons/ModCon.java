@@ -2,7 +2,6 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
 import org.xvm.cc_explore.FilePart;
-import java.io.IOException;
 
 /**
   Exploring XEC Constants
@@ -10,7 +9,7 @@ import java.io.IOException;
 public class ModCon extends IdCon {
   private transient int _tx;    // index for module string name
   private StringCon _str;
-  public ModCon( FilePart X ) throws IOException {
+  public ModCon( FilePart X ) {
     _tx = X.u31();
   }
   @Override public void resolve( CPool pool ) { _str = (StringCon)pool.get(_tx); }
