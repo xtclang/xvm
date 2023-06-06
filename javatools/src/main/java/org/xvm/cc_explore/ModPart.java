@@ -3,7 +3,6 @@ package org.xvm.cc_explore;
 import org.xvm.cc_explore.cons.*;
 
 import java.util.ArrayList;
-import java.io.IOException;
 
 /**
    Module component
@@ -16,7 +15,7 @@ class ModPart extends ClassPart {
   public final VerTree _allowedVers;
   public final ArrayList<Version> _prefers;
   
-  ModPart( Part par, int nFlags, ModCon con, CondCon cond, FilePart X ) throws IOException {
+  ModPart( Part par, int nFlags, ModCon con, CondCon cond, FilePart X ) {
     super(par,nFlags,con,cond,X);
 
     _t = ModuleType.valueOf(X.u8());

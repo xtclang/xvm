@@ -3,16 +3,15 @@ package org.xvm.cc_explore.cons;
 import org.xvm.cc_explore.Annot;
 import org.xvm.cc_explore.CPool;
 import org.xvm.cc_explore.FilePart;
-import java.io.IOException;
 
 /**
   Exploring XEC Constants
  */
 public class AnnotTCon extends TCon {
-  private transient int _anox, _tx;  // Type index for annotation, type
+  private final transient int _anox, _tx;  // Type index for annotation, type
   Annot _an;
   TCon _con;
-  public AnnotTCon( FilePart X ) throws IOException {
+  public AnnotTCon( FilePart X ) {
     _anox = X.u31();
     _tx   = X.u31();
   }

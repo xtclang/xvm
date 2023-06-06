@@ -25,7 +25,7 @@ public class XEC {
     // Load whole XTC file into buf, then parse
     byte[] buf = Files.readAllBytes(Path.of(args[0]));
     FilePart file = new FilePart(buf);
-    
+    System.err.println("TODO: Loaded xfc fine, Execution continues");
     TODO();
   }
 

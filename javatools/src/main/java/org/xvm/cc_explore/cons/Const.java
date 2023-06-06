@@ -259,6 +259,10 @@ public abstract class Const {
     PRIVATE  ( Part.ACCESS_PRIVATE  );
 
     Access(int flags) { this.FLAGS = flags; }
+
+    public static Access valueOf(int i) { return VALUES[i]; }
+    private static final Access[] VALUES = Access.values();
+
     /**
      * The integer flags used to encode the access enum.
      * @see Part#ACCESS_MASK
