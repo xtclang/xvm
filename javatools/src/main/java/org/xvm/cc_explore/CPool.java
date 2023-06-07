@@ -46,6 +46,7 @@ public class CPool {
         case ParameterizedType -> new ParamTCon(X);
         case Property      -> new PropCon(X);
         case Range, RangeExclusive, RangeInclusive -> new RangeCon(X,f);
+        case Register      -> new RegCon(X);
         case Signature     -> new SigCon(X);
         case SingletonConst, SingletonService -> new SingleCon(X,f);
         case String        -> new StringCon(X);
@@ -55,6 +56,7 @@ public class CPool {
         case UInt8Array    -> new UInt8AryCon(X);
         case UnionType     -> new UnionTCon(X);
         case Version       -> new VerCon(X,f);
+        case VirtualChildType -> new VirtDepTCon(X);
         default -> {
           System.err.println("Format "+f);
           throw XEC.TODO();
