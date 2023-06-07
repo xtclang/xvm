@@ -3,6 +3,7 @@ package org.xvm.cc_explore;
 import org.xvm.cc_explore.cons.ModCon;
 import org.xvm.cc_explore.cons.Const;
 
+import java.io.UTFDataFormatException;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -190,11 +191,36 @@ public class FilePart extends Part {
     return txs;
   }
 
+  
+   private int utf8Byte() {
+     int n = u8();
+     if( (n & 0b11000000) != 0b10000000 )
+       throw new IllegalArgumentException("trailing unicode byte does not match 10xxxxxx");
+     return n & 0b00111111;
+   }
+
+  
   // Read a UTF8 char
-  int utf8Char() {
+  public int utf8Char() {
     int b = u8();
     if( (b&0x80)==0 ) return (char)b; // ASCII single byte
-    throw XEC.TODO();
+
+    // otherwise the format is based on the number of high-order 1-bits:
+    // #1s first byte  trailing  # trailing  bits  code-points
+    // --- ----------  --------  ----------  ----  -----------------------
+    //  2  110xxxxx    10xxxxxx      1        11   U+0080    - U+07FF
+    //  3  1110xxxx    10xxxxxx      2        16   U+0800    - U+FFFF
+    //  4  11110xxx    10xxxxxx      3        21   U+10000   - U+1FFFFF
+    //  5  111110xx    10xxxxxx      4        26   U+200000  - U+3FFFFFF
+    //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
+    return switch( Integer.highestOneBit( ~(0xFFFFFF00 | b) ) ) {
+    case 0b00100000 -> (b & 0b00011111) <<  6 | utf8Byte();
+    case 0b00010000 -> (b & 0b00001111) << 12 | utf8Byte() <<  6 | utf8Byte();
+    case 0b00001000 -> (b & 0b00000111) << 18 | utf8Byte() << 12 | utf8Byte() <<  6 | utf8Byte();
+    case 0b00000100 -> (b & 0b00000011) << 24 | utf8Byte() << 18 | utf8Byte() << 12 | utf8Byte() <<  6 | utf8Byte();
+    case 0b00000010 -> (b & 0b00000001) << 30 | utf8Byte() << 24 | utf8Byte() << 18 | utf8Byte() << 12 | utf8Byte() << 6 | utf8Byte();
+    default -> throw new IllegalArgumentException( "initial byte: " + Integer.toHexString( b ) );
+    };
   }
   
   // Read a UTF8 string
