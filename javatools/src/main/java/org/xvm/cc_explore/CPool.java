@@ -22,7 +22,8 @@ public class CPool {
         case Annotation    -> new Annot(X);
         case Any           -> new MatchAnyCon(X,f);
         case Array, Tuple  -> new AryCon(X,f);
-        case Bit, CInt8, Int8, CUInt8, UInt8 -> new ByteCon(X,f);
+        case Bit, CInt8, Int8, Nibble, CUInt8, UInt8 -> new ByteCon(X,f);
+        case Char          -> new CharCon(X);
         case Class         -> new ClassCon(X);
         case Date, Duration, FPLiteral, IntLiteral, Path, Time, TimeOfDay -> new LitCon(X,f);
         case Dec32         -> new Dec32Con(X);
@@ -34,8 +35,10 @@ public class CPool {
         case Float16       -> new Flt16Con(X);
         case Float32       -> new Flt32Con(X);
         case Float64       -> new Flt64Con(X);
+        case FormalTypeChild -> new FormalTChildCon(X);
         case ImmutableType -> new ImmutTCon(X);
-        case Int, UInt, CInt16,  Int16,  CInt32,  Int32,  CInt64,  Int64,  CInt128,  Int128,  CIntN,  IntN, CUInt16, UInt16, CUInt32, UInt32, CUInt64, UInt64, CUInt128, UInt128, CUIntN, UIntN -> new IntCon(X,f);
+        case Int, UInt, CInt16, Int16, CInt32, Int32, CInt64, Int64, CInt128, Int128, CIntN, IntN, CUInt16, UInt16, CUInt32, UInt32, CUInt64, UInt64, CUInt128, UInt128, CUIntN, UIntN -> new IntCon(X,f);
+        case IntersectionType -> new InterTCon(X);
         case Method        -> new MethodCon(X);
         case Module        -> new ModCon(X);
         case MultiMethod   -> new MMethodCon(X);
