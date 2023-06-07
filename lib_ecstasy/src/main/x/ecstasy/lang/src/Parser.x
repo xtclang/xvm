@@ -540,14 +540,12 @@ class Parser
     /**
      * Parse a function type expression.
      *
-     * <p/><code><pre>
-     * FunctionTypeExpression
-     *     "function" ReturnList FunctionTypeFinish
+     *     FunctionTypeExpression
+     *         "function" ReturnList FunctionTypeFinish
      *
-     * FunctionTypeFinish
-     *     Name ParameterTypeList
-     *     ParameterTypeList Name
-     * </pre></code>
+     *     FunctionTypeFinish
+     *         Name ParameterTypeList
+     *         ParameterTypeList Name
      *
      * @return a FunctionTypeExpression
      */
