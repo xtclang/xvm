@@ -6,7 +6,7 @@ import org.xvm.cc_explore.FilePart;
 /**
   Exploring XEC Constants
  */
-public class RelTCon extends TCon {
+public abstract class RelTCon extends TCon {
   private final transient int _t1x, _t2x;
   private TCon _con1, _con2;
   public RelTCon( FilePart X ) {
