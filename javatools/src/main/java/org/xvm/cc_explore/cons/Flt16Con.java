@@ -30,7 +30,7 @@ public class Flt16Con extends Const {
   
     // The range of the encoding's biased exponent E shall include:
     // - every integer between 1 and 2^w - 2, inclusive, to encode normal numbers
-    // - the reserved value 0 to encode ±0 and subnormal numbers
+    // - the reserved value 0 to encode 0 and subnormal numbers
     // - the reserved value 2w - 1 to encode +/-infinity and NaN
   
     // The representation r of the floating-point datum, and value v of the floating-point datum
