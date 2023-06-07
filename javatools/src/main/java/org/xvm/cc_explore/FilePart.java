@@ -3,6 +3,7 @@ package org.xvm.cc_explore;
 import org.xvm.cc_explore.cons.ModCon;
 import org.xvm.cc_explore.cons.Const;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 
 /**
@@ -94,10 +95,13 @@ public class FilePart extends Part {
 
   // ------------------------------------
   // File parser utilities
-  public boolean u1 () { return _buf[x++]!=0; } // boolean read
-  public int     u8 () { return _buf[x++]&0xFF; } // Unsigned byte read as an int
+  public boolean u1 () { return _buf[x++]!=0; }     // boolean read
+  public int     u8 () { return _buf[x++]&0xFF; }   // Unsigned byte  read as an int
+  public int     i8 () { return _buf[x++]; }        //   Signed byte  read as an int
   public int     u16() { return (u8()<<8) | u8(); } // Unsigned short read as an int
-  public int i32() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
+  public int     i32() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
+  public long    i64() { return (((long)i32())<<32) | ((long)(i32()) & 0xFFFFFFFFL); }
+  public void undo() { x--; }
   public long pack64() {
     // See org.xvm.util.PackedInteger;
       
@@ -105,7 +109,7 @@ public class FilePart extends Part {
     // encoded in one byte.  The least significant 7 bits of the value are
     // shifted left by 1 bit, and the 0x1 bit is set to 1.  When reading in a
     // packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.      
-    int b = _buf[x++];          // Signed byte read
+    int b = i8();               // Signed byte read
     // xxxxxxx1
     if( (b&1)!=0 ) return b>>1; // Tiny
     
@@ -131,8 +135,34 @@ public class FilePart extends Part {
       return x;
     }
 
-    // Huge format
+    // Huge format.  IntCon sizes this large use the isize/bigint API and so
+    // don't call here.  In other cases, its an error.
     throw XEC.TODO();
+  }
+
+  // Return the number of packed bytes in this integer, advances the cursor 1
+  // byte.  Returns -1 for a huge format, which requires another packed read to
+  // get the actual size.
+  public int isize() {
+    int b = i8();               // Signed byte read
+    // Tiny: xxxxxxx1
+    if( (b&1)!=0 ) return 1;    // Tiny; 1 byte
+
+    // Small/Medium: xxxxx?10
+    if( (b&2)!=0 ) return (b&4)==0 ? 2 : 3;
+
+    // Large format: 1-8 trailing bytes
+    if( (b&0xFF) != 0b11111100 ) return ((b&0xFC)>>>2)+2;
+
+    // Huge format
+    return -1;
+  }
+
+  // Read a BigInteger
+  public BigInteger bigint(int c) {
+    assert c > 8;               // Use the packed format for smaller stuff
+    if( c > 1024 ) throw new IllegalArgumentException("integer size of " + c + " bytes; maximum is 1024");
+    return new BigInteger(_buf,(x+=c)-c,c);
   }
 
   // Unsigned 31 bit, but might read from packed as larger.
