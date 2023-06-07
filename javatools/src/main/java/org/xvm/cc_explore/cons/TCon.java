@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.XEC;
-import java.util.Arrays;
 
 /**
   Exploring XEC Constants
