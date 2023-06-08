@@ -1097,7 +1097,7 @@ public abstract class AstNode
                 {
                 return fArgsComplete
                         ? chooseBest(setConvert, typeTarget, errs)
-                        : setIs.iterator().next();
+                        : setConvert.iterator().next();
                 }
             }
 
