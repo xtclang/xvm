@@ -18,9 +18,7 @@ public class AryCon extends Const {
   }
   @Override public void resolve( CPool pool ) {
     TCon t = (TCon)pool.get(_tx);
-    _cons = new Const[_txs.length];
-    for( int i=0; i<_txs.length; i++ )
-      _cons[i] = pool.get(_txs[i]);
+    _cons = resolveAry(pool,_txs);
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }

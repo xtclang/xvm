@@ -21,6 +21,14 @@ public abstract class Const {
    */
   public Const resolveTypedefs() { return this; }
 
+  // Resolve an array
+  static Const[] resolveAry( CPool pool, int[] xs) {
+    Const[] cs = new Const[xs.length];
+    for( int i=0; i<xs.length; i++ )
+      cs[i] = pool.get(xs[i]);
+    return cs;
+  }
+
   
   public enum Format {
     IntLiteral("numbers"),
