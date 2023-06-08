@@ -378,19 +378,6 @@ service DigestAuthenticator(Realm realm)
             return False;
         }
 
-        // a helper function to grab required header properties
-        static conditional String require(Map<String, String> props, String name, Boolean? quoted) {
-            if (String value := props.get(name)) {
-                return quoted?
-                        ? value.unquote()
-                        : (True, value);
-
-                value := value.unquote();
-                return True, value;
-            }
-            return False;
-        }
-
         // a few more required pieces of information from the header properties
         String algorithm;
         String response;
@@ -453,6 +440,29 @@ service DigestAuthenticator(Realm realm)
         responseHash = hash.freeze(inPlace=True);
 
         return True, userId, responseHash, hasher, opaque, nonce, uri, cnonce, ncHex, nc;
+    }
+
+    /**
+     * Helper function to grab required header properties.
+     *
+     * @param props   the map of properties
+     * @param name    the property name
+     * @param quoted  True if the value must be quoted; False if the value must be unquoted; Null
+     *                if the value may or may not be quoted
+     *
+     * @return `True` iff the corresponding value exists in the map and is quoted if necessary
+     * @return (conditional) the property value
+     */
+    static conditional String require(Map<String, String> props, String name, Boolean? quoted) {
+        if (String value := props.get(name)) {
+            return quoted?
+                    ? value.unquote()
+                    : (True, value);
+
+            value := value.unquote();
+            return True, value;
+        }
+        return False;
     }
 
     /**

@@ -49,9 +49,9 @@ const RestrictedClient(Client underlying)
     // ----- Client interface ----------------------------------------------------------------------
 
     @Override
-    ResponseIn send(RequestOut request) {
+    ResponseIn send(RequestOut request, PasswordCallback? callback = Null) {
         return allowed(request.uri)
-                ? underlying.send(request)
+                ? underlying.send(request, callback)
                 : new responses.SimpleResponse(Forbidden);
     }
 

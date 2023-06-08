@@ -20,7 +20,7 @@ interface Client {
      * @param protocols    the [Protocol]s that the new Client is allowed to use; if empty, no
      *                     restrictions are placed
      */
-    Client allow(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols) {
+    Client! allow(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols) {
         Client restricted = new RestrictedClient(this, Allow, hostPorts, protocols);
         return &restricted.maskAs(Client);
     }
@@ -34,7 +34,7 @@ interface Client {
      * @param protocols    the [Protocol]s that the new Client is disallowed to use; if empty, no
      *                     restrictions are placed
      */
-    Client deny(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols) {
+    Client! deny(HostPort|HostPort[] hostPorts, Protocol|Protocol[] protocols) {
         Client restricted = new RestrictedClient(this, Deny, hostPorts, protocols);
         return &restricted.maskAs(Client);
     }
@@ -42,7 +42,7 @@ interface Client {
     /**
      * Create a `Client` that restricts access to URIs "under" the specified [Uri].
      */
-    Client restrictTo(Uri baseUri) {
+    Client! restrictTo(Uri baseUri) {
         String   host = baseUri.host ?: assert as "host must be specified";
         UInt16   port = baseUri.port ?: 0;
 
@@ -160,13 +160,20 @@ interface Client {
     }
 
     /**
+     * Password callback used for authentication.
+     */
+    typedef function (String name, String password)(String) as PasswordCallback;
+
+    /**
      * Send a request.
      *
-     * @param request  the request to send
+     * @param request   the request to send
+     * @param callback  (optional) a function that provides used name and password if authentication
+     *                  is required
      *
      * @return the response
      *
      * TODO document failure modes (does it return a response? or throw?)
      */
-    ResponseIn send(RequestOut request);
+    ResponseIn send(RequestOut request, PasswordCallback? callback = Null);
 }

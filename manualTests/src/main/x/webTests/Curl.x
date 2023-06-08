@@ -19,15 +19,28 @@ module Curl {
             return;
         }
 
-        String method = args[0];
-        String uri    = args[1];
+        String methodName = args[0];
+        String uriString  = args[1];
 
         @Inject web.Client client;
 
-        ResponseIn response = switch (method.toUppercase()) {
-            case "GET": client.get(uri);
-            default   : TODO
-        };
+        HttpMethod method   = HttpMethod.of(methodName);
+        Uri        uri      = new Uri(uriString);
+        RequestOut request  = client.createRequest(method, uri);
+
+        Client.PasswordCallback callback = realm ->
+            {
+            console.print($"Realm: {realm}");
+            console.print("User name: ", suppressNewline=True);
+            String name = console.readLine();
+
+            console.print("Password: ", suppressNewline=True);
+            String password = console.readLine(suppressEcho = True);
+
+            return name, password;
+            };
+
+        ResponseIn response = client.send(request, callback);
 
         // process the response
         console.print(response);
