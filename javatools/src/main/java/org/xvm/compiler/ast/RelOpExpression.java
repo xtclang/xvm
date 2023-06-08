@@ -608,7 +608,7 @@ public class RelOpExpression
             SignatureConstant sig = idOp.getSignature();
             if (sig.containsAutoNarrowing(false))
                 {
-                sig = sig.removeAutoNarrowing();
+                sig = sig.resolveAutoNarrowing(pool(), typeRequired, null);
                 }
             atypeResults = sig.getRawReturns();
             cResults     = atypeResults.length;
@@ -707,11 +707,19 @@ public class RelOpExpression
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps)
                 {
-                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()
-                        && isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
+                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit())
                     {
-                    // TODO find best, not just the first
-                    return typeRequired;
+                    TypeConstant typeReturn = idMethod.getRawReturns()[0];
+                    if (typeReturn.containsAutoNarrowing(false))
+                        {
+                        typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+                        }
+
+                    if (isAssignable(ctx, typeReturn, typeRequired))
+                        {
+                        // TODO find best, not just the first
+                        return typeRequired;
+                        }
                     }
                 }
             }
@@ -725,11 +733,20 @@ public class RelOpExpression
                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps)
                         {
-                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()
-                                && isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
+                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit())
                             {
-                            // TODO find best, not just the first
-                            return typeParam;
+                            TypeConstant typeReturn = idMethod.getRawReturns()[0];
+                            if (typeReturn.containsAutoNarrowing(false))
+                                {
+                                typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
+                                                typeRequired, null);
+                                }
+
+                            if (isAssignable(ctx, typeReturn, typeRequired))
+                                {
+                                // TODO find best, not just the first
+                                return typeParam;
+                                }
                             }
                         }
                     }
@@ -763,10 +780,17 @@ public class RelOpExpression
                 getDefaultMethodName(), operator.getId().TEXT, 1);
         for (MethodConstant idMethod : setOps)
             {
-            if (typeRequired != null &&
-                    !isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
+            if (typeRequired != null)
                 {
-                continue;
+                TypeConstant typeReturn = idMethod.getRawReturns()[0];
+                if (typeReturn.containsAutoNarrowing(false))
+                    {
+                    typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+                    }
+                if (!isAssignable(ctx, typeReturn, typeRequired))
+                    {
+                    continue;
+                    }
                 }
 
             TypeConstant typeParam = idMethod.getRawParams()[0];
@@ -814,6 +838,11 @@ public class RelOpExpression
             // determine if this method satisfies the types (param and return)
             TypeConstant typeParam  = method.getRawParams()[0];
             TypeConstant typeReturn = method.getRawReturns()[0];
+            if (typeReturn.containsAutoNarrowing(false))
+                {
+                typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+                }
+
             if (type2.isAssignableTo(typeParam) &&
                     (typeRequired == null || typeReturn.isAssignableTo(typeRequired)))
                 {

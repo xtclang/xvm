@@ -527,7 +527,7 @@ public class ArrayAccessExpression
                     }
 
                 aIndexTypes = idGet.getRawParams();
-                typeResult  = idGet.getRawReturns()[0].removeAutoNarrowing();
+                typeResult  = idGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray, null);
                 m_idGet     = idGet;
                 }
             }
@@ -777,6 +777,11 @@ public class ArrayAccessExpression
         NextOp: for (MethodConstant idMethod : setAll)
             {
             SignatureConstant sig = idMethod.getSignature();
+            if (sig.containsAutoNarrowing(false))
+                {
+                sig = sig.resolveAutoNarrowing(pool(), typeTarget, null);
+                }
+
             if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
                     || !isAssignable(ctx, sig.getRawReturns()[0], typeReturn)))
                 {

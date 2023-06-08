@@ -808,13 +808,8 @@ public class TerminalTypeConstant
                     return typeCtx;
                     }
 
-                // strip the immutability and access modifiers
-                while (typeTarget instanceof ImmutableTypeConstant ||
-                       typeTarget instanceof AccessTypeConstant)
-                    {
-                    typeTarget = typeTarget.getUnderlyingType();
-                    }
-                return typeTarget;
+                // strip an access modifier
+                return typeTarget.removeAccess();
                 }
 
             case ParentClass:
