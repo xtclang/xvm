@@ -9,5 +9,4 @@ import org.xvm.cc_explore.FilePart;
 public class RegCon extends Const {
   private final int _reg;
   public RegCon( FilePart X ) { _reg = (int)X.pack64(); }
-  @Override public void resolve( CPool pool ) { }
 }

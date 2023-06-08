@@ -25,6 +25,5 @@ public class SigCon extends IdCon {
     for( int i=0; i<_parmxs.length; i++ )  _params[i] = (TCon)pool.get(_parmxs[i]);
     for( int i=0; i<_retxs .length; i++ )  _rets  [i] = (TCon)pool.get(_retxs [i]);
   }  
-  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
   @Override public String name() { throw XEC.TODO(); }  
 }

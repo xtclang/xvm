@@ -25,26 +25,26 @@ class ModPart extends ClassPart {
     if( isFingerprint() ) {
       _allowedVers = new VerTree();
       for( int i=0, len = X.u31(); i < len; i++ ) {
-        VerCon cVer = (VerCon) X._pool.get(X.u31());
+        VerCon cVer = (VerCon) X.xget();
         _allowedVers.put(cVer.ver(), X.u1());
       }
 
       _prefers = new ArrayList<>();
       for( int i=0, len=X.u31(); i < len; i++ ) {
-        VerCon cVer = (VerCon) X._pool.get(X.u31());
+        VerCon cVer = (VerCon) X.xget();
         Version ver = cVer.ver();
         if( !_prefers.contains(ver) ) // Duplicate filtering
           _prefers.add(ver);
       }
     } else {
       if( X.u1() )
-        version = (VerCon)X._pool.get(X.u31());
+        version = (VerCon)X.xget();
       _allowedVers = null;
       _prefers = null;
     }
     _version = version;
-    _dir  = (LitCon)X._pool.get(X.u31());
-    _time = (LitCon)X._pool.get(X.u31());
+    _dir  = (LitCon)X.xget();
+    _time = (LitCon)X.xget();
   }
 
   /**
