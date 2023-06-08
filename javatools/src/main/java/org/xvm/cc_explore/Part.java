@@ -47,7 +47,7 @@ abstract public class Part {
       int c = X.u31();
       _contribs = new ArrayList<>();
       for( int i=0; i<c; i++ )
-        _contribs.add(new Contrib(X));
+        _contribs.add( new Contrib( X ) );
     } else {
       _contribs = null;
     }
@@ -63,7 +63,7 @@ abstract public class Part {
         // the first byte of the two-byte FLAGS value (which is the start of
         // the body) for a single component
         n = (n << 8) | X.u8();
-        kid = Format.fromFlags(n).parse(this,X._pool.get(X.u31()), n, null, X);
+        kid = Format.fromFlags(n).parse(this,X.xget(), n, null, X);
       } else {
         kid = null;
         throw XEC.TODO();
@@ -109,13 +109,13 @@ abstract public class Part {
    * abstract sense, meaning any class, interface, mixin, const, enum, or service) can be composed
    * of any number of contributing components.
    */
-  public class Contrib {
+  public static class Contrib {
     final Composition _comp;
     final TCon _tContrib;
     final PropCon _prop;
     protected Contrib( FilePart X) {
       _comp = Composition.valueOf(X.u8());
-      _tContrib = (TCon)X._pool.get(X.u31());
+      _tContrib = (TCon)X.xget();
       PropCon prop = null;
       assert _tContrib!=null;
       switch( _comp ) {
@@ -125,7 +125,7 @@ abstract public class Part {
       case RebasesOnto:
         break;
       case Delegates:
-        prop = (PropCon)X._pool.get(X.u31());
+        prop = (PropCon)X.xget();
         break;
       default: throw XEC.TODO();
       }
@@ -161,7 +161,6 @@ abstract public class Part {
      * @param nFlags  the 2-byte component bit-flags value
      * @return the Format specified by the bit flags
      */
-    static final int FORMAT_MASK = 0x000F, FORMAT_SHIFT = 0;
     static Format fromFlags(int nFlags) {
       return valueOf((nFlags & FORMAT_MASK) >>> FORMAT_SHIFT);
     }
@@ -196,6 +195,8 @@ abstract public class Part {
      */
     public static Format valueOf(int i) { return FORMATS[i]; }
     private static final Format[] FORMATS = Format.values();
+
+    static final int FORMAT_MASK = 0x000F, FORMAT_SHIFT = 0;
   }
 
   // ----- enumeration: Component Composition ----------------------------------------------------

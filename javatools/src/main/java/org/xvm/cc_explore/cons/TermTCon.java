@@ -12,5 +12,4 @@ public class TermTCon extends TCon {
     _defx = X.u31();
   }
   @Override public void resolve( CPool pool ) { _id = pool.get(_defx); }
-  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }

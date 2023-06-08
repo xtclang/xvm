@@ -9,5 +9,4 @@ import java.math.BigInteger;
 public class CharCon extends Const {
   private final int _ch;
   public CharCon( FilePart X ) { _ch = X.utf8Char(); }
-  @Override public void resolve( CPool pool ) {}
 }

@@ -16,5 +16,4 @@ public class Flt8e4Con extends Const {
     default -> throw new UnsupportedOperationException("TODO implement non-zero E4M3 float values");
     };
   }
-  @Override public void resolve( CPool pool ) {} 
 }
