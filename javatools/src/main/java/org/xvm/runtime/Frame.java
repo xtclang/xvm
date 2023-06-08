@@ -1389,7 +1389,7 @@ public class Frame
         {
         Container container = f_context.f_container;
 
-        // if the ibjtection request comse from the native container (which is kind of a recursion
+        // if the injection request comes from the native container (which is kind of a recursion
         // anyway), there is absolutely no way to specify a module injector
         if (f_function != null && !(container instanceof NativeContainer))
             {
