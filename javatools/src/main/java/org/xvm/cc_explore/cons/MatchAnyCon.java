@@ -14,5 +14,4 @@ public class MatchAnyCon extends Const {
     _tx = X.u31();
   }  
   @Override public void resolve( CPool pool ) { _con = pool.get(_tx); }
-  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }

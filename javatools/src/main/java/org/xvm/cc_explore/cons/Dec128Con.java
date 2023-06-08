@@ -82,7 +82,6 @@ public class Dec128Con extends DecCon {
    * Test the passed high 64 bits of a 128-bit decimal to ensure that they are finite; if they are
    * not, throw an exception.
    * @param hi  the high 64 bits of a 128-bit IEEE-754-2008 decimal value
-   * @return the high 64 bits of a finite 128-bit IEEE-754-2008 decimal value
    * @throws NumberFormatException if the decimal is either a NaN or an Infinity value
    */
   private static void ensureFiniteHighBits(long hi) {

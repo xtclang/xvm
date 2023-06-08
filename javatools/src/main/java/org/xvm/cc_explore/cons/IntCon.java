@@ -69,5 +69,4 @@ public class IntCon extends Const {
   private IllegalArgumentException bad(int c) {
     return new IllegalArgumentException("value exceeds " + c + " bytes: " + (_big==null ? ""+_x : _big.toString()));
   }
-  @Override public void resolve( CPool pool ) {}
 }

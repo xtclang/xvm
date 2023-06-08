@@ -13,7 +13,6 @@ public class ByteCon extends Const {
     _f = f;
     _val = isSigned(f) ? X.i8() : X.u8();
   }
-  @Override public void resolve( CPool pool ) { }
 
   /**
    * Determine if the specified format is a signed format.
