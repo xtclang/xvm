@@ -100,8 +100,27 @@ abstract public class Part {
     return filec;
   }
 
+  // Part name
   String name() { return _id.name(); }
 
+  public Part child(String s) {
+    // there are five cases:
+    // 1) no child by that name - return null
+    // 2) one unconditional child by that name - return the child
+    // 3) a number of children by that name, but no conditions match - return null
+    // 4) a number of children by that name, one condition matches - return that child
+    // 5) a number of children by that name, multiple conditions match - return a composite child
+    
+    // most common result: no child by that name
+    Part kid = _name2kid.get(s);
+    if( kid == null ) return null;
+
+    // common result: exactly one non-conditional match
+    if( kid._sibling == null && kid._cond == null ) return kid;
+
+    throw XEC.TODO();
+  }
+  
   
   // ----- inner class: Component Contribution ---------------------------------------------------
   /**

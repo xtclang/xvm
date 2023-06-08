@@ -85,7 +85,8 @@ public class FilePart extends Part {
     parseKids(this);
   }
 
-
+  ModPart getMod() { return (ModPart)child(_modName); }
+  
   // Can we handle this version?
   static boolean isFileVersionSupported(int major, int minor) {
     return major==VERSION_MAJOR_CUR && minor==VERSION_MINOR_CUR;
