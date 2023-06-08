@@ -25,5 +25,4 @@ public class RangeCon extends Const {
     _lo = pool.get(_lox);
     _hi = pool.get(_hix);
   }
-  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }

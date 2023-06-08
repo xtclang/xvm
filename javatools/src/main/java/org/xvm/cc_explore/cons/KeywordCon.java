@@ -8,5 +8,4 @@ import org.xvm.cc_explore.*;
 public class KeywordCon extends PsuedoCon {
   private final Format _f;
   public KeywordCon( Format f ) { _f = f;  }
-  @Override public void resolve( CPool pool ) { }
 }

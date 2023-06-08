@@ -8,7 +8,7 @@ import org.xvm.cc_explore.Part;
  */
 public abstract class Const {
 
-  abstract public void resolve( CPool pool );
+  public void resolve( CPool pool ){};
 
   /**
    * Recurse through the constants that make up this constant, replacing
