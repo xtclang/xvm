@@ -5,6 +5,7 @@ import org.xvm.cc_explore.*;
 /**
   Exploring XEC Constants
  */
-public class CondCon extends NamedCon {
-  public CondCon( FilePart X ) { super(X); throw XEC.TODO(); }
+public abstract class CondCon extends Const {
+  public final Format _f;
+  public CondCon( Format f ) { _f = f; }
 }
