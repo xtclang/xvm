@@ -10,5 +10,4 @@ public class Flt64Con extends Const {
   public Flt64Con( FilePart X ) {
     _flt = Double.longBitsToDouble(X.i64());
   }
-  @Override public void resolve( CPool pool ) {}
 }

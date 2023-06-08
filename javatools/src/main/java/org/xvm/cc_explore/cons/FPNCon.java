@@ -17,5 +17,4 @@ public class FPNCon extends Const {
     if( len < min || len > 16384 )
       throw new IllegalArgumentException("value length ("+len+") must be a power-of-two between " + min + " and 16384");
   }
-  @Override public void resolve( CPool pool ) { }
 }

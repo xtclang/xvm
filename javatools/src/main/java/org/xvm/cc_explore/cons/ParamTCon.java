@@ -20,5 +20,4 @@ public class ParamTCon extends TCon {
     _params = new TCon[_txs.length];
     for( int i=0; i<_txs.length; i++ )  _params[i] = (TCon)pool.get(_txs[i]);
   }
-  @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }

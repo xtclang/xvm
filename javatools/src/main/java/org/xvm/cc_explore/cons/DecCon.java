@@ -11,7 +11,6 @@ import java.math.MathContext;
 public abstract class DecCon extends Const {
   private final BigDecimal _dec;
   public DecCon( FilePart X, BigDecimal dec ) { _dec = dec; }
-  @Override public void resolve( CPool pool ) {}
 
   /**
    * Convert the passed declet to three decimal digits, and format them as a Java <tt>int</tt> in

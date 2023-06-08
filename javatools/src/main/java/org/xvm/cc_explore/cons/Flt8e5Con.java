@@ -18,5 +18,4 @@ public class Flt8e5Con extends Const {
     default -> throw new UnsupportedOperationException("TODO implement non-zero E5M2 float values");
     };
   }
-  @Override public void resolve( CPool pool ) {} 
 }

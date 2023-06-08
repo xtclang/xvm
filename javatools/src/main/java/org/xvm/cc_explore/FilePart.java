@@ -3,7 +3,6 @@ package org.xvm.cc_explore;
 import org.xvm.cc_explore.cons.ModCon;
 import org.xvm.cc_explore.cons.Const;
 
-import java.io.UTFDataFormatException;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -19,7 +18,6 @@ public class FilePart extends Part {
   /**
    * The current major version of the XVM FileStructure. This is the newest
    * version that can be read and/or written by this implementation.
-   *
    * By convention, version 0 is the pre-production version: The language and
    * tool-chain are still in development.
    */
@@ -29,7 +27,6 @@ public class FilePart extends Part {
    * The current minor version of the XVM File structure. This is the newest
    * version that can be written by this implementation. (Newer minor versions
    * can be safely read.)
-   *
    * By convention, as long as VERSION_MAJOR_CUR == 0, whenever a change is made to Ecstasy that
    * changes the persistent structure of an ".xtc" file in a manner that isn't both forwards and
    * backwards compatible, the minor version will be updated to the 8-digit ISO 8601 date (i.e.
@@ -94,6 +91,9 @@ public class FilePart extends Part {
     return major==VERSION_MAJOR_CUR && minor==VERSION_MINOR_CUR;
   }
 
+  // Get from a pre-resolved constant pool
+  Const xget() { return _pool.get(u31()); }
+  
   // ------------------------------------
   // File parser utilities
   public boolean u1 () { return _buf[x++]!=0; }     // boolean read
@@ -133,7 +133,7 @@ public class FilePart extends Part {
       long x = 0;
       for( int i=0; i<c; i++ )
         x = (x<<8) | u8();
-      if( c<=2 ) return (short)x; // Sign extend as-if 2 bytes
+      if( c==2 ) return (short)x; // Sign extend as-if 2 bytes
       if( c<=4 ) return (int)x;   // Sign extend as-if 4 bytes
       return x;
     }

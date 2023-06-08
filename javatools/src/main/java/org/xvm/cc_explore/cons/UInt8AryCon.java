@@ -9,5 +9,4 @@ import org.xvm.cc_explore.FilePart;
 public class UInt8AryCon extends Const {
   private final byte[] _bs;
   public UInt8AryCon( FilePart X ) { _bs = X.bytes(); }
-  @Override public void resolve( CPool pool ) {}  
 }

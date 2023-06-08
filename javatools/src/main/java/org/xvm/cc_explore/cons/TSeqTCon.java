@@ -7,5 +7,4 @@ import org.xvm.cc_explore.XEC;
   Exploring XEC Constants
  */
 public class TSeqTCon extends TCon {
-  @Override public void resolve( CPool pool ) {}
 }

@@ -15,7 +15,6 @@ public class Flt32Con extends Const {
     default -> throw XEC.TODO();
     };
   }
-  @Override public void resolve( CPool pool ) {}
 
   // Normal serialized float
   private static float from32( int x ) {

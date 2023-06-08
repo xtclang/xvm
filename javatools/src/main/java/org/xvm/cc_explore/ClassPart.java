@@ -13,7 +13,7 @@ class ClassPart extends Part {
   ClassPart( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
     super(par,nFlags,id,cond,X);
     _params = parseTypeParams(X);
-    _path = (LitCon)X._pool.get(X.u31());
+    _path = (LitCon)X.xget();
   }
 
   // Helper method to read a collection of type parameters.

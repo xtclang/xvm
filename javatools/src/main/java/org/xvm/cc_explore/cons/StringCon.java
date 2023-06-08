@@ -11,5 +11,4 @@ public class StringCon extends Const {
   public StringCon( FilePart X ) {
     _str = X.utf8();
   }
-  @Override public void resolve( CPool pool ) {}
 }
