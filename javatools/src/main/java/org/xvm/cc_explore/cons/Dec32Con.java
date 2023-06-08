@@ -12,7 +12,6 @@ public class Dec32Con extends DecCon {
   public Dec32Con( FilePart X ) {
     super(X, toBigDecimal32(X.i32()));
   }
-  @Override public void resolve( CPool pool ) {}
 
   /**
    * Test the passed bits to ensure that they are finite; if they are not, throw an exception.
