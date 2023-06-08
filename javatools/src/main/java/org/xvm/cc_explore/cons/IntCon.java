@@ -26,7 +26,7 @@ public class IntCon extends Const {
       _big = null;      
     } else {                    // Size is modest Huge
       BigInteger big =  X.bigint(z-1); // Already read size, just do BigInteger
-      if( LONG_MIN.compareTo(big) >= 0 && big.compareTo(LONG_MAX) <= 0 ) {
+      if( LONG_MIN.compareTo(big) <= 0 && big.compareTo(LONG_MAX) <= 0 ) {
         _x = big.longValueExact();
         _big = null;
       } else {
@@ -36,17 +36,17 @@ public class IntCon extends Const {
     }
 
     int c = switch( f ) {   // Size in bytes of int constant
-    case Int16 -> 2;
-    case CUInt32 -> 4;
-    case CInt64, Int64, CUInt64 -> 8;
-    case CInt128, CUInt128, Int -> 16;
-    case IntN -> 1024;
+    case Int16, CInt16 -> 2;
+    case CInt32, CUInt16, CUInt32 -> 4;
+    case Int64, CInt64, CUInt64 -> 8;
+    case Int, CInt128, CUInt128, UInt -> 16;
+    case IntN, CIntN, CUIntN -> 1024;
     default -> { System.err.println(f); throw XEC.TODO(); }
     };
     
     boolean unsigned = switch( f ) {
-    case CInt128, CInt64, Int, Int16, Int64, IntN -> false;
-    case CUInt32, CUInt64, CUInt128 -> true;
+    case Int, Int16, Int64, IntN, CInt16, CInt32, CInt64, CInt128, CIntN -> false;
+    case CUInt16, CUInt32, CUInt64, CUInt128, CUIntN, UInt -> true;
     default -> { System.err.println(f); throw XEC.TODO(); }
     };
 
@@ -58,7 +58,8 @@ public class IntCon extends Const {
         long rng = 1L<<(c<<3);
         if(  unsigned && _x < 0 ) throw new IllegalArgumentException("illegal unsigned value: " + _x);
         if(  unsigned && _x >= rng ) throw bad(c);
-        if( !unsigned && !(-(rng>>1) <= _x && _x < (rng>>1)) ) throw bad(c);
+        if( !unsigned && !(-(rng>>1) <= _x && _x < (rng>>1)) )
+          throw bad(c);
       }
     } else {
       if(  unsigned && ((_big.bitLength()+7)>>3) > c ) throw bad(c);

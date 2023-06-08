@@ -112,9 +112,11 @@ abstract public class Part {
   public class Contrib {
     final Composition _comp;
     final TCon _tContrib;
+    final PropCon _prop;
     protected Contrib( FilePart X) {
       _comp = Composition.valueOf(X.u8());
       _tContrib = (TCon)X._pool.get(X.u31());
+      PropCon prop = null;
       assert _tContrib!=null;
       switch( _comp ) {
       case Extends:
@@ -122,8 +124,12 @@ abstract public class Part {
       case Into:
       case RebasesOnto:
         break;
+      case Delegates:
+        prop = (PropCon)X._pool.get(X.u31());
+        break;
       default: throw XEC.TODO();
       }
+      _prop = prop;
     }
   }
   

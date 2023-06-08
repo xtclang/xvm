@@ -133,6 +133,8 @@ public class FilePart extends Part {
       long x = 0;
       for( int i=0; i<c; i++ )
         x = (x<<8) | u8();
+      if( c<=2 ) return (short)x; // Sign extend as-if 2 bytes
+      if( c<=4 ) return (int)x;   // Sign extend as-if 4 bytes
       return x;
     }
 
@@ -177,8 +179,8 @@ public class FilePart extends Part {
   }
 
   // Read a byte array
-  public byte[] bytes() {
-    int len = u31();
+  public byte[] bytes() { return bytes(u31()); }
+  public byte[] bytes(int len) {
     return Arrays.copyOfRange(_buf,x,x+=len);
   }
   

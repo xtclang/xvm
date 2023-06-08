@@ -12,6 +12,7 @@ class ModPart extends ClassPart {
   public final LitCon _dir;     // Directory?
   public final LitCon _time;    // Creation timestamp?
 
+  public final VerCon _version;
   public final VerTree _allowedVers;
   public final ArrayList<Version> _prefers;
   
@@ -19,7 +20,8 @@ class ModPart extends ClassPart {
     super(par,nFlags,con,cond,X);
 
     _t = ModuleType.valueOf(X.u8());
-
+    VerCon version = null;
+    
     if( isFingerprint() ) {
       _allowedVers = new VerTree();
       for( int i=0, len = X.u31(); i < len; i++ ) {
@@ -30,16 +32,17 @@ class ModPart extends ClassPart {
       _prefers = new ArrayList<>();
       for( int i=0, len=X.u31(); i < len; i++ ) {
         VerCon cVer = (VerCon) X._pool.get(X.u31());
-        Version     ver = cVer.ver();
+        Version ver = cVer.ver();
         if( !_prefers.contains(ver) ) // Duplicate filtering
           _prefers.add(ver);
       }
     } else {
       if( X.u1() )
-        throw XEC.TODO();
+        version = (VerCon)X._pool.get(X.u31());
       _allowedVers = null;
       _prefers = null;
     }
+    _version = version;
     _dir  = (LitCon)X._pool.get(X.u31());
     _time = (LitCon)X._pool.get(X.u31());
   }
