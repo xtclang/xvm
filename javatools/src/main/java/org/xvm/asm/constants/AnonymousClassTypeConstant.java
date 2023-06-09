@@ -121,6 +121,12 @@ public class AnonymousClassTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return super.isShared(poolOther) && m_idAnon.isShared(poolOther);
+        }
+
+    @Override
     public int getMaxParamsCount()
         {
         // anonymous classes are never formal

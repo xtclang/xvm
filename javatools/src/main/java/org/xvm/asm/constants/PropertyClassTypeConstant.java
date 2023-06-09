@@ -142,6 +142,12 @@ public class PropertyClassTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return super.isShared(poolOther) && m_idProp.isShared(poolOther);
+        }
+
+    @Override
     public int getMaxParamsCount()
         {
         return 0;

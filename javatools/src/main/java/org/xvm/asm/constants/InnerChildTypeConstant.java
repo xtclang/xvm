@@ -102,6 +102,12 @@ public class InnerChildTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return super.isShared(poolOther) && m_idChild.isShared(poolOther);
+        }
+
+    @Override
     public boolean isInnerChildClass()
         {
         return true;
