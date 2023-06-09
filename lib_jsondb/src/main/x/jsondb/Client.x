@@ -919,9 +919,8 @@ service Client<Schema extends RootSchema> {
                 if (size == 0) {
                     this.infos = [];
                 } else {
-                    Client client = this.Client; // TODO GG: this should not be needed
                     ListMap<String, DboInfo> infos = new ListMap(size);
-                    childIds.associate(i -> {val info = client.infoFor(i); return info.name, info;}, infos);
+                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
                     this.infos = infos.freeze();
                 }
             }

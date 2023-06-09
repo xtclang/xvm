@@ -2782,6 +2782,13 @@ public class Context
             }
 
         @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            ensureCaptureMap().put(sName, true);
+            return asnOuter.applyAssignmentFromCapture();
+            }
+
+        @Override
         public void requireThis(long lPos, ErrorListener errs)
             {
             captureThis();
@@ -2911,13 +2918,6 @@ public class Context
         public boolean isThisCaptured()
             {
             return m_fCaptureThis;
-            }
-
-        @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
-            ensureCaptureMap().put(sName, true);
-            return asnOuter.applyAssignmentFromCapture();
             }
 
         /**
