@@ -93,15 +93,15 @@ public class PropertyComposition
     @Override
     public TypeConstant getType()
         {
-        TypeConstant typeParent = f_clzParent.getInceptionType();
-        return typeParent.getConstantPool().ensurePropertyClassTypeConstant(
-                typeParent, f_infoProp.getIdentity());
+        return getInceptionType();
         }
 
     @Override
     public TypeConstant getInceptionType()
         {
-        throw new UnsupportedOperationException();
+        TypeConstant typeParent = f_clzParent.getInceptionType();
+        return typeParent.getConstantPool().ensurePropertyClassTypeConstant(
+                typeParent, f_infoProp.getIdentity());
         }
 
     @Override
