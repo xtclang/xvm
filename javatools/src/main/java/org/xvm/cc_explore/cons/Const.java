@@ -8,6 +8,14 @@ import org.xvm.cc_explore.Part;
  */
 public abstract class Const {
 
+  /**
+   * The qualified name of the Ecstasy core module. This is the only module that has no external
+   * dependencies (other than a conceptual dependency in the compiler on the prototype module,
+   * due to the "turtles" problem of Ref.x having properties which are themselves refs).
+   */
+  public static final String ECSTASY_MODULE = "ecstasy.xtclang.org";
+
+  
   public void resolve( CPool pool ){};
 
   /**
