@@ -995,12 +995,21 @@ public class MethodStructure
                     }
                 }
 
-            if (!mapTypeParams.containsKey(constParam) && fAllowFormal)
+            if (!mapTypeParams.containsKey(constParam))
                 {
-                // no extra knowledge; assume that anything goes
-                TypeConstant typeConstraint = param.getType().resolveConstraints().getParamType(0);
-                TypeConstant typePending    = new PendingTypeConstant(getConstantPool(), typeConstraint);
-                mapTypeParams.put(constParam, typePending);
+                ConstantPool pool           = getConstantPool();
+                TypeConstant typeParam      = param.getType().resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
+                TypeConstant typeConstraint = typeParam.resolveConstraints().getParamType(0);
+                if (fAllowFormal)
+                    {
+                    // no extra knowledge; assume that anything goes
+                    TypeConstant typePending = new PendingTypeConstant(pool, typeConstraint);
+                    mapTypeParams.put(constParam, typePending);
+                    }
+                else
+                    {
+                    mapTypeParams.put(constParam, typeConstraint);
+                    }
                 }
             }
         return mapTypeParams;
