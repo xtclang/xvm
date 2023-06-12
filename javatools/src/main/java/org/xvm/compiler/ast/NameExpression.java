@@ -2243,6 +2243,12 @@ public class NameExpression
                                 return m_arg = new TargetInfo(sName, typeLeft.getParentType(), 1);
                                 }
 
+                            if (typeLeft instanceof PropertyClassTypeConstant &&
+                                    constTarget.getType().equals(typeLeft.getParentType()))
+                                {
+                                return m_arg = new TargetInfo(sName, typeLeft.getParentType(), 1);
+                                }
+
                             // they may choose to emphasize the exact type of "this" by writing:
                             // "this.X", where X is this class itself, a super class or any other
                             // contribution into this class; in all cases we'll treat it as "this"

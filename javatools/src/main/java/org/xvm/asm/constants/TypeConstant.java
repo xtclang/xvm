@@ -1707,7 +1707,10 @@ public abstract class TypeConstant
                                     }
                                 errsTemp.merge();
                                 }
-                            typeDeferred.setTypeInfo(infoDeferred);
+                            if (infoDeferred != null)
+                                {
+                                typeDeferred.setTypeInfo(infoDeferred);
+                                }
                             }
                         }
                     }
@@ -1965,10 +1968,10 @@ public abstract class TypeConstant
                         : info.limitAccess(Access.PUBLIC);
             }
 
-        // annotated types require special handling
-        if (isAnnotated())
+        // annotated and property class types require special handling
+        TypeConstant typeUnderlying = getUnderlyingType(); // remove "Access:PRIVATE"
+        if (typeUnderlying.isAnnotated())
             {
-            TypeConstant typeUnderlying = getUnderlyingType(); // remove "Access:PRIVATE" piece
             if (typeUnderlying instanceof AnnotatedTypeConstant typeAnno)
                 {
                 return typeAnno.buildPrivateInfo(errs);
@@ -1977,6 +1980,11 @@ public abstract class TypeConstant
             log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
                     getAnnotations()[0], typeUnderlying.getValueString());
             return null;
+            }
+
+        if (typeUnderlying instanceof PropertyClassTypeConstant typePropClass)
+            {
+            return typePropClass.buildTypeInfo(errs);
             }
 
         // this implementation only deals with modifying (not including immutable) and terminal type

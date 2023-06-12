@@ -309,7 +309,7 @@ public class PropertyClassTypeConstant
                 TypeConstant typeRef = infoProp.getBaseRefType().removeAutoNarrowing();
 
                 typeBase = pool.ensureAccessTypeConstant(typeRef, Access.PROTECTED);
-                infoBase = typeBase.buildTypeInfo(errs);
+                infoBase = typeBase.ensureTypeInfoInternal(errs);
                 if (!isComplete(infoBase))
                     {
                     return null;
