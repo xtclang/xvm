@@ -56,7 +56,6 @@ public class FilePart extends Part {
     ABSTRACT_BIT | 
     STATIC_BIT | 
     SYNTHETIC_BIT;
-
   
 
   // Constructor parses byte array, builds FileComponent
@@ -83,7 +82,7 @@ public class FilePart extends Part {
 
     // Parse any children components
     parseKids(this);
-    
+
     _buf = null;                // Free large memory since we're done with it
   }
 
