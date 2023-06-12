@@ -83,6 +83,8 @@ public class FilePart extends Part {
 
     // Parse any children components
     parseKids(this);
+    
+    _buf = null;                // Free large memory since we're done with it
   }
 
   ModPart getMod() { return (ModPart)child(_modName); }

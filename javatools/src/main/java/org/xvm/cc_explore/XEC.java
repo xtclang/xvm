@@ -1,5 +1,8 @@
 package org.xvm.cc_explore;
 
+import org.xvm.cc_explore.cons.Const;
+
+import java.io.FileFilter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.io.File;
@@ -31,23 +34,22 @@ public class XEC {
     // Load XDK
     ModRepo repo = new ModRepo(libs);
     
-    // Load whole XTC file into buf, then parse
-    byte[] buf = Files.readAllBytes(Path.of(xtc));
-    FilePart file = new FilePart(buf);
-    System.err.println("TODO: Loaded "+xtc+" fine, Execution continues");
+    // Load XTC file into repo
+    ModPart mod = repo.load(xtc);
 
     // See that we got a main module
-    ModPart mod = file.getMod();
     if( mod==null ) {
-      if( explicitModuleFile(file._modName) )  TODO();
+      if( explicitModuleFile(xtc) )  TODO();
       else TODO();
     }
-    // Got a module, save in repo
     if( mod==null ) throw new IllegalArgumentException("Unable to load module "+ xtc);
-    repo.put(mod.name(),mod);
+
+    // Get the XTC core module
+    ModPart root = repo.get(Const.ECSTASY_MODULE);
 
     
     
+    System.err.println("TODO: Loaded "+xtc+" fine, Execution continues");
     TODO();
   }
 
@@ -85,16 +87,37 @@ public class XEC {
   private static String[] args(int ndx, String[] args) {
     return Arrays.copyOfRange(args,ndx,args.length);
   }
-
   
   // True if the name is an explicit Ecstasy source or compiled name.
   protected static boolean explicitModuleFile(String s) { return s.endsWith(".x") || s.endsWith(".xtc"); }
 
 
-  // Module Repository: Mapping from Strings to ModParts.
+  // Module Repository: Mapping from module name Strings to ModParts.
   static class ModRepo extends HashMap<String,ModPart> {
-    final String[] _libs;       // Path to libs
-    ModRepo(String[] libs) { _libs = libs;  }
+    // Eager load all library modules
+    ModRepo(String[] libs) throws IOException {
+      for( String lib : libs )
+        load(lib);
+    }
+
+    // Load a single file or directory of files.  Return a single module or null.
+    ModPart load( String s ) throws IOException { return load(new File(s)); }
+    ModPart load( File f ) throws IOException {
+      if( f.isDirectory() ) {
+        for( File file : f.listFiles(ModulesOnly) )
+          load(file);
+        return null;            // Null for directories
+      } else {
+        byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
+        ModPart mod = new FilePart(buf).getMod();    // Parse the entire file, extract main module
+        put(mod.name(),mod);
+        return mod;             // Return single module for single file
+      }
+    }
+    // Filter to readable XTC named files only
+    static final FileFilter ModulesOnly = file ->
+      file.getName().length() > 4 && file.getName().endsWith(".xtc") &&
+      file.exists() && file.isFile() && file.canRead() && file.length() > 0;
   }
 
   public static RuntimeException TODO() { return new RuntimeException("TODO"); }
