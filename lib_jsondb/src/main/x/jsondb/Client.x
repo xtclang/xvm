@@ -873,79 +873,40 @@ service Client<Schema extends RootSchema> {
         @Override
         @Concurrent
         @Lazy Map<String, DBObject> dbChildren.calc() {
-            return new DBObjectMap();
-//            return new Map()
-//                {
-//                @Override
-//                conditional DBObject get(String key)
-//                    {
-//                    if (DboInfo info := infos.get(key))
-//                        {
-//                        return True, implFor(info.id);
-//                        }
-//
-//                    return False;
-//                    }
-//
-//                @Override
-//                @Lazy Set<String> keys.calc()
-//                    {
-//                    return infos.keys;
-//                    }
-//
-//                protected @Lazy Map<String, DboInfo> infos.calc()
-//                    {
-//                    Int[] childIds = info_.childIds;
-//                    Int   size     = childIds.size;
-//                    if (size == 0)
-//                        {
-//                        return [];
-//                        }
-//
-//                    ListMap<String, DboInfo> infos = new ListMap(size);
-//                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
-//                    return infos.freeze();
-//                    }
-//                };
-        }
 
-        // TODO GG: remove and use the "inside the property" class
-        private class DBObjectMap
-                implements Map<String, DBObject> {
+            return new Map() {
+                @Override
+                conditional DBObject get(String key) {
+                    if (DboInfo info := infos.get(key)) {
+                        return True, implFor(info.id);
+                    }
 
-            construct() {
-                Int[] childIds = info_.childIds;
-                Int   size     = childIds.size;
-                if (size == 0) {
-                    this.infos = [];
-                } else {
+                    return False;
+                    }
+
+                @Override
+                @Lazy Set<String> keys.calc() {
+                    return infos.keys;
+                }
+
+                @Override
+                Set<DBObject> values.get() = throw new UnsupportedOperation();
+
+                @Override
+                Set<Map<String, DBObject>.Entry> entries.get() = throw new UnsupportedOperation();
+
+                @Lazy Map<String, DboInfo> infos.calc() {
+                    Int[] childIds = info_.childIds;
+                    Int   size     = childIds.size;
+                    if (size == 0) {
+                        return [];
+                    }
+
                     ListMap<String, DboInfo> infos = new ListMap(size);
                     childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
-                    this.infos = infos.freeze();
+                    return infos.freeze();
                 }
-            }
-
-            protected Map<String, DboInfo> infos;
-
-            @Override
-            conditional DBObject get(String key) {
-                if (DboInfo info := infos.get(key)) {
-                    return True, implFor(info.id);
-                }
-
-                return False;
-            }
-
-            @Override
-            @Lazy Set<String> keys.calc() {
-                return infos.keys;
-            }
-
-            @Override
-            Set<DBObject> values.get() = throw new UnsupportedOperation();
-
-            @Override
-            Set<Map<String, DBObject>.Entry> entries.get() = throw new UnsupportedOperation();
+            };
         }
 
         @Override

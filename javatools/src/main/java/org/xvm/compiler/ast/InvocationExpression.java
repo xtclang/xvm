@@ -1934,7 +1934,7 @@ public class InvocationExpression
             MethodStructure method = code.getMethodStructure();
             if (m_targetInfo == null)
                 {
-                argTarget = ctx.generateThisRegister(code, method.isConstructor(), errs);
+                argTarget = ctx.generateThisRegister(code);
                 }
             else
                 {

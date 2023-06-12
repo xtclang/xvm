@@ -760,7 +760,7 @@ public class PropertyDeclarationStatement
             PropertyConstant idAssigned      = typeVar.ensureTypeInfo(errs)
                                                .findProperty("assigned").getIdentity();
 
-            Register regThis = ctx.generateThisRegister(code, true, errs);
+            Register regThis = ctx.generateThisRegister(code);
 
             code.add(new P_Var(idProp, regThis, regPropRef));
             code.add(new P_Get(idAssigned, regPropRef, regAssigned));

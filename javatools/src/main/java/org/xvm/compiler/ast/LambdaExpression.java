@@ -852,14 +852,14 @@ public class LambdaExpression
                 Argument argResult = LVal.getLocalArgument();
                 if (fBindTarget & fBindParams)
                     {
-                    Register regThis = ctx.generateThisRegister(code, false, errs);
+                    Register regThis = ctx.generateThisRegister(code);
                     Register regTemp = new Register(idLambda.getSignature().asFunctionType(), Op.A_STACK);
                     code.add(new MBind(regThis, idLambda, regTemp));
                     code.add(new FBind(regTemp, anBind, aBindArgs, argResult));
                     }
                 else if (fBindTarget)
                     {
-                    Register regThis = ctx.generateThisRegister(code, false, errs);
+                    Register regThis = ctx.generateThisRegister(code);
                     code.add(new MBind(regThis, idLambda, argResult));
                     }
                 else if (fBindParams)
