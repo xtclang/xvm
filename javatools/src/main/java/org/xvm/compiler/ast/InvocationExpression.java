@@ -3076,7 +3076,7 @@ public class InvocationExpression
     protected ListMap<FormalConstant, TypeConstant> resolveTypeParameters(MethodStructure method,
             TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAllowFormal)
         {
-        return method.resolveTypeParameters(m_typeTarget, atypeArgs, atypeReturn, fAllowFormal);
+        return method.resolveTypeParameters(pool(), m_typeTarget, atypeArgs, atypeReturn, fAllowFormal);
         }
 
     /**

@@ -865,6 +865,7 @@ public class MethodStructure
      * For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
      * actual return type: Number this method would return a map {"T":Number, "U":String}
      *
+     * @param pool         the ConstantPool to use
      * @param typeTarget   (optional) the target type; if specified must be used to validate and
      *                     resolve all formal type parameters for a function called with an explicit
      *                     left-hand-side type
@@ -875,8 +876,9 @@ public class MethodStructure
      * @return a ListMap of the resolved types in the natural order, keyed by the names; conflicting
      *         types will be not in the map
      */
-    public ListMap<FormalConstant, TypeConstant> resolveTypeParameters(TypeConstant typeTarget,
-                TypeConstant[] atypeArgs, TypeConstant[] atypeReturns, boolean fAllowFormal)
+    public ListMap<FormalConstant, TypeConstant> resolveTypeParameters(ConstantPool pool,
+                TypeConstant typeTarget, TypeConstant[] atypeArgs, TypeConstant[] atypeReturns,
+                boolean fAllowFormal)
         {
         int                                   cTypeParams   = getTypeParamCount();
         ListMap<FormalConstant, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
@@ -902,7 +904,7 @@ public class MethodStructure
             if (typeTarget != null && this.isFunction())
                 {
                 typeRequired = param.getType().getParamType(0).
-                        resolveAutoNarrowing(getConstantPool(), false, typeTarget, null);
+                        resolveAutoNarrowing(pool, false, typeTarget, null);
                 }
 
             for (int iA = 0; iA < cArgs; iA++)
@@ -997,8 +999,8 @@ public class MethodStructure
 
             if (!mapTypeParams.containsKey(constParam))
                 {
-                ConstantPool pool           = getConstantPool();
-                TypeConstant typeParam      = param.getType().resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
+                TypeConstant typeParam      = param.getType().resolveGenerics(pool,
+                                                GenericTypeResolver.of(mapTypeParams));
                 TypeConstant typeConstraint = typeParam.resolveConstraints().getParamType(0);
                 if (fAllowFormal)
                     {

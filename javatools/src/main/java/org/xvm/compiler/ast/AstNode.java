@@ -1487,7 +1487,7 @@ public abstract class AstNode
     protected ListMap<FormalConstant, TypeConstant> resolveTypeParameters(MethodStructure method,
             TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAllowFormal)
         {
-        return method.resolveTypeParameters(null, atypeArgs, atypeReturn, fAllowFormal);
+        return method.resolveTypeParameters(pool(), null, atypeArgs, atypeReturn, fAllowFormal);
         }
 
     /**
