@@ -9,7 +9,7 @@ public class SigCon extends IdCon {
   private transient int _namex;  // Type index for name
   private transient int[] _parmxs, _retxs;  // Type index arrays for parms, returns
   StringCon _name;
-  TCon[] _params;
+  TCon[] _parms;
   TCon[] _rets;
   
   public SigCon( FilePart X ) {
@@ -19,11 +19,11 @@ public class SigCon extends IdCon {
   }
   
   @Override public void resolve( CPool pool ) {
-    _name = (StringCon)pool.get(_namex);
-    _params = new TCon[_parmxs.length];
-    _rets   = new TCon[_retxs .length];
-    for( int i=0; i<_parmxs.length; i++ )  _params[i] = (TCon)pool.get(_parmxs[i]);
-    for( int i=0; i<_retxs .length; i++ )  _rets  [i] = (TCon)pool.get(_retxs [i]);
+    _name  = (StringCon)pool.get(_namex);
+    _parms = TCon.resolveAry(pool,_parmxs);
+    _rets  = TCon.resolveAry(pool, _retxs);
   }  
-  @Override public String name() { throw XEC.TODO(); }  
+  @Override public String name() { throw XEC.TODO(); }
+  public TCon[] rawRets () { return _rets ; }
+  public TCon[] rawParms() { return _parms; }
 }

@@ -32,11 +32,12 @@ public class XEC {
 
     
     // Load XDK
-    ModRepo repo = new ModRepo(libs);
-    
+    ModRepo repo = new ModRepo();
     // Load XTC file into repo
     ModPart mod = repo.load(xtc);
 
+    for( String lib : libs ) repo.load(lib);
+    
     // See that we got a main module
     if( mod==null ) {
       if( explicitModuleFile(xtc) )  TODO();
@@ -44,11 +45,12 @@ public class XEC {
     }
     if( mod==null ) throw new IllegalArgumentException("Unable to load module "+ xtc);
 
-    // Get the XTC core module
-    ModPart root = repo.get(Const.ECSTASY_MODULE);
+    // Start the thread pool up
+    XRuntime.start();
 
-    
-    
+    // Start the initial container.
+    Container C = new Container(repo,mod);
+
     System.err.println("TODO: Loaded "+xtc+" fine, Execution continues");
     TODO();
   }
@@ -94,12 +96,6 @@ public class XEC {
 
   // Module Repository: Mapping from module name Strings to ModParts.
   static class ModRepo extends HashMap<String,ModPart> {
-    // Eager load all library modules
-    ModRepo(String[] libs) throws IOException {
-      for( String lib : libs )
-        load(lib);
-    }
-
     // Load a single file or directory of files.  Return a single module or null.
     ModPart load( String s ) throws IOException { return load(new File(s)); }
     ModPart load( File f ) throws IOException {
@@ -109,7 +105,8 @@ public class XEC {
         return null;            // Null for directories
       } else {
         byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
-        ModPart mod = new FilePart(buf).getMod();    // Parse the entire file, extract main module
+        FilePart file = new FilePart(buf); // Parse the entire file
+        ModPart mod = file.getMod();       // Extract main module
         put(mod.name(),mod);
         return mod;             // Return single module for single file
       }

@@ -1,22 +1,28 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.FilePart;
 import org.xvm.cc_explore.Part;
 
 /**
-  Exploring XEC Constants
+   Abstract XEC constants.  These are all conceptually immutable, and shared
+   across e.g. containers and services.  They take a one-time initialization
+   during creation; after the Java constructor and during the resolve phase.
+   They are actually immutable after resolving.
+   
+   
  */
 public abstract class Const {
 
-  /**
-   * The qualified name of the Ecstasy core module. This is the only module that has no external
-   * dependencies (other than a conceptual dependency in the compiler on the prototype module,
-   * due to the "turtles" problem of Ref.x having properties which are themselves refs).
-   */
-  public static final String ECSTASY_MODULE = "ecstasy.xtclang.org";
-
-  
+  // Resolve any internal references from the serialized form.
   public void resolve( CPool pool ){};
+
+  // Parse an array of Const from a pre-filled constant pool
+  public static Const[] xconsts( FilePart X ) {
+    Const[] as = new Const[X.u31()];
+    for( int i=0; i<as.length; i++ )  as[i] = X.xget();
+    return as;
+  }
 
   /**
    * Recurse through the constants that make up this constant, replacing
@@ -30,7 +36,7 @@ public abstract class Const {
   public Const resolveTypedefs() { return this; }
 
   // Resolve an array
-  static Const[] resolveAry( CPool pool, int[] xs) {
+  public static Const[] resolveAry( CPool pool, int[] xs) {
     Const[] cs = new Const[xs.length];
     for( int i=0; i<xs.length; i++ )
       cs[i] = pool.get(xs[i]);
@@ -289,5 +295,12 @@ public abstract class Const {
      */
     public final int FLAGS;
   }
-  
+
+  /**
+   * The qualified name of the Ecstasy core module. This is the only module that has no external
+   * dependencies (other than a conceptual dependency in the compiler on the prototype module,
+   * due to the "turtles" problem of Ref.x having properties which are themselves refs).
+   */
+  public static final String ECSTASY_MODULE = "ecstasy.xtclang.org";
+
 }

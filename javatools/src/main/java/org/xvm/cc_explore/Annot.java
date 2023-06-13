@@ -17,8 +17,15 @@ public class Annot extends Const {
   }
   @Override public void resolve( CPool pool ) {
     _clz = (ClassCon)pool.get(_clzx);
-    _cons = new Const[_parmxs.length];
-    for( int i=0; i<_parmxs.length; i++ )
-      _cons[i] = pool.get(_parmxs[i]);
+    _cons = resolveAry(pool,_parmxs);
   }
+  
+  // Parse an array of Annots from a pre-filled constant pool
+  public static Annot[] xannos( FilePart X ) {
+    Annot[] as = new Annot[X.u31()];
+    for( int i=0; i<as.length; i++ )  as[i] = (Annot)X.xget();
+    return as;
+  }
+  
+  @Override public String toString() { return _clz.toString(); }
 }

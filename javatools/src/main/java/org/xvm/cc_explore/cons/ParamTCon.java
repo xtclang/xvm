@@ -17,7 +17,6 @@ public class ParamTCon extends TCon {
   }
   @Override public void resolve( CPool pool ) {
     _con = (TCon)pool.get(_tx);
-    _params = new TCon[_txs.length];
-    for( int i=0; i<_txs.length; i++ )  _params[i] = (TCon)pool.get(_txs[i]);
+    _params = TCon.resolveAry(pool,_txs);
   }
 }

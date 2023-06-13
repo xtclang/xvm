@@ -11,4 +11,5 @@ public class StringCon extends Const {
   public StringCon( FilePart X ) {
     _str = X.utf8();
   }
+  @Override public String toString() { return _str; }
 }
