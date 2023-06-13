@@ -5,6 +5,7 @@
 class ListSet<Element>
         extends MapSet<Element>
         implements Replicable {
+        // TODO CP should be freezable
     // ----- constructors --------------------------------------------------------------------------
 
     /**
