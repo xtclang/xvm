@@ -47,9 +47,6 @@ public class FilePart extends Part {
   byte[] _buf;                  // Bits from the XTC file
   int x;                        // Cursor
 
-  // Lazy parse kids
-  final boolean _lazy;
-
   static final int NFLAGS =
     (Part.Format.FILE.ordinal() << Part.Format.FORMAT_SHIFT) |
     (Const.Access.PUBLIC.ordinal() << ACCESS_SHIFT) |
@@ -61,7 +58,6 @@ public class FilePart extends Part {
   // Constructor parses byte array, builds FileComponent
   FilePart( byte[] buf ) {
     super(null,NFLAGS,null,null,null);
-    _lazy = true;
     
     _buf = buf;
 
@@ -94,7 +90,7 @@ public class FilePart extends Part {
   }
 
   // Get from a pre-resolved constant pool
-  Const xget() { return _pool.get(u31()); }
+  public Const xget() { return _pool.get(u31()); }
   
   // ------------------------------------
   // File parser utilities

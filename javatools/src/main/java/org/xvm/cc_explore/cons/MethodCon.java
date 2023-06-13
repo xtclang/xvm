@@ -18,5 +18,7 @@ public class MethodCon extends IdCon {
     _par = (MMethodCon)pool.get(_parx);
     _sig = (SigCon)pool.get(_sigx);
   }
-  @Override public String name() { throw XEC.TODO(); }  
+  @Override public String name() { return _par.name(); }
+  public TCon[] rawRets () { return _sig.rawRets (); }
+  public TCon[] rawParms() { return _sig.rawParms(); }
 }
