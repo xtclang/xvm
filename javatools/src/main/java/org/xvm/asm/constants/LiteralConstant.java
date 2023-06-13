@@ -1009,9 +1009,6 @@ public class LiteralConstant
             case "IntLiteral<<Int":
             case "IntLiteral>>Int":
             case "IntLiteral>>>Int":
-                // TODO
-                throw new UnsupportedOperationException("TODO CP");
-
             case "IntLiteral+UInt":
             case "IntLiteral-UInt":
             case "IntLiteral*UInt":
