@@ -20,7 +20,7 @@ const MinMax<Element extends Orderable>
     }
 
     @Override
-    Accumulator init() {
+    Accumulator init(Int capacity = 0) {
         return elementAggregator.init();
     }
 
@@ -36,7 +36,7 @@ const MinMax<Element extends Orderable>
             implements Aggregator<Value, immutable WorkingMinMax<Value>> {
 
         @Override
-        Accumulator init() {
+        Accumulator init(Int capacity = 0) {
             return new ElementAccumulator<Value>();
         }
 
@@ -50,7 +50,7 @@ const MinMax<Element extends Orderable>
             implements Aggregator<WorkingMinMax<Value>, WorkingMinMax<Value>> {
 
         @Override
-        Accumulator init() {
+        Accumulator init(Int capacity = 0) {
             return new ResultAccumulator<Value>();
         }
 
@@ -64,7 +64,7 @@ const MinMax<Element extends Orderable>
             implements Aggregator<WorkingMinMax<Value>, Range<Value>?> {
 
         @Override
-        Accumulator init() {
+        Accumulator init(Int capacity = 0) {
             return new ResultAccumulator<Value>();
         }
 

@@ -1,6 +1,8 @@
 import collections.ArrayDeque;
 import collections.SparseIntSet;
 
+import ecstasy.collections.Collect;
+
 import oodb.DBClosed;
 import oodb.DBProcessor;
 import oodb.DBTransaction.Priority;
@@ -83,8 +85,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         this.clock      = catalog.clock;
         this.processors = catalog.metadata?.dbObjectInfos
                 .filter(info -> info.category == DBProcessor)
-                .map(info -> info.id, new SparseIntSet())
-                .as(Set<Int>);
+                .map(info -> info.id, new Collect<Int, SparseIntSet>(SparseIntSet));
     }
 
 

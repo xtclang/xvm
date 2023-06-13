@@ -1,5 +1,7 @@
 import crypto.Signer;
 
+import ecstasy.collections.CollectImmutableArray;
+
 import oodb.DBMap;
 
 import User.HashInfo;
@@ -77,7 +79,7 @@ mixin Users
         String[]   roleNames = [roleName.is(String)?] : roleName;
         AuthSchema schema    = dbParent.as(AuthSchema);
         if (Role[] roleList := schema.roles.findByNames(roleNames)) {
-            roleIds = roleList.map(r -> r.roleId, new Int[](roleList.size)).as(Int[]);
+            roleIds = roleList.map(r -> r.roleId, CollectImmutableArray.of(Int));
         } else {
             return False;
         }
@@ -107,11 +109,11 @@ mixin Users
      *
      * @param name  a hash that must be present in the User's `userHashes`
      */
-    User[] findByUserHash(Hash hash) {
+    immutable User[] findByUserHash(Hash hash) {
         return switch(hash.size) {
-            case 128 / 8: values.filter(u -> u.userHashes.md5 == hash, new User[]).as(User[]);
+            case 128 / 8: values.filter(u -> u.userHashes.md5 == hash, CollectImmutableArray.of(User));
             case 256 / 8: values.filter(u -> u.userHashes.sha256     == hash
-                                          || u.userHashes.sha512_256 == hash, new User[]).as(User[]);
+                                          || u.userHashes.sha512_256 == hash, CollectImmutableArray.of(User));
             default: [];
         };
     }
