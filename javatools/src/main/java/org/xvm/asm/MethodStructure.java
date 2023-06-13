@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -892,6 +893,9 @@ public class MethodStructure
 
         assert cArgs <= cMethodParams && cReturns <= cMethodReturns;
 
+        // we may need to utilize the generic types to resolve formal types constraints
+        Map<String, TypeConstant> mapTypeGeneric = new HashMap<>();
+
         NextParameter:
         for (int iT = 0; iT < cTypeParams; iT++)
             {
@@ -909,11 +913,10 @@ public class MethodStructure
 
             for (int iA = 0; iA < cArgs; iA++)
                 {
-                TypeConstant typeFormal = atypeMethodParams[cTypeParams + iA];
                 TypeConstant typeActual = atypeArgs[iA];
-
                 if (typeActual != null)
                     {
+                    TypeConstant typeFormal   = atypeMethodParams[cTypeParams + iA];
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
                     if (typeResolved != null)
                         {
@@ -949,16 +952,18 @@ public class MethodStructure
                                 }
                             }
                         }
+
+                    resolveGenericTypes(pool, typeFormal, typeActual, mapTypeGeneric);
                     }
                 }
 
             for (int iR = 0; iR < cMethodReturns; iR++)
                 {
-                TypeConstant typeFormal = atypeMethodReturns[iR];
                 TypeConstant typeActual = iR < cReturns ? atypeReturns[iR] : null;
 
                 if (typeActual != null)
                     {
+                    TypeConstant typeFormal   = atypeMethodReturns[iR];
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
                     if (typeResolved != null)
                         {
@@ -994,13 +999,24 @@ public class MethodStructure
                                 }
                             }
                         }
+
+                    resolveGenericTypes(pool, typeFormal, typeActual, mapTypeGeneric);
                     }
                 }
 
             if (!mapTypeParams.containsKey(constParam))
                 {
-                TypeConstant typeParam      = param.getType().resolveGenerics(pool,
-                                                GenericTypeResolver.of(mapTypeParams));
+                // we couldn't resolve the formal type parameter - compute the constraint type
+                TypeConstant typeParam = param.getType();
+                if (!mapTypeGeneric.isEmpty())
+                    {
+                    typeParam = typeParam.resolveGenerics(pool, mapTypeGeneric::get);
+                    }
+                if (!mapTypeParams.isEmpty())
+                    {
+                    typeParam = typeParam.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
+                    }
+
                 TypeConstant typeConstraint = typeParam.resolveConstraints().getParamType(0);
                 if (fAllowFormal)
                     {
@@ -1015,6 +1031,34 @@ public class MethodStructure
                 }
             }
         return mapTypeParams;
+        }
+
+    private void resolveGenericTypes(ConstantPool pool,
+                                     TypeConstant typeFormal, TypeConstant typeActual,
+                                     Map<String, TypeConstant> mapTypeGeneric)
+        {
+        ClassStructure clzParent = getContainingClass();
+        if (clzParent.isParameterized())
+            {
+            for (Map.Entry<StringConstant, TypeConstant> entry : clzParent.getTypeParams().entrySet())
+                {
+                String sName = entry.getKey().getValue();
+
+                TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
+                if (typeResolved == null)
+                    {
+                    // save off a resolved constraint
+                    mapTypeGeneric.computeIfAbsent(sName, s ->
+                            entry.getValue().resolveGenerics(pool, mapTypeGeneric::get));
+                    }
+                else
+                    {
+                    // take the narrowest type
+                    mapTypeGeneric.merge(sName, typeResolved, (typeOld, typeNew) ->
+                            typeOld == null || typeNew.isA(typeOld) ? typeNew : typeOld);
+                    }
+                }
+            }
         }
 
 

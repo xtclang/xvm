@@ -859,10 +859,6 @@ public class InvocationExpression
                     // against all the types we know by now (marking unresolved as "pending")
                     if (cParams > 0)
                         {
-                        TypeConstant[] atype = new TypeConstant[cParams];
-
-                        System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
-
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
                                 fCall || cReturns == 0
                                     ? atypeReturn
@@ -871,6 +867,10 @@ public class InvocationExpression
                             {
                             return null;
                             }
+
+                        TypeConstant[] atype = new TypeConstant[cParams];
+                        System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
+
                         atypeParams = resolveTypes(resolver, atype);
                         }
                     else
