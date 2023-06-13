@@ -1518,10 +1518,11 @@ public abstract class AstNode
             MethodStructure method, List<Expression> listExprArgs,
             Map<String, Expression> mapNamedExpr, ErrorListener errs)
         {
-        int cParams  = method.getVisibleParamCount();
-        int cArgs    = listExprArgs.size();
-        int cNamed   = mapNamedExpr.size();
-        int cUnnamed = cArgs - cNamed;
+        int cTypeParams = method.getTypeParamCount();
+        int cParams     = method.getVisibleParamCount();
+        int cArgs       = listExprArgs.size();
+        int cNamed      = mapNamedExpr.size();
+        int cUnnamed    = cArgs - cNamed;
 
         Expression[] aexpr = new Expression[cParams];
 
@@ -1539,7 +1540,7 @@ public abstract class AstNode
                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
                 return null;
                 }
-            int iParam = param.getIndex();
+            int iParam = param.getIndex() - cTypeParams;
 
             // if a named arg overrides an unnamed (required), we'll null it out to generate
             // an error later
