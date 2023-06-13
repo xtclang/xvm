@@ -18,5 +18,6 @@ public abstract class NamedCon extends IdCon {
     _par  = (    IdCon)pool.get( _parx);
     _name = (StringCon)pool.get(_namex);
   }
-  @Override public String name() { throw XEC.TODO(); }  
+  @Override public String name() { return _name._str; }
+  @Override public String toString() { return _name.toString(); }
 }

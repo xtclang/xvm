@@ -8,11 +8,11 @@ import java.util.HashMap;
 /**
      DAG structure containment of components/parts
  */
-abstract public class Part {
+abstract public class Part<IDCON extends IdCon> {
   public final Part _par;       // Parent in the parent chain; null ends.  Last is FilePart.
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
-  public final IdCon _id;       // Identifier
+  public final IDCON _id;       // Identifier
 
   public final ArrayList<Contrib> _contribs;
 
@@ -22,27 +22,24 @@ abstract public class Part {
   private HashMap<String,Part> _name2kid;
 
   // Linked list of siblings at the same DAG level with the same name
-  private Part _sibling = null;
+  private Part _sibling;
 
-  // If a child is lazily created, here is the buffer offset and length to parse.
-  // The actual buffer is in the FilePart at the Part root.
-  int _lazy_off, _lazy_len;
-  
-  Part( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
+  Part( Part par, int nFlags, IDCON id, CondCon cond, FilePart X ) {
     _par = par;
+    _sibling = null;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
     assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
     
     if( id != null ) {
-      id = (IdCon)id.resolveTypedefs();
+      id = (IDCON)id.resolveTypedefs();
       id.resetCachedInfo();
     }
     _nFlags = nFlags;
     _cond = cond;
     _id = id;
 
-    // Only null for self FileComponent.  Other components need to parse bits.
+    // Only null for self FilePart.  Other parts need to parse bits.
     if( X!=null ) {
       int c = X.u31();
       _contribs = new ArrayList<>();
@@ -54,7 +51,7 @@ abstract public class Part {
   }
 
   void parseKids( FilePart X ) {
-    int cnt = X.u31();
+    int cnt = X.u31();          // Number of kids
     for( int i=0; i<cnt; i++ ) {
       int n = X.u8();
       Part kid;
@@ -68,8 +65,9 @@ abstract public class Part {
         kid = null;
         throw XEC.TODO();
       }
-      // if the child is a method, it can only be contained by a MultiMethodStructure
-      assert !(kid instanceof MethodPart);
+      // if the child is a method, it can only be contained by a MultiMethodPart
+      assert !(kid instanceof MethodPart) || (this instanceof MMethodPart);
+      // Insert name->kid mapping
       if( _name2kid==null ) _name2kid = new HashMap<>();
       Part old = _name2kid.get(kid.name());
       if( old==null ) _name2kid.put(kid.name(),kid);
@@ -77,27 +75,11 @@ abstract public class Part {
         while( old._sibling!=null ) old = old._sibling; // Follow linked list to end
         old._sibling = kid;                             // Append kid to tail of linked list
       }
-      // Here we can be lazy on the child's children
-      int lazy_len = X.u31();
-      if( lazy_len > 0 ) {
-        if( X._lazy ) {
-          X.x += lazy_len; // Skip in parser
-          for( Part p=kid; p!=null; p=p._sibling ) {
-            kid._lazy_off = X.x;
-            kid._lazy_len = lazy_len;
-          }
-        } else {
-          throw XEC.TODO();     // Recursively call parseKids
-        }
-      }
+      // Here we could be lazy on the child's children, but instead are always eager.
+      int len = X.u31();        // Length of serialized nested children
+      if( len > 0 )             // If there are recursively more children
+        kid.parseKids(X);
     }
-  }
-
-  // Walk the parent chain to the top
-  FilePart getFileComp() {
-    Part c = this;
-    while( !(c instanceof FilePart filec) ) c = c._par;
-    return filec;
   }
 
   // Part name
@@ -129,13 +111,20 @@ abstract public class Part {
    * of any number of contributing components.
    */
   public static class Contrib {
-    final Composition _comp;
-    final TCon _tContrib;
-    final PropCon _prop;
-    protected Contrib( FilePart X) {
+    private final Composition _comp;
+    private final TCon _tContrib;
+    private final PropCon _prop;
+    private final SingleCon _inject;
+    private final Annot _annot;
+    private final HashMap<StringCon, TCon> _parms;
+    protected Contrib( FilePart X ) {
       _comp = Composition.valueOf(X.u8());
       _tContrib = (TCon)X.xget();
       PropCon prop = null;
+      Annot annot = null;
+      SingleCon inject = null;
+      HashMap<StringCon, TCon> parms = null;
+    
       assert _tContrib!=null;
       switch( _comp ) {
       case Extends:
@@ -143,12 +132,35 @@ abstract public class Part {
       case Into:
       case RebasesOnto:
         break;
+      case Annotation:
+        annot = (Annot)X.xget();
+        break;
       case Delegates:
         prop = (PropCon)X.xget();
         break;
+        
+      case Incorporates:
+        int len = X.u31();
+        if( len == 0 ) break;
+        parms = new HashMap<>();
+        for( int i = 0; i < len; i++ ) {
+          StringCon name = (StringCon) X.xget();
+          int ix = X.u31();
+          parms.put(name, ix == 0 ? null : (TCon)X._pool.get(ix));
+        }
+        break;
+
+      case Import:
+        inject = (SingleCon)X.xget();
+        if( inject==null ) break;
+        throw XEC.TODO();
+        
       default: throw XEC.TODO();
       }
+      _annot = annot;
       _prop = prop;
+      _inject = inject;
+      _parms = parms;
     }
   }
   
@@ -176,15 +188,6 @@ abstract public class Part {
     FILE;
     
     /**
-     * Determine the format from a component's bit-flags value.
-     * @param nFlags  the 2-byte component bit-flags value
-     * @return the Format specified by the bit flags
-     */
-    static Format fromFlags(int nFlags) {
-      return valueOf((nFlags & FORMAT_MASK) >>> FORMAT_SHIFT);
-    }
-
-    /**
      * Instantiate a component as it is being read from a stream, reading its body
      * @param par    the parent component
      * @param con    the constant for the new component's identity
@@ -196,26 +199,30 @@ abstract public class Part {
     Part parse( Part par, Const con, int nFlags, CondCon cond, FilePart X ) {
       assert par!=null;
       return switch( this ) {
-      case MODULE   -> new ModPart(par, nFlags, (ModCon) con, cond, X);
-      //case PACKAGE  -> throw XEC.TODO(); // new PackageComponent(par, nFlags, (PackageCon) con, cond);
-      //case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE -> throw XEC.TODO(); // new ClassComponent(par, nFlags, (ClassCon) con, cond);
-      //case TYPEDEF  -> throw XEC.TODO(); // new TypedefComponent(par, nFlags, (TypedefCon) con, cond);
-      //case PROPERTY -> throw XEC.TODO(); // new PropertyComponent(par, nFlags, (PropCon) con, cond);
-      //case MULTIMETHOD -> throw XEC.TODO(); //  new MMethodComponent(par, nFlags, (MMthodCon) con, cond);
-      case METHOD   -> new MethodPart(par, nFlags, (MethodCon) con, cond, X);
+      case MODULE     -> new    ModPart(par, nFlags, (    ModCon) con, cond, X);
+      case PACKAGE    ->new PackagePart(par, nFlags, (PackageCon) con, cond, X);
+      case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE
+        ->               new  ClassPart(par, nFlags, (  ClassCon) con, cond, X);
+      case TYPEDEF    -> new   TDefPart(par, nFlags, (   TDefCon) con, cond, X);
+      case PROPERTY   -> new   PropPart(par, nFlags, (   PropCon) con, cond, X);
+      case MULTIMETHOD->new MMethodPart(par, nFlags, (MMethodCon) con, cond, X);
+      case METHOD     -> new MethodPart(par, nFlags, ( MethodCon) con, cond, X);
       default ->  throw new IllegalArgumentException("uninstantiable format: " + this);
       };
     }
 
     /**
-     * Look up a Format enum by its ordinal.
-     * @param i  the ordinal
-     * @return the Format enum for the specified ordinal
+     * Determine the format from a component's bit-flags value.
+     * @param nFlags  the 2-byte component bit-flags value
+     * @return the Format specified by the bit flags
      */
+    static final int FORMAT_MASK = 0x000F, FORMAT_SHIFT = 0;
+    static Format fromFlags(int nFlags) {
+      return valueOf((nFlags & FORMAT_MASK) >>> FORMAT_SHIFT);
+    }
+
     public static Format valueOf(int i) { return FORMATS[i]; }
     private static final Format[] FORMATS = Format.values();
-
-    static final int FORMAT_MASK = 0x000F, FORMAT_SHIFT = 0;
   }
 
   // ----- enumeration: Component Composition ----------------------------------------------------
