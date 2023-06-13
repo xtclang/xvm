@@ -231,7 +231,7 @@ service ChainBundle {
         WebServiceInfo[] serviceInfos = catalog.services;
         String           path         = serviceInfos[wsid].path;
 
-        MethodInfo[] interceptors = [];
+        MethodInfo[] interceptors = new MethodInfo[];
         for (Int id : 0..wsid) {
             WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path)) {
@@ -243,12 +243,11 @@ service ChainBundle {
                         interceptors.add(routeInfo);
                     }
                 } else {
-                    // TODO GG simplify
-                    interceptors.addAll(serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod, CollectArray.of(MethodInfo)));
+                    interceptors.addAll(serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod));
                 }
             }
         }
-        return interceptors.makeImmutable();
+        return interceptors.freeze(inPlace=True);
     }
 
     /**
@@ -258,16 +257,14 @@ service ChainBundle {
         WebServiceInfo[] serviceInfos = catalog.services;
         String           path         = serviceInfos[wsid].path;
 
-        MethodInfo[] observerInfos = [];
+        MethodInfo[] observerInfos = new MethodInfo[];
         for (Int id : 0..wsid) {
             WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path)) {
-                // TODO GG
-//                observerInfos.addAll(serviceInfo.observers.filter(m -> m.httpMethod == httpMethod));
-                observerInfos.addAll(serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, CollectArray.of(MethodInfo)));
+                observerInfos.addAll(serviceInfo.observers.filter(m -> m.httpMethod == httpMethod));
             }
         }
-        return observerInfos.makeImmutable();
+        return observerInfos.freeze(inPlace=True);
     }
 
     /**
