@@ -348,6 +348,11 @@ public class InvocationExpression
     protected TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired,
                                                 boolean fExhaustive, ErrorListener errs)
         {
+        if (isValidated())
+            {
+            return getTypes();
+            }
+
         ConstantPool pool = pool();
 
         if (expr instanceof NameExpression exprName)
