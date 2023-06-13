@@ -7,7 +7,7 @@ import java.util.ArrayList;
 /**
    Module component
  */
-class ModPart extends ClassPart {
+class ModPart extends ClassPart<ModCon> {
   public final ModuleType _t;   // Type of Module
   public final LitCon _dir;     // Directory?
   public final LitCon _time;    // Creation timestamp?
