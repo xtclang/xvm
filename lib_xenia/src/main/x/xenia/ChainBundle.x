@@ -2,6 +2,8 @@ import Catalog.EndpointInfo;
 import Catalog.MethodInfo;
 import Catalog.WebServiceInfo;
 
+import ecstasy.collections.CollectArray;
+
 import web.AcceptList;
 import web.Body;
 import web.BodyParam;
@@ -241,7 +243,8 @@ service ChainBundle {
                         interceptors.add(routeInfo);
                     }
                 } else {
-                    serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod, interceptors);
+                    // TODO GG simplify
+                    interceptors.addAll(serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod, CollectArray.of(MethodInfo)));
                 }
             }
         }
@@ -259,7 +262,9 @@ service ChainBundle {
         for (Int id : 0..wsid) {
             WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path)) {
-                serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, observerInfos);
+                // TODO GG
+//                observerInfos.addAll(serviceInfo.observers.filter(m -> m.httpMethod == httpMethod));
+                observerInfos.addAll(serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, CollectArray.of(MethodInfo)));
             }
         }
         return observerInfos.makeImmutable();

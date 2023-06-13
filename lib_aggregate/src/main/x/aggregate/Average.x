@@ -25,7 +25,7 @@ const Average<Element extends Number, Quotient extends Number>
     }
 
     @Override
-    Accumulator init() {
+    Accumulator init(Int capacity = 0) {
         return new ElementSummer<Element>();
     }
 
@@ -41,7 +41,7 @@ const Average<Element extends Number, Quotient extends Number>
             implements Aggregator<Value, CountAndSum<Value>> {
 
         @Override
-        Accumulator init() {
+        Accumulator init(Int capacity = 0) {
             return new ElementSummer<Value>();
         }
 
@@ -55,7 +55,7 @@ const Average<Element extends Number, Quotient extends Number>
             implements Aggregator<CountAndSum<Value>, CountAndSum<Value>> {
 
         @Override
-        Accumulator init() {
+        Accumulator init(Int capacity = 0) {
             return new ResultSummer<Value>();
         }
 
@@ -69,7 +69,7 @@ const Average<Element extends Number, Quotient extends Number>
             implements Aggregator<CountAndSum<Value>, Quotient?> {
 
         @Override
-        Accumulator init() {
+        Accumulator init(Int capacity = 0) {
             return new ResultSummer<Value>();
         }
 

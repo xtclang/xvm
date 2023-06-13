@@ -296,7 +296,8 @@ const UriTemplate {
         @Override
         Int estimateStringLength() {
             return 2 + (prefix==Null ? 0 : 1) + vars.size - 1
-                     + vars.map(Variable.estimateStringLength).reduce(0, (s1, s2) -> s1 + s2);
+                     + vars.map(Variable.estimateStringLength)
+                           .reduce(0, (s1, s2) -> s1 + s2);
         }
 
         @Override
@@ -966,7 +967,8 @@ const UriTemplate {
 
     @Override
     Int estimateStringLength() {
-        return parts.map(Stringable.estimateStringLength).reduce(0, (s1, s2) -> s1 + s2);
+        return parts.map(Stringable.estimateStringLength)
+                    .reduce(0, (s1, s2) -> s1 + s2);
     }
 
     @Override

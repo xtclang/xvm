@@ -1,3 +1,5 @@
+import ecstasy.collections.CollectArray;
+
 import oodb.DBMap;
 
 /**
@@ -13,7 +15,8 @@ mixin UserHistory
      * @return an array of zero or more change records
      */
     UserChange[] findByUser(Int userId) {
-        return values.filter(uc -> uc.appliesTo(userId),
-                new UserChange[]).as(UserChange[]).sorted((uc1, uc2) -> uc1.timestamp <=> uc2.timestamp);
+        return values.filter(chg -> chg.appliesTo(userId), CollectArray.of(UserChange))
+                     .sorted((chg1, chg2) -> chg1.timestamp <=> chg2.timestamp, inPlace=True)
+                     .freeze(inPlace=True);
     }
 }
