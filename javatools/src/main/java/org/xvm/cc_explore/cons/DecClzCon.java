@@ -6,9 +6,8 @@ import org.xvm.cc_explore.*;
   Exploring XEC Constants
  */
 public class DecClzCon extends IdCon {
-  private transient int _tx;
   private TCon _type;
-  public DecClzCon( FilePart X ) { _tx = X.u31(); }
-  @Override public void resolve( CPool pool ) { _type = (TCon)pool.get(_tx); }
+  public DecClzCon( FilePart X ) { X.u31(); }
+  @Override public void resolve( FilePart X ) { _type = (TCon)X.xget(); }
   @Override public String name() { throw XEC.TODO(); }
 }

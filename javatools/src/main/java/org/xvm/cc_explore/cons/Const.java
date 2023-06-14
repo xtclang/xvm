@@ -15,7 +15,7 @@ import org.xvm.cc_explore.Part;
 public abstract class Const {
 
   // Resolve any internal references from the serialized form.
-  public void resolve( CPool pool ){};
+  public void resolve( FilePart X ){};
 
   // Parse an array of Const from a pre-filled constant pool
   public static Const[] xconsts( FilePart X ) {
@@ -34,15 +34,6 @@ public abstract class Const {
    * @return this same type, but without any typedefs or resolvable {@link UnresolvedNameConstant}s in it
    */
   public Const resolveTypedefs() { return this; }
-
-  // Resolve an array
-  public static Const[] resolveAry( CPool pool, int[] xs) {
-    Const[] cs = new Const[xs.length];
-    for( int i=0; i<xs.length; i++ )
-      cs[i] = pool.get(xs[i]);
-    return cs;
-  }
-
   
   public enum Format {
     IntLiteral("numbers"),

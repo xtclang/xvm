@@ -38,7 +38,7 @@ public class FilePart extends Part {
   final int _minor;
 
   // Constant pool...
-  final CPool _pool;
+  public CPool _pool;
 
   // Main module name
   final String _modName;
@@ -72,6 +72,7 @@ public class FilePart extends Part {
 
     // Build the constant pool
     _pool = new CPool(this);
+    _pool.parse(this);
 
     // Easy access to module name; will be non-null (TODO: or crash)
     _modName = ((ModCon)_pool.get(u31())).name();
@@ -194,22 +195,18 @@ public class FilePart extends Part {
     return Arrays.copyOfRange(_buf,x,x+=len);
   }
   
-  // Read an array of idxs
-  public int[] idxAry() {
+  // Skip an array of idxs
+  public void skipAry() {
     int len = u31();      
-    int[] txs = new int[len];
-    for( int i=0; i<len; i++ )
-      txs[i] = u31();
-    return txs;
+    for( int i=0; i<len; i++ )  u31();
   }
-
   
-   private int utf8Byte() {
-     int n = u8();
-     if( (n & 0b11000000) != 0b10000000 )
-       throw new IllegalArgumentException("trailing unicode byte does not match 10xxxxxx");
-     return n & 0b00111111;
-   }
+  private int utf8Byte() {
+    int n = u8();
+    if( (n & 0b11000000) != 0b10000000 )
+      throw new IllegalArgumentException("trailing unicode byte does not match 10xxxxxx");
+    return n & 0b00111111;
+  }
 
   
   // Read a UTF8 char
@@ -246,6 +243,6 @@ public class FilePart extends Part {
       if( ch > 0xFFFF ) throw XEC.TODO();
       SB.append((char)ch);
     }
-    return SB.toString();
+    return SB.toString().intern();
   }    
 }

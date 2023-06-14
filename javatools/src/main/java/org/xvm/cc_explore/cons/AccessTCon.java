@@ -8,12 +8,11 @@ import org.xvm.cc_explore.FilePart;
   Exploring XEC Constants
  */
 public class AccessTCon extends TCon {
-  private final transient int _tx;
   private final Access _access;
   TCon _con;
   public AccessTCon( FilePart X ) {
-    _tx   = X.u31();
+    X.u31();                    // Skip index for _con
     _access = Access.valueOf(X.u31());
   }
-  @Override public void resolve( CPool pool ) { _con = (TCon)pool.get(_tx); }
+  @Override public void resolve( FilePart X ) { _con = (TCon)X.xget(); }
 }
