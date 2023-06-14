@@ -1,20 +1,23 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.xclz.XClz;
 
 import java.util.ArrayList;
 
 /**
    Module component
  */
-class ModPart extends ClassPart {
+public class ModPart extends ClassPart {
   public final ModuleType _t;   // Type of Module
   public final LitCon _dir;     // Directory?
   public final LitCon _time;    // Creation timestamp?
 
-  public final VerCon _version;
-  public final VerTree _allowedVers;
-  public final ArrayList<Version> _prefers;
+  public final VerCon _version; // This version
+  public final VerTree _allowedVers; //
+  public final ArrayList<Version> _prefers; 
+
+  private XClz _xclz;           // Cached Java class hierarchy version of this module
   
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, FilePart X ) {
     super(par,nFlags,con,cond,X);
@@ -47,6 +50,7 @@ class ModPart extends ClassPart {
     _time = (LitCon)X.xget();
   }
 
+  @Override public String toString() { return con().toString(); }
   ModCon con() { return (ModCon)_id; }
   
   /**
@@ -72,6 +76,9 @@ class ModPart extends ClassPart {
     }
     return null;
   }
+
+  // Return a Java Class for this XTC Module
+  XClz xclz() { return _xclz==null ? (_xclz=XClz.make(this)) : _xclz; }
   
 
   // ----- ModuleType enumeration ----------------------------------------------------------------
