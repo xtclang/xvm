@@ -1,17 +1,15 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.*;
 
 /**
   Exploring XEC Constants
  */
 public abstract class TCon extends Const {
-  // Resolve an array
-  public static TCon[] resolveAry( CPool pool, int[] xs) {
-    TCon[] cs = new TCon[xs.length];
-    for( int i=0; i<xs.length; i++ )
-      cs[i] = (TCon)pool.get(xs[i]);
+  public static TCon[] tcons( FilePart X ) {    
+    TCon[] cs = new TCon[X.u31()];
+    for( int i=0; i<cs.length; i++ )
+      cs[i] = (TCon)X.xget();
     return cs;
   }
 }
