@@ -47,6 +47,8 @@ class ModPart extends ClassPart {
     _time = (LitCon)X.xget();
   }
 
+  ModCon con() { return (ModCon)_id; }
+  
   /**
    * Check if this is a fingerprint module, which is a secondary (not main) module in a file
    * structure that represents the set of external dependencies on a particular imported module
@@ -61,6 +63,16 @@ class ModPart extends ClassPart {
     };
   }
 
+  // Find a method by name, or return null
+  MethodPart method(String s) {
+    Part p = _name2kid.get(s);
+    if( p instanceof MMethodPart mm && s.equals(mm.name()) ) {
+      if( mm._name2kid.size()!=1 ) throw XEC.TODO(); // Disambiguate?
+      return (MethodPart)mm._name2kid.get(s);
+    }
+    return null;
+  }
+  
 
   // ----- ModuleType enumeration ----------------------------------------------------------------
   /**
