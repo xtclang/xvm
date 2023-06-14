@@ -8,15 +8,21 @@ import java.util.ArrayList;
  */
 public class CPool {
   // Constants by index
-  private final ArrayList<Const> _consts = new ArrayList<>();
+  private final Const[] _consts;
   
   CPool( FilePart X ) {
-
-    // load the constant pool from the stream
     int len = X.u31();
+    _consts = new Const[len];
+  }
+  void parse( FilePart X ) {
+    int len = _consts.length;
+    int[] offs = new int[len];
+    
+    // load the constant pool from the stream
     for( int i = 0; i < len; i++ ) {
       Const.Format f = Const.Format.valueOf(X.u8());
-      _consts.add( switch( f ) {
+      offs[i] = X.x;
+      _consts[i] = switch( f ) {
         case AccessType    -> new AccessTCon(X);
         case AnnotatedType -> new AnnotTCon(X);
         case Annotation    -> new Annot(X);
@@ -80,15 +86,17 @@ public class CPool {
           System.err.println("Format "+f);
           throw XEC.TODO();
         }
-        });
+        };
     }
 
     // Convert indices into refs
-    for( Const c : _consts )
-      c.resolve(this);
+    int oldx = X.x;
+    for( int i = 0; i < len; i++ ) {
+      X.x = offs[i];            // Reset parsing state
+      _consts[i].resolve(X);
+    }
+    X.x = oldx;
   }
 
-  public Const get( int idx ) {
-    return idx == -1 ? null : _consts.get(idx);
-  }
+  public Const get( int idx ) { return idx == -1 ? null : _consts[idx]; }
 }

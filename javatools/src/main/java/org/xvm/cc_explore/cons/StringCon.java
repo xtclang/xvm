@@ -8,8 +8,6 @@ import org.xvm.cc_explore.FilePart;
  */
 public class StringCon extends Const {
   final String _str;
-  public StringCon( FilePart X ) {
-    _str = X.utf8();
-  }
+  public StringCon( FilePart X ) { _str = X.utf8(); }
   @Override public String toString() { return _str; }
 }

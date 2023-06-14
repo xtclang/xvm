@@ -6,17 +6,15 @@ import org.xvm.cc_explore.*;
   Exploring XEC Constants
  */
 public class ParamTCon extends TCon {
-  private transient int _tx;  // Type index for type
-  private transient int[] _txs;  // Type index for type parameters
   TCon _con;
-  TCon[] _params;
+  TCon[] _parms;
   
   public ParamTCon( FilePart X ) {
-    _tx  = X.u31();
-    _txs = X.idxAry();
+    X.u31();
+    X.skipAry();
   }
-  @Override public void resolve( CPool pool ) {
-    _con = (TCon)pool.get(_tx);
-    _params = TCon.resolveAry(pool,_txs);
+  @Override public void resolve( FilePart X ) {
+    _con = (TCon)X.xget();
+    _parms = TCon.tcons(X);
   }
 }

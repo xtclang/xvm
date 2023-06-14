@@ -7,17 +7,15 @@ import org.xvm.cc_explore.cons.ClassCon;
   Exploring XEC Constants
  */
 public class Annot extends Const {
-  private transient int _clzx;  // Type index for clazz
-  private transient int[] _parmxs; // Type index for each parameter
   ClassCon _clz;
   Const[] _cons;
   Annot( FilePart X ) {
-    _clzx = X.u31();
-    _parmxs = X.idxAry();
+    X.u31();
+    X.skipAry();
   }
-  @Override public void resolve( CPool pool ) {
-    _clz = (ClassCon)pool.get(_clzx);
-    _cons = resolveAry(pool,_parmxs);
+  @Override public void resolve( FilePart X ) {
+    _clz = (ClassCon)X.xget();
+    _cons = xconsts(X);
   }
   
   // Parse an array of Annots from a pre-filled constant pool

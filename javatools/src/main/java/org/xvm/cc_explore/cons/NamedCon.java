@@ -6,18 +6,16 @@ import org.xvm.cc_explore.*;
   Exploring XEC Constants
  */
 public abstract class NamedCon extends IdCon {
-  private transient int _parx;  // Type index for parent
-  private transient int _namex; // Type index for name
   private IdCon _par;
   private StringCon _name;
   NamedCon( FilePart X ) {
-    _parx  = X.u31();
-    _namex = X.u31();
+    X.u31();
+    X.u31();
   }
-  @Override public void resolve( CPool pool ) {
-    _par  = (    IdCon)pool.get( _parx);
-    _name = (StringCon)pool.get(_namex);
+  @Override public void resolve( FilePart X ) {
+    _par  = (    IdCon)X.xget();
+    _name = (StringCon)X.xget();
   }
   @Override public String name() { return _name._str; }
-  @Override public String toString() { return _name.toString(); }
+  @Override public String toString() { return name(); }
 }

@@ -6,22 +6,20 @@ import org.xvm.cc_explore.*;
   Exploring XEC Constants
  */
 public class SigCon extends IdCon {
-  private transient int _namex;  // Type index for name
-  private transient int[] _parmxs, _retxs;  // Type index arrays for parms, returns
   StringCon _name;
   TCon[] _parms;
   TCon[] _rets;
   
   public SigCon( FilePart X ) {
-    _namex  = X.u31();
-    _parmxs = X.idxAry();
-    _retxs  = X.idxAry();
+    X.u31();
+    X.skipAry();
+    X.skipAry();
   }
   
-  @Override public void resolve( CPool pool ) {
-    _name  = (StringCon)pool.get(_namex);
-    _parms = TCon.resolveAry(pool,_parmxs);
-    _rets  = TCon.resolveAry(pool, _retxs);
+  @Override public void resolve( FilePart X ) {
+    _name  = (StringCon)X.xget();
+    _parms = TCon.tcons(X);
+    _rets  = TCon.tcons(X);
   }  
   @Override public String name() { throw XEC.TODO(); }
   public TCon[] rawRets () { return _rets ; }
