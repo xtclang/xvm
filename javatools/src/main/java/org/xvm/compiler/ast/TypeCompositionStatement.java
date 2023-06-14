@@ -1299,7 +1299,13 @@ public class TypeCompositionStatement
                     Expression       exprTarget = ((Delegates) composition).getDelegatee();
                     String           sTarget;
                     PropertyConstant idTarget;
-                    if (exprTarget instanceof NameExpression exprName && exprName.isSimpleName())
+                    if (!(exprTarget instanceof NameExpression exprName))
+                        {
+                        exprTarget.log(errs, Severity.ERROR, Compiler.DELEGATE_INVALID);
+                        break;
+                        }
+
+                    if (exprName.isSimpleName())
                         {
                         sTarget = exprName.getName();
                         }
@@ -1319,7 +1325,7 @@ public class TypeCompositionStatement
                                 new Token(lStartPos, lEndPos, Id.IDENTIFIER, sTarget),
                                 null, exprTarget, null, null);
                         propTarget.markSynthetic();
-                        exprTarget.setParent(propTarget); // REVIEW
+                        exprTarget.setParent(propTarget);
                         ensureBody().addStatement(propTarget);
                         }
                     idTarget = pool.ensurePropertyConstant(component.getIdentityConstant(), sTarget);

@@ -2327,7 +2327,7 @@ public class InvocationExpression
                 // an import name can specify a MultiMethodConstant;
                 // we only allow functions (not methods or constructors)
                 IdentityConstant idClz      = idMM.getParentConstant();
-                TypeConstant     typeTarget = idClz.getType();
+                TypeConstant     typeTarget = idClz.getFormalType();
                 TypeInfo         info       = getTypeInfo(ctx, typeTarget, errs);
                 IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
                         args, MethodKind.Any, !fNoCall, false, atypeReturn, errs);
