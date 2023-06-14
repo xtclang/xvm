@@ -10,12 +10,12 @@ class DistinctIterator<Element>
         construct DelegatingIterator(iter);
     }
 
-    private ListMap<Element, Nullable> previous = new ListMap();   // TODO CP switch to ListSet
+    private ListSet<Element> previous = new ListSet();
 
     @Override
     conditional Element next() {
         while (Element el := iter.next()) {
-            if (previous.putIfAbsent(el, Null)) {
+            if (previous.addIfAbsent(el)) {
                 return True, el;
             }
         }
