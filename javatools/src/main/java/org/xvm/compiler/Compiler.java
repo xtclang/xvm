@@ -1385,6 +1385,10 @@ public class Compiler
      */
     public static final String INJECTOR_REQUIRED                  = "COMPILER-193";
     /**
+     * The delegation target must be a property.
+     */
+    public static final String DELEGATE_INVALID                   = "COMPILER-194";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

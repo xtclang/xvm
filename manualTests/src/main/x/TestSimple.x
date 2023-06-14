@@ -2,11 +2,15 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        String[] strings = new String[];
-        String[] other = ["a", "bb"];
+    }
 
-        strings += other.filter(s -> s.size == 1); // this used to fail to compile
+    import ecstasy.collections.Aggregator;
 
-        console.print(strings);
+    class Test<Element>(Element element)
+        delegates Collection<Element>(reify()) { // used to produce a confusing error
+
+        Set<Element> reify() {
+            TODO
+        }
     }
 }
