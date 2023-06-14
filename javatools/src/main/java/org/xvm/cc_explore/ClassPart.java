@@ -7,10 +7,10 @@ import java.util.HashMap;
 /**
    Class part
  */
-class ClassPart<ID2 extends IdCon> extends Part<ID2> {
+class ClassPart extends Part {
   final HashMap<StringCon,TCon> _params; // String->Type mapping
   final LitCon _path;           // File name compiling this file
-  ClassPart( Part par, int nFlags, ID2 id, CondCon cond, FilePart X ) {
+  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
     super(par,nFlags,id,cond,X);
     _params = parseTypeParams(X);
     _path = (LitCon)X.xget();

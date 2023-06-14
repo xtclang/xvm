@@ -8,23 +8,23 @@ import java.util.HashMap;
 /**
      DAG structure containment of components/parts
  */
-abstract public class Part<IDCON extends IdCon> {
+abstract public class Part {
   public final Part _par;       // Parent in the parent chain; null ends.  Last is FilePart.
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
-  public final IDCON _id;       // Identifier
+  public final IdCon _id;       // Identifier
 
   public final ArrayList<Contrib> _contribs;
 
   // Map from kid name to kid.  
   // TODO: I lifted this 1 layer from the original, and I'm pretty sure this
   // isn't right but I don't have a test case to debug yet
-  private HashMap<String,Part> _name2kid;
+  HashMap<String,Part> _name2kid;
 
   // Linked list of siblings at the same DAG level with the same name
   private Part _sibling;
 
-  Part( Part par, int nFlags, IDCON id, CondCon cond, FilePart X ) {
+  Part( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
     _par = par;
     _sibling = null;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
@@ -32,7 +32,7 @@ abstract public class Part<IDCON extends IdCon> {
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
     
     if( id != null ) {
-      id = (IDCON)id.resolveTypedefs();
+      id = (IdCon)id.resolveTypedefs();
       id.resetCachedInfo();
     }
     _nFlags = nFlags;
@@ -102,8 +102,7 @@ abstract public class Part<IDCON extends IdCon> {
 
     throw XEC.TODO();
   }
-  
-  
+
   // ----- inner class: Component Contribution ---------------------------------------------------
   /**
    * Represents one contribution to the definition of a class. A class (with the term used in the
@@ -162,6 +161,7 @@ abstract public class Part<IDCON extends IdCon> {
       _inject = inject;
       _parms = parms;
     }
+    // resolve
   }
   
   /**
