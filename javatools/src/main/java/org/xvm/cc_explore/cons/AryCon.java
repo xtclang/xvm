@@ -7,18 +7,17 @@ import org.xvm.cc_explore.*;
  */
 public class AryCon extends Const {
   final Format _f;
-  private transient int _tx;    // Type index for whole array
-  private transient int[] _txs; // Type index for each element
-  private Const[] _cons;
+  private TCon _t;              // Type for whole array
+  private Const[] _cons;        // Type for each element
   
   public AryCon( FilePart X, Const.Format f ) {
     _f = f;
-    _tx  = X.u31();
-    _txs = X.idxAry();
+    X.u31();                    // Type index for whole array
+    X.skipAry();                // Index for each element
   }
-  @Override public void resolve( CPool pool ) {
-    TCon t = (TCon)pool.get(_tx);
-    _cons = resolveAry(pool,_txs);
+  @Override public void resolve( FilePart X ) {
+    _t = (TCon)X.xget();
+    _cons = xconsts(X);
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }

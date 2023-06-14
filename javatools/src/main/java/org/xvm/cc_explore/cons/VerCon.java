@@ -12,8 +12,8 @@ public class VerCon extends LitCon {
   }
 
   public Version ver() { return _ver; }
-  @Override public void resolve( CPool pool ) {
-    super.resolve(pool);
+  @Override public void resolve( FilePart X ) {
+    super.resolve(X);
     _ver = new Version(_str._str);
   }
 }
