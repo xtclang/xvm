@@ -7,14 +7,13 @@ import org.xvm.cc_explore.FilePart;
   Exploring XEC Constants
  */
 public abstract class RelTCon extends TCon {
-  private final transient int _t1x, _t2x;
   private TCon _con1, _con2;
   public RelTCon( FilePart X ) {
-    _t1x = X.u31();
-    _t2x = X.u31();
+    X.u31();
+    X.u31();
   }
-  @Override public void resolve( CPool pool ) {
-    _con1 = (TCon)pool.get(_t1x);
-    _con2 = (TCon)pool.get(_t2x);
+  @Override public void resolve( FilePart X ) {
+    _con1 = (TCon)X.xget();
+    _con2 = (TCon)X.xget();
   }
 }

@@ -48,6 +48,9 @@ abstract public class Part {
     }
   }
 
+
+  // Tik-tok style recursive-descent parsing.  This is the Tik, shared amongst
+  // all kids.  The Tok is where we do kid-specific parsing.
   void parseKids( FilePart X ) {
     int cnt = X.u31();          // Number of kids
     for( int i=0; i<cnt; i++ ) {
@@ -58,6 +61,7 @@ abstract public class Part {
         // the first byte of the two-byte FLAGS value (which is the start of
         // the body) for a single component
         n = (n << 8) | X.u8();
+        // Tok.
         kid = Format.fromFlags(n).parse(this,X.xget(), n, null, X);
       } else {
         kid = null;
