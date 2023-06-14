@@ -14,6 +14,4 @@ public abstract class TCon extends Const {
       cs[i] = (TCon)pool.get(xs[i]);
     return cs;
   }
-
-
 }
