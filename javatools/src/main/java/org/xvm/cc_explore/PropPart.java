@@ -5,7 +5,7 @@ import org.xvm.cc_explore.cons.*;
 /**
    Property part
  */
-class PropPart extends Part<PropCon> {
+class PropPart extends Part {
   public final Const.Access _access;
   public final TCon _type;
   public final Const _init;

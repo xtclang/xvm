@@ -4,7 +4,7 @@ import org.xvm.cc_explore.cons.*;
 
 import java.io.IOException;
 
-class MethodPart extends Part<MethodCon> {
+class MethodPart extends Part {
 
   // Method's "super"
   public final MethodCon _super;
@@ -45,7 +45,7 @@ class MethodPart extends Part<MethodCon> {
     _finally = (MethodCon)X.xget();
 
     // Read return types
-    TCon[] rawRets = _id.rawRets();
+    TCon[] rawRets = ((MethodCon)_id).rawRets();
     _rets = new Parameter[rawRets.length];
     boolean cret = isConditionalReturn();
     for( int i=0; i<rawRets.length; i++ ) {
@@ -55,7 +55,7 @@ class MethodPart extends Part<MethodCon> {
     }
 
     // Read type parameters
-    TCon[] rawParms = _id.rawParms();
+    TCon[] rawParms = ((MethodCon)_id).rawParms();
     int nparms = X.u31();
     _nDefaults = X.u31();    // Number of default parms
     _args = new Parameter[rawParms.length];
