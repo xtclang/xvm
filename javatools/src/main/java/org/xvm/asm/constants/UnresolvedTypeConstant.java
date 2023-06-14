@@ -368,6 +368,14 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public Relation calculateRelation(TypeConstant typeLeft)
+        {
+        return isTypeResolved()
+                ? getResolvedType().calculateRelation(typeLeft)
+                : Relation.INCOMPATIBLE;
+        }
+
+    @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                boolean fFunction, List<TypeConstant> listParams)
         {
