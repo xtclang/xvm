@@ -31,10 +31,8 @@ abstract public class Part {
     assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
     
-    if( id != null ) {
+    if( id != null )
       id = (IdCon)id.resolveTypedefs();
-      id.resetCachedInfo();
-    }
     _nFlags = nFlags;
     _cond = cond;
     _id = id;

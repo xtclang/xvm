@@ -22,7 +22,8 @@ public class XEC {
     // Parse options
     // Parse (-L path)* libs
     String[] libs = libs(args);
-    // Check for alternate main
+    // Check for alternate run method
+    String xrun = "run";
     int ndx = libs.length*2;
     if( ndx < args.length && args[ndx].equals("-M") ) throw XEC.TODO();
     // File to run
@@ -49,11 +50,16 @@ public class XEC {
     // Start the thread pool up
     XRuntime.start();
 
-    // Start the initial container.
-    Container C = new Container(repo,mod);
-
-    System.err.println("TODO: Loaded "+xtc+" fine, Execution continues");
-    TODO();
+    // Start the native container.  Top of the container tree.
+    NativeContainer N = new NativeContainer(repo);
+    // Start the initial container
+    MainContainer M = new MainContainer(N,repo,mod);
+    
+    System.err.println("Launching "+xrun);
+    /*Joinable J=*/M.invoke(xrun,xargs); // Returns something to join against
+    //J.join();
+    //System.err.println("Done.");
+    throw TODO();
   }
 
   // Parse options: Count and gather libs
