@@ -41,16 +41,39 @@ class ListMap<Key, Value>
      * @param vals  the values for the map
      */
     construct(Key[] keys, Value[] vals) {
-        this.keyArray = keys.mutability == Persistent || keys.mutability == Constant
-                            ? keys : keys.freeze(inPlace=False);
-        this.valArray = vals.mutability == Persistent || vals.mutability == Constant
-                            ? vals : vals.freeze(inPlace=False);
-        this.inPlace  = False;
-
-        // TODO various checks, and do we need to copy the array(s) if they aren't immutable?
         assert keys.size == vals.size;
+        switch (keys.mutability, vals.mutability) {
+            case (Constant, Constant):
+                keyArray = keys;
+                valArray = vals;
+                break;
+
+            case (Persistent, Persistent):
+            case (Persistent, Constant):
+            case (Constant, Persistent):
+                keyArray = keys;
+                valArray = vals;
+                break;
+
+            default:
+                if (keys.all(k -> k.is(immutable | service))
+                        && vals.all(v -> v.is(immutable | service))) {
+                    // both arrays can be safely made as "Constant" mutability without mutating any
+                    // of their elements
+                    keyArray = keys.freeze();
+                    valArray = vals.freeze();
+                } else {
+                    // make sure both arrays are at least "Persistent" mutability (to avoid
+                    // accidentally freezing any of the objects referenced by the arrays)
+                    keyArray = keys.mutability > Persistent ? keys.toArray(Persistent) : keys;
+                    valArray = vals.mutability > Persistent ? vals.toArray(Persistent) : vals;
+                }
+                break;
+        }
+        this.inPlace = False;
     } finally {
-        if (this.keyArray.is(immutable Array) && this.valArray.is(immutable Array)) {
+        // pre-freeze the ListMap if the contents of the map are all already immutable
+        if (this.keyArray.is(immutable) && this.valArray.is(immutable)) {
             makeImmutable();
         }
     }
@@ -67,6 +90,13 @@ class ListMap<Key, Value>
 
     @Override
     public/private Boolean inPlace;
+
+    ListMap! ensureMutable()
+        {
+        return inPlace && !this.is(immutable)
+                ? this
+                : new ListMap(this);
+        }
 
     /**
      * The list of keys in the map, in order of insertion.
@@ -147,10 +177,6 @@ class ListMap<Key, Value>
 
 
     // ----- Map interface -------------------------------------------------------------------------
-
-// TODO CP
-//    @Override
-//    public/private Mutability mutability = Mutable;
 
     @Override
     Int size.get() {
@@ -300,42 +326,6 @@ class ListMap<Key, Value>
         return compute(new CursorEntry(key));
     }
 
-// TODO CP
-//    @Override
-//    ListMap ensureMutable()
-//        {
-//        if (mutability == Mutable)
-//            {
-//            return this;
-//            }
-//
-//        ListMap that = new ListMap(size);
-//        that.putAll(this);
-//        return that;
-//        }
-//
-//    @Override
-//    ListMap ensureFixedSize(Boolean inPlace = False)
-//        {
-//        TODO
-//        }
-//
-//    @Override
-//    ListMap ensurePersistent(Boolean inPlace = False)
-//        {
-//        TODO
-//        }
-//
-//    @Override
-//    immutable ListMap freeze(Boolean inPlace = False)
-//        {
-//        immutable Key[]   keys = keyArray.freeze(inPlace);
-//        immutable Value[] vals = valArray.freeze(inPlace);
-//
-//        return inPlace
-//                ? makeImmutable()
-//                : new ListMap(keys, vals).as(immutable ListMap);
-//        }
 
     // ----- Keys Set ------------------------------------------------------------------------------
 
