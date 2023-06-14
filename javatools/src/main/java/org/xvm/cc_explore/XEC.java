@@ -31,12 +31,13 @@ public class XEC {
     String[] xargs = args(ndx,args);
 
     
-    // Load XDK
     ModRepo repo = new ModRepo();
     // Load XTC file into repo
     ModPart mod = repo.load(xtc);
-
+    // Load XDK
     for( String lib : libs ) repo.load(lib);
+    // Link the repo
+    repo.link();
     
     // See that we got a main module
     if( mod==null ) {
@@ -115,6 +116,18 @@ public class XEC {
     static final FileFilter ModulesOnly = file ->
       file.getName().length() > 4 && file.getName().endsWith(".xtc") &&
       file.exists() && file.isFile() && file.canRead() && file.length() > 0;
+
+    // Link.
+    // Each module has a parent FilePart; the parent FilePart has a set of
+    // child modules (including the original module).  Some of the child
+    // modules might be Fingerprints: unlinked module names that must appear in
+    // the repo.  Replace fingerprints with the primary module.
+    void link() {
+      // For all modules in repo
+      for( ModPart mod : values() )
+        // Get the parent's set of child modules and link them against the repo
+        ((FilePart)mod._par).link(this);
+    }
   }
 
   public static RuntimeException TODO() { return new RuntimeException("TODO"); }
