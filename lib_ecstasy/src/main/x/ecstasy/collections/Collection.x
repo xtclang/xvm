@@ -441,11 +441,7 @@ interface Collection<Element>
             Result distinct(Aggregator<Element, Result>? collector = Null) {
 
         if (collector == Null) {
-            if (this.is(Set<Element>) && this.is(Result)) {
-                return this;
-            }
-            // TODO CP replace with deferred-distinct set?
-            return new ListSet<Element>(this).as(Result);
+            return (empty ? [] : new deferred.DistinctCollection<Element>(this)).as(Result);
         }
 
         Appender<Element> dest = collector.init();
