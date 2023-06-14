@@ -429,7 +429,7 @@ public class InvocationExpression
                     TypeConstant[] atype = m_fCall || cReturns == 0
                             ? atypeReturn
                             : pool.extractFunctionReturns(atypeReturn[0]);
-                    resolver = makeTypeParameterResolver(ctx, method, atype, ErrorListener.BLACKHOLE);
+                    resolver = makeTypeParameterResolver(ctx, method, false, atype, ErrorListener.BLACKHOLE);
                     }
 
                 if (m_fCall)
@@ -864,7 +864,7 @@ public class InvocationExpression
                     // against all the types we know by now (marking unresolved as "pending")
                     if (cParams > 0)
                         {
-                        GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
+                        GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method, true,
                                 fCall || cReturns == 0
                                     ? atypeReturn
                                     : pool.extractFunctionReturns(atypeReturn[0]), errs);
@@ -1936,7 +1936,6 @@ public class InvocationExpression
         Argument argTarget;
         if (exprLeft == null)
             {
-            MethodStructure method = code.getMethodStructure();
             if (m_targetInfo == null)
                 {
                 argTarget = ctx.generateThisRegister(code);
@@ -3089,8 +3088,8 @@ public class InvocationExpression
      *         type parameters could not be resolved, reporting the unresolved type parameters to
      *         the error list
      */
-    private GenericTypeResolver makeTypeParameterResolver(
-            Context ctx, MethodStructure method, TypeConstant[] atypeReturn, ErrorListener errs)
+    private GenericTypeResolver makeTypeParameterResolver(Context ctx, MethodStructure method,
+            boolean fAllowFormal, TypeConstant[] atypeReturn, ErrorListener errs)
         {
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
@@ -3103,7 +3102,7 @@ public class InvocationExpression
         transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
         Map<FormalConstant, TypeConstant> mapTypeParams =
-                resolveTypeParameters(method, atypeArgs, atypeReturn, true);
+                resolveTypeParameters(method, atypeArgs, atypeReturn, fAllowFormal);
 
         if (mapTypeParams.size() == method.getTypeParamCount())
             {
