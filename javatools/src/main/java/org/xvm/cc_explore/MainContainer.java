@@ -1,6 +1,7 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.xclz.XClz;
 
 class MainContainer extends Container {
   final ModPart _mod;           // Starting module
@@ -14,8 +15,10 @@ class MainContainer extends Container {
     MethodPart meth = _mod.method(xrun);
     if( meth == null ) return; // TODO: Existing XEC prints to sys.err and returns
     // Here I need to build/cache/load a java class for the "_mod",
+    XClz xclz = _mod.xclz();
     // Then invoke a Java executor Runnable task (F/J lite task?) for the method+args.
-    
+    System.err.println("Launching "+xrun);
+
     throw XEC.TODO();
   }
   

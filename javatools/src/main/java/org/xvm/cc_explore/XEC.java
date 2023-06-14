@@ -55,7 +55,6 @@ public class XEC {
     // Start the initial container
     MainContainer M = new MainContainer(N,repo,mod);
     
-    System.err.println("Launching "+xrun);
     /*Joinable J=*/M.invoke(xrun,xargs); // Returns something to join against
     //J.join();
     //System.err.println("Done.");
