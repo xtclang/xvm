@@ -719,6 +719,14 @@ public class ParameterizedTypeConstant
         TypeConstant typeTermThat = that.m_constType;
         if (!typeTermThat.isA(typeTermThis))
             {
+            // the only special (but important) scenario is a resolution of Type<T> from Class<T>
+            if (typeTermThis.isTypeOfType() && typeTermThat.equals(getConstantPool().typeClass()))
+                {
+                TypeConstant typeThis = this.getParamType(0); // DataType
+                TypeConstant typeThat = that.getParamType(0); // PublicType
+
+                return typeThis.resolveTypeParameter(typeThat, sFormalName);
+                }
             return null;
             }
 
