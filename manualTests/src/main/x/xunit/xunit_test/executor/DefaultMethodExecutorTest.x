@@ -32,7 +32,7 @@ class DefaultMethodExecutorTest {
         ExecutionContext ctx      = DefaultExecutionContext.create(model);
         ResolverStub     resolver = new ResolverStub(["Foo", "Bar"]);
 
-        ctx.repository.register(ParameterResolver, resolver);
+        ctx.registry.register(ParameterResolver, resolver);
 
         DefaultMethodExecutor executor = new DefaultMethodExecutor();
         Tuple                 result   = executor.invoke(fn, ctx);
