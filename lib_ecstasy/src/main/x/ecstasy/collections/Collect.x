@@ -19,7 +19,7 @@ const Collect<Element, Result extends Replicable+Collection<Element>>(Type<Resul
      * @return an CollectArray
      */
     static <Element, Result extends Replicable+Collection<Element>>
-            Collect<Element, Result> to(Type<Result> result, Boolean freeze=False) {
+            Collect!<Element, Result> to(Type<Result> result, Boolean freeze=False) {
         return new Collect<Element, Result>(result, freeze);
     }
 
@@ -32,11 +32,11 @@ const Collect<Element, Result extends Replicable+Collection<Element>>(Type<Resul
      * @return a collecting aggregator that will result in the specified immutable Collection type
      */
     static <Element extends Shareable, Result extends Freezable+Replicable+Collection<Element>>
-            Collect<Element, Result> toFrozen(Type<Result> result) {
+            Collect!<Element, Result> toFrozen(Type<Result> result) {
         // ideally this would have an "immutable Result", but since the same type is used both for
         // collecting (via the init() method) and the final result (via reduce()), it is not
         // possible to assume immutable for the instance used during the collecting phase
-        return Collect.to(result, freeze=True) /** TODO GG remove */ .as(Collect<Element, Result>);
+        return Collect.to(result, freeze=True);
     }
 
     @Override
