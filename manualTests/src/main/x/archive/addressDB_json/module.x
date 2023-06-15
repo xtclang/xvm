@@ -41,14 +41,13 @@ module AddressBookDB_jsondb
             "String"=String,
             "AddressBookDB_:Contact"=AddressBookDB_.Contact,
             ];
-        // also TODO CP allow [] to be used as a Map (etc.) constant without "Map:"
         }
 
     @Override
     @Lazy json_.Schema jsonSchema.calc()
         {
         return new json_.Schema(
-                mappings         = [], // TODO use dbTypes?
+                mappings         = [], // TODO CP use dbTypes?
                 version          = dbVersion,
                 randomAccess     = True,
                 enableMetadata   = True,

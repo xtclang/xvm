@@ -214,9 +214,7 @@ service Container
                 String[]          namedConditions   = []);
 
         /**
-         * TODO: remove this temporary method (e.g. use a FileTemplateImpl constructor instead)
-         *
-         * Create the FileTemplate from the specified file.
+         * Create an unresolved FileTemplate from the specified file.
          *
          * @throws an Exception if the file doesn't contain a valid module
          */

@@ -351,7 +351,6 @@ mixin LinkedList<Element>
     @Override
     @Op("[..]") List<Element> slice(Range<Int> indexes) {
         TODO check interval descending, and flip it if so, then collect forwards in an array, then flip again if descending
-        // TODO
     }
 
     @Override

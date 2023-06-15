@@ -118,8 +118,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * Cached key/transaction/value triples. This is "the database", in the sense that this is the same
      * data that is stored on disk.
-     *
-     * TODO if the value for a key is stable, replace the nested SkiplistMap with a single Value?
      */
     typedef SkiplistMap<Int, Value|Deletion> as History;
     protected Map<Key, History> history = new HashMap();
