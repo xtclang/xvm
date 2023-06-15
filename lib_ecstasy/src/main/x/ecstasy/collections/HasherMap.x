@@ -534,7 +534,7 @@ class HasherMap<Key, Value>
         @Override
         construct(TreeNode that) {
             // deep clone the sub nodes
-            this.nodes = this.nodes.map(node -> node.duplicate(), CollectArray.of(TreeNode));
+            this.nodes = that.nodes.map(node -> node.duplicate(), CollectArray.of(HashBucket<Key, Value>));
         }
 
         /**
