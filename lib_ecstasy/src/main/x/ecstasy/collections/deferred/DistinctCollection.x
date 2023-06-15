@@ -3,28 +3,31 @@
  */
 class DistinctCollection<Element>(Collection<Element> original)
         implements Set<Element>
-        delegates Collection<Element>(reify()) {
+        delegates Collection<Element>(reified) {
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The potentially non-distinct Collection.
      */
-    private Collection original;
+    private Collection<Element> original;
 
     /**
      * The explicitly distinct Collection.
      */
-    private ListSet<Element>? realized;
+    private ListSet<Element>? realized.get() = &reified.peek() ?: Null;
+
+    /**
+     * The cached reified Collection.
+     */
+    private @Lazy ListSet<Element> reified.calc() = new ListSet<Element>().addAll(original);
 
 
     // ----- Collection interface ------------------------------------------------------------------
 
     @Override
-    Iterator<Element> iterator() = realized?.iterator() : original.iterator().distinct();
-
-    @Override
     conditional Int knownSize() {
         return realized?.knownSize();
+
         if (original.empty) {
             return True, 0;
         }
@@ -38,7 +41,7 @@ class DistinctCollection<Element>(Collection<Element> original)
     Boolean contains(Element value) = realized?.contains(value) : original.contains(value);
 
     @Override
-    Boolean containsAll(Collection! values)  = realized?.containsAll(values) : original.containsAll(values);
+    Boolean containsAll(Collection<Element> values) = realized?.containsAll(values) : original.containsAll(values);
 
     @Override
     <Result extends Collection<Element>>
@@ -47,12 +50,5 @@ class DistinctCollection<Element>(Collection<Element> original)
     }
 
     @Override
-    Set<Element> reify() {
-        return realized?;
-
-        ListSet<Element> reified = new ListSet<Element>();
-        reified.addAll(original);
-        realized = reified;
-        return reified;
-    }
+    Set<Element> reify() = reified;
 }

@@ -270,7 +270,7 @@ interface Collection<Element>
     <Result extends Collection!> Result filter(function Boolean(Element) match,
                                                Aggregator<Element, Result>? collector = Null) {
         if (collector == Null) {
-            // TODO deferred result
+            // TODO CP deferred result
             Element[] dest = new Element[];
             for (Element e : this) {
                 if (match(e)) {
@@ -321,7 +321,7 @@ interface Collection<Element>
             for (Element e : this) {
                 (match(e) ? matches : misses).add(e);
             }
-            // TODO defer
+            // TODO CP defer
             return matches.as(Result), misses.as(Result);
         }
 
@@ -368,12 +368,12 @@ interface Collection<Element>
      */
     <Value, Result extends Collection!<Value>>
             Result map(function Value(Element)    transform,
-                        Aggregator<Value, Result>? collector = Null) {
+                       Aggregator<Value, Result>? collector = Null) {
 
         Iterator<Element> iter  = iterator();
         Int               count = size;
         if (collector == Null) {
-            // TODO return new DeferredMapCollection(this, transform);
+            // TODO CP return new DeferredMapCollection(this, transform);
             return new Value[count](_ -> transform(iter.take())).as(Result);
         }
 
@@ -410,7 +410,7 @@ interface Collection<Element>
                            Aggregator<Value, Result>? collector = Null) {
 
         if (collector == Null) {
-            // TODO deferred result
+            // TODO CP deferred result
             Value[] dest = new Value[];
             forEach(e -> dest.addAll(flatten(e)));
             return dest.as(Result);
@@ -502,7 +502,7 @@ interface Collection<Element>
      */
     @Concurrent
     <Key, Value> Map<Key,Value> associate(function (Key, Value) (Element) transform,
-                                          Map<Key,Value>?                 dest = Null) {   // TODO
+                                          Map<Key,Value>?                 dest = Null) {// TODO CP replace with a collector
         Map<Key, Value> map = dest ?: new ListMap();
         forEach(e -> {
             (Key k, Value v) = transform(e);
@@ -525,7 +525,7 @@ interface Collection<Element>
      */
     @Concurrent
     <Key> Map<Key, Element> associateBy(function Key(Element) keyFor,
-                                        Map<Key, Element>?    dest = Null) {            // TODO
+                                        Map<Key, Element>?    dest = Null) {// TODO CP replace with a collector
         return associate(e -> {return keyFor(e), e;}, dest);
     }
 
@@ -543,7 +543,7 @@ interface Collection<Element>
      */
     @Concurrent
     <Value> Map<Element, Value> associateWith(function Value(Element) valueFor,
-                                              Map<Element, Value>?    dest = Null) {     // TODO
+                                              Map<Element, Value>?    dest = Null) {// TODO CP replace with a collector
         return associate(e -> {return e, valueFor(e);}, dest);
     }
 
@@ -562,7 +562,7 @@ interface Collection<Element>
      */
     @Concurrent
     <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element)           keyFor,
-                                                 Map<Key, Collection!<Element>>? dest   = Null) {      // TODO
+                                                 Map<Key, Collection!<Element>>? dest   = Null) {// TODO CP replace with a collector
         Map<Key, Collection<Element>> map = dest ?: new ListMap();
         forEach(e -> {
             map.computeIfAbsent(keyFor(e), () -> new ListSet<Element>()).add(e);
@@ -589,7 +589,7 @@ interface Collection<Element>
     @Concurrent
     <Value> Map<Element, Value> groupWith(function Value(Element, Value) accumulate,
                                           function Value(Element)        initial,
-                                          Map<Element, Value>?           dest = Null) {    // TODO
+                                          Map<Element, Value>?           dest = Null) { // TODO CP replace with a collector
         Map<Element, Value> map = dest ?: new ListMap();
         forEach(e -> {
             map.process(e, entry -> {
@@ -614,7 +614,7 @@ interface Collection<Element>
      *                               [Orderable]
      */
     @Concurrent
-    List<Element> sorted(Orderer? orderer = Null) {                     // TODO
+    List<Element> sorted(Orderer? orderer = Null) { // TODO CP add collector
         return toArray(Mutable).sorted(orderer, True);
     }
 
