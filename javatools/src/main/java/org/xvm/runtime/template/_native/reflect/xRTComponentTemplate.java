@@ -73,7 +73,6 @@ public class xRTComponentTemplate
         markNativeProperty("synthetic");
 
         markNativeMethod("children", null, null);
-        markNativeMethod("toString", VOID, STRING);
 
         invalidateTypeInfo();
         }
@@ -255,14 +254,6 @@ public class xRTComponentTemplate
             : ensureComponentArrayType();
 
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
-        }
-
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        Component component = ((ComponentTemplateHandle) hTarget).getComponent();
-        String    sResult   = component.getIdentityConstant().getValueString();
-        return frame.assignValue(iReturn, xString.makeHandle(sResult));
         }
 
 
