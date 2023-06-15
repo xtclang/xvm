@@ -6,7 +6,8 @@
  * Runtime objects, such as classes and functions, may be able to provide a template, but the
  * opposite is never true; any such relationship is unidirectional.
  */
-interface ComponentTemplate {
+interface ComponentTemplate
+        extends Stringable {
     /**
      * The ComponentTemplate Format enumerates the various forms of
      *
@@ -137,4 +138,17 @@ interface ComponentTemplate {
      * The child templates of this template.
      */
     ComponentTemplate![] children();
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength() {
+        return path.size;
+    }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf) {
+        return path.appendTo(buf);
+    }
 }

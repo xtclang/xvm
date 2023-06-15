@@ -4,8 +4,7 @@
  */
 interface ClassTemplate
         extends ComponentTemplate
-        extends Composition
-        extends Stringable {
+        extends Composition {
     // ----- local types ---------------------------------------------------------------------------
 
     /**
