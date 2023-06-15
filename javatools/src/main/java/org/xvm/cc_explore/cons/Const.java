@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.FilePart;
 import org.xvm.cc_explore.Part;
 
 /**
@@ -15,14 +14,7 @@ import org.xvm.cc_explore.Part;
 public abstract class Const {
 
   // Resolve any internal references from the serialized form.
-  public void resolve( FilePart X ){};
-
-  // Parse an array of Const from a pre-filled constant pool
-  public static Const[] xconsts( FilePart X ) {
-    Const[] as = new Const[X.u31()];
-    for( int i=0; i<as.length; i++ )  as[i] = X.xget();
-    return as;
-  }
+  public void resolve( CPool X ){};
 
   /**
    * Recurse through the constants that make up this constant, replacing

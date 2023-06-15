@@ -9,7 +9,7 @@ public class RangeCon extends Const {
   private final Format _f;
   private final boolean _xlo, _xhi; // Exclude lo, hi
   private Const _lo, _hi;
-  public RangeCon( FilePart X, Const.Format f ) {
+  public RangeCon( CPool X, Const.Format f ) {
     _f = f;
     int b = switch( f ) {
     case Range -> X.u8();
@@ -22,7 +22,7 @@ public class RangeCon extends Const {
     X.u31();
     X.u31();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     if( _f == Format.Range ) X.u8();
     _lo = X.xget();
     _hi = X.xget();
