@@ -247,16 +247,12 @@ module TestReflection {
         console.print($"constructors={t.constructors}");
         console.print($"multimethods={t.multimethods}");
 
-        // TODO CP figure out how to make this work: val method = Point.foo;
-        for (val method : t.methods) {
-            if (method.name == "foo") {
-                console.print($"method={method}");
-                console.print($|method.invoke()=\
-                                 |{method.as(Method<Point<Int>, Tuple<>, Tuple<Int>>).
-                                 |   invoke(p, Tuple:())[0]}
-                                );
-            }
-        }
+        Method method = Point.foo;
+        console.print($"method={method}");
+        console.print($|method.invoke()=\
+                         |{method.as(Method<Point<Number>, Tuple<>, Tuple<Int>>).
+                         |   invoke(p, Tuple:())[0]}
+                        );
 
         for (val constructor : t.constructors) {
             switch (constructor.params.size) {
