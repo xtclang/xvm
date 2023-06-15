@@ -15,7 +15,7 @@
  *   there must also exist a constructor on the class with no non-default parameters. Lastly, if the
  *   `group` is specified as [Omit], then the method is **not** _callable_.
  *
- * The annotation provides two optional parameters that are used to tailor the unit test
+ * The annotation provides optional parameters that are used to tailor the unit test
  * specification for methods and constructors:
  *
  * * [group] - this assigns the test to a named group of tests, which allows specific groups of
@@ -32,6 +32,11 @@
  *   Other group names can be used; any other names are expected to be treated as normal unit tests
  *   unless the test runner (such as `xunit`) is configured otherwise.
  *
+ *   [priority] - this assigns an ordering to execution of the annotated resource. Best practice is
+ *   that unit tests should be agnostic of ordering, but other annotated resources, such as before
+ *   test or after test methods, test extensions, etc. may require ordering to be specified.
+ *   Priority order is highest first, the reverse of the natural order of an Int.
+ *
  * * [expectedException] - if this is non-Null, it indicates that the unit test must throw the
  *   specified type of exception, otherwise the test will be considered a failure. This option is
  *   useful for a test that is expected to always fail with an exception.
@@ -39,8 +44,17 @@
  * The parameters are ignored when the annotation is used on classes and properties. Any usage other
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
-mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
-        into Class | Property | Method | Function {
+mixin Test(String group = Unit, Int priority = 0, Type<Exception>? expectedException = Null)
+        implements Orderable
+        into Module | Package | Class | Property | Method | Function {
+
+    /**
+     * @return `True` if this `Test` is in the `Omit` group.
+     */
+    Boolean omitted() {
+        return group == Omit;
+    }
+
     /**
      * Use this [group] value to indicate a normal unit test. This is the default test group name.
      */
@@ -56,4 +70,16 @@ mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
      * Use this [group] value to indicate that the method must **not** be treated as a unit test.
      */
     static String Omit = "omit";
+
+    /**
+     * The valid targets for a Test annotation.
+     */
+    typedef Module | Package | Class | Property | Method | Function as TestTarget;
+
+    // ----- Orderable -----------------------------------------------------------------------------
+
+    static <CompileType extends Test> Ordered compare(CompileType value1, CompileType value2) {
+        // the reverse of the natural order of an Int
+        return value2.priority <=> value1.priority;
+    }
 }

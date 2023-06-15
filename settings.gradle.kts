@@ -18,6 +18,7 @@ include(":lib_jsondb")          // produces jsondb.xtc
 include(":lib_web")             // produces web.xtc
 include(":lib_webauth")         // produces webauth.xtc
 include(":lib_xenia")           // produces xenia.xtc
+include(":lib_xunit")           // produces xunit.xtc
 
 // TODO(":wiki")
 include(":xdk")      // builds the above modules (ecstasy.xtc, javatools_bridge.xtc, json.xtc, etc.)
