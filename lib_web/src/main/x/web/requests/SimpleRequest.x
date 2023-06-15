@@ -11,7 +11,7 @@ class SimpleRequest
         implements Body {
 
     construct(Client client, HttpMethod method, Uri uri) {
-        this.client = client; // REVIEW: all we need it the Registry
+        this.client = client; // REVIEW: all we need is the Registry
         this.method = method;
         this.uri    = uri;
     }

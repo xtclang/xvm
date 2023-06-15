@@ -56,7 +56,7 @@ module TestParser
             "ecstasy.xtclang.org:collections.HashMap",
             "ecstasy.xtclang.org:collections.List<ecstasy.xtclang.org:numbers.Int64>",
             "@ecstasy.xtclang.org:annotations.Unchecked ecstasy.xtclang.org:collections.List<@ecstasy.xtclang.org:annotations.Unchecked ecstasy.xtclang.org:numbers.Int64>",
-            "Function<Tuple<String>, Tuple<Int>>", // TODO CP - ParseFailed CompareGT required, ShiftRight found
+            "Function<Tuple<String>, Tuple<Int>>",
             ];
 
         for (String test : tests)

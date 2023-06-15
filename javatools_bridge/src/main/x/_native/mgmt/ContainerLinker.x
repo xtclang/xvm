@@ -10,8 +10,6 @@ import ecstasy.reflect.ModuleTemplate;
 
 service ContainerLinker
         implements Container.Linker {
-    // TODO remove the temporary method
-    @Override FileTemplate loadFileTemplate(File file) {TODO("Native");}
 
     @Override
     Control loadAndLink(
@@ -46,13 +44,13 @@ service ContainerLinker
     }
 
     @Override
+    FileTemplate loadFileTemplate(File file) {TODO("Native");}
+
+    @Override
     String toString() {
         return "Linker";
     }
 
-    /**
-     * Native implementation.
-     */
     Control resolveAndLink(
             ModuleTemplate    primaryModule,
             Model             model,

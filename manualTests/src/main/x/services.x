@@ -50,7 +50,6 @@ module TestServices {
             Loop: for (TestService each : svcs) {
                 val i = Loop.count;
                 each.spin^(10_000).passTo(n -> {
-                    // TODO CP console.print($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
                     console.print($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
                 });
             }

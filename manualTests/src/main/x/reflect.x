@@ -24,10 +24,6 @@ module TestReflection {
         testTypes();
     }
 
-    Function<<Int, String>, <Int>> foo() {
-        TODO §
-    }
-
     void testFuncType() {
         console.print("\n** testFuncType");
 
@@ -255,9 +251,9 @@ module TestReflection {
         for (val method : t.methods) {
             if (method.name == "foo") {
                 console.print($"method={method}");
-                // TODO CP - splitting the multi-line before the "invoke" breaks the parser
                 console.print($|method.invoke()=\
-                                 |{method.as(Method<Point<Int>, Tuple<>, Tuple<Int>>).invoke(p, Tuple:())[0]}
+                                 |{method.as(Method<Point<Int>, Tuple<>, Tuple<Int>>).
+                                 |   invoke(p, Tuple:())[0]}
                                 );
             }
         }

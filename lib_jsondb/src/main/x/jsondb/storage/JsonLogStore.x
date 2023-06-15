@@ -26,7 +26,7 @@ service JsonLogStore<Element extends immutable Const>
 
     @Override
     @Synchronized
-    void append(Int txId, Element element) { // TODO this is all wrong (it's not transactional)
+    void append(Int txId, Element element) { // TODO GG: this is all wrong (it's not transactional)
         checkWrite();
 
         StringBuffer buf = new StringBuffer(64);
