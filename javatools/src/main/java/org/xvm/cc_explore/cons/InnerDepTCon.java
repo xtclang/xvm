@@ -7,11 +7,11 @@ import org.xvm.cc_explore.*;
  */
 public class InnerDepTCon extends DepTCon {
   private ClassCon _child;
-  public InnerDepTCon( FilePart X ) {
+  public InnerDepTCon( CPool X ) {
     super(X);
     X.u31();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     super.resolve(X);
     _child = (ClassCon)X.xget();
   }

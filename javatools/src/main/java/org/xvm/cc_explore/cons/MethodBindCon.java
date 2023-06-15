@@ -7,6 +7,6 @@ import org.xvm.cc_explore.*;
  */
 public class MethodBindCon extends Const {
   private MethodCon _method;
-  public MethodBindCon( FilePart X ) { X.u31(); }
-  @Override public void resolve( FilePart X ) { _method = (MethodCon)X.xget(); }
+  public MethodBindCon( CPool X ) { X.u31(); }
+  @Override public void resolve( CPool X ) { _method = (MethodCon)X.xget(); }
 }
