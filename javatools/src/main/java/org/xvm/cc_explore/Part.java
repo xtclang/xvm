@@ -24,7 +24,7 @@ abstract public class Part {
   // Linked list of siblings at the same DAG level with the same name
   private Part _sibling;
 
-  Part( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
+  Part( Part par, int nFlags, IdCon id, CondCon cond, CPool X ) {
     _par = par;
     _sibling = null;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
@@ -51,7 +51,7 @@ abstract public class Part {
 
   // Tik-tok style recursive-descent parsing.  This is the Tik, shared amongst
   // all kids.  The Tok is where we do kid-specific parsing.
-  void parseKids( FilePart X ) {
+  final void parseKids( CPool X ) {
     int cnt = X.u31();          // Number of kids
     for( int i=0; i<cnt; i++ ) {
       int n = X.u8();
@@ -117,14 +117,14 @@ abstract public class Part {
     private final PropCon _prop;
     private final SingleCon _inject;
     private final Annot _annot;
-    private final HashMap<StringCon, TCon> _parms;
-    protected Contrib( FilePart X ) {
+    private final HashMap<String, TCon> _parms;
+    protected Contrib( CPool X ) {
       _comp = Composition.valueOf(X.u8());
       _tContrib = (TCon)X.xget();
       PropCon prop = null;
       Annot annot = null;
       SingleCon inject = null;
-      HashMap<StringCon, TCon> parms = null;
+      HashMap<String, TCon> parms = null;
     
       assert _tContrib!=null;
       switch( _comp ) {
@@ -145,9 +145,9 @@ abstract public class Part {
         if( len == 0 ) break;
         parms = new HashMap<>();
         for( int i = 0; i < len; i++ ) {
-          StringCon name = (StringCon) X.xget();
+          String name = ((StringCon)X.xget())._str;
           int ix = X.u31();
-          parms.put(name, ix == 0 ? null : (TCon)X._pool.get(ix));
+          parms.put(name, ix == 0 ? null : (TCon)X.get(ix));
         }
         break;
 
@@ -198,7 +198,7 @@ abstract public class Part {
      * @param X      file parser support
      * @return the new component
      */
-    Part parse( Part par, Const con, int nFlags, CondCon cond, FilePart X ) {
+    Part parse( Part par, Const con, int nFlags, CondCon cond, CPool X ) {
       assert par!=null;
       return switch( this ) {
       case MODULE     -> new    ModPart(par, nFlags, (    ModCon) con, cond, X);

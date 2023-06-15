@@ -9,11 +9,11 @@ public class ParamTCon extends TCon {
   TCon _con;
   TCon[] _parms;
   
-  public ParamTCon( FilePart X ) {
+  public ParamTCon( CPool X ) {
     X.u31();
     X.skipAry();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     _con = (TCon)X.xget();
     _parms = TCon.tcons(X);
   }

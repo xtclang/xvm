@@ -1,10 +1,10 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.FilePart;
+import org.xvm.cc_explore.CPool;
 
 /**
   Exploring XEC Constants
  */
 public class UnionTCon extends RelTCon {
-  public UnionTCon( FilePart X ) { super(X); }
+  public UnionTCon( CPool X ) { super(X); }
 }

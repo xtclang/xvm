@@ -13,13 +13,13 @@ public class ModPart extends ClassPart {
   public final LitCon _dir;     // Directory?
   public final LitCon _time;    // Creation timestamp?
 
-  public final VerCon _version; // This version
+  public final Version _version; // This version
   public final VerTree _allowedVers; //
   public final ArrayList<Version> _prefers; 
 
   private XClz _xclz;           // Cached Java class hierarchy version of this module
   
-  ModPart( Part par, int nFlags, ModCon con, CondCon cond, FilePart X ) {
+  ModPart( Part par, int nFlags, ModCon con, CondCon cond, CPool X ) {
     super(par,nFlags,con,cond,X);
 
     _t = ModuleType.valueOf(X.u8());
@@ -28,7 +28,7 @@ public class ModPart extends ClassPart {
     if( isFingerprint() ) {
       _allowedVers = new VerTree();
       for( int i=0, len = X.u31(); i < len; i++ ) {
-        VerCon cVer = (VerCon) X.xget();
+        VerCon cVer = (VerCon)X.xget();
         _allowedVers.put(cVer.ver(), X.u1());
       }
 
@@ -45,7 +45,7 @@ public class ModPart extends ClassPart {
       _allowedVers = null;
       _prefers = null;
     }
-    _version = version;
+    _version = version==null ? null : version.ver();
     _dir  = (LitCon)X.xget();
     _time = (LitCon)X.xget();
   }

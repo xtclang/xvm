@@ -16,7 +16,7 @@ public class Parameter {
   // Parameter index, negative for returns
   public final int _idx;
   
-  Parameter( boolean is_ret, int idx, boolean special, FilePart X ) {    
+  Parameter( boolean is_ret, int idx, boolean special, CPool X ) {    
     _annots = Annot.xannos(X);
     _type = (TCon)X.xget();
     _name = (StringCon)X.xget();

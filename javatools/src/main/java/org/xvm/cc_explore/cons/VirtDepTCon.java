@@ -7,14 +7,14 @@ import org.xvm.cc_explore.*;
  */
 public class VirtDepTCon extends DepTCon {
   private final boolean _thisClz;
-  private StringCon _name;
-  public VirtDepTCon( FilePart X ) {
+  private String _name;
+  public VirtDepTCon( CPool X ) {
     super(X);
     X.u31();
     _thisClz = X.u1();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     super.resolve(X);
-    _name = (StringCon)X.xget();
+    _name =((StringCon)X.xget())._str;
   }
 }
