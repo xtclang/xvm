@@ -7,15 +7,15 @@ import org.xvm.cc_explore.*;
  */
 public abstract class NamedCon extends IdCon {
   private IdCon _par;
-  private StringCon _name;
-  NamedCon( FilePart X ) {
+  private String _name;
+  NamedCon( CPool X ) {
     X.u31();
     X.u31();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     _par  = (    IdCon)X.xget();
-    _name = (StringCon)X.xget();
+    _name =((StringCon)X.xget())._str;
   }
-  @Override public String name() { return _name._str; }
-  @Override public String toString() { return name(); }
+  @Override public String name() { return _name; }
+  @Override public String toString() { return _name; }
 }

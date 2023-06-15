@@ -7,5 +7,5 @@ import org.xvm.cc_explore.*;
  */
 public class Flt128Con extends Const {
   private final byte[] _buf;   
-  public Flt128Con( FilePart X ) { _buf = X.bytes(16); }
+  public Flt128Con( CPool X ) { _buf = X.bytes(16); }
 }

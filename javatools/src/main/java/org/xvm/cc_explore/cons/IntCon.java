@@ -13,7 +13,7 @@ public class IntCon extends Const {
   private static final BigInteger LONG_MIN = BigInteger.valueOf(Long.MIN_VALUE);
   private static final BigInteger LONG_MAX = BigInteger.valueOf(Long.MAX_VALUE);
   
-  public IntCon( FilePart X, Const.Format f ) {
+  public IntCon( CPool X, Const.Format f ) {
     _f = f;
 
     int z = X.isize();          // Read the size; drop extra bits beyond size

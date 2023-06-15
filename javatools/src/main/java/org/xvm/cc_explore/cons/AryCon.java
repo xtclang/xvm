@@ -10,14 +10,14 @@ public class AryCon extends Const {
   private TCon _t;              // Type for whole array
   private Const[] _cons;        // Type for each element
   
-  public AryCon( FilePart X, Const.Format f ) {
+  public AryCon( CPool X, Const.Format f ) {
     _f = f;
     X.u31();                    // Type index for whole array
     X.skipAry();                // Index for each element
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     _t = (TCon)X.xget();
-    _cons = xconsts(X);
+    _cons = X.consts();
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
 }

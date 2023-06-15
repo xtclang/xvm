@@ -1,12 +1,9 @@
 package org.xvm.cc_explore;
 
-import org.xvm.cc_explore.cons.Const;
-
 import java.io.FileFilter;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -40,13 +37,6 @@ public class XEC {
     // Link the repo
     repo.link();
     
-    // See that we got a main module
-    if( mod==null ) {
-      if( explicitModuleFile(xtc) )  TODO();
-      else TODO();
-    }
-    if( mod==null ) throw new IllegalArgumentException("Unable to load module "+ xtc);
-
     // Start the thread pool up
     XRuntime.start();
 
@@ -95,9 +85,6 @@ public class XEC {
   private static String[] args(int ndx, String[] args) {
     return Arrays.copyOfRange(args,ndx,args.length);
   }
-  
-  // True if the name is an explicit Ecstasy source or compiled name.
-  protected static boolean explicitModuleFile(String s) { return s.endsWith(".x") || s.endsWith(".xtc"); }
 
 
   // Module Repository: Mapping from module name Strings to ModParts.
@@ -112,7 +99,7 @@ public class XEC {
       } else {
         byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
         FilePart file = new FilePart(buf); // Parse the entire file
-        ModPart mod = file.getMod();       // Extract main module
+        ModPart mod = file._mod;           // Extract main module
         put(mod.name(),mod);
         return mod;             // Return single module for single file
       }

@@ -1,15 +1,15 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.FilePart;
+import org.xvm.cc_explore.CPool;
 
 /**
   Exploring XEC Constants
  */
 public class ModCon extends IdCon {
-  private StringCon _str;
-  public ModCon( FilePart X ) { X.u31(); }
-  public String name() { return _str._str; }
+  private String _str;
+  public ModCon( CPool X ) { X.u31(); }
+  @Override public void resolve( CPool X ) { _str =((StringCon)X.xget())._str; }
+  @Override public String name() { return _str; }
   @Override public String toString() { return name(); }
-  @Override public void resolve( FilePart X ) { _str = (StringCon)X.xget(); }
 }

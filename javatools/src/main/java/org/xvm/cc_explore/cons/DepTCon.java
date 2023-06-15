@@ -7,6 +7,6 @@ import org.xvm.cc_explore.*;
  */
 public abstract class DepTCon extends TCon {
   private TCon _par;
-  DepTCon( FilePart X ) { X.u31(); }
-  @Override public void resolve( FilePart X ) { _par = (TCon)X.xget(); }
+  DepTCon( CPool X ) { X.u31(); }
+  @Override public void resolve( CPool X ) { _par = (TCon)X.xget(); }
 }

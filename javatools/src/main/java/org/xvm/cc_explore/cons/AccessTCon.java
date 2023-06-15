@@ -10,9 +10,9 @@ import org.xvm.cc_explore.FilePart;
 public class AccessTCon extends TCon {
   private final Access _access;
   TCon _con;
-  public AccessTCon( FilePart X ) {
+  public AccessTCon( CPool X ) {
     X.u31();                    // Skip index for _con
     _access = Access.valueOf(X.u31());
   }
-  @Override public void resolve( FilePart X ) { _con = (TCon)X.xget(); }
+  @Override public void resolve( CPool X ) { _con = (TCon)X.xget(); }
 }

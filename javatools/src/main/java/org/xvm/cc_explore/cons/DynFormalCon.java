@@ -10,14 +10,14 @@ public class DynFormalCon extends FormalCon {
   private final int _reg, _nreg; // Registers
   private TCon _type;
   private FormalCon _formal;
-  public DynFormalCon( FilePart X ) {
+  public DynFormalCon( CPool X ) {
     super(X);
     _reg  = X.u16();
     _nreg = X.u16();
     X.u31();
     X.u31();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     super.resolve(X);
     X.u16();
     X.u16();

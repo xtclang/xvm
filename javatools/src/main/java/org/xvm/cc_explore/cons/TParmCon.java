@@ -9,7 +9,7 @@ import org.xvm.cc_explore.util.TLS;
 public class TParmCon extends FormalCon {
   private final int _reg;       // Register index
   private final TLS<Boolean> _tlsReEntry = new TLS<>();
-  public TParmCon( FilePart X ) {
+  public TParmCon( CPool X ) {
     super(X);
     _reg = X.u31();
   }

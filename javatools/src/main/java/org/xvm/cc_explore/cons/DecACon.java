@@ -7,6 +7,6 @@ import org.xvm.cc_explore.*;
  */
 public class DecACon extends Const {
   private DecCon _dec;
-  public DecACon( FilePart X ) { X.u31(); }
-  @Override public void resolve( FilePart X ) { _dec = (DecCon)X.xget(); }
+  public DecACon( CPool X ) { X.u31(); }
+  @Override public void resolve( CPool X ) { _dec = (DecCon)X.xget(); }
 }

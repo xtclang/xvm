@@ -9,7 +9,7 @@ import java.math.MathContext;
   Exploring XEC Constants
  */
 public class Dec128Con extends DecCon {
-  public Dec128Con( FilePart X ) {
+  public Dec128Con( CPool X ) {
     super(X, toBigDecimal128(X.i64(),X.i64()));
   }
 

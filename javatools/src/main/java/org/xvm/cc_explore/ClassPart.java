@@ -8,26 +8,25 @@ import java.util.HashMap;
    Class part
  */
 class ClassPart extends Part {
-  final HashMap<StringCon,TCon> _params; // String->Type mapping
+  final HashMap<String,TCon> _parms; // String->Type mapping
   final LitCon _path;           // File name compiling this file
-  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, FilePart X ) {
+  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, CPool X ) {
     super(par,nFlags,id,cond,X);
-    _params = parseTypeParams(X);
-    _path = (LitCon)X.xget();
+    _parms = parseTypeParms(X);
+    _path  = (LitCon)X.xget();
   }
 
   // Helper method to read a collection of type parameters.
-  HashMap<StringCon, TCon> parseTypeParams( FilePart X ) {
+  HashMap<String,TCon> parseTypeParms( CPool X ) {
     int len = X.u31();
     if( len <= 0 ) return null;
-    HashMap<StringCon, TCon> map = new HashMap<>();
+    HashMap<String, TCon> map = new HashMap<>();
     for( int i=0; i < len; i++ ) {
-      StringCon name = (StringCon)X.xget();
-      TCon      type = (     TCon)X.xget();
-      assert !map.containsKey(name);
-      map.put(name, type);
+      String name = ((StringCon)X.xget())._str;
+      TCon   type =  (     TCon)X.xget();
+      TCon old = map.put(name, type);
+      assert old==null;         // No double puts
     }
     return map;
   }
-
 }

@@ -7,7 +7,7 @@ import org.xvm.cc_explore.*;
  */
 public class Flt32Con extends Const {
   public final float _flt;
-  public Flt32Con( FilePart X, Format f ) {
+  public Flt32Con( CPool X, Format f ) {
     _flt = switch( f ) {
     case  Float32 -> from32 ( X.i32() );
     case BFloat16 -> from16b( X.u16() );

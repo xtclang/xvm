@@ -7,7 +7,7 @@ import org.xvm.cc_explore.*;
  */
 public class Flt64Con extends Const {
   public final double _flt;
-  public Flt64Con( FilePart X ) {
+  public Flt64Con( CPool X ) {
     _flt = Double.longBitsToDouble(X.i64());
   }
 }

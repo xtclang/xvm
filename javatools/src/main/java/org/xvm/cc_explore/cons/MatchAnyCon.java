@@ -8,9 +8,9 @@ import org.xvm.cc_explore.*;
 public class MatchAnyCon extends Const {
   final Format _f;
   private Const _con;
-  public MatchAnyCon( FilePart X, Const.Format f ) {
+  public MatchAnyCon( CPool X, Const.Format f ) {
     _f = f;
     X.u31();
   }  
-  @Override public void resolve( FilePart X ) { _con = X.xget(); }
+  @Override public void resolve( CPool X ) { _con = X.xget(); }
 }

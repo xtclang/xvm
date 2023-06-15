@@ -2,8 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 
-import java.io.IOException;
-
 class MethodPart extends Part {
 
   // Method's "super"
@@ -35,7 +33,7 @@ class MethodPart extends Part {
   public final int _first;      // First line
   
   // 
-  MethodPart( Part par, int nFlags, MethodCon id, CondCon con, FilePart X ) {
+  MethodPart( Part par, int nFlags, MethodCon id, CondCon con, CPool X ) {
     super(par,nFlags,id,con,X);
     
     // Read annotations
@@ -67,10 +65,10 @@ class MethodPart extends Part {
     
     // Read method's "super(s)"
     _super = (MethodCon)X.xget();
-    _supers = _super == null ? new Const[0] : Const.xconsts(X);
+    _supers = _super == null ? new Const[0] : X.consts();
 
     // Read the constants
-    _cons = Const.xconsts(X);
+    _cons = X.consts();
 
     // Read the code
     _code = X.bytes();

@@ -7,7 +7,7 @@ import org.xvm.cc_explore.*;
  */
 public class Flt8e5Con extends Const {
   private final float _flt;
-  public Flt8e5Con( FilePart X ) {
+  public Flt8e5Con( CPool X ) {
     _flt = switch( X.u8() ) {
     case 0x00 ->  0.0f;
     case 0x80 -> -0.0f;
