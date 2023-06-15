@@ -1,7 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.FilePart;
+import org.xvm.cc_explore.CPool;
 
 /**
   Exploring XEC Constants
@@ -9,7 +9,7 @@ import org.xvm.cc_explore.FilePart;
 public class FPNCon extends Const {
   final Format _f;
   private final byte[] _buf;
-  public FPNCon( FilePart X, Format f ) {
+  public FPNCon( CPool X, Format f ) {
     _f = f;
     int len = (1 << X.u8());
     _buf = X.bytes(len);

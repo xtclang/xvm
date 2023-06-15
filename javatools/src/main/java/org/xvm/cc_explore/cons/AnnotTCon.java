@@ -2,7 +2,7 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.Annot;
 import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.FilePart;
+import org.xvm.cc_explore.CPool;
 
 /**
   Exploring XEC Constants
@@ -10,11 +10,11 @@ import org.xvm.cc_explore.FilePart;
 public class AnnotTCon extends TCon {
   Annot _an;
   TCon _con;
-  public AnnotTCon( FilePart X ) {
+  public AnnotTCon( CPool X ) {
     X.u31();
     X.u31();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     _an = (Annot)X.xget();
     _con = (TCon)X.xget();
   }

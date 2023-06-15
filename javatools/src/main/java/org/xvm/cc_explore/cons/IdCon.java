@@ -8,6 +8,5 @@ import org.xvm.cc_explore.XEC;
   A forwarding pointer to another component
  */
 public abstract class IdCon extends Const {
-
   abstract public String name();
 }

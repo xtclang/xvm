@@ -8,12 +8,12 @@ import org.xvm.cc_explore.*;
 public class MethodCon extends IdCon {
   private MMethodCon _par;
   private SigCon _sig;
-  public MethodCon( FilePart X ) {
+  public MethodCon( CPool X ) {
     X.u31();
     X.u31();
     X.u31();
   }
-  @Override public void resolve( FilePart X ) {
+  @Override public void resolve( CPool X ) {
     _par = (MMethodCon)X.xget();
     _sig = (SigCon)X.xget();
   }

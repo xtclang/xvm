@@ -8,5 +8,5 @@ import java.math.BigInteger;
  */
 public class CharCon extends Const {
   private final int _ch;
-  public CharCon( FilePart X ) { _ch = X.utf8Char(); }
+  public CharCon( CPool X ) { _ch = X.utf8Char(); }
 }

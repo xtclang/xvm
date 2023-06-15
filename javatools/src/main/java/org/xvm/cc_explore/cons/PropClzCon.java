@@ -7,6 +7,6 @@ import org.xvm.cc_explore.*;
  */
 public class PropClzCon extends DepTCon {
   private PropCon _prop;
-  public PropClzCon( FilePart X ) { super(X); X.u31(); }
-  @Override public void resolve( FilePart X ) { super.resolve(X); _prop = (PropCon)X.xget(); }  
+  public PropClzCon( CPool X ) { super(X); X.u31(); }
+  @Override public void resolve( CPool X ) { super.resolve(X); _prop = (PropCon)X.xget(); }  
 }

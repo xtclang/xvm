@@ -6,5 +6,5 @@ import org.xvm.cc_explore.*;
   Exploring XEC Constants
  */
 public class FormalTChildCon extends PropCon {
-  public FormalTChildCon( FilePart X ) { super(X); }
+  public FormalTChildCon( CPool X ) { super(X); }
 }
