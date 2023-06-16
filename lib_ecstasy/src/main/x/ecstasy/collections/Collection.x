@@ -280,8 +280,7 @@ interface Collection<Element>
             return dest.as(Result);
         }
 
-        // TODO GG? collector.Accumulator accumulator = collector.init();
-        Appender<Element> accumulator = collector.init();
+        collector.Accumulator accumulator = collector.init();
         if (&accumulator == &this) {
             accumulator = this.removeAll(e -> !match(e));
         } else {
