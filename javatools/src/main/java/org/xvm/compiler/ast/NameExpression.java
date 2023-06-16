@@ -2279,7 +2279,21 @@ public class NameExpression
                 switch (idChild.getFormat())
                     {
                     case Class:
-                        log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, sName);
+                        // the only thing we allow here is a reference to a typedef when a type is
+                        // required; e.g.:
+                        //   Aggregator<Element> collector = ...
+                        //   collector.Accumulator accumulator = collector.init();
+                        ChildInfo infoChild = infoLeft.getChildInfosByName().get(sName);
+                        assert infoChild != null;
+
+                        if (infoChild.getIdentity() instanceof TypedefConstant idTypedef)
+                            {
+                            m_arg = idTypedef;
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, sName);
+                            }
                         break;
 
                     case Typedef:
@@ -2798,8 +2812,12 @@ public class NameExpression
                     }
 
                 m_plan = Plan.TypeOfTypedef;
+
                 TypeConstant typeRef = ((TypedefConstant) constant).getReferredToType();
-                return typeRef.getType();
+                TypeConstant typeLeft = left == null
+                        ? ctx.getThisType()
+                        : left.getImplicitType(ctx);
+                return typeRef.getType().resolveGenerics(pool, typeLeft);
                 }
 
             case Method:
