@@ -13,7 +13,6 @@ include(":lib_crypto")          // produces crypto.xtc
 include(":lib_net")             // produces net.xtc
 include(":lib_json")            // produces json.xtc
 include(":lib_oodb")            // produces oodb.xtc
-include(":lib_imdb")            // produces imdb.xtc
 include(":lib_jsondb")          // produces jsondb.xtc
 include(":lib_web")             // produces web.xtc
 include(":lib_webauth")         // produces webauth.xtc
