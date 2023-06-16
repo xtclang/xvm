@@ -31,7 +31,7 @@ interface CopyableCollection<Element>
                 return this.new(this);
             }
 
-            return this.map(transform, Collect.to(ReplicableCopier<Element>) /* TODO GG remove */ .as(Collect<Element, ReplicableCopier<Element>>));
+            return this.map(transform, Collect.to(ReplicableCopier<Element>));
         }
 
         @Override
