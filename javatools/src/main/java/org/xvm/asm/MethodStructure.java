@@ -894,7 +894,8 @@ public class MethodStructure
         assert cArgs <= cMethodParams && cReturns <= cMethodReturns;
 
         // we may need to utilize the generic types to resolve formal types constraints
-        Map<String, TypeConstant> mapTypeGeneric = new HashMap<>();
+        Map<String, TypeConstant>  mapTypeGeneric = new HashMap<>();
+        Set<TypeParameterConstant> setPending     = new HashSet<>();
 
         NextParameter:
         for (int iT = 0; iT < cTypeParams; iT++)
@@ -918,20 +919,8 @@ public class MethodStructure
                     {
                     TypeConstant typeFormal   = atypeMethodParams[cTypeParams + iA];
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                    if (typeResolved != null)
+                    if (typeResolved != null && !typeResolved.containsUnresolved())
                         {
-                        if (typeResolved.containsUnresolved())
-                            {
-                            if (fAllowFormal)
-                                {
-                                continue;
-                                }
-                            else
-                                {
-                                continue NextParameter;
-                                }
-                            }
-
                         if (typeRequired == null)
                             {
                             if (checkConflict(typeResolved, constParam, true, mapTypeParams))
@@ -965,20 +954,8 @@ public class MethodStructure
                     {
                     TypeConstant typeFormal   = atypeMethodReturns[iR];
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                    if (typeResolved != null)
+                    if (typeResolved != null && !typeResolved.containsUnresolved())
                         {
-                        if (typeResolved.containsUnresolved())
-                            {
-                            if (fAllowFormal)
-                                {
-                                continue;
-                                }
-                            else
-                                {
-                                continue NextParameter;
-                                }
-                            }
-
                         if (typeRequired == null)
                             {
                             if (checkConflict(typeResolved, constParam, false, mapTypeParams))
@@ -1004,8 +981,30 @@ public class MethodStructure
                     }
                 }
 
-            if (!mapTypeParams.containsKey(constParam))
+            if (mapTypeParams.containsKey(constParam))
                 {
+                // we resolved the current type parameter (#iT); there is a chance that this could
+                // help to resolve still pending type parameters
+                if (!setPending.isEmpty())
+                    {
+                    TypeConstant typeActual = mapTypeParams.get(constParam);
+                    TypeConstant typeFormal = atypeMethodParams[iT].getParamType(0);
+                    for (TypeParameterConstant constPending : setPending)
+                        {
+                        TypeConstant typeResolved =
+                                typeFormal.resolveTypeParameter(typeActual, constPending.getName());
+                        if (typeResolved != null)
+                            {
+                            mapTypeParams.put(constPending, typeResolved);
+                            setPending.remove(constPending);
+                            }
+                        }
+                    }
+                }
+            else
+                {
+                setPending.add(constParam);
+
                 // we couldn't resolve the formal type parameter - compute the constraint type
                 TypeConstant typeParam = param.getType();
                 if (!mapTypeGeneric.isEmpty())
@@ -1033,6 +1032,11 @@ public class MethodStructure
         return mapTypeParams;
         }
 
+    /**
+     * Use the specified formal and actual type to resolve any generic types for the parent class
+     * and if so, place them into the specified map. This may be necessary if the type parameter
+     * constraints depend on the generic types.
+     */
     private void resolveGenericTypes(ConstantPool pool,
                                      TypeConstant typeFormal, TypeConstant typeActual,
                                      Map<String, TypeConstant> mapTypeGeneric)
