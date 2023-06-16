@@ -316,6 +316,28 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
+        typeActual = typeActual.resolveTypedefs();
+
+        if (getFormat() == typeActual.getFormat())
+            {
+            return super.resolveTypeParameter(typeActual, sFormalName);
+            }
+
+        // check if any of our legs can unambiguously resolve the formal type and take the narrowest
+        TypeConstant typeResult1 = getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
+        TypeConstant typeResult2 = getUnderlyingType2().resolveTypeParameter(typeActual, sFormalName);
+        return typeResult1 == null
+                ? typeResult2
+                : typeResult2 == null
+                        ? typeResult1
+                        : typeResult1.isA(typeResult2) ? typeResult1
+                        : typeResult2.isA(typeResult1) ? typeResult2
+                                                       : null;
+        }
+
+    @Override
     public boolean isNestMateOf(IdentityConstant idClass)
         {
         TypeConstant type1 = m_constType1;
