@@ -1,8 +1,6 @@
 - GG: add support for runtime constants that cross the module line; may need to restore the removed
       delegation logic in ConverterExpression
 
-- CP: consider removing Cloneable and CollectionCloner
-
 - CP: a content-type header for FormData has the following format:
     multipart/form-data; boundary=---------------------------1612195806993123533773008794
   the logic in MediaType.of() does not recognize it as parameters; simply drops it
@@ -90,8 +88,6 @@
 - consider not needing the ^ for a return of a tail-call invocation (except in a try block?)
     "return foo();" should be equivalent to "return foo^();"
 
-- GG: rewrite removeAccess() and removeImmutable(); it blows on virtual children now
-
 - CP: consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
 
 - consider a new Async mixin:
@@ -101,41 +97,10 @@
 
 - add compiler support for conditional Tuple
 
-- GG: ComponentTemplate equality is not working; how/where to declare it native?
-    static <CompileType extends RTComponentTemplate> Boolean equals(CompileType o1, CompileType o2)
-        {
-        TODO("native");
-        }
-
 - consider adding a V_GET opcode that would combine the functionality of L_GET and MOVE_THIS for
   dynamically inflated (via & ref) or non-inflated properties; it would eliminate the need for
   corresponding compensation in ClassTemplate.getPropertyValue() and OpInvocable.getCallChain()
   (submission "Fix Ref handling for non-inflated properties" of 8/9/2022)
-
-- TypeInfo is failing to compute (see NumberArray.asBitArray():
-  Var<Bit> v = new Object()
-        {
-        Bit element
-            {
-            @Override
-            Boolean assigned.get()
-                {
-                TODO
-                }
-
-            @Override
-            Bit get()
-                {
-                TODO
-                }
-
-            @Override
-            void set(Bit v)
-                {
-                TODO
-                }
-            }
-        }.&element;
 
 - GG: optimize-out unnecessary array cloning by changing getBytes() to copyBytes(arrayInto)
 
