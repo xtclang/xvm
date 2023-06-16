@@ -1,16 +1,15 @@
 module TestSimple {
     @Inject Console console;
 
+    package agg import aggregate.xtclang.org;
+
+    import agg.*;
+
     void run() {
-    }
+        Sum<Int> sum = new Sum();
 
-    import ecstasy.collections.Aggregator;
-
-    class Test<Element>(Element element)
-        delegates Collection<Element>(reify()) { // used to produce a confusing error
-
-        Set<Element> reify() {
-            TODO
-        }
+        sum.Accumulator acc = sum.init(); // used to fail to compile
+        acc.add(1);
+        console.print(sum.reduce(acc));
     }
 }
