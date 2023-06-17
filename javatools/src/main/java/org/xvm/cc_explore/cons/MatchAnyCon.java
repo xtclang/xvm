@@ -13,4 +13,5 @@ public class MatchAnyCon extends Const {
     X.u31();
   }  
   @Override public void resolve( CPool X ) { _con = X.xget(); }
+  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
 }

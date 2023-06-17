@@ -7,13 +7,15 @@ import java.util.HashMap;
 /**
    Class part
  */
-class ClassPart extends Part {
-  final HashMap<String,TCon> _parms; // String->Type mapping
+public class ClassPart extends Part {
+  private final HashMap<String,TCon> _tcons; // String->Type mapping
   final LitCon _path;           // File name compiling this file
+  private final HashMap<String,Part> _parms; // String->Class mapping
   ClassPart( Part par, int nFlags, IdCon id, CondCon cond, CPool X ) {
-    super(par,nFlags,id,cond,X);
-    _parms = parseTypeParms(X);
+    super(par,nFlags,id,null,cond,X);
+    _tcons = parseTypeParms(X);
     _path  = (LitCon)X.xget();
+    _parms = _tcons==null ? null : new HashMap<>();
   }
 
   // Helper method to read a collection of type parameters.
@@ -28,5 +30,23 @@ class ClassPart extends Part {
       assert old==null;         // No double puts
     }
     return map;
+  }
+
+  // Tok, kid-specific internal linking.
+  @Override void link_innards( XEC.ModRepo repo ) {
+    if( _tcons==null ) return;
+    for( String name : _tcons.keySet() )
+      _parms.put(name,_tcons.get(name).link(repo));
+  }
+
+  @Override public Part child(String s) {
+    Part kid = super.child(s);
+    if( kid!=null ) return kid;
+    for( Contrib c : _contribs ) {
+      if( c._comp==Composition.Implements &&
+          (kid = c.part().child(s)) != null )
+        return kid;
+    }
+    return null;
   }
 }
