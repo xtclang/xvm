@@ -27,4 +27,5 @@ public class RangeCon extends Const {
     _lo = X.xget();
     _hi = X.xget();
   }
+  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
 }

@@ -27,15 +27,12 @@ public class ModPart extends ClassPart {
     
     if( isFingerprint() ) {
       _allowedVers = new VerTree();
-      for( int i=0, len = X.u31(); i < len; i++ ) {
-        VerCon cVer = (VerCon)X.xget();
-        _allowedVers.put(cVer.ver(), X.u1());
-      }
+      for( int i=0, len = X.u31(); i < len; i++ )
+        _allowedVers.put(((VerCon)X.xget()).ver(), X.u1());
 
       _prefers = new ArrayList<>();
       for( int i=0, len=X.u31(); i < len; i++ ) {
-        VerCon cVer = (VerCon) X.xget();
-        Version ver = cVer.ver();
+        Version ver = ((VerCon)X.xget()).ver();
         if( !_prefers.contains(ver) ) // Duplicate filtering
           _prefers.add(ver);
       }
@@ -49,9 +46,11 @@ public class ModPart extends ClassPart {
     _dir  = (LitCon)X.xget();
     _time = (LitCon)X.xget();
   }
-
-  @Override public String toString() { return con().toString(); }
-  ModCon con() { return (ModCon)_id; }
+  
+  // Fingerprints link against a repo to get the actual module
+  @Override Part link_as( XEC.ModRepo repo ) {
+    return isFingerprint() ? repo.get(_name) : this;
+  }
   
   /**
    * Check if this is a fingerprint module, which is a secondary (not main) module in a file
@@ -70,7 +69,7 @@ public class ModPart extends ClassPart {
   // Find a method by name, or return null
   MethodPart method(String s) {
     Part p = _name2kid.get(s);
-    if( p instanceof MMethodPart mm && s.equals(mm.name()) ) {
+    if( p instanceof MMethodPart mm && s.equals(mm._name) ) {
       if( mm._name2kid.size()!=1 ) throw XEC.TODO(); // Disambiguate?
       return (MethodPart)mm._name2kid.get(s);
     }

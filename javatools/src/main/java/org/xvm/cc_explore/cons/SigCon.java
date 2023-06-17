@@ -24,4 +24,5 @@ public class SigCon extends IdCon {
   @Override public String name() { return _name; }
   public TCon[] rawRets () { return _rets ; }
   public TCon[] rawParms() { return _parms; }
+  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
 }

@@ -9,10 +9,10 @@ import java.util.HashMap;
      DAG structure containment of components/parts
  */
 abstract public class Part {
+  public final String _name;    // Identifier
   public final Part _par;       // Parent in the parent chain; null ends.  Last is FilePart.
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
-  public final IdCon _id;       // Identifier
 
   public final ArrayList<Contrib> _contribs;
 
@@ -24,18 +24,16 @@ abstract public class Part {
   // Linked list of siblings at the same DAG level with the same name
   private Part _sibling;
 
-  Part( Part par, int nFlags, IdCon id, CondCon cond, CPool X ) {
+  Part( Part par, int nFlags, IdCon id, String name, CondCon cond, CPool X ) {
     _par = par;
     _sibling = null;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
     assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
     
-    if( id != null )
-      id = (IdCon)id.resolveTypedefs();
+    _name = id==null ? name : ((IdCon)(id.resolveTypedefs())).name();
     _nFlags = nFlags;
     _cond = cond;
-    _id = id;
 
     // Only null for self FilePart.  Other parts need to parse bits.
     if( X!=null ) {
@@ -48,9 +46,12 @@ abstract public class Part {
     }
   }
 
+  @Override public String toString() { return _name; }
+
 
   // Tik-tok style recursive-descent parsing.  This is the Tik, shared amongst
-  // all kids.  The Tok is where we do kid-specific parsing.
+  // all kids.  The Tok is where we do kid-specific parsing.  Since we don't
+  // have the kids yet, we can't really do a Visitor pattern here.
   final void parseKids( CPool X ) {
     int cnt = X.u31();          // Number of kids
     for( int i=0; i<cnt; i++ ) {
@@ -71,8 +72,8 @@ abstract public class Part {
       assert !(kid instanceof MethodPart) || (this instanceof MMethodPart);
       // Insert name->kid mapping
       if( _name2kid==null ) _name2kid = new HashMap<>();
-      Part old = _name2kid.get(kid.name());
-      if( old==null ) _name2kid.put(kid.name(),kid);
+      Part old = _name2kid.get(kid._name);
+      if( old==null ) _name2kid.put(kid._name,kid);
       else {
         while( old._sibling!=null ) old = old._sibling; // Follow linked list to end
         old._sibling = kid;                             // Append kid to tail of linked list
@@ -84,25 +85,50 @@ abstract public class Part {
     }
   }
 
-  // Part name
-  String name() { return _id.name(); }
+  // Tik-tok style recursive-descent linking.  This is the Tik, shared amongst
+  // all kids.  The Tok is where we do kid-specific linking.  If I see too many
+  // of these tik-tok patterns I'll probably add a Visitor instead.
+  public final Part link( XEC.ModRepo repo ) {
+    Part p = XEC.ModRepo.VISIT.get(this);
+    if( p!=null ) return p;     // Already linked
+    p = link_as(repo);          // In-place replacement (Required ModPart becomes Primary ModPart)
+    XEC.ModRepo.VISIT.put(this,p);     // Stop cycles
+    if( p!=this ) return p.link(repo); // Now link the replacement
+    // Link all part innards
+    if( _contribs != null )
+      for( Contrib c : _contribs )
+        c.link(repo);
+    // Link specfic part innards
+    link_innards(repo);                 // Link internal Const
+  
+    // For all child parts
+    if( _name2kid==null ) return this;
+    for( String name : _name2kid.keySet() ) {
+      Part kid = _name2kid.get(name).link(repo); 
+      _name2kid.put(name,kid);  // Replace with upgrade and link
+    }
+    return this;
+  }
 
+  // Tok, replace self with a better Part
+  Part link_as( XEC.ModRepo repo ) { return this; }
+
+  // Tok, kid-specific internal linking.
+  void link_innards( XEC.ModRepo repo ) { }
+  
   public Part child(String s) {
-    // there are five cases:
-    // 1) no child by that name - return null
-    // 2) one unconditional child by that name - return the child
-    // 3) a number of children by that name, but no conditions match - return null
-    // 4) a number of children by that name, one condition matches - return that child
-    // 5) a number of children by that name, multiple conditions match - return a composite child
-    
     // most common result: no child by that name
-    Part kid = _name2kid.get(s);
+    Part kid = _name2kid==null ? null : _name2kid.get(s);
     if( kid == null ) return null;
 
     // common result: exactly one non-conditional match
     if( kid._sibling == null && kid._cond == null ) return kid;
 
-    throw XEC.TODO();
+    // Filter based on Assembly, not implemented.
+    // Gather the kids into an Array, build a CompositeComponent... but hey
+    // MMethodPart is already a composite.
+    assert this instanceof MMethodPart;
+    return this;
   }
 
   // ----- inner class: Component Contribution ---------------------------------------------------
@@ -112,12 +138,16 @@ abstract public class Part {
    * of any number of contributing components.
    */
   public static class Contrib {
-    private final Composition _comp;
+    final Composition _comp;
     private final TCon _tContrib;
     private final PropCon _prop;
     private final SingleCon _inject;
     private final Annot _annot;
     private final HashMap<String, TCon> _parms;
+    // Post link values
+    private Part _cPart;
+    private final HashMap<String, ClassPart> _clzs;
+    
     protected Contrib( CPool X ) {
       _comp = Composition.valueOf(X.u8());
       _tContrib = (TCon)X.xget();
@@ -162,8 +192,23 @@ abstract public class Part {
       _prop = prop;
       _inject = inject;
       _parms = parms;
+      _clzs = parms==null ? null : new HashMap<>();
     }
-    // resolve
+    // Link all the internal parts
+    void link( XEC.ModRepo repo ) {
+      if( _cPart!=null ) return;
+      _cPart = _tContrib.link(repo);
+      
+      if( _prop  !=null ) _prop  .link(repo);
+      if( _inject!=null ) _inject.link(repo);
+      if( _annot !=null ) _annot .link(repo);
+      if( _parms !=null )
+        for( String name : _parms.keySet() ) {
+          TCon tcon = _parms.get(name);
+          _clzs.put(name, tcon==null ? null : (ClassPart)tcon.link(repo));
+        }
+    }
+    Part part() { assert _cPart!=null; return _cPart; }
   }
   
   /**
