@@ -46,8 +46,8 @@ public class FilePart extends Part {
   
 
   // Constructor parses byte array, builds FileComponent
-  FilePart( byte[] buf ) {
-    super(null,NFLAGS,null,null,null);
+  FilePart( byte[] buf, String name ) {
+    super(null,NFLAGS,null,name,null,null);
 
     // Constant pool and buffer parser
     CPool pool = new CPool(buf);
@@ -72,18 +72,6 @@ public class FilePart extends Part {
     _mod = (ModPart)child(mod.name());
   }
   
-  // Link 
-  void link( XEC.ModRepo repo ) {
-    // For all child modules
-    for( String name : _name2kid.keySet() ) {
-      Part p = _name2kid.get(name);
-      // Filter down to fingerprint modules
-      if( p instanceof ModPart mod2 && mod2.isFingerprint() )
-        // Update in parent mapping the Primary module
-        _name2kid.put(name,repo.get(mod2.name()));
-    }
-  }
-
   // Can we handle this version?
   static boolean isFileVersionSupported(int major, int minor) {
     return major==VERSION_MAJOR_CUR && minor==VERSION_MINOR_CUR;

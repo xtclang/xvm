@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.*;
 
 /**
   Exploring XEC Constants
@@ -24,4 +23,5 @@ public class FSNodeCon extends TCon {
     _mod    = (   LitCon)X.xget();
     _data   =            X.xget();
   }
+  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
 }
