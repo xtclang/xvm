@@ -1,13 +1,13 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.*;
 
 /**
   Exploring XEC Constants
  */
 public abstract class RelTCon extends TCon {
-  private TCon _con1, _con2;
+  private TCon  _con1,  _con2;
+  private Part _part1, _part2;
   public RelTCon( CPool X ) {
     X.u31();
     X.u31();
@@ -15,5 +15,10 @@ public abstract class RelTCon extends TCon {
   @Override public void resolve( CPool X ) {
     _con1 = (TCon)X.xget();
     _con2 = (TCon)X.xget();
+  }
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _part1!=null ) return _part1;
+    _part2 = _con2.link(repo);
+    return (_part1 = _con1.link(repo));
   }
 }

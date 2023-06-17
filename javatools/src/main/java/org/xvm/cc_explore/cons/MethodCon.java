@@ -5,13 +5,12 @@ import org.xvm.cc_explore.*;
 /**
   Exploring XEC Constants
  */
-public class MethodCon extends IdCon {
-  private MMethodCon _par;
+public class MethodCon extends PartCon<MethodPart> {
   private SigCon _sig;
   public MethodCon( CPool X ) {
-    X.u31();
-    X.u31();
-    X.u31();
+    X.u31();                    // Parent
+    X.u31();                    // Signature
+    X.u31();                    // Lambda
   }
   @Override public void resolve( CPool X ) {
     _par = (MMethodCon)X.xget();
