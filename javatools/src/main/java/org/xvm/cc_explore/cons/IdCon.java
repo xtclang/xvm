@@ -9,4 +9,5 @@ import org.xvm.cc_explore.XEC;
  */
 public abstract class IdCon extends Const {
   abstract public String name();
+  public IdCon link_as(XEC.ModRepo repo) { throw XEC.TODO(); }
 }

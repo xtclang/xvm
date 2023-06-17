@@ -1,20 +1,23 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.Part;
+import org.xvm.cc_explore.*;
 
 /**
    Abstract XEC constants.  These are all conceptually immutable, and shared
    across e.g. containers and services.  They take a one-time initialization
    during creation; after the Java constructor and during the resolve phase.
    They are actually immutable after resolving.
-   
-   
  */
 public abstract class Const {
 
   // Resolve any internal references from the serialized form.
   public void resolve( CPool X ){};
+
+  // Convert e.g. ClassCon/ModCon/PackCon to their Part equivalents.
+  // Non-Part related just link internals.
+  public Part link(XEC.ModRepo repo) { return null; }
+  // After linking, the part call does not need the repo.
+  Part part() { throw XEC.TODO();  }
 
   /**
    * Recurse through the constants that make up this constant, replacing

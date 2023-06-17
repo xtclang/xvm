@@ -1,11 +1,14 @@
 package org.xvm.cc_explore;
 
+import org.xvm.cc_explore.cons.Const;
+
 import java.io.FileFilter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
   Exploring XTC bytecodes.  Fakes as a XEC runtime translator to JVM bytecodes.
@@ -88,7 +91,7 @@ public class XEC {
 
 
   // Module Repository: Mapping from module name Strings to ModParts.
-  static class ModRepo extends HashMap<String,ModPart> {
+  public static class ModRepo extends HashMap<String,ModPart> {
     // Load a single file or directory of files.  Return a single module or null.
     ModPart load( String s ) throws IOException { return load(new File(s)); }
     ModPart load( File f ) throws IOException {
@@ -98,9 +101,9 @@ public class XEC {
         return null;            // Null for directories
       } else {
         byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
-        FilePart file = new FilePart(buf); // Parse the entire file
+        FilePart file = new FilePart(buf,f.toString()); // Parse the entire file
         ModPart mod = file._mod;           // Extract main module
-        put(mod.name(),mod);
+        put(mod._name,mod);
         return mod;             // Return single module for single file
       }
     }
@@ -114,11 +117,13 @@ public class XEC {
     // child modules (including the original module).  Some of the child
     // modules might be Fingerprints: unlinked module names that must appear in
     // the repo.  Replace fingerprints with the primary module.
+    public static final HashMap<Part,Part> VISIT = new HashMap<>();
     void link() {
+      VISIT.clear();
       // For all modules in repo
       for( ModPart mod : values() )
         // Get the parent's set of child modules and link them against the repo
-        ((FilePart)mod._par).link(this);
+        mod._par.link(this);
     }
   }
 

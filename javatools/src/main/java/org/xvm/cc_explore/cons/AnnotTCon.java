@@ -1,15 +1,14 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.Annot;
-import org.xvm.cc_explore.CPool;
-import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.*;
 
 /**
   Exploring XEC Constants
  */
 public class AnnotTCon extends TCon {
   Annot _an;
-  TCon _con;
+  private TCon _con;
+  private ClassPart _clz;
   public AnnotTCon( CPool X ) {
     X.u31();
     X.u31();
@@ -17,5 +16,9 @@ public class AnnotTCon extends TCon {
   @Override public void resolve( CPool X ) {
     _an = (Annot)X.xget();
     _con = (TCon)X.xget();
+  }
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _clz!=null ) return _clz;
+    return (_clz = (ClassPart)_con.link(repo));
   }
 }
