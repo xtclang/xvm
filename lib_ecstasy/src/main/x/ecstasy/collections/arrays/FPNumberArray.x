@@ -761,4 +761,30 @@ mixin FPNumberArray<Element extends FPNumber>
                         : new Array(mutability, this))
                 : new Float128[size](i -> this[i].toFloat128()).toArray(mutability, True);
     }
+
+
+    // ----- aggregations --------------------------------------------------------------------------
+
+    /**
+     * Compute variance of the array values.
+     *
+     * @return True iff the array is not empty
+     * @return (optional) the variance
+     */
+    conditional Element variance() {
+        Int size = this.size;
+        if (size == 0) {
+            return False;
+        }
+        assert Element sum := sum();
+        Element        cnt  = Int.converterTo(Element)(size);
+        Element mean = sum/cnt;
+
+        sum = Element.zero();
+        for (Element value : this) {
+            Element diff = value - mean;
+            sum += diff*diff;
+        }
+        return True, sum/cnt;
+    }
 }
