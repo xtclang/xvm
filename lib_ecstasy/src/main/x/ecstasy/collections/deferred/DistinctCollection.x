@@ -34,8 +34,8 @@ class DistinctCollection<Element>
             // returned value -- after the first value has been returned, of course!
             Iterator<Element> orderedIterator = original.iterator();
             return new Iterator<Element>() {
-                private Boolean first = True;
-                private @Unassigned Element prev;
+                private Boolean  first = True;
+                private Element? prev  = Null;
 
                 @Override Boolean knownDistinct() = True;
                 @Override conditional Orderer knownOrder() = (True, order);
