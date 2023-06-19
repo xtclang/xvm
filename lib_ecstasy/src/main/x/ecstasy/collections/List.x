@@ -641,7 +641,7 @@ interface List<Element>
         }
 
         return this.inPlace && inPlace
-                ? sort(this, orderer)
+                ? sort(orderer)
                 : super(orderer);
     }
 
@@ -1304,47 +1304,49 @@ interface List<Element>
     // ----- sorting algorithms --------------------------------------------------------------------
 
     /**
-     * Sort the contents of the passed list, in place if possible, using the specified order.
+     * Sort the contents of this list, in place if possible, using the specified order.
      *
-     * @param list   the list to sort
      * @param order  (optional) the Orderer to use to sort the list; defaults to the natural order
      *               for Element
      *
      * @return the sorted list (which may not be the list that was passed in)
      */
-    static <Element> List<Element> sort(List<Element> list, Element.Orderer? order = Null) {
+    List!<Element> sort(Orderer? order = Null) {
         if (order == Null) {
             if (!(order := Element.ordered())) {
                 throw new TypeMismatch($"Element type {Element} is not Orderable");
             }
         }
 
-        if (list.is(immutable List) || !list.inPlace) {
-            list = list.toArray(Mutable);
+        if (this.is(immutable) || !inPlace) {
+            return toArray(Mutable).sort(order);
         }
 
-        bubbleSort(list, order);
-        return list;
+        Int size = this.size;
+        if (size >= 5) {
+            bubbleSort(order);
+        } else {
+            quickSort(order, 0, size - 1);
+        }
+
+        return this;
     }
 
     /**
-     * Bubble-sort the contents of the passed list, in place, using the specified Orderer. The loop
+     * Bubble-sort the contents of this list, in place, using the specified Orderer. The loop
      * is optimized for an almost-sorted list, with the most-likely-to-be-unsorted items at the end.
      *
-     * @param list   the list to sort in-place
      * @param order  the Orderer to use to sort the list
      * @param max    the maximum number of passes to make over the list
      *
      * @return True iff the list is now sorted
      */
-    static <Element> Boolean bubbleSort(List<Element>   list,
-                                        Element.Orderer order,
-                                        Int             max = MaxValue) {
-        if (!list.indexed) {
+    Boolean bubbleSort(Orderer order, Int max = MaxValue) {
+        if (!indexed) {
             // TODO cursor-based implementation?
         }
 
-        Int last = list.size - 1;
+        Int last = size - 1;
         if (last <= 0) {
             return True;
         }
@@ -1354,12 +1356,12 @@ interface List<Element>
         do {
             sorted = True;
 
-            list.Element bubble = list[last];
+            Element bubble = this[last];
             for (Int i = last-1; i >= first; --i) {
-                list.Element prev = list[i];
+                Element prev = this[i];
                 if (order(prev, bubble) == Greater) {
-                    list[i  ] = bubble;
-                    list[i+1] = prev;
+                    this[i  ] = bubble;
+                    this[i+1] = prev;
                     sorted    = False;
                 } else {
                     bubble = prev;
@@ -1372,5 +1374,88 @@ interface List<Element>
         } while (!sorted && --max > 0);
 
         return sorted;
+    }
+
+    /**
+     * Sort the contents of this list, in place, using the [Quicksort algorithm]
+     * (https://en.wikipedia.org/wiki/Quicksort).
+     *
+     * @param order  the Orderer to use to sort the list
+     * @paran low    the first index to sort
+     * @paran high   the last index to sort
+     */
+    void quickSort(Orderer order, Int low, Int high) {
+
+        if (low < high) {
+
+            Int partitionIndex = partition(order, low, high);
+
+            quickSort(order, low, partitionIndex - 1);
+            quickSort(order, partitionIndex + 1, high);
+        }
+
+        /**
+         * Partition this list by taking the last element as pivot, place the pivot element
+         * at its correct position in sorted list, and place all smaller to left of pivot and all
+         * greater elements to right of pivot.
+         */
+        Int partition(Orderer order, Int low, Int high) {
+            Element pivot = this[high];
+            Int     i     = low - 1;
+
+            for (Int j : low ..< high) {
+
+                if (order(this[j], pivot) == Lesser) {
+                    i++;
+                    swap(i, j);
+                }
+            }
+            swap(i + 1, high);
+            return i + 1;
+        }
+    }
+
+    /**
+     * Swap the elements of this list.
+     */
+    void swap(Int i, Int j) {
+        Element el = this[i];
+        this[i] = this[j];
+        this[j] = el;
+    }
+
+    /**
+     * Compute the longest consecutive run of the same value in the list. If the list is sorted,
+     * the resulting value is the "mode" of values in this list, which is the value that appears
+     * most often in this array.
+     *
+     * @return True iff the list is not empty
+     * @return (optional) the longest run ("mode") of the list values
+     * @return (optional) the size of the longest run
+     */
+    conditional (Element, Int) longestRun() {
+        if (empty) {
+            return False;
+        }
+
+        Element prevValue = this[0];
+        Int     currCount = 1;
+        Element maxValue  = prevValue;
+        Int     maxCount  = currCount;
+
+        for (Int i : 1 ..< size) {
+            Element currValue = this[i];
+            if (currValue == prevValue) {
+                if (++currCount > maxCount) {
+                    maxValue = currValue;
+                    maxCount = currCount;
+                }
+            } else {
+                prevValue = currValue;
+                currCount = 1;
+            }
+        }
+
+        return True, maxValue, maxCount;
     }
 }

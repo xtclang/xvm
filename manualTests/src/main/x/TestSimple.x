@@ -6,10 +6,27 @@ module TestSimple {
     import agg.*;
 
     void run() {
-        Sum<Int> sum = new Sum();
+        test([1, 8, 3, 12, 2, 10, 4, 14]);
+        test([1, 8, 3, 12, 2, 10, 4, 3]);
+        test([1, 8, 3, 12, 2, 10, 4, 14, 3]);
+        test([16, 16, 8, 3, 12, 2, 10, 4, 14, 8, 12, 1]);
 
-        sum.Accumulator acc = sum.init(); // used to fail to compile
-        acc.add(1);
-        console.print(sum.reduce(acc));
+        void test(Int[] ints) {
+
+            Int[] sorted = ints.sorted();
+            console.print(ints);
+            console.print(sorted);
+
+            assert Int median := ints.median();
+            console.print($"{median=}");
+
+            assert Int mode := sorted.longestRun();
+            console.print($"{mode=}");
+
+            Float64[] floats = new Float64[ints.size](i -> ints[i].toFloat64());
+            assert Float64 variance := floats.variance();
+            Float64 stddev = variance.sqrt();
+            console.print($"{variance=} {stddev=}");
+        }
     }
 }
