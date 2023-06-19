@@ -1,0 +1,222 @@
+/**
+ * `DeferredCollection` is a base class for deferred results from various operation on a
+ * `Collection`, such as `map()` and `filter()`.
+ */
+@Abstract class DeferredCollection<Element>
+        delegates Collection<Element>(reified) {
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct a DeferredCollection based on an original collection.
+     *
+     * @param original  the collection from which this collection's contents will be drawn
+     */
+    construct(Collection<Element> original) {
+        this.original = original;
+    }
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * The Collection from which the contents of this Collection will be drawn, or `Null` after this
+     * Collection has been reified (to allow memory to be collected).
+     */
+    protected Collection<Element>? original;
+
+    /**
+     * The cached reified copy of this Collection.
+     */
+    protected @Lazy Collection<Element> reified.calc() {
+        assert Collection<Element> original ?= original;
+        Collection<Element> reified = createReified();
+        this.original = Null;
+        return reified;
+    }
+
+    /**
+     * This is the method that actually creates the reified result on demand; each sub-class must
+     * provide an implementation. During this method, any other properties that are related to the
+     * original Collection, that hold any significant references or amounts of memory, and are no
+     * longer needed after reification should be nulled out.
+     *
+     * @return the appropriate reified copy of the contents of this collection
+     */
+    protected @Abstract Collection<Element> createReified();
+
+    /**
+     * Indicate whether this Collection has already cached its reified contents.
+     */
+    protected Boolean alreadyReified.get() = original == Null;
+
+    /**
+     * This is the method that allows the contents of this Collection to be iterated, without
+     * creating a reified copy of the data in this Collection. Each sub-class must provide an
+     * implementation.
+     *
+     * @return an Iterator that provides the contents of this Collection based on the original
+     *         Collection
+     */
+    protected @Abstract Iterator<Element> unreifiedIterator();
+
+    /**
+     * This method is used to efficiently reify a chain of DeferredCollection objects, such as with
+     * a sequence of calls like `map(...).filter(...).flatMap(...).reduce(...).toArray()`.
+     *
+     * @param accumulator  the Appender to append all of the elements to from this
+     *                     DeferredCollection
+     */
+    protected void evaluate(Appender<Element> accumulator) {
+        if (alreadyReified) {
+            Int count = reified.size;
+            if (count > 0) {
+                accumulator.ensureCapacity(count)
+                           .addAll(reified);
+            }
+        } else {
+            for (Element e : this) {
+                accumulator.add(e);
+            }
+        }
+    }
+
+
+    // ----- Collection interface ------------------------------------------------------------------
+
+    @Override
+    Iterator<Element> iterator() {
+        // assume that some percentage of DeferredCollections are created and then iterated exactly
+        // once, in which case it's wasteful to realize the results; conversely, if multiple
+        // iterations occur, then realize the results
+        private Boolean iteratedAtLeastOnce = False;
+        if (!iteratedAtLeastOnce && alreadyReified) {
+            Iterator<Element> iter = unreifiedIterator();
+            iteratedAtLeastOnce = True;
+            return iter;
+        }
+        return reified.iterator();
+    }
+
+    @Override
+    conditional Int knownSize() {
+        if (Int origSize := original?.knownSize()) {
+            return origSize == 0
+                    ? (True, 0)
+                    : False;
+        }
+        return reified.knownSize();
+    }
+
+    @Override
+    @RO Boolean empty.get() {
+        if (Int origSize := original?.knownSize(), origSize == 0) {
+            return True;
+        }
+        return reified.empty;
+    }
+
+    @Override
+    void forEach(function void (Element) process) {
+        if (alreadyReified) {
+            reified.forEach(process);
+        } else {
+            using (val iter = iterator()) {
+                iter.forEach(process);
+            }
+        }
+    }
+
+    @Override
+    conditional Element any(function Boolean(Element) match = _ -> True) {
+        if (alreadyReified) {
+            return reified.any(match);
+        } else {
+            using (val iter = iterator()) {
+                return iter.untilAny(match);
+            }
+        }
+    }
+
+    @Override
+    Boolean all(function Boolean(Element) match) {
+        if (alreadyReified) {
+            return reified.all(match);
+        } else {
+            using (val iter = iterator()) {
+                return iter.whileEach(match);
+            }
+        }
+    }
+
+    @Override
+    <Result extends Collection<Element>> Result filter(function Boolean(Element) match,
+                                                       Aggregator<Element, Result>? collector = Null) {
+        if (alreadyReified) {
+            return reified.filter(match, collector).as(Result);
+        } else if (collector == Null) {
+            return new FilteredCollection<Element>(this, match).as(Result);
+        } else {
+            collector.Accumulator accum = collector.init();
+            for (Element e : this) {
+                if (match(e)) {
+                    accum.add(e);
+                }
+            }
+            return collector.reduce(accum);
+        }
+    }
+
+    // TODO CP partition()
+    // TODO CP map()
+    // TODO CP flatMap()
+    // TODO CP 4x associate etc.
+
+    @Override
+    <Result> Result reduce(Result                           initial,
+                           function Result(Result, Element) accumulate) {
+        return alreadyReified
+                ? reified.reduce(initial, accumulate)
+                : super(initial, accumulate);
+    }
+
+    @Override
+    <Result> Result reduce(Aggregator<Element, Result> aggregator) {
+        if (alreadyReified) {
+            return reified.reduce(aggregator);
+        } else {
+            aggregator.Accumulator accumulator = aggregator.init();
+            if (Int count := knownSize()) {
+                if (count == 0) {
+                    return aggregator.reduce(accumulator);
+                }
+                accumulator.ensureCapacity(count);
+            }
+            for (Element e : this) {
+                accumulator.add(e);
+            }
+            return aggregator.reduce(accumulator);
+        }
+    }
+
+    @Override
+    <Result extends Collection<Element>> Result distinct(Aggregator<Element, Result>? collector = Null) {
+        if (!alreadyReified && collector == Null) {
+            return new DistinctCollection<Element>(this).as(Result);
+        }
+        return reified.distinct(collector);
+    }
+
+    @Override
+    Collection<Element> reify() = reified;
+
+    // TODO GG try replacing "Collection<Element>" with "Collection!" and I think it's VERIFY-70's all over
+    @Override @Op("+") Collection<Element> add(Element value)                              = throw new ReadOnly();
+    @Override @Op("+") Collection<Element> addAll(Iterable<Element> values)                = throw new ReadOnly();
+    @Override Collection<Element> addAll(Iterator<Element> iter)                           = throw new ReadOnly();
+    @Override conditional Collection<Element> addIfAbsent(Element value)                   = throw new ReadOnly();
+    @Override @Op("-") Collection<Element> remove(Element value)                           = throw new ReadOnly();
+    @Override @Op("-") Collection<Element> removeAll(Iterable<Element> values)             = throw new ReadOnly();
+    @Override conditional Collection<Element> removeIfPresent(Element value)               = throw new ReadOnly();
+    @Override (Collection<Element>, Int) removeAll(function Boolean(Element) shouldRemove) = throw new ReadOnly();
+    @Override Collection<Element> retainAll(Iterable<Element> values)                      = throw new ReadOnly();
+    @Override Collection<Element> clear()                                                  = throw new ReadOnly();
+}

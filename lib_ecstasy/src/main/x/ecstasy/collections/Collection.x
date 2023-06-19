@@ -270,14 +270,11 @@ interface Collection<Element>
     <Result extends Collection!> Result filter(function Boolean(Element) match,
                                                Aggregator<Element, Result>? collector = Null) {
         if (collector == Null) {
-            // TODO CP deferred result
-            Element[] dest = new Element[];
-            for (Element e : this) {
-                if (match(e)) {
-                    dest.add(e);
-                }
+//            return (empty ? [] : new deferred.FilteredCollection(this, match)).as(Result);
+            if (Int count := knownSize(), count == 0) {
+                return [].as(Result);
             }
-            return dest.as(Result);
+            return new deferred.FilteredCollection<Element>(this, match).as(Result);
         }
 
         collector.Accumulator accumulator = collector.init();
@@ -427,6 +424,14 @@ interface Collection<Element>
         }
         return collector.reduce(dest);
     }
+
+    // TODO CP flatMap taking an Appender
+    /*
+    @Concurrent
+    <Value, Result extends Collection!<Value>>
+            Result flatMap(function Int(Value, Appender<Element>) flatten,
+                           Aggregator<Value, Result>? collector = Null) {
+    */
 
     /**
      * Build a distinct [Set] of elements found in this collection.
