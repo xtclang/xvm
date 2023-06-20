@@ -4,7 +4,7 @@ import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.TLS;
 
 /**
-  Exploring XEC Constants
+   Same as a Java generic constant name: "Map<K,V>; <V> get(K key) { ... }"
  */
 public class TParmCon extends FormalCon {
   private final int _reg;       // Register index

@@ -7,7 +7,7 @@ import org.xvm.cc_explore.*;
  */
 public abstract class PartCon<PART extends Part> extends IdCon {
   PartCon _par;                 // Parent
-  private PART _part;
+  PART _part;
   @Override public PART link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
     if( _par==null ) {

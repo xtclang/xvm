@@ -1,6 +1,5 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.Part;
 import org.xvm.cc_explore.XEC;
 
 /**
