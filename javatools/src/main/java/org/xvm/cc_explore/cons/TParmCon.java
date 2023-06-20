@@ -13,4 +13,9 @@ public class TParmCon extends FormalCon {
     super(X);
     _reg = X.u31();
   }
+  // This guy does not have a matching Part/Component/Structure
+  @Override public Part link( XEC.ModRepo repo ) {
+    _par.link(repo).link(repo);
+    return null;
+  }
 }

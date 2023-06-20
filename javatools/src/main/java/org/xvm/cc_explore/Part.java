@@ -98,7 +98,7 @@ abstract public class Part {
     if( _contribs != null )
       for( Contrib c : _contribs )
         c.link(repo);
-    // Link specfic part innards
+    // Link specific part innards
     link_innards(repo);                 // Link internal Const
   
     // For all child parts
@@ -116,7 +116,7 @@ abstract public class Part {
   // Tok, kid-specific internal linking.
   void link_innards( XEC.ModRepo repo ) { }
   
-  public Part child(String s) {
+  public Part child(String s, XEC.ModRepo repo) {
     // most common result: no child by that name
     Part kid = _name2kid==null ? null : _name2kid.get(s);
     if( kid == null ) return null;
@@ -195,8 +195,8 @@ abstract public class Part {
       _clzs = parms==null ? null : new HashMap<>();
     }
     // Link all the internal parts
-    void link( XEC.ModRepo repo ) {
-      if( _cPart!=null ) return;
+    Part link( XEC.ModRepo repo ) {
+      if( _cPart!=null ) return _cPart;
       _cPart = _tContrib.link(repo);
       
       if( _prop  !=null ) _prop  .link(repo);
@@ -207,6 +207,7 @@ abstract public class Part {
           TCon tcon = _parms.get(name);
           _clzs.put(name, tcon==null ? null : (ClassPart)tcon.link(repo));
         }
+      return _cPart;
     }
     Part part() { assert _cPart!=null; return _cPart; }
   }
