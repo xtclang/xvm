@@ -5,19 +5,19 @@ import org.xvm.cc_explore.*;
 /**
   General Con class backed by matching Part class
  */
-public abstract class PartCon<PART extends Part> extends IdCon {
+public abstract class PartCon extends IdCon {
   PartCon _par;                 // Parent
-  PART _part;
-  @Override public PART link( XEC.ModRepo repo ) {
+  Part _part;
+  @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
     if( _par==null ) {
-      _part = (PART)repo.get(name());
+      _part = (Part)repo.get(name());
     } else {
       Part par = _par.link(repo).link(repo);
-      _part = (PART)par.child(name());
+      _part = par.child(name());
     }
     assert _part!=null;
     return _part;
   }
-  @Override PART part() { assert _part!=null; return _part; }
+  @Override Part part() { assert _part!=null; return _part; }
 }

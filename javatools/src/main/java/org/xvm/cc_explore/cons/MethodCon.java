@@ -5,7 +5,7 @@ import org.xvm.cc_explore.*;
 /**
   Exploring XEC Constants
  */
-public class MethodCon extends PartCon<MethodPart> {
+public class MethodCon extends PartCon {
   private SigCon _sig;
   public MethodCon( CPool X ) {
     X.u31();                    // Parent

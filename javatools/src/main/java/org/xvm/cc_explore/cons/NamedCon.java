@@ -5,7 +5,7 @@ import org.xvm.cc_explore.*;
 /**
   Exploring XEC Constants
  */
-public abstract class NamedCon<PART extends Part> extends PartCon<PART> {
+public abstract class NamedCon extends PartCon {
   String _name;
   NamedCon( CPool X ) {  X.u31(); X.u31(); }
   @Override public String name() { return _name; }

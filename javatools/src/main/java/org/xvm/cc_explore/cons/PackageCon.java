@@ -5,6 +5,6 @@ import org.xvm.cc_explore.*;
 /**
   Exploring XEC Constants
  */
-public class PackageCon extends NamedCon<PackagePart> {
+public class PackageCon extends NamedCon {
   public PackageCon( CPool X ) { super(X); }
 }
