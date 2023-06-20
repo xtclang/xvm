@@ -12,7 +12,9 @@ public class MMethodCon extends NamedCon {
     if( p!=null ) return p;
     // If parent lookup fails, try again in Object
     p = repo.get("ecstasy.xtclang.org").child("Object",repo).child(name(),repo);
-    assert p!=null;
+    //assert p!=null;
+    if( p==null )
+      System.err.println("Cannot find "+name()+" in "+_par.name());
     return (_part=p);    
   }
 }
