@@ -7,7 +7,12 @@ import org.xvm.cc_explore.*;
  */
 public class AnonClzTCon extends DepTCon {
   private ClassCon _anon;
+  private ClassPart _aclz;
   public AnonClzTCon( CPool X ) { super(X); X.u31(); }
   @Override public void resolve( CPool X ) { super.resolve(X); _anon = (ClassCon)X.xget(); }
-  public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
+  public Part link(XEC.ModRepo repo) {
+    if( _aclz!=null ) return _aclz;
+    super.link(repo);
+    return (_aclz = (ClassPart)_anon.link(repo));
+  }
 }

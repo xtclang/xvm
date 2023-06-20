@@ -10,14 +10,10 @@ public abstract class PartCon extends IdCon {
   Part _part;
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
-    if( _par==null ) {
-      _part = (Part)repo.get(name());
-    } else {
-      Part par = _par.link(repo).link(repo);
-      _part = par.child(name());
-    }
-    assert _part!=null;
-    return _part;
+    // Link the parent, do any replacement lookups
+    Part par = _par.link(repo).link(repo);
+    // Find the child in the parent
+    return (_part = par.child(name(),repo));
   }
   @Override Part part() { assert _part!=null; return _part; }
 }

@@ -39,12 +39,12 @@ public class ClassPart extends Part {
       _parms.put(name,_tcons.get(name).link(repo));
   }
 
-  @Override public Part child(String s) {
-    Part kid = super.child(s);
+  @Override public Part child(String s, XEC.ModRepo repo) {
+    Part kid = super.child(s,repo);
     if( kid!=null ) return kid;
     for( Contrib c : _contribs ) {
-      if( c._comp==Composition.Implements &&
-          (kid = c.part().child(s)) != null )
+      if( (c._comp==Composition.Implements || c._comp==Composition.Extends) &&
+          (kid = c.link(repo).child(s,repo)) != null )
         return kid;
     }
     return null;

@@ -69,7 +69,7 @@ public class FilePart extends Part {
     // Parse any children components
     parseKids(pool);
 
-    _mod = (ModPart)child(mod.name());
+    _mod = (ModPart)child(mod.name(),null);
   }
   
   // Can we handle this version?
