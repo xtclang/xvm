@@ -80,9 +80,7 @@ interface Collection<Element>
      * check that `inPlace` is `True`, and otherwise throw a [ReadOnly] exception; one example is
      * when the `value` property on a [List.Cursor] is set.
      */
-    @RO Boolean inPlace.get() {
-        return True;
-    }
+    @RO Boolean inPlace.get() = True;
 
     /**
      * Metadata: Is the collection maintained in a specific order? And if that order is a function
@@ -93,9 +91,7 @@ interface Collection<Element>
      *         indicates that an order is maintained, but not by comparison of elements, for example
      *         when a collection stores elements in the order that they are added
      */
-    conditional Orderer? ordered() {
-        return False;
-    }
+    conditional Orderer? ordered() = False;
 
     /**
      * Metadata: Is the collection of a known size? The size is available from the [size] property,
@@ -270,9 +266,9 @@ interface Collection<Element>
     <Result extends Collection!> Result filter(function Boolean(Element) match,
                                                Aggregator<Element, Result>? collector = Null) {
         if (collector == Null) {
-//            return (empty ? [] : new deferred.FilteredCollection(this, match)).as(Result);
             if (Int count := knownSize(), count == 0) {
-                return [].as(Result);
+                Element[] empty = [];
+                return empty.as(Result);
             }
             return new deferred.FilteredCollection<Element>(this, match).as(Result);
         }
@@ -365,22 +361,26 @@ interface Collection<Element>
     <Value, Result extends Collection!<Value>>
             Result map(function Value(Element)    transform,
                        Aggregator<Value, Result>? collector = Null) {
-
-        Iterator<Element> iter  = iterator();
-        Int               count = size;
         if (collector == Null) {
-            // TODO CP return new DeferredMapCollection(this, transform);
-            return new Value[count](_ -> transform(iter.take())).as(Result);
+            if (Int count := knownSize(), count == 0) {
+                Value[] empty = [];
+                return empty.as(Result);
+            }
+            return new deferred.MappedCollection<Value, Element>(this, transform).as(Result);
         }
 
-        Appender<Value> dest = collector.init(count);
+        Iterator<Element> iter = iterator();
+
+        Appender<Value> dest = collector.init(knownSize() ?: 0);
         if (&dest == &this) {
             // there is no way to optimize the in-place mapping on an amorphous Collection;
-            // implementations of this interface should replace this default behavior
-            Element[] temp = new Element[count](_ -> iter.take());
+            // implementations of this interface that have a more optimal solution should override
+            // this default behavior
+            Element[] temp = new Element[knownSize()?](_ -> iter.take()) : new Element[].addAll(this);
             clear();
             iter = temp.iterator();
         }
+
         for (Element e : iter) {
             dest = dest.add(transform(e));
         }
