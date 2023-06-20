@@ -22,7 +22,7 @@ public class Annot extends Const {
   }
   @Override public Part link(XEC.ModRepo repo) {
     if( _clz!=null ) return _clz;
-    _clz = _con.link(repo);
+    _clz = (ClassPart)_con.link(repo);
     for( Const con : _cons )
       con.link(repo);
     return _clz;
