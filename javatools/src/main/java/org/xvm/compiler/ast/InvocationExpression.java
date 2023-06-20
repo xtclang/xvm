@@ -1362,6 +1362,7 @@ public class InvocationExpression
             Expression exprLeft = exprName.left;
             if (m_argMethod instanceof MethodConstant idMethod)
                 {
+                idMethod = rebaseMethodConstant(idMethod, m_method);
                 if (m_method.isFunction() || m_method.isConstructor())
                     {
                     // use the function identity as the argument & drop through to the function handling
@@ -1600,7 +1601,7 @@ public class InvocationExpression
                         assert m_idConvert == null && !m_fBindParams && !m_fCall;
                         if (cLVals > 0)
                             {
-                            aLVal[0].assign(m_argMethod, code, errs);
+                            aLVal[0].assign(idMethod, code, errs);
                             }
                         return;
                         }
@@ -1613,8 +1614,7 @@ public class InvocationExpression
                     // this is a method call; the method itself is a property or a register
                     Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
                                             fTargetOnStack, errs);
-                    Argument argMethod = m_argMethod;
-                    if (argMethod instanceof PropertyConstant idProp)
+                    if (m_argMethod instanceof PropertyConstant idProp)
                         {
                         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
                         if (prop.isConstant() && prop.hasInitialValue())
@@ -1638,9 +1638,9 @@ public class InvocationExpression
                     }
                 else
                     {
-                    if (m_argMethod instanceof Register)
+                    if (m_argMethod instanceof Register regFn)
                         {
-                        argFn = m_argMethod;
+                        argFn = regFn;
                         }
                     else
                         {
@@ -3181,6 +3181,38 @@ public class InvocationExpression
         return pool.buildFunctionType(
                 Arrays.copyOfRange(atypeParams, cTypeParams, atypeParams.length),
                 pool.extractFunctionReturns(typeFn));
+        }
+
+    /**
+     * There are scenarios, when a MethodConstant doesn't actually point to a method structure.
+     * That allows the compiler to supply more specific target bound type information on the method
+     * signature for the runtime.
+     * <p/>
+     * The purpose of this method is to make sure that despite that "disconnect", the identity of
+     * the "rebased" MethodConstant parent identifies the parent of the actual method structure,
+     * allowing the runtime quickly identify the topmost structure in the virtual call chain that
+     * is known at the compile time.
+     *
+     * @param idMethod  the MethodConstant to evaluate and, if necessary, rebase the parent of
+     * @param method    the actual method structure
+     *
+     * @return the MethodConstant whose name space is the same as the method structure parent's
+     *         identity
+     */
+    private MethodConstant rebaseMethodConstant(MethodConstant idMethod, MethodStructure method)
+        {
+        if (!method.equals(idMethod.getComponent()))
+            {
+            Component parentId     = idMethod.getNamespace().getComponent();
+            Component parentMethod = method.getParent().getParent();
+            if (!parentId.equals(parentMethod))
+                {
+                idMethod = pool().ensureMethodConstant(
+                        parentMethod.getIdentityConstant(), idMethod.getSignature());
+                }
+            }
+
+        return idMethod;
         }
 
 
