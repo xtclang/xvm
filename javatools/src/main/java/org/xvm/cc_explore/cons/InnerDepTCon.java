@@ -7,6 +7,7 @@ import org.xvm.cc_explore.*;
  */
 public class InnerDepTCon extends DepTCon {
   private ClassCon _child;
+  private ClassPart _kclz;
   public InnerDepTCon( CPool X ) {
     super(X);
     X.u31();
@@ -15,5 +16,7 @@ public class InnerDepTCon extends DepTCon {
     super.resolve(X);
     _child = (ClassCon)X.xget();
   }
-  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
+  @Override public Part link(XEC.ModRepo repo) {
+    return _kclz==null ? (_kclz = (ClassPart)_child.link(repo)) : _kclz;
+  }
 }

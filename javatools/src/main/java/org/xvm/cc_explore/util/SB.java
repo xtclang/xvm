@@ -39,8 +39,10 @@ public final class SB {
 
   // Increase indentation
   public SB ii( int i) { _indent += i; return this; }
+  public SB ii() { return ii(2); }
   // Decrease indentation
   public SB di( int i) { _indent -= i; return this; }
+  public SB di() { return di(2); }
 
   public SB nl( ) { return p(System.lineSeparator()); }
 

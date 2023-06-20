@@ -6,10 +6,14 @@ public class MethodPart extends MMethodPart {
 
   // Method's "super"
   private final MethodCon  _supercon;
+  private MMethodPart _super;
+  
   public final Const[] _supers;
+  public final Part[] _super_parts;
   
   // Optional "finally" block
   public final MethodCon _finally;
+  private MMethodPart _final;
 
   // Annotations
   public final Annot[] _annos;
@@ -65,7 +69,10 @@ public class MethodPart extends MMethodPart {
     
     // Read method's "super(s)"
     _supercon = (MethodCon)X.xget();
-    _supers = _supercon == null ? null : X.consts();
+    Const[] supers = _supercon == null ? null : X.consts();
+    if( supers!=null && supers.length==0 ) supers=null;
+    _supers = supers;
+    _super_parts = supers!=null ? new Part[supers.length] : null;
 
     // Read the constants
     _cons = X.consts();
@@ -92,13 +99,16 @@ public class MethodPart extends MMethodPart {
 
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) {
-    if( _supercon!=null ) throw XEC.TODO();
-    if( _supers  !=null ) throw XEC.TODO();
-    if( _finally !=null ) throw XEC.TODO();
+    if( _supercon!=null ) _super = (MMethodPart)_supercon.link(repo);
+    if( _finally !=null ) _final = (MMethodPart)_finally .link(repo);
     if( _annos   !=null ) for( Annot    anno : _annos ) anno.link(repo);
     if( _rets    !=null ) for( Parameter ret :  _rets ) ret .link(repo);
     if( _args    !=null ) for( Parameter arg :  _args ) arg .link(repo);
     if( _cons    !=null ) for( Const     con :  _cons ) con .link(repo);
+    if( _supers  !=null )
+      for( int i=0; i<_supers.length; i++ )
+        if( _supers[i]!=null )
+          _super_parts[i] = _supers[i].link(repo);
   }
 
 }

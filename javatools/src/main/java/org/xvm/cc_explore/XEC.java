@@ -44,9 +44,9 @@ public class XEC {
     XRuntime.start();
 
     // Start the native container.  Top of the container tree.
-    NativeContainer N = new NativeContainer(repo);
+    NativeContainer N = new NativeContainer();
     // Start the initial container
-    MainContainer M = new MainContainer(N,repo,mod);
+    MainContainer M = new MainContainer(N,mod);
     
     /*Joinable J=*/M.invoke(xrun,xargs); // Returns something to join against
     //J.join();

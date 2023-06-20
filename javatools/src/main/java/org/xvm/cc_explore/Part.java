@@ -19,10 +19,10 @@ abstract public class Part {
   // Map from kid name to kid.  
   // TODO: I lifted this 1 layer from the original, and I'm pretty sure this
   // isn't right but I don't have a test case to debug yet
-  HashMap<String,Part> _name2kid;
+  public HashMap<String,Part> _name2kid;
 
   // Linked list of siblings at the same DAG level with the same name
-  private Part _sibling;
+  public Part _sibling;
 
   Part( Part par, int nFlags, IdCon id, String name, CondCon cond, CPool X ) {
     _par = par;
