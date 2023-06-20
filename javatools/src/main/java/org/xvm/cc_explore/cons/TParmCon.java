@@ -15,7 +15,13 @@ public class TParmCon extends FormalCon {
   }
   // This guy does not have a matching Part/Component/Structure
   @Override public Part link( XEC.ModRepo repo ) {
-    _par.link(repo).link(repo);
+    //_par.link(repo).link(repo);
+    Part par = _par.link(repo);
+    if( par==null ) {
+      System.err.println("Cannot find "+name()+" in "+_par.name());
+      return null;
+    }
+    par = par.link(repo);
     return null;
   }
 }

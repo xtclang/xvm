@@ -1,7 +1,7 @@
 package org.xvm.cc_explore;
 
 class NativeContainer extends Container {
-  NativeContainer( XEC.ModRepo repo ) { super(null,repo); }
+  NativeContainer( ) { super(null,null); }
 
   // Initialize default things into the container?
   void init() {
