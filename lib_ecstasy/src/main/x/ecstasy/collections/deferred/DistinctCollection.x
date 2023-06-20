@@ -2,7 +2,7 @@
  * `DistinctCollection` is the deferred result of a `distinct()` operation on a `Collection`.
  */
 class DistinctCollection<Element>
-        extends DeferredCollection<Element>
+        extends DeferredCollection<Element, Element>
         implements Set<Element> {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -69,6 +69,9 @@ class DistinctCollection<Element>
 
 
     // ----- Collection interface ------------------------------------------------------------------
+
+    @Override
+    conditional Orderer? ordered() = (original ?: reified).ordered();
 
     @Override
     Boolean contains(Element value) = (original ?: reified).contains(value);

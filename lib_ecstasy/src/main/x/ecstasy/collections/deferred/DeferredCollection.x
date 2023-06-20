@@ -2,7 +2,7 @@
  * `DeferredCollection` is a base class for deferred results from various operation on a
  * `Collection`, such as `map()` and `filter()`.
  */
-@Abstract class DeferredCollection<Element>
+@Abstract class DeferredCollection<Element, FromElement>
         delegates Collection<Element>(reified) {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -11,7 +11,7 @@
      *
      * @param original  the collection from which this collection's contents will be drawn
      */
-    construct(Collection<Element> original) {
+    construct(Collection<FromElement> original) {
         this.original = original;
     }
 
@@ -21,13 +21,13 @@
      * The Collection from which the contents of this Collection will be drawn, or `Null` after this
      * Collection has been reified (to allow memory to be collected).
      */
-    protected Collection<Element>? original;
+    protected Collection<FromElement>? original;
 
     /**
      * The cached reified copy of this Collection.
      */
     protected @Lazy Collection<Element> reified.calc() {
-        assert Collection<Element> original ?= original;
+        assert Collection<FromElement> original ?= original;
         Collection<Element> reified = createReified();
         this.original = Null;
         return reified;
@@ -97,13 +97,21 @@
     }
 
     @Override
+    @RO Boolean inPlace.get() = True;
+
+    @Override
     conditional Int knownSize() {
-        if (Int origSize := original?.knownSize()) {
-            return origSize == 0
-                    ? (True, 0)
-                    : False;
+        if (Collection<FromElement> original ?= original) {
+            // this implementation only knows the size iff the original is known to be empty;
+            // sub-classes that have more knowledge of the relationship between the size of the
+            // original and the size of the reified result should override this method accordingly
+            if (Int origSize := original.knownSize(), origSize == 0) {
+                return True, 0;
+                }
+            return False;
+        } else {
+            return reified.knownSize();
         }
-        return reified.knownSize();
     }
 
     @Override
@@ -166,16 +174,42 @@
     }
 
     // TODO CP partition()
-    // TODO CP map()
+
+    @Override
+    <Value, Result extends Collection<Value>>
+            Result map(function Value(Element)    transform,
+                       Aggregator<Value, Result>? collector = Null) {
+        if (alreadyReified) {
+            return reified.map(transform, collector).as(Result);
+        } else if (collector == Null) {
+            return new MappedCollection<Value, Element>(this, transform).as(Result);
+        } else {
+            collector.Accumulator accum = collector.init();
+            for (Element e : this) {
+                accum.add(transform(e));
+            }
+            return collector.reduce(accum);
+        }
+    }
+
     // TODO CP flatMap()
     // TODO CP 4x associate etc.
 
     @Override
     <Result> Result reduce(Result                           initial,
                            function Result(Result, Element) accumulate) {
-        return alreadyReified
-                ? reified.reduce(initial, accumulate)
-                : super(initial, accumulate);
+        if (alreadyReified) {
+            return reified.reduce(initial, accumulate);
+        }
+
+        // this is the default implementation from Collection; if we super(), we would instead go
+        // go via delegation to reified, and we are trying not to reify (at least not the first time
+        // through)
+        Result result = initial;
+        forEach(e -> {
+            result = accumulate(result, e);
+        });
+        return result;
     }
 
     @Override
@@ -208,7 +242,6 @@
     @Override
     Collection<Element> reify() = reified;
 
-    // TODO GG try replacing "Collection<Element>" with "Collection!" and I think it's VERIFY-70's all over
     @Override @Op("+") Collection<Element> add(Element value)                              = throw new ReadOnly();
     @Override @Op("+") Collection<Element> addAll(Iterable<Element> values)                = throw new ReadOnly();
     @Override Collection<Element> addAll(Iterator<Element> iter)                           = throw new ReadOnly();

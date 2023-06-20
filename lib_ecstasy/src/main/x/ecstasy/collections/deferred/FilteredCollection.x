@@ -2,7 +2,7 @@
  * `FilteredCollection` is the deferred result of a `filter()` operation on a `Collection`.
  */
 class FilteredCollection<Element>
-        extends DeferredCollection<Element> {
+        extends DeferredCollection<Element, Element> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -30,9 +30,9 @@ class FilteredCollection<Element>
         assert Collection<Element>       original ?= original;
         assert function Boolean(Element) include  ?= include;
         Element[] contents = new Element[];
-        for (Element el : original) {
-            if (include(el)) {
-                contents.add(el);
+        for (Element e : original) {
+            if (include(e)) {
+                contents.add(e);
             }
         }
         return contents;
@@ -43,28 +43,30 @@ class FilteredCollection<Element>
         return original?.iterator().filter(include?) : assert;
     }
 
-// TODO GG
-//    @Override
-//    protected void evaluate(Appender<Element> accumulator) {
-//        if (DeferredCollection nextDeferred := original.is(DeferredCollection)) {
-//            Appender<Element> applyFilter = new Appender<Element>() {
-//                private function Boolean(Element) x = TODO
-////                private function Boolean(Element) x = include ?: assert;
-//                @Override Appender<Element> add(Element v) {
-//                    if (x(v)) {
-//                        accumulator.add(v);
-//                    }
-//                    return this;
-//                }
-//            };
-//            nextDeferred.evaluate(applyFilter);
-//        } else {
-//            super(accumulator);
-//        }
-//    }
+    @Override
+    protected void evaluate(Appender<Element> accumulator) {
+        if (DeferredCollection<Element> nextDeferred := original.is(DeferredCollection<Element>),
+                function Boolean(Element) include ?= include) {
+            class ApplyFilter(Appender<Element> accumulator, function Boolean(Element) include)
+                    implements Appender<Element> {
+                @Override Appender<Element> add(Element v) {
+                    if (include(v)) {
+                        accumulator.add(v);
+                    }
+                    return this;
+                }
+            }
+            nextDeferred.evaluate(new ApplyFilter(accumulator, include));
+        } else {
+            super(accumulator);
+        }
+    }
 
 
     // ----- Collection interface ------------------------------------------------------------------
+
+    @Override
+    conditional Orderer? ordered() = (original ?: reified).ordered();
 
     @Override
     Boolean contains(Element value) {
@@ -82,18 +84,5 @@ class FilteredCollection<Element>
         } else {
             return reified.containsAll(values);
         }
-    }
-
-    @Override
-    <Result extends Collection!> Result filter(function Boolean(Element) match,
-                                               Aggregator<Element, Result>? collector = Null) {
-        if (collector == Null,
-                Collection<Element> original ?= original,
-                function Boolean(Element) include ?= include) {
-            // TODO GG forgetting "<Element>" on the next line produces an unhelpful error message
-            return new FilteredCollection<Element>(original, e -> include(e) && match(e)).as(Result);
-        }
-        // TODO GG return reified.filter(match, collector);
-        return super(match, collector);
     }
 }
