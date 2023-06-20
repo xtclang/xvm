@@ -5,7 +5,7 @@ import org.xvm.cc_explore.*;
 /**
   Exploring XEC Constants
  */
-public class ModCon extends PartCon<ModPart> {
+public class ModCon extends PartCon {
   String _name;
   public ModCon( CPool X ) {  X.u31(); }
   @Override public String name() { return _name; }
