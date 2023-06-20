@@ -9,6 +9,7 @@ public class RangeCon extends Const {
   private final Format _f;
   private final boolean _xlo, _xhi; // Exclude lo, hi
   private Const _lo, _hi;
+  private Part _plo;            // Optional; some IntCons have no part
   public RangeCon( CPool X, Const.Format f ) {
     _f = f;
     int b = switch( f ) {
@@ -27,5 +28,9 @@ public class RangeCon extends Const {
     _lo = X.xget();
     _hi = X.xget();
   }
-  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _plo != null ) return _plo;
+    _hi.link(repo);
+    return (_plo = _lo.link(repo));
+  }
 }
