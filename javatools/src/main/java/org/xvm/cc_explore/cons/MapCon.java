@@ -12,7 +12,7 @@ public class MapCon extends Const {
   private final Const[] _keys, _vals;
 
   private Part _part;
-  private MMethodPart[] _meths;
+  private Part[] _parts;
   
   public MapCon( CPool X, Const.Format f ) {
     _f = f;
@@ -31,12 +31,12 @@ public class MapCon extends Const {
     }
   }
   @Override public Part link(XEC.ModRepo repo) {
-    if( _meths!=null ) return null; // Already linked
-    _meths = new MMethodPart[_vals.length];
+    if( _parts!=null ) return null; // Already linked
+    _parts = new Part[_vals.length];
     if( _t!=null ) _part = _t.link(repo);
     for( int i=0; i<_vals.length; i++ ) {
       _keys[i].link(repo);
-      _meths[i] = (MMethodPart)_vals[i].link(repo);
+      _parts[i] = _vals[i].link(repo);
     }
     return null;
   }

@@ -2,6 +2,7 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.xclz.XClz;
+import org.xvm.cc_explore.xclz.XClzBuilder;
 
 import java.util.ArrayList;
 
@@ -17,7 +18,7 @@ public class ModPart extends ClassPart {
   public final VerTree _allowedVers; //
   public final ArrayList<Version> _prefers; 
 
-  private XClz _xclz;           // Cached Java class hierarchy version of this module
+  private XClzBuilder _xbuild; // Cached Java class hierarchy version of this module
   
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, CPool X ) {
     super(par,nFlags,con,cond,X);
@@ -77,7 +78,7 @@ public class ModPart extends ClassPart {
   }
 
   // Return a Java Class for this XTC Module
-  XClz xclz() { return _xclz==null ? (_xclz=XClz.make(this)) : _xclz; }
+  XClz xclz() { return (_xbuild==null ? (_xbuild=new XClzBuilder(this)) : _xbuild)._xclz; }
   
 
   // ----- ModuleType enumeration ----------------------------------------------------------------
