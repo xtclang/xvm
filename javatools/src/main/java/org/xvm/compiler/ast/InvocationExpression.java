@@ -3203,12 +3203,20 @@ public class InvocationExpression
         {
         if (!method.equals(idMethod.getComponent()))
             {
-            Component parentId     = idMethod.getNamespace().getComponent();
-            Component parentMethod = method.getParent().getParent();
-            if (!parentId.equals(parentMethod))
+            if (method.getAccess() == Access.PRIVATE)
                 {
-                idMethod = pool().ensureMethodConstant(
-                        parentMethod.getIdentityConstant(), idMethod.getSignature());
+                // for private methods, the idMethod *must be* the actual identity
+                idMethod = method.getIdentityConstant();
+                }
+            else if (idMethod.isTopLevel()) // exempt methods inside properties or methods
+                {
+                Component parentId     = idMethod.getNamespace().getComponent();
+                Component parentMethod = method.getParent().getParent();
+                if (!parentId.equals(parentMethod))
+                    {
+                    idMethod = pool().ensureMethodConstant(
+                            parentMethod.getIdentityConstant(), idMethod.getSignature());
+                    }
                 }
             }
 

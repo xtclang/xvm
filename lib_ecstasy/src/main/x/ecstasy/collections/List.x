@@ -1323,7 +1323,7 @@ interface List<Element>
         }
 
         Int size = this.size;
-        if (size >= 0) { // TODO GG: TEMPORARY!!!
+        if (size < 5) {
             bubbleSort(order);
         } else {
             quickSort(order, 0, size - 1);
