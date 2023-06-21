@@ -316,8 +316,7 @@ public class CallChain
                     ? template.invokeNativeGet(frame, container.getName(), hThis, iReturn)
                     : template.invokeNativeN(frame, method, hThis, Utils.OBJECTS_NONE, iReturn);
                 }
-            case Default:
-            case Explicit:
+            case Default, Explicit, Delegating:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
                 ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
@@ -354,8 +353,7 @@ public class CallChain
                 return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
                     hThis, hArg, Op.A_IGNORE);
 
-            case Default:
-            case Explicit:
+            case Default, Explicit, Delegating:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
                 ObjectHandle[]  ahVar       = new ObjectHandle[Math.max(methodSuper.getMaxVars(), 1)];
@@ -396,7 +394,7 @@ public class CallChain
                         : template.invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
                 }
 
-            case Default, Explicit ->
+            case Default, Explicit, Delegating ->
                 {
                 ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
                 return fReturnTuple
@@ -428,7 +426,7 @@ public class CallChain
             case Native ->
                 hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
 
-            case Default, Explicit ->
+            case Default, Explicit, Delegating ->
                 frame.invokeN(this, nDepth, hThis,
                         Utils.ensureSize(ahArg, methodSuper.getMaxVars()), aiReturn);
 
