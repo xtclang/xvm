@@ -27,6 +27,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -703,7 +704,16 @@ public class MethodDeclarationStatement
             if (cAnnos == 1)
                 {
                 // optimize the most common scenario
-                Annotation   anno      = aAnno[0];
+                Annotation anno = aAnno[0];
+                if (anno.getAnnotationClass().equals(pool.clzOverride()))
+                    {
+                    if (!validateOverride(clzParent, method, errs))
+                        {
+                        return; // an error must've been reported
+                        }
+                    break Validate;
+                    }
+
                 TypeConstant typeMixin = anno.getFormalType();
                 if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                     {
@@ -733,7 +743,14 @@ public class MethodDeclarationStatement
                 Set<TypeConstant> setTypes   = new HashSet<>();
                 for (int i = 0; i < cAnnos; i++)
                     {
-                    Annotation   anno      = aAnno[i];
+                    Annotation anno = aAnno[i];
+                    if (anno.getAnnotationClass().equals(pool.clzOverride()))
+                        {
+                        if (!validateOverride(clzParent, method, errs))
+                            {
+                            return; // an error must've been reported
+                            }
+                        }
                     TypeConstant typeMixin = anno.getFormalType();
                     if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                         {
@@ -858,6 +875,39 @@ public class MethodDeclarationStatement
                     : aReturns[0]).getType();
             typeRet.validate(errs);
             }
+        }
+
+    /**
+     * Validate the @Override applicability. Note, that strictly speaking this check is not
+     * necessary, since a corresponding verification would be reported by the TypeInfo computation
+     * logic anyway, but it allows to provide a better compiler error message.
+     */
+    private boolean validateOverride(ClassStructure clzParent, MethodStructure method, ErrorListener errs)
+        {
+        if (method.isConstructor())
+            {
+            // we don't collect the constructor chains in the TypeInfo, so the check below wouldn't
+            // work; we may need to improve this and use logic similar to the special "super"
+            // processing in InvocationExpression.resolveName()
+            return true;
+            }
+
+        MethodInfo infoMethod = clzParent.getFormalType().ensureAccess(Access.PRIVATE).
+                                    ensureTypeInfo(ErrorListener.BLACKHOLE).
+                                    getMethodById(method.getIdentityConstant());
+        if (infoMethod == null)
+            {
+            // something is seriously wrong with this method; the "@Override" is the least of the
+            // issues; ignore it and the problem will be reported in due time
+            return true;
+            }
+
+        if (infoMethod.getChain().length < 2)
+            {
+            log(errs, Severity.ERROR, Compiler.SUPER_MISSING);
+            return false;
+            }
+        return true;
         }
 
     /**
