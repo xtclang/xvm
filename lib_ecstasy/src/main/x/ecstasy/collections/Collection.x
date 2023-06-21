@@ -388,7 +388,27 @@ interface Collection<Element>
     }
 
     /**
-     * Build a `Collection` that has some number of elements "flattened from" each element of this
+     * Build a `Collection` that has zero or more elements "flattened from" each element of this
+     * collection.
+     *
+     * @param transform  a function that provides an iter the "flattened" elements from each element in this
+     *                   `Collection`
+     * @param collector  an optional [Aggregator] to use to collect the results
+     *
+     * @return the resulting `Collection` containing the elements that matched the criteria; the
+     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
+     *         subsequent changes to this `Collection` must not alter the contents of the returned
+     *         `Collection`
+     */
+    @Concurrent
+    <Value, Result extends Collection!<Value>>
+            Result flatMap(function Iterable<Value>(Element) flatten,
+                           Aggregator<Value, Result>? collector = Null) {
+        return flatMap((e, dest) -> dest.addAll(flatten(e)), collector);
+    }
+
+    /**
+     * Build a `Collection` that has zero or more elements "flattened from" each element of this
      * collection.
      *
      * @param transform  a function that creates the "flattened" elements from each element in this
@@ -402,36 +422,29 @@ interface Collection<Element>
      */
     @Concurrent
     <Value, Result extends Collection!<Value>>
-            Result flatMap(function Iterable<Value>(Element) flatten,
+            Result flatMap(function void(Element, Appender<Value>) flatten,
                            Aggregator<Value, Result>? collector = Null) {
 
         if (collector == Null) {
-            // TODO CP deferred result
-            Value[] dest = new Value[];
-            forEach(e -> dest.addAll(flatten(e)));
-            return dest.as(Result);
+            if (Int count := knownSize(), count == 0) {
+                Value[] empty = [];
+                return empty.as(Result);
+            }
+            return new deferred.FlatMappedCollection<Value, Element>(this, flatten).as(Result);
         }
 
-        Collection<Element> src  = this;
-        Appender<Value>     dest = collector.init(src.knownSize() ?: 0);
-        Boolean             same = &src == &dest;
-        Appender<Value>     temp = same ? new Value[] : dest;
-        src.forEach(e -> temp.addAll(flatten(e)));
-        if (same) {
-            // the results were temporarily held in "temp"; since the collector specified that
-            // "this" is the destination, we need to clear "this" and add the "temp" results here
-            dest = this.clear().as(Collection<Value>).addAll(temp.as(Value[]));
+        Appender<Value>     result  = collector.init();
+        Boolean             inPlace = &this == &result;
+        Appender<Value>     dest    = inPlace ? new Value[] : result;
+        forEach(e -> flatten(e, dest));
+        if (inPlace) {
+            // the results were temporarily held in a temporary array; since the collector
+            // specified that "this" is the destination, we need to clear "this" and copy the
+            // temporary results here
+            result = clear().as(Collection<Value>).addAll(dest.as(Value[]));
         }
-        return collector.reduce(dest);
+        return collector.reduce(result);
     }
-
-    // TODO CP flatMap taking an Appender
-    /*
-    @Concurrent
-    <Value, Result extends Collection!<Value>>
-            Result flatMap(function Int(Value, Appender<Element>) flatten,
-                           Aggregator<Value, Result>? collector = Null) {
-    */
 
     /**
      * Build a distinct [Set] of elements found in this collection.
@@ -445,12 +458,24 @@ interface Collection<Element>
             Result distinct(Aggregator<Element, Result>? collector = Null) {
 
         if (collector == Null) {
-            return (empty ? [] : new deferred.DistinctCollection<Element>(this)).as(Result);
+            if (Int count := knownSize(), count == 0) {
+                Element[] empty = [];
+                return empty.as(Result);
+            }
+            return new deferred.DistinctCollection<Element>(this).as(Result);
         }
 
-        Appender<Element> dest = collector.init();
-        // TODO CP check for &dest == &this
-        if (this.is(Set<Element>) || dest.is(Set<Element>)) {
+        Collection<Element> src  = this;
+        Appender<Element>   dest = collector.init();
+        if (&src == &dest) {
+            // the source and destination are the same collection; it is non-trivial to "uniquify"
+            // in place, when all we have to work with is the set of methods on Collection, so
+            // create a temporary copy and do the work there
+            src  = new ListSet<Element>(this);  // note: src was this
+            dest = this.clear();                // note: dest is this
+        }
+
+        if (src.is(Set<Element>) || dest.is(Set<Element>)) {
             dest = dest.addAll(this);
         } else if (dest.is(Collection<Element>)) {
             for (Element e : this) {
