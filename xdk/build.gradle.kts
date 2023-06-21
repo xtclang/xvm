@@ -15,7 +15,6 @@ val crypto        = project(":lib_crypto")
 val net           = project(":lib_net")
 val json          = project(":lib_json")
 val oodb          = project(":lib_oodb")
-val imdb          = project(":lib_imdb")
 val jsondb        = project(":lib_jsondb")
 val web           = project(":lib_web")
 val webauth       = project(":lib_webauth")
@@ -32,7 +31,6 @@ val cryptoMain      = "${crypto.projectDir}/src/main"
 val netMain         = "${net.projectDir}/src/main"
 val jsonMain        = "${json.projectDir}/src/main"
 val oodbMain        = "${oodb.projectDir}/src/main"
-val imdbMain        = "${imdb.projectDir}/src/main"
 val jsondbMain      = "${jsondb.projectDir}/src/main"
 val webMain         = "${web.projectDir}/src/main"
 val webauthMain     = "${webauth.projectDir}/src/main"
@@ -233,26 +231,6 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
    mainClass.set("org.xvm.tool.Compiler")
 }
 
-val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
-    group       = "Build"
-    description = "Build imdb.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileOODB)
-
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-version", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "-L", "$libDir",
-         "$imdbMain/x/imdb.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
 val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     group         = "Build"
     description   = "Build jsondb.xtc module"
@@ -436,15 +414,6 @@ val build = tasks.register("build") {
 
     if (oodbSrc > oodbDest) {
         dependsOn(compileOODB)
-        }
-
-    // compile imdb.xtclang.org
-    val imdbSrc = fileTree(imdbMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val imdbDest = file("$libDir/imdb.xtc").lastModified()
-
-    if (imdbSrc > imdbDest) {
-        dependsOn(compileIMDB)
         }
 
     // compile jsondb.xtclang.org

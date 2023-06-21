@@ -479,6 +479,9 @@ public class UnionTypeConstant
             }
 
         // check if any of our legs can unambiguously resolve the formal type
+        // Note: on the surface this seems to be incorrect - it would be natural to expect *both*
+        //       legs to resolve to the same type; however we use this logic for mixins "into"
+        //       resolution, where we need to find any possible resolution
         TypeConstant typeResult1 = getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
         TypeConstant typeResult2 = getUnderlyingType2().resolveTypeParameter(typeActual, sFormalName);
         return typeResult1 == null
