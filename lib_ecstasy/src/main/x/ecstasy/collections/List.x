@@ -1381,8 +1381,8 @@ interface List<Element>
      * (https://en.wikipedia.org/wiki/Quicksort).
      *
      * @param order  the Orderer to use to sort the list
-     * @paran low    the first index to sort
-     * @paran high   the last index to sort
+     * @param low    the first index to sort
+     * @param high   the last index to sort
      */
     void quickSort(Orderer order, Int low, Int high) {
 

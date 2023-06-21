@@ -468,7 +468,7 @@ mixin NumberArray<Element extends Number>
             return False;
         }
 
-        // this algorrithm partially sorts the array, so we need a mutable copy
+        // this algorithm partially sorts the array, so we need a mutable copy
         NumberArray array = toArray(Mutable, inPlace=False);
         (Element? a, Element? b) = array.median(Null, Null, 0, n - 1, n / 2);
 
