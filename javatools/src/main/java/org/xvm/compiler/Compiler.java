@@ -1389,6 +1389,10 @@ public class Compiler
      */
     public static final String DELEGATE_INVALID                   = "COMPILER-194";
     /**
+     * A super method indicated by @Override cannot be found.
+     */
+    public static final String SUPER_MISSING                      = "COMPILER-195";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
