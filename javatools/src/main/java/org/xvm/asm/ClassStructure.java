@@ -3312,6 +3312,7 @@ public class ClassStructure
             assert !prop.isStatic();
             propHost = createProperty(false, prop.getAccess(), prop.getVarAccess(),
                     prop.getType(), prop.getName());
+            propHost.setSynthetic(true);
             }
 
         MethodStructure methodDelegate = propHost.findMethod(sigAccessor);
@@ -3340,6 +3341,7 @@ public class ClassStructure
 
             methodDelegate = propHost.createMethod(false, prop.getAccess(), null,
                     aReturns, sigAccessor.getName(), aParams, true, false);
+            methodDelegate.setSynthetic(true);
 
             Code             code       = methodDelegate.createCode();
             PropertyConstant idDelegate = prop.getIdentityConstant();
@@ -3394,6 +3396,7 @@ public class ClassStructure
 
             methodDelegate = createMethod(false, method.getAccess(), null,
                     aReturns, method.getName(), aParams, true, false);
+            methodDelegate.setSynthetic(true);
 
             Code           code       = methodDelegate.createCode();
             MethodInfo     infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);
