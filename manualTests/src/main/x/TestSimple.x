@@ -2,29 +2,23 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-
-        Collection<String> strings = ["a", "b", "c"];
-        Derived<String> d = new Derived(strings);
-
-        assert d.size == 3;
-        assert d.contains("a"); // used to assert at run-time
-        }
-
-    class Base<Element>(Collection<Element> original)
-        implements Collection<Element>
-        delegates Collection<Element>(original) {
-
-        void test()   {
-            new Base<Element>(original);
-        }
+        Test t = new Test();
+//        console.print(t.getFunction1()());
+        console.print(t.getFunction2()("hello"));
     }
 
-    class Derived<Element>(Collection<Element> original)
-        extends Base<Element>(original) {
+    class Test {
+//        function Int() getFunction1() {
+//            return foo;  // that used to allow to compile and would blow at runtime
+//        }
 
-        @Override
-        Boolean contains(Element el) {
-            return super(el);
+        function Int(String) getFunction2() {
+            return foo;  // that used to fail to compile
+        }
+
+        Int foo(String s, Int i=42) {
+            console.print($"{s=}");
+            return ++i;
         }
     }
 }
