@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.util.SB;
 
 /**
   General Con class backed by matching Part class
@@ -8,6 +9,7 @@ import org.xvm.cc_explore.*;
 public abstract class PartCon extends IdCon {
   PartCon _par;                 // Parent
   Part _part;
+  @Override public SB str(SB sb) { return _par==null ? sb : _par.str(sb.p(" -> ")); }
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
     // Link the parent, do any replacement lookups

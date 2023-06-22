@@ -15,6 +15,8 @@ public class MethodPart extends MMethodPart {
   public final MethodCon _finally;
   private MMethodPart _final;
 
+  private final int _lamidx;    // Lambda index?
+  
   // Annotations
   public final Annot[] _annos;
 
@@ -39,6 +41,8 @@ public class MethodPart extends MMethodPart {
   // 
   MethodPart( Part par, int nFlags, MethodCon id, CondCon con, CPool X ) {
     super(par,nFlags,id,con,X);
+
+    _lamidx = id._lamidx;
     
     // Read annotations
     _annos = Annot.xannos(X);
@@ -47,25 +51,27 @@ public class MethodPart extends MMethodPart {
     _finally = (MethodCon)X.xget();
 
     // Read return types
-    TCon[] rawRets = id.rawRets();
-    _rets = new Parameter[rawRets.length];
     boolean cret = isConditionalReturn();
-    for( int i=0; i<rawRets.length; i++ ) {
-      _rets[i] = new Parameter(true, i, i==0 && cret, X);
-      if( !_rets[i]._clzcon.equals(rawRets[i]) )
-        throw new IllegalArgumentException("type mismatch between method constant and return " + i + " value type");
-    }
+    TCon[] rawRets = id.rawRets();
+    _rets = rawRets==null ? null : new Parameter[rawRets.length];
+    if( rawRets!=null )
+      for( int i=0; i<rawRets.length; i++ ) {
+        _rets[i] = new Parameter(true, i, i==0 && cret, X);
+        if( !_rets[i]._con.equals(rawRets[i]) )
+          throw new IllegalArgumentException("type mismatch between method constant and return " + i + " value type");
+      }
 
     // Read type parameters
-    TCon[] rawParms = id.rawParms();
     int nparms = X.u31();
     _nDefaults = X.u31();    // Number of default parms
-    _args = new Parameter[rawParms.length];
-    for( int i=0; i<rawParms.length; i++ ) {
-      _args[i] = new Parameter(false, i, i<nparms, X);
-      if( !_args[i]._clzcon.equals(rawParms[i]) )
-        throw new IllegalArgumentException("type mismatch between method constant and param " + i + " value type");
-    }
+    TCon[] rawParms = id.rawParms();
+    _args = rawParms==null ? null : new Parameter[rawParms.length];
+    if( rawParms!=null )
+      for( int i=0; i<rawParms.length; i++ ) {
+        _args[i] = new Parameter(false, i, i<nparms, X);
+        if( !_args[i]._con.equals(rawParms[i]) )
+          throw new IllegalArgumentException("type mismatch between method constant and param " + i + " value type");
+      }
     
     // Read method's "super(s)"
     _supercon = (MethodCon)X.xget();
@@ -79,7 +85,7 @@ public class MethodPart extends MMethodPart {
 
     // Read the code
     _code = X.bytes();
-    assert _cons.length==0 || _code.length>0;
+    assert _cons==null || _code.length>0;
 
     // Read the source code
     int n = X.u31();
