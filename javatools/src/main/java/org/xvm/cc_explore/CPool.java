@@ -220,8 +220,10 @@ public class CPool {
 
   // Parse an array of Const from a pre-filled constant pool
   public Const[] consts() {
-    Const[] as = new Const[u31()];
-    for( int i=0; i<as.length; i++ )  as[i] = xget();
+    int len = u31();
+    if( len==0 ) return null;
+    Const[] as = new Const[len];
+    for( int i=0; i<len; i++ )  as[i] = xget();
     return as;
   }
 
