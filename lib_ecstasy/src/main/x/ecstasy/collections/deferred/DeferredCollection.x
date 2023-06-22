@@ -172,7 +172,26 @@
         }
     }
 
-    // TODO CP partition()
+    // TODO GG I forgot this @Override and the errors were overwhelming ...
+    @Override
+    <Result extends Collection<Element>>
+    (Result matches, Result misses) partition(function Boolean(Element)    match,
+                                              Aggregator<Element, Result>? collector = Null) {
+        if (alreadyReified) {
+            return  reified.partition(match, collector);
+        } else if (collector == Null) {
+            PartitionedCollection<Element> matches = new PartitionedCollection(this, match);
+            PartitionedCollection<Element> misses  = matches.inverse;
+            return matches.as(Result), misses.as(Result);
+        } else {
+            collector.Accumulator matches = collector.init();
+            collector.Accumulator misses  = collector.init();
+            for (Element e : this) {
+                (match(e) ? matches : misses).add(e);
+            }
+            return collector.reduce(matches), collector.reduce(misses);
+        }
+    }
 
     @Override
     <Value, Result extends Collection<Value>>
@@ -191,7 +210,23 @@
         }
     }
 
-    // TODO CP flatMap()
+    @Override
+    <Value, Result extends Collection<Value>>
+            Result flatMap(function void(Element, Appender<Value>) flatten,
+                           Aggregator<Value, Result>?              collector = Null) {
+        if (alreadyReified) {
+            return reified.flatMap(flatten, collector).as(Result);
+        } else if (collector == Null) {
+            return new FlatMappedCollection<Value, Element>(this, flatten).as(Result);
+        } else {
+            collector.Accumulator accum = collector.init();
+            for (Element e : this) {
+                flatten(e, accum);
+            }
+            return collector.reduce(accum);
+        }
+    }
+
     // TODO CP 4x associate etc.
 
     @Override
