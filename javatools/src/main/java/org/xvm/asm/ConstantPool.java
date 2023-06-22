@@ -3533,10 +3533,17 @@ public class ConstantPool
         int cRP = typeRP.getParamsCount();
         int cRR = typeRR.getParamsCount();
 
-        if (cLP > cRP || cLR > cRR)
+        // the number of parameters must match unless it's an assignment to a naked Function or Method
+        if (cLP != cRP && cLP > 0)
             {
-            // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
-            return cRR == 0 && cLR == 1 && typeRP.isTuple() && typeRR.getParamsCount() == 0
+            return Relation.INCOMPATIBLE;
+            }
+
+        // the number of returns on the left must not exceed the number of returns on the right;
+        // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
+        if (cLR > cRR)
+            {
+            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(getCurrentPool().typeTuple0())
                     ? Relation.IS_A
                     : Relation.INCOMPATIBLE;
             }
