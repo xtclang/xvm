@@ -23,7 +23,7 @@ class MappedCollection<Element, FromElement>
      * The mapping function, or Null after it has been applied (which allows memory to be
      * collected).
      */
-    public function Element(FromElement)? transform;
+    protected function Element(FromElement)? transform;
 
     @Override
     protected Collection<Element> createReified() {

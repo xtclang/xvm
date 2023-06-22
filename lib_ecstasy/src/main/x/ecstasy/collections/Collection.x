@@ -308,12 +308,9 @@ interface Collection<Element>
                       Aggregator<Element, Result>? collector = Null) {
 
         if (collector == Null) {
-            Element[] matches = new Element[];
-            Element[] misses  = new Element[];
-            for (Element e : this) {
-                (match(e) ? matches : misses).add(e);
-            }
-            // TODO CP defer
+            import deferred.PartitionedCollection;
+            PartitionedCollection<Element> matches = new PartitionedCollection(this, match);
+            PartitionedCollection<Element> misses  = matches.inverse;
             return matches.as(Result), misses.as(Result);
         }
 

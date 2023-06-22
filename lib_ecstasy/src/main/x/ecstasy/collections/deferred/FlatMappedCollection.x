@@ -23,7 +23,7 @@ class FlatMappedCollection<Element, FromElement>
      * The mapping function, or Null after it has been applied (which allows memory to be
      * collected).
      */
-    public function void(FromElement, Appender<Element>)? flatten;
+    protected function void(FromElement, Appender<Element>)? flatten;
 
     @Override
     protected Collection<Element> createReified() {

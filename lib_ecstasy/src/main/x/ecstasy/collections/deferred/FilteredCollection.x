@@ -23,7 +23,7 @@ class FilteredCollection<Element>
      * The filtering function, or Null after it has been filtered (which allows memory to be
      * collected).
      */
-    public function Boolean(Element)? include;
+    protected function Boolean(Element)? include;
 
     @Override
     protected Collection<Element> createReified() {
