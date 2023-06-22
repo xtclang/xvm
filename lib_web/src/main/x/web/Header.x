@@ -94,7 +94,7 @@ interface Header
                                                   .map(e -> e[1]);
 
         if (expandDelim != Null) {
-            iter = iter.flatMap(s -> s.split(expandDelim).iterator());
+            iter = iter.flatMap(s -> s.split(expandDelim));
         }
 
         return iter.map(s -> s.trim());

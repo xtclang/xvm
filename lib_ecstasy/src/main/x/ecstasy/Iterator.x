@@ -369,7 +369,7 @@ interface Iterator<Element> {
      * @return a new iterator representing the concatenated results of applying the specified function
      *         to each element in this iterator
      */
-    <Result> Iterator!<Result> flatMap(function Iterator!<Result> (Element) flatten) {
+    <Result> Iterator!<Result> flatMap(function Iterable<Result> (Element) flatten) {
         return new iterators.FlatMappedIterator<Result, Element>(this, flatten);
     }
 

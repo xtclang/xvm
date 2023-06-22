@@ -5,7 +5,7 @@
 class FlatMappedIterator<Element, Original>
         implements Iterator<Element> {
 
-    construct(Iterator<Original> iter, function Iterator<Element> transform(Original)) {
+    construct(Iterator<Original> iter, function Iterable<Element> transform(Original)) {
         this.iterOrig  = iter;
         this.transform = transform;
     }
@@ -18,7 +18,7 @@ class FlatMappedIterator<Element, Original>
     /**
      * The element transformation function (the "mapping" function).
      */
-    protected/private function Iterator<Element> transform(Original);
+    protected/private function Iterable<Element> transform(Original);
 
     /**
      * The most recent result iterator from a flat-map transformation.
@@ -33,7 +33,7 @@ class FlatMappedIterator<Element, Original>
             }
 
             if (Original el := iterOrig.next()) {
-                iterCur = transform(el);
+                iterCur = transform(el).iterator();
             } else {
                 iterCur = Null;
                 return False;
