@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.util.SB;
 
 /**
    Abstract XEC constants.  These are all conceptually immutable, and shared
@@ -14,11 +15,14 @@ public abstract class Const {
   public void resolve( CPool X ){};
 
   // Convert e.g. ClassCon/ModCon/PackCon to their Part equivalents.
-  // Non-Part related just link internals.
   public Part link(XEC.ModRepo repo) { return null; }
+
   // After linking, the part call does not need the repo.
   Part part() { throw XEC.TODO();  }
 
+  public final String toString() { return str(new SB()).toString(); }
+  public SB str( SB sb ) { return sb.p(getClass().toString()); }
+  
   /**
    * Recurse through the constants that make up this constant, replacing
    * typedefs with the types that they refer to.
