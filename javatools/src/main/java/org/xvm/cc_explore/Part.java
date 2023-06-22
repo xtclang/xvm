@@ -1,16 +1,23 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.util.SB;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
-     DAG structure containment of components/parts
+   DAG structure containment of the existing components/structures.
+   Handles e.g. the Class hierarchy, Modules, Methods, and Packages.
+   These things are represented as structures in memory.
+   
+   Does not handle Types nor Values?  Types being conceptual sets of Values,
+   and a reflective mirror is used in memory.  Values represent concrete
+   executable state.
  */
 abstract public class Part {
-  public final String _name;    // Identifier
   public final Part _par;       // Parent in the parent chain; null ends.  Last is FilePart.
+  public final String _name;    // Identifier
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
 
@@ -28,7 +35,7 @@ abstract public class Part {
     _par = par;
     _sibling = null;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
-    assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
+    //assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
     
     _name = id==null ? name : ((IdCon)(id.resolveTypedefs())).name();
@@ -46,8 +53,11 @@ abstract public class Part {
     }
   }
 
-  @Override public String toString() { return _name; }
-
+  @Override public String toString() { return str(new SB()).toString(); }
+  public SB str(SB sb) {
+    sb.p(_name);
+    return _par==null ? sb : _par.str(sb.p(" -> "));
+  }
 
   // Tik-tok style recursive-descent parsing.  This is the Tik, shared amongst
   // all kids.  The Tok is where we do kid-specific parsing.  Since we don't

@@ -10,7 +10,7 @@ public class AnonClzTCon extends DepTCon {
   private ClassPart _aclz;
   public AnonClzTCon( CPool X ) { super(X); X.u31(); }
   @Override public void resolve( CPool X ) { super.resolve(X); _anon = (ClassCon)X.xget(); }
-  public Part link(XEC.ModRepo repo) {
+  @Override public ClassPart link(XEC.ModRepo repo) {
     if( _aclz!=null ) return _aclz;
     super.link(repo);
     return (_aclz = (ClassPart)_anon.link(repo));

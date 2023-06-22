@@ -4,8 +4,8 @@ import org.xvm.cc_explore.cons.*;
 
 public class Parameter {
   // Parameter type
-  final TCon _clzcon;
-  private ClassPart _clz;
+  public final TCon _con;
+  private Part _part;
   // Parameter annotations
   public final Annot[] _annots;
   // Parameter name
@@ -19,7 +19,7 @@ public class Parameter {
   
   Parameter( boolean is_ret, int idx, boolean special, CPool X ) {    
     _annots = Annot.xannos(X);
-    _clzcon = (TCon)X.xget();
+    _con = (TCon)X.xget();
     StringCon str = (StringCon)X.xget();
     _name = str==null ? null : str._str;
     _def  = X.xget();
@@ -32,11 +32,11 @@ public class Parameter {
   }
 
   // Specific internal linking
-  void link( XEC.ModRepo repo ) {
-    if( _clzcon!=null ) return;
-    _clz = (ClassPart)_clzcon.link(repo);
+  public Part link( XEC.ModRepo repo ) {
+    if( _part!=null ) return _part;
     if( _annots!=null ) throw XEC.TODO();
-    if( _def!=null ) throw XEC.TODO();
+    if( _def!=null ) _def.link(repo);
+    return (_part = _con.link(repo));
   }
 
 }

@@ -16,7 +16,9 @@ public class InnerDepTCon extends DepTCon {
     super.resolve(X);
     _child = (ClassCon)X.xget();
   }
-  @Override public Part link(XEC.ModRepo repo) {
-    return _kclz==null ? (_kclz = (ClassPart)_child.link(repo)) : _kclz;
+  @Override public ClassPart link(XEC.ModRepo repo) {
+    if( _kclz != null ) return _kclz;
+    super.link(repo);
+    return (_kclz = (ClassPart)_child.link(repo));
   }
 }

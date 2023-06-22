@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.util.SB;
 
 /**
   Exploring XEC Constants
@@ -8,5 +9,5 @@ import org.xvm.cc_explore.CPool;
 public class StringCon extends Const {
   public final String _str;
   public StringCon( CPool X ) { _str = X.utf8(); }
-  @Override public String toString() { return _str; }
+  @Override public SB str(SB sb) { return sb.p(_str); }
 }

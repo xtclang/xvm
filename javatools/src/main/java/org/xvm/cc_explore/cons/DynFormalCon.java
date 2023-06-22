@@ -24,5 +24,4 @@ public class DynFormalCon extends FormalCon {
     _type   = (     TCon)X.xget();
     _formal = (FormalCon)X.xget();
   }  
-  @Override public IdCon link_as(XEC.ModRepo repo) { throw XEC.TODO(); }
 }

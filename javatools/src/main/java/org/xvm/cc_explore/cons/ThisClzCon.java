@@ -1,18 +1,17 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.util.SB;
 
 /**
   Exploring XEC Constants
  */
 public class ThisClzCon extends PartCon {
-  private IdCon _clz;
   public ThisClzCon( CPool X ) { X.u31();  }
-  @Override public void resolve( CPool X ) { _clz = (ClassCon)X.xget(); }
-  @Override public String name() { return _clz.name(); }
-  @Override public Part link( XEC.ModRepo repo ) {
-    if( _part!=null ) return _part;
-    assert _par==null;
-    return (_part = _clz.link(repo));
+  @Override public SB str(SB sb) { return super.str(sb.p("this")); }
+  @Override public void resolve( CPool X ) { _par = (ClassCon)X.xget(); }
+  @Override public String name() { return _par.name(); }
+  @Override public ClassPart link( XEC.ModRepo repo ) {
+    return (ClassPart)(_part==null ? (_part=_par.link(repo)) : _part);
   }
 }

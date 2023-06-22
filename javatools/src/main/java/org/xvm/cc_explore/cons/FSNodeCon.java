@@ -23,5 +23,5 @@ public class FSNodeCon extends TCon {
     _mod    = (   LitCon)X.xget();
     _data   =            X.xget();
   }
-  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
+  @Override public XType link(XEC.ModRepo repo) { throw XEC.TODO(); }
 }
