@@ -88,10 +88,9 @@
         // once, in which case it's wasteful to realize the results; conversely, if multiple
         // iterations occur, then realize the results
         private Boolean iteratedAtLeastOnce = False;
-        if (!iteratedAtLeastOnce && alreadyReified) {
-            Iterator<Element> iter = unreifiedIterator();
+        if (!iteratedAtLeastOnce && !alreadyReified) {
             iteratedAtLeastOnce = True;
-            return iter;
+            return unreifiedIterator();
         }
         return reified.iterator();
     }
