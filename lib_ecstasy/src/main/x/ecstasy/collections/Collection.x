@@ -263,7 +263,7 @@ interface Collection<Element>
      *
      */
     @Concurrent
-    <Result extends Collection!> Result filter(function Boolean(Element) match,
+    <Result extends Collection!> Result filter(function Boolean(Element)    match,
                                                Aggregator<Element, Result>? collector = Null) {
         if (collector == Null) {
             if (Int count := knownSize(), count == 0) {
@@ -303,9 +303,9 @@ interface Collection<Element>
      *                   contents of the returned `Collection`
      */
     @Concurrent
-    <Result extends Collection!> (Result matches, Result misses)
-            partition(function Boolean(Element) match,
-                      Aggregator<Element, Result>? collector = Null) {
+    <Result extends Collection!>
+    (Result matches, Result misses) partition(function Boolean(Element)    match,
+                                              Aggregator<Element, Result>? collector = Null) {
 
         if (collector == Null) {
             import deferred.PartitionedCollection;
@@ -400,7 +400,7 @@ interface Collection<Element>
     @Concurrent
     <Value, Result extends Collection!<Value>>
             Result flatMap(function Iterable<Value>(Element) flatten,
-                           Aggregator<Value, Result>? collector = Null) {
+                           Aggregator<Value, Result>?        collector = Null) {
         return flatMap((e, dest) -> dest.addAll(flatten(e)), collector);
     }
 
@@ -420,7 +420,7 @@ interface Collection<Element>
     @Concurrent
     <Value, Result extends Collection!<Value>>
             Result flatMap(function void(Element, Appender<Value>) flatten,
-                           Aggregator<Value, Result>? collector = Null) {
+                           Aggregator<Value, Result>?              collector = Null) {
 
         if (collector == Null) {
             if (Int count := knownSize(), count == 0) {
@@ -452,8 +452,7 @@ interface Collection<Element>
      */
     @Concurrent
     <Result extends Collection!<Element>>
-            Result distinct(Aggregator<Element, Result>? collector = Null) {
-
+    Result distinct(Aggregator<Element, Result>? collector = Null) {
         if (collector == Null) {
             if (Int count := knownSize(), count == 0) {
                 Element[] empty = [];
