@@ -2873,6 +2873,7 @@ public class NameExpression
                             }
                         method = infoMethod.getTopmostMethodStructure(infoLeft);
                         assert method != null;
+                        m_arg = method.getIdentityConstant();
                         }
 
                     int cTypeParams = method.getTypeParamCount();
@@ -2900,6 +2901,31 @@ public class NameExpression
                         // resolve the function signature against all the types we know by now
                         typeFn          = typeFn.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
                         m_mapTypeParams = mapTypeParams;
+                        }
+
+                    if (m_plan == Plan.BindTarget && typeDesired.isA(pool.typeFunction()))
+                        {
+                        int cArgDesired  = pool.extractFunctionParams(typeDesired).length;
+                        int cArgVisible  = method.getVisibleParamCount();
+                        int cArgRequired = method.getRequiredParamCount();
+                        if (cArgDesired < cArgRequired || cArgDesired > cArgVisible)
+                            {
+                            log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
+                                    cArgDesired, cArgRequired);
+                            return null;
+                            }
+
+                        if (cArgVisible > cArgDesired)
+                            {
+                            // theoretically speaking, we could have produced an FBind opcode
+                            // binding all the default arguments to Register,DEFAULT, but it's
+                            // not necessary, due to the runtime compensation
+                            // (see Frame.getArgument() check for a missing argument)
+                            for (int i = cArgVisible-1; i > cArgDesired-1; i--)
+                                {
+                                typeFn = pool.bindFunctionParam(typeFn, i, null);
+                                }
+                            }
                         }
                     }
                 return typeFn;
