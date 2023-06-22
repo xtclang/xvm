@@ -7,7 +7,7 @@ import java.util.HashMap;
 /**
    Class part
  */
-public class ClassPart extends Part {
+public class ClassPart extends XType {
   private final HashMap<String,TCon> _tcons; // String->Type mapping
   final LitCon _path;           // File name compiling this file
   private final HashMap<String,Part> _parms; // String->Class mapping
