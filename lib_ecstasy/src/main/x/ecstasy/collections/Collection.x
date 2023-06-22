@@ -306,7 +306,6 @@ interface Collection<Element>
     <Result extends Collection!>
     (Result matches, Result misses) partition(function Boolean(Element)    match,
                                               Aggregator<Element, Result>? collector = Null) {
-
         if (collector == Null) {
             import deferred.PartitionedCollection;
             PartitionedCollection<Element> matches = new PartitionedCollection(this, match);
