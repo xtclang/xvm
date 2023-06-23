@@ -59,7 +59,6 @@ public class XClzBuilder {
   
   // Generate a Java string code this MM
   private String jcode( MMethodPart mm ) {
-    assert mm._sibling==null;
     MethodPart meth = (MethodPart)mm._name2kid.get(mm._name);
     assert meth._sibling==null;
 

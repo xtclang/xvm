@@ -24,16 +24,10 @@ abstract public class Part {
   public final ArrayList<Contrib> _contribs;
 
   // Map from kid name to kid.  
-  // TODO: I lifted this 1 layer from the original, and I'm pretty sure this
-  // isn't right but I don't have a test case to debug yet
   public HashMap<String,Part> _name2kid;
-
-  // Linked list of siblings at the same DAG level with the same name
-  public Part _sibling;
 
   Part( Part par, int nFlags, IdCon id, String name, CondCon cond, CPool X ) {
     _par = par;
-    _sibling = null;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
     //assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
@@ -82,12 +76,7 @@ abstract public class Part {
       assert !(kid instanceof MethodPart) || (this instanceof MMethodPart);
       // Insert name->kid mapping
       if( _name2kid==null ) _name2kid = new HashMap<>();
-      Part old = _name2kid.get(kid._name);
-      if( old==null ) _name2kid.put(kid._name,kid);
-      else {
-        while( old._sibling!=null ) old = old._sibling; // Follow linked list to end
-        old._sibling = kid;                             // Append kid to tail of linked list
-      }
+      putkid(kid._name,kid);
       // Here we could be lazy on the child's children, but instead are always eager.
       int len = X.u31();        // Length of serialized nested children
       if( len > 0 )             // If there are recursively more children
@@ -95,6 +84,11 @@ abstract public class Part {
     }
   }
 
+  void putkid(String name, Part kid) {
+    assert !_name2kid.containsKey(kid._name);
+    _name2kid.put(kid._name,kid);
+  }
+  
   // Tik-tok style recursive-descent linking.  This is the Tik, shared amongst
   // all kids.  The Tok is where we do kid-specific linking.  If I see too many
   // of these tik-tok patterns I'll probably add a Visitor instead.
@@ -127,18 +121,12 @@ abstract public class Part {
   void link_innards( XEC.ModRepo repo ) { }
   
   public Part child(String s, XEC.ModRepo repo) {
-    // most common result: no child by that name
-    Part kid = _name2kid==null ? null : _name2kid.get(s);
+    if( _name2kid==null ) return null;    
+    Part kid = _name2kid.get(s);
     if( kid == null ) return null;
-
-    // common result: exactly one non-conditional match
-    if( kid._sibling == null && kid._cond == null ) return kid;
-
-    // Filter based on Assembly, not implemented.
-    // Gather the kids into an Array, build a CompositeComponent... but hey
-    // MMethodPart is already a composite.
-    assert this instanceof MMethodPart;
-    return this;
+    assert getClass()!=MMethodPart.class;
+    // MethodPart lookups are not unique; have to check the sibling chain
+    return kid;
   }
 
   // ----- inner class: Component Contribution ---------------------------------------------------
