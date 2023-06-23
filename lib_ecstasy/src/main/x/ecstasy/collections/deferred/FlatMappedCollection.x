@@ -50,7 +50,7 @@ class FlatMappedCollection<Element, FromElement>
             private Mode mode = None;
 
             // various storage for the "next" element(s)
-            private Element? e;
+            private Element? single;
             private List<Element>? list;
             private Int index;
             private Int size;
@@ -72,11 +72,11 @@ class FlatMappedCollection<Element, FromElement>
                     break;
 
                 case Single:
-                    assert Element e ?= e;
+                    assert Element single ?= single;
                     if (buffer.size < 1) {
-                        buffer.add(e);
+                        buffer.add(single);
                     } else {
-                        buffer[0] = e;
+                        buffer[0] = single;
                     }
                     size = 1;
                     break;
@@ -157,9 +157,9 @@ class FlatMappedCollection<Element, FromElement>
                     case None:
                         break;
                     case Single:
-                        assert Element e ?= e;
+                        assert Element single ?= single;
                         loadNext();
-                        return True, e;
+                        return True, single;
                     case List:
                     case Buffer:
                         if (index < size) {
@@ -190,8 +190,8 @@ class FlatMappedCollection<Element, FromElement>
             Appender<Element> add(Element v) {
                 switch (mode) {
                 case None:
-                    mode = Single;
-                    e    = v;
+                    mode   = Single;
+                    single = v;
                     break;
                 case Single:
                 case List:
