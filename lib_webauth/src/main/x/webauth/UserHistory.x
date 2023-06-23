@@ -1,4 +1,4 @@
-import ecstasy.collections.CollectArray;
+import ecstasy.collections.CollectImmutableArray;
 
 import oodb.DBMap;
 
@@ -15,8 +15,8 @@ mixin UserHistory
      * @return an array of zero or more change records
      */
     UserChange[] findByUser(Int userId) {
-        return values.filter(chg -> chg.appliesTo(userId), CollectArray.of(UserChange))
-                     .sorted((chg1, chg2) -> chg1.timestamp <=> chg2.timestamp, inPlace=True)
-                     .freeze(inPlace=True);
+        return values.filter(chg -> chg.appliesTo(userId))
+                     .sorted((chg1, chg2) -> chg1.timestamp <=> chg2.timestamp,
+                             CollectImmutableArray.of(UserChange));
     }
 }

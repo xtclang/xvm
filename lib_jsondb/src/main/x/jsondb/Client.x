@@ -903,9 +903,9 @@ service Client<Schema extends RootSchema> {
                         return [];
                     }
 
-                    ListMap<String, DboInfo> infos = new ListMap(size);
-                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
-                    return infos.freeze();
+                    import ecstasy.collections.CollectImmutableMap;
+                    static CollectImmutableMap<String, DboInfo> collector = new CollectImmutableMap();
+                    return childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, collector);
                 }
             };
         }

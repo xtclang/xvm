@@ -525,14 +525,16 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Key, Value> Map<Key,Value> associate(function (Key, Value) (Element) transform,
-                                          Map<Key,Value>?                 dest = Null) {// TODO CP replace with a collector
-        Map<Key, Value> map = dest ?: new ListMap();
+    <Key, Value, Result extends Map<Key, Value>>
+    Result associate(function (Key, Value) (Element)   transform,
+                     MapCollector<Key, Value, Result>? collector = Null) {
+        Int             cap = knownSize() ?: 0;
+        Map<Key, Value> map = collector?.init(cap) : new ListMap(cap);
         forEach(e -> {
             (Key k, Value v) = transform(e);
             map.put(k, v);
         });
-        return map;
+        return collector?.reduce(map) : map.as(Result);
     }
 
     /**
@@ -548,9 +550,10 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Key> Map<Key, Element> associateBy(function Key(Element) keyFor,
-                                        Map<Key, Element>?    dest = Null) {// TODO CP replace with a collector
-        return associate(e -> {return keyFor(e), e;}, dest);
+    <Key, Result extends Map<Key, Element>>
+    Result associateBy(function Key(Element)               keyFor,
+                       MapCollector<Key, Element, Result>? collector = Null) {
+        return associate(e -> (keyFor(e), e), collector);
     }
 
     /**
@@ -566,9 +569,10 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Value> Map<Element, Value> associateWith(function Value(Element) valueFor,
-                                              Map<Element, Value>?    dest = Null) {// TODO CP replace with a collector
-        return associate(e -> {return e, valueFor(e);}, dest);
+    <Value, Result extends Map<Element, Value>>
+    Result associateWith(function Value(Element)               valueFor,
+                         MapCollector<Element, Value, Result>? collector = Null) {
+        return associate(e -> (e, valueFor(e)), collector);
     }
 
     /**
@@ -585,13 +589,15 @@ interface Collection<Element>
      * @return the resulting `Map` of collections of elements
      */
     @Concurrent
-    <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element)           keyFor,
-                                                 Map<Key, Collection!<Element>>? dest   = Null) {// TODO CP replace with a collector
-        Map<Key, Collection<Element>> map = dest ?: new ListMap();
+    <Key, Result extends Map<Key, Collection!<Element>>>
+    Result groupBy(function Key(Element)                            keyFor,
+                   MapCollector<Key, Collection!<Element>, Result>? collector = Null) {
+        Int                            cap = knownSize() ?: 0;
+        Map<Key, Collection!<Element>> map = collector?.init(cap) : new ListMap(cap);
         forEach(e -> {
             map.computeIfAbsent(keyFor(e), () -> new ListSet<Element>()).add(e);
         });
-        return map;
+        return collector?.reduce(map) : map.as(Result);
     }
 
     /**
@@ -611,10 +617,12 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Value> Map<Element, Value> groupWith(function Value(Element, Value) accumulate,
-                                          function Value(Element)        initial,
-                                          Map<Element, Value>?           dest = Null) { // TODO CP replace with a collector
-        Map<Element, Value> map = dest ?: new ListMap();
+    <Value, Result extends Map<Element, Value>>
+    Result groupWith(function Value(Element, Value)        accumulate,
+                     function Value(Element)               initial,
+                     MapCollector<Element, Value, Result>? collector = Null) {
+        Int                 cap = knownSize() ?: 0;
+        Map<Element, Value> map = collector?.init(cap) : new ListMap(cap);
         forEach(e -> {
             map.process(e, entry -> {
                 entry.value = entry.exists
@@ -623,14 +631,14 @@ interface Collection<Element>
                 return Null;
             });
         });
-        return map;
+        return collector?.reduce(map) : map.as(Result);
     }
 
     /**
      * Create a sorted `List` from this `Collection`.
      *
-     * @param orderer  an optional [Type.Orderer] to control the sort order; `Null` means to use the
-     *                 element type's natural order
+     * @param order  an optional [Type.Orderer] to control the sort order; `Null` means to use the
+     *               element type's natural order
      *
      * @return a sorted list
      *
@@ -638,8 +646,12 @@ interface Collection<Element>
      *                               [Orderable]
      */
     @Concurrent
-    List<Element> sorted(Orderer? orderer = Null) { // TODO CP add collector
-        return toArray(Mutable).sorted(orderer, True);
+    <Result extends List<Element>> Result sorted(Orderer?                     order     = Null,
+                                                 Aggregator<Element, Result>? collector = Null) {
+        List<Element> list = collector?.init(knownSize() ?: 0).addAll(this).as(List<Element>)
+                           : toArray(Mutable);
+        list = list.sorted(order, inPlace = True);
+        return collector?.reduce(list) : list.as(Result);
     }
 
     /**
@@ -1042,7 +1054,7 @@ interface Collection<Element>
             Map<CompileType.Element, Int> map = collection1.groupWith(
                     (_, n) -> (n + 1),
                     (_) -> 1,
-                    new HashMap());
+                    new MapCollector(() -> new HashMap()));
             if (map.size == size) {
                 return collection1.containsAll(collection2);
             } else {
