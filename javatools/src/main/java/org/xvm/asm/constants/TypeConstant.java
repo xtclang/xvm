@@ -3998,7 +3998,7 @@ public abstract class TypeConstant
                                 {
                                 MethodConstant id = methodContrib.getIdentity();
                                 id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
-                                        idContrib.getNamespace().getValueString(),
+                                        constId.getValueString(),
                                         id.getSignature().getValueString(),
                                         id.getNamespace().getValueString());
                                 }
@@ -4079,7 +4079,8 @@ public abstract class TypeConstant
                     else if (fSelf && methodContrib.getTail().isOverride())
                         {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
-                                methodContrib.getIdentity().getPathString(), getValueString());
+                                methodContrib.getIdentity().getPathString(),
+                                constId.getValueString());
 
                         }
                     }
@@ -4148,7 +4149,8 @@ public abstract class TypeConstant
                     else
                         {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
-                                methodContrib.getIdentity().getPathString(), getValueString());
+                                methodContrib.getIdentity().getPathString(),
+                                constId.getValueString());
                         }
                     }
                 else
@@ -4286,7 +4288,7 @@ public abstract class TypeConstant
                             {
                             MethodConstant idMethod = methodMatch.getIdentity();
                             idMethod.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
-                                    removeAccess().getValueString(),
+                                    constId.getValueString(),
                                     idMethod.getSignature().getValueString(),
                                     idMethod.getNamespace().getValueString()
                                     );
@@ -4390,7 +4392,7 @@ public abstract class TypeConstant
                     else
                         {
                         log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
-                                typeContrib.getValueString(),
+                                constId.getValueString(),
                                 infoNarrowing.getIdentity().getValueString());
                         }
                     }
@@ -4399,7 +4401,7 @@ public abstract class TypeConstant
                     for (Object nidNarrowing : setNarrowing)
                         {
                         log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
-                                typeContrib.getValueString(),
+                                constId.getValueString(),
                                 mapVirtMethods.get(nidNarrowed).getIdentity().getValueString(),
                                 mapVirtMods.get(nidNarrowing).getIdentity().getSignature().getValueString());
                         }
