@@ -114,10 +114,20 @@ public class MethodInfo
     public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs)
         {
         assert this.getIdentity().getName().equals(that.getIdentity().getName());
-        assert !this.isFunction() && (!this.isConstructor() || this.containsVirtualConstructor());
-        assert !that.isFunction() && (!that.isConstructor() || that.isVirtualConstructor());
-        assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) &&
-               that.getAccess().isAsAccessibleAs(Access.PROTECTED);
+        assert !this.isFunction() && !that.isFunction();
+
+        if (!this.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
+            !that.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
+            (this.isConstructor() && !this.containsVirtualConstructor()) ||
+            (that.isConstructor() && !that.isVirtualConstructor()))
+            {
+            MethodConstant id = getIdentity();
+            id.log(errs, Severity.ERROR, Constants.VE_METHOD_OVERRIDE_ILLEGAL,
+                    that.getIdentity().getNamespace().getValueString(),
+                    id.getSignature().getValueString(),
+                    id.getNamespace().getValueString());
+            return this;
+            }
 
         if (this.equals(that))
             {
