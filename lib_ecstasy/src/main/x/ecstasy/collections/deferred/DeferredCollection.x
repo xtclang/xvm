@@ -26,22 +26,39 @@
     /**
      * The cached reified copy of this Collection.
      */
-    protected @Lazy Collection<Element> reified.calc() {
+    protected @Lazy(createReified) Collection<Element> reified;
+
+    /**
+     * @return the reified copy of this Collection to cache
+     */
+    protected Collection<Element> createReified() {
         assert Collection<FromElement> original ?= original;
-        Collection<Element> reified = createReified();
-        this.original = Null;
+        Collection<Element> reified = instantiateEmptyReified();
+        evaluateInto(reified);
+        postReifyCleanup();
         return reified;
     }
 
     /**
-     * This is the method that actually creates the reified result on demand; each sub-class must
-     * provide an implementation. During this method, any other properties that are related to the
-     * original Collection, that hold any significant references or amounts of memory, and are no
-     * longer needed after reification should be nulled out.
+     * This is the method that creates the data structure that will hold the reified result.
+     * Sub-classes can override this to use a specific data structure, or pre-size the data
+     * structure accordingly.
      *
-     * @return the appropriate reified copy of the contents of this collection
+     * @return the empty data structure that will be filled to create the reified copy of the
+     *         contents of this collection
      */
-    protected @Abstract Collection<Element> createReified();
+    protected Collection<Element> instantiateEmptyReified() {
+        return new Element[];
+    }
+
+    /**
+     * Clean up any references that can hold memory that were only necessary up until and including
+     * the process of reification.
+     */
+    protected void postReifyCleanup()
+        {
+        original = Null;
+        }
 
     /**
      * Indicate whether this Collection has already cached its reified contents.
@@ -65,7 +82,7 @@
      * @param accumulator  the Appender to append all of the elements to from this
      *                     DeferredCollection
      */
-    protected void evaluate(Appender<Element> accumulator) {
+    protected void evaluateInto(Appender<Element> accumulator) {
         if (alreadyReified) {
             Int count = reified.size;
             if (count > 0) {

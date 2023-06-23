@@ -26,15 +26,11 @@ class FlatMappedCollection<Element, FromElement>
     protected function void(FromElement, Appender<Element>)? flatten;
 
     @Override
-    protected Collection<Element> createReified() {
-        assert Collection<FromElement>                       original ?= original;
-        assert function void(FromElement, Appender<Element>) flatten  ?= flatten;
-        Element[] result = new Element[];
-        for (FromElement e : original) {
-            flatten(e, result);
-        }
-        return result;
+    protected void postReifyCleanup() {
+        flatten = Null;
+        super();
     }
+
 
     @Override
     protected Iterator<Element> unreifiedIterator() {
@@ -262,7 +258,7 @@ class FlatMappedCollection<Element, FromElement>
     }
 
     @Override
-    protected void evaluate(Appender<Element> accumulator) {
+    protected void evaluateInto(Appender<Element> accumulator) {
         if (DeferredCollection<FromElement> nextDeferred := original.is(DeferredCollection<FromElement>),
                 function void(FromElement, Appender<Element>) flatten ?= flatten) {
             class ApplyFlatten(Appender<Element> accumulator, function void(FromElement, Appender<Element>) flatten)
@@ -272,7 +268,7 @@ class FlatMappedCollection<Element, FromElement>
                     return this;
                 }
             }
-            nextDeferred.evaluate(new ApplyFlatten(accumulator, flatten));
+            nextDeferred.evaluateInto(new ApplyFlatten(accumulator, flatten));
         } else {
             super(accumulator);
         }

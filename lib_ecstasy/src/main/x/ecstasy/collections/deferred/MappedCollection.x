@@ -26,14 +26,15 @@ class MappedCollection<Element, FromElement>
     protected function Element(FromElement)? transform;
 
     @Override
-    protected Collection<Element> createReified() {
-        assert Collection<FromElement>       original  ?= original;
-        assert function Element(FromElement) transform ?= transform;
-        Element[] contents = new Element[](original.knownSize() ?: 0);
-        for (FromElement e : original) {
-            contents.add(transform(e));
-        }
-        return contents;
+    protected Collection<Element> instantiateEmptyReified() {
+        assert Collection<FromElement> original ?= original;
+        return new Element[](original.knownSize() ?: 0);
+    }
+
+    @Override
+    protected void postReifyCleanup() {
+        transform = Null;
+        super();
     }
 
     @Override
@@ -42,7 +43,7 @@ class MappedCollection<Element, FromElement>
     }
 
     @Override
-    protected void evaluate(Appender<Element> accumulator) {
+    protected void evaluateInto(Appender<Element> accumulator) {
         if (DeferredCollection<FromElement> nextDeferred := original.is(DeferredCollection<FromElement>),
                 function Element(FromElement) transform ?= transform) {
             class ApplyTransform(Appender<Element> accumulator, function Element(FromElement) transform)
@@ -52,7 +53,7 @@ class MappedCollection<Element, FromElement>
                     return this;
                 }
             }
-            nextDeferred.evaluate(new ApplyTransform(accumulator, transform));
+            nextDeferred.evaluateInto(new ApplyTransform(accumulator, transform));
         } else {
             super(accumulator);
         }

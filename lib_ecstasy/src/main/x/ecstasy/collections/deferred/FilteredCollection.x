@@ -26,16 +26,9 @@ class FilteredCollection<Element>
     protected function Boolean(Element)? include;
 
     @Override
-    protected Collection<Element> createReified() {
-        assert Collection<Element>       original ?= original;
-        assert function Boolean(Element) include  ?= include;
-        Element[] contents = new Element[];
-        for (Element e : original) {
-            if (include(e)) {
-                contents.add(e);
-            }
-        }
-        return contents;
+    protected void postReifyCleanup() {
+        include = Null;
+        super();
     }
 
     @Override
@@ -44,7 +37,7 @@ class FilteredCollection<Element>
     }
 
     @Override
-    protected void evaluate(Appender<Element> accumulator) {
+    protected void evaluateInto(Appender<Element> accumulator) {
         if (DeferredCollection<Element> nextDeferred := original.is(DeferredCollection<Element>),
                 function Boolean(Element) include ?= include) {
             class ApplyFilter(Appender<Element> accumulator, function Boolean(Element) include)
@@ -56,7 +49,7 @@ class FilteredCollection<Element>
                     return this;
                 }
             }
-            nextDeferred.evaluate(new ApplyFilter(accumulator, include));
+            nextDeferred.evaluateInto(new ApplyFilter(accumulator, include));
         } else {
             super(accumulator);
         }
