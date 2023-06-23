@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.util.SB;
 
 /**
   Exploring XEC Constants
@@ -15,6 +16,7 @@ public class SigCon extends IdCon {
     X.skipAry();
     X.skipAry();
   }
+  @Override public SB str(SB sb) { return sb.p(_name).p("{}"); }
   
   @Override public void resolve( CPool X ) {
     _name  =((StringCon)X.xget())._str;

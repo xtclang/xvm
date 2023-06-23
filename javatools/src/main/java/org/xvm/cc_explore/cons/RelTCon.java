@@ -6,7 +6,7 @@ import org.xvm.cc_explore.*;
   Exploring XEC Constants
  */
 public abstract class RelTCon extends TCon {
-  private TCon  _con1,  _con2;
+  TCon  _con1,  _con2;
   private XType _type1, _type2;
   public RelTCon( CPool X ) {
     X.u31();

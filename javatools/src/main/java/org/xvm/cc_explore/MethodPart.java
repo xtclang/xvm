@@ -3,7 +3,13 @@ package org.xvm.cc_explore;
 import org.xvm.cc_explore.cons.*;
 
 public class MethodPart extends MMethodPart {
-
+  // Method names are not unique, since e.g. "->" represents an anonymous
+  // lambda, and there can be a bunch of those in main method.  Lookup is by
+  // name first, and then ties are broken by _id.
+  public final MethodCon _id;
+  // Linked list of siblings at the same DAG level with the same name
+  public MethodPart _sibling;
+  
   // Method's "super"
   private final MethodCon  _supercon;
   private MMethodPart _super;
@@ -42,6 +48,11 @@ public class MethodPart extends MMethodPart {
   MethodPart( Part par, int nFlags, MethodCon id, CondCon con, CPool X ) {
     super(par,nFlags,id,con,X);
 
+    // Unique "id" since name is not unique
+    _id = id;
+    _sibling = null;
+
+    // Lambda index
     _lamidx = id._lamidx;
     
     // Read annotations
