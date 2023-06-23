@@ -2,6 +2,8 @@ import Catalog.EndpointInfo;
 import Catalog.MethodInfo;
 import Catalog.WebServiceInfo;
 
+import ecstasy.collections.CollectArray;
+
 import web.AcceptList;
 import web.Body;
 import web.BodyParam;
@@ -229,7 +231,7 @@ service ChainBundle {
         WebServiceInfo[] serviceInfos = catalog.services;
         String           path         = serviceInfos[wsid].path;
 
-        MethodInfo[] interceptors = [];
+        MethodInfo[] interceptors = new MethodInfo[];
         for (Int id : 0..wsid) {
             WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path)) {
@@ -241,11 +243,11 @@ service ChainBundle {
                         interceptors.add(routeInfo);
                     }
                 } else {
-                    serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod, interceptors);
+                    interceptors.addAll(serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod));
                 }
             }
         }
-        return interceptors.makeImmutable();
+        return interceptors.freeze(inPlace=True);
     }
 
     /**
@@ -255,14 +257,14 @@ service ChainBundle {
         WebServiceInfo[] serviceInfos = catalog.services;
         String           path         = serviceInfos[wsid].path;
 
-        MethodInfo[] observerInfos = [];
+        MethodInfo[] observerInfos = new MethodInfo[];
         for (Int id : 0..wsid) {
             WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path)) {
-                serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, observerInfos);
+                observerInfos.addAll(serviceInfo.observers.filter(m -> m.httpMethod == httpMethod));
             }
         }
-        return observerInfos.makeImmutable();
+        return observerInfos.freeze(inPlace=True);
     }
 
     /**

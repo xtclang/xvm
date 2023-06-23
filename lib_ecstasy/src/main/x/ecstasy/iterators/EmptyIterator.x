@@ -93,7 +93,7 @@ const EmptyIterator<Element>
     }
 
     @Override
-    <Result> Iterator<Result> flatMap(function Iterator<Result> (Element) flatten) {
+    <Result> Iterator<Result> flatMap(function Iterable<Result> (Element) flatten) {
         return Result == Element
                 ? this
                 : Result.emptyIterator;

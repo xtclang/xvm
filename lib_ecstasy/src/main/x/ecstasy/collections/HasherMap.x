@@ -534,7 +534,7 @@ class HasherMap<Key, Value>
         @Override
         construct(TreeNode that) {
             // deep clone the sub nodes
-            this.nodes.map(node -> node.duplicate(), new HashBucket<Key, Value>[](that.nodes.size.notLessThan(4)));
+            this.nodes = that.nodes.map(node -> node.duplicate(), CollectArray.of(HashBucket<Key, Value>));
         }
 
         /**
@@ -574,7 +574,8 @@ class HasherMap<Key, Value>
 
         @Override
         @RO Int size.get() {
-            return nodes.map(node -> node.size).reduce(0, (total, add) -> total+add);
+            return nodes.map(node -> node.size)
+                        .reduce(0, (total, add) -> total+add);
         }
 
         @Override

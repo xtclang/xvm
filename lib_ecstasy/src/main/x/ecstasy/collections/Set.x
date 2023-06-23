@@ -5,6 +5,15 @@
  */
 interface Set<Element>
         extends Collection<Element> {
+
+    @Override
+    @Concurrent
+    <Result extends Collection<Element>>
+            Result distinct(Aggregator<Element, Result>? collector = Null) {
+
+        return collector == Null && this.is(immutable Result) ? this : super(collector);
+    }
+
     /**
      * The "symmetric difference" operator determines the elements that are present in only this
      * set or the other set, but not both.

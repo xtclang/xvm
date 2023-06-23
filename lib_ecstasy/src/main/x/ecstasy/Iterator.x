@@ -369,7 +369,7 @@ interface Iterator<Element> {
      * @return a new iterator representing the concatenated results of applying the specified function
      *         to each element in this iterator
      */
-    <Result> Iterator!<Result> flatMap(function Iterator!<Result> (Element) flatten) {
+    <Result> Iterator!<Result> flatMap(function Iterable<Result> (Element) flatten) {
         return new iterators.FlatMappedIterator<Result, Element>(this, flatten);
     }
 
@@ -408,7 +408,8 @@ interface Iterator<Element> {
             return this;
         }
 
-        return toArray().sorted(order).iterator();
+    // TODO GG return toArray().sorted(order).iterator();
+    return toArray().sorted(order).as(List<Element>).iterator();
     }
 
     /**

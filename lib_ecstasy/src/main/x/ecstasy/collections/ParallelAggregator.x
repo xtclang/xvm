@@ -56,10 +56,10 @@ interface ParallelAggregator<Element, Partial, Result>
     @RO Aggregator<Partial, Result> finalAggregator;
 
     @Override
-    Accumulator init() {
+    Accumulator init(Int capacity = 0) {
         // the default init() and reduce() implementations should be optimized for non-parallel
         // aggregation, if appropriate, in order to reduce the number of objects and steps
-        return elementAggregator.init();
+        return elementAggregator.init(capacity);
     }
 
     @Override

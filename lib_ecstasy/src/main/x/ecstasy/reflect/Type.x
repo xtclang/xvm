@@ -453,7 +453,7 @@ interface Type<DataType, OuterType>
     }
 
     /**
-     * @return an empty iterator of this type
+     * An empty [Iterator] of this type.
      */
     @RO Iterator<DataType> emptyIterator.get() {
         return createEmptyIterator();

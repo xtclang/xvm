@@ -1,5 +1,6 @@
 import collections.SparseIntSet;
 
+import ecstasy.collections.CollectImmutableArray;
 import ecstasy.collections.maps.KeyEntry;
 import ecstasy.collections.maps.KeySetBasedMap;
 import ecstasy.reflect.Annotation;
@@ -902,9 +903,9 @@ service Client<Schema extends RootSchema> {
                         return [];
                     }
 
-                    ListMap<String, DboInfo> infos = new ListMap(size);
-                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
-                    return infos.freeze();
+                    import ecstasy.collections.CollectImmutableMap;
+                    static CollectImmutableMap<String, DboInfo> collector = new CollectImmutableMap();
+                    return childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, collector);
                 }
             };
         }
@@ -1891,8 +1892,7 @@ service Client<Schema extends RootSchema> {
             DBCategory category = this.category;
             return catalog.metadata?.dbObjectInfos
                     .filter(info -> info.category == category)
-                    .map(info -> info.id, new Int[])
-                    .as(Int[]) : assert;
+                    .map(info -> info.id, CollectImmutableArray.of(Int)) : assert;
         }
 
         @Lazy

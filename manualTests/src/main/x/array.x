@@ -276,7 +276,8 @@ module TestArray {
 
             case 9:
                 console.print("\n   --> flatmap test");
-                iter = iter.flatMap(s -> s.iterator()).map(ch -> ch.toString());
+                iter = iter.flatMap(s -> s) /* TODO GG remove */ .as(Iterator<Char>)
+                           .map(ch -> ch.toString());
                 break;
 
             case 10:

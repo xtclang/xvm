@@ -25,7 +25,7 @@ const Sum<Element extends Number>
     }
 
     @Override
-    Accumulator init() {
+    Accumulator init(Int capacity = 0) {
         return new WorkingSum();
     }
 

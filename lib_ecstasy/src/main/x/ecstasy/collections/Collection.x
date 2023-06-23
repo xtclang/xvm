@@ -80,9 +80,7 @@ interface Collection<Element>
      * check that `inPlace` is `True`, and otherwise throw a [ReadOnly] exception; one example is
      * when the `value` property on a [List.Cursor] is set.
      */
-    @RO Boolean inPlace.get() {
-        return True;
-    }
+    @RO Boolean inPlace.get() = True;
 
     /**
      * Metadata: Is the collection maintained in a specific order? And if that order is a function
@@ -93,9 +91,7 @@ interface Collection<Element>
      *         indicates that an order is maintained, but not by comparison of elements, for example
      *         when a collection stores elements in the order that they are added
      */
-    conditional Orderer? ordered() {
-        return False;
-    }
+    conditional Orderer? ordered() = False;
 
     /**
      * Metadata: Is the collection of a known size? The size is available from the [size] property,
@@ -257,27 +253,37 @@ interface Collection<Element>
      * Evaluate the contents of this `Collection` using the provided criteria, and produce a
      * resulting `Collection` that contains only the elements that match.
      *
-     * @param match  a function that evaluates an element of the `Collection` for inclusion
-     * @param dest   an optional `Collection` to collect the results in; pass `this` collection to
-     *               filter out the values "in place"
+     * @param match      a function that evaluates an element of the `Collection` for inclusion
+     * @param collector  an optional [Aggregator] to use to collect the results
      *
-     * @return the resulting `Collection` containing the elements that matched the criteria
+     * @return the resulting `Collection` containing the elements that matched the criteria; the
+     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
+     *         subsequent changes to this `Collection` must not alter the contents of the returned
+     *         `Collection`
+     *
      */
     @Concurrent
-    Collection! filter(function Boolean(Element) match,
-                       Collection!?              dest  = Null) {
-        if (dest == Null) {
-            dest = new Element[];       // TODO replace with deferred-filter collection
-        } else if (&dest == &this) {
-            return this.removeAll(e -> !match(e));
+    <Result extends Collection!> Result filter(function Boolean(Element)    match,
+                                               Aggregator<Element, Result>? collector = Null) {
+        if (collector == Null) {
+            if (Int count := knownSize(), count == 0) {
+                Element[] empty = [];
+                return empty.as(Result);
+            }
+            return new deferred.FilteredCollection<Element>(this, match).as(Result);
         }
 
-        for (Element e : this) {
-            if (match(e)) {
-                dest = dest.add(e);
+        collector.Accumulator accumulator = collector.init();
+        if (&accumulator == &this) {
+            accumulator = this.removeAll(e -> !match(e));
+        } else {
+            for (Element e : this) {
+                if (match(e)) {
+                    accumulator = accumulator.add(e);
+                }
             }
         }
-        return dest;
+        return collector.reduce(accumulator);
     }
 
     /**
@@ -285,24 +291,54 @@ interface Collection<Element>
      * those that do not.
      *
      * @param match      a function that evaluates an element of the `Collection` for inclusion
-     * @param trueList   an optional `List` to collect the matching results in
-     * @param falseList  an optional `List` to collect the non-matching results in
+     * @param collector  an optional [Aggregator] to use to collect the results
      *
-     * @return trueList   the list of elements that match the provided criteria
-     * @return falseList  the list of elements that **do not** match the provided criteria
+     * @return matches   the list of elements that match the provided criteria; the returned
+     *                   `Collection` may depend on this `Collection`, so [reify] the result if
+     *                   subsequent changes to this `Collection` must not alter the contents of the
+     *                   returned `Collection`
+     * @return misses    the list of elements that **do not** match the provided criteria; the
+     *                   returned `Collection` may depend on this `Collection`, so [reify] the
+     *                   result if subsequent changes to this `Collection` must not alter the
+     *                   contents of the returned `Collection`
      */
     @Concurrent
-    (List<Element> trueList, List<Element> falseList) partition(function Boolean(Element) match,
-                                                                List<Element>? trueList  = Null,
-                                                                List<Element>? falseList = Null) {
-        // TODO if passed trueList or falseList is this
-
-        trueList  ?:= new Element[];
-        falseList ?:= new Element[];
-        for (Element e : this) {
-            (match(e) ? trueList : falseList).add(e);
+    <Result extends Collection!>
+    (Result matches, Result misses) partition(function Boolean(Element)    match,
+                                              Aggregator<Element, Result>? collector = Null) {
+        if (collector == Null) {
+            import deferred.PartitionedCollection;
+            PartitionedCollection<Element> matches = new PartitionedCollection(this, match);
+            PartitionedCollection<Element> misses  = matches.inverse;
+            return matches.as(Result), misses.as(Result);
         }
-        return trueList, falseList;
+
+        Appender<Element> matches = collector.init();
+        Appender<Element> misses  = collector.init();
+        if (&matches == &this) {
+            for (Element e : this) {
+                if (!match(e)) {
+                    misses.add(e);
+                }
+            }
+            Result missResult = collector.reduce(misses);
+            return collector.reduce(this.removeAll(missResult)), missResult;
+        }
+
+        if (&misses == &this) {
+            for (Element e : this) {
+                if (match(e)) {
+                    matches.add(e);
+                }
+            }
+            Result matchResult = collector.reduce(matches);
+            return matchResult, collector.reduce(this.removeAll(matchResult));
+        }
+
+        for (Element e : this) {
+            (match(e) ? matches : misses).add(e);
+        }
+        return collector.reduce(matches), collector.reduce(misses);
     }
 
     /**
@@ -311,72 +347,140 @@ interface Collection<Element>
      *
      * @param transform  a function that creates a "mapped" element from each element in this
      *                   `Collection`
-     * @param dest       an optional `Collection` to collect the results in; pass `this` collection
-     *                   to map the values "in place"
+     * @param collector  an optional [Aggregator] to use to collect the results
      *
-     * @return the resulting `Collection` containing the elements that matched the criteria
+     * @return the resulting `Collection` containing the elements that matched the criteria; the
+     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
+     *         subsequent changes to this `Collection` must not alter the contents of the returned
+     *         `Collection`
      */
-    <Result> Collection!<Result> map(function Result(Element) transform,
-                                     Collection!<Result>?     dest      = Null) {
-        Iterator<Element> iter = iterator();
-
-        // there is no way to optimize the in-place mapping on an amorphous Collection;
-        // implementations of this interface should replace this default behavior
-        if (&dest == &this) {
-            Result[] results = new Result[size](_ -> transform(iter.take()));
-            clear();
-            addAll(results.as(List<Element>));
-            assert dest != Null;
-            return dest;
+    <Value, Result extends Collection!<Value>>
+            Result map(function Value(Element)    transform,
+                       Aggregator<Value, Result>? collector = Null) {
+        if (collector == Null) {
+            if (Int count := knownSize(), count == 0) {
+                Value[] empty = [];
+                return empty.as(Result);
+            }
+            return new deferred.MappedCollection<Value, Element>(this, transform).as(Result);
         }
 
-        if (dest == Null) {
-            // TODO replace with deferred-map collection?
-            return new Result[size](_ -> transform(iter.take()));
+        Iterator<Element> iter = iterator();
+
+        Appender<Value> dest = collector.init(knownSize() ?: 0);
+        if (&dest == &this) {
+            // there is no way to optimize the in-place mapping on an amorphous Collection;
+            // implementations of this interface that have a more optimal solution should override
+            // this default behavior
+            Element[] temp = new Element[knownSize()?](_ -> iter.take()) : new Element[].addAll(this);
+            clear();
+            iter = temp.iterator();
         }
 
         for (Element e : iter) {
             dest = dest.add(transform(e));
         }
-        return dest;
+        return collector.reduce(dest);
     }
 
     /**
-     * Build a `Collection` that has some number of elements "flattened from" each element of this
+     * Build a `Collection` that has zero or more elements "flattened from" each element of this
+     * collection.
+     *
+     * @param transform  a function that provides an iter the "flattened" elements from each element in this
+     *                   `Collection`
+     * @param collector  an optional [Aggregator] to use to collect the results
+     *
+     * @return the resulting `Collection` containing the elements that matched the criteria; the
+     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
+     *         subsequent changes to this `Collection` must not alter the contents of the returned
+     *         `Collection`
+     */
+    @Concurrent
+    <Value, Result extends Collection!<Value>>
+            Result flatMap(function Iterable<Value>(Element) flatten,
+                           Aggregator<Value, Result>?        collector = Null) {
+        return flatMap((e, dest) -> dest.addAll(flatten(e)), collector);
+    }
+
+    /**
+     * Build a `Collection` that has zero or more elements "flattened from" each element of this
      * collection.
      *
      * @param transform  a function that creates the "flattened" elements from each element in this
      *                   `Collection`
-     * @param dest       an optional `Collection` to collect the results in; "in place" flat mapping
-     *                   is not supported
+     * @param collector  an optional [Aggregator] to use to collect the results
      *
-     * @return the resulting `Collection` containing the elements that matched the criteria
+     * @return the resulting `Collection` containing the elements that matched the criteria; the
+     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
+     *         subsequent changes to this `Collection` must not alter the contents of the returned
+     *         `Collection`
      */
     @Concurrent
-    <Result> Collection!<Result> flatMap(function Iterable<Result>(Element) flatten,
-                                         Collection!<Result>?               dest    = Null) {
-        assert:arg &dest != &this;
+    <Value, Result extends Collection!<Value>>
+            Result flatMap(function void(Element, Appender<Value>) flatten,
+                           Aggregator<Value, Result>?              collector = Null) {
 
-        dest ?:= new Result[];
-        forEach(e -> dest.addAll(flatten(e)));
-        return dest;
+        if (collector == Null) {
+            if (Int count := knownSize(), count == 0) {
+                Value[] empty = [];
+                return empty.as(Result);
+            }
+            return new deferred.FlatMappedCollection<Value, Element>(this, flatten).as(Result);
+        }
+
+        Appender<Value>     result  = collector.init();
+        Boolean             inPlace = &this == &result;
+        Appender<Value>     dest    = inPlace ? new Value[] : result;
+        forEach(e -> flatten(e, dest));
+        if (inPlace) {
+            // the results were temporarily held in a temporary array; since the collector
+            // specified that "this" is the destination, we need to clear "this" and copy the
+            // temporary results here
+            result = clear().as(Collection<Value>).addAll(dest.as(Value[]));
+        }
+        return collector.reduce(result);
     }
 
     /**
      * Build a distinct [Set] of elements found in this collection.
      *
-     * @param dest  an optional `Set` to collect the results in
+     * @param collector  an optional [Aggregator] to use to collect the results
      *
-     * @return the resulting `Set` containing the distinct set of elements
+     * @return the resulting `Collection` containing the distinct set of elements
      */
     @Concurrent
-    Set<Element> distinct(Set<Element>? dest = Null) {
-        if (dest == Null) {
-            return this.is(Set<Element>)
-                    ? this
-                    : new ListSet(this); // TODO replace with deferred-distinct set ???
+    <Result extends Collection!<Element>>
+    Result distinct(Aggregator<Element, Result>? collector = Null) {
+        if (collector == Null) {
+            if (Int count := knownSize(), count == 0) {
+                Element[] empty = [];
+                return empty.as(Result);
+            }
+            return new deferred.DistinctCollection<Element>(this).as(Result);
         }
-        return &dest == &this ? dest : dest.addAll(this);
+
+        Collection<Element> src  = this;
+        Appender<Element>   dest = collector.init();
+        if (&src == &dest) {
+            // the source and destination are the same collection; it is non-trivial to "uniquify"
+            // in place, when all we have to work with is the set of methods on Collection, so
+            // create a temporary copy and do the work there
+            src  = new ListSet<Element>(this);  // note: src was this
+            dest = this.clear();                // note: dest is this
+        }
+
+        if (src.is(Set<Element>) || dest.is(Set<Element>)) {
+            dest = dest.addAll(this);
+        } else if (dest.is(Collection<Element>)) {
+            for (Element e : this) {
+                dest := dest.addIfAbsent(e);
+            }
+        } else {
+            // inefficient but correct
+            dest = dest.addAll(new ListSet(this));
+        }
+        return collector.reduce(dest);
     }
 
     /**
@@ -421,14 +525,16 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Key, Value> Map<Key,Value> associate(function (Key, Value) (Element) transform,
-                                          Map<Key,Value>?                 dest = Null) {
-        Map<Key, Value> map = dest ?: new ListMap();
+    <Key, Value, Result extends Map<Key, Value>>
+    Result associate(function (Key, Value) (Element)   transform,
+                     MapCollector<Key, Value, Result>? collector = Null) {
+        Int             cap = knownSize() ?: 0;
+        Map<Key, Value> map = collector?.init(cap) : new ListMap(cap);
         forEach(e -> {
             (Key k, Value v) = transform(e);
             map.put(k, v);
         });
-        return map;
+        return collector?.reduce(map) : map.as(Result);
     }
 
     /**
@@ -444,9 +550,10 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Key> Map<Key, Element> associateBy(function Key(Element) keyFor,
-                                        Map<Key, Element>?    dest = Null) {
-        return associate(e -> {return keyFor(e), e;}, dest);
+    <Key, Result extends Map<Key, Element>>
+    Result associateBy(function Key(Element)               keyFor,
+                       MapCollector<Key, Element, Result>? collector = Null) {
+        return associate(e -> (keyFor(e), e), collector);
     }
 
     /**
@@ -462,9 +569,10 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Value> Map<Element, Value> associateWith(function Value(Element) valueFor,
-                                              Map<Element, Value>?    dest = Null) {
-        return associate(e -> {return e, valueFor(e);}, dest);
+    <Value, Result extends Map<Element, Value>>
+    Result associateWith(function Value(Element)               valueFor,
+                         MapCollector<Element, Value, Result>? collector = Null) {
+        return associate(e -> (e, valueFor(e)), collector);
     }
 
     /**
@@ -481,13 +589,15 @@ interface Collection<Element>
      * @return the resulting `Map` of collections of elements
      */
     @Concurrent
-    <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element)           keyFor,
-                                                 Map<Key, Collection!<Element>>? dest   = Null) {
-        Map<Key, Collection<Element>> map = dest ?: new ListMap();
+    <Key, Result extends Map<Key, Collection!<Element>>>
+    Result groupBy(function Key(Element)                            keyFor,
+                   MapCollector<Key, Collection!<Element>, Result>? collector = Null) {
+        Int                            cap = knownSize() ?: 0;
+        Map<Key, Collection!<Element>> map = collector?.init(cap) : new ListMap(cap);
         forEach(e -> {
             map.computeIfAbsent(keyFor(e), () -> new ListSet<Element>()).add(e);
         });
-        return map;
+        return collector?.reduce(map) : map.as(Result);
     }
 
     /**
@@ -507,10 +617,12 @@ interface Collection<Element>
      * @return the resulting `Map`
      */
     @Concurrent
-    <Value> Map<Element, Value> groupWith(function Value(Element, Value) accumulate,
-                                          function Value(Element)        initial,
-                                          Map<Element, Value>?           dest = Null) {
-        Map<Element, Value> map = dest ?: new ListMap();
+    <Value, Result extends Map<Element, Value>>
+    Result groupWith(function Value(Element, Value)        accumulate,
+                     function Value(Element)               initial,
+                     MapCollector<Element, Value, Result>? collector = Null) {
+        Int                 cap = knownSize() ?: 0;
+        Map<Element, Value> map = collector?.init(cap) : new ListMap(cap);
         forEach(e -> {
             map.process(e, entry -> {
                 entry.value = entry.exists
@@ -519,14 +631,14 @@ interface Collection<Element>
                 return Null;
             });
         });
-        return map;
+        return collector?.reduce(map) : map.as(Result);
     }
 
     /**
      * Create a sorted `List` from this `Collection`.
      *
-     * @param orderer  an optional [Type.Orderer] to control the sort order; `Null` means to use the
-     *                 element type's natural order
+     * @param order  an optional [Type.Orderer] to control the sort order; `Null` means to use the
+     *               element type's natural order
      *
      * @return a sorted list
      *
@@ -534,8 +646,12 @@ interface Collection<Element>
      *                               [Orderable]
      */
     @Concurrent
-    List<Element> sorted(Orderer? orderer = Null) {
-        return toArray(Mutable).sorted(orderer, True);
+    <Result extends List<Element>> Result sorted(Orderer?                     order     = Null,
+                                                 Aggregator<Element, Result>? collector = Null) {
+        List<Element> list = collector?.init(knownSize() ?: 0).addAll(this).as(List<Element>)
+                           : toArray(Mutable);
+        list = list.sorted(order, inPlace = True);
+        return collector?.reduce(list) : list.as(Result);
     }
 
     /**
@@ -938,7 +1054,7 @@ interface Collection<Element>
             Map<CompileType.Element, Int> map = collection1.groupWith(
                     (_, n) -> (n + 1),
                     (_) -> 1,
-                    new HashMap());
+                    new MapCollector(() -> new HashMap()));
             if (map.size == size) {
                 return collection1.containsAll(collection2);
             } else {

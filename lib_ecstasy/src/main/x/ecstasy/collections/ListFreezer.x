@@ -1,7 +1,7 @@
 /**
  * Implementations of [List] that need to implement [Freezable] can use this mix-in to do so:
  *
- *     incorporates conditional ListFreezer<Element extends immutable Object | Freezable>
+ *     incorporates conditional ListFreezer<Element extends Shareable>
  */
 mixin ListFreezer<Element extends Shareable>
         into List<Element> + CopyableCollection<Element>

@@ -28,10 +28,13 @@ interface Aggregator<Element, Result> {
      * Create an intermediate, mutable data structure that will accumulate Elements as part of
      * the aggregator implementation. The `Accumulator` is write-only from the view of the caller.
      *
+     * @param capacity  the suggested capacity for the Aggregator, which is the number of estimated
+     *                  elements, or `0` to indicate that the number is unknown
+     *
      * @return an `Accumulator` that will be used to accumulate all of the `Element` values that
      *         are being aggregated
      */
-    Accumulator init();
+    Accumulator init(Int capacity = 0);
 
     /**
      * Extract the aggregated result from the passed `Accumulator`, which must be an `Accumulator`

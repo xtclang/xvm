@@ -23,7 +23,7 @@ class ListSet<Element>
      * @param values  initial values to store in the ListSet
      */
     construct(Iterable<Element> values) {
-        ListMap<Element, Nullable> map = new ListMap(values.size);
+        ListMap<Element, Nullable> map = new ListMap();
         for (Element value : values) {
             map.put(value, Null);
         }

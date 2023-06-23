@@ -1,3 +1,5 @@
+import ecstasy.collections.CollectImmutableArray;
+
 /**
  * A representation of the headers for an HTTP request or response.
  *
@@ -65,9 +67,7 @@ interface Header
      * @return a list of names of the HTTP headers
      */
     @RO List<String> names.get() {
-        List<Entry> entries = this.entries;
-
-        return entries.map(e -> e[0], new String[](entries.size)).as(List<String>);
+        return entries.map(e -> e[0], CollectImmutableArray.of(String));
     }
 
     /**
@@ -94,7 +94,7 @@ interface Header
                                                   .map(e -> e[1]);
 
         if (expandDelim != Null) {
-            iter = iter.flatMap(s -> s.split(expandDelim).iterator());
+            iter = iter.flatMap(s -> s.split(expandDelim));
         }
 
         return iter.map(s -> s.trim());

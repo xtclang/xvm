@@ -3,6 +3,9 @@ import collections.ArrayOrderedSet;
 import collections.CircularArray;
 import collections.SparseIntSet;
 
+import ecstasy.collections.Collect;
+import ecstasy.collections.CollectArray;
+
 import json.ElementOutput;
 import json.Lexer.Token;
 import json.Mapping;
@@ -128,25 +131,24 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         Boolean hasDistributors  = catalog.metadata?.dbObjectInfos.any(info -> !info.distributors .empty) : False;
         Boolean hasSyncTriggers  = hasValidators |  hasRectifiers | hasDistributors;
 
+        Collect<Int, SparseIntSet> intoSparseIntSet = Collect.to(SparseIntSet);
+
         if (hasValidators) {
             validators = catalog.metadata?.dbObjectInfos
                     .filter(info -> !info.validators.empty)
-                    .map(info -> info.id, new SparseIntSet())
-                    .as(Set<Int>);
+                    .map(info -> info.id, intoSparseIntSet);
         }
 
         if (hasRectifiers) {
             rectifiers = catalog.metadata?.dbObjectInfos
                     .filter(info -> !info.rectifiers.empty)
-                    .map(info -> info.id, new SparseIntSet())
-                    .as(Set<Int>);
+                    .map(info -> info.id, intoSparseIntSet);
         }
 
         if (hasDistributors) {
             distributors = catalog.metadata?.dbObjectInfos
                     .filter(info -> !info.distributors.empty)
-                    .map(info -> info.id, new SparseIntSet())
-                    .as(Set<Int>);
+                    .map(info -> info.id, intoSparseIntSet);
         }
 
         if (hasSyncTriggers) {
@@ -2771,7 +2773,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return a mutable array of [LogFileInfo]
      */
     protected LogFileInfo[] loadLogs(File[] logFiles) {
-        return logFiles.map(f -> loadLog(f), new LogFileInfo[]).as(LogFileInfo[]);
+        return logFiles.map(f -> loadLog(f), CollectArray.of(LogFileInfo));
     }
 
     /**

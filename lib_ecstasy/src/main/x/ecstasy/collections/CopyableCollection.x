@@ -31,9 +31,7 @@ interface CopyableCollection<Element>
                 return this.new(this);
             }
 
-            ReplicableCopier<Element> that = this.new();
-            this.map(transform, that);
-            return that;
+            return this.map(transform, Collect.to(ReplicableCopier<Element>));
         }
 
         @Override

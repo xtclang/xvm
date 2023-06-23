@@ -118,6 +118,7 @@ class MapSet<Element>
     static mixin MapSetFreezer<Element extends Shareable>
             into MapSet<Element>
             implements Freezable {
+
         @Override
         immutable MapSetFreezer freeze(Boolean inPlace = False) {
             if (this.is(immutable MapSetFreezer)) {
