@@ -579,11 +579,6 @@ class Array<Element>
     }
 
     @Override
-    Array sorted(Orderer? orderer = Null, Boolean inPlace = False) {
-        return super(orderer, inPlace).as(Array);
-    }
-
-    @Override
     Array toArray(Mutability? mutability = Null, Boolean inPlace = False) {
         if (mutability == Null || mutability == this.mutability) {
             return this;

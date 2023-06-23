@@ -48,14 +48,14 @@ interface List<Element>
 
     @Override
     Boolean contains(Element value) {
-        if (Orderer? orderer := ordered(), orderer != Null) {
+        if (Orderer? order := ordered(), order != Null) {
             // binary search
             Int lo = 0;
             Int hi = size - 1;
             while (lo <= hi) {
                 Int     mid = (lo + hi) >> 1;
                 Element cur = this[mid];
-                switch (orderer(value, cur)) {
+                switch (order(value, cur)) {
                 case Lesser:
                     hi = mid - 1;
                     break;
@@ -217,8 +217,8 @@ interface List<Element>
      * @return (conditional) the index at which the specified value was found
      */
     conditional Int indexOf(Element value, Int startAt = 0) {
-        if (Orderer? orderer := ordered(), orderer != Null) {
-            if (Int index := binarySearch(value, orderer)) {
+        if (Orderer? order := ordered(), order != Null) {
+            if (Int index := binarySearch(value, order)) {
                 while (index > startAt && this[index-1] == value) {
                     --index;
                 }
@@ -313,8 +313,8 @@ interface List<Element>
      * @return (conditional) the index at which the specified value was found
      */
     conditional Int lastIndexOf(Element value, Int startAt = MaxValue) {
-        if (Orderer? orderer := ordered(), orderer != Null) {
-            if (Int index := binarySearch(value, orderer)) {
+        if (Orderer? order := ordered(), order != Null) {
+            if (Int index := binarySearch(value, order)) {
                 Int stop = startAt.notGreaterThan(size-1);
                 while (index < stop && this[index+1] == value) {
                     ++index;
@@ -626,23 +626,29 @@ interface List<Element>
      * @return the resultant list, which is the same as `this` for a mutable list
      */
     @Override
-    List! sorted(Orderer? orderer = Null, Boolean inPlace = False) {
+    <Result extends List!<Element>> Result sorted(Orderer?                     order     = Null,
+                                                  Aggregator<Element, Result>? collector = Null,
+                                                  Boolean                      inPlace   = False) {
+        if (collector != Null) {
+            return super(order, collector);
+        }
+
         Int size = this.size;
         if (size <= 1 && (inPlace || !this.inPlace)) {
             // nothing to sort
-            return this;
+            return this.as(Result);
         }
 
-        if (orderer != Null, Orderer? prev := ordered(), prev? == orderer) {
+        if (order != Null, Orderer? prev := ordered(), prev? == order) {
             // already in the right order
-            return inPlace
+            return (inPlace
                     ? this
-                    : this[0 ..< size];
+                    : this[0 ..< size]).as(Result);
         }
 
-        return this.inPlace && inPlace
-                ? sort(orderer)
-                : super(orderer);
+        return (this.inPlace && inPlace
+                ? sort(order)
+                : super(order)).as(Result);
     }
 
     /**
