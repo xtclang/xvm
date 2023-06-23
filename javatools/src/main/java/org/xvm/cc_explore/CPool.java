@@ -206,9 +206,10 @@ public class CPool {
   }
   
   // Skip an array of idxs
-  public void skipAry() {
+  public int skipAry() {
     int len = u31();      
     for( int i=0; i<len; i++ )  u31();
+    return len;
   }
   
   private int utf8Byte() {
