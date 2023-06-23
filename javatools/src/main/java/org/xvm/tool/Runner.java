@@ -65,7 +65,8 @@ public class Runner
         if (options().isShowVersion())
             {
             ModuleStructure core = repo.loadModule(Constants.ECSTASY_MODULE);
-            out("Ecstasy Runtime Environment " + core.getVersion().getVersion());
+            out("Ecstasy Runtime Environment " + core.getVersion().getVersion()
+                    + " (" + Constants.VERSION_MAJOR_CUR + "." + Constants.VERSION_MINOR_CUR + ")");
             }
 
         File fileModule = options().getTarget();

@@ -19,8 +19,8 @@ class DistinctCollection<Element>
     // ----- internal ------------------------------------------------------------------------------
 
     @Override
-    protected Collection<Element> createReified() {
-        return new ListSet<Element>(original?) : assert;
+    protected Collection<Element> instantiateEmptyReified() {
+        return new ListSet<Element>();
     }
 
     @Override
