@@ -228,6 +228,14 @@
 
     @Override
     <Value, Result extends Collection<Value>>
+            Result flatMap(function Iterable<Value>(Element) flatten,
+                           Aggregator<Value, Result>?        collector = Null) {
+        // TODO CP need to alter delegates clause to not delegate this method
+        return flatMap((e, dest) -> dest.addAll(flatten(e)), collector);
+    }
+
+    @Override
+    <Value, Result extends Collection<Value>>
             Result flatMap(function void(Element, Appender<Value>) flatten,
                            Aggregator<Value, Result>?              collector = Null) {
         if (alreadyReified) {
