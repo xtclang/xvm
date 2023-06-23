@@ -50,7 +50,7 @@ class FlatMappedCollection<Element, FromElement>
             private Iterator<FromElement> unflattenedIterator;
             private function void(FromElement, Appender<Element>) flatten;
 
-            private enum Mode { None, Single, List, Iterator, EOF }
+            private enum Mode { None, Single, List, Buffer, Iterator, EOF }
             private Mode mode = None;
 
             // various storage for the "next" element(s)
@@ -58,9 +58,89 @@ class FlatMappedCollection<Element, FromElement>
             private List<Element>? list;
             private Int index;
             private Int size;
+            private Element[]? buffer;
             private Iterator<Element>? iter;
 
-            // load the storage for the "next" element(s)
+            /*
+             * @return a buffer for adding pending items to
+             */
+            Element[] ensureBuffer() {
+                Element[] buffer;
+                if (!(buffer ?= this.buffer)) {
+                    buffer = new Element[];
+                    this.buffer = buffer;
+                }
+
+                switch (mode) {
+                case None:
+                    break;
+
+                case Single:
+                    assert Element e ?= e;
+                    if (buffer.size < 1) {
+                        buffer.add(e);
+                    } else {
+                        buffer[0] = e;
+                    }
+                    size = 1;
+                    break;
+
+                case List:
+                    assert List<Element> list ?= list;
+                    assert index == 0;
+                    // how many elements will fit into the buffer, vs. how much does the buffer need
+                    // to expand?
+                    Int space = buffer.size;
+                    Int count = list.size;
+                    if (space >= count) {
+                        // simple copy into the buffer
+                        for (Int i = 0; i < count; ++i) {
+                            buffer[i] = list[i];
+                        }
+                    } else {
+                        buffer.ensureCapacity(count);
+                        // use the existing buffer space for the items that will fit
+                        for (Int i = 0; i < space; ++i) {
+                            buffer[i] = list[i];
+                        }
+                        // expand the buffer to hold the rest of the items
+                        for (Int i = space; i < count; ++i) {
+                            buffer.add(list[i]);
+                        }
+                    }
+                    size = count;
+                    break;
+
+                case Buffer:
+                    return buffer;
+
+                case Iterator:
+                    // this is weird (someone added an iterator and now they're adding a
+                    // non-iterator) so we can support this inefficiently
+                    assert Iterator<Element> iter ?= iter;
+                    Int space = buffer.size;
+                    Loop: for (Element e : iter) {
+                        if (Loop.count < space) {
+                            buffer[Loop.count] = e;
+                        } else {
+                            buffer.add(e);
+                        }
+                    }
+                    this.iter = Null;
+                    break;
+
+                case EOF:
+                    assert;
+                }
+                mode  = Buffer;
+                list  = buffer;
+                index = 0;
+                return buffer;
+            }
+
+            /*
+             * load the storage for the "next" element(s).
+             */
             void loadNext() {
                 mode = None;
                 while (FromElement unflattened := unflattenedIterator.next()) {
@@ -85,6 +165,7 @@ class FlatMappedCollection<Element, FromElement>
                         loadNext();
                         return True, e;
                     case List:
+                    case Buffer:
                         if (index < size) {
                             return True, list?[index++] : assert;
                         }
@@ -111,29 +192,69 @@ class FlatMappedCollection<Element, FromElement>
 
             @Override
             Appender<Element> add(Element v) {
-                mode = Single;
-                e    = v;
+                switch (mode) {
+                case None:
+                    mode = Single;
+                    e    = v;
+                    break;
+                case Single:
+                case List:
+                case Buffer:
+                case Iterator:
+                    ensureBuffer().add(v);
+                    break;
+                case EOF:
+                    assert;
+                }
                 return this;
             }
 
             @Override
             Appender<Element> addAll(Iterable<Element> iterable) {
-                if (iterable.is(List<Element>), iterable.indexed) {
-                    mode  = List;
-                    list  = iterable;
-                    index = 0;
-                    size  = iterable.size;
-                } else {
-                    mode = Iterator;
-                    iter = iterable.iterator();
+                switch (mode) {
+                case None:
+                    if (iterable.is(List<Element>), iterable.indexed) {
+                        mode  = List;
+                        list  = iterable;
+                        index = 0;
+                        size  = iterable.size;
+                    } else {
+                        mode = Iterator;
+                        iter = iterable.iterator();
+                    }
+                    break;
+                case Single:
+                case List:
+                case Buffer:
+                    ensureBuffer().addAll(iterable);
+                    break;
+                case Iterator:
+                    iter = iter?.concat(iterable.iterator()) : assert;
+                    break;
+                case EOF:
+                    assert;
                 }
                 return this;
             }
 
             @Override
             Appender<Element> addAll(Iterator<Element> iterator) {
-                mode = Iterator;
-                iter = iterator;
+                switch (mode) {
+                case None:
+                    mode = Iterator;
+                    iter = iterator;
+                    break;
+                case Single:
+                case List:
+                case Buffer:
+                    ensureBuffer().addAll(iterator);
+                    break;
+                case Iterator:
+                    iter = iter?.concat(iterator) : assert;
+                    break;
+                case EOF:
+                    assert;
+                }
                 return this;
             }
         }
