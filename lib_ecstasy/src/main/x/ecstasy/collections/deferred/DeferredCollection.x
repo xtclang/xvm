@@ -189,7 +189,6 @@
         }
     }
 
-    // TODO GG I forgot this @Override and the errors were overwhelming ...
     @Override
     <Result extends Collection<Element>>
     (Result matches, Result misses) partition(function Boolean(Element)    match,
