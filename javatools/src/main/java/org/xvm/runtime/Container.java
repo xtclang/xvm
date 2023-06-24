@@ -438,7 +438,7 @@ public abstract class Container
 
         // we need to make this call outside of the constructor due to a possible recursion
         // (ConcurrentHashMap.computeIfAbsent doesn't allow that)
-        clz.ensureFieldLayout();
+        clz.ensureFieldLayout(this);
         return clz;
         }
 
