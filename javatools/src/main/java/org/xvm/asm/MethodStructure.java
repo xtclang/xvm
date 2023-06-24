@@ -905,13 +905,6 @@ public class MethodStructure
 
             TypeParameterConstant constParam = param.asTypeParameterConstant(getIdentityConstant());
 
-            TypeConstant typeRequired = null;
-            if (typeTarget != null && this.isFunction())
-                {
-                typeRequired = param.getType().getParamType(0).
-                        resolveAutoNarrowing(pool, false, typeTarget, null);
-                }
-
             for (int iA = 0; iA < cArgs; iA++)
                 {
                 TypeConstant typeActual = atypeArgs[iA];
@@ -919,27 +912,10 @@ public class MethodStructure
                     {
                     TypeConstant typeFormal   = atypeMethodParams[cTypeParams + iA];
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                    if (typeResolved != null && !typeResolved.containsUnresolved())
+                    if (typeResolved != null && !typeResolved.containsUnresolved() &&
+                            checkConflict(typeResolved, constParam, true, mapTypeParams))
                         {
-                        if (typeRequired == null)
-                            {
-                            if (checkConflict(typeResolved, constParam, true, mapTypeParams))
-                                {
-                                continue NextParameter;
-                                }
-                            }
-                        else
-                            {
-                            if (typeResolved.isA(typeRequired))
-                                {
-                                mapTypeParams.put(constParam, typeRequired);
-                                }
-                            else
-                                {
-                                mapTypeParams.remove(constParam);
-                                continue NextParameter;
-                                }
-                            }
+                        continue NextParameter;
                         }
 
                     resolveGenericTypes(pool, typeFormal, typeActual, mapTypeGeneric);
@@ -949,32 +925,14 @@ public class MethodStructure
             for (int iR = 0; iR < cMethodReturns; iR++)
                 {
                 TypeConstant typeActual = iR < cReturns ? atypeReturns[iR] : null;
-
                 if (typeActual != null)
                     {
                     TypeConstant typeFormal   = atypeMethodReturns[iR];
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                    if (typeResolved != null && !typeResolved.containsUnresolved())
+                    if (typeResolved != null && !typeResolved.containsUnresolved() &&
+                            checkConflict(typeResolved, constParam, false, mapTypeParams))
                         {
-                        if (typeRequired == null)
-                            {
-                            if (checkConflict(typeResolved, constParam, false, mapTypeParams))
-                                {
-                                continue NextParameter;
-                                }
-                            }
-                        else
-                            {
-                            if (typeResolved.isA(typeRequired))
-                                {
-                                mapTypeParams.put(constParam, typeRequired);
-                                }
-                            else
-                                {
-                                mapTypeParams.remove(constParam);
-                                continue NextParameter;
-                                }
-                            }
+                        continue NextParameter;
                         }
 
                     resolveGenericTypes(pool, typeFormal, typeActual, mapTypeGeneric);
@@ -1007,6 +965,10 @@ public class MethodStructure
 
                 // we couldn't resolve the formal type parameter - compute the constraint type
                 TypeConstant typeParam = param.getType();
+                if (typeTarget != null)
+                    {
+                    typeParam = typeParam.resolveGenerics(pool, typeTarget);
+                    }
                 if (!mapTypeGeneric.isEmpty())
                     {
                     typeParam = typeParam.resolveGenerics(pool, mapTypeGeneric::get);
@@ -1016,7 +978,7 @@ public class MethodStructure
                     typeParam = typeParam.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
                     }
 
-                TypeConstant typeConstraint = typeParam.resolveConstraints().getParamType(0);
+                TypeConstant typeConstraint = typeParam.getParamType(0);
                 if (fAllowFormal)
                     {
                     // no extra knowledge; assume that anything goes

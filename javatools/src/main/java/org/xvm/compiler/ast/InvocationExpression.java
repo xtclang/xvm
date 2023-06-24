@@ -429,7 +429,8 @@ public class InvocationExpression
                     TypeConstant[] atype = m_fCall || cReturns == 0
                             ? atypeReturn
                             : pool.extractFunctionReturns(atypeReturn[0]);
-                    resolver = makeTypeParameterResolver(ctx, method, false, atype, ErrorListener.BLACKHOLE);
+                    resolver = makeTypeParameterResolver(ctx, method, false, typeLeft, atype,
+                                    ErrorListener.BLACKHOLE);
                     }
 
                 if (m_fCall)
@@ -865,6 +866,7 @@ public class InvocationExpression
                     if (cParams > 0)
                         {
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method, true,
+                                typeLeft,
                                 fCall || cReturns == 0
                                     ? atypeReturn
                                     : pool.extractFunctionReturns(atypeReturn[0]), errs);
@@ -903,7 +905,8 @@ public class InvocationExpression
                     transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
                     // re-resolve against the validated types
-                    mapTypeParams = resolveTypeParameters(method,
+                    mapTypeParams = method.resolveTypeParameters(pool,
+                        typeLeft,
                         atypeArgs,
                         fCall || cReturns == 0
                             ? atypeReturn
@@ -3076,20 +3079,13 @@ public class InvocationExpression
         return new TypeConstant[] {typeFn};
         }
 
-    @Override
-    protected ListMap<FormalConstant, TypeConstant> resolveTypeParameters(MethodStructure method,
-            TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAllowFormal)
-        {
-        return method.resolveTypeParameters(pool(), m_typeTarget, atypeArgs, atypeReturn, fAllowFormal);
-        }
-
     /**
      * @return a type parameter resolver for a given method and array of return types or null if the
      *         type parameters could not be resolved, reporting the unresolved type parameters to
      *         the error list
      */
     private GenericTypeResolver makeTypeParameterResolver(Context ctx, MethodStructure method,
-            boolean fAllowFormal, TypeConstant[] atypeReturn, ErrorListener errs)
+            boolean fAllowFormal, TypeConstant typeTarget, TypeConstant[] atypeReturn, ErrorListener errs)
         {
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
@@ -3102,7 +3098,7 @@ public class InvocationExpression
         transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
         Map<FormalConstant, TypeConstant> mapTypeParams =
-                resolveTypeParameters(method, atypeArgs, atypeReturn, fAllowFormal);
+                method.resolveTypeParameters(pool(), typeTarget, atypeArgs, atypeReturn, fAllowFormal);
 
         if (mapTypeParams.size() == method.getTypeParamCount())
             {

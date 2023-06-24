@@ -626,9 +626,9 @@ interface List<Element>
      * @return the resultant list, which is the same as `this` for a mutable list
      */
     @Override
-    <Result extends List!<Element>> Result sorted(Orderer?                     order     = Null,
-                                                  Aggregator<Element, Result>? collector = Null,
-                                                  Boolean                      inPlace   = False) {
+    <Result extends List!> Result sorted(Orderer?                     order     = Null,
+                                         Aggregator<Element, Result>? collector = Null,
+                                         Boolean                      inPlace   = False) {
         if (collector != Null) {
             return super(order, collector);
         }
