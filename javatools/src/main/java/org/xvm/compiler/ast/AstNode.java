@@ -1295,7 +1295,7 @@ public abstract class AstNode
                 atypeArgs = transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
                 ListMap<FormalConstant, TypeConstant> mapTypeParams =
-                        resolveTypeParameters(method, atypeArgs, atypeReturn, true);
+                        method.resolveTypeParameters(pool, typeTarget, atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1381,7 +1381,7 @@ public abstract class AstNode
                 {
                 // re-resolve the type parameters since we could have narrowed some
                 ListMap<FormalConstant, TypeConstant> mapTypeParams =
-                        resolveTypeParameters(method, atypeArgs, atypeReturn, true);
+                        method.resolveTypeParameters(pool, typeTarget, atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1478,16 +1478,6 @@ public abstract class AstNode
             type = pool.ensureParameterizedTypeConstant(type, idFormal.getType());
             }
         return type;
-        }
-
-    /**
-     * A trivial wrapper around {@link MethodStructure#resolveTypeParameters} call that allows
-     * subclasses to override it.
-     */
-    protected ListMap<FormalConstant, TypeConstant> resolveTypeParameters(MethodStructure method,
-            TypeConstant[] atypeArgs, TypeConstant[] atypeReturn, boolean fAllowFormal)
-        {
-        return method.resolveTypeParameters(pool(), null, atypeArgs, atypeReturn, fAllowFormal);
         }
 
     /**

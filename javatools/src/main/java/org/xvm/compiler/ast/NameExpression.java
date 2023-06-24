@@ -2887,8 +2887,8 @@ public class NameExpression
                             return null;
                             }
 
-                        ListMap<FormalConstant, TypeConstant> mapTypeParams = resolveTypeParameters(
-                                method, atypeArgs, TypeConstant.NO_TYPES, false);
+                        ListMap<FormalConstant, TypeConstant> mapTypeParams = method.resolveTypeParameters(
+                                pool, null, atypeArgs, TypeConstant.NO_TYPES, false);
 
                         if (mapTypeParams.size() < cTypeParams)
                             {

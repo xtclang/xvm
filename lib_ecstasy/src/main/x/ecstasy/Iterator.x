@@ -408,8 +408,7 @@ interface Iterator<Element> {
             return this;
         }
 
-    // TODO GG return toArray().sorted(order).iterator();
-    return toArray().sorted(order).as(List<Element>).iterator();
+    return toArray().sorted(order).iterator();
     }
 
     /**
