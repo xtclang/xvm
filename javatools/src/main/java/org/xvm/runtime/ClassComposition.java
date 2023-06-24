@@ -547,7 +547,7 @@ public class ClassComposition
     /**
      * Create a map of fields that serves as a prototype for all instances of this class.
      */
-    public synchronized void ensureFieldLayout()
+    public synchronized void ensureFieldLayout(Container container)
         {
         if (m_mapFields != null)
             {
@@ -630,7 +630,7 @@ public class ClassComposition
                     {
                     clzRef = infoProp.isCustomLogic()
                             ? ensurePropertyComposition(infoProp)
-                            : f_template.f_container.resolveClass(infoProp.getBaseRefType());
+                            : container.resolveClass(infoProp.getBaseRefType());
                     }
 
                 if (clzRef != null && !infoProp.isNative())

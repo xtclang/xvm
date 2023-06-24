@@ -298,7 +298,7 @@ public abstract class ClassTemplate
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
     public TypeComposition ensureClass(Container container,
-                                          TypeConstant typeInception, TypeConstant typeMask)
+                                       TypeConstant typeInception, TypeConstant typeMask)
         {
         ClassComposition clz = container.ensureClassComposition(typeInception, this);
 
