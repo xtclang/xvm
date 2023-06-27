@@ -8,14 +8,14 @@ import org.xvm.cc_explore.util.SB;
  */
 public abstract class DepTCon extends TCon {
   private TCon _par;
-  private XType _clz;
+  private Part _clz;
   DepTCon( CPool X ) { X.u31(); }
   @Override public SB str(SB sb) {
     sb.p("<dep>");
     return _par==null ? sb : _par.str(sb.p(" -> "));
   }
   @Override public void resolve( CPool X ) { _par = (TCon)X.xget(); }
-  @Override public XType link(XEC.ModRepo repo) {
+  @Override public Part link(XEC.ModRepo repo) {
     return _clz==null ? (_clz = _par.link(repo)) : _clz;
   }
 }

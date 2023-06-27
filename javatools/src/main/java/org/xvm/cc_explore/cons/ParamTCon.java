@@ -11,12 +11,12 @@ public class ParamTCon extends TCon {
   TCon _con;
   TCon[] _parms;
   ClassPart _clz;
-  public final XType[] _types;
+  public final Part[] _types;
   
   public ParamTCon( CPool X ) {
     X.u31();
     int len = X.skipAry();
-    _types = len==0 ? null : new XType[len];
+    _types = len==0 ? null : new Part[len];
   }
   @Override public SB str(SB sb) {
     if( _con instanceof TermTCon tt ) sb.p(tt.name());
@@ -27,7 +27,7 @@ public class ParamTCon extends TCon {
     _con = (TCon)X.xget();
     _parms = TCon.tcons(X);
   }
-  @Override public XType link(XEC.ModRepo repo) {
+  @Override public Part link(XEC.ModRepo repo) {
     if( _clz!=null ) return _clz;
     _clz = (ClassPart)_con.link(repo);
     if( _parms!=null ) {

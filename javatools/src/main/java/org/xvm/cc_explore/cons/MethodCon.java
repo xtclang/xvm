@@ -26,10 +26,13 @@ public class MethodCon extends PartCon {
     MMethodPart mm = (MMethodPart)_par.link(repo).link(repo);
     // Find the child in the parent
     MethodPart meth = (MethodPart)mm._name2kid.get(name());
+    // Confirm the signature matches
+    //throw XEC.TODO();
     // Note that if there are no siblings, we do not check the method id - and
     // indeed this can mismatch
     if( meth._sibling!=null ) // Search sibling list
-      while( meth._id!=this ) meth = meth._sibling;
+      //while( meth._id!=this ) meth = meth._sibling;
+      throw XEC.TODO();
     return (_part = meth);
   }
   @Override public String name() { return _par.name(); }
