@@ -1641,7 +1641,7 @@ public abstract class AstNode
                     // note: theoretically there could still be one better than either of these two,
                     // but for now, just assume it's an error at this point
                     log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-                            idBest.getSignature().getValueString());
+                            idBest.getSignature().removeAutoNarrowing().getValueString());
                     return null;
                     }
                 }
