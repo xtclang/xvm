@@ -7,7 +7,7 @@ import org.xvm.cc_explore.util.SB;
   Exploring XEC Constants
  */
 public abstract class TCon extends Const {
-  @Override public abstract XType link(XEC.ModRepo repo);
+  @Override public abstract Part link(XEC.ModRepo repo);
 
   public static TCon[] tcons( CPool X ) {
     int len = X.u31();

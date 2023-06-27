@@ -1,18 +1,26 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.tvar.*;
 
 import java.util.HashMap;
 
 /**
    Class part
  */
-public class ClassPart extends XType {
+public class ClassPart extends Part {
   private final HashMap<String,TCon> _tcons; // String->Type mapping
   final LitCon _path;           // File name compiling this file
   private final HashMap<String,Part> _parms; // String->Class mapping
+
+  // A list of "extra" features about Classes: extends, implements, delegates
+  public final Contrib[] _contribs;
+  
   ClassPart( Part par, int nFlags, IdCon id, CondCon cond, CPool X ) {
     super(par,nFlags,id,null,cond,X);
+
+    _contribs = Contrib.xcontribs(_cslen,X);
+    
     _tcons = parseTypeParms(X);
     _path  = (LitCon)X.xget();
     _parms = _tcons==null ? null : new HashMap<>();
@@ -35,10 +43,21 @@ public class ClassPart extends XType {
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) {
     if( _tcons==null ) return;
+
+    // Link all part innards
+    if( _contribs != null )
+      for( Contrib c : _contribs )
+        c.link(repo);
+
     for( String name : _tcons.keySet() )
       _parms.put(name,_tcons.get(name).link(repo));
   }
 
+  @Override public TVar _set_tvar() {
+    //throw XEC.TODO();
+    return null;
+  }
+  
   @Override public Part child(String s, XEC.ModRepo repo) {
     Part kid = super.child(s,repo);
     if( kid!=null ) return kid;
