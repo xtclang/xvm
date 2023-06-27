@@ -124,6 +124,8 @@ public class CPool {
   public int     i32() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
   public long    i64() { return (((long)i32())<<32) | ((long)(i32()) & 0xFFFFFFFFL); }
   public void undo() { x--; }
+  static public boolean isDigit(char c) { return '0'<=c && c<='9'; }
+  
   public long pack64() {
     // See org.xvm.util.PackedInteger;
       
