@@ -16,6 +16,7 @@ public class TParmCon extends FormalCon {
     if( _part!=null ) return _part;
     MethodPart meth = (MethodPart)_par.link(repo).link(repo);
     Parameter parm = meth._args[_reg];
-    return (_part=new XTypeParm(meth,_name,parm,repo));
+    //return (_part=new PartParm(meth,_name,parm,repo));
+    throw XEC.TODO();
   }
 }

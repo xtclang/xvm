@@ -2,7 +2,7 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
 import org.xvm.cc_explore.XEC;
-import org.xvm.cc_explore.XType;
+import org.xvm.cc_explore.Part;
 
 /**
   Exploring XEC Constants
@@ -18,5 +18,5 @@ public class FileStoreCon extends TCon {
     _path =((StringCon)X.xget())._str;
     _dir  = (FSNodeCon)X.xget();
   }
-  @Override public XType link(XEC.ModRepo repo) { throw XEC.TODO(); }
+  @Override public Part link(XEC.ModRepo repo) { throw XEC.TODO(); }
 }
