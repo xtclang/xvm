@@ -1498,7 +1498,8 @@ public class LambdaExpression
                 {
                 TypeConstant type  = atypeParams[i];
                 String       sName = asParams[i];
-                if (sName != null && !sName.equals(Id.ANY.TEXT) && type != null)
+                if (sName != null && !sName.equals(Id.ANY.TEXT) &&
+                            type != null && !type.containsUnresolved())
                     {
                     Register     reg          = createRegister(type);
                     TypeConstant typeNarrowed = ctxOuter.resolveFormalType(type);
