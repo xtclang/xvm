@@ -2,8 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.util.AryInt;
 
-import static org.xvm.util.Handy.isDigit;
-
 /**
  * Represents an Ecstasy module version.
  */
@@ -21,9 +19,9 @@ public class Version implements Comparable<Version> {
     String build = null;
 
     // Parse Version numbers of the form "1.2.3.4"
-    while( ix < len && isDigit(s.charAt(ix)) ) {
+    while( ix < len && CPool.isDigit(s.charAt(ix)) ) {
       int n = 0;
-      while( ix < len && isDigit(s.charAt(ix)) )
+      while( ix < len && CPool.isDigit(s.charAt(ix)) )
         n = n * 10 + (s.charAt(ix++) - '0');
       ints.push(n);
       if( ix == len ) break;
@@ -48,7 +46,7 @@ public class Version implements Comparable<Version> {
 
     // Optional suffix, requires a prefix.
     int n = 0, old=ix;
-    while( ix < len && isDigit(s.charAt(ix)) )
+    while( ix < len && CPool.isDigit(s.charAt(ix)) )
       n = n * 10 + (s.charAt(ix++) - '0');
     if( old!=ix ) ints.push(n);
 

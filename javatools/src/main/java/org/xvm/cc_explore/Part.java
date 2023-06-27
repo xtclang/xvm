@@ -1,6 +1,8 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.tvar.TVLeaf;
+import org.xvm.cc_explore.tvar.TVar;
 import org.xvm.cc_explore.util.SB;
 
 import java.util.ArrayList;
@@ -11,9 +13,12 @@ import java.util.HashMap;
    Handles e.g. the Class hierarchy, Modules, Methods, and Packages.
    These things are represented as structures in memory.
    
-   Does not handle Types nor Values?  Types being conceptual sets of Values,
-   and a reflective mirror is used in memory.  Values represent concrete
-   executable state.
+   Everything has a TVar type.  FileParts have the empty type.
+   Classes are a TVStruct with fields (which include methods).
+   Classes are nominal, and isa tests can start/stop on the name.
+   Interfaces classes which require structural testing; the name is just for fun.
+   Methods are TVLambda, and the Parameters are normal TVars.
+   
  */
 abstract public class Part {
   public final Part _par;       // Parent in the parent chain; null ends.  Last is FilePart.
@@ -21,11 +26,17 @@ abstract public class Part {
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
 
-  public final ArrayList<Contrib> _contribs;
+  // A list of "extra" features about this Part.
+  // Zero except for Class and Prop parts.
+  final int _cslen;
 
   // Map from kid name to kid.  
   public HashMap<String,Part> _name2kid;
 
+  // TVar type
+  private TVar _tvar;
+
+  
   Part( Part par, int nFlags, IdCon id, String name, CondCon cond, CPool X ) {
     _par = par;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
@@ -36,15 +47,9 @@ abstract public class Part {
     _nFlags = nFlags;
     _cond = cond;
 
-    // Only null for self FilePart.  Other parts need to parse bits.
-    if( X!=null ) {
-      int c = X.u31();
-      _contribs = new ArrayList<>();
-      for( int i=0; i<c; i++ )
-        _contribs.add( new Contrib( X ) );
-    } else {
-      _contribs = null;
-    }
+    // X is self FilePart.  Other parts need to get the length.
+    // Only Class and Prop have non-zero length.
+    _cslen = X==null ? 0 : X.u31();
   }
 
   @Override public String toString() { return str(new SB()).toString(); }
@@ -98,10 +103,7 @@ abstract public class Part {
     p = link_as(repo);          // In-place replacement (Required ModPart becomes Primary ModPart)
     XEC.ModRepo.VISIT.put(this,p);     // Stop cycles
     if( p!=this ) return p.link(repo); // Now link the replacement
-    // Link all part innards
-    if( _contribs != null )
-      for( Contrib c : _contribs )
-        c.link(repo);
+    
     // Link specific part innards
     link_innards(repo);                 // Link internal Const
   
@@ -111,6 +113,10 @@ abstract public class Part {
       Part kid = _name2kid.get(name).link(repo); 
       _name2kid.put(name,kid);  // Replace with upgrade and link
     }
+
+    // Compute a type variable, if it has not happened already
+    set_tvar();
+
     return this;
   }
 
@@ -129,86 +135,50 @@ abstract public class Part {
     return kid;
   }
 
-  // ----- inner class: Component Contribution ---------------------------------------------------
-  /**
-   * Represents one contribution to the definition of a class. A class (with the term used in the
-   * abstract sense, meaning any class, interface, mixin, const, enum, or service) can be composed
-   * of any number of contributing components.
-   */
-  public static class Contrib {
-    final Composition _comp;
-    private final TCon _tContrib;
-    private final PropCon _prop;
-    private final SingleCon _inject;
-    private final Annot _annot;
-    private final HashMap<String, TCon> _parms;
-    // Post link values
-    private Part _cPart;
-    private final HashMap<String, ClassPart> _clzs;
-    
-    protected Contrib( CPool X ) {
-      _comp = Composition.valueOf(X.u8());
-      _tContrib = (TCon)X.xget();
-      PropCon prop = null;
-      Annot annot = null;
-      SingleCon inject = null;
-      HashMap<String, TCon> parms = null;
-    
-      assert _tContrib!=null;
-      switch( _comp ) {
-      case Extends:
-      case Implements:
-      case Into:
-      case RebasesOnto:
-        break;
-      case Annotation:
-        annot = (Annot)X.xget();
-        break;
-      case Delegates:
-        prop = (PropCon)X.xget();
-        break;
-        
-      case Incorporates:
-        int len = X.u31();
-        if( len == 0 ) break;
-        parms = new HashMap<>();
-        for( int i = 0; i < len; i++ ) {
-          String name = ((StringCon)X.xget())._str;
-          int ix = X.u31();
-          parms.put(name, ix == 0 ? null : (TCon)X.get(ix));
-        }
-        break;
 
-      case Import:
-        inject = (SingleCon)X.xget();
-        if( inject==null ) break;
-        throw XEC.TODO();
-        
-      default: throw XEC.TODO();
-      }
-      _annot = annot;
-      _prop = prop;
-      _inject = inject;
-      _parms = parms;
-      _clzs = parms==null ? null : new HashMap<>();
-    }
-    // Link all the internal parts
-    Part link( XEC.ModRepo repo ) {
-      if( _cPart!=null ) return _cPart;
-      _cPart = _tContrib.link(repo);
-      
-      if( _prop  !=null ) _prop  .link(repo);
-      if( _inject!=null ) _inject.link(repo);
-      if( _annot !=null ) _annot .link(repo);
-      if( _parms !=null )
-        for( String name : _parms.keySet() ) {
-          TCon tcon = _parms.get(name);
-          _clzs.put(name, tcon==null ? null : (ClassPart)tcon.link(repo));
-        }
-      return _cPart;
-    }
-    Part part() { assert _cPart!=null; return _cPart; }
+  // ----- Types -----------------------------------------------------------
+  // This problem in many ways appear to mirror AA types, including resolvable
+  // fields.  It's not the full type inference, but there's definitely a "isa"
+  // question being asked during linking - which corresponds to AA's "which is
+  // the (exactly one) match for this type, from this set of choices".
+  //
+  // Things in the type grammer
+  // - Classes.  Names matter.  Can be subtyped.  Uses TVStruct.
+  // - Interfaces.  Name is ignored, and structural matching only; again TVStruct.
+  // - Methods, using TVLambda.
+  // - Generified parts: aka HM type variables.
+  // - I'll probably get a lot of unspecified type vars, aka Leafs.
+  // - - So using the UF algo like normal HM to roll up.
+  //
+  //   Short description from Appender.x XTC file:
+
+  //   interface Iterator<Element> {
+  //     next: { -> Element }; // Abstract
+  //     take: { -> Element }; // Concrete
+  //     ... more concrete fields...
+  //   }
+  //   
+  //   interface Iterable<Element> {
+  //     size:Int;
+  //     iterator: { -> Iterator<Element> }; // Abstract
+  //     toArray: { Mut -> Element[] } // Concrete, returns Element array
+  //   }
+  //
+  //   
+  //   interface Appender<Element> {
+  //     add:{ Element -> Appender };
+  //     addAll:{ Iterable<Element> -> Appender };
+  //     addAll:{ Iterator<Element> -> Appender };
+  //     ensureCapacity:{ Int -> Appender };
+  //   }
+  public final TVar set_tvar() {
+    return _tvar==null ? (_tvar=_set_tvar()) : _tvar;
   }
+  public TVar _set_tvar() {
+    assert _tvar==null;
+    return new TVLeaf();
+  }
+
   
   /**
    * The Format enumeration defines the multiple different binary formats used
