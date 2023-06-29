@@ -15,6 +15,7 @@ public class TDefPart extends Part {
   
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) {
-    _part = _type.link(repo);
+    //_part = _type.link(repo);
+    throw XEC.TODO(); // Set _tvar
   }  
 }

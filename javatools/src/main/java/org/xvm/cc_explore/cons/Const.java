@@ -14,9 +14,6 @@ public abstract class Const {
   // Resolve any internal references from the serialized form.
   public void resolve( CPool X ){};
 
-  // Convert e.g. ClassCon/ModCon/PackCon to their Part equivalents.
-  public Part link(XEC.ModRepo repo) { return null; }
-
   // After linking, the part call does not need the repo.
   Part part() { throw XEC.TODO();  }
 

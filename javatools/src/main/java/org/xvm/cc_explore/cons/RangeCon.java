@@ -28,9 +28,9 @@ public class RangeCon extends Const {
     _lo = X.xget();
     _hi = X.xget();
   }
-  @Override public Part link(XEC.ModRepo repo) {
-    if( _plo != null ) return _plo;
-    _hi.link(repo);
-    return (_plo = _lo.link(repo));
-  }
+  //@Override public Part link(XEC.ModRepo repo) {
+  //  if( _plo != null ) return _plo;
+  //  _hi.link(repo);
+  //  return (_plo = _lo.link(repo));
+  //}
 }

@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.tvar.TVar;
 
 /**
   Exploring XEC Constants
@@ -8,5 +9,13 @@ import org.xvm.cc_explore.XEC;
  */
 public abstract class IdCon extends Const {
   abstract public String name();
-  public IdCon link_as(XEC.ModRepo repo) { throw XEC.TODO(); }
+
+  // Convert e.g. ClassCon/ModCon/PackCon to their Part equivalents.
+  public Part link(XEC.ModRepo repo) { return null; }
+  
+  TVar _tvar;
+  public final TVar tvar() {
+    assert _tvar!=null;
+    return _tvar.unified() ? (_tvar=_tvar.find()) : _tvar;
+  }
 }

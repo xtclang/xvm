@@ -7,6 +7,7 @@ import org.xvm.cc_explore.util.SB;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 
 /**
    DAG structure containment of the existing components/structures.
@@ -26,16 +27,12 @@ abstract public class Part {
   public final int _nFlags;     // Some bits
   public final CondCon _cond;   // Conditional component
 
-  // A list of "extra" features about this Part.
+  // Contributions.  A list of "extra" features about this Part.
   // Zero except for Class and Prop parts.
   final int _cslen;
 
   // Map from kid name to kid.  
-  public HashMap<String,Part> _name2kid;
-
-  // TVar type
-  private TVar _tvar;
-
+  IdentityHashMap<String,Part> _name2kid;
   
   Part( Part par, int nFlags, IdCon id, String name, CondCon cond, CPool X ) {
     _par = par;
@@ -80,7 +77,7 @@ abstract public class Part {
       // if the child is a method, it can only be contained by a MultiMethodPart
       assert !(kid instanceof MethodPart) || (this instanceof MMethodPart);
       // Insert name->kid mapping
-      if( _name2kid==null ) _name2kid = new HashMap<>();
+      if( _name2kid==null ) _name2kid = new IdentityHashMap<>();
       putkid(kid._name,kid);
       // Here we could be lazy on the child's children, but instead are always eager.
       int len = X.u31();        // Length of serialized nested children
@@ -106,16 +103,19 @@ abstract public class Part {
     
     // Link specific part innards
     link_innards(repo);                 // Link internal Const
-  
+    assert _tvar!=null;
+
     // For all child parts
     if( _name2kid==null ) return this;
     for( String name : _name2kid.keySet() ) {
-      Part kid = _name2kid.get(name).link(repo); 
-      _name2kid.put(name,kid);  // Replace with upgrade and link
+      Part kid0 = _name2kid.get(name);
+      if( kid0 instanceof PropPart pp ) {
+        // Do nothing?
+      } else {
+        Part kid = kid0.link(repo); 
+        _name2kid.put(name,kid);  // Replace with upgrade and link
+      }
     }
-
-    // Compute a type variable, if it has not happened already
-    set_tvar();
 
     return this;
   }
@@ -124,15 +124,13 @@ abstract public class Part {
   Part link_as( XEC.ModRepo repo ) { return this; }
 
   // Tok, kid-specific internal linking.
-  void link_innards( XEC.ModRepo repo ) { }
-  
-  public Part child(String s, XEC.ModRepo repo) {
-    if( _name2kid==null ) return null;    
-    Part kid = _name2kid.get(s);
-    if( kid == null ) return null;
-    assert getClass()!=MMethodPart.class;
-    // MethodPart lookups are not unique; have to check the sibling chain
-    return kid;
+  abstract void link_innards( XEC.ModRepo repo );
+
+  // Look up a child, post linking.  Does not need a repo
+  public Part child(String s) { return child(s,null); }
+  // Look up a child, during linking.  The overrides might need the repo.
+  public Part child(String s, XEC.ModRepo ignore ) {
+    return _name2kid==null ? null : _name2kid.get(s);
   }
 
 
@@ -171,15 +169,64 @@ abstract public class Part {
   //     addAll:{ Iterator<Element> -> Appender };
   //     ensureCapacity:{ Int -> Appender };
   //   }
-  public final TVar set_tvar() {
-    return _tvar==null ? (_tvar=_set_tvar()) : _tvar;
+
+  // A set of type *parents*.  Normal Parts form a tree with a single parent.
+  // Type parents form a DAG, since many "implements" can be used.
+  private Part[] _tpars;
+  private boolean _env_lock;    // Used for asserts
+  
+  // Type environment.  Locally available type names, not including self.
+  private IdentityHashMap<String,TVar> _env;
+  // Self type
+  private TVar _tvar;
+
+
+  // Access the self-type
+  public final TVar tvar() {
+    return _tvar.unified() ? (_tvar = _tvar.find()) : _tvar;
   }
-  public TVar _set_tvar() {
-    assert _tvar==null;
-    return new TVLeaf();
-  }
+  // Set the self-type exactly once
+  final void set_tvar(TVar tv) { assert _tvar==null; _tvar=tv; }
+  public final boolean has_tvar() { return _tvar!=null; }
 
   
+  
+  void env_extend(Part parent) {
+    assert !_env_lock;          // No GET before done extending.
+    if( _tpars==null ) {
+      _tpars = new Part[]{parent};
+      return;
+    }
+    // Check for dups vs prior path
+    throw XEC.TODO();
+  }
+  void set_env_lock() { _env_lock=true; }
+  
+  // Extend the local type namespace
+  void env_add(String s, TVar tv ) {
+    assert _env_get(s)==null;
+    if( _env==null ) _env = new IdentityHashMap<>();
+    _env.put(s,tv);
+  }
+  
+  TVar env_get(String s) {
+    assert _env_lock;           // GET: so better be done extending
+    return _env_get(s);
+  }
+  TVar _env_get(String s) {     // GET no assert, used itself in asserts
+    assert s==s.intern();
+    if( _env!=null ) {
+      TVar tv = _env.get(s);
+      if( tv!=null ) return tv;
+    }
+    if( _tpars==null ) return null;
+    if( _tpars.length==1 )
+      return _tpars[0]._env_get(s);
+    // Need a visit bit
+    throw XEC.TODO();
+  }
+  
+  // ----- Enums -----------------------------------------------------------
   /**
    * The Format enumeration defines the multiple different binary formats used
    * to store component information.  Those beginning with "RSVD_" are
