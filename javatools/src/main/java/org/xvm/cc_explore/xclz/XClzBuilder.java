@@ -33,7 +33,7 @@ public class XClzBuilder {
     _sb.p("public class ").p(java_class_name).p(" {").nl().ii();
     
     // Look for a module init.  This will become the Java <clinit>
-    MMethodPart construct = (MMethodPart)_mod._name2kid.get("construct");
+    MMethodPart construct = (MMethodPart)_mod.child("construct",null);
     if( construct != null ) {
       _sb.nl();
       _sb.ip("static {").ii();
@@ -42,24 +42,25 @@ public class XClzBuilder {
       throw XEC.TODO();      
     }
 
-    for( Part part : _mod._name2kid.values() ) {
-      if( part instanceof MMethodPart mm ) {
-        if( !mm._name.equals("construct") ) {// Already handled module constructor
-          throw XEC.TODO();
-        }
-      } else if( part instanceof PackagePart pp ) {
-        // External reference is ok
-      } else {
-        throw XEC.TODO();
-      }
-    }
-    
-    _sb.di().p("}").nl();
+    //for( Part part : _mod._name2kid.values() ) {
+    throw XEC.TODO();
+    //  if( part instanceof MMethodPart mm ) {
+    //    if( !mm._name.equals("construct") ) {// Already handled module constructor
+    //      throw XEC.TODO();
+    //    }
+    //  } else if( part instanceof PackagePart pp ) {
+    //    // External reference is ok
+    //  } else {
+    //    throw XEC.TODO();
+    //  }
+    //}
+    //
+    //_sb.di().p("}").nl();
   }
   
   // Generate a Java string code this MM
   private String jcode( MMethodPart mm ) {
-    MethodPart meth = (MethodPart)mm._name2kid.get(mm._name);
+    MethodPart meth = (MethodPart)mm.child(mm._name,null);
     assert meth._sibling==null;
 
 

@@ -2,6 +2,8 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.ModCon;
 import org.xvm.cc_explore.cons.Const;
+import org.xvm.cc_explore.tvar.TVar;
+import org.xvm.cc_explore.tvar.TVLeaf;
 
 /**
      DAG structure containment of components
@@ -71,7 +73,13 @@ public class FilePart extends Part {
 
     _mod = (ModPart)child(mod.name(),null);
   }
-  
+
+  @Override void link_innards( XEC.ModRepo repo ) {
+    // A junk TVar just so every Part has a TVar.  Not used for anything except
+    // passing the assert.
+    set_tvar(new TVLeaf());
+  }
+
   // Can we handle this version?
   static boolean isFileVersionSupported(int major, int minor) {
     return major==VERSION_MAJOR_CUR && minor==VERSION_MINOR_CUR;

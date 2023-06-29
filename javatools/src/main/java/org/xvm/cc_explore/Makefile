@@ -60,7 +60,7 @@ test_classes := $(patsubst $(TST)/%java,$(CLZDIR)/test/%class,$(test_javas))
 classes = $(main_classes) $(test_classes)
 
 
-default_targets := test
+default:	classes tags
 
 # Just the classes, no jarring step
 classes: $(classes)
@@ -85,10 +85,12 @@ JARBITS += -C $(CLZDIR)/main .    # The java class files
 
 JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
 
-test:	$(classes) $(test_classes) tags
+test:	$(classes) $(test_classes)
 	$(JVM) --enable-preview org.xvm.cc_explore.XEC -L ../xdk/build/xdk/lib -L ../xdk/build/xdk/javatools/ ../doc/examples/FizzBuzz.xtc 123
 
-tags:	$(main_javas) $(test_javas)
+tags:	../TAGS
+
+../TAGS:	$(main_javas) $(test_javas)
 	@rm -f ../TAGS
 	@$(CTAGS) -o ../TAGS -e --recurse=yes --extra=+q --fields=+fksaiS $(SRC) $(TST)
 

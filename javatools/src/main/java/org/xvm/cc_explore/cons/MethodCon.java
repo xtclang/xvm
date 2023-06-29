@@ -25,10 +25,10 @@ public class MethodCon extends PartCon {
     // Link the parent, do any replacement lookups
     MMethodPart mm = (MMethodPart)_par.link(repo).link(repo);
     // Find the child in the parent
-    MethodPart meth = (MethodPart)mm._name2kid.get(name());
+    MethodPart meth = (MethodPart)mm.child(name(),repo);
     // Confirm the signature matches
     //throw XEC.TODO();
-    // Note that if there are no siblings, we do not check the method id - and
+    // Note that if there are no siblings, we do not check the signature - and
     // indeed this can mismatch
     if( meth._sibling!=null ) // Search sibling list
       //while( meth._id!=this ) meth = meth._sibling;

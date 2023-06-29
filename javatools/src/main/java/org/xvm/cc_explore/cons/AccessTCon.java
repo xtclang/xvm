@@ -2,6 +2,7 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
+import org.xvm.cc_explore.tvar.TVar;
 
 /**
   Exploring XEC Constants
@@ -16,7 +17,7 @@ public class AccessTCon extends TCon {
   }
   @Override public SB str(SB sb) { return _con.str(sb.p(_access.toString()).p(" -> ")); }
   @Override public void resolve( CPool X ) { _con = (TCon)X.xget(); }
-  public Part link(XEC.ModRepo repo) {
-    return _type==null ? (_type=_con.link(repo)) : _type;
-  }
+  //public Part link(XEC.ModRepo repo) {
+  //  return _type==null ? (_type=_con.link(repo)) : _type;
+  //}
 }
