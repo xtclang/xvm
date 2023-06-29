@@ -129,4 +129,12 @@ public class XEC {
   }
 
   public static RuntimeException TODO() { return new RuntimeException("TODO"); }
+
+  public static VerifyException verify_fail(String format, String... ss) {
+    return new VerifyException( String.format(format,(Object[])ss) );
+  }
+  public static class VerifyException extends RuntimeException {
+    VerifyException(String msg) { super(msg); }
+  }
+
 }
