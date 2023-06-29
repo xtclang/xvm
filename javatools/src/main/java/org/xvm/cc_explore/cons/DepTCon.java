@@ -15,7 +15,7 @@ public abstract class DepTCon extends TCon {
     return _par==null ? sb : _par.str(sb.p(" -> "));
   }
   @Override public void resolve( CPool X ) { _par = (TCon)X.xget(); }
-  @Override public Part link(XEC.ModRepo repo) {
-    return _clz==null ? (_clz = _par.link(repo)) : _clz;
-  }
+  //@Override public Part link(XEC.ModRepo repo) {
+  //  return _clz==null ? (_clz = _par.link(repo)) : _clz;
+  //}
 }

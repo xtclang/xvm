@@ -1,6 +1,7 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.tvar.TVar;
 
 public class Parameter {
   // Parameter type
@@ -32,11 +33,15 @@ public class Parameter {
   }
 
   // Specific internal linking
-  public Part link( XEC.ModRepo repo ) {
-    if( _part!=null ) return _part;
+  public void link( XEC.ModRepo repo ) {
+    if( _con.has_tvar() ) return;
+    _con.setype(repo);
+    
     if( _annots!=null ) throw XEC.TODO();
-    if( _def!=null ) _def.link(repo);
-    return (_part = _con.link(repo));
+    if( _def!=null )
+      //_def.link(repo);
+      throw XEC.TODO();         // Constant value
   }
 
+  public TVar tvar() { return _con.tvar(); }
 }
