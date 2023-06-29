@@ -2,6 +2,7 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
+import org.xvm.cc_explore.tvar.TVar;
 
 /**
   Exploring XEC Constants
@@ -20,9 +21,9 @@ public class VirtDepTCon extends DepTCon {
     super.resolve(X);
     _name =((StringCon)X.xget())._str;
   }
-  @Override public ClassPart link(XEC.ModRepo repo) {
-    if( _part!=null ) return _part;
-    ClassPart clz = (ClassPart)super.link(repo);
-    return (_part = (ClassPart)clz._name2kid.get(_name));
-  }
+  //@Override public ClassPart link(XEC.ModRepo repo) {
+  //  if( _part!=null ) return _part;
+  //  ClassPart clz = (ClassPart)super.link(repo);
+  //  return (_part = (ClassPart)clz._name2kid.get(_name));
+  //}
 }

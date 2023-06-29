@@ -1,6 +1,8 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.tvar.TVar;
+import org.xvm.cc_explore.util.SB;
 
 import java.util.HashMap;
 
@@ -11,13 +13,13 @@ import java.util.HashMap;
  */
 public class Contrib {
   final Part.Composition _comp;
-  private final TCon _tContrib;
+  final TCon _tContrib;
+  private TVar _tvar;
   private final PropCon _prop;
   private final SingleCon _inject;
   private final Annot _annot;
   private final HashMap<String, TCon> _parms;
   // Post link values
-  private Part _cPart;
   private final HashMap<String, ClassPart> _clzs;
   
   protected Contrib( CPool X ) {
@@ -66,24 +68,32 @@ public class Contrib {
     _parms = parms;
     _clzs = parms==null ? null : new HashMap<>();
   }
+  
   // Link all the internal parts
-  Part link( XEC.ModRepo repo ) {
-    if( _cPart!=null ) return _cPart;
-    _cPart = _tContrib.link(repo);
+  void link( XEC.ModRepo repo ) {
+    if( _tvar!=null ) return;
+    _tvar = _tContrib.setype(repo);   // Get the type
     
     if( _prop  !=null ) _prop  .link(repo);
-    if( _inject!=null ) _inject.link(repo);
+    if( _inject!=null ) throw XEC.TODO(); // _inject.link(repo);
     if( _annot !=null ) _annot .link(repo);
     if( _parms !=null )
       for( String name : _parms.keySet() ) {
         TCon tcon = _parms.get(name);
-        _clzs.put(name, tcon==null ? null : (ClassPart)tcon.link(repo));
+        //_clzs.put(name, tcon==null ? null : (ClassPart)tcon.link(repo));
+        throw XEC.TODO();       // Do type things not link things
       }
-    return _cPart;
   }
-  Part part() { assert _cPart!=null; return _cPart; }
 
-  static final Contrib[] xcontribs( int len, CPool X ) {
+  public TVar tvar() { return _tvar; }
+  
+  @Override public String toString() { return str(new SB()).toString(); }
+  public SB str(SB sb) {
+    sb.p(_comp.toString());
+    return _tContrib ==null ? sb : _tContrib.str(sb.p(" -> "));
+  }
+  
+  static Contrib[] xcontribs( int len, CPool X ) {
     if( len==0 ) return null;
     Contrib[] cs = new Contrib[len];
     for( int i=0; i<len; i++ )
@@ -92,4 +102,3 @@ public class Contrib {
   }
 
 }
-

@@ -326,46 +326,46 @@ abstract public class TVar implements Cloneable {
 
   // Look for dups, in a tree or even a forest (which Syntax.p() does).  Does
   // not rollup edges, so that debug printing does not have any side effects.
-  public VBitSet get_dups(boolean debug) { return _get_dups(new VBitSet(),new VBitSet(),debug,false); }
-  public VBitSet _get_dups(VBitSet visit, VBitSet dups, boolean debug, boolean prims) {
+  public VBitSet get_dups(boolean debug) { return _get_dups(new VBitSet(),new VBitSet(),debug); }
+  public VBitSet _get_dups(VBitSet visit, VBitSet dups, boolean debug) {
     if( visit.tset(_uid) )
       { dups.set(debug_find()._uid); return dups; }
     // Dup count unified and not the args
     return _uf==null
-      ? _get_dups_impl(visit,dups,debug,prims) // Subclass specific dup counting
-      : _uf._get_dups (visit,dups,debug,prims);
+      ? _get_dups_impl(visit,dups,debug) // Subclass specific dup counting
+      : _uf._get_dups (visit,dups,debug);
   }
-  public VBitSet _get_dups_impl(VBitSet visit, VBitSet dups, boolean debug, boolean prims) {
+  public VBitSet _get_dups_impl(VBitSet visit, VBitSet dups, boolean debug) {
     if( _args != null )
       for( TVar tv3 : _args )  // Edge lookup does NOT 'find()'
         if( tv3!=null )
-          tv3._get_dups(visit,dups,debug,prims);
+          tv3._get_dups(visit,dups,debug);
     return dups;
   }
 
-  public final String p() { VCNT=0; VNAMES.clear(); return str(new SB(), null, null, false, false ).toString(); }
+  public final String p() { VCNT=0; VNAMES.clear(); return str(new SB(), null, null, false ).toString(); }
   private static int VCNT;
   private static final NonBlockingHashMapLong<String> VNAMES = new NonBlockingHashMapLong<>();
 
-  @Override public final String toString() { return str(new SB(), null, null, true, false ).toString(); }
+  @Override public final String toString() { return str(new SB(), null, null, true ).toString(); }
 
-  public final SB str(SB sb, VBitSet visit, VBitSet dups, boolean debug, boolean prims) {
+  public final SB str(SB sb, VBitSet visit, VBitSet dups, boolean debug) {
     if( visit==null ) {
       assert dups==null;
-      _get_dups(visit=new VBitSet(),dups=new VBitSet(),debug,prims);
+      _get_dups(visit=new VBitSet(),dups=new VBitSet(),debug);
       visit.clear();
     }
-    return _str(sb,visit,dups,debug,prims);
+    return _str(sb,visit,dups,debug);
   }
 
   // Fancy print for Debuggers - includes explicit U-F re-direction.
   // Does NOT roll-up U-F, has no side-effects.
-  SB _str(SB sb, VBitSet visit, VBitSet dups, boolean debug, boolean prims) {
+  SB _str(SB sb, VBitSet visit, VBitSet dups, boolean debug) {
     boolean dup = dups.get(_uid);
-    if( !debug && unified() ) return find()._str(sb,visit,dups,debug,prims);
+    if( !debug && unified() ) return find()._str(sb,visit,dups,debug);
     if( unified() || this instanceof TVLeaf ) {
       vname(sb,debug,true);
-      return unified() ? _uf._str(sb.p(">>"), visit, dups, debug, prims) : sb;
+      return unified() ? _uf._str(sb.p(">>"), visit, dups, debug) : sb;
     }
     // Dup printing for all
     if( dup && debug ) {
@@ -373,15 +373,15 @@ abstract public class TVar implements Cloneable {
       if( visit.tset(_uid) ) return sb; // V123 and nothing else
       sb.p(':');                        // V123:followed_by_type_descr
     }
-    return _str_impl(sb,visit,dups,debug,prims);
+    return _str_impl(sb,visit,dups,debug);
   }
 
   // Generic structural TVar
-  SB _str_impl(SB sb, VBitSet visit, VBitSet dups, boolean debug, boolean prims) {
+  SB _str_impl(SB sb, VBitSet visit, VBitSet dups, boolean debug) {
     sb.p(getClass().getSimpleName()).p("( ");
     if( _args!=null )
       for( TVar tv3 : _args )
-        tv3._str(sb,visit,dups,debug,prims).p(" ");
+        tv3._str(sb,visit,dups,debug).p(" ");
     return sb.unchar().p(")");
   }
 

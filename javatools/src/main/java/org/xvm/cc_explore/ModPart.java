@@ -69,10 +69,10 @@ public class ModPart extends ClassPart {
 
   // Find a method by name, or return null
   MethodPart method(String s) {
-    Part p = _name2kid.get(s);
+    Part p = child(s);
     if( p instanceof MMethodPart mm && s.equals(mm._name) ) {
       if( mm._name2kid.size()!=1 ) throw XEC.TODO(); // Disambiguate?
-      return (MethodPart)mm._name2kid.get(s);
+      return (MethodPart)mm.child(s);
     }
     return null;
   }

@@ -23,11 +23,11 @@ public class AryCon extends Const {
     _cons = X.consts();
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
-  @Override public ClassPart link(XEC.ModRepo repo) {
-    if( _clz!=null ) return _clz;
-    if( _cons!=null )
-      for( Const c : _cons )
-        c.link(repo);
-    return (_clz = (ClassPart)_t.link(repo));
-  }
+  //@Override public ClassPart link(XEC.ModRepo repo) {
+  //  if( _clz!=null ) return _clz;
+  //  if( _cons!=null )
+  //    for( Const c : _cons )
+  //      c.link(repo);
+  //  return (_clz = (ClassPart)_t.link(repo));
+  //}
 }

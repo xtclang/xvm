@@ -1,6 +1,7 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.tvar.TVar;
 
 /**
    Property part
@@ -8,7 +9,6 @@ import org.xvm.cc_explore.cons.*;
 public class PropPart extends Part {
   public final Const.Access _access;
   public TCon _con;
-  public Part _type;
   public Const _init;
   
   // A list of "extra" features about Properties
@@ -27,14 +27,14 @@ public class PropPart extends Part {
   }
 
   @Override void link_innards( XEC.ModRepo repo ) {
-    if( _type!=null ) return;
-    
     // Link all part innards
     if( _contribs != null )
       for( Contrib c : _contribs )
         c.link(repo);
-
-    _type = _con.link(repo);
-    if( _init!=null ) _init.link(repo);
+    if( _init!=null ) throw XEC.TODO(); // _init.link(repo);    
+    set_tvar(_con.setype(repo));
+    
+    throw XEC.TODO();
+    //set_tvar(_con.tvar());
   }
 }

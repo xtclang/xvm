@@ -16,7 +16,7 @@ public class MatchAnyCon extends Const {
   }  
   @Override public SB str(SB sb) { return _con.str(sb.p(_f.toString()).p(" -> ")); }
   @Override public void resolve( CPool X ) { _con = X.xget(); }
-  @Override public Part link(XEC.ModRepo repo) {
-    return _type==null ? (_type = _con.link(repo)) : _type;
-  }
+  //@Override public Part link(XEC.ModRepo repo) {
+  //  return _type==null ? (_type = _con.link(repo)) : _type;
+  //}
 }

@@ -17,17 +17,18 @@ public class MMethodCon extends NamedCon {
       // i.e., Looking at List<Person> and now looking up against <Person>
       if( prop._con instanceof ParamTCon parm ) {
         //assert parm._parms.length==1;
-        p = (MMethodPart)parm._parms[0].link(repo).child(name(),repo);
+        //p = (MMethodPart)parm._parms[0].link(repo).child(name(),repo);
+        throw XEC.TODO();
       } else if( prop._con instanceof TermTCon ttcon ) {
         throw XEC.TODO();
       } else {
         throw XEC.TODO();
       }
     } else if( _par._part instanceof MethodPart meth ) {
-      p = (MMethodPart)meth._name2kid.get(_name);
+      p = (MMethodPart)meth.child(_name);
     } else if( _par._part instanceof MMethodPart mm ) {
-      MethodPart meth = (MethodPart)mm._name2kid.get(mm._name);
-      p = (MMethodPart)meth._name2kid.get(_name);
+      MethodPart meth = (MethodPart)mm.child(mm._name);
+      p = (MMethodPart)meth.child(_name);
     }
     // If parent lookup fails, try again in Object
     if( p==null )

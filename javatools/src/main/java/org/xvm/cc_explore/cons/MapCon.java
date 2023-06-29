@@ -30,14 +30,14 @@ public class MapCon extends Const {
       _vals[i] = X.xget();
     }
   }
-  @Override public Part link(XEC.ModRepo repo) {
-    if( _parts!=null ) return null; // Already linked
-    _parts = new Part[_vals.length];
-    if( _t!=null ) _part = _t.link(repo);
-    for( int i=0; i<_vals.length; i++ ) {
-      _keys[i].link(repo);
-      _parts[i] = _vals[i].link(repo);
-    }
-    return null;
-  }
+  //@Override public Part link(XEC.ModRepo repo) {
+  //  if( _parts!=null ) return null; // Already linked
+  //  _parts = new Part[_vals.length];
+  //  if( _t!=null ) _part = _t.link(repo);
+  //  for( int i=0; i<_vals.length; i++ ) {
+  //    _keys[i].link(repo);
+  //    _parts[i] = _vals[i].link(repo);
+  //  }
+  //  return null;
+  //}
 }
