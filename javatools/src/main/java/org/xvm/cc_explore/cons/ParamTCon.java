@@ -10,7 +10,7 @@ import org.xvm.cc_explore.tvar.TVStruct;
  */
 public class ParamTCon extends TCon {
   TCon _con;
-  TCon[] _parms;
+  public TCon[] _parms;
   TVStruct _clz;
   public final TVar[] _types;
   
@@ -30,34 +30,11 @@ public class ParamTCon extends TCon {
   }
   
   @Override TVar _setype( XEC.ModRepo repo ) {
-    TVar clz_type = _con.setype(repo);
-    if( _parms!=null ) {
+    _clz = (TVStruct)_con.setype(repo);
+    if( _parms!=null )
       for( int i=0; i<_parms.length; i++ )
-        _types[i] = _parms[i].setype(repo);
-    }
-    throw XEC.TODO();
-    //
-  //  // Make a fresh copy, so I can parameterize it
-  //  TVStruct clz = (TVStruct) (_tvar = _clz.tvar().fresh());
-  //  for( int i=0; i<_types.length; i++ ) {
-  //    if( _parms[i] instanceof TSeqTCon ) {
-  //      assert _clz._name.equals("Type");
-  //      // A TSeqTCon marks a self-recursive type
-  //      TVar tv = clz.arg("DataType");
-  //      // Make tv/self a TVStruct
-  //      TVStruct self = tv instanceof TVStruct self0 ? self0 : new TVStruct(true);
-  //      if( !(tv instanceof TVStruct) ) tv.unify(self);
-  //      // Make self, self-recursive
-  //      self.add_fld("DataType",self);
-  //    } else {
-  //      // The generified type name is used as a field name.  Appender<Element>
-  //      // has " Appender" (mangled class name) as first slot, and Element as
-  //      // another field name.      
-  //      clz.add_fld(_types[i]._name,_types[i].tvar());
-  //    }
-  //  }
-  //
-  //  return _clz;
+       _types[i] = _parms[i].setype(repo);
+    return _clz;
   }
 
 }
