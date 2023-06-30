@@ -21,7 +21,7 @@ public class ModPart extends ClassPart {
   private XClzBuilder _xbuild; // Cached Java class hierarchy version of this module
   
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, CPool X ) {
-    super(par,nFlags,con,cond,X);
+    super(par,nFlags,con,cond,X,Part.Format.MODULE);
 
     _t = ModuleType.valueOf(X.u8());
     VerCon version = null;
