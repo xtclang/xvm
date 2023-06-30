@@ -25,7 +25,7 @@ public class TVStruct extends TVar {
   public static final String CLZ = " super"; // Bogus super-class field
 
   // The many names this thing is called
-  final HashSet<String> _names;
+  public HashSet<String> _names;
   
   // True if more fields can be added.  Generally false for a known Struct, and
   // true for a Field reference to an unknown struct.
@@ -279,6 +279,7 @@ public class TVStruct extends TVar {
   @Override public TVStruct copy() {
     TVStruct st = (TVStruct)super.copy();
     st._flds = _flds.clone();
+    st._names = (HashSet<String>)_names.clone();
     return st;
   }
 

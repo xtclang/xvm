@@ -93,15 +93,11 @@ public class ClassPart extends Part {
           throw XEC.TODO();
         }
         case Implements, Delegates -> {
-          TermTCon tc;
-          if( c._tContrib instanceof TermTCon tc2 ) tc = tc2;
-          else if( c._tContrib instanceof ImmutTCon itc )
-            throw XEC.TODO(); //tc = (TermTCon)itc.icon(); // Wrap in immut
-          else throw XEC.TODO(); // Some other thing here?
+          TermTCon ttc = ifaces0(c._tContrib); // The iface, perhaps after a TVImmut
+          assert ttc.clz()._f==Part.Format.INTERFACE;
+          assert ((TVStruct)ttc.tvar()).is_open();
           // Unify interface into class
-          assert tc.clz()._f==Part.Format.INTERFACE;
-          assert ((TVStruct)tc.tvar()).is_open();
-          tc.tvar().fresh_unify(tvar(),null);
+          c.tvar().fresh_unify(tvar(),null);
         }
 
         // This is a "mixin", marker interface.  It becomes part of the parent-
@@ -144,12 +140,19 @@ public class ClassPart extends Part {
     // Classes are closed: all fields are listed.
     // Interfaces are open: at least these fields, but you are allowed more.
     switch( _f ) {
-    case CLASS, CONST, MODULE, PACKAGE: stvar().close(); break;
+    case CLASS, CONST, MODULE, PACKAGE, ENUM, ENUMVALUE: stvar().close(); break;
     case INTERFACE: break;
     default: throw XEC.TODO();
     };
 
   }
+
+  private static TermTCon ifaces0( TCon tc ) {
+    if( tc instanceof TermTCon ttc ) return ttc;
+    if( tc instanceof ImmutTCon itc ) return (TermTCon)itc.icon();
+    throw XEC.TODO();
+  }  
+
   
   @Override public Part child(String s, XEC.ModRepo repo) {
     Part kid = super.child(s,repo);

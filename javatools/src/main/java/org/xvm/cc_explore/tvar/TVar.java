@@ -154,7 +154,7 @@ abstract public class TVar implements Cloneable {
   static private final IdentityHashMap<TVar,TVar> VARS = new IdentityHashMap<>();
   static private TVar[] NONGEN;
 
-  public String fresh_unify( TVar that, TVar[] nongen ) {
+  public final String fresh_unify( TVar that, TVar[] nongen ) {
     if( this==that ) return null;
     assert VARS.isEmpty() && DUPS.isEmpty() && ERRS.len()==0 && NONGEN==null;
     NONGEN = nongen;
@@ -165,7 +165,7 @@ abstract public class TVar implements Cloneable {
     return msg;
   }
 
-  int _fresh_unify( TVar that ) {
+  final int _fresh_unify( TVar that ) {
     assert !unified() && !that.unified();
 
     // Check for cycles
@@ -181,14 +181,17 @@ abstract public class TVar implements Cloneable {
     if( nongen_in() ) return vput(that,_unify(that));
 
     // LHS leaf, RHS is unchanged but goes in the VARS
-    if( this instanceof TVLeaf lf ) return vput(that,0);
+    if( this instanceof TVLeaf ) return vput(that,0);
     // RHS is a tvar; union with a deep copy of LHS
-    if( that instanceof TVLeaf    ) return vput(that,that.union(_fresh()));
+    if( that instanceof TVLeaf ) return vput(that,that.union(_fresh()));
 
     // Two unrelated classes usually make an error
     if( getClass() != that.getClass() ) {
-      ERRS.p("Cannot unify "+this+" and "+that).nl();
-      return 1;
+      // Specifically allow an immutable struct
+      if( !(this instanceof TVImmut && that instanceof TVStruct) ) {
+        ERRS.p("Cannot unify "+this+" and "+that).nl();
+        return 1;
+      }
     }
 
     // Early set, to stop cycles

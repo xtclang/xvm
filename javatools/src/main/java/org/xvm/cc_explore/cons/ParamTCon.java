@@ -37,4 +37,5 @@ public class ParamTCon extends TCon {
     return _clz;
   }
 
+  public TVStruct clz() { return _clz; }
 }

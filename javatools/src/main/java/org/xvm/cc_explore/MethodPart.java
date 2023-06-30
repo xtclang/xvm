@@ -151,8 +151,8 @@ public class MethodPart extends MMethodPart {
       // variable names by looking in the arg[0] slot.  
       for( Parameter arg : _args ) {
         arg.link( repo );
-        if( _args[0]==arg && arg._con instanceof ParamTCon ptcon )
-          // This gets added to the local type Env
+        if( _args[0]==arg && arg._con instanceof ParamTCon ptcon && ptcon.clz()._names.contains("Type") )
+          // arg[0] ISA this type
           throw XEC.TODO();
       }
     }
