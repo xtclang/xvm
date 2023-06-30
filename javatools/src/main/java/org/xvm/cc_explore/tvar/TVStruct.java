@@ -174,10 +174,11 @@ public class TVStruct extends TVar {
   // -------------------------------------------------------------
   @Override int _fresh_unify_impl( TVar tv3 ) {
     boolean missing = false;
-    assert !unified() && !tv3.unified();    
+    assert !unified() && !tv3.unified();
 
     TVStruct that = (TVStruct)tv3.find();
-    
+    that._names.addAll(_names);
+
     for( int i=0; i<_max; i++ ) {
       TVar lhs = arg(i);
       int ti = that.idx(_flds[i]);

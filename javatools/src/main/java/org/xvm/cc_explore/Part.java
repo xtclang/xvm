@@ -169,17 +169,8 @@ abstract public class Part {
   //     addAll:{ Iterator<Element> -> Appender };
   //     ensureCapacity:{ Int -> Appender };
   //   }
-
-  // A set of type *parents*.  Normal Parts form a tree with a single parent.
-  // Type parents form a DAG, since many "implements" can be used.
-  private Part[] _tpars;
-  private boolean _env_lock;    // Used for asserts
-  
-  // Type environment.  Locally available type names, not including self.
-  private IdentityHashMap<String,TVar> _env;
   // Self type
   private TVar _tvar;
-
 
   // Access the self-type
   public final TVar tvar() {
@@ -188,43 +179,6 @@ abstract public class Part {
   // Set the self-type exactly once
   final void set_tvar(TVar tv) { assert _tvar==null; _tvar=tv; }
   public final boolean has_tvar() { return _tvar!=null; }
-
-  
-  
-  void env_extend(Part parent) {
-    assert !_env_lock;          // No GET before done extending.
-    if( _tpars==null ) {
-      _tpars = new Part[]{parent};
-      return;
-    }
-    // Check for dups vs prior path
-    throw XEC.TODO();
-  }
-  void set_env_lock() { _env_lock=true; }
-  
-  // Extend the local type namespace
-  void env_add(String s, TVar tv ) {
-    assert _env_get(s)==null;
-    if( _env==null ) _env = new IdentityHashMap<>();
-    _env.put(s,tv);
-  }
-  
-  TVar env_get(String s) {
-    assert _env_lock;           // GET: so better be done extending
-    return _env_get(s);
-  }
-  TVar _env_get(String s) {     // GET no assert, used itself in asserts
-    assert s==s.intern();
-    if( _env!=null ) {
-      TVar tv = _env.get(s);
-      if( tv!=null ) return tv;
-    }
-    if( _tpars==null ) return null;
-    if( _tpars.length==1 )
-      return _tpars[0]._env_get(s);
-    // Need a visit bit
-    throw XEC.TODO();
-  }
   
   // ----- Enums -----------------------------------------------------------
   /**
@@ -265,7 +219,7 @@ abstract public class Part {
       case MODULE     -> new    ModPart(par, nFlags, (    ModCon) con, cond, X);
       case PACKAGE    ->new PackagePart(par, nFlags, (PackageCon) con, cond, X);
       case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE
-        ->               new  ClassPart(par, nFlags, (  ClassCon) con, cond, X);
+        ->               new  ClassPart(par, nFlags, (  ClassCon) con, cond, X, this);
       case TYPEDEF    -> new   TDefPart(par, nFlags, (   TDefCon) con, cond, X);
       case PROPERTY   -> new   PropPart(par, nFlags, (   PropCon) con, cond, X);
       case MULTIMETHOD->new MMethodPart(par, nFlags, (MMethodCon) con, cond, X);

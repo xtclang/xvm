@@ -2,22 +2,39 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.*;
+import org.xvm.cc_explore.util.S;
 
 import java.util.HashMap;
 
 /**
    Class part
+
+
+class - closed-struct with methods as fields; FIDXs on concrete methods
+interface, delegates - defined as an open-struct with methods as fields
+interface abstract method is a leaf (or a lambda leaf with arg counts).  No FIDX.
+interface concrete method is a full lambda with FIDX.
+"class implements iface" - unify the open iface struct against closed class struct
+"class extends class" - chain thru a special field " super".  
+Special type constructor "isa X".
+_tcons add a field their name to the class, pts to a ISA tvar.
+Can drop the env lookup I think.
+Methods may have a special arg0, also of ISA TVar.
+
+
  */
 public class ClassPart extends Part {
   private final HashMap<String,TCon> _tcons; // String->TCon mapping
   final LitCon _path;           // File name compiling this file
+  final Part.Format _f;         // Class, Interface, Mixin, Enum, Module, Package
 
   // A list of "extra" features about Classes: extends, implements, delegates
   public final Contrib[] _contribs;
   
-  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, CPool X ) {
+  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, CPool X, Part.Format f ) {
     super(par,nFlags,id,null,cond,X);
 
+    _f = f;
     _contribs = Contrib.xcontribs(_cslen,X);
     
     _tcons = parseTypeParms(X);
@@ -40,40 +57,51 @@ public class ClassPart extends Part {
 
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) {
-    // Set the local type to stop recursions
-    set_tvar(new TVStruct(_name,true));
+    // Make the class struct, with fields
+    TVStruct stv = new TVStruct(_name,true);
+    set_tvar(stv);              // Set the local type to stop recursions
+    for( String s : _name2kid.keySet() ) {
+      if( _name2kid.get(s) instanceof TDefPart ) {
+        stv.add_fld(s,new TVIsa(new TVLeaf())); // Add a local typdef as a ISA
+      } else if( _name2kid.get(s) instanceof PropPart pp ) {
+        // Property.  
+        if( _tcons!=null && _tcons.get(s)!=null ) {
+          stv.add_fld(s,new TVIsa(new TVLeaf()));
 
-    
-    // The class is generified/parameterized.  The _tcons list the parameter
-    // names.  So in the class "Iterator<Element>", "Element" is in the tcons.
-    if( _tcons!=null )
-      for( String name : _tcons.keySet() ) {
-        TCon tcon = _tcons.get(name);
-        tcon.setype(repo);      // Pre-compute, so later types can find it
-        env_add(name,tcon.tvar());
+        } else {
+          // This is an XTC "property" - a field with built-in getters & setters.
+          // These built-in fields have mangled names.
+          // TODO: Already specify get:{-> Leaf} and set:{ Leaf -> }
+          stv.add_fld((s+".get").intern(),new TVLeaf());
+          stv.add_fld((s+".set").intern(),new TVLeaf());
+        }
+      } else {
+        stv.add_fld(s,new TVLeaf());
       }
-    // This name->tvar mapping now needs to appear in the future environment
-    // searches during setype analysis.  This is a class-wide type constant
-    // name, and can be found by e.g. PropCon with the same name.  Search
-    // path might look like:
-    //    class->name2kid->(MMethod)name2kid->(Method)->args[]->Parameter
-    //      ->_con-> [any type path] -> PropCon
-    // Alternative: PropCon -> Class -> TCons -> this clz type.
+      stv = (TVStruct)stv.find();
+    }
 
     // This Class may extend another one.
-    // Look for extends, implements, etc contributions
+    // Look for extends, implements, etc. contributions
     if( _contribs != null ) {
       for( Contrib c : _contribs ) {
+        c.link( repo );
         switch( c._comp ) {
-        case Extends, Implements, Delegates -> {
-          assert c._comp != Composition.Extends || _contribs[0] == c; // Can optimize if extends are always in slot 0
-          c.link( repo );
+        case Extends -> {
+          assert _contribs[0] == c; // Can optimize if extends are always in slot 0
+          // Add contrib class to super chain
+          throw XEC.TODO();
+        }
+        case Implements, Delegates -> {
           TermTCon tc;
           if( c._tContrib instanceof TermTCon tc2 ) tc = tc2;
           else if( c._tContrib instanceof ImmutTCon itc )
-            tc = (TermTCon)itc.icon();
-          else throw XEC.TODO();
-          env_extend( tc.clz() );
+            throw XEC.TODO(); //tc = (TermTCon)itc.icon(); // Wrap in immut
+          else throw XEC.TODO(); // Some other thing here?
+          // Unify interface into class
+          assert tc.clz()._f==Part.Format.INTERFACE;
+          assert ((TVStruct)tc.tvar()).is_open();
+          tc.tvar().fresh_unify(tvar(),null);
         }
 
         // This is a "mixin", marker interface.  It becomes part of the parent-
@@ -82,43 +110,20 @@ public class ClassPart extends Part {
         case Into -> {
           TCon mixed = c._tContrib;
           while( mixed instanceof UnionTCon utc ) {
+            mixed = utc.con1(); // Next
             TermTCon tc = (TermTCon)utc.con2();
             tc.setype(repo);
             ClassPart clz = tc.clz();
-            clz.env_extend( this );
-            mixed = utc.con1();
+            //clz.env_extend( this );
+            throw XEC.TODO();
           }
           TermTCon tc = (TermTCon)mixed;
           tc.setype(repo);
           ClassPart clz = tc.clz();
-          clz.env_extend( this );
+          //clz.env_extend( this );
           throw XEC.TODO();
         }
         }
-      }
-    }
-    set_env_lock();           // No more env extends
-
-    // Now add typedefs to the type environment and value fields to the self
-    // struct fields.
-    for( String s : _name2kid.keySet() ) {
-      if( _name2kid.get(s) instanceof TDefPart ) {
-        env_add(s,new TVLeaf());// Add typdef to local type namespace
-      } else if( _name2kid.get(s) instanceof PropPart ) {
-        // Property
-        
-        // A repeat in the tcons?  This is another way to find generic type name.
-        // The property here has more info
-        if( _tcons!=null && _tcons.get(s)!=null ) {
-        } else {
-          // This is an XTC "property" - a field with built-in getters & setters.
-          // These built-in fields have mangled names.
-          stvar().add_fld(s+".get",new TVLeaf());
-          stvar().add_fld(s+".set",new TVLeaf());
-        }
-      } else {
-        assert env_get(s)==null; // No name collision
-        stvar().add_fld(s,new TVLeaf());
       }
     }
 
@@ -126,9 +131,7 @@ public class ClassPart extends Part {
     if( _contribs != null ) {
       for( Contrib c : _contribs ) {
         switch( c._comp ) {
-        case Extends:
-        case Implements:
-        case Delegates:
+        case Extends, Implements, Delegates, Into:
           break;                // Already did
         default:
           // Handle other contributions
@@ -136,6 +139,16 @@ public class ClassPart extends Part {
         }
       }
     }
+
+    // The structure has more unspecified fields, or not.
+    // Classes are closed: all fields are listed.
+    // Interfaces are open: at least these fields, but you are allowed more.
+    switch( _f ) {
+    case CLASS, CONST, MODULE, PACKAGE: stvar().close(); break;
+    case INTERFACE: break;
+    default: throw XEC.TODO();
+    };
+
   }
   
   @Override public Part child(String s, XEC.ModRepo repo) {
