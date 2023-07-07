@@ -39,7 +39,7 @@
  *       body = contentSvc.genBody();
  *
  *       // async request for two advertisements, but don't wait more than 500ms for either
- *       using (new Timeout(Duration:.5S"))
+ *       using (new Timeout(Duration:.5S))
  *           {
  *           ad1 = adSvc1.selectAd();
  *           ad2 = adSvc2.selectAd();
