@@ -1,38 +1,40 @@
-import libnet.Uri;
+import net.Uri;
 
-import libcrypto.Algorithms;
-import libcrypto.Signer;
+import crypto.Algorithms;
+import crypto.Signer;
 
-import libweb.Body;
-import libweb.Client;
-import libweb.Header;
-import libweb.Header.Entry;
-import libweb.HttpStatus;
-import libweb.MediaType;
-import libweb.RequestOut;
-import libweb.ResponseIn;
-
-import libweb.codecs.Base64Format;
-import libweb.codecs.Codec;
-import libweb.codecs.Registry;
-import libweb.codecs.Utf8Codec;
+import codecs.Base64Format;
+import codecs.Codec;
+import codecs.Registry;
+import codecs.Utf8Codec;
 
 import ecstasy.collections.CaseInsensitive;
 
+import Header.Entry;
+
+
 /**
- * The native Client implementation.
+ * An implementation of the `Client` API.
  */
-service RTClient
+const HttpClient
         implements Client {
 
-    @Override
-    @Lazy Registry registry.calc() {
-        return new Registry();
+    construct(Registry? registry = Null) {
+        this.registry = registry ?: new Registry();
     }
+
+    /**
+     * The connector.
+     */
+    @Inject Client.Connector connector;
+
+    @Override
+    Registry registry;
 
     @Override
     @Lazy Header defaultHeaders.calc() {
-        (String[] defaultHeaderNames, String[] defaultHeaderValues) = getDefaultHeaders();
+        (String[] defaultHeaderNames, String[] defaultHeaderValues) =
+            connector.getDefaultHeaders();
 
         Header header = new ResponseHeader(defaultHeaderNames, defaultHeaderValues);
         return &header.maskAs(Header);
@@ -64,7 +66,8 @@ service RTClient
             (Int      statusCode,
              String[] responseHeaderNames,
              String[] responseHeaderValues,
-             Byte[]   responseBytes) = sendRequest(method, uri.toString(), headerNames, headerValues, bytes);
+             Byte[]   responseBytes) =
+                connector.sendRequest(method, uri.toString(), headerNames, headerValues, bytes);
 
             retryCount++;
             if (autoRedirect && 300 <= statusCode < 400 && retryCount < retryLimit,
@@ -140,7 +143,7 @@ service RTClient
             }
 
             Header     responseHeader = new ResponseHeader(responseHeaderNames, responseHeaderValues);
-            ResponseIn response       = new Response(status, &responseHeader.maskAs(Header), responseBytes);
+            ResponseIn response       = new Response(registry, status, &responseHeader.maskAs(Header), responseBytes);
             return &response.maskAs(ResponseIn);
         }
     }
@@ -164,8 +167,8 @@ service RTClient
             String password, Int retryCount, Map<String, String> props)
         {
         // create cnonce and extract necessary properties (see DigestAuthenticator.parseDigest)
-        import libweb.security.DigestAuthenticator;
-        import libweb.security.Realm.Hash;
+        import security.DigestAuthenticator;
+        import security.Realm.Hash;
 
         import DigestAuthenticator.require;
         import DigestAuthenticator.toHash;
@@ -236,28 +239,10 @@ service RTClient
         return False;
     }
 
-    @Override
-    String toString() {
-        return "Client";
-    }
-
-
-    // ----- native helpers ------------------------------------------------------------------------
-
-    (String[] defaultHeaderNames, String[] defaultHeaderValues) getDefaultHeaders() {
-        TODO("native");
-    }
-
-    (Int statusCode, String[] responseHeaderNames, String[] responseHeaderValues, Byte[] responseBytes)
-            sendRequest(String method, String uri,
-                        String[] headerNames, String[] headerValues, Byte[] bytes) {
-        TODO("native");
-    }
-
 
     // ----- helper classes ------------------------------------------------------------------------
 
-    const ResponseHeader
+    static const ResponseHeader
             implements Header {
         construct(String[] headerNames, String[] headerValues) {
             Int headerCount = headerNames.size;
@@ -268,9 +253,7 @@ service RTClient
         }
 
         @Override
-        @RO Boolean isRequest.get() {
-            return False;
-        }
+        @RO Boolean isRequest.get() = False;
 
         @Override
         List<Entry> entries;
@@ -302,7 +285,7 @@ service RTClient
         }
     }
 
-    class Response(HttpStatus status, Header header, Byte[] bytes)
+    static const Response(Registry registry, HttpStatus status, Header header, Byte[] bytes)
             implements ResponseIn
             implements Body {
         // ----- ResponseIn interface --------------------------------------------------------------
@@ -310,8 +293,6 @@ service RTClient
         @Override
         <Result> conditional Result to(Type<Result> type) {
             if (status == OK) {
-                Registry registry = this.RTClient.registry;
-
                 if (Codec<Result> codec := registry.findCodec(mediaType, Result)) {
                     try {
                         Result result = codec.decode(bytes);
@@ -323,9 +304,7 @@ service RTClient
         }
 
         @Override
-        @RO Body body.get() {
-            return this;
-        }
+        @RO Body body.get() = this;
 
         @Override
         Body ensureBody(MediaType mediaType, Boolean streaming=False) {
@@ -349,8 +328,6 @@ service RTClient
         }
 
         @Override
-        String toString() {
-            return status.toString();
-        }
+        String toString() = status.toString();
     }
 }

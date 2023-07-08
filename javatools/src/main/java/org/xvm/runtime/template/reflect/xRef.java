@@ -685,6 +685,15 @@ public class xRef
         {
         if (hTarget instanceof GenericHandle hGeneric)
             {
+            if (!hGeneric.isService())
+                {
+                TypeConstant type = hGeneric.getType();
+                if (!type.isImmutable() || !type.isSingleUnderlyingClass(true))
+                    {
+                    return frame.raiseException("Masked object must be shareable");
+                    }
+                }
+
             TypeConstant typeMasked = hType.getUnsafeDataType();
             ObjectHandle hMasked    = hGeneric.maskAs(frame.f_context.f_container, typeMasked);
 

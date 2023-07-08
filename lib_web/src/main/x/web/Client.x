@@ -4,7 +4,7 @@ import requests.SimpleRequest;
 
 
 /**
- * A representation of an HTTP client.
+ * A representation of a web client.
  * TODO how to secure? need to be able to restrict which algos can be used
  * TODO patch method
  */
@@ -176,4 +176,21 @@ interface Client {
      * TODO document failure modes (does it return a response? or throw?)
      */
     ResponseIn send(RequestOut request, PasswordCallback? callback = Null);
+
+    /**
+     * Represents a low-level web Connector.
+     */
+    static interface Connector {
+        /**
+         * Default headers to include into every request.
+         */
+        (String[] defaultHeaderNames, String[] defaultHeaderValues) getDefaultHeaders();
+
+        /**
+         * Send a request.
+         */
+        (Int statusCode, String[] responseHeaderNames, String[] responseHeaderValues, Byte[] responseBytes)
+                sendRequest(String method, String uri,
+                            String[] headerNames, String[] headerValues, Byte[] bytes);
+    }
 }
