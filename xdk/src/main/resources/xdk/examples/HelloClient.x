@@ -16,8 +16,10 @@ module HelloClient {
 
     @Inject Console console;
 
+    import web.HttpClient;
+
     void run(String[] args=["http://localhost:8080"]) {
-        @Inject web.Client client;
+        HttpClient client = new HttpClient();
 
         String uri = args[0];
         console.print($"Accessing: {uri.quoted()}");

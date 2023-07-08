@@ -39,7 +39,6 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -78,7 +77,7 @@ import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
-import org.xvm.runtime.template._native.web.xRTClient;
+import org.xvm.runtime.template._native.web.xRTConnector;
 import org.xvm.runtime.template._native.web.xRTServer;
 
 import org.xvm.util.Handy;
@@ -367,10 +366,10 @@ public class NativeContainer
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "Algorithms"));
         addResourceSupplier(new InjectionKey("algorithms", typeAlgorithms), templateAlgorithms::ensureAlgorithms);
 
-        // +++ web:Client
-        xRTClient templateCleint = xRTClient.INSTANCE;
-        TypeConstant typeClient = templateCleint.getCanonicalType();
-        addResourceSupplier(new InjectionKey("client", typeClient), templateCleint::ensureClient);
+        // +++ web:Client.Connector
+        xRTConnector templateConnector = xRTConnector.INSTANCE;
+        TypeConstant typeConnector = templateConnector.getCanonicalType();
+        addResourceSupplier(new InjectionKey("connector", typeConnector), templateConnector::ensureConnector);
 
         // +++ web:WebServer
         xRTServer templateServer = xRTServer.INSTANCE;

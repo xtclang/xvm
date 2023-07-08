@@ -20,8 +20,7 @@ module Hello
     package crypto import crypto.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
-
-    // TODO: package authdb import webauthdb.xtclang.org;
+    package msg    import Messages;
 
     import crypto.KeyStore;
     import crypto.KeyStore.Info;
@@ -29,6 +28,8 @@ module Hello
     import web.*;
     import web.responses.*;
     import web.security.*;
+
+    import msg.Greeting;
 
     void run(String[] args=["password"]) {
         @Inject Console console;
@@ -75,8 +76,13 @@ module Hello
             }
 
             @Get
-            ResponseOut hello() {
+            ResponseOut home() {
                 return new HtmlResponse(/resources/hello/index.html);
+            }
+
+            @Get("hello")
+            Greeting greeting() {
+                return new Greeting("Hi, there!");
             }
 
             @HttpsRequired
@@ -94,13 +100,13 @@ module Hello
             @LoginRequired
             @Get("l")
             ResponseOut logMeIn(Session session) {
-                return hello();
+                return home();
             }
 
             @Get("d")
             ResponseOut logMeOut() {
                 session?.deauthenticate();
-                return hello();
+                return home();
             }
 
             @Get("c")

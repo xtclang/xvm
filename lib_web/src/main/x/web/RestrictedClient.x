@@ -1,3 +1,5 @@
+import codecs.Registry;
+
 /**
  * A [Client] implementation that restricts the `Client` functionality for the underlying client
  * based on the specified constraints.
@@ -47,6 +49,9 @@ const RestrictedClient(Client underlying)
 
 
     // ----- Client interface ----------------------------------------------------------------------
+
+    @Override
+    Registry registry.get() = underlying.registry;
 
     @Override
     ResponseIn send(RequestOut request, PasswordCallback? callback = Null) {

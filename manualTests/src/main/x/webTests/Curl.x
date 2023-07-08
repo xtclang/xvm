@@ -22,7 +22,7 @@ module Curl {
         String methodName = args[0];
         String uriString  = args[1];
 
-        @Inject web.Client client;
+        Client client = new HttpClient();
 
         HttpMethod method   = HttpMethod.of(methodName);
         Uri        uri      = new Uri(uriString);

@@ -33,6 +33,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
@@ -64,14 +65,14 @@ import org.xvm.util.TransientThreadLocal;
 
 
 /**
- * Native implementation of the RTClient.x service.
+ * Native implementation of the RTConnector.x service.
  */
-public class xRTClient
+public class xRTConnector
         extends xService
     {
-    public static xRTClient INSTANCE;
+    public static xRTConnector INSTANCE;
 
-    public xRTClient(Container container, ClassStructure structure, boolean fInstance)
+    public xRTConnector(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, false);
 
@@ -136,10 +137,11 @@ public class xRTClient
         TypeConstant type = m_typeCanonical;
         if (type == null)
             {
-            ConstantPool pool = pool();
+            ConstantPool  pool = pool();
+            ClassConstant idClient = pool.ensureClassConstant(
+                    pool.ensureModuleConstant("web.xtclang.org"), "Client");
             m_typeCanonical = type = pool.ensureTerminalTypeConstant(
-                pool.ensureClassConstant(pool.ensureModuleConstant("web.xtclang.org"), "Client"));
-
+                    pool.ensureClassConstant(idClient, "Connector"));
             }
         return type;
         }
@@ -147,10 +149,10 @@ public class xRTClient
     /**
      * Injection support method.
      */
-    public ObjectHandle ensureClient(Frame frame, ObjectHandle hOpts)
+    public ObjectHandle ensureConnector(Frame frame, ObjectHandle hOpts)
         {
-        ServiceContext context = f_container.createServiceContext("Client");
-        ClientHandle   hClient = new ClientHandle(getCanonicalClass(f_container), context);
+        ServiceContext  context    = f_container.createServiceContext("Connector");
+        ConnectorHandle hConnector = new ConnectorHandle(getCanonicalClass(f_container), context);
 
         try
             {
@@ -158,10 +160,10 @@ public class xRTClient
             SSLSocketFactory factory  = createSocketFactory();
             HostnameVerifier verifier = (sHostName, session) -> true;
 
-            hClient.configure(handler, factory, verifier);
+            hConnector.configure(handler, factory, verifier);
 
-            context.setService(hClient);
-            return hClient;
+            context.setService(hConnector);
+            return hConnector;
             }
         catch (GeneralSecurityException e)
             {
@@ -180,7 +182,7 @@ public class xRTClient
                 return invokeGetDefaultHeaders(frame, aiReturn);
 
             case "sendRequest":
-                return invokeSendRequest(frame, (ClientHandle) hTarget, (StringHandle) ahArg[0],
+                return invokeSendRequest(frame, (ConnectorHandle) hTarget, (StringHandle) ahArg[0],
                     (StringHandle) ahArg[1], (ArrayHandle) ahArg[2], (ArrayHandle) ahArg[3],
                     (ArrayHandle) ahArg[4], aiReturn);
             }
@@ -209,9 +211,9 @@ public class xRTClient
      *  "(Int statusCode, String[] responseHeaderNames, String[] responseHeaderValues, Byte[] responseBytes)
      *      sendRequest(String uri, String[] headerNames, String[] headerValues, Byte[] bytes)".
      */
-    private int invokeSendRequest(Frame frame, ClientHandle hClient, StringHandle hMethod,
-                StringHandle hUrl, ArrayHandle hHeaderNames, ArrayHandle hHeaderValues,
-                ArrayHandle hBytes, int[] aiReturn)
+    private int invokeSendRequest(Frame frame, ConnectorHandle hConn, StringHandle hMethod,
+                                  StringHandle hUrl, ArrayHandle hHeaderNames, ArrayHandle hHeaderValues,
+                                  ArrayHandle hBytes, int[] aiReturn)
         {
         StringArrayHandle haNames  = (StringArrayHandle) hHeaderNames.m_hDelegate;
         StringArrayHandle haValues = (StringArrayHandle) hHeaderValues.m_hDelegate;
@@ -229,7 +231,7 @@ public class xRTClient
         int cTimeoutMillis = 5_000_000;   // TODO: how to configure?
         int cMaxSize       = 8*1024*1024;
 
-        try (var ignore = s_handlerGlobal.withHandler(hClient.m_cookieHandler))
+        try (var ignore = s_handlerGlobal.withHandler(hConn.m_cookieHandler))
             {
             URL               url  = new URL(hUrl.getStringValue());
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -241,8 +243,8 @@ public class xRTClient
 
             if (conn instanceof HttpsURLConnection connTls)
                 {
-                connTls.setHostnameVerifier(hClient.m_verifier);
-                connTls.setSSLSocketFactory(hClient.m_sslFactory);
+                connTls.setHostnameVerifier(hConn.m_verifier);
+                connTls.setSSLSocketFactory(hConn.m_sslFactory);
                 }
 
             for (Map.Entry<String, String> entry : mapHeaders.entrySet())
@@ -374,13 +376,13 @@ public class xRTClient
         }
 
     /**
-     * A {@link ServiceHandle} for the RTClient service.
+     * A {@link ServiceHandle} for the RTConnector service.
      */
-    protected static class ClientHandle
+    protected static class ConnectorHandle
             extends ServiceHandle
         {
         /**
-         * The {@link CookieHandler} used by this Client.
+         * The {@link CookieHandler} used by this Connector.
          */
         protected CookieHandler m_cookieHandler;
         /**
@@ -392,7 +394,7 @@ public class xRTClient
          */
         protected HostnameVerifier m_verifier;
 
-        protected ClientHandle(TypeComposition clazz, ServiceContext context)
+        protected ConnectorHandle(TypeComposition clazz, ServiceContext context)
             {
             super(clazz, context);
             }
@@ -408,7 +410,7 @@ public class xRTClient
         @Override
         public String toString()
             {
-            return "Client";
+            return "Connector";
             }
         }
 
