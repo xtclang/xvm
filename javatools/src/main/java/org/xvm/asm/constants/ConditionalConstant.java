@@ -46,11 +46,11 @@ import org.xvm.util.LongList;
  * <li>{@link PresentCondition PresentCondition} - evaluates to true iff the specified VM structure
  *     (and optionally a particular version of that VM structure) is present at runtime, allowing
  *     optional dependencies to be supported;</li>
- * <li>{@link VersionedCondition VersionedCondition} - evaluates to true iff the version of this module
- *     is of a specified version.</li>
+ * <li>{@link VersionedCondition VersionedCondition} - evaluates to true iff the version of this
+ *     module is of a specified version.</li>
  * </ul>
  * <p/>
- * Four additional conditional constants support the composition of other conditions:
+ * Three additional conditional constants support the composition of other conditions:
  * <ul>
  * <li>{@link NotCondition NotCondition} - evaluates to true iff the specified condition evaluates
  *     to false, i.e. a "not" condition;</li>
