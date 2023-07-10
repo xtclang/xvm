@@ -174,6 +174,17 @@ accessed from Control Panel), click the "Change system locale..." button and che
 Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTING.md)
 document.
 
+## Bleeding Edge for Developers
+
+If you would like to contribute to the Ecstasy Project, it might be an idea to use the
+very latest version by invoking
+
+    gradlew dist-local
+
+This copies the build from the xvm directory into the brew cellar.
+
+Note: this would be done after installing the XDK via brew.
+
 ## Questions?
 
 To submit a contributor agreement, sign up for very hard work, fork over a giant
