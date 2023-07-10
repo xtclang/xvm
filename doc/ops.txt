@@ -134,7 +134,7 @@
 +MOV_THIS   #, lvalue-dest                          ; # (an inline unsigned byte) specifies the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
 +MOV_THISA  #, lvalue-dest, A_*                     ; same as above with an additional access modifier (A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE)
 +MOV_TYPE   rvalue-src, lvalue-dest                 ; place the type of the r-value into the l-value
-+CAST       rvalue-src, lvalue-dest, TYPE           ; copy source to destination with cast
++CAST       rvalue-src, lvalue-dest, TYPE           ; copy source to destination with type assertion
 
 // Value comparisons (mostly Boolean checks)
 // - rvalues support a local-property mode
