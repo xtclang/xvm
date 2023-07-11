@@ -235,8 +235,8 @@ public class xRTServer
     // ----- native implementations ----------------------------------------------------------------
 
     /**
-     * Implementation of "void configureImpl(String hostName, KeyStore keystore,
-     *                          UInt16 httpPort, UInt16 httpsPort, String? tlsKey)" method.
+     * Implementation of "void configureImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort,
+     *                          KeyStore keystore, String? tlsKey)" method.
      */
     private int invokeConfigure(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
@@ -245,16 +245,16 @@ public class xRTServer
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
             }
 
-        String         sHost       = ((StringHandle)   ahArg[0]).getStringValue();
-        KeyStoreHandle hKeystore   = (KeyStoreHandle)  ahArg[1];
-        int            nHttpPort   = (int) ((JavaLong) ahArg[2]).getValue();
-        int            nHttpsPort  = (int) ((JavaLong) ahArg[3]).getValue();
+        String         sBindAddr   = ((StringHandle)   ahArg[0]).getStringValue();
+        int            nHttpPort   = (int) ((JavaLong) ahArg[1]).getValue();
+        int            nHttpsPort  = (int) ((JavaLong) ahArg[2]).getValue();
+        KeyStoreHandle hKeystore   = (KeyStoreHandle)  ahArg[3];
         String         sTlsKey     = ahArg[4] instanceof StringHandle hS ? hS.getStringValue() : null;
 
         try
             {
-            HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sHost, nHttpPort));
-            HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sHost, nHttpsPort),
+            HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sBindAddr, nHttpPort));
+            HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sBindAddr, nHttpsPort),
                                                             hKeystore, sTlsKey);
             hServer.configure(httpServer, httpsServer);
             return Op.R_NEXT;

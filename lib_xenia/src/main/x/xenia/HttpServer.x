@@ -27,6 +27,11 @@ interface HttpServer
     @RO String hostName;
 
     /**
+     * The address the server is bound to (can be the same as hostName).
+     */
+    @RO String bindAddr;
+
+    /**
      * The server port number that is used for plain text requests.
      */
     @RO UInt16 plainPort;
@@ -40,15 +45,15 @@ interface HttpServer
      * Configure the server.
      *
      * @param hostName   the host name (e.g. "www.xqiz.it")
-     * @param keystore   the KeyStore to use for tls certificates and encryption
      * @param httpPort   the port for plain text (insecure) communications
      * @param httpsPort  the port for encrypted (tls) communications
+     * @param keystore   the KeyStore to use for tls certificates and encryption
      * @param tlsKey     the name of the public/private key pair in the keystore to use for tls
      * @param cookieKey  the name of the secret key in the keystore to use for cookie encryption
      */
-    void configure(String hostName, KeyStore keystore,
-                   UInt16 httpPort = 80, UInt16 httpsPort = 443,
-                   String? tlsKey = Null, String? cookieKey  = Null);
+    void configure(String hostName, String bindAddress,
+                   UInt16 httpPort, UInt16 httpsPort,
+                   KeyStore keystore, String? tlsKey = Null, String? cookieKey = Null);
 
     /**
      * Configure a Xenia service.
