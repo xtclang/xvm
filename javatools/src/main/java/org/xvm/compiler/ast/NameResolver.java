@@ -547,7 +547,8 @@ public class NameResolver
                 if (stmtImport.isWildcard())
                     {
                     m_component = ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
-                    assert m_component instanceof ClassStructure;
+                    assert m_component instanceof ClassStructure ||
+                           m_component instanceof TypedefStructure;
                     m_constant  = m_component.getIdentityConstant();
                     }
                 else

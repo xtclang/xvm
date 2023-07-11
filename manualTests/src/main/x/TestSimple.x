@@ -1,24 +1,19 @@
 module TestSimple {
     @Inject Console console;
 
+    package json import json.xtclang.org;
+
+    import json.*;
+
     void run() {
-        Test t = new Test();
-//        console.print(t.getFunction1()());
-        console.print(t.getFunction2()("hello"));
-    }
-
-    class Test {
-//        function Int() getFunction1() {
-//            return foo;  // that used to allow to compile and would blow at runtime
-//        }
-
-        function Int(String) getFunction2() {
-            return foo;  // that used to fail to compile
-        }
-
-        Int foo(String s, Int i=42) {
-            console.print($"{s=}");
-            return ++i;
-        }
+         String str = \|{
+                       |"host":"admin.xqiz.it",
+                       |"http":8080,
+                       |"https":8090
+                       |}
+                       ;
+        Doc doc = new Parser(str.toReader()).parseDoc(); // used to fail to compile (unknown type "Doc")
+        assert doc.is(Map<String, Doc>);
+        console.print(doc);
     }
 }
