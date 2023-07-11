@@ -398,6 +398,7 @@ service SessionImpl
             userId            = Null;
             exclusiveAgent    = False;
             trustLevel        = None;
+            roles             = [];
             lastAuthenticated = Null;
 
             issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldUser),
