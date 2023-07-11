@@ -25,7 +25,7 @@ module HelloServer {
     void run() {
         import crypto.KeyStore;
         @Inject(opts=new KeyStore.Info(#./https.p12, "password")) KeyStore keystore;
-        xenia.createServer(this, "localhost", keystore, httpPort=8080, httpsPort=8090);
+        xenia.createServer(this, "localhost", "localhost", 8080, 8090, keystore);
 
         @Inject Console console;
         console.print($|To access this server, open a browser on this machine and enter this URL:
