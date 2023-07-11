@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
@@ -26,7 +27,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
-import org.xvm.asm.Assignment;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -236,7 +237,8 @@ public class StatementBlock
                     ClassStructure clz = (ClassStructure) id.getComponent();
                     if (clz != null)
                         {
-                        if (clz.getChild(sName) instanceof ClassStructure)
+                        Component child = clz.getChild(sName);
+                        if (child instanceof ClassStructure || child instanceof TypedefStructure)
                             {
                             if (stmtResult == null)
                                 {
