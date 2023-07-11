@@ -136,7 +136,8 @@ public class Fiber
         Fiber fiberCaller = this.f_fiberCaller;
         if (fiberCaller == null)
             {
-            return false;
+            fiberCaller = that.f_fiberCaller;
+            return fiberCaller != null && this.isAssociated(fiberCaller);
             }
 
         // by switching the target to "that" we alternate the descending checks:
