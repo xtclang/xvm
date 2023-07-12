@@ -50,7 +50,6 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 

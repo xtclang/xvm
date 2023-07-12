@@ -1,8 +1,6 @@
 package org.xvm.runtime.template._native.reflect;
 
 
-import java.util.function.Function;
-
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;

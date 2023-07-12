@@ -3069,20 +3069,13 @@ public class ClassStructure
                     SignatureConstant sigMethod = method.getIdentityConstant().getSignature();
                     if (method.isAccessible(access) && method.isFunction() == fFunction)
                         {
-                        if (fFunction)
-                            {
-                            if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
-                                {
-                                return true;
-                                }
-                            }
-                        else
+                        if (!fFunction)
                             {
                             sigMethod = sigMethod.resolveGenericTypes(pool, resolver);
-                            if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
-                                {
-                                return true;
-                                }
+                            }
+                        if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
+                            {
+                            return true;
                             }
                         }
                     }

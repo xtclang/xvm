@@ -211,8 +211,8 @@ public abstract class Utils
                 }
 
             ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
-            ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);;
-            ahArg[1] = xString.makeHandle(sName);;
+            ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);
+            ahArg[1] = xString.makeHandle(sName);
 
             iResult = chain.invoke(frame, hInjector, ahArg, Op.A_STACK);
             }
