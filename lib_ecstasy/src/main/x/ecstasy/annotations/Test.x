@@ -40,7 +40,7 @@
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
 mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
-        into Class | Property | Method | Function {
+        extends Iff("test".defined) {
     /**
      * Use this [group] value to indicate a normal unit test. This is the default test group name.
      */
@@ -54,6 +54,8 @@ mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
 
     /**
      * Use this [group] value to indicate that the method must **not** be treated as a unit test.
+     *
+     * Alternatively, just use `@Iff("test".defined)`.
      */
     static String Omit = "omit";
 }

@@ -12,6 +12,11 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      */
     @RO Access access;
 
+    /**
+     * Support for link-time conditional evaluation.
+     */
+    @RO Boolean present.get() = True;
+
 
     // ----- dynamic invocation support ------------------------------------------------------------
 

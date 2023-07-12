@@ -70,6 +70,11 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
     */
     @RO immutable Annotation[] annotations;
 
+    /**
+     * Support for link-time conditional evaluation.
+     */
+    @RO Boolean present.get() = True;
+
 
     // ----- dynamic behavior ----------------------------------------------------------------------
 

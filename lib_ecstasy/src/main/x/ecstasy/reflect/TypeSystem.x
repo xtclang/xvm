@@ -8,10 +8,10 @@ import reflect.TypeTemplate;
  *
  * Each Ecstasy container is created based on a TypeSystem.
  *
- * Modules in a type system are either shared from the parent container, or not shared. (Modules
+ * Modules in a type system are either shared from the parent container, or not shared. Modules
  * that are shared will share the same singleton instances across the containers. If those modules
  * contain singleton services, then the mutable information represented by those services will be
- * shared across the containers.)
+ * shared across the containers.
  */
 const TypeSystem {
     /**
@@ -20,7 +20,7 @@ const TypeSystem {
      * @param modules  an array of modules
      * @param shared   (optional) an array of indicators of which modules are shared
      */
-    construct(Module[] modules, Boolean[] shared=[]) {
+    construct(Module[] modules, Boolean[] shared=[], Set<String> definedNames=[]) {
         assert modules.size > 0;
         if (!modules.is(immutable)) {
             modules = modules.freeze();
@@ -61,6 +61,9 @@ const TypeSystem {
         this.sharedModules         = sharedModules        .freeze(True);
         this.moduleBySimpleName    = moduleBySimpleName   .freeze(True);
         this.moduleByQualifiedName = moduleByQualifiedName.freeze(True);
+        this.definedNames          = definedNames.is(immutable ListSet<String>)
+                ? definedNames
+                : new ListSet<String>(definedNames).freeze(True);
     }
 
     /**
@@ -297,6 +300,11 @@ const TypeSystem {
      * The modules in this type system that are shared with the type system of the parent container.
      */
     HashSet<Module> sharedModules;
+
+    /**
+     * A set of String values that represent named options used to form this TypeSystem.
+     */
+    ListSet<String> definedNames;
 
 
     // ----- Stringable methods --------------------------------------------------------------------

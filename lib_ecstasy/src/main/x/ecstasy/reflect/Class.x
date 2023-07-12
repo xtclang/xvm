@@ -475,6 +475,11 @@ const Class<PublicType, ProtectedType extends PublicType,
                 || this.implements(clz);
     }
 
+    /**
+     * Support for link-time conditional evaluation.
+     */
+    @RO Boolean present.get() = True;
+
 
     // ----- construction --------------------------------------------------------------------------
 

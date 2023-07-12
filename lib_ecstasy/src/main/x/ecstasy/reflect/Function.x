@@ -11,6 +11,13 @@
  */
 interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
         extends Signature<ParamTypes, ReturnTypes> {
+
+    /**
+     * Support for link-time conditional evaluation.
+     */
+    @RO Boolean present.get() = True;
+
+
     // ----- dynamic invocation support ------------------------------------------------------------
 
     /**

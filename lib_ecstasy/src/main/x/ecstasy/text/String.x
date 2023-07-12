@@ -42,6 +42,22 @@ const String
         return hash;
     }
 
+    /**
+     * Support for link-time conditional evaluation: Determine if the name represented by this
+     * String is defined (an enabled option), within the [TypeSystem] of the current service.
+     *
+     * For example, to determine if the `TypeSystem` is formed using the "test" mode:
+     *
+     *     if ("test".defined) {...}
+     *
+     * Or, to specify that a class is only present when in "test" mode:
+     *
+     *     @Iff("test".defined) class ...
+     */
+    Boolean defined.get() {
+        return this:service.typeSystem.definedNames.contains(this);
+    }
+
 
     // ----- operators -----------------------------------------------------------------------------
 

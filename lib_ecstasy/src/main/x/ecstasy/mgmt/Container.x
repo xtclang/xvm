@@ -90,7 +90,7 @@ service Container
      *                          additional modules specified here (and any of their dependencies)
      *                          will be linked into the new container's type system; the default is
      *                          that no additional modules will be loaded
-     * @param namedConditions   the link-time condition names to use, such as "test" or "debug"
+     * @param definedNames      the link-time condition names to use, such as "test" or "debug"
      */
     construct(ModuleSpec        primaryModule,
               Model             model             = Secure,
@@ -98,11 +98,11 @@ service Container
               ResourceProvider? injector          = Null,
               Module[]          sharedModules     = [],
               ModuleSpec[]      additionalModules = [],
-              String[]          namedConditions   = []) {
+              String[]          definedNames      = []) {
         // load and link the modules to form a type system
         @Inject Linker linker;
         Control control = linker.loadAndLink(
-                primaryModule, model, repository, injector, sharedModules, additionalModules, namedConditions);
+                primaryModule, model, repository, injector, sharedModules, additionalModules, definedNames);
 
         // store off the results
         this.model   = model;
@@ -200,7 +200,7 @@ service Container
          * @param additionalModules a set of additional modules required in the new type system, but
          *                          not necessarily implied via the module dependencies that
          *                          emanate from the `primaryModule` or the `sharedModules`
-         * @param namedConditions   the link-time condition names to use, such as "test" or "debug"
+         * @param definedNames      the link-time condition names to use, such as "test" or "debug"
          *
          * @throws an Exception if an error occurs attempting to link the provided modules together
          */
@@ -211,7 +211,7 @@ service Container
                 ResourceProvider? injector          = Null,
                 Module[]          sharedModules     = [],
                 ModuleSpec[]      additionalModules = [],
-                String[]          namedConditions   = []);
+                String[]          definedNames      = []);
 
         /**
          * Create an unresolved FileTemplate from the specified file.
