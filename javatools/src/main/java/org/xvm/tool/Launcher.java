@@ -58,6 +58,7 @@ import static org.xvm.util.Handy.quotedString;
  *
  * <ul><li> <code>xtc</code> <i>("ecstasy")</i> routes to {@link Compiler}
  * </li><li> <code>xec</code> <i>("exec")</i> routes to {@link Runner}
+ * </li><li> <code>xtest</code> <i>("extest")</i> routes to {@link TestRunner}
  * </li><li> <code>xam</code> <i>("exam")</i> routes to {@link Disassembler}
  * </li></ul>
  */
@@ -101,6 +102,10 @@ public abstract class Launcher
 
             case "xec":
                 Runner.main(argv);
+                break;
+
+            case "xtest":
+                TestRunner.main(argv);
                 break;
 
             case "xam":

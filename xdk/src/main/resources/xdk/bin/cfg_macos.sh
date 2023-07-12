@@ -35,9 +35,10 @@ fi
 
 if [[ -e "${DIR}/cfg_macos.sh" ]]; then
   # copy launcher to various command names
-  echo "Creating command line tools: \"xtc\", \"xec\", \"xam\""
+  echo "Creating command line tools: \"xtc\", \"xec\", \"xtest\", \"xam\""
   cp "${DIR}/macos_launcher" "${DIR}/xtc"
   cp "${DIR}/macos_launcher" "${DIR}/xec"
+  cp "${DIR}/macos_launcher" "${DIR}/xtest"
   cp "${DIR}/macos_launcher" "${DIR}/xam"
 
   if [[ "${EXP}" == "Y" ]]; then

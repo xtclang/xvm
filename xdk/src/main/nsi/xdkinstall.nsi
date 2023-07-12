@@ -58,6 +58,7 @@ Section "-hidden app"
   SetOutPath "$INSTDIR\bin"
   CopyFiles $INSTDIR\bin\windows_launcher.exe $INSTDIR\bin\xec.exe
   CopyFiles $INSTDIR\bin\windows_launcher.exe $INSTDIR\bin\xtc.exe
+  CopyFiles $INSTDIR\bin\windows_launcher.exe $INSTDIR\bin\xtest.exe
   CopyFiles $INSTDIR\bin\windows_launcher.exe $INSTDIR\bin\xam.exe
 
   WriteRegStr HKLM "Software\${NAME}" "Install_Dir" $INSTDIR

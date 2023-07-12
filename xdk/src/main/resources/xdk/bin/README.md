@@ -3,6 +3,7 @@ This directory contains the command line tools:
 * `xtc` (`xtc.exe` on Windows) - the **Ecstasy compiler** is used to
   compile Ecstasy source (`.x`) into a module (`.xtc`)
 * `xec` (`xec.exe` on Windows) - execute an Ecstasy module (`.xtc`)
+* `xtest` (`xtest.exe` on Windows) - execute the tests in an Ecstasy module (`.xtc`)
 * `xam` (`xam.exe` on Windows) - disassemble an Ecstasy module (`.xtc`)
 
 If the commands are not already present in this directory, then
@@ -26,7 +27,7 @@ meet your requirements:
 
 So, for example, if the `java` executable is not in the path, but rather
 is located at `~/jdk/jre/bin`, then create a configuration file in the
-`xdk/bin` directory for each command (`xtc.cfg`, `xec.cfg`, `xam.cfg`)
+`xdk/bin` directory for each command (`xtc.cfg`, `xtest.cfg`, `xec.cfg`, `xam.cfg`)
 that contains this one line:
 
     exec=~/jdk/jre/bin/java

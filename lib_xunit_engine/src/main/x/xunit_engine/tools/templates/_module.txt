@@ -1,0 +1,19 @@
+/**
+ * Auto generated module to execute XUnit tests.
+ */
+module %appName%_xunit%qualifier%
+    {
+    package xunit_        import xunit.xtclang.org;
+    package xunit_engine_ import xunit_engine.xtclang.org;
+
+    package hosted_       import %appName%%qualifier%;
+
+    import xunit_engine_.console.ConsoleRunner;
+
+    void run(String[] args)
+        {
+        Module m = hosted_.as(Module);
+        ConsoleRunner runner = new ConsoleRunner();
+        runner.run(m);
+        }
+    }

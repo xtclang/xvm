@@ -15,7 +15,7 @@
  *   there must also exist a constructor on the class with no non-default parameters. Lastly, if the
  *   `group` is specified as [Omit], then the method is **not** _callable_.
  *
- * The annotation provides two optional parameters that are used to tailor the unit test
+ * The annotation provides optional parameters that are used to tailor the unit test
  * specification for methods and constructors:
  *
  * * [group] - this assigns the test to a named group of tests, which allows specific groups of
@@ -32,15 +32,30 @@
  *   Other group names can be used; any other names are expected to be treated as normal unit tests
  *   unless the test runner (such as `xunit`) is configured otherwise.
  *
- * * [expectedException] - if this is non-Null, it indicates that the unit test must throw the
- *   specified type of exception, otherwise the test will be considered a failure. This option is
- *   useful for a test that is expected to always fail with an exception.
+ * * [priority] - this assigns an ordering to execution of the annotated resource. Best practice is
+ *   that unit tests should be agnostic of ordering, but other annotated resources, such as before
+ *   test or after test methods, test extensions, etc. may require ordering to be specified.
+ *   Annotated elements are ordered based the priority value, where a lower value has greater priority
+ *   than a higher value. For example, `Int.MaxValue` is the lowest priority (i.e. natural Int order).
+ *
+ * * [tags] - this is a list of additional tags that can be used to filter which tests should be executed.
+ *   Whilst the `group` property specifies a single group that can be used to determine the tests to
+ *   execute, a test can be assigned multiple tags to allow richer control over test groupings.
  *
  * The parameters are ignored when the annotation is used on classes and properties. Any usage other
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
-mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
-        extends Iff("test".defined) {
+mixin Test(String group = Unit, , Int priority = Int.MaxValue, String[] tags = [])
+        extends Iff("test".defined)
+        implements Orderable {
+
+    /**
+     * @return `True` if this `Test` is in the `Omit` group.
+     */
+    Boolean omitted() {
+        return group == Omit;
+    }
+
     /**
      * Use this [group] value to indicate a normal unit test. This is the default test group name.
      */
@@ -58,4 +73,10 @@ mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
      * Alternatively, just use `@Iff("test".defined)`.
      */
     static String Omit = "omit";
+
+
+    // ----- Orderable -----------------------------------------------------------------------------
+
+    static <CompileType extends Test> Ordered compare(CompileType value1, CompileType value2) {
+        return value1.priority <=> value2.priority;
 }

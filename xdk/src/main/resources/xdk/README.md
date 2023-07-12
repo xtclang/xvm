@@ -66,6 +66,14 @@ After compiling, execute the "Hello World!" example:
 
 For more information, run: `xec -help`
 
+## Testing
+
+The `xtest` command is used to execute tests in a compiled
+`.xtc` file.
+
+
+For more information, run: `xtest -help`
+
 ## Disassembling
 
 The `xam` command (pronounced "exam") is used to peek at the compiled
