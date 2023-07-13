@@ -422,8 +422,7 @@ public class Parser
         List<Parameter> constructorParams = parseParameterList(false);
 
         // sequence of compositions
-        List<CompositionNode> compositions = new ArrayList<>();
-        parseConditionalComposition(null, compositions);
+        List<CompositionNode> compositions = parseCompositions();
 
         // TypeCompositionBody
         StatementBlock body = null;
@@ -445,84 +444,13 @@ public class Parser
         }
 
     /**
-     * Parse any compositions, including any conditions that surround them.
-     *
-     * @param exprCondition  the condition (or null if none) that applies to any found compositions
-     * @param compositions   a list of compositions to contribute to
-     */
-    void parseConditionalComposition(Expression exprCondition, List<CompositionNode> compositions)
-        {
-        boolean fAny;
-        do
-            {
-            if (peek(Id.IF))
-                {
-                Token tokIf = expect(Id.IF);
-                expect(Id.L_PAREN);
-                Expression exprIf = parseLinkerCondition();
-                expect(Id.R_PAREN);
-
-                // then ...
-                expect(Id.L_CURLY);
-                Token tokAnd = null;
-                if (exprCondition == null)
-                    {
-                    parseConditionalComposition(exprIf, compositions);
-                    }
-                else
-                    {
-                    tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
-                    parseConditionalComposition(new CmpExpression(exprCondition, tokAnd, exprIf), compositions);
-                    }
-                expect(Id.R_CURLY);
-
-                // else ...
-                Token tokElse = match(Id.ELSE);
-                if (tokElse != null)
-                    {
-                    Token      tokNot   = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
-                    Expression exprElse = new PrefixExpression(tokNot, exprIf);
-                    boolean    fElseIf  = peek(Id.IF);
-                    if (!fElseIf)
-                        {
-                        expect(Id.L_CURLY);
-                        }
-                    if (exprCondition == null)
-                        {
-                        parseConditionalComposition(exprElse, compositions);
-                        }
-                    else
-                        {
-                        parseConditionalComposition(new CmpExpression(exprCondition, tokAnd, exprElse), compositions);
-                        }
-
-                    if (!fElseIf)
-                        {
-                        expect(Id.R_CURLY);
-                        }
-                    }
-
-                fAny = true;
-                }
-            else
-                {
-                fAny = parseComposition(exprCondition, compositions);
-                }
-            }
-        while (fAny);
-        }
-
-    /**
      * Parse any compositions found, but do not handle any conditional statements.
      *
-     * @param exprCondition  the condition (or null if none) that applies to any found compositions
-     * @param compositions   a list of compositions to contribute to
-     *
-     * @return true if at least one composition was parsed
+     * @return a list of compositions
      */
-    boolean parseComposition(Expression exprCondition, List<CompositionNode> compositions)
+    List<CompositionNode> parseCompositions()
         {
-        boolean fAny = false;
+        List<CompositionNode> compositions = new ArrayList<>();
         while (true)
             {
             // the keywords below require "match()" to extract them, because they are context
@@ -532,18 +460,16 @@ public class Parser
                 {
                 TypeExpression   type = parseExtendedTypeExpression();
                 List<Expression> args = parseArgumentList(false, false, false);
-                compositions.add(new CompositionNode.Extends(exprCondition, keyword, type, args,
+                compositions.add(new CompositionNode.Extends(null, keyword, type, args,
                         prev().getEndPosition()));
-                fAny = true;
                 }
             else if ((keyword = match(Id.IMPLEMENTS)) != null)
                 {
                 do
                     {
-                    compositions.add(new CompositionNode.Implements(exprCondition, keyword, parseExtendedTypeExpression()));
+                    compositions.add(new CompositionNode.Implements(null, keyword, parseExtendedTypeExpression()));
                     }
                 while (match(Id.COMMA) != null);
-                fAny = true;
                 }
             else if ((keyword = match(Id.DELEGATES)) != null)
                 {
@@ -553,11 +479,10 @@ public class Parser
                     expect(Id.L_PAREN);
                     Expression expr = parseExpression();
                     Token tokEnd = expect(Id.R_PAREN);
-                    compositions.add(new CompositionNode.Delegates(exprCondition, keyword, type,
+                    compositions.add(new CompositionNode.Delegates(null, keyword, type,
                             expr, tokEnd.getEndPosition()));
                     }
                 while (match(Id.COMMA) != null);
-                fAny = true;
                 }
             else if ((keyword = match(Id.INCORPORATES)) != null)
                 {
@@ -611,15 +536,13 @@ public class Parser
                         }
 
                     List<Expression> args = parseArgumentList(false, false, false);
-                    compositions.add(new CompositionNode.Incorporates(exprCondition, keyword, type, args, constraints));
+                    compositions.add(new CompositionNode.Incorporates(null, keyword, type, args, constraints));
                     }
                 while (match(Id.COMMA) != null);
-                fAny = true;
                 }
             else if ((keyword = match(Id.INTO)) != null)
                 {
-                compositions.add(new CompositionNode.Into(exprCondition, keyword, parseExtendedTypeExpression()));
-                fAny = true;
+                compositions.add(new CompositionNode.Into(null, keyword, parseExtendedTypeExpression()));
                 }
             else // not context-sensitive keywords
                 {
@@ -644,9 +567,8 @@ public class Parser
                             {
                             injector = parseNamedTypeExpression(null);
                             }
-                        compositions.add(new CompositionNode.Import(exprCondition, keyword, modifier,
+                        compositions.add(new CompositionNode.Import(null, keyword, modifier,
                                 module,versions, injects, injector, prev().getEndPosition()));
-                        fAny = true;
                         }
                         break;
 
@@ -654,14 +576,13 @@ public class Parser
                         {
                         keyword = expect(Id.DEFAULT);
                         expect(Id.L_PAREN);
-                        compositions.add(new CompositionNode.Default(exprCondition, keyword,
+                        compositions.add(new CompositionNode.Default(null, keyword,
                                 parseExpression(), expect(Id.R_PAREN).getEndPosition()));
-                        fAny = true;
                         }
                         break;
 
                     default:
-                        return fAny;
+                        return compositions;
                     }
                 }
             }
@@ -780,60 +701,6 @@ public class Parser
                 case TYPEDEF:
                     stmt = parseTypeDefStatement(exprCondition, null);
                     break;
-
-                case IF:
-                    {
-                    Token tokIf = expect(Id.IF);
-                    expect(Id.L_PAREN);
-                    Expression exprIf = parseLinkerCondition();
-                    expect(Id.R_PAREN);
-
-                    // then ...
-                    expect(Id.L_CURLY);
-                    Token tokAnd = null;
-                    if (exprCondition == null)
-                        {
-                        parseTypeCompositionComponents(exprIf, stmts, fFileLevel);
-                        }
-                    else
-                        {
-                        tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
-                        parseTypeCompositionComponents(new CmpExpression(exprCondition, tokAnd, exprIf), stmts, fFileLevel);
-                        }
-                    // the '}' is eaten by the recursive call to parseTypeCompositionComponents
-
-                    // else ...
-                    Token tokElse = match(Id.ELSE);
-                    if (tokElse != null)
-                        {
-                        Token      tokNot   = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
-                        Expression exprElse = new PrefixExpression(tokNot, exprIf);
-                        boolean    fElseIf  = peek(Id.IF);
-                        if (!fElseIf)
-                            {
-                            expect(Id.L_CURLY);
-                            }
-                        if (exprCondition == null)
-                            {
-                            parseTypeCompositionComponents(exprElse, stmts, fFileLevel);
-                            }
-                        else
-                            {
-                            parseTypeCompositionComponents(new CmpExpression(exprCondition, tokAnd, exprElse), stmts, fFileLevel);
-                            }
-                        // the '}' is eaten by the recursive call to parseTypeCompositionComponents
-
-                        // TODO what about "else if" (the else won't have a '}')
-//                        if (!fElseIf)
-//                            {
-//                            expect(Id.R_CURLY);
-//                            }
-                        }
-
-                    // there is no "if statement" per se; instead, the expression was simply pushed
-                    // down to any type composition components that were encountered inside the if
-                    continue;
-                    }
 
                 default:
                     {
