@@ -5,6 +5,54 @@ import io.IllegalUTF;
 import numbers.IntConvertible;
 
 
+/**
+ * This is the implementation of a Unicode character, which represents a single Unicode _codepoint_.
+ *
+ * The programming term "char" or "character" is simultaneously both well-known and yet wildly
+ * ambiguous, and depending on the context (e.g. programming language and platform), it may indicate
+ * any of: a 7- or 8-bit character of any of a number of encodings (e.g. ASCII, ANSI, etc.), a
+ * 16-bit value (e.g. DBCS, UTF-16, etc.), a variable-length encoding (e.g. MBCS, UTF-8, UTF-16), or
+ * even a 32-bit value, which is typically a Unicode codepoint.
+ *
+ * Unicode codepoints are just unsigned integer values, in the range `0..0x10FFFF`. (That range is
+ * subject to change again in any new version of Unicode, of course.) For each value in that range,
+ * the codepoint is either defined by the Unicode standard, or is considered "Unassigned". There are
+ * a few special sections -- called "surrogates" -- within the codepoint range that are reserved for
+ * combining two 16-bit values to form a codepoint that is outside of the 16-bit range; this is a
+ * historic anachronism that dates back to the transition from when all Unicode codepoints were in
+ * the 16-bit range.
+ *
+ * This `Character` class represents each character as a Unicode codepoint, expressed as a 32-bit
+ * unsigned integer value. However, even with 32 bits of information, that if often not enough space
+ * to represent what an end user may perceive as a character. Specifically, when the user sees a
+ * "character" on a screen, that is a _glyph_, which is a graphical representation of a _grapheme_,
+ * which is a single human-recognizable "character" that could for example be selected on a screen
+ * using a mouse or other input method. A grapheme is usually a single Unicode character, but it can
+ * also be composed of a _sequence_ of multiple Unicode characters. This is common in certain
+ * human languages that have different ways of composing various elements and accents into a single
+ * grapheme, but it is also common with characters like emojis, which can combine up to a half dozen
+ * (!!!) or more separate emoji characters into a single emoji that is displayed to the user. In
+ * other words, an Ecstasy `Character` is usually a grapheme, but some graphemes require more than
+ * one Ecstasy `Character` in order to specify the entire set of details about the grapheme.
+ *
+ * The implementation of this class is dependent on information from the Unicode standard, which is
+ * published by the [unicode.org](http://unicode.org/) web site. When a new version of the Unicode
+ * standard is released, the organization releases a "Unicode Character Database" (UCD), which
+ * contains the information about each Unicode codepoint. Ecstasy includes extracted portions of
+ * that information in order to answer specific questions about a given character, such as "Is this
+ * character a lower-case letter?", and "What is the upper-case form of this character?" The
+ * information is encoded using [ConstOrdinalList], and consists of the following files in the
+ * Ecstasy module:
+ *
+ * * CharBlocks.dat - specifies the block name for each character
+ * * CharCats.dat - specifies the Category for each character
+ * * CharCCCs.dat - Combining Character Class value for each character
+ * * CharDecs.dat - specifies the decimal value for characters that denote a numeric value
+ * * CharLowers.dat - specifies the lower case character for characters that have a lower case form
+ * * CharNums.dat - specifies the numeric string for characters that denote a numeric value
+ * * CharTitles.dat - specifies the title case character for characters that have a title case form
+ * * CharUppers.dat - specifies the upper case character for characters that have a upper case form
+ */
 const Char(UInt32 codepoint)
         implements IntConvertible
         implements Sequential
