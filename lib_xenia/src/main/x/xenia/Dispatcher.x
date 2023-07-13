@@ -26,30 +26,54 @@ import net.UriTemplate.UriParameters;
  * Dispatcher is responsible for finding an endpoint, creating a call chain for an HTTP request and
  * invoking it on a corresponding WebService.
  */
-service Dispatcher(Catalog        catalog,
-                   BundlePool     bundlePool,
-                   SessionManager sessionManager,
-                   Authenticator  authenticator,
-                  ) {
+service Dispatcher {
+    construct(Catalog        catalog,
+              BundlePool     bundlePool,
+              SessionManager sessionManager,
+              Authenticator  authenticator) {
+        this.catalog             = catalog;
+        this.bundlePool          = bundlePool;
+        this.sessionManager      = sessionManager;
+        this.plainTextCookieName = sessionManager.plainTextCookieName;
+        this.encryptedCookieName = sessionManager.encryptedCookieName;
+        this.consentCookieName   = sessionManager.consentCookieName;
+        this.authenticator       = authenticator;
+    }
+
     /**
      * The Catalog.
      */
-    protected Catalog catalog;
+    protected @Final Catalog catalog;
 
     /**
      * The pool of call chain bundles.
      */
-    protected BundlePool bundlePool;
+    protected @Final BundlePool bundlePool;
 
     /**
      * The session manager.
      */
-    protected SessionManager sessionManager;
+    protected @Final SessionManager sessionManager;
+
+    /**
+     * The name of the session cookie for non-TLS traffic (copied from the session manager).
+     */
+    protected @Final String plainTextCookieName;
+
+    /**
+     * The name of the session cookie for TLS traffic (copied from the session manager).
+     */
+    protected @Final String encryptedCookieName;
+
+    /**
+     * The name of the persistent session cookie (copied from the session manager).
+     */
+    protected @Final String consentCookieName;
 
     /**
      * The user authenticator.
      */
-    protected Authenticator authenticator;
+    protected @Final Authenticator authenticator;
 
     /**
      * Pending request counter.
@@ -111,7 +135,7 @@ service Dispatcher(Catalog        catalog,
                     bundle = bundlePool.allocateBundle(wsid);
 
                     SystemService svc = bundle.ensureWebService(wsid).as(SystemService);
-                    HttpStatus|ResponseOut|String result = svc.handle(uriString, requestInfo);
+                    HttpStatus|ResponseOut|String result = svc.handle(this, uriString, requestInfo);
                     if (result.is(String)) {
                         uriString = result;
                         bundlePool.releaseBundle(bundle);
@@ -204,7 +228,7 @@ service Dispatcher(Catalog        catalog,
                 if (result.is(HttpStatus)) {
                     response = new SimpleResponse(result);
                     for (CookieId cookieId : CookieId.from(eraseCookies)) {
-                        response.header.add(Header.SetCookie, cookieId.eraser);
+                        response.header.add(Header.SetCookie, eraseCookie(cookieId));
                     }
                     break ProcessRequest;
                 }
@@ -240,7 +264,7 @@ service Dispatcher(Catalog        catalog,
                                 session.cookieSent_(cookie);
                             }
                         } else if (eraseCookies & cookieId.mask != 0) {
-                            header.add(Header.SetCookie, cookieId.eraser);
+                            header.add(Header.SetCookie, eraseCookie(cookieId));
                         }
                     }
 
@@ -337,7 +361,7 @@ service Dispatcher(Catalog        catalog,
             for (String cookieHeader : cookies) {
                 for (String cookie : cookieHeader.split(';')) {
                     if (Int      delim    := cookie.indexOf('='),
-                        CookieId cookieId := CookieId.lookupCookie(cookie[0 ..< delim].trim())) {
+                        CookieId cookieId := lookupCookie(cookie[0 ..< delim].trim())) {
                         if (SessionImpl session := sessionManager.getSessionByCookie(
                                 cookie.substring(delim+1).trim())) {
                             return session;
@@ -599,7 +623,7 @@ service Dispatcher(Catalog        catalog,
      * @return consent   the persistent consent cookie value, or Null if absent
      * @return failures  a bitmask of any errors encountered per `CookieId`
      */
-    static (String? txtTemp, String? tlsTemp, String? consent, Int failures)
+    (String? txtTemp, String? tlsTemp, String? consent, Int failures)
             extractSessionCookies(RequestInfo requestInfo) {
         String? txtTemp  = Null;
         String? tlsTemp  = Null;
@@ -611,7 +635,7 @@ service Dispatcher(Catalog        catalog,
             for (String cookieHeader : cookies) {
                 NextCookie: for (String cookie : cookieHeader.split(';')) {
                     if (Int      delim    := cookie.indexOf('='),
-                        CookieId cookieId := CookieId.lookupCookie(cookie[0 ..< delim].trim())) {
+                        CookieId cookieId := lookupCookie(cookie[0 ..< delim].trim())) {
                         String? oldValue;
                         String  newValue = cookie.substring(delim+1).trim();
                         switch (cookieId) {
@@ -657,6 +681,52 @@ service Dispatcher(Catalog        catalog,
         }
 
         return txtTemp, tlsTemp, consent, failures;
+    }
+
+    /**
+     * Determine if a cookie name indicates a session cookie.
+     *
+     * @param cookieName  the name of the cookie
+     *
+     * @return True iff the name indicates a session cookie
+     * @return (conditional) the CookieId
+     */
+    conditional CookieId lookupCookie(String cookieName) {
+        if (cookieName == plainTextCookieName) {
+            return True, PlainText;
+        } else if (cookieName == encryptedCookieName) {
+            return True, Encrypted;
+        } else if (cookieName == consentCookieName) {
+            return True, Consent;
+        } else {
+            return False;
+        }
+    }
+
+    /**
+     * Obtain the session cookie name for the specified cookie id.
+     *
+     * @param id  the session CookieId
+     *
+     * @return the name of the cookie to use for the specified CookieId
+     */
+    String cookieNameFor(CookieId id) {
+        return switch (id) {
+            case PlainText: plainTextCookieName;
+            case Encrypted: encryptedCookieName;
+            case Consent:   consentCookieName;
+        };
+    }
+
+    /**
+     * Obtain a header entry that will erase the session cookie for the specified cookie id.
+     *
+     * @param id  the session CookieId
+     *
+     * @return a header entry that will erase the session cookie
+     */
+    String eraseCookie(CookieId id) {
+        return $"{cookieNameFor(id)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT{id.attributes}";
     }
 
     /**

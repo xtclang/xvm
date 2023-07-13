@@ -4,6 +4,7 @@ import web.HttpStatus;
 import web.codecs.Base64Format;
 
 import HttpServer.RequestInfo;
+import SessionCookie.CookieId;
 import SessionImpl.Event_;
 import SessionStore.IOResult;
 
@@ -43,19 +44,46 @@ import SessionStore.IOResult;
  * either anonymity or privacy.
  */
 @Concurrent
-service SessionManager(SessionStore store, SessionProducer instantiateSession) {
+service SessionManager {
+    // ----- constructors --------------------------------------------------------------------------
+
+    construct(SessionStore store, SessionProducer instantiateSession, UInt16 plainPort=80, UInt16 tlsPort=443) {
+        this.store              = store;
+        this.instantiateSession = instantiateSession;
+
+        plainTextCookieName = plainPort == 80  ? CookieId.PlainText.cookieName : $"{CookieId.PlainText.cookieName}_{plainPort}";
+        encryptedCookieName = tlsPort   == 443 ? CookieId.Encrypted.cookieName : $"{CookieId.Encrypted.cookieName}_{tlsPort}";
+        consentCookieName   = tlsPort   == 443 ? CookieId.Consent.cookieName   : $"{CookieId.Consent.cookieName}_{tlsPort}";
+    }
+
+
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The means to persistently store sessions.
      */
-    protected/private SessionStore store;
+    protected/private @Final SessionStore store;
 
     /**
      * The means to instantiate sessions.
      */
     typedef function SessionImpl(SessionManager, Int64, RequestInfo) as SessionProducer;
-    protected/private SessionProducer instantiateSession;
+    protected/private @Final SessionProducer instantiateSession;
+
+    /**
+     * The name of the session cookie for non-TLS traffic.
+     */
+    public/private @Final String plainTextCookieName;
+
+    /**
+     * The name of the session cookie for TLS traffic.
+     */
+    public/private @Final String encryptedCookieName;
+
+    /**
+     * The name of the persistent session cookie (requires consent).
+     */
+    public/private @Final String consentCookieName;
 
     /**
      * Increment the session identifier "counter" by a large prime number.

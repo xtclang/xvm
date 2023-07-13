@@ -48,7 +48,8 @@ service SystemService {
      * @return one of: an `HttpStatus` error code; a complete `Response`; or a new path to use in
      *         place of the passed `uriString`
      */
-    HttpStatus|ResponseOut|String handle(String      uriString,
+    HttpStatus|ResponseOut|String handle(Dispatcher  dispatcher,
+                                         String      uriString,
                                          RequestInfo info,
                                         ) {
         String[] parts = uriString.split('/');
@@ -67,7 +68,7 @@ service SystemService {
                 return NotFound;
             }
 
-            return validateSessionCookies(uriString, info, redirect, version);
+            return validateSessionCookies(dispatcher, uriString, info, redirect, version);
 
         default:
             return NotFound;
@@ -99,7 +100,8 @@ service SystemService {
      * @return one of: an `HttpStatus` error code; a complete `Response`; or a new path to use in
      *         place of the passed `uriString`
      */
-    protected HttpStatus|ResponseOut validateSessionCookies(String      uriString,
+    protected HttpStatus|ResponseOut validateSessionCookies(Dispatcher  dispatcher,
+                                                            String      uriString,
                                                             RequestInfo info,
                                                             Int64       redirect,
                                                             Int64       version,
@@ -142,7 +144,7 @@ service SystemService {
 
         // find up to three session cookies that were passed in with the request
         (String? txtTemp, String? tlsTemp, String? consent, Int failures)
-                = Dispatcher.extractSessionCookies(info);
+                = dispatcher.extractSessionCookies(info);
         if (failures != 0) {
             // something is deeply wrong with the cookies coming from the user agent, and it's
             // unlikely that we can fix them (because by the time that we got here, we supposedly
@@ -244,7 +246,7 @@ service SystemService {
                      | (tlsTemp == Null ? 0 : CookieId.TlsTemp)
                      | (consent == Null ? 0 : CookieId.OnlyConsent);
         for (CookieId cookieId : CookieId.from(present & ~desired)) {
-            header.add(Header.SetCookie, cookieId.eraser);
+            header.add(Header.SetCookie, dispatcher.eraseCookie(cookieId));
         }
 
         // come back to verify that the user agent received and subsequently sent the

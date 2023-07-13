@@ -239,16 +239,6 @@ const SessionCookie {
         Encrypted("__Host-xtemporary", True , False, "; Path=/; SameSite=Strict; HttpOnly; Secure"),
         Consent  ("__Host-xconsented", True , True , "; Path=/; SameSite=Strict; HttpOnly; Secure");
 
-        static conditional CookieId lookupCookie(String cookieName) {
-            return switch (cookieName) {
-                case        "xplaintext": (True, PlainText);
-                case "__Host-xtemporary": (True, Encrypted);
-                case "__Host-xconsented": (True, Consent  );
-
-                default: False;
-            };
-        }
-
         /**
          * Turn a bitmask of cookie ID ordinals into an array of corresponding cookie IDs.
          */
@@ -265,12 +255,6 @@ const SessionCookie {
                 default: assert;
             };
         }
-
-        /**
-         * A response header value that will erase this CookieId from the user agent.
-         */
-        @Lazy(() -> $"{cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT{attributes}")
-        String eraser;
 
         /**
          * The bitmask for this CookieId.
@@ -333,6 +317,17 @@ const SessionCookie {
      * The identity of the cookie, as seen by the user agent.
      */
     CookieId cookieId;
+
+    /**
+     * The name of the cookie, as in the HTTP header.
+     */
+    String cookieName.get() {
+        return switch (cookieId) {
+            case PlainText: manager.plainTextCookieName;
+            case Encrypted: manager.encryptedCookieName;
+            case Consent:   manager.consentCookieName;
+        };
+    }
 
     /**
      * The set of cookies on the user agent that were sent from and/or being provided by the user
@@ -477,7 +472,7 @@ const SessionCookie {
 
     @Override
     Int estimateStringLength() {
-        return cookieId.cookieName.size
+        return cookieName.size
              + 1
              + text.size
              + cookieId.attributes.size;
@@ -485,7 +480,7 @@ const SessionCookie {
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) {
-        cookieId.cookieName.appendTo(buf);
+        cookieName.appendTo(buf);
         buf.add('=');
 
         if (cookieId.persistent) {

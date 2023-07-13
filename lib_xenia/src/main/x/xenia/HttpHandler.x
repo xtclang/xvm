@@ -211,7 +211,7 @@ service HttpHandler
             };
         }
 
-        SessionManager mgr = new SessionManager(new SessionStore(), sessionProducer);
+        SessionManager mgr = new SessionManager(new SessionStore(), sessionProducer, httpServer.plainPort, httpServer.tlsPort);
         httpServer.configureService(mgr);
         return mgr;
     }
