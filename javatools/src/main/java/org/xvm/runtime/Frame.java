@@ -1979,7 +1979,7 @@ public class Frame
             case Property:
                 {
                 String sFormalName = constFormal.getName();
-                if (method.isLambda() && method.isStatic())
+                if (method != null && method.isLambda() && method.isStatic())
                     {
                     // generic types are passed to "static" lambdas as type parameters
                     for (int i = 0, c = method.getTypeParamCount(); i < c; i++)
@@ -2002,7 +2002,8 @@ public class Frame
                 // look for a match only amongst the method's formal type parameters
                 TypeParameterConstant constParam = (TypeParameterConstant) constFormal;
 
-                if (!constParam.getMethod().equals(method.getIdentityConstant()))
+                if (method == null ||
+                        !constParam.getMethod().equals(method.getIdentityConstant()))
                     {
                     return null;
                     }
