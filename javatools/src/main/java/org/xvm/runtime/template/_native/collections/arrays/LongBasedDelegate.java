@@ -123,7 +123,7 @@ public abstract class LongBasedDelegate
         int    nStart = valueIndex(ofStart);
         long[] alValue;
 
-        if (shiftCount(ofStart) == 0)
+        if (nStart == 0)
             {
             alValue = Arrays.copyOfRange(hDelegate.m_alValue, nStart, nStart + storage(cSize));
             }
