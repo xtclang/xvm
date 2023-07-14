@@ -1,6 +1,7 @@
 package org.xvm.runtime.template._native.mgmt;
 
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import java.util.Collections;
@@ -24,10 +25,13 @@ import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.fs.xOSFileNode.NodeHandle;
+import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
@@ -59,7 +63,7 @@ public class xContainerLinker
                 pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
         GET_RESOURCE = clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
 
-        markNativeMethod("loadFileTemplate", null, null);
+        markNativeMethod("loadFileTemplate", BYTES, null);
         markNativeMethod("resolveAndLink", null, null);
 
         invalidateTypeInfo();
@@ -81,8 +85,9 @@ public class xContainerLinker
                 {
                 try
                     {
-                    NodeHandle    hFile  = (NodeHandle) hArg;
-                    FileStructure struct = new FileStructure(hFile.getPath().toFile());
+                    ArrayHandle   hContents  = (ArrayHandle) hArg;
+                    byte[]        abContents = xRTUInt8Delegate.getBytes((ByteArrayHandle) hContents.m_hDelegate);
+                    FileStructure struct = new FileStructure(new ByteArrayInputStream(abContents));
 
                     return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(frame.f_context.f_container, struct));
                     }

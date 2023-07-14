@@ -44,7 +44,9 @@ service ContainerLinker
     }
 
     @Override
-    FileTemplate loadFileTemplate(File file) {TODO("Native");}
+    FileTemplate loadFileTemplate(File file) {
+        return loadFileTemplate(file.contents);
+    }
 
     @Override
     String toString() {
@@ -59,4 +61,6 @@ service ContainerLinker
             Module[]          sharedModules,
             ModuleTemplate[]  additionalModules,
             String[]          namedConditions) {TODO("Native");}
+
+    FileTemplate loadFileTemplate(Byte[] contents) {TODO("Native");}
 }
