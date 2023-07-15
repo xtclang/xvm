@@ -1136,18 +1136,6 @@ ExtendedTypeExpression
 AnyTypeExpression
     ExtendedTypeExpression
 
-AnonTypeExpression
-    "{" NameOrSignatureList ";" "}"             # note: at least one name or signature is required
-
-NameOrSignatureList
-    NameOrSignature
-    NameOrSignatureList ";" NameOrSignature
-
-NameOrSignature
-    Name                                                                    # ref to 1+ property/method
-    PropertyModifiers-opt TypeExpression Name                               # property
-    MethodModifiers-opt TypeParameterList-opt MethodIdentity ParameterList  # method
-
 # '+' creates an intersection of two types; '-' creates a difference of two types
 IntersectingTypeExpression
     UnionedTypeExpression
@@ -1164,7 +1152,6 @@ UnionedTypeExpression
     UnionedTypeExpression "|" PrefixTypeExpression
 
 ExtendedUnionedTypeExpression
-    AnonTypeExpression
     ExtendedPrefixTypeExpression
     ExtendedUnionedTypeExpression "|" ExtendedPrefixTypeExpression
 
@@ -1199,6 +1186,7 @@ ExtendedPrimaryTypeExpression
     "(" ExtendedTypeExpression ")"
     NamedTypeExpression
     FunctionTypeExpression
+    AnonTypeExpression
     "const"
     "enum"
     "module"
@@ -1230,6 +1218,18 @@ TypeValueList
 #    the '!' operator, precedence rules require the range to be inside parens, e.g. "!(v1..v2)"
 TypeValue
     Expression
+
+AnonTypeExpression
+    "{" NameOrSignatureList ";" "}"             # note: at least one name or signature is required
+
+NameOrSignatureList
+    NameOrSignature
+    NameOrSignatureList ";" NameOrSignature
+
+NameOrSignature
+    Name                                                                    # ref to 1+ property/method
+    PropertyModifiers-opt TypeExpression Name                               # property
+    MethodModifiers-opt TypeParameterList-opt MethodIdentity ParameterList  # method
 
 # Note: in the case that the name precedes the ParameterTypeList, the token
 #       stream is re-ordered such that the name is deposited into the stream
