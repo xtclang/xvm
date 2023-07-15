@@ -4,6 +4,7 @@ import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.*;
 import org.xvm.cc_explore.util.S;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -28,6 +29,11 @@ public class ClassPart extends Part {
   final LitCon _path;           // File name compiling this file
   final Part.Format _f;         // Class, Interface, Mixin, Enum, Module, Package
 
+  ClassPart _super; // Super-class.  Note that "_par" field is the containing Package, not the superclass
+
+  ClassPart[] _mixes;             // List of incorporated mixins.
+
+  
   // A list of "extra" features about Classes: extends, implements, delegates
   public final Contrib[] _contribs;
   
@@ -61,9 +67,10 @@ public class ClassPart extends Part {
     TVStruct stv = new TVStruct(_name,true);
     set_tvar(stv);              // Set the local type to stop recursions
     for( String s : _name2kid.keySet() ) {
-      if( _name2kid.get(s) instanceof TDefPart ) {
+      Part p = _name2kid.get(s);
+      if( p instanceof TDefPart ) {
         stv.add_fld(s,new TVIsa(new TVLeaf())); // Add a local typdef as a ISA
-      } else if( _name2kid.get(s) instanceof PropPart pp ) {
+      } else if( p instanceof PropPart pp ) {
         // Property.  
         if( _tcons!=null && _tcons.get(s)!=null ) {
           stv.add_fld(s,new TVIsa(new TVLeaf()));
@@ -89,8 +96,11 @@ public class ClassPart extends Part {
         switch( c._comp ) {
         case Extends -> {
           assert _contribs[0] == c; // Can optimize if extends are always in slot 0
-          // Add contrib class to super chain
-          throw XEC.TODO();
+          TermTCon ttc = ifaces0(c._tContrib); // The class
+          Format f = ttc.clz()._f;
+          assert f==Part.Format.CONST || f==Part.Format.ENUM; // Class or Constant or Enum class
+          // Cannot assert struct is closed, because of recursive references.
+          _super = ttc.clz();   // Record super-class
         }
         case Implements, Delegates -> {
           TermTCon ttc = ifaces0(c._tContrib); // The iface, perhaps after a TVImmut
@@ -101,47 +111,39 @@ public class ClassPart extends Part {
         }
 
         // This is a "mixin", marker interface.  It becomes part of the parent-
-        // chain of the following "linked list" of classes.  The linked list
-        // is formed from a left-spline UnionTCon.
-        case Into -> {
-          TCon mixed = c._tContrib;
-          while( mixed instanceof UnionTCon utc ) {
-            mixed = utc.con1(); // Next
-            TermTCon tc = (TermTCon)utc.con2();
-            tc.setype(repo);
-            ClassPart clz = tc.clz();
-            //clz.env_extend( this );
-            throw XEC.TODO();
-          }
-          TermTCon tc = (TermTCon)mixed;
-          tc.setype(repo);
-          ClassPart clz = tc.clz();
-          //clz.env_extend( this );
-          throw XEC.TODO();
-        }
-        }
-      }
-    }
+        // chain of the following "linked list" of classes.  The linked list is
+        // formed from a left-spline UnionTCon.  Proper mixins was confirmed by
+        // XTC compiler, and TODO Some Day we can verify again here.
+        case Into -> { }
 
-    // All other contributions
-    if( _contribs != null ) {
-      for( Contrib c : _contribs ) {
-        switch( c._comp ) {
-        case Extends, Implements, Delegates, Into:
-          break;                // Already did
-        default:
-          // Handle other contributions
+        // This can be a mixin marker annotation, which has been checked by the
+        // XTC compiler already.
+        case Annotation -> {
+          ClassPart mix = ifaces0(c._tContrib).clz();
+          assert mix._f==Part.Format.MIXIN;
+          assert mix._contribs[0]._comp==Part.Composition.Into;
+        }
+        
+        case Incorporates -> {
+          ClassPart mix = ifaces0(c._tContrib).clz();
+          if( _mixes==null ) _mixes = new ClassPart[1];
+          else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
+          _mixes[_mixes.length-1] = mix;
+          mix.tvar().fresh_unify( tvar(),null);
+        }
+
+        default ->  // Handle other contributions
           throw XEC.TODO();
         }
+        
       }
     }
 
     // The structure has more unspecified fields, or not.
-    // Classes are closed: all fields are listed.
     // Interfaces are open: at least these fields, but you are allowed more.
     switch( _f ) {
     case CLASS, CONST, MODULE, PACKAGE, ENUM, ENUMVALUE: stvar().close(); break;
-    case INTERFACE: break;
+    case INTERFACE, MIXIN: break;
     default: throw XEC.TODO();
     };
 

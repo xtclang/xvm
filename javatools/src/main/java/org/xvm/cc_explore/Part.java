@@ -102,22 +102,32 @@ abstract public class Part {
     if( p!=this ) return p.link(repo); // Now link the replacement
     
     // Link specific part innards
+    p("self");
     link_innards(repo);                 // Link internal Const
     assert _tvar!=null;
 
     // For all child parts
-    if( _name2kid==null ) return this;
-    for( String name : _name2kid.keySet() ) {
-      Part kid0 = _name2kid.get(name);
-      if( kid0 instanceof PropPart pp ) {
-        // Do nothing?
-      } else {
-        Part kid = kid0.link(repo); 
-        _name2kid.put(name,kid);  // Replace with upgrade and link
+    p("kids");
+    D++;
+    if( _name2kid!=null ) 
+      for( String name : _name2kid.keySet() ) {
+        Part kid0 = _name2kid.get(name);
+        if( kid0 instanceof PropPart pp ) {
+          // Do nothing?
+        } else {
+          Part kid = kid0.link(repo); 
+          _name2kid.put(name,kid);  // Replace with upgrade and link
+        }
       }
-    }
-
+    D--;
+    p("done");
     return this;
+  }
+
+  private static int D=0;
+  private void p(String msg) {
+    for( int i=0; i<D; i++ ) System.out.print("  ");
+    System.out.println("Link "+msg+" "+this);
   }
 
   // Tok, replace self with a better Part

@@ -187,11 +187,8 @@ abstract public class TVar implements Cloneable {
 
     // Two unrelated classes usually make an error
     if( getClass() != that.getClass() ) {
-      // Specifically allow an immutable struct
-      if( !(this instanceof TVImmut && that instanceof TVStruct) ) {
-        ERRS.p("Cannot unify "+this+" and "+that).nl();
-        return 1;
-      }
+      ERRS.p("Cannot unify "+this+" and "+that).nl();
+      return 1;
     }
 
     // Early set, to stop cycles

@@ -22,6 +22,8 @@ public abstract class TCon extends Const {
     return (_tvar = tv);
   }
 
+  @Override public void con_link( XEC.ModRepo repo ) { setype(repo); }
+
   // Sub TCons use this return the initial tvar; and can be assured that they
   // are called only once, and they do not need to assign to tvar.
   TVar _setype( XEC.ModRepo repo ) { throw XEC.TODO(); }

@@ -38,10 +38,11 @@ public class Parameter {
     _con.setype(repo);
     
     if( _annots!=null ) throw XEC.TODO();
-    if( _def!=null )
-      //_def.link(repo);
-      throw XEC.TODO();         // Constant value
+    if( _def!=null ) _def.con_link(repo);
   }
 
   public TVar tvar() { return _con.tvar(); }
+  public TVar generic_tvar() {
+    return ((ParamTCon)_con)._types[0];
+  }
 }

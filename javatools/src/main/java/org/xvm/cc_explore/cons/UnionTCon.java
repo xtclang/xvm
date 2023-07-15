@@ -16,10 +16,4 @@ public class UnionTCon extends RelTCon {
     sb.p("|");
     return _con1.str(sb);
   }
-  @Override public TVar _setype(XEC.ModRepo repo) {
-    super._setype(repo);
-  //  TVar tv1 = _con1.tvar();
-  //  TVar tv2 = _con2.tvar();
-    throw XEC.TODO();
-  }
 }

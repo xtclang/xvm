@@ -11,7 +11,6 @@ import org.xvm.cc_explore.tvar.TVStruct;
 public class ParamTCon extends TCon {
   TCon _con;
   public TCon[] _parms;
-  TVStruct _clz;
   public final TVar[] _types;
   
   public ParamTCon( CPool X ) {
@@ -30,12 +29,11 @@ public class ParamTCon extends TCon {
   }
   
   @Override TVar _setype( XEC.ModRepo repo ) {
-    _clz = (TVStruct)_con.setype(repo);
     if( _parms!=null )
       for( int i=0; i<_parms.length; i++ )
        _types[i] = _parms[i].setype(repo);
-    return _clz;
+    return _con.setype(repo);
   }
 
-  public TVStruct clz() { return _clz; }
+  public TVStruct clz() { return (TVStruct)tvar(); }
 }
