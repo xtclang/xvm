@@ -17,6 +17,9 @@ public abstract class Const {
   // After linking, the part call does not need the repo.
   Part part() { throw XEC.TODO();  }
 
+  public void con_link( XEC.ModRepo repo ) { }
+
+  
   public final String toString() { return str(new SB()).toString(); }
   public SB str( SB sb ) { return sb.p(getClass().toString()); }
   
