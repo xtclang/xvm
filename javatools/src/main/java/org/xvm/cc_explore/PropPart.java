@@ -33,8 +33,5 @@ public class PropPart extends Part {
         c.link(repo);
     if( _init!=null ) throw XEC.TODO(); // _init.link(repo);    
     set_tvar(_con.setype(repo));
-    
-    throw XEC.TODO();
-    //set_tvar(_con.tvar());
   }
 }

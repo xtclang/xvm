@@ -115,7 +115,7 @@ public class MethodPart extends MMethodPart {
     if( _supercon!=null ) _super = (MMethodPart)_supercon.link(repo);
     if( _finally !=null ) _final = (MMethodPart)_finally .link(repo);
     
-    if( _args !=null ) {
+    if( _args !=null )
       // Lambda-local type variables
       // From ectasy.x,
       // static <NotNullable> conditional NotNullable notNull(NotNullable? value) {
@@ -149,21 +149,12 @@ public class MethodPart extends MMethodPart {
 
       // All remaining arguments and returns can use any lambda-local type
       // variable names by looking in the arg[0] slot.  
-      for( Parameter arg : _args ) {
+      for( Parameter arg : _args )
         arg.link( repo );
-        if( _args[0]==arg && arg._con instanceof ParamTCon ptcon && ptcon.clz()._names.contains("Type") )
-          // arg[0] ISA this type
-          throw XEC.TODO();
-      }
-    }
 
-
-    
     if( _annos   !=null ) for( Annot    anno : _annos ) anno.link(repo);
     if( _rets    !=null ) for( Parameter ret :  _rets ) ret .link(repo);
-    if( _cons    !=null ) for( Const     con :  _cons )
-                            if( con instanceof IdCon idcon ) idcon.link(repo);
-                            else throw XEC.TODO();
+    if( _cons    !=null ) for( Const     con :  _cons ) con .con_link(repo);
     if( _supers  !=null )
       for( int i=0; i<_supers.length; i++ )
         if( _supers[i]!=null )

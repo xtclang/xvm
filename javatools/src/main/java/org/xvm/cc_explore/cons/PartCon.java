@@ -10,7 +10,9 @@ public abstract class PartCon extends IdCon {
   PartCon _par;                 // Parent
   Part _part;
   @Override public SB str(SB sb) { return _par==null ? sb : _par.str(sb.p(" -> ")); }
-  
+
+  @Override public void con_link( XEC.ModRepo repo ) { link(repo); }
+
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
     // Link the parent, do any replacement lookups

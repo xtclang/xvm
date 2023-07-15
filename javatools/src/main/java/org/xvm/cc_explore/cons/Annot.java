@@ -22,10 +22,10 @@ public class Annot extends PartCon {
   }
   @Override public Part link(XEC.ModRepo repo) {
     if( _part!=null ) return _part;
-    _part = (ClassPart)_par.link(repo);
+    _part = _par.link(repo);
     if( _cons!=null )
       for( Const con : _cons )
-        throw XEC.TODO(); // con.link(repo); // Do constant linking
+        con.con_link(repo);
     return _part;
   }
   
