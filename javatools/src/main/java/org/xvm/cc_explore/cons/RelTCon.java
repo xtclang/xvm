@@ -18,9 +18,10 @@ public abstract class RelTCon extends TCon {
     _con1 = (TCon)X.xget();
     _con2 = (TCon)X.xget();
   }
+  // Note that the _tvar type set here is used to stop repeated setype calls
+  // but isn't really any sensible TVar.
   @Override public TVar _setype(XEC.ModRepo repo) {
     _con1.setype(repo);
-    _con2.setype(repo);
-    return null;
+    return _con2.setype(repo);
   }
 }
