@@ -20,7 +20,7 @@ public class Contrib {
   private final Annot _annot;
   private final HashMap<String, TCon> _parms;
   // Post link values
-  private final HashMap<String, ClassPart> _clzs;
+  final HashMap<String, ClassPart> _clzs;
   
   protected Contrib( CPool X ) {
     _comp = Part.Composition.valueOf(X.u8());
@@ -79,9 +79,9 @@ public class Contrib {
     if( _annot !=null ) _annot .link(repo);
     if( _parms !=null )
       for( String name : _parms.keySet() ) {
-        TCon tcon = _parms.get(name);
-        //_clzs.put(name, tcon==null ? null : (ClassPart)tcon.link(repo));
-        throw XEC.TODO();       // Do type things not link things
+        TermTCon tcon = (TermTCon)_parms.get(name);
+        tcon.setype(repo);
+        _clzs.put(name,tcon.clz());
       }
   }
 

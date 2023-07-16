@@ -9,7 +9,7 @@ import org.xvm.cc_explore.tvar.TVStruct;
    Parameterized Type Constant.
  */
 public class ParamTCon extends TCon {
-  TCon _con;
+  public TCon _con;
   public TCon[] _parms;
   public final TVar[] _types;
   
