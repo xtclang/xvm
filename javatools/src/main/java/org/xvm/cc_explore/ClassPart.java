@@ -69,11 +69,11 @@ public class ClassPart extends Part {
     for( String s : _name2kid.keySet() ) {
       Part p = _name2kid.get(s);
       if( p instanceof TDefPart ) {
-        stv.add_fld(s,new TVIsa(new TVLeaf())); // Add a local typdef as a ISA
+        stv.add_fld((_name+".typedef."+s).intern(),new TVLeaf()); // Add a local typdef as a ISA
       } else if( p instanceof PropPart pp ) {
         // Property.  
         if( _tcons!=null && _tcons.get(s)!=null ) {
-          stv.add_fld(s,new TVIsa(new TVLeaf()));
+          stv.add_fld(generic(s),new TVLeaf());
 
         } else {
           // This is an XTC "property" - a field with built-in getters & setters.
@@ -85,7 +85,7 @@ public class ClassPart extends Part {
       } else {
         stv.add_fld(s,new TVLeaf());
       }
-      stv = (TVStruct)stv.find();
+      assert !stv.unified();
     }
 
     // This Class may extend another one.
@@ -101,6 +101,7 @@ public class ClassPart extends Part {
           assert f==Part.Format.CONST || f==Part.Format.ENUM; // Class or Constant or Enum class
           // Cannot assert struct is closed, because of recursive references.
           _super = ttc.clz();   // Record super-class
+          if( c._clzs != null )  throw XEC.TODO();
         }
         case Implements, Delegates -> {
           TermTCon ttc = ifaces0(c._tContrib); // The iface, perhaps after a TVImmut
@@ -108,6 +109,7 @@ public class ClassPart extends Part {
           assert ((TVStruct)ttc.tvar()).is_open();
           // Unify interface into class
           c.tvar().fresh_unify(tvar(),null);
+          if( c._clzs != null )  throw XEC.TODO();
         }
 
         // This is a "mixin", marker interface.  It becomes part of the parent-
@@ -129,7 +131,12 @@ public class ClassPart extends Part {
           if( _mixes==null ) _mixes = new ClassPart[1];
           else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
           _mixes[_mixes.length-1] = mix;
-          mix.tvar().fresh_unify( tvar(),null);
+          // Unify a fresh copy of the mixin's type
+          mix.tvar().fresh_unify(tvar(),null);
+          // Set generic parameter types
+          if( c._clzs != null )
+            for( String generic : c._clzs.keySet() )
+              ((TVStruct)tvar()).arg(mix.generic(generic)).unify( c._clzs.get( generic ).tvar() );
         }
 
         default ->  // Handle other contributions
@@ -146,14 +153,19 @@ public class ClassPart extends Part {
     case INTERFACE, MIXIN: break;
     default: throw XEC.TODO();
     };
-
   }
 
   private static TermTCon ifaces0( TCon tc ) {
     if( tc instanceof TermTCon ttc ) return ttc;
     if( tc instanceof ImmutTCon itc ) return (TermTCon)itc.icon();
+    if( tc instanceof ParamTCon ptc ) return (TermTCon)ptc._con;
     throw XEC.TODO();
   }  
+
+  // Mangle a generic type name
+  private String generic( String s ) {
+    return (_name+".generic."+s).intern();
+  }
 
   
   @Override public Part child(String s, XEC.ModRepo repo) {
