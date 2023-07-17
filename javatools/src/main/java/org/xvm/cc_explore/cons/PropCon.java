@@ -7,4 +7,11 @@ import org.xvm.cc_explore.*;
  */
 public class PropCon extends FormalCon {
   public PropCon( CPool X ) { super(X); }
+  @Override public Part link( XEC.ModRepo repo ) {
+    if( _part!=null ) return _part;
+    // Link the parent, do any replacement lookups
+    Part par = _par.link(repo).link(repo);
+    // Just the parent, I guess
+    return (_part = par);
+  }
 }

@@ -13,14 +13,16 @@ import java.util.HashMap;
  */
 public class Contrib {
   final Part.Composition _comp;
-  final TCon _tContrib;
-  private TVar _tvar;
+  private boolean _linked;
   private final PropCon _prop;
   private final SingleCon _inject;
   private final Annot _annot;
   private final HashMap<String, TCon> _parms;
   // Post link values
   final HashMap<String, ClassPart> _clzs;
+  
+  final TCon _tContrib;
+  private TVar _tvar;
   
   protected Contrib( CPool X ) {
     _comp = Part.Composition.valueOf(X.u8());
@@ -71,21 +73,23 @@ public class Contrib {
   
   // Link all the internal parts
   void link( XEC.ModRepo repo ) {
-    if( _tvar!=null ) return;
-    _tvar = _tContrib.setype(repo);   // Get the type
+    if( _linked ) return;
+    _linked = true;
+    _tContrib.link(repo);
     
     if( _prop  !=null ) _prop  .link(repo);
     if( _inject!=null ) throw XEC.TODO(); // _inject.link(repo);
     if( _annot !=null ) _annot .link(repo);
     if( _parms !=null )
       for( String name : _parms.keySet() ) {
-        TermTCon tcon = (TermTCon)_parms.get(name);
-        tcon.setype(repo);
-        _clzs.put(name,tcon.clz());
+        TCon tcon = _parms.get(name);
+        if( tcon!=null ) tcon.link(repo);
+        _clzs.put(name,tcon==null ? null : ((ClzCon)tcon).clz());
       }
   }
 
-  public TVar tvar() { return _tvar; }
+  // TODO: _tvar = _tContrib.setype(repo);   // Get the type
+  public TVar tvar() { assert _tvar!=null; return _tvar; }
   
   @Override public String toString() { return str(new SB()).toString(); }
   public SB str(SB sb) {
