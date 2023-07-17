@@ -153,7 +153,7 @@ public class xException
         {
         type = type.removeAccess().
                     resolveGenerics(frame.poolContext(), frame.getGenericsResolver(true));
-        return illegalArgument(frame, "Mutable object of type \" " + type.getValueString()
+        return illegalArgument(frame, "Mutable object of type \"" + type.getValueString()
                 + "\" cannot be used for a service call");
         }
 

@@ -468,7 +468,8 @@ public abstract class ClassTemplate
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
                                  TypeConstant typeProxy)
         {
-        ClassComposition clzTarget = (ClassComposition) hTarget.getComposition();
+        ClassComposition clzTarget  = (ClassComposition) hTarget.getComposition();
+        TypeConstant     typeTarget = hTarget.getType();
         if (!hTarget.isMutable())
             {
             // the only reason we need to create a ProxyHandle for an immutable object is that its
@@ -477,28 +478,28 @@ public abstract class ClassTemplate
             // the proxy to it, since the receiving service may need to cast it to a narrower
             // type that is known within its type system; an example would be passing a module
             // across the container lines that may know to cast it to the WebApp or CatalogMetadata
-            ProxyComposition clzProxy = new ProxyComposition(clzTarget, hTarget.getType());
+            ProxyComposition clzProxy = new ProxyComposition(clzTarget, typeTarget);
             return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
             }
 
         if (typeProxy == null)
             {
-            return frame.raiseException(xException.mutableObject(frame, hTarget.getType()));
+            return frame.raiseException(xException.mutableObject(frame, typeTarget));
             }
 
         if (typeProxy.isInterfaceType())
             {
             if (typeProxy.containsGenericType(true))
                 {
-                typeProxy = typeProxy.resolveGenerics(frame.poolContext(), hTarget.getType());
+                typeProxy = typeProxy.resolveGenerics(frame.poolContext(), typeTarget);
                 }
-            assert hTarget.getType().isA(typeProxy);
+            assert typeTarget.isA(typeProxy);
 
             ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
             return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
             }
 
-        return frame.raiseException(xException.mutableObject(frame, typeProxy));
+        return frame.raiseException(xException.mutableObject(frame, typeTarget));
         }
 
 
