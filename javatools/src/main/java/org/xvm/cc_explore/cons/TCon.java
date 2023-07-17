@@ -17,16 +17,15 @@ public abstract class TCon extends Const {
   public final boolean has_tvar() { return _tvar!=null; }
   // Set the TVar
   public final TVar setype( XEC.ModRepo repo ) {
-    if( _tvar!=null ) return _tvar;
-    TVar tv =  _setype(repo);
-    return (_tvar = tv);
+    return _tvar==null ? (_tvar = _setype(repo)) : _tvar;
   }
-
-  @Override public void con_link( XEC.ModRepo repo ) { setype(repo); }
 
   // Sub TCons use this return the initial tvar; and can be assured that they
   // are called only once, and they do not need to assign to tvar.
   TVar _setype( XEC.ModRepo repo ) { throw XEC.TODO(); }
+
+  // Only used to break cyclic tvar construction
+  void set_tvar_cycle_break(TVar tv) { _tvar = tv; }
   
   public static TCon[] tcons( CPool X ) {
     int len = X.u31();

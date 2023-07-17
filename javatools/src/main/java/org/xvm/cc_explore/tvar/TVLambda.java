@@ -37,17 +37,14 @@ public class TVLambda extends TVar {
   // -------------------------------------------------------------
   // Sub-classes specify trial_unify on sub-parts.
   // Check arguments, not return nor omem.
-  @Override int _trial_unify_ok_impl( TVar tv3 ) {
+  @Override boolean _trial_unify_ok_impl( TVar tv3 ) {
     TVLambda that = (TVLambda)tv3; // Invariant when called
-    if( _nargs != that._nargs ) return -1; // Fails to be equal
+    if( _nargs != that._nargs ) return false; // Fails to be equal
     // Check all other arguments
-    int cmp = 1;
-    for( int i=0; i<_args.length; i++ ) {
-      int acmp = arg(i)._trial_unify_ok(that.arg(i));
-      if( acmp == -1 ) return -1; // Arg failed so trial fails
-      cmp &= acmp;                // Maybe arg makes trial a maybe
-    }
-    return cmp;                   // Trial result
+    for( int i=0; i<_args.length; i++ )
+      if( !arg(i)._trial_unify_ok(that.arg(i)) )
+        return false;           // Arg failed so trial fails
+    return true;
   }
 
   @Override SB _str_impl(SB sb, VBitSet visit, VBitSet dups, boolean debug) {
