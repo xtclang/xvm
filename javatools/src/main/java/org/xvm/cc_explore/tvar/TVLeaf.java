@@ -16,5 +16,5 @@ public class TVLeaf extends TVar {
   @Override public void _union_impl(TVar that) { }
 
   // Always maybe unifies
-  @Override int _trial_unify_ok_impl( TVar tv3 ) { return 0; }
+  @Override boolean _trial_unify_ok_impl( TVar tv3 ) { return true; }
 }

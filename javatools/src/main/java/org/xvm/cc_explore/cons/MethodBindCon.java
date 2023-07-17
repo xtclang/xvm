@@ -10,6 +10,6 @@ public class MethodBindCon extends PartCon {
   @Override public String name() { throw XEC.TODO(); }
   @Override public void resolve( CPool X ) { _par = (MethodCon)X.xget(); }
   @Override public Part link(XEC.ModRepo repo) {
-    return _part==null ? (_part=(MethodPart)_par.link(repo)) : _part;
+    return _part==null ? (_part=_par.link(repo)) : _part;
   }
 }

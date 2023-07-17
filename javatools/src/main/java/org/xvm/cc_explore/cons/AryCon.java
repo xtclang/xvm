@@ -2,11 +2,12 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
+import org.xvm.cc_explore.tvar.TVBase;
 
 /**
   Exploring XEC Constants
  */
-public class AryCon extends Const {
+public class AryCon extends TCon {
   final Format _f;
   private TCon _t;              // Type for whole array
   private Const[] _cons;        // Type for each element
@@ -23,6 +24,8 @@ public class AryCon extends Const {
     _cons = X.consts();
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
+  @Override TVBase _setype( XEC.ModRepo repo ) { return new TVBase(this); }
+  
   //@Override public ClassPart link(XEC.ModRepo repo) {
   //  if( _clz!=null ) return _clz;
   //  if( _cons!=null )

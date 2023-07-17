@@ -12,6 +12,7 @@ public class ParamTCon extends TCon {
   public TCon _con;
   public TCon[] _parms;
   public final TVar[] _types;
+  private Part _part;
   
   public ParamTCon( CPool X ) {
     X.u31();
@@ -28,6 +29,15 @@ public class ParamTCon extends TCon {
     _parms = TCon.tcons(X);
   }
   
+  @Override public Part link( XEC.ModRepo repo ) {
+    if( _part!=null ) return _part;
+    _part = _con.link(repo);
+    assert _part!=null;
+    if( _parms!=null )
+      for( TCon parm : _parms )
+        parm.link(repo);
+    return _part;
+  }
   @Override TVar _setype( XEC.ModRepo repo ) {
     if( _parms!=null )
       for( int i=0; i<_parms.length; i++ )

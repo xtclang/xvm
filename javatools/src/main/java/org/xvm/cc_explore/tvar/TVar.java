@@ -300,26 +300,26 @@ abstract public class TVar implements Cloneable {
   // No change to either side, this is a trial only.
   // Collect leafs and bases and open structs on the pattern (this).
   private static final NonBlockingHashMapLong<TVar> TDUPS = new NonBlockingHashMapLong<>();
-  public int trial_unify_ok(TVar that) {
+  public boolean trial_unify_ok(TVar that) {
     TDUPS.clear();
     return _trial_unify_ok(that);
   }
-  int _trial_unify_ok(TVar that) {
-    if( this==that ) return 1; // hard-yes
+  boolean _trial_unify_ok(TVar that) {
+    if( this==that ) return true; // hard-yes
     assert !unified() && !that.unified();
     long duid = dbl_uid(that._uid);
     if( TDUPS.putIfAbsent(duid,this)!=null )
-      return 1;                 // Visit only once, and assume will resolve
-    if( this instanceof TVLeaf leaf ) return 0; // Leaves do not fail now, but might fail later
-    if( that instanceof TVLeaf leaf ) return 0; // Leaves do not fail now, but might fail later
+      return true;              // Visit only once, and assume will resolve
+    if( this instanceof TVLeaf leaf ) return true; // Leaves do not fail now, but might fail later
+    if( that instanceof TVLeaf leaf ) return true; // Leaves do not fail now, but might fail later
     // Different classes always fail
-    if( getClass() != that.getClass() ) return -1;
+    if( getClass() != that.getClass() ) return false;
     // Subclasses check sub-parts
     return _trial_unify_ok_impl(that);
   }
 
   // Subclasses specify on sub-parts
-  int _trial_unify_ok_impl( TVar that ) { throw XEC.TODO(); }
+  boolean _trial_unify_ok_impl( TVar that ) { throw XEC.TODO(); }
 
   // -----------------
   // Glorious Printing

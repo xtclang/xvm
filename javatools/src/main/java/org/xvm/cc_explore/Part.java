@@ -34,19 +34,29 @@ abstract public class Part {
   // Map from kid name to kid.  
   IdentityHashMap<String,Part> _name2kid;
   
-  Part( Part par, int nFlags, IdCon id, String name, CondCon cond, CPool X ) {
+  Part( Part par, int nFlags, Const id, String name, CondCon cond, CPool X ) {
     _par = par;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
     //assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
     
-    _name = id==null ? name : ((IdCon)(id.resolveTypedefs())).name();
+    _name = id==null ? name : ((IdCon)id.resolveTypedefs()).name();
     _nFlags = nFlags;
     _cond = cond;
 
     // X is self FilePart.  Other parts need to get the length.
     // Only Class and Prop have non-zero length.
     _cslen = X==null ? 0 : X.u31();
+  }
+
+  // Constructed class parts
+  Part( Part par, String name ) {
+    _par = par;
+    _name = name;
+    _nFlags = 0;
+    _cond = null;
+    _cslen = 0;
+    
   }
 
   @Override public String toString() { return str(new SB()).toString(); }
@@ -102,13 +112,11 @@ abstract public class Part {
     if( p!=this ) return p.link(repo); // Now link the replacement
     
     // Link specific part innards
-    p("self");
+    p(X++);
     link_innards(repo);                 // Link internal Const
-    assert _tvar!=null;
 
     // For all child parts
-    p("kids");
-    D++;
+    p(Y++);
     if( _name2kid!=null ) 
       for( String name : _name2kid.keySet() ) {
         Part kid0 = _name2kid.get(name);
@@ -119,15 +127,13 @@ abstract public class Part {
           _name2kid.put(name,kid);  // Replace with upgrade and link
         }
       }
-    D--;
-    p("done");
+    p(Z++);
     return this;
   }
 
-  private static int D=0;
-  private void p(String msg) {
-    for( int i=0; i<D; i++ ) System.out.print("  ");
-    System.out.println("Link "+msg+" "+this);
+  private static int X=0,Y=0,Z=0;
+  private void p(int ignore) {
+    System.out.println("["+X+","+Y+","+Z+"]");
   }
 
   // Tok, replace self with a better Part
