@@ -1,12 +1,13 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
-import java.math.BigInteger;
+import org.xvm.cc_explore.tvar.TVBase;
 
 /**
   Exploring XEC Constants
  */
-public class CharCon extends Const {
+public class CharCon extends TCon {
   private final int _ch;
   public CharCon( CPool X ) { _ch = X.utf8Char(); }
+  @Override TVBase _setype( XEC.ModRepo repo ) { return new TVBase(this); }
 }

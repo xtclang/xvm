@@ -1,11 +1,12 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.tvar.TVLambda;
 
 /**
   Exploring XEC Constants
  */
-public class MapCon extends Const {
+public class MapCon extends TCon {
   final Format _f;
   
   private TCon _t;              // Type for whole map
@@ -30,6 +31,10 @@ public class MapCon extends Const {
       _vals[i] = X.xget();
     }
   }
+  @Override TVLambda _setype( XEC.ModRepo repo ) {
+    return new TVLambda(1,1);
+  }
+  
   //@Override public Part link(XEC.ModRepo repo) {
   //  if( _parts!=null ) return null; // Already linked
   //  _parts = new Part[_vals.length];

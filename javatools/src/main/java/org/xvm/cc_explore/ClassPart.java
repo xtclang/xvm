@@ -37,7 +37,7 @@ public class ClassPart extends Part {
   // A list of "extra" features about Classes: extends, implements, delegates
   public final Contrib[] _contribs;
   
-  ClassPart( Part par, int nFlags, IdCon id, CondCon cond, CPool X, Part.Format f ) {
+  ClassPart( Part par, int nFlags, Const id, CondCon cond, CPool X, Part.Format f ) {
     super(par,nFlags,id,null,cond,X);
 
     _f = f;
@@ -46,7 +46,16 @@ public class ClassPart extends Part {
     _tcons = parseTypeParms(X);
     _path  = (LitCon)X.xget();
   }
-
+   
+  // Constructed class parts
+  ClassPart( Part par, String name, Part.Format f ) {
+    super(par,name);
+    _f = f;
+    _tcons = null;
+    _path = null;
+    _contribs = null;
+  }
+  
   // Helper method to read a collection of type parameters.
   HashMap<String,TCon> parseTypeParms( CPool X ) {
     int len = X.u31();
@@ -66,99 +75,52 @@ public class ClassPart extends Part {
     // Make the class struct, with fields
     TVStruct stv = new TVStruct(_name,true);
     set_tvar(stv);              // Set the local type to stop recursions
-    for( String s : _name2kid.keySet() ) {
-      Part p = _name2kid.get(s);
-      if( p instanceof TDefPart ) {
-        stv.add_fld((_name+".typedef."+s).intern(),new TVLeaf()); // Add a local typdef as a ISA
-      } else if( p instanceof PropPart pp ) {
-        // Property.  
-        if( _tcons!=null && _tcons.get(s)!=null ) {
-          stv.add_fld(generic(s),new TVLeaf());
-
+    if( _name2kid != null )
+      for( String s : _name2kid.keySet() ) {
+        Part p = _name2kid.get(s);
+        if( p instanceof TDefPart ) {
+          stv.add_fld((_name+".typedef."+s).intern(),new TVLeaf()); // Add a local typdef as a ISA
+        } else if( p instanceof PropPart pp ) {
+          // Property.  
+          if( _tcons!=null && _tcons.get(s)!=null ) {
+            stv.add_fld(generic(s),new TVLeaf());
+    
+          } else {
+            // This is an XTC "property" - a field with built-in getters & setters.
+            // These built-in fields have mangled names.
+            // TODO: Already specify get:{-> Leaf} and set:{ Leaf -> }
+            stv.add_fld((s+".get").intern(),new TVLeaf());
+            stv.add_fld((s+".set").intern(),new TVLeaf());
+          }
         } else {
-          // This is an XTC "property" - a field with built-in getters & setters.
-          // These built-in fields have mangled names.
-          // TODO: Already specify get:{-> Leaf} and set:{ Leaf -> }
-          stv.add_fld((s+".get").intern(),new TVLeaf());
-          stv.add_fld((s+".set").intern(),new TVLeaf());
+          stv.add_fld(s,new TVLeaf());
         }
-      } else {
-        stv.add_fld(s,new TVLeaf());
+        assert !stv.unified();
       }
-      assert !stv.unified();
-    }
 
     // This Class may extend another one.
     // Look for extends, implements, etc. contributions
-    if( _contribs != null ) {
-      for( Contrib c : _contribs ) {
+    if( _contribs != null )
+      for( Contrib c : _contribs )
         c.link( repo );
-        switch( c._comp ) {
-        case Extends -> {
-          assert _contribs[0] == c; // Can optimize if extends are always in slot 0
-          TermTCon ttc = ifaces0(c._tContrib); // The class
-          Format f = ttc.clz()._f;
-          assert f==Part.Format.CONST || f==Part.Format.ENUM; // Class or Constant or Enum class
-          // Cannot assert struct is closed, because of recursive references.
-          _super = ttc.clz();   // Record super-class
-          if( c._clzs != null )  throw XEC.TODO();
-        }
-        case Implements, Delegates -> {
-          TermTCon ttc = ifaces0(c._tContrib); // The iface, perhaps after a TVImmut
-          assert ttc.clz()._f==Part.Format.INTERFACE;
-          assert ((TVStruct)ttc.tvar()).is_open();
-          // Unify interface into class
-          c.tvar().fresh_unify(tvar(),null);
-          if( c._clzs != null )  throw XEC.TODO();
-        }
-
-        // This is a "mixin", marker interface.  It becomes part of the parent-
-        // chain of the following "linked list" of classes.  The linked list is
-        // formed from a left-spline UnionTCon.  Proper mixins was confirmed by
-        // XTC compiler, and TODO Some Day we can verify again here.
-        case Into -> { }
-
-        // This can be a mixin marker annotation, which has been checked by the
-        // XTC compiler already.
-        case Annotation -> {
-          ClassPart mix = ifaces0(c._tContrib).clz();
-          assert mix._f==Part.Format.MIXIN;
-          assert mix._contribs[0]._comp==Part.Composition.Into;
-        }
-        
-        case Incorporates -> {
-          ClassPart mix = ifaces0(c._tContrib).clz();
-          if( _mixes==null ) _mixes = new ClassPart[1];
-          else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
-          _mixes[_mixes.length-1] = mix;
-          // Unify a fresh copy of the mixin's type
-          mix.tvar().fresh_unify(tvar(),null);
-          // Set generic parameter types
-          if( c._clzs != null )
-            for( String generic : c._clzs.keySet() )
-              ((TVStruct)tvar()).arg(mix.generic(generic)).unify( c._clzs.get( generic ).tvar() );
-        }
-
-        default ->  // Handle other contributions
-          throw XEC.TODO();
-        }
-        
-      }
-    }
 
     // The structure has more unspecified fields, or not.
     // Interfaces are open: at least these fields, but you are allowed more.
     switch( _f ) {
-    case CLASS, CONST, MODULE, PACKAGE, ENUM, ENUMVALUE: stvar().close(); break;
+    case CLASS, CONST, MODULE, PACKAGE, ENUM, ENUMVALUE, SERVICE: stvar().close(); break;
     case INTERFACE, MIXIN: break;
     default: throw XEC.TODO();
     };
   }
 
-  private static TermTCon ifaces0( TCon tc ) {
-    if( tc instanceof TermTCon ttc ) return ttc;
-    if( tc instanceof ImmutTCon itc ) return (TermTCon)itc.icon();
-    if( tc instanceof ParamTCon ptc ) return (TermTCon)ptc._con;
+  private static TermTCon ifaces0( TCon tc, XEC.ModRepo repo ) {
+  //  if( tc instanceof TermTCon ttc ) return ttc;
+  //  if( tc instanceof ImmutTCon itc ) return (TermTCon)itc.icon();
+  //  if( tc instanceof ParamTCon ptc ) return (TermTCon)ptc._con;
+  //  if( tc instanceof VirtDepTCon vtc ) {
+  //    vtc.link(repo);
+  //    throw XEC.TODO();
+  //  }
     throw XEC.TODO();
   }  
 
@@ -166,7 +128,65 @@ public class ClassPart extends Part {
   private String generic( String s ) {
     return (_name+".generic."+s).intern();
   }
-
+  
+  //private void _setype(XEC.ModRepo repo) {
+  //  if( _contribs != null ) {
+  //    for( Contrib c : _contribs ) {
+  //      c.link( repo );
+  //      switch( c._comp ) {
+  //      case Extends -> {
+  //        assert _contribs[0] == c; // Can optimize if extends are always in slot 0
+  //        TermTCon ttc = ifaces0(c._tContrib,repo); // The class
+  //        Format f = ttc.clz()._f;
+  //        assert f==Part.Format.CONST || f==Part.Format.ENUM; // Class or Constant or Enum class
+  //        // Cannot assert struct is closed, because of recursive references.
+  //        _super = ttc.clz();   // Record super-class
+  //        if( c._clzs != null )  throw XEC.TODO();
+  //      }
+  //      case Implements, Delegates -> {
+  //        TermTCon ttc = ifaces0(c._tContrib,repo); // The iface, perhaps after a TVImmut
+  //        assert ttc.clz()._f==Part.Format.INTERFACE;
+  //        assert ((TVStruct)ttc.tvar()).is_open();
+  //        // Unify interface into class
+  //        c.tvar().fresh_unify(tvar(),null);
+  //        if( c._clzs != null )  throw XEC.TODO();
+  //      }
+  //
+  //      // This is a "mixin", marker interface.  It becomes part of the parent-
+  //      // chain of the following "linked list" of classes.  The linked list is
+  //      // formed from a left-spline UnionTCon.  Proper mixins was confirmed by
+  //      // XTC compiler, and TODO Some Day we can verify again here.
+  //      case Into -> { }
+  //
+  //      // This can be a mixin marker annotation, which has been checked by the
+  //      // XTC compiler already.
+  //      case Annotation -> {
+  //        ClassPart mix = ifaces0(c._tContrib,repo).clz();
+  //        assert mix._f==Part.Format.MIXIN;
+  //        assert mix._contribs[0]._comp==Part.Composition.Into;
+  //      }
+  //      
+  //      case Incorporates -> {
+  //        ClassPart mix = ifaces0(c._tContrib,repo).clz();
+  //        if( _mixes==null ) _mixes = new ClassPart[1];
+  //        else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
+  //        _mixes[_mixes.length-1] = mix;
+  //        // Unify a fresh copy of the mixin's type
+  //        mix.tvar().fresh_unify(tvar(),null);
+  //        // Set generic parameter types
+  //        if( c._clzs != null )
+  //          for( String generic : c._clzs.keySet() )
+  //            ((TVStruct)tvar()).arg(mix.generic(generic)).unify( c._clzs.get( generic ).tvar() );
+  //      }
+  //
+  //      default ->  // Handle other contributions
+  //        throw XEC.TODO();
+  //      }
+  //      
+  //    }
+  //  }
+  //}
+  
   
   @Override public Part child(String s, XEC.ModRepo repo) {
     Part kid = super.child(s,repo);

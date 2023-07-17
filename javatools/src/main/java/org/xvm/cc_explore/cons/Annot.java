@@ -25,7 +25,7 @@ public class Annot extends PartCon {
     _part = _par.link(repo);
     if( _cons!=null )
       for( Const con : _cons )
-        con.con_link(repo);
+        con.link(repo);
     return _part;
   }
   
