@@ -9,6 +9,7 @@ import org.xvm.cc_explore.tvar.TVStruct;
  */
 public class TParmCon extends FormalCon {
   private final int _reg;       // Register index
+  private Parameter _parm;
   public TParmCon( CPool X ) {
     super(X);
     _reg = X.u31();
@@ -17,9 +18,12 @@ public class TParmCon extends FormalCon {
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
     MethodPart meth = (MethodPart)_par.link(repo).link(repo);
-    Parameter parm = meth._args[_reg];
-    assert ((TVStruct)parm.tvar())._names.contains("Type");
-    _tvar = parm.generic_tvar();
+    _parm = meth._args[_reg];
     return (_part=new ParmPart(meth,this));
+  }
+
+  @Override TVar _setype( XEC.ModRepo repo ) {
+    assert ((TVStruct)_parm.tvar())._names.contains("Type");
+    return _parm.generic_tvar();
   }
 }

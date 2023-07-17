@@ -23,7 +23,9 @@ public class VirtDepTCon extends DepTCon {
   }
   //@Override public ClassPart link(XEC.ModRepo repo) {
   //  if( _part!=null ) return _part;
-  //  ClassPart clz = (ClassPart)super.link(repo);
-  //  return (_part = (ClassPart)clz._name2kid.get(_name));
+  //  ClassPart clz = super.link(repo);
+  //  ClassPart part = (ClassPart)clz.child(_name);
+  //  assert part!=null;
+  //  return (_part = part);
   //}
 }

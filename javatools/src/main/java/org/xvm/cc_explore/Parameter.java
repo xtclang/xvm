@@ -4,15 +4,15 @@ import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.TVar;
 
 public class Parameter {
-  // Parameter type
-  public final TCon _con;
-  private Part _part;
-  // Parameter annotations
-  public final Annot[] _annots;
+  private boolean _linked;
   // Parameter name
   public final String _name;
+  // Parameter type
+  public final TCon _con;
+  // Parameter annotations
+  public final Annot[] _annots;
   // Default value
-  public final Const _def;
+  public final TCon _def;
   // True IFF a condition-return or a type-parm parm
   public final boolean _special;
   // Parameter index, negative for returns
@@ -23,7 +23,7 @@ public class Parameter {
     _con = (TCon)X.xget();
     StringCon str = (StringCon)X.xget();
     _name = str==null ? null : str._str;
-    _def  = X.xget();
+    _def  = (TCon)X.xget();
     _idx = is_ret ? -1-idx : idx;
     _special = special;
   }
@@ -34,13 +34,15 @@ public class Parameter {
 
   // Specific internal linking
   public void link( XEC.ModRepo repo ) {
-    if( _con.has_tvar() ) return;
-    _con.setype(repo);
+    if( _linked ) return;
+    _linked = true;
+    _con.link(repo);
     
     if( _annots!=null ) throw XEC.TODO();
-    if( _def!=null ) _def.con_link(repo);
+    if( _def != null ) _def.link(repo);
   }
 
+  public TVar setype() { return _con.setype(null); }
   public TVar tvar() { return _con.tvar(); }
   public TVar generic_tvar() {
     return ((ParamTCon)_con)._types[0];

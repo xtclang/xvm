@@ -1,12 +1,13 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.tvar.TVBase;
 import java.math.BigInteger;
 
 /**
   Exploring XEC Constants
  */
-public class IntCon extends Const {
+public class IntCon extends TCon {
   private final Format _f;
   private final long _x;          // Only valid if _big is null
   private final BigInteger _big;  // If null, _x holds the value.  If not-null _x is 0.
@@ -69,4 +70,5 @@ public class IntCon extends Const {
   private IllegalArgumentException bad(int c) {
     return new IllegalArgumentException("value exceeds " + c + " bytes: " + (_big==null ? ""+_x : _big.toString()));
   }
+  @Override TVBase _setype( XEC.ModRepo repo ) { return new TVBase(this); }
 }

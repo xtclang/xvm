@@ -219,52 +219,18 @@ public class TVStruct extends TVar {
   
   
   // -------------------------------------------------------------
-  // TODO  move to Resolvable?
-  // Attempt to resolve any unresolved fields.
-  // Remove any pre-resolved fields.
-  //static boolean trial_resolve_all(boolean outie, TVStruct t) {
-  //  boolean progress = false;
-  //  for( int i=0; i<t._max; i++ ) {
-  //    t = ((TVStruct)t.find());
-  //    String key = t._flds[i];
-  //    Resolvable res = TVField.FIELDS.get(key);
-  //    if( res==null ) continue;  // Field is already resolved, or not a resolvable field
-  //    // Field is still resolving?
-  //    if( res.is_resolving() ) {
-  //      if( !t.is_open() && // More fields possible, so trial_resolve cannot be tried
-  //          res.trial_resolve(outie,t.arg(i),t, false) ) { // Attempt resolve
-  //        progress = true;
-  //        t = t.find().as_struct();
-  //        i--;                  // Rerun after removing resolved field
-  //      }
-  //    } else {
-  //      progress = true;
-  //      // key is resolving, but Field is already resolved
-  //      TVar old = t.arg(i);        // Old unresolved value
-  //      t.del_fld(i);              // Remove resolving key
-  //      TVar t3 = t.arg(res.fld()); // Get resolved label, if any
-  //      if( t3==null ) t.add_fld(res.fld(),old,true); // Insert resolved-label, even if this is open, since operation is a label replacement
-  //      else if( outie ) old.unify(t3, false); // Unify into existing (fold labels together)
-  //      else old._unify(t3, false); // Unify into existing (fold labels together)
-  //    }
-  //  }
-  //  return progress;
-  //}
-
-  @Override int _trial_unify_ok_impl( TVar tv3 ) {
+  @Override boolean _trial_unify_ok_impl( TVar tv3 ) {
     TVStruct that = (TVStruct)tv3; // Invariant when called
-    //for( int i=0; i<_max; i++ ) {
-    //  if( Resolvable.is_resolving( _flds[i]) ) continue;
-    //  TVar lhs = arg(i);
-    //  TVar rhs = that.arg(_flds[i]); // RHS lookup by field name
-    //  if( lhs!=rhs && rhs!=null && !lhs._trial_unify_ok(rhs) )
-    //    return false;           // Child fails to unify
-    //}
-    //
-    //// Allow unification with extra fields.  The normal unification path
-    //// will not declare an error, it will just remove the extra fields.
-    //return this.mismatched_child(that) && that.mismatched_child(this);
-    throw XEC.TODO();
+    if( !_names.equals(that._names) ) return false;
+    for( int i=0; i<_max; i++ ) {
+      TVar lhs = arg(i);
+      TVar rhs = that.arg(_flds[i]); // RHS lookup by field name
+      if( lhs!=rhs && rhs!=null && !lhs._trial_unify_ok(rhs) )
+        return false;           // Child fails to unify
+    }
+    // Allow unification with extra fields.  The normal unification path
+    // will not declare an error, it will just remove the extra fields.
+    return this.mismatched_child(that) && that.mismatched_child(this);
   }
 
   private boolean mismatched_child(TVStruct that ) {

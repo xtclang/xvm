@@ -7,7 +7,7 @@ import org.xvm.cc_explore.tvar.TVar;
 /**
   Exploring XEC Constants
  */
-public class AnnotTCon extends TCon {
+public class AnnotTCon extends TCon implements ClzCon {
   Annot _an;
   private TCon _con;
   private ClassPart _clz;
@@ -22,8 +22,12 @@ public class AnnotTCon extends TCon {
     _an = (Annot)X.xget();
     _con = (TCon)X.xget();
   }
-  //@Override public ClassPart link(XEC.ModRepo repo) {
-  //  if( _clz!=null ) return _clz;
-  //  return (_clz = (ClassPart)_con.link(repo));
-  //}
+  @Override public ClassPart link(XEC.ModRepo repo) {
+    return _clz==null ? (_clz = (ClassPart)_con.link(repo)) : _clz;
+  }
+  @Override public ClassPart clz() { return _clz; }
+  @Override public TVar _setype(XEC.ModRepo repo) {
+    //_an._setype( repo );
+    return _con.setype(repo);
+  }
 }

@@ -8,4 +8,5 @@ import org.xvm.cc_explore.tvar.TVar;
  */
 public abstract class FormalCon extends NamedCon {
   FormalCon( CPool X ) { super(X); }
+  @Override public Part link( XEC.ModRepo repo ) { return null; }  
 }

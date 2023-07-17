@@ -28,10 +28,10 @@ public class PropPart extends Part {
 
   @Override void link_innards( XEC.ModRepo repo ) {
     // Link all part innards
+    _con.link(repo);
+    if( _init!=null ) _init.link(repo);
     if( _contribs != null )
       for( Contrib c : _contribs )
         c.link(repo);
-    if( _init!=null ) throw XEC.TODO(); // _init.link(repo);    
-    set_tvar(_con.setype(repo));
   }
 }
