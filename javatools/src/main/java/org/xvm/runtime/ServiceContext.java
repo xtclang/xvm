@@ -22,14 +22,20 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import java.util.function.Supplier;
+
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.Return_0;
 
@@ -1196,7 +1202,7 @@ public class ServiceContext
         {
         assert iReturn != Op.A_IGNORE_ASYNC;
 
-        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1, typeRet);
+        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1, () -> typeRet);
 
         addRequest(request, frame.isDynamicVar(iReturn));
 
@@ -1329,8 +1335,11 @@ public class ServiceContext
                 }
             };
 
-        TypeConstant[] atypeRet = cReturns == 0 ? TypeConstant.NO_TYPES : hFunction.getReturnTypes();
-        OpRequest      request  = new OpRequest(frame, opCall, cReturns, atypeRet);
+
+        Supplier<TypeConstant[]> supplier = cReturns == 0
+                ? null
+                : () -> resolveFormalReturnTypes(hFunction, ahArg);
+        OpRequest request = new OpRequest(frame, opCall, cReturns, supplier);
 
         boolean fOverwhelmed = addRequest(request, fAsync);
 
@@ -1395,8 +1404,8 @@ public class ServiceContext
                 }
             };
 
-        TypeConstant[]                    atypeRet = hFunction.getReturnTypes();
-        OpRequest                         request  = new OpRequest(frame, opCall, cReturns, atypeRet);
+        Supplier<TypeConstant[]>          supplier = () -> resolveFormalReturnTypes(hFunction, ahArg);
+        OpRequest                         request  = new OpRequest(frame, opCall, cReturns, supplier);
         CompletableFuture<ObjectHandle[]> future   = request.f_future;
 
         boolean fOverwhelmed = addRequest(request, false);
@@ -1420,6 +1429,71 @@ public class ServiceContext
 
         // TODO replace with: assignFutureResults()
         return frame.call(frame.createWaitFrame(future, aiReturn));
+        }
+
+    /**
+     * Helper method to resolve the formal type parameters in the function's return type.
+     *
+     * This method is only called if the value returned by the service is not immutable and needs
+     * to be proxied. In that case the actual return value type could be used to resolve generic
+     * return types (see ClassTemplate.createProxyHandle), but formal type parameters can only be
+     * resolved using the type parameters types that are passed in by the caller.
+     */
+    private TypeConstant[] resolveFormalReturnTypes(FunctionHandle hFunction, ObjectHandle[] ahArg)
+        {
+        TypeConstant[] atype  = hFunction.getReturnTypes();
+        int            cTypes = atype.length;
+
+        if (cTypes > 0)
+            {
+            GenericTypeResolver resolver = new GenericTypeResolver()
+                {
+                @Override
+                public TypeConstant resolveGenericType(String sFormalName)
+                    {
+                    return null;
+                    }
+
+                @Override
+                public TypeConstant resolveFormalType(FormalConstant constFormal)
+                    {
+                    if (constFormal instanceof TypeParameterConstant constTypeParam)
+                        {
+                        int             nRegister = constTypeParam.getRegister();
+                        MethodConstant  idMethod  = hFunction.getMethodId();
+                        MethodStructure method    = idMethod == null
+                                ? null
+                                : (MethodStructure) idMethod.getComponent();
+                        if (method != null && nRegister < method.getTypeParamCount() &&
+                                method.getParam(nRegister).getName().equals(constTypeParam.getName()))
+                            {
+                            return ahArg[nRegister].getType().getParamType(0);
+                            }
+                        }
+
+                    return null;
+                    }
+                };
+
+            boolean fClone = true;
+            for (int i = 0; i < cTypes; i++)
+                {
+                TypeConstant type = atype[i];
+                if (type.containsTypeParameter(true))
+                    {
+                    TypeConstant typeResolved = type.resolveGenerics(f_pool, resolver);
+                    if (typeResolved != type)
+                        {
+                        if (fClone)
+                            {
+                            atype = atype.clone();
+                            }
+                        atype[i] = typeResolved;
+                        }
+                    }
+                }
+            };
+        return atype;
         }
 
     /**
@@ -1547,7 +1621,7 @@ public class ServiceContext
                 }
             };
 
-        OpRequest request = new OpRequest(frame, opInit, 1);
+        OpRequest request = new OpRequest(frame, opInit, 1, null);
 
         addRequest(request, false);
 
@@ -1740,13 +1814,17 @@ public class ServiceContext
     public static class OpRequest
             extends Request
         {
-        protected OpRequest(Frame frameCaller, Op op, int cReturns, TypeConstant... typeRet)
+        /**
+         * @param supplierRet  (optional) the supplier of return types to be used *only* if the
+         *                     request's return values need to be proxied
+         */
+        protected OpRequest(Frame frameCaller, Op op, int cReturns, Supplier<TypeConstant[]> supplierRet)
             {
             super(frameCaller);
 
             f_op          = op;
-            f_atypeReturn = typeRet;
             f_cReturns    = cReturns;
+            f_supplierRet = supplierRet;
             }
 
         @Override
@@ -1803,7 +1881,8 @@ public class ServiceContext
                     if (frame.m_hException == null)
                         {
                         int iResult = ctxSrc.validatePassThrough(frame, ctxDst,
-                                            f_atypeReturn, frame.f_ahVar, 1);
+                                        f_supplierRet == null ? null : f_supplierRet.get(),
+                                        frame.f_ahVar, 1);
                         if (iResult == Op.R_EXCEPTION)
                             {
                             Arrays.fill(frame.f_ahVar, null);
@@ -1873,7 +1952,9 @@ public class ServiceContext
                                 }
                             }
 
-                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, null, ahReturn, cReturns);
+                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst,
+                                        f_supplierRet == null ? null : f_supplierRet.get(),
+                                        ahReturn, cReturns);
                         if (iResult == Op.R_EXCEPTION)
                             {
                             Arrays.fill(ahReturn, null);
@@ -1892,9 +1973,9 @@ public class ServiceContext
             return f_op.toString();
             }
 
-        private final Op             f_op;
-        private final int            f_cReturns;
-        private final TypeConstant[] f_atypeReturn;
+        private final Op                       f_op;
+        private final int                      f_cReturns;
+        private final Supplier<TypeConstant[]> f_supplierRet;
         }
 
     /**

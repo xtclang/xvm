@@ -1,19 +1,16 @@
-module TestSimple {
+module TestSimple.examples.org {
     @Inject Console console;
 
-    package json import json.xtclang.org;
-
-    import json.*;
-
     void run() {
-         String str = \|{
-                       |"host":"admin.xqiz.it",
-                       |"http":8080,
-                       |"https":8090
-                       |}
-                       ;
-        Doc doc = new Parser(str.toReader()).parseDoc(); // used to fail to compile (unknown type "Doc")
-        assert doc.is(Map<String, Doc>);
-        console.print(doc);
+        String[] strings = ["abc", "def"];
+
+        Test<String> t = new Test(strings);
+        String[] filtered = t.filter(s -> s.indexOf("e")).toArray(Constant); // that used to fail at RT
+        console.print(filtered);
+    }
+
+    service Test<Element>(Collection<Element> underlying)
+        implements Collection<Element>
+        delegates Collection(underlying) {
     }
 }
