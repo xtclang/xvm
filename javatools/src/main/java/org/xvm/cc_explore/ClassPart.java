@@ -72,63 +72,54 @@ public class ClassPart extends Part {
 
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) {
-    // Make the class struct, with fields
-    TVStruct stv = new TVStruct(_name,true);
-    set_tvar(stv);              // Set the local type to stop recursions
-    if( _name2kid != null )
-      for( String s : _name2kid.keySet() ) {
-        Part p = _name2kid.get(s);
-        if( p instanceof TDefPart ) {
-          stv.add_fld((_name+".typedef."+s).intern(),new TVLeaf()); // Add a local typdef as a ISA
-        } else if( p instanceof PropPart pp ) {
-          // Property.  
-          if( _tcons!=null && _tcons.get(s)!=null ) {
-            stv.add_fld(generic(s),new TVLeaf());
-    
-          } else {
-            // This is an XTC "property" - a field with built-in getters & setters.
-            // These built-in fields have mangled names.
-            // TODO: Already specify get:{-> Leaf} and set:{ Leaf -> }
-            stv.add_fld((s+".get").intern(),new TVLeaf());
-            stv.add_fld((s+".set").intern(),new TVLeaf());
-          }
-        } else {
-          stv.add_fld(s,new TVLeaf());
-        }
-        assert !stv.unified();
-      }
-
     // This Class may extend another one.
     // Look for extends, implements, etc. contributions
     if( _contribs != null )
       for( Contrib c : _contribs )
         c.link( repo );
-
-    // The structure has more unspecified fields, or not.
-    // Interfaces are open: at least these fields, but you are allowed more.
-    switch( _f ) {
-    case CLASS, CONST, MODULE, PACKAGE, ENUM, ENUMVALUE, SERVICE: stvar().close(); break;
-    case INTERFACE, MIXIN: break;
-    default: throw XEC.TODO();
-    };
   }
-
-  private static TermTCon ifaces0( TCon tc, XEC.ModRepo repo ) {
-  //  if( tc instanceof TermTCon ttc ) return ttc;
-  //  if( tc instanceof ImmutTCon itc ) return (TermTCon)itc.icon();
-  //  if( tc instanceof ParamTCon ptc ) return (TermTCon)ptc._con;
-  //  if( tc instanceof VirtDepTCon vtc ) {
-  //    vtc.link(repo);
-  //    throw XEC.TODO();
-  //  }
-    throw XEC.TODO();
-  }  
 
   // Mangle a generic type name
   private String generic( String s ) {
     return (_name+".generic."+s).intern();
   }
   
+  @Override TVar _setype() {
+    // Make the class struct, with fields
+    TVStruct stv = new TVStruct(_name,true);
+    if( _name2kid != null )
+      for( String s : _name2kid.keySet() ) {
+        Part p = _name2kid.get(s);
+        if( p instanceof TDefPart ) {
+          stv.add_fld((_name+".typedef."+s).intern()); // Add a local typdef as a ISA
+        } else if( p instanceof PropPart pp ) {
+          // Property.  
+          if( _tcons!=null && _tcons.get(s)!=null ) {
+            stv.add_fld(generic(s));
+    
+          } else {
+            // This is an XTC "property" - a field with built-in getters & setters.
+            // These built-in fields have mangled names.
+            // TODO: Already specify get:{-> Leaf} and set:{ Leaf -> }
+            stv.add_fld((s+".get").intern());
+            stv.add_fld((s+".set").intern());
+          }
+        } else {
+          stv.add_fld(s);
+        }
+      }
+
+    // The structure has more unspecified fields, or not.
+    // Interfaces are open: at least these fields, but you are allowed more.
+    switch( _f ) {
+    case CLASS, CONST, MODULE, PACKAGE, ENUM, ENUMVALUE, SERVICE: stv.close(); break;
+    case INTERFACE, MIXIN: break;
+    default: throw XEC.TODO();
+    };
+    
+    return stv;
+  }
+
   //private void _setype(XEC.ModRepo repo) {
   //  if( _contribs != null ) {
   //    for( Contrib c : _contribs ) {

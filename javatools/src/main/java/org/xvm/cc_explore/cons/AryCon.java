@@ -24,13 +24,13 @@ public class AryCon extends TCon {
     _cons = X.consts();
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
-  @Override TVBase _setype( XEC.ModRepo repo ) { return new TVBase(this); }
+  @Override TVBase _setype() { return new TVBase(this); }
   
-  //@Override public ClassPart link(XEC.ModRepo repo) {
-  //  if( _clz!=null ) return _clz;
-  //  if( _cons!=null )
-  //    for( Const c : _cons )
-  //      c.link(repo);
-  //  return (_clz = (ClassPart)_t.link(repo));
-  //}
+  @Override public ClassPart link(XEC.ModRepo repo) {
+    if( _clz!=null ) return _clz;
+    if( _cons!=null )
+      for( Const c : _cons )
+        c.link(repo);
+    return (_clz = (ClassPart)_t.link(repo));
+  }
 }
