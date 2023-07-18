@@ -18,8 +18,8 @@ public class ImmutTCon extends TCon implements ClzCon {
   @Override public Part link(XEC.ModRepo repo) {
     return _part==null ? (_part = _con.link(repo)) : _part;
   }
-  @Override public TVar _setype(XEC.ModRepo repo) {
-    TVar tv = _con.setype(repo);
+  @Override TVar _setype() {
+    TVar tv = _con.setype();
     // Add the "Immut" interface
     TVStruct tv2 = (TVStruct)tv.fresh();
     tv2._names.add("Immut");

@@ -2,6 +2,7 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.TVStruct;
+import org.xvm.cc_explore.tvar.TVar;
 
 // A bunch of methods, following the kids list
 public class MMethodPart extends Part {
@@ -18,9 +19,9 @@ public class MMethodPart extends Part {
     }
   }
 
-  @Override void link_innards( XEC.ModRepo repo ) {
-    // A container of 1 or more methods.  Usually 1.  If there are more than
-    // one, each user has to resolve the choices individually.
+  @Override void link_innards( XEC.ModRepo repo ) {}
+  @Override TVar _setype( ) {
+    throw XEC.TODO();
   }
   
 }

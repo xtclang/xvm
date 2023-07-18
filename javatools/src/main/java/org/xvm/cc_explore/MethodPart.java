@@ -161,10 +161,10 @@ public class MethodPart extends MMethodPart {
       _sibling.link(repo);
   }
 
-  public TVLambda setype() {
+  TVLambda _setype() {
     if( has_tvar() ) return (TVLambda)tvar();
     TVLambda lam = new TVLambda(_args==null ? 0 : _args.length, _rets==null ? 0 : _rets.length);
-    set_tvar(lam);
+    setype_stop_cycles(lam);    // Stop cycles
     // Fill in the TVLambda
     if( _args != null )
       for( int i=0; i<_args.length; i++ )
@@ -172,6 +172,7 @@ public class MethodPart extends MMethodPart {
     if( _rets != null )
       for( int i=0; i<_rets.length; i++ )
         _rets[i].setype().unify(lam.arg(lam._nargs+i));
+    assert !lam.unified();
     return lam;
   }
   

@@ -42,7 +42,7 @@ public class Parameter {
     if( _def != null ) _def.link(repo);
   }
 
-  public TVar setype() { return _con.setype(null); }
+  TVar setype() { return _con.setype(); }
   public TVar tvar() { return _con.tvar(); }
   public TVar generic_tvar() {
     return ((ParamTCon)_con)._types[0];

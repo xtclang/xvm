@@ -72,6 +72,7 @@ public class TVStruct extends TVar {
     return -1;
   }
   
+  public void add_fld(String fld) { add_fld(fld, new TVLeaf()); }
   public void add_fld(String fld, TVar tvf) {
     int idx = idx(fld);
     if( idx!=-1 ) {

@@ -14,5 +14,5 @@ public class ServiceTCon extends TCon {
   @Override public Part link( XEC.ModRepo repo ) {
     return _part==null ? (_part=_con.link(repo)) : _part;
   }
-  @Override public TVar _setype( XEC.ModRepo repo ) { return _con.setype(repo); }
+  @Override TVar _setype() { return _con.setype(); }
 }

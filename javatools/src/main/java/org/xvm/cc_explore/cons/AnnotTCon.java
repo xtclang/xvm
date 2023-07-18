@@ -26,8 +26,8 @@ public class AnnotTCon extends TCon implements ClzCon {
     return _clz==null ? (_clz = (ClassPart)_con.link(repo)) : _clz;
   }
   @Override public ClassPart clz() { return _clz; }
-  @Override public TVar _setype(XEC.ModRepo repo) {
-    //_an._setype( repo );
-    return _con.setype(repo);
+  @Override TVar _setype() {
+    _an.setype( );
+    return _con.setype();
   }
 }

@@ -22,7 +22,7 @@ public class TParmCon extends FormalCon {
     return (_part=new ParmPart(meth,this));
   }
 
-  @Override TVar _setype( XEC.ModRepo repo ) {
+  @Override TVar _setype() {
     assert ((TVStruct)_parm.tvar())._names.contains("Type");
     return _parm.generic_tvar();
   }

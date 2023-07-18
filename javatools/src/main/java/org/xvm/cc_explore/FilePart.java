@@ -74,11 +74,8 @@ public class FilePart extends Part {
     _mod = (ModPart)child(mod.name(),null);
   }
 
-  @Override void link_innards( XEC.ModRepo repo ) {
-    // A junk TVar just so every Part has a TVar.  Not used for anything except
-    // passing the assert.
-    set_tvar(new TVLeaf());
-  }
+  @Override void link_innards( XEC.ModRepo repo ) { }
+  @Override TVar _setype( ) { return new TVLeaf(); }
 
   // Can we handle this version?
   static boolean isFileVersionSupported(int major, int minor) {

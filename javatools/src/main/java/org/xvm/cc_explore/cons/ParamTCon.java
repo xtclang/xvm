@@ -38,11 +38,11 @@ public class ParamTCon extends TCon {
         parm.link(repo);
     return _part;
   }
-  @Override TVar _setype( XEC.ModRepo repo ) {
+  @Override TVar _setype() {
     if( _parms!=null )
       for( int i=0; i<_parms.length; i++ )
-       _types[i] = _parms[i].setype(repo);
-    return _con.setype(repo);
+       _types[i] = _parms[i].setype();
+    return _con.setype();
   }
 
   public TVStruct clz() { return (TVStruct)tvar(); }

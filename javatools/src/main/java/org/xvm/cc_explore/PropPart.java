@@ -34,4 +34,7 @@ public class PropPart extends Part {
       for( Contrib c : _contribs )
         c.link(repo);
   }
+  @Override TVar _setype( ) {
+    throw XEC.TODO();
+  }
 }

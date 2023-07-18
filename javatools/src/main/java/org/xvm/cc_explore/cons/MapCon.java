@@ -31,18 +31,16 @@ public class MapCon extends TCon {
       _vals[i] = X.xget();
     }
   }
-  @Override TVLambda _setype( XEC.ModRepo repo ) {
-    return new TVLambda(1,1);
-  }
+  @Override TVLambda _setype() {  return new TVLambda(1,1); }
   
-  //@Override public Part link(XEC.ModRepo repo) {
-  //  if( _parts!=null ) return null; // Already linked
-  //  _parts = new Part[_vals.length];
-  //  if( _t!=null ) _part = _t.link(repo);
-  //  for( int i=0; i<_vals.length; i++ ) {
-  //    _keys[i].link(repo);
-  //    _parts[i] = _vals[i].link(repo);
-  //  }
-  //  return null;
-  //}
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _parts!=null ) return null; // Already linked
+    if( _t!=null ) _part = _t.link(repo);
+    _parts = new Part[_vals.length];
+    for( int i=0; i<_vals.length; i++ ) {
+      _keys[i].link(repo);
+      _parts[i] = _vals[i].link(repo);
+    }
+    return null;
+  }
 }

@@ -16,5 +16,5 @@ public class LitCon extends TCon {
   }
   @Override public SB str(SB sb) { return sb.p(_str); }
   @Override public void resolve( CPool X ) { _str = ((StringCon)X.xget())._str; }
-  @Override TVBase _setype( XEC.ModRepo repo ) { return new TVBase(this); }
+  @Override TVBase _setype( ) { return new TVBase(this); }
 }
