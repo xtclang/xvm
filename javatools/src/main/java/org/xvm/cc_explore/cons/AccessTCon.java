@@ -16,7 +16,5 @@ public class AccessTCon extends TCon {
   }
   @Override public SB str(SB sb) { return _con.str(sb.p(_access.toString()).p(" -> ")); }
   @Override public void resolve( CPool X ) { _con = (TCon)X.xget(); }
-  @Override public TVar _setype( XEC.ModRepo repo ) {
-    return _con.setype(repo);
-  }
+  @Override TVar _setype() { return _con.setype(); }
 }
