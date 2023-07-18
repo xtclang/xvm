@@ -20,10 +20,10 @@ public class TermTCon extends TCon implements ClzCon {
   @Override public Part link(XEC.ModRepo repo) {
     return _part==null ? (_part=_id.link(repo)) : _part;
   }
-  @Override public TVar _setype(XEC.ModRepo repo) {
+  @Override TVar _setype() {
     if( _id instanceof KeywordCon ) return null;
     if( _id instanceof PartCon part )
-      return part.link(repo).link(repo).tvar();
+      return part.setype();
     throw XEC.TODO();
   }
 }

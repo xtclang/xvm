@@ -28,7 +28,6 @@ public class MethodCon extends PartCon {
     MMethodPart mm = (MMethodPart)_par.link(repo).link(repo);
     // Find a child in the parent
     MethodPart meth = (MethodPart)mm.child(name(),repo);
-    //TVLambda lam0 = (TVLambda)_sig.setype(null);
     // Find matching lambda
     for( ; meth!=null;  meth = meth._sibling )
       if( meth._methcon == this )
@@ -36,15 +35,11 @@ public class MethodCon extends PartCon {
     return (_part = meth);
   }
   
-  @Override public Part part() {
-    assert _sig.has_tvar();  // Requires setypes, and signature disambiguation 
-    return super.part();
-  }
   @Override public String name() { return _par.name(); }
   public TCon[] rawRets () { return _sig.rawRets (); }
   public TCon[] rawParms() { return _sig.rawParms(); }
 
-  @Override TVar _setype( XEC.ModRepo repo ) {
+  @Override TVar _setype() {
     throw XEC.TODO();
   }
 }

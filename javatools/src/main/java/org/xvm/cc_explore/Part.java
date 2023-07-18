@@ -112,11 +112,9 @@ abstract public class Part {
     if( p!=this ) return p.link(repo); // Now link the replacement
     
     // Link specific part innards
-    p(X++);
     link_innards(repo);                 // Link internal Const
 
     // For all child parts
-    p(Y++);
     if( _name2kid!=null ) 
       for( String name : _name2kid.keySet() ) {
         Part kid0 = _name2kid.get(name);
@@ -127,13 +125,7 @@ abstract public class Part {
           _name2kid.put(name,kid);  // Replace with upgrade and link
         }
       }
-    p(Z++);
     return this;
-  }
-
-  private static int X=0,Y=0,Z=0;
-  private void p(int ignore) {
-    System.out.println("["+X+","+Y+","+Z+"]");
   }
 
   // Tok, replace self with a better Part
@@ -187,14 +179,18 @@ abstract public class Part {
   //   }
   // Self type
   private TVar _tvar;
+  public final boolean has_tvar() { return _tvar!=null; }
 
   // Access the self-type
   public final TVar tvar() {
     return _tvar.unified() ? (_tvar = _tvar.find()) : _tvar;
   }
   // Set the self-type exactly once
-  final void set_tvar(TVar tv) { assert _tvar==null; _tvar=tv; }
-  public final boolean has_tvar() { return _tvar!=null; }
+  public final TVar setype( ) { return _tvar==null ? (_tvar = _setype()) : _tvar; }
+  final TVar setype_stop_cycles( TVar tv ) { return (_tvar=tv); }
+  // Sub Parts use this return the initial tvar; and can be assured that they
+  // are called only once, and they do not need to assign to tvar.
+  abstract TVar _setype();
   
   // ----- Enums -----------------------------------------------------------
   /**
