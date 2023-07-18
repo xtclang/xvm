@@ -665,9 +665,14 @@ public class SwitchStatement
         @Override
         public Context exit()
             {
-            // don't contribute; the break statement has already registered the "Statement.Break"
-            // info that will be processed at the end of Statement.validate() logic
-            return getOuterContext();
+            Context ctxOuter = getOuterContext();
+
+            // promote the assignments, but not narrowed types; the break statement has already
+            // registered the "Statement.Break" info that will be processed at the end of
+            // Statement.validate() logic
+            promoteAssignments(ctxOuter);
+
+            return ctxOuter;
             }
         }
 

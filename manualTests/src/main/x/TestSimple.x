@@ -2,15 +2,22 @@ module TestSimple.examples.org {
     @Inject Console console;
 
     void run() {
-        String[] strings = ["abc", "def"];
-
-        Test<String> t = new Test(strings);
-        String[] filtered = t.filter(s -> s.indexOf("e")).toArray(Constant); // that used to fail at RT
-        console.print(filtered);
     }
 
-    service Test<Element>(Collection<Element> underlying)
-        implements Collection<Element>
-        delegates Collection(underlying) {
+    Int test(Int x) {
+        switch (x) {
+        case 0:
+            return 0;
+
+        case 1:
+            Int bug = x + 1;
+            function Int (Int) supply = i -> {
+                return bug + i; // "bug" used to be not "effectively final"
+            };
+            return 1;
+
+        default:
+            return 0;
+        }
     }
 }
