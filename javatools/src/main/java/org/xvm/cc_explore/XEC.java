@@ -40,6 +40,8 @@ public class XEC {
     for( String lib : libs ) repo.load(lib);
     // Link the repo
     repo.link();
+    // Type the repo
+    //repo.setype();
     
     // Start the thread pool up
     XRuntime.start();
@@ -102,7 +104,7 @@ public class XEC {
         return null;            // Null for directories
       } else {
         byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
-        FilePart file = new FilePart(buf,f.toString()); // Parse the entire file
+        FilePart file = new FilePart(buf,f.toString()); // Parse the entire file, drops buffer after parsing
         ModPart mod = file._mod;           // Extract main module
         put(mod._name,mod);
         return mod;             // Return single module for single file
@@ -113,11 +115,7 @@ public class XEC {
       file.getName().length() > 4 && file.getName().endsWith(".xtc") &&
       file.exists() && file.isFile() && file.canRead() && file.length() > 0;
 
-    // Link.
-    // Each module has a parent FilePart; the parent FilePart has a set of
-    // child modules (including the original module).  Some of the child
-    // modules might be Fingerprints: unlinked module names that must appear in
-    // the repo.  Replace fingerprints with the primary module.
+    // Link.  Replace *Con references to *Part references.
     public static final HashMap<Part,Part> VISIT = new HashMap<>();
     void link() {
       VISIT.clear();
