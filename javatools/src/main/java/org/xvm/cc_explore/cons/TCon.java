@@ -10,22 +10,18 @@ import org.xvm.cc_explore.tvar.TVar;
 public abstract class TCon extends Const {
 
   private TVar _tvar;
-  public final TVar tvar() {
-    assert _tvar!=null;
-    return _tvar.unified() ? (_tvar=_tvar.find()) : _tvar;
-  }
   public final boolean has_tvar() { return _tvar!=null; }
-  // Set the TVar
-  public final TVar setype( XEC.ModRepo repo ) {
-    return _tvar==null ? (_tvar = _setype(repo)) : _tvar;
-  }
+  // Normal access, already set (never null)
+  public final TVar tvar() { return _tvar.unified() ? (_tvar=_tvar.find()) : _tvar; }
+  // Set the TVar; can be null or not
+  public final TVar setype( ) { return _tvar==null ? (_tvar = _setype()) : _tvar; }
 
   // Sub TCons use this return the initial tvar; and can be assured that they
   // are called only once, and they do not need to assign to tvar.
-  TVar _setype( XEC.ModRepo repo ) { throw XEC.TODO(); }
+  TVar _setype( ) { throw XEC.TODO(); }
 
   // Only used to break cyclic tvar construction
-  void set_tvar_cycle_break(TVar tv) { _tvar = tv; }
+  void setype_stop_cycles(TVar tv) { _tvar = tv; }
   
   public static TCon[] tcons( CPool X ) {
     int len = X.u31();

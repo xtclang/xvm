@@ -30,8 +30,9 @@ public abstract class RelTCon extends TCon implements ClzCon {
   
   // Note that the _tvar type set here is used to stop repeated setype calls
   // but isn't really any sensible TVar.
-  @Override public TVar _setype(XEC.ModRepo repo) {
-    _con1.setype(repo);
-    return _con2.setype(repo);
+  @Override TVar _setype() {
+    _con1.setype();
+    _con2.setype();
+    throw XEC.TODO();
   }
 }
