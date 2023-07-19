@@ -23,6 +23,11 @@ module xunit.xtclang.org {
     }
 
     /**
+     * The valid targets for a Test annotation.
+     */
+    typedef Module | Package | Class | Property | Method | Function as TestTarget;
+
+    /**
      * An `PreconditionFailed` exception is raised when a test precondition fails.
      *
      * This is typically used in tests to indicate that a the preconditions for running

@@ -10,4 +10,4 @@
  * @param reason  the reason for disabling the test.
  */
 mixin Disabled(String reason)
-        into Test.TestTarget;
+        into TestTarget;

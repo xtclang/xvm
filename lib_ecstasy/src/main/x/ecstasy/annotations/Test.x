@@ -45,7 +45,7 @@
  * The parameters are ignored when the annotation is used on classes and properties. Any usage other
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
-mixin Test(String group = Unit, , Int priority = Int.MaxValue, String[] tags = [])
+mixin Test(String group = Unit, Int priority = Int.MaxValue, String[] tags = [])
         extends Iff("test".defined)
         implements Orderable {
 
@@ -74,9 +74,9 @@ mixin Test(String group = Unit, , Int priority = Int.MaxValue, String[] tags = [
      */
     static String Omit = "omit";
 
-
     // ----- Orderable -----------------------------------------------------------------------------
 
     static <CompileType extends Test> Ordered compare(CompileType value1, CompileType value2) {
         return value1.priority <=> value2.priority;
+    }
 }
