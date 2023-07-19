@@ -29,7 +29,7 @@ public class TVStruct extends TVar {
   
   // True if more fields can be added.  Generally false for a known Struct, and
   // true for a Field reference to an unknown struct.
-  boolean _open;
+  public boolean _open;
   
   // The set of field labels, 1-to-1 with TVar field contents.  Most field
   // operations are UNORDERED, so we generally need to search the fields by

@@ -19,7 +19,7 @@ public abstract class PartCon extends TCon implements IdCon {
     // Find the child in the parent
     return (_part = par.child(name(),repo)).link(repo);
   }
-  @Override TVar _setype() { return _part.tvar(); }
+  @Override TVar _setype() { return _part.setype(); }
 
   @Override public Part part() { assert _part!=null; return _part; }
 
