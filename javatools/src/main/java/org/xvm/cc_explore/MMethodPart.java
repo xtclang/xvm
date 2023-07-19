@@ -1,7 +1,7 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.TVStruct;
+import org.xvm.cc_explore.tvar.TVLeaf;
 import org.xvm.cc_explore.tvar.TVar;
 
 // A bunch of methods, following the kids list
@@ -20,8 +20,6 @@ public class MMethodPart extends Part {
   }
 
   @Override void link_innards( XEC.ModRepo repo ) {}
-  @Override TVar _setype( ) {
-    throw XEC.TODO();
-  }
-  
+  // I could construct a tuple of each underlying method
+  @Override TVar _setype( ) { return new TVLeaf(); }  
 }
