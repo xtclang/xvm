@@ -88,8 +88,9 @@ public class Contrib {
       }
   }
 
-  // TODO: _tvar = _tContrib.setype(repo);   // Get the type
   public TVar tvar() { assert _tvar!=null; return _tvar; }
+  public final TVar setype( ) { return _tvar==null ? (_tvar = _tContrib.setype()) : _tvar; }
+  
   
   @Override public String toString() { return str(new SB()).toString(); }
   public SB str(SB sb) {
