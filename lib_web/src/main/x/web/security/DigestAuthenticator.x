@@ -187,7 +187,7 @@ service DigestAuthenticator(Realm realm)
     protected String createNonce(Session session) {
         return session.attributes.process(ActiveNonces, entry -> {
             @Inject Random rnd;
-            String nonce = Base64Format.Instance.encode(rnd.fill(new Byte[9]));
+            String nonce = Base64Format.Instance.encode(rnd.bytes(9));
 
             NonceTable nonces;
             if (entry.exists, nonces := entry.value.is(NonceTable)) {

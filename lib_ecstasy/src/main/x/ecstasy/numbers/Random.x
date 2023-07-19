@@ -22,12 +22,7 @@ interface Random {
      *
      * @return the passed array
      */
-    Bit[] fill(Bit[] bits) {
-        for (Int i = 0, Int c = bits.size; i < c; ++i) {
-            bits[i] = bit();
-        }
-        return bits;
-    }
+    Bit[] bits(Int size) = new Bit[size](_ -> bit()).freeze(inPlace=True);
 
     /**
      * A second name for the [toUInt8] method, to assist with readability. By using a property
@@ -44,12 +39,7 @@ interface Random {
      *
      * @return the passed array
      */
-    Byte[] fill(Byte[] bytes) {
-        for (Int i = 0, Int c = bytes.size; i < c; ++i) {
-            bytes[i] = uint8();
-        }
-        return bytes;
-    }
+    immutable Byte[] bytes(Int size) = new Byte[size](_ -> this.byte()).freeze(inPlace=True); // TODO GG why is "this." required?
 
     /**
      * Select a random number that is between `0` (inclusive) and the specified maximum value
@@ -65,8 +55,8 @@ interface Random {
             return 0;
         }
 
-        Int   fillCount = (max-1).leftmostBit.trailingZeroCount + 1;
-        Bit[] rndbits   = fill(new Bit[fillCount]);
+        Int   bitSize = (max-1).leftmostBit.trailingZeroCount + 1;
+        Bit[] rndbits = bits(bitSize);
         if (max & max-1 == 0) {
             // max is a power of 2, so we're done
             return rndbits.toUInt().toInt();
@@ -80,7 +70,7 @@ interface Random {
             if (n < max) {
                 return n;
             }
-            fill(rndbits);
+            rndbits = bits(bitSize);
         }
     }
 
@@ -91,9 +81,7 @@ interface Random {
      *
      * @return a random 64-bit signed integer value within in the specified range
      */
-    Int int(Range<Int> range) {
-        return range.effectiveLowerBound + int(range.size);
-    }
+    Int int(Range<Int> range) = range.effectiveLowerBound + int(range.size);
 
     /**
      * Select a random number that is between `0` (inclusive) and the specified maximum value
@@ -103,9 +91,7 @@ interface Random {
      *
      * @return a random signed integer value in the range `0..<max`
      */
-    UInt uint(UInt max) {
-        return int(max.toInt()).toUInt();
-    }
+    UInt uint(UInt max) = int(max.toInt()).toUInt();
 
     /**
      * Select a random unsigned integer number that is in the specified range.
@@ -114,79 +100,57 @@ interface Random {
      *
      * @return a random 64-bit unsigned integer value within in the specified range
      */
-    UInt uint(Range<UInt> range) {
-        return range.effectiveLowerBound + uint(range.size.toUInt());
-    }
+    UInt uint(Range<UInt> range) = range.effectiveLowerBound + uint(range.size.toUInt());
 
     /**
      * @return a random 8-bit signed integer value
      */
-    Int8 int8() {
-        return fill(Int8:0.toByteArray(Fixed)).toInt8();
-    }
+    Int8 int8() = bits(8).toInt8();
 
     /**
      * @return a random 16-bit signed integer value
      */
-    Int16 int16() {
-        return fill(Int16:0.toByteArray(Fixed)).toInt16();
-    }
+    Int16 int16() = bytes(2).toInt16();
 
     /**
      * @return a random 32-bit signed integer value
      */
-    Int32 int32() {
-        return fill(Int32:0.toByteArray(Fixed)).toInt32();
-    }
+    Int32 int32() = bytes(4).toInt32();
 
     /**
      * @return a random 64-bit signed integer value
      */
-    Int64 int64() {
-        return fill(Int64:0.toByteArray(Fixed)).toInt64();
-    }
+    Int64 int64() = bytes(8).toInt64();
 
     /**
      * @return a random 128-bit signed integer value
      */
-    Int128 int128() {
-        return fill(Int128:0.toByteArray(Fixed)).toInt128();
-    }
+    Int128 int128() = bytes(16).toInt128();
 
     /**
      * @return a random 8-bit unsigned integer value
      */
-    UInt8 uint8() {
-        return fill(UInt8:0.toByteArray(Fixed)).toUInt8();
-    }
+    UInt8 uint8() = bits(8).toUInt8();
 
     /**
      * @return a random 16-bit unsigned integer value
      */
-    UInt16 uint16() {
-        return fill(UInt16:0.toByteArray(Fixed)).toUInt16();
-    }
+    UInt16 uint16() = bytes(2).toUInt16();
 
     /**
      * @return a random 32-bit unsigned integer value
      */
-    UInt32 uint32() {
-        return fill(UInt32:0.toByteArray(Fixed)).toUInt32();
-    }
+    UInt32 uint32() = bytes(4).toUInt32();
 
     /**
      * @return a random 64-bit unsigned integer value
      */
-    UInt64 uint64() {
-        return fill(UInt64:0.toByteArray(Fixed)).toUInt64();
-    }
+    UInt64 uint64() = bytes(8).toUInt64();
 
     /**
      * @return a random 128-bit unsigned integer value
      */
-    UInt128 uint128() {
-        return fill(UInt128:0.toByteArray(Fixed)).toUInt128();
-    }
+    UInt128 uint128() = bytes(16).toUInt128();
 
     /**
      * @return a random decimal value in the range `[0..1)`.
@@ -201,44 +165,32 @@ interface Random {
     /**
      * @return a random 32-bit decimal value in the range `[0..1)`.
      */
-    Dec32 dec32() {
-        TODO default implementation of dec32()
-    }
+    Dec32 dec32() = TODO default implementation of dec32()
 
     /**
      * @return a random 64-bit decimal value in the range `[0..1)`.
      */
-    Dec64 dec64() {
-        TODO default implementation of dec64()
-    }
+    Dec64 dec64() = TODO default implementation of dec64()
 
     /**
      * @return a random 128-bit decimal value in the range `[0..1)`.
      */
-    Dec128 dec128() {
-        TODO default implementation of dec128()
-    }
+    Dec128 dec128() = TODO default implementation of dec128()
 
     /**
      * @return a random 8-bit "FP8 E4M3" floating point value in the range `0..<1`.
      */
-    Float8e4 float8e4() {
-        TODO default Random.float8e4() implementation
-    }
+    Float8e4 float8e4() = TODO default Random.float8e4() implementation
 
     /**
      * @return a random 8-bit "FP8 E5M2" floating point value in the range `0..<1`.
      */
-    Float8e5 float8e5() {
-        TODO default Random.float8e5() implementation
-    }
+    Float8e5 float8e5() = TODO default Random.float8e5() implementation
 
     /**
      * @return a random 16-bit "brain" floating point value in the range `0..<1`.
      */
-    BFloat16 bfloat16() {
-        TODO default Random.bfloat16() implementation
-    }
+    BFloat16 bfloat16() = TODO default Random.bfloat16() implementation
 
     /**
      * @return a random 16-bit binary floating point value in the range `0..<1`.

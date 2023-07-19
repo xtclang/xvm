@@ -2287,6 +2287,12 @@ public abstract class ClassTemplate
         {
         ConstantPool pool = template.pool();
 
+        if (sName.startsWith("immutable "))
+            {
+            return pool.ensureImmutableTypeConstant(
+                    getClassType(sName.substring("immutable ".length()), template));
+            }
+
         if (sName.startsWith("@"))
             {
             int ofEnd = sName.indexOf(" ", 1);

@@ -66,8 +66,8 @@ public class xRTRandom
     public void initNative()
         {
         String[] BIT       = new String[] {"numbers.Bit"};
-        String[] BITARRAY  = new String[] {"collections.Array<numbers.Bit>"};
-        String[] BYTEARRAY = new String[] {"collections.Array<numbers.UInt8>"};
+        String[] BITARRAY  = new String[] {"immutable collections.Array<numbers.Bit>"};
+        String[] BYTEARRAY = new String[] {"immutable collections.Array<numbers.UInt8>"};
         String[] INT8      = new String[] {"numbers.Int8"};
         String[] INT16     = new String[] {"numbers.Int16"};
         String[] INT32     = new String[] {"numbers.Int32"};
@@ -81,8 +81,8 @@ public class xRTRandom
         String[] FLOAT64   = new String[] {"numbers.Float64"};
 
         markNativeMethod("bit"    , VOID     , BIT      );
-        markNativeMethod("fill"   , BITARRAY , BITARRAY );
-        markNativeMethod("fill"   , BYTEARRAY, BYTEARRAY);
+        markNativeMethod("bits"   , INT      , BITARRAY );
+        markNativeMethod("bytes"  , INT      , BYTEARRAY);
         markNativeMethod("int"    , INT      , INT      );
         markNativeMethod("int8"   , VOID     , INT8     );
         markNativeMethod("int16"  , VOID     , INT16    );
@@ -111,28 +111,44 @@ public class xRTRandom
         {
         switch (method.getName())
             {
-            case "fill": // "Byte[] fill(Byte[] bytes)" or "Bit[] fill(Bit[] bits)"
+            case "bits": // "Bit[] bits(Int size)"
                 {
-                ArrayHandle hArray = (ArrayHandle) hArg;
-                if (!hArray.isMutable() || hArray.getMutability().compareTo(Mutability.Fixed) < 0)
+                long cBits = ((JavaLong) hArg).getValue();
+                if (cBits < 0)
                     {
-                    return frame.raiseException(xException.immutableObject(frame));
+                    return frame.raiseException(xException.illegalArgument(frame,
+                            "size must be >= 0: " + cBits));
                     }
 
-                long cSize = hArray.m_hDelegate.m_cSize;
-                if (hArray.getTemplate() instanceof xBitArray)
+                if (cBits > 2_000_000_000L)
                     {
-                    byte[] ab = new byte[(int) (cSize + 7) / 8];
-                    rnd(hTarget).nextBytes(ab);
-                    xBitArray.setBits(hArray, ab, cSize);
+                    return frame.raiseException(xException.illegalArgument(frame,
+                            "size limit (2 billion bits) exceeded: " + cBits));
                     }
-                else
+
+                byte[] ab = new byte[(int) ((cBits+7)>>>3)];
+                rnd(hTarget).nextBytes(ab);
+                return frame.assignValue(iReturn, xBitArray.makeBitArrayHandle(ab, (int) cBits, Mutability.Constant));
+                }
+
+            case "bytes": // "Byte[] bytes(Int size)"
+                {
+                long cBytes = ((JavaLong) hArg).getValue();
+                if (cBytes < 0)
                     {
-                    byte[] ab = new byte[(int) cSize];
-                    rnd(hTarget).nextBytes(ab);
-                    xByteArray.setBytes(hArray, ab);
+                    return frame.raiseException(xException.illegalArgument(frame,
+                            "array size must be >= 0: " + cBytes));
                     }
-                return frame.assignValue(iReturn, hArg);
+
+                if (cBytes > 2_000_000_000L)
+                    {
+                    return frame.raiseException(xException.illegalArgument(frame,
+                            "array size limit (2 billion bits) exceeded: " + cBytes));
+                    }
+
+                byte[] ab = new byte[(int) cBytes];
+                rnd(hTarget).nextBytes(ab);
+                return frame.assignValue(iReturn, xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
                 }
 
             case "int":

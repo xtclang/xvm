@@ -193,7 +193,7 @@ const HttpClient
             }
 
             @Inject Random rnd;
-            String cnonce = Base64Format.Instance.encode(rnd.fill(new Byte[9]));
+            String cnonce = Base64Format.Instance.encode(rnd.bytes(9));
 
             String qop = "auth";
             qop := require(props, "qop", True);

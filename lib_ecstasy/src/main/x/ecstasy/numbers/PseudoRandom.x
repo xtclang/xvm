@@ -35,78 +35,43 @@ service PseudoRandom(UInt64 seed = 0)
     // ----- Random interface ----------------------------------------------------------------------
 
     @Override
-    Bit bit() {
-        return (uint64() & 1 == 1).toBit();
-    }
+    Bit bit() = (uint64() & 1 == 1).toBit();
 
     @Override
-    Bit[] fill(Bit[] bits) {
-        assert bits.mutability >= Fixed;
-
-        Int offset = 0;
-        Int remain = bits.size;
-        while (remain >= 64) {
-            bits.replaceAll(offset, uint64().toBitArray());
-            offset += 64;
-            remain -= 64;
-        }
-        if (remain > 0) {
-            bits.replaceAll(offset, uint64().toBitArray()[0..<remain]);
-        }
-        return bits;
-    }
+    immutable Bit[] bits(Int size) = uints(size + 0b111111 >> 6).toBitArray()[0..<size].freeze(inPlace=True);
 
     @Override
-    Byte[] fill(Byte[] bytes) {
-        assert bytes.mutability >= Fixed;
+    immutable Byte[] bytes(Int size) = uints(size + 0b111 >> 3).toByteArray()[0..<size].freeze(inPlace=True);
 
-        Int offset = 0;
-        Int remain = bytes.size;
-        while (remain >= 8) {
-            bytes.replaceAll(offset, uint64().toByteArray());
-            offset += 8;
-            remain -= 8;
-        }
-        if (remain > 0) {
-            bytes.replaceAll(offset, uint64().toByteArray()[0..<remain]);
-        }
-        return bytes;
-    }
+    /**
+     * Create an array of the specified number of random UInt64 values.
+     *
+     * @param size  the number of UInt64 values to generate
+     *
+     * @return an array of `size` UInt64 values
+     */
+    protected UInt64[] uints(Int size) = new UInt64[size](_ -> uint64());
 
     @Override
-    Int8 int8() {
-        return uint64().toInt8(truncate=True);
-    }
+    Int8 int8()     = int64().toInt8(truncate=True);
 
     @Override
-    Int16 int16() {
-        return uint64().toInt16(truncate=True);
-    }
+    Int16 int16()   = int64().toInt16(truncate=True);
 
     @Override
-    Int32 int32() {
-        return uint64().toInt32(truncate=True);
-    }
+    Int32 int32()   = int64().toInt32(truncate=True);
 
     @Override
-    Int64 int64() {
-        return uint64().toInt64(truncate=True);
-    }
+    Int64 int64()   = uint64().toBitArray().toInt64();
 
     @Override
-    UInt8 uint8() {
-        return uint64().toUInt8(truncate=True);
-    }
+    UInt8 uint8()   = uint64().toUInt8(truncate=True);
 
     @Override
-    UInt16 uint16() {
-        return uint64().toUInt16(truncate=True);
-    }
+    UInt16 uint16() = uint64().toUInt16(truncate=True);
 
     @Override
-    UInt32 uint32() {
-        return uint64().toUInt32(truncate=True);
-    }
+    UInt32 uint32() = uint64().toUInt32(truncate=True);
 
     @Override
     UInt64 uint64() {
