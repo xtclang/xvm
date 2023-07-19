@@ -5,6 +5,7 @@ import org.xvm.cc_explore.tvar.TVar;
 
 /**
    Property part
+   A property is basically some state (a field in a class) and a getter and setter.
  */
 public class PropPart extends Part {
   public final Const.Access _access;
@@ -35,6 +36,7 @@ public class PropPart extends Part {
         c.link(repo);
   }
   @Override TVar _setype( ) {
-    throw XEC.TODO();
+    if( _init!=null ) throw XEC.TODO();
+    return _con.setype();
   }
 }

@@ -186,7 +186,17 @@ abstract public class Part {
     return _tvar.unified() ? (_tvar = _tvar.find()) : _tvar;
   }
   // Set the self-type exactly once
-  public final TVar setype( ) { return _tvar==null ? (_tvar = _setype()) : _tvar; }
+  public final TVar setype( ) {
+    if( _tvar!=null ) return _tvar;
+    _tvar = _setype();
+    
+    // Recursively kids
+    if( _name2kid != null )
+      for( String s : _name2kid.keySet() )
+        _name2kid.get(s).setype();
+    
+    return _tvar;
+  }
   final TVar setype_stop_cycles( TVar tv ) { return (_tvar=tv); }
   // Sub Parts use this return the initial tvar; and can be assured that they
   // are called only once, and they do not need to assign to tvar.

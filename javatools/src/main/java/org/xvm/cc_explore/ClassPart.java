@@ -87,6 +87,7 @@ public class ClassPart extends Part {
   @Override TVar _setype() {
     // Make the class struct, with fields
     TVStruct stv = new TVStruct(_name,true);
+    setype_stop_cycles( stv );
     if( _name2kid != null )
       for( String s : _name2kid.keySet() ) {
         Part p = _name2kid.get(s);
@@ -109,6 +110,61 @@ public class ClassPart extends Part {
         }
       }
 
+    if( _contribs != null ) {
+      for( Contrib c : _contribs ) {
+        switch( c._comp ) {
+        case Extends -> {
+          assert _contribs[0] == c; // Can optimize if extends are always in slot 0
+          _super = ((ClzCon)c._tContrib).clz();
+          assert _super._f==Part.Format.CONST || _super._f==Part.Format.ENUM; // Class or Constant or Enum class
+          // Cannot assert struct is closed, because of recursive references.
+          if( c._clzs != null )  throw XEC.TODO();
+        }
+        case Implements, Delegates -> {
+          assert ((ClzCon)c._tContrib).clz()._f==Part.Format.INTERFACE;
+          TVStruct ctv = (TVStruct)c.setype();
+          assert ctv.is_open();
+          // Unify interface into class
+          ctv.fresh_unify(stv,null);
+          if( c._clzs != null )  throw XEC.TODO();
+        }
+  
+        // This is a "mixin", marker interface.  It becomes part of the parent-
+        // chain of the following "linked list" of classes.  The linked list is
+        // formed from a left-spline UnionTCon.  Proper mixins was confirmed by
+        // XTC compiler, and TODO Some Day we can verify again here.
+        case Into -> { }
+  
+        // This can be a mixin marker annotation, which has been checked by the
+        // XTC compiler already.
+        case Annotation -> {
+          //ClassPart mix = ifaces0(c._tContrib).clz();
+          //assert mix._f==Part.Format.MIXIN;
+          //assert mix._contribs[0]._comp==Part.Composition.Into;
+          throw XEC.TODO();
+        }
+        
+        case Incorporates -> {
+          ClassPart mix = ((ClzCon)c._tContrib).clz();
+          if( _mixes==null ) _mixes = new ClassPart[1];
+          else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
+          _mixes[_mixes.length-1] = mix;
+          // Unify a fresh copy of the mixin's type
+          mix.setype().fresh_unify(stv,null);
+          // Set generic parameter types
+          if( c._clzs != null )
+            for( String generic : c._clzs.keySet() )
+              //((TVStruct)tvar()).arg(mix.generic(generic)).unify( c._clzs.get( generic ).tvar() );
+              throw XEC.TODO();
+          throw XEC.TODO();
+        }
+  
+        default ->  // Handle other contributions
+          throw XEC.TODO();
+        }        
+      }
+    }
+
     // The structure has more unspecified fields, or not.
     // Interfaces are open: at least these fields, but you are allowed more.
     switch( _f ) {
@@ -116,81 +172,8 @@ public class ClassPart extends Part {
     case INTERFACE, MIXIN: break;
     default: throw XEC.TODO();
     };
-    
-    return stv;
-  }
 
-  //private void _setype(XEC.ModRepo repo) {
-  //  if( _contribs != null ) {
-  //    for( Contrib c : _contribs ) {
-  //      c.link( repo );
-  //      switch( c._comp ) {
-  //      case Extends -> {
-  //        assert _contribs[0] == c; // Can optimize if extends are always in slot 0
-  //        TermTCon ttc = ifaces0(c._tContrib,repo); // The class
-  //        Format f = ttc.clz()._f;
-  //        assert f==Part.Format.CONST || f==Part.Format.ENUM; // Class or Constant or Enum class
-  //        // Cannot assert struct is closed, because of recursive references.
-  //        _super = ttc.clz();   // Record super-class
-  //        if( c._clzs != null )  throw XEC.TODO();
-  //      }
-  //      case Implements, Delegates -> {
-  //        TermTCon ttc = ifaces0(c._tContrib,repo); // The iface, perhaps after a TVImmut
-  //        assert ttc.clz()._f==Part.Format.INTERFACE;
-  //        assert ((TVStruct)ttc.tvar()).is_open();
-  //        // Unify interface into class
-  //        c.tvar().fresh_unify(tvar(),null);
-  //        if( c._clzs != null )  throw XEC.TODO();
-  //      }
-  //
-  //      // This is a "mixin", marker interface.  It becomes part of the parent-
-  //      // chain of the following "linked list" of classes.  The linked list is
-  //      // formed from a left-spline UnionTCon.  Proper mixins was confirmed by
-  //      // XTC compiler, and TODO Some Day we can verify again here.
-  //      case Into -> { }
-  //
-  //      // This can be a mixin marker annotation, which has been checked by the
-  //      // XTC compiler already.
-  //      case Annotation -> {
-  //        ClassPart mix = ifaces0(c._tContrib,repo).clz();
-  //        assert mix._f==Part.Format.MIXIN;
-  //        assert mix._contribs[0]._comp==Part.Composition.Into;
-  //      }
-  //      
-  //      case Incorporates -> {
-  //        ClassPart mix = ifaces0(c._tContrib,repo).clz();
-  //        if( _mixes==null ) _mixes = new ClassPart[1];
-  //        else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
-  //        _mixes[_mixes.length-1] = mix;
-  //        // Unify a fresh copy of the mixin's type
-  //        mix.tvar().fresh_unify(tvar(),null);
-  //        // Set generic parameter types
-  //        if( c._clzs != null )
-  //          for( String generic : c._clzs.keySet() )
-  //            ((TVStruct)tvar()).arg(mix.generic(generic)).unify( c._clzs.get( generic ).tvar() );
-  //      }
-  //
-  //      default ->  // Handle other contributions
-  //        throw XEC.TODO();
-  //      }
-  //      
-  //    }
-  //  }
-  //}
-  
-  
-  @Override public Part child(String s, XEC.ModRepo repo) {
-    Part kid = super.child(s,repo);
-    if( kid!=null ) return kid;
-    for( Contrib c : _contribs ) {
-      if( (c._comp==Composition.Implements || c._comp==Composition.Extends) ) {
-        c.link(repo);
-        //if( (kid = c.child(s,repo)) != null )
-        //  return kid;
-        throw XEC.TODO();       // Lookup child in contrib
-      }
-    }
-    return null;
+    return stv;
   }
 
   TVStruct stvar() { return (TVStruct)tvar(); }

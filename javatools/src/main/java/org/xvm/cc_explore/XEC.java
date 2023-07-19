@@ -41,7 +41,7 @@ public class XEC {
     // Link the repo
     repo.link();
     // Type the repo
-    //repo.setype();
+    repo.setype();
     
     // Start the thread pool up
     XRuntime.start();
@@ -123,6 +123,11 @@ public class XEC {
       for( ModPart mod : values() )
         // Get the parent's set of child modules and link them against the repo
         mod._par.link(this);
+    }
+    // Set the TVar types.
+    void setype() {
+      for( ModPart mod : values() )
+        mod.setype();
     }
   }
 

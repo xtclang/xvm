@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.CPool;
+import org.xvm.cc_explore.RelPart;
 import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.tvar.TVar;
@@ -15,4 +16,5 @@ public class InterTCon extends RelTCon {
     sb.p("&");
     return _con1.str(sb);
   }
+  @Override RelPart.Op op() { return RelPart.Op.Intersect; }
 }

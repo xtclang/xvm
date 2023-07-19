@@ -3,16 +3,15 @@ package org.xvm.cc_explore.cons;
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.tvar.TVar;
-import org.xvm.cc_explore.tvar.TVStruct;
 
 /**
    Parameterized Type Constant.
  */
-public class ParamTCon extends TCon {
+public class ParamTCon extends TCon implements ClzCon {
   public TCon _con;
   public TCon[] _parms;
   public final TVar[] _types;
-  private Part _part;
+  private ClassPart _part;
   
   public ParamTCon( CPool X ) {
     X.u31();
@@ -31,7 +30,7 @@ public class ParamTCon extends TCon {
   
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
-    _part = _con.link(repo);
+    _part = (ClassPart)_con.link(repo);
     assert _part!=null;
     if( _parms!=null )
       for( TCon parm : _parms )
@@ -45,5 +44,5 @@ public class ParamTCon extends TCon {
     return _con.setype();
   }
 
-  public TVStruct clz() { return (TVStruct)tvar(); }
+  @Override public ClassPart clz() { return _part; }
 }
