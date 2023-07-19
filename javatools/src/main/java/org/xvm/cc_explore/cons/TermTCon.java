@@ -22,8 +22,7 @@ public class TermTCon extends TCon implements ClzCon {
   }
   @Override TVar _setype() {
     if( _id instanceof KeywordCon ) return null;
-    if( _id instanceof PartCon part )
-      return part.setype();
+    if( _id instanceof PartCon part ) return part.setype();
     throw XEC.TODO();
   }
 }
