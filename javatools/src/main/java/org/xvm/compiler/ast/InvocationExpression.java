@@ -2879,15 +2879,38 @@ public class InvocationExpression
         MethodConstant idConvert = null;
         if (!fFunction)
             {
-            idConvert = typeFn.getConverterTo(pool.typeFunction());
-            if (idConvert == null)
+            if (typeFn.isA(pool.typeMethod()))
                 {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
-                return null;
+                if (ctx.isMethod())
+                    {
+                    TypeConstant typeThis   = ctx.getThisType();
+                    TypeConstant typeTarget = typeFn.getParamType(0);
+                    if (!typeThis.isA(typeTarget))
+                        {
+                        log(errs, Severity.ERROR, Compiler.INVALID_METHOD_TARGET,
+                                typeTarget.getValueString(), typeThis.getValueString());
+                        return null;
+                        }
+                    ctx.requireThis(getStartPosition(), errs);
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.NO_THIS);
+                    return null;
+                    }
                 }
             else
                 {
-                typeFn = idConvert.getRawReturns()[0];
+                idConvert = typeFn.getConverterTo(pool.typeFunction());
+                if (idConvert == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
+                    return null;
+                    }
+                else
+                    {
+                    typeFn = idConvert.getRawReturns()[0];
+                    }
                 }
             }
 

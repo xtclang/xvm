@@ -39,7 +39,7 @@ interface Random {
      *
      * @return the passed array
      */
-    immutable Byte[] bytes(Int size) = new Byte[size](_ -> this.byte()).freeze(inPlace=True); // TODO GG why is "this." required?
+    immutable Byte[] bytes(Int size) = new Byte[size](_ -> byte()).freeze(inPlace=True);
 
     /**
      * Select a random number that is between `0` (inclusive) and the specified maximum value
