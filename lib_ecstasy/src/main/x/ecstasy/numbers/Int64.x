@@ -170,16 +170,6 @@ const Int64
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    @Override
-    (Int64 - Unchecked) toChecked() {
-        return this.is(Unchecked) ? new Int64(bits) : this;
-    }
-
-    @Override
-    @Unchecked Int64 toUnchecked() {
-        return this.is(Unchecked) ? this : new @Unchecked Int64(bits);
-    }
-
     @Auto
     @Override
     Int toInt(Boolean truncate = False, Rounding direction = TowardZero);

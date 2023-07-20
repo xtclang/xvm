@@ -33,27 +33,19 @@ module TestNumbers {
         console.print("n2=" + n2);
         console.print("-1=" + (--n2));
         console.print("+1=" + (++n2));
+        console.print("+1=" + (++n2));
 
         UInt64 d3 = n2 / 1000;
         console.print("d3=" + d3);
         console.print("n3=" + (d3*1000 + n2 % 1000));
 
-        try {
-            n2++;
-            assert;
-        } catch (Exception e) {}
-
-        Int64 un1 = Int64.MaxValue.toInt64().toUnchecked();
+        Int64 un1 = MaxValue;
         Int64 un2 = un1 + 1;
-
         assert un2 == Int64.MinValue; // wraps around w/out exception
-        assert un2.is(@Unchecked Int64);
 
-        UInt64 un3 = UInt64.MaxValue.toUInt64().toUnchecked();
+        UInt64 un3 = MaxValue;
         UInt64 un4 = ++un3;
         assert un4 == 0;
-
-        assert un4.is(@Unchecked UInt64);
     }
 
     void testByte() {
@@ -66,28 +58,21 @@ module TestNumbers {
         console.print("n2=" + n2);
         console.print("-1=" + (--n2));
         console.print("+1=" + (++n2));
+        console.print("+1=" + (++n2));
 
         Byte d3 = n2 / 10;
         console.print("d3=" + d3);
         console.print("n3=" + (d3*10 + n2 % 10));
 
-        try {
-            n2++;
-            assert;
-        } catch (Exception e) {}
-
         // Byte == UInt8
-        Byte un1 = Byte.MaxValue.toUInt8().toUnchecked();
+        Byte un1 = MaxValue;
         Byte un2 = un1 + 1;
 
         assert un2 == 0; // wraps around w/out exception
-        assert un2.is(@Unchecked Byte);
 
-        Int8 un3 = Int8.MaxValue.toInt8().toUnchecked();
+        Int8 un3 = MaxValue;
         Int8 un4 = ++un3;
         assert un4 == Int8.MinValue;
-
-        assert un4.is(@Unchecked Int8);
     }
 
     void testInt128() {

@@ -1144,19 +1144,19 @@ class SkiplistMap<Key extends Orderable, Value>
 
         switch (elementType) {
         // the numeric types ...
-        case Int8  , UInt8  , @Unchecked Int8  , @Unchecked UInt8  :
-        case Int16 , UInt16 , @Unchecked Int16 , @Unchecked UInt16 :
-        case Int32 , UInt32 , @Unchecked Int32 , @Unchecked UInt32 :
-        case Int64 , UInt64 , @Unchecked Int64 , @Unchecked UInt64 :
-        case Int128, UInt128, @Unchecked Int128, @Unchecked UInt128:
+        case Int8  , UInt8:
+        case Int16 , UInt16:
+        case Int32 , UInt32:
+        case Int64 , UInt64:
+        case Int128, UInt128:
         case Dec32, Dec64, Dec128:
         case BFloat16, Float16, Float32, Float64, Float128:
             // and the nullable forms ... TODO CP "case" does not allow "T?"
-        case Nullable|Int8  , Nullable|UInt8  , Nullable|@Unchecked Int8  , Nullable|@Unchecked UInt8  :
-        case Nullable|Int16 , Nullable|UInt16 , Nullable|@Unchecked Int16 , Nullable|@Unchecked UInt16 :
-        case Nullable|Int32 , Nullable|UInt32 , Nullable|@Unchecked Int32 , Nullable|@Unchecked UInt32 :
-        case Nullable|Int64 , Nullable|UInt64 , Nullable|@Unchecked Int64 , Nullable|@Unchecked UInt64 :
-        case Nullable|Int128, Nullable|UInt128, Nullable|@Unchecked Int128, Nullable|@Unchecked UInt128:
+        case Nullable|Int8  , Nullable|UInt8:
+        case Nullable|Int16 , Nullable|UInt16:
+        case Nullable|Int32 , Nullable|UInt32:
+        case Nullable|Int64 , Nullable|UInt64:
+        case Nullable|Int128, Nullable|UInt128:
         case Nullable|Dec32, Nullable|Dec64, Nullable|Dec128:
         case Nullable|BFloat16, Nullable|Float16, Nullable|Float32, Nullable|Float64, Nullable|Float128:
             return new NumberStore<elementType.DataType, indexType.DataType>();
@@ -2254,24 +2254,12 @@ class SkiplistMap<Key extends Orderable, Value>
             valueHeight = ((nullable ? bytesPerNum+1 : bytesPerNum) + bytesPerIndex-1) / bytesPerIndex;
 
             fromBytes = switch (numType) {
-                case @Unchecked Int8    : a -> a.toInt8()   .toUnchecked().as(Element);
-                case @Unchecked Int16   : a -> a.toInt16()  .toUnchecked().as(Element);
-                case @Unchecked Int32   : a -> a.toInt32()  .toUnchecked().as(Element);
-                case @Unchecked Int64   : a -> a.toInt64()  .toUnchecked().as(Element);
-                case @Unchecked Int128  : a -> a.toInt128() .toUnchecked().as(Element);
-
                 case Int                : a -> a.toInt()                  .as(Element);
                 case Int8               : a -> a.toInt8()                 .as(Element);
                 case Int16              : a -> a.toInt16()                .as(Element);
                 case Int32              : a -> a.toInt32()                .as(Element);
                 case Int64              : a -> a.toInt64()                .as(Element);
                 case Int128             : a -> a.toInt128()               .as(Element);
-
-                case @Unchecked UInt8   : a -> a.toUInt8()  .toUnchecked().as(Element);
-                case @Unchecked UInt16  : a -> a.toUInt16() .toUnchecked().as(Element);
-                case @Unchecked UInt32  : a -> a.toUInt32() .toUnchecked().as(Element);
-                case @Unchecked UInt64  : a -> a.toUInt64() .toUnchecked().as(Element);
-                case @Unchecked UInt128 : a -> a.toUInt128().toUnchecked().as(Element);
 
                 case UInt               : a -> a.toUInt()                 .as(Element);
                 case UInt8              : a -> a.toUInt8()                .as(Element);

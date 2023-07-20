@@ -143,16 +143,6 @@ const IntN
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    (IntN - Unchecked) toChecked() {
-        return this.is(Unchecked) ? new IntN(bits) : this;
-    }
-
-    @Override
-    @Unchecked IntN toUnchecked() {
-        return this.is(Unchecked) ? this : new @Unchecked IntN(bits);
-    }
-
-    @Override
     Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
 
     @Override

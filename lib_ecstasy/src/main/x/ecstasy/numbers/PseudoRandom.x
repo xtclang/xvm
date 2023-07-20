@@ -19,17 +19,16 @@ service PseudoRandom(UInt64 seed = 0)
                 seed = 42; // RIP DNA
             }
         }
-
-        n = seed.toUnchecked();
+        this.seed = seed;
     }
 
 
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The previous random value.
+     * The most recent rolling random seed.
      */
-    private @Unchecked UInt64 n;
+    private UInt64 seed;
 
 
     // ----- Random interface ----------------------------------------------------------------------
@@ -75,13 +74,11 @@ service PseudoRandom(UInt64 seed = 0)
 
     @Override
     UInt64 uint64() {
-        @Unchecked UInt64 rnd = n;
-
-        rnd ^= (rnd >> 12);
-        rnd ^= (rnd << 25);
-        rnd ^= (rnd >> 27);
-
-        n = rnd;
-        return rnd * 0x2545F4914F6CDD1D;
+        UInt64 seed = seed;
+        seed ^= (seed >> 12);
+        seed ^= (seed << 25);
+        seed ^= (seed >> 27);
+        this.seed = seed;
+        return seed * 0x2545F4914F6CDD1D;
     }
 }

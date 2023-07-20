@@ -62,7 +62,6 @@ import ecstasy.annotations.Test;
 import ecstasy.annotations.Transient;
 import ecstasy.annotations.WatchVar          as Watch;
 import ecstasy.annotations.WeakVar           as Weak;
-import ecstasy.annotations.UncheckedInt      as Unchecked;
 
 import ecstasy.collections.Array;
 import ecstasy.collections.Collection;

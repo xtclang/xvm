@@ -150,16 +150,6 @@ const UInt32
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    @Override
-    (UInt32 - Unchecked) toChecked() {
-        return this.is(Unchecked) ? new UInt32(bits) : this;
-    }
-
-    @Override
-    @Unchecked UInt32 toUnchecked() {
-        return this.is(Unchecked) ? this : new @Unchecked UInt32(bits);
-    }
-
     @Auto
     @Override
     Int toInt(Boolean truncate = False, Rounding direction = TowardZero);

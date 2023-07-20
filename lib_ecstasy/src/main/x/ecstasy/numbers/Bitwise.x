@@ -186,17 +186,4 @@ mixin Bitwise
     Bitwise reverseBytes() {
         TODO
     }
-
-
-    // ----- conversions ---------------------------------------------------------------------------
-
-    /**
-     * Obtain the integer number as an integer that checks for overflow and underflow conditions.
-     */
-    (Bitwise - Unchecked) toChecked();
-
-    /**
-     * Obtain the integer number as an integer that does not check for overflow or underflow.
-     */
-    @Unchecked Bitwise toUnchecked();
 }

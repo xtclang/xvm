@@ -458,13 +458,6 @@
     @Override
     static <To extends Number!> function To (Number) converterTo(Type<To> to) {
         return switch (to) {
-            case @Unchecked Int8    : n -> n.toInt8()   .toUnchecked().as(To);
-            case @Unchecked Int16   : n -> n.toInt16()  .toUnchecked().as(To);
-            case @Unchecked Int32   : n -> n.toInt32()  .toUnchecked().as(To);
-            case @Unchecked Int64   : n -> n.toInt64()  .toUnchecked().as(To);
-            case @Unchecked Int128  : n -> n.toInt128() .toUnchecked().as(To);
-            case @Unchecked IntN    : n -> n.toIntN()   .toUnchecked().as(To);
-
             case Int                : n -> n.toInt()                  .as(To);
             case Int8               : n -> n.toInt8()                 .as(To);
             case Int16              : n -> n.toInt16()                .as(To);
@@ -472,13 +465,6 @@
             case Int64              : n -> n.toInt64()                .as(To);
             case Int128             : n -> n.toInt128()               .as(To);
             case IntN               : n -> n.toIntN()                 .as(To);
-
-            case @Unchecked UInt8   : n -> n.toUInt8()  .toUnchecked().as(To);
-            case @Unchecked UInt16  : n -> n.toUInt16() .toUnchecked().as(To);
-            case @Unchecked UInt32  : n -> n.toUInt32() .toUnchecked().as(To);
-            case @Unchecked UInt64  : n -> n.toUInt64() .toUnchecked().as(To);
-            case @Unchecked UInt128 : n -> n.toUInt128().toUnchecked().as(To);
-            case @Unchecked UIntN   : n -> n.toUIntN()  .toUnchecked().as(To);
 
             case UInt               : n -> n.toUInt()                 .as(To);
             case UInt8              : n -> n.toUInt8()                .as(To);

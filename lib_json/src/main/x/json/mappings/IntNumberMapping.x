@@ -49,18 +49,5 @@ const IntNumberMapping<Serializable extends IntNumber>
             numbers.UInt128    = (lit) -> lit.toUInt128(),
             numbers.IntN       = (lit) -> lit.toIntN(),
             numbers.UIntN      = (lit) -> lit.toUIntN(),
-
-            @Unchecked numbers.Int8       = (lit) -> lit.toInt8()   .toUnchecked(),
-            @Unchecked numbers.Int16      = (lit) -> lit.toInt16()  .toUnchecked(),
-            @Unchecked numbers.Int32      = (lit) -> lit.toInt32()  .toUnchecked(),
-            @Unchecked numbers.Int64      = (lit) -> lit.toInt64()  .toUnchecked(),
-            @Unchecked numbers.Int128     = (lit) -> lit.toInt128() .toUnchecked(),
-            @Unchecked numbers.UInt8      = (lit) -> lit.toUInt8()  .toUnchecked(),
-            @Unchecked numbers.UInt16     = (lit) -> lit.toUInt16() .toUnchecked(),
-            @Unchecked numbers.UInt32     = (lit) -> lit.toUInt32() .toUnchecked(),
-            @Unchecked numbers.UInt64     = (lit) -> lit.toUInt64() .toUnchecked(),
-            @Unchecked numbers.UInt128    = (lit) -> lit.toUInt128().toUnchecked(),
-            @Unchecked numbers.IntN       = (lit) -> lit.toIntN()   .toUnchecked(),
-            @Unchecked numbers.UIntN      = (lit) -> lit.toUIntN()  .toUnchecked(),
             ];
 }

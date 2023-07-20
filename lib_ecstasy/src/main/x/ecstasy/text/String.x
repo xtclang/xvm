@@ -35,7 +35,7 @@ const String
      * A lazily calculated, cached hash code.
      */
     private @Lazy Int64 hash.calc() {
-        @Unchecked Int64 hash = Int64:982_451_653.toUnchecked(); // start with a prime number
+        Int64 hash = Int64:982_451_653;         // start with a prime number
         for (Char char : chars) {
             hash = hash * 31 + char.toInt64();
         }

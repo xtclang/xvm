@@ -133,7 +133,7 @@ module TestAnnotations {
     }
 
     @Tagged(weight=1)
-    void testMethodMixin(@Tagged(weight=2) (@Unchecked Int64)? i = Null) {
+    void testMethodMixin(@Tagged(weight=2) (@AutoFreezable Freezable)? o = Null) {
         Method m = testMethodMixin;
         console.print(m);
 

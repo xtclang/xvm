@@ -55,7 +55,7 @@ module TestParser
             "@None @Zero() @One(1) @Two(-1, \"hello\") Map<@Junk('a') String, @Expires(Date:2020-12-25) util.Password>",
             "ecstasy.xtclang.org:collections.HashMap",
             "ecstasy.xtclang.org:collections.List<ecstasy.xtclang.org:numbers.Int64>",
-            "@ecstasy.xtclang.org:annotations.Unchecked ecstasy.xtclang.org:collections.List<@ecstasy.xtclang.org:annotations.Unchecked ecstasy.xtclang.org:numbers.Int64>",
+            "@ecstasy.xtclang.org:annotations.AutoFreezable ecstasy.xtclang.org:collections.List<@ecstasy.xtclang.org:annotations.AutoFreezable ecstasy.xtclang.org:numbers.Int64>",
             "Function<Tuple<String>, Tuple<Int>>",
             ];
 

@@ -175,16 +175,6 @@ const UInt8
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    @Override
-    (UInt8 - Unchecked) toChecked() {
-        return this.is(Unchecked) ? new UInt8(bits) : this;
-    }
-
-    @Override
-    @Unchecked UInt8 toUnchecked() {
-        return this.is(Unchecked) ? this : new @Unchecked UInt8(bits);
-    }
-
     @Auto
     @Override
     Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
