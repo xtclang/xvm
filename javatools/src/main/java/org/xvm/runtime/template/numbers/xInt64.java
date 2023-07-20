@@ -20,7 +20,7 @@ public class xInt64
 
     public xInt64(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, Long.MIN_VALUE, Long.MAX_VALUE, 64, false, true);
+        super(container, structure, Long.MIN_VALUE, Long.MAX_VALUE, 64, false, false);
 
         if (fInstance)
             {

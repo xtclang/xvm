@@ -16,7 +16,7 @@ public class xUInt16
 
     public xUInt16(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, 0, 2L * (long) Short.MAX_VALUE + 1, 16, true);
+        super(container, structure, 0, 2L * (long) Short.MAX_VALUE + 1, 16, false);
 
         if (fInstance)
             {

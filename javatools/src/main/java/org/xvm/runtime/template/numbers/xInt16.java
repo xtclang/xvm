@@ -16,7 +16,7 @@ public class xInt16
 
     public xInt16(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, Short.MIN_VALUE, Short.MAX_VALUE, 16, false, true);
+        super(container, structure, Short.MIN_VALUE, Short.MAX_VALUE, 16, false, false);
 
         if (fInstance)
             {

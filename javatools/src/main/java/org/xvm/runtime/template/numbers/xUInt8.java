@@ -23,7 +23,7 @@ public class xUInt8
 
     public xUInt8(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, 0, 255, 8, true);
+        super(container, structure, 0, 255, 8, false);
 
         if (fInstance)
             {

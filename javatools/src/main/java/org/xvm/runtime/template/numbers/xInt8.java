@@ -19,7 +19,7 @@ public class xInt8
 
     public xInt8(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE, 8, false, true);
+        super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE, 8, false, false);
 
         if (fInstance)
             {

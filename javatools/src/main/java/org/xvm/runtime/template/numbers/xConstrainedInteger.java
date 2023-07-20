@@ -6,7 +6,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -694,8 +693,7 @@ public abstract class xConstrainedInteger
     /**
      * Convert a PackedInteger value into a handle for the type represented by this template.
      *
-     * TODO GG re-evaluate
-     * Note: this method can throw an Overflow since the "source" is always IntLiteral.
+     * Note: this method can throw an Overflow since the "source" is either IntLiteral or UInt64.
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */

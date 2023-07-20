@@ -16,7 +16,7 @@ public class xInt32
 
     public xInt32(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, Integer.MIN_VALUE, Integer.MAX_VALUE, 32, false, true);
+        super(container, structure, Integer.MIN_VALUE, Integer.MAX_VALUE, 32, false, false);
 
         if (fInstance)
             {

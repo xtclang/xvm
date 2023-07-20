@@ -25,7 +25,7 @@ public class xUInt64
 
     public xUInt64(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, 0, -1, 64,  true);
+        super(container, structure, 0, -1, 64, false);
 
         if (fInstance)
             {
@@ -85,7 +85,10 @@ public class xUInt64
                 {
                 return frame.assignValue(iReturn, hTarget);
                 }
-            return overflow(frame);
+            if (f_fChecked)
+                {
+                return overflow(frame);
+                }
             }
 
         if (l2 <= 0)
@@ -99,11 +102,14 @@ public class xUInt64
                 {
                 return frame.assignValue(iReturn, hArg);
                 }
-            return overflow(frame);
+            if (f_fChecked)
+                {
+                return overflow(frame);
+                }
             }
 
         long lr = l1 * l2;
-        if ((l1 | l2) >>> 31 != 0 && divUnassigned(lr, l2) != l1)
+        if (f_fChecked && (l1 | l2) >>> 31 != 0 && divUnassigned(lr, l2) != l1)
             {
             return overflow(frame);
             }
@@ -116,7 +122,7 @@ public class xUInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        if (l2 == 0)
+        if (f_fChecked && l2 == 0)
             {
             return overflow(frame);
             }
@@ -130,7 +136,7 @@ public class xUInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        if (l2 == 0)
+        if (f_fChecked && l2 == 0)
             {
             return overflow(frame);
             }
@@ -146,7 +152,7 @@ public class xUInt64
             // there is a range: 0x7FFF_FFFF_FFFF_FFFF .. 0xFFFF_FFFF_FFFF_FFFF
             // that fits "long", but represented by the PackedInteger as "big"
             BigInteger bi = piValue.getBigInteger();
-            if (bi.signum() > 0 && bi.bitLength() <= 64)
+            if (bi.signum() > 0 && bi.bitLength() <= 64 || !fChecked)
                 {
                 return frame.assignValue(iReturn, makeJavaLong(bi.longValue()));
                 }

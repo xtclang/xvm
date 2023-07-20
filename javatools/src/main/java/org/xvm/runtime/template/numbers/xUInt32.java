@@ -16,7 +16,7 @@ public class xUInt32
 
     public xUInt32(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, 0, 2L * (long) Integer.MAX_VALUE + 1, 32, true);
+        super(container, structure, 0, 2L * (long) Integer.MAX_VALUE + 1, 32, false);
 
         if (fInstance)
             {
