@@ -116,7 +116,9 @@ interface FileNode
     Boolean delete();
 
     /**
-     * Attempt to rename the file-node. This operation is atomic.
+     * Attempt to rename the file-node. This operation will fail if the destination name already
+     * exists (unless the name is the same as this file's, in which case it's a no-op). This
+     * operation is atomic.
      *
      * @param name  the new name for the file-node
      *
