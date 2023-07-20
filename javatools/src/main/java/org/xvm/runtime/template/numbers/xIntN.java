@@ -23,7 +23,7 @@ public class xIntN
 
     public xIntN(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, false, true);
+        super(container, structure, false, false);
 
         if (fInstance)
             {
