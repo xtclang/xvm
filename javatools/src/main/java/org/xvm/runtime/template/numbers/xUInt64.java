@@ -47,12 +47,6 @@ public class xUInt64
         }
 
     @Override
-    protected xConstrainedInteger getUncheckedTemplate()
-        {
-        return xUncheckedUInt64.INSTANCE;
-        }
-
-    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof IntConstant constInt)

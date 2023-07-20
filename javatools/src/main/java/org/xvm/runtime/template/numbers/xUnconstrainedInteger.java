@@ -46,8 +46,6 @@ public abstract class xUnconstrainedInteger
 
         markNativeProperty("leadingZeroCount");
 
-// TODO markNativeMethod("toUnchecked", VOID, null);
-
 // TODO markNativeMethod("toBooleanArray", VOID, null);
 // TODO markNativeMethod("toBitArray"    , VOID, null);
 

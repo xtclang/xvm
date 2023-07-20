@@ -577,13 +577,12 @@ public class LiteralConstant
         }
 
     /**
-     * Convert the LiteralConstant to an CInt8, Int8, CUInt8, or UInt8 ByteConstant, iff the
-     * LiteralConstant is an IntLiteral whose value is in the range -128..127 (signed) or 0..255
-     * (unsigned).
+     * Convert the LiteralConstant to an Int8 or UInt8 ByteConstant, iff the LiteralConstant is an
+     * IntLiteral whose value is in the range -128..127 (signed) or 0..255 (unsigned).
      *
-     * @param format  CInt8, Int8, CUInt8, or UInt8
+     * @param format  Int8 or UInt8
      *
-     * @return a CInt8, Int8, CUInt8, or UInt8 ByteConstant
+     * @return a Int8 or UInt8 ByteConstant
      *
      * @throws ArithmeticException  on overflow
      */
@@ -597,7 +596,6 @@ public class LiteralConstant
         PackedInteger pi = getPackedInteger();
         switch (format)
             {
-            case CInt8:
             case Int8:
                 if (pi.isBig() || pi.getLong() < -128 || pi.getLong() > 127)
                     {
@@ -605,7 +603,6 @@ public class LiteralConstant
                     }
                 break;
 
-            case CUInt8:
             case UInt8:
                 if (pi.isBig() || pi.getLong() < 0 || pi.getLong() > 255)
                     {
@@ -1079,22 +1076,6 @@ public class LiteralConstant
             case "IntLiteral<=>UInt":
                 return this.toIntConstant(that.getFormat()).apply(op, that);
 
-            case "IntLiteral+CInt8":
-            case "IntLiteral-CInt8":
-            case "IntLiteral*CInt8":
-            case "IntLiteral/CInt8":
-            case "IntLiteral%CInt8":
-            case "IntLiteral&CInt8":
-            case "IntLiteral|CInt8":
-            case "IntLiteral^CInt8":
-            case "IntLiteral==CInt8":
-            case "IntLiteral!=CInt8":
-            case "IntLiteral<CInt8":
-            case "IntLiteral<=CInt8":
-            case "IntLiteral>CInt8":
-            case "IntLiteral>=CInt8":
-            case "IntLiteral<=>CInt8":
-
             case "IntLiteral+Int8":
             case "IntLiteral-Int8":
             case "IntLiteral*Int8":
@@ -1110,22 +1091,6 @@ public class LiteralConstant
             case "IntLiteral>Int8":
             case "IntLiteral>=Int8":
             case "IntLiteral<=>Int8":
-
-            case "IntLiteral+CUInt8":
-            case "IntLiteral-CUInt8":
-            case "IntLiteral*CUInt8":
-            case "IntLiteral/CUInt8":
-            case "IntLiteral%CUInt8":
-            case "IntLiteral&CUInt8":
-            case "IntLiteral|CUInt8":
-            case "IntLiteral^CUInt8":
-            case "IntLiteral==CUInt8":
-            case "IntLiteral!=CUInt8":
-            case "IntLiteral<CUInt8":
-            case "IntLiteral<=CUInt8":
-            case "IntLiteral>CUInt8":
-            case "IntLiteral>=CUInt8":
-            case "IntLiteral<=>CUInt8":
 
             case "IntLiteral+UInt8":
             case "IntLiteral-UInt8":
@@ -1143,166 +1108,6 @@ public class LiteralConstant
             case "IntLiteral>=UInt8":
             case "IntLiteral<=>UInt8":
                 return this.toByteConstant(that.getFormat()).apply(op, that);
-
-            case "IntLiteral+CInt16":
-            case "IntLiteral-CInt16":
-            case "IntLiteral*CInt16":
-            case "IntLiteral/CInt16":
-            case "IntLiteral%CInt16":
-            case "IntLiteral&CInt16":
-            case "IntLiteral|CInt16":
-            case "IntLiteral^CInt16":
-            case "IntLiteral==CInt16":
-            case "IntLiteral!=CInt16":
-            case "IntLiteral<CInt16":
-            case "IntLiteral<=CInt16":
-            case "IntLiteral>CInt16":
-            case "IntLiteral>=CInt16":
-            case "IntLiteral<=>CInt16":
-
-            case "IntLiteral+CInt32":
-            case "IntLiteral-CInt32":
-            case "IntLiteral*CInt32":
-            case "IntLiteral/CInt32":
-            case "IntLiteral%CInt32":
-            case "IntLiteral&CInt32":
-            case "IntLiteral|CInt32":
-            case "IntLiteral^CInt32":
-            case "IntLiteral==CInt32":
-            case "IntLiteral!=CInt32":
-            case "IntLiteral<CInt32":
-            case "IntLiteral<=CInt32":
-            case "IntLiteral>CInt32":
-            case "IntLiteral>=CInt32":
-            case "IntLiteral<=>CInt32":
-
-            case "IntLiteral+CInt64":
-            case "IntLiteral-CInt64":
-            case "IntLiteral*CInt64":
-            case "IntLiteral/CInt64":
-            case "IntLiteral%CInt64":
-            case "IntLiteral&CInt64":
-            case "IntLiteral|CInt64":
-            case "IntLiteral^CInt64":
-            case "IntLiteral==CInt64":
-            case "IntLiteral!=CInt64":
-            case "IntLiteral<CInt64":
-            case "IntLiteral<=CInt64":
-            case "IntLiteral>CInt64":
-            case "IntLiteral>=CInt64":
-            case "IntLiteral<=>CInt64":
-
-            case "IntLiteral+CInt128":
-            case "IntLiteral-CInt128":
-            case "IntLiteral*CInt128":
-            case "IntLiteral/CInt128":
-            case "IntLiteral%CInt128":
-            case "IntLiteral&CInt128":
-            case "IntLiteral|CInt128":
-            case "IntLiteral^CInt128":
-            case "IntLiteral==CInt128":
-            case "IntLiteral!=CInt128":
-            case "IntLiteral<CInt128":
-            case "IntLiteral<=CInt128":
-            case "IntLiteral>CInt128":
-            case "IntLiteral>=CInt128":
-            case "IntLiteral<=>CInt128":
-
-            case "IntLiteral+CIntN":
-            case "IntLiteral-CIntN":
-            case "IntLiteral*CIntN":
-            case "IntLiteral/CIntN":
-            case "IntLiteral%CIntN":
-            case "IntLiteral&CIntN":
-            case "IntLiteral|CIntN":
-            case "IntLiteral^CIntN":
-            case "IntLiteral==CIntN":
-            case "IntLiteral!=CIntN":
-            case "IntLiteral<CIntN":
-            case "IntLiteral<=CIntN":
-            case "IntLiteral>CIntN":
-            case "IntLiteral>=CIntN":
-            case "IntLiteral<=>CIntN":
-
-            case "IntLiteral+CUInt16":
-            case "IntLiteral-CUInt16":
-            case "IntLiteral*CUInt16":
-            case "IntLiteral/CUInt16":
-            case "IntLiteral%CUInt16":
-            case "IntLiteral&CUInt16":
-            case "IntLiteral|CUInt16":
-            case "IntLiteral^CUInt16":
-            case "IntLiteral==CUInt16":
-            case "IntLiteral!=CUInt16":
-            case "IntLiteral<CUInt16":
-            case "IntLiteral<=CUInt16":
-            case "IntLiteral>CUInt16":
-            case "IntLiteral>=CUInt16":
-            case "IntLiteral<=>CUInt16":
-
-            case "IntLiteral+CUInt32":
-            case "IntLiteral-CUInt32":
-            case "IntLiteral*CUInt32":
-            case "IntLiteral/CUInt32":
-            case "IntLiteral%CUInt32":
-            case "IntLiteral&CUInt32":
-            case "IntLiteral|CUInt32":
-            case "IntLiteral^CUInt32":
-            case "IntLiteral==CUInt32":
-            case "IntLiteral!=CUInt32":
-            case "IntLiteral<CUInt32":
-            case "IntLiteral<=CUInt32":
-            case "IntLiteral>CUInt32":
-            case "IntLiteral>=CUInt32":
-            case "IntLiteral<=>CUInt32":
-
-            case "IntLiteral+CUInt64":
-            case "IntLiteral-CUInt64":
-            case "IntLiteral*CUInt64":
-            case "IntLiteral/CUInt64":
-            case "IntLiteral%CUInt64":
-            case "IntLiteral&CUInt64":
-            case "IntLiteral|CUInt64":
-            case "IntLiteral^CUInt64":
-            case "IntLiteral==CUInt64":
-            case "IntLiteral!=CUInt64":
-            case "IntLiteral<CUInt64":
-            case "IntLiteral<=CUInt64":
-            case "IntLiteral>CUInt64":
-            case "IntLiteral>=CUInt64":
-            case "IntLiteral<=>CUInt64":
-
-            case "IntLiteral+CUInt128":
-            case "IntLiteral-CUInt128":
-            case "IntLiteral*CUInt128":
-            case "IntLiteral/CUInt128":
-            case "IntLiteral%CUInt128":
-            case "IntLiteral&CUInt128":
-            case "IntLiteral|CUInt128":
-            case "IntLiteral^CUInt128":
-            case "IntLiteral==CUInt128":
-            case "IntLiteral!=CUInt128":
-            case "IntLiteral<CUInt128":
-            case "IntLiteral<=CUInt128":
-            case "IntLiteral>CUInt128":
-            case "IntLiteral>=CUInt128":
-            case "IntLiteral<=>CUInt128":
-
-            case "IntLiteral+CUIntN":
-            case "IntLiteral-CUIntN":
-            case "IntLiteral*CUIntN":
-            case "IntLiteral/CUIntN":
-            case "IntLiteral%CUIntN":
-            case "IntLiteral&CUIntN":
-            case "IntLiteral|CUIntN":
-            case "IntLiteral^CUIntN":
-            case "IntLiteral==CUIntN":
-            case "IntLiteral!=CUIntN":
-            case "IntLiteral<CUIntN":
-            case "IntLiteral<=CUIntN":
-            case "IntLiteral>CUIntN":
-            case "IntLiteral>=CUIntN":
-            case "IntLiteral<=>CUIntN":
 
             case "IntLiteral+Int16":
             case "IntLiteral-Int16":
@@ -1804,49 +1609,25 @@ public class LiteralConstant
                     {
                     return toIntConstant(Format.Int);
                     }
-                else if (typeOut.equals(pool.typeCInt8()))
-                    {
-                    return toByteConstant(Format.CInt8);
-                    }
                 else if (typeOut.equals(pool.typeInt8()))
                     {
                     return toByteConstant(Format.Int8);
-                    }
-                else if (typeOut.equals(pool.typeCInt16()))
-                    {
-                    return toIntConstant(Format.CInt16);
                     }
                 else if (typeOut.equals(pool.typeInt16()))
                     {
                     return toIntConstant(Format.Int16);
                     }
-                else if (typeOut.equals(pool.typeCInt32()))
-                    {
-                    return toIntConstant(Format.CInt32);
-                    }
                 else if (typeOut.equals(pool.typeInt32()))
                     {
                     return toIntConstant(Format.Int32);
-                    }
-                else if (typeOut.equals(pool.typeCInt64()))
-                    {
-                    return toIntConstant(Format.CInt64);
                     }
                 else if (typeOut.equals(pool.typeInt64()))
                     {
                     return toIntConstant(Format.Int64);
                     }
-                else if (typeOut.equals(pool.typeCInt128()))
-                    {
-                    return toIntConstant(Format.CInt128);
-                    }
                 else if (typeOut.equals(pool.typeInt128()))
                     {
                     return toIntConstant(Format.Int128);
-                    }
-                else if (typeOut.equals(pool.typeCIntN()))
-                    {
-                    return toIntConstant(Format.CIntN);
                     }
                 else if (typeOut.equals(pool.typeIntN()))
                     {
@@ -1856,49 +1637,25 @@ public class LiteralConstant
                     {
                     return toIntConstant(Format.UInt);
                     }
-                else if (typeOut.equals(pool.typeCUInt8()))
-                    {
-                    return toByteConstant(Format.CUInt8);
-                    }
                 else if (typeOut.equals(pool.typeUInt8()))
                     {
                     return toByteConstant(Format.UInt8);
-                    }
-                else if (typeOut.equals(pool.typeCUInt16()))
-                    {
-                    return toIntConstant(Format.CUInt16);
                     }
                 else if (typeOut.equals(pool.typeUInt16()))
                     {
                     return toIntConstant(Format.UInt16);
                     }
-                else if (typeOut.equals(pool.typeCUInt32()))
-                    {
-                    return toIntConstant(Format.CUInt32);
-                    }
                 else if (typeOut.equals(pool.typeUInt32()))
                     {
                     return toIntConstant(Format.UInt32);
-                    }
-                else if (typeOut.equals(pool.typeCUInt64()))
-                    {
-                    return toIntConstant(Format.CUInt64);
                     }
                 else if (typeOut.equals(pool.typeUInt64()))
                     {
                     return toIntConstant(Format.UInt64);
                     }
-                else if (typeOut.equals(pool.typeCUInt128()))
-                    {
-                    return toIntConstant(Format.CUInt128);
-                    }
                 else if (typeOut.equals(pool.typeUInt128()))
                     {
                     return toIntConstant(Format.UInt128);
-                    }
-                else if (typeOut.equals(pool.typeCUIntN()))
-                    {
-                    return toIntConstant(Format.CUIntN);
                     }
                 else if (typeOut.equals(pool.typeUIntN()))
                     {
@@ -1951,7 +1708,7 @@ public class LiteralConstant
                     }
                 else if (pool.typeUInt8().isA(typeOut))
                     {
-                    return toByteConstant(Format.CUInt8);
+                    return toByteConstant(Format.UInt8);
                     }
                 else
                     {

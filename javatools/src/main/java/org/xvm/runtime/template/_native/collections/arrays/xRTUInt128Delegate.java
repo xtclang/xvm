@@ -42,7 +42,7 @@ public class xRTUInt128Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeCUInt128());
+                pool.typeUInt128());
         }
 
     @Override

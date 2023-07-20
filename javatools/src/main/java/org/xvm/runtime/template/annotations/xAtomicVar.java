@@ -56,34 +56,22 @@ public class xAtomicVar
         Map<TypeConstant, xAtomicVar> mapTemplates = new HashMap<>();
 
         // Int, UInt
-        mapTemplates.put(pool.typeInt(),     new xAtomicInt(xInt .INSTANCE));
-        mapTemplates.put(pool.typeUInt(),    new xAtomicInt(xUInt.INSTANCE));
+        mapTemplates.put(pool.typeInt(),     new xAtomicInt(xInt .INSTANCE));       // TODO GG unchecked?
+        mapTemplates.put(pool.typeUInt(),    new xAtomicInt(xUInt.INSTANCE));       // TODO GG unchecked?
 
         // Int128, UInt128
-        mapTemplates.put(pool.typeCInt128(),  new xAtomicInt128(xInt128.INSTANCE));
-        mapTemplates.put(pool.typeCUInt128(), new xAtomicInt128(xUInt128.INSTANCE));
+        mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(xInt128.INSTANCE));  // TODO GG unchecked?
+        mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(xUInt128.INSTANCE)); // TODO GG unchecked?
 
-        // checked
-        mapTemplates.put(pool.typeCInt8(),   new xAtomicIntNumber(xInt8 .INSTANCE));
-        mapTemplates.put(pool.typeCInt16(),  new xAtomicIntNumber(xInt16.INSTANCE));
-        mapTemplates.put(pool.typeCInt32(),  new xAtomicIntNumber(xInt32.INSTANCE));
-        mapTemplates.put(pool.typeCInt64(),  new xAtomicIntNumber(xInt64.INSTANCE));
+        mapTemplates.put(pool.typeInt8(),    new xAtomicIntNumber(xUncheckedInt8 .INSTANCE));
+        mapTemplates.put(pool.typeInt16(),   new xAtomicIntNumber(xUncheckedInt16.INSTANCE));
+        mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(xUncheckedInt32.INSTANCE));
+        mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(xUncheckedInt64.INSTANCE));
 
-        mapTemplates.put(pool.typeCUInt8(),  new xAtomicIntNumber(xUInt8.INSTANCE));
-        mapTemplates.put(pool.typeCUInt16(), new xAtomicIntNumber(xUInt16.INSTANCE));
-        mapTemplates.put(pool.typeCUInt32(), new xAtomicIntNumber(xUInt32.INSTANCE));
-        mapTemplates.put(pool.typeCUInt64(), new xAtomicIntNumber(xUInt64.INSTANCE));
-
-        // unchecked
-        mapTemplates.put(pool.typeInt8(),   new xAtomicIntNumber(xUncheckedInt8.INSTANCE));
-        mapTemplates.put(pool.typeInt16(),  new xAtomicIntNumber(xUncheckedInt16.INSTANCE));
-        mapTemplates.put(pool.typeInt32(),  new xAtomicIntNumber(xUncheckedInt32.INSTANCE));
-        mapTemplates.put(pool.typeInt64(),  new xAtomicIntNumber(xUncheckedInt64.INSTANCE));
-
-        mapTemplates.put(pool.typeUInt8(),  new xAtomicIntNumber(xUncheckedUInt8.INSTANCE));
-        mapTemplates.put(pool.typeUInt16(), new xAtomicIntNumber(xUncheckedUInt16.INSTANCE));
-        mapTemplates.put(pool.typeUInt32(), new xAtomicIntNumber(xUncheckedUInt32.INSTANCE));
-        mapTemplates.put(pool.typeUInt64(), new xAtomicIntNumber(xUncheckedUInt64.INSTANCE));
+        mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(xUncheckedUInt8 .INSTANCE));
+        mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(xUncheckedUInt16.INSTANCE));
+        mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(xUncheckedUInt32.INSTANCE));
+        mapTemplates.put(pool.typeUInt64(),  new xAtomicIntNumber(xUncheckedUInt64.INSTANCE));
 
         NUMBER_TEMPLATES = mapTemplates;
 

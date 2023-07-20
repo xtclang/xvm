@@ -42,12 +42,6 @@ public class xInt64
         }
 
     @Override
-    protected xConstrainedInteger getUncheckedTemplate()
-        {
-        return xUncheckedInt64.INSTANCE;
-        }
-
-    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
             ObjectHandle[] ahArg, int iReturn)
         {

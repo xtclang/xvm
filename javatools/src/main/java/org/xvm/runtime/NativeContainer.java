@@ -859,13 +859,13 @@ public class NativeContainer
 
             case IntLiteral, FPLiteral:
 
-            case Int,      UInt:
-            case CInt8,    Int8,   CUInt8,   UInt8:
-            case CInt16,   Int16,  CUInt16,  UInt16:
-            case CInt32,   Int32,  CUInt32,  UInt32:
-            case CInt64,   Int64,  CUInt64,  UInt64:
-            case CInt128,  Int128, CUInt128, UInt128:
-            case CIntN,    IntN,   CUIntN,   UIntN:
+            case Int,    UInt:
+            case Int8,   UInt8:
+            case Int16,  UInt16:
+            case Int32,  UInt32:
+            case Int64,  UInt64:
+            case Int128, UInt128:
+            case IntN,   UIntN:
             case BFloat16:
             case Float16, Float32, Float64, Float128, FloatN:
             case Dec,     Dec32,   Dec64,   Dec128,   DecN:

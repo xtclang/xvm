@@ -36,10 +36,4 @@ public class xUInt16
         {
         return xInt16.INSTANCE;
         }
-
-    @Override
-    protected xConstrainedInteger getUncheckedTemplate()
-        {
-        return xUncheckedUInt16.INSTANCE;
-        }
     }

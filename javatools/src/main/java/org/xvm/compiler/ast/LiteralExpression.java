@@ -95,32 +95,32 @@ public class LiteralExpression
             case LIT_INTA:
                 return pool.typeInt();
             case LIT_INT8:
-                return pool.typeCInt8();
+                return pool.typeInt8();
             case LIT_INT16:
-                return pool.typeCInt16();
+                return pool.typeInt16();
             case LIT_INT32:
-                return pool.typeCInt32();
+                return pool.typeInt32();
             case LIT_INT64:
-                return pool.typeCInt64();
+                return pool.typeInt64();
             case LIT_INT128:
-                return pool.typeCInt128();
+                return pool.typeInt128();
             case LIT_INTN:
-                return pool.typeCIntN();
+                return pool.typeIntN();
 
             case LIT_UINTA:
                 return pool.typeUInt();
             case LIT_UINT8:
-                return pool.typeCUInt8();
+                return pool.typeUInt8();
             case LIT_UINT16:
-                return pool.typeCUInt16();
+                return pool.typeUInt16();
             case LIT_UINT32:
-                return pool.typeCUInt32();
+                return pool.typeUInt32();
             case LIT_UINT64:
-                return pool.typeCUInt64();
+                return pool.typeUInt64();
             case LIT_UINT128:
-                return pool.typeCUInt128();
+                return pool.typeUInt128();
             case LIT_UINTN:
-                return pool.typeCUIntN();
+                return pool.typeUIntN();
 
             case LIT_DEC:
                 return pool.typeFPLiteral();
@@ -310,27 +310,27 @@ public class LiteralExpression
                 break;
 
             case LIT_INT8:
-                format = Format.CInt8;
+                format = Format.Int8;
                 break;
 
             case LIT_INT16:
-                format = Format.CInt16;
+                format = Format.Int16;
                 break;
 
             case LIT_INT32:
-                format = Format.CInt32;
+                format = Format.Int32;
                 break;
 
             case LIT_INT64:
-                format = Format.CInt64;
+                format = Format.Int64;
                 break;
 
             case LIT_INT128:
-                format = Format.CInt128;
+                format = Format.Int128;
                 break;
 
             case LIT_INTN:
-                format = Format.CIntN;
+                format = Format.IntN;
                 break;
 
             case LIT_UINTA:
@@ -338,27 +338,27 @@ public class LiteralExpression
                 break;
 
             case LIT_UINT8:
-                format = Format.CUInt8;
+                format = Format.UInt8;
                 break;
 
             case LIT_UINT16:
-                format = Format.CUInt16;
+                format = Format.UInt16;
                 break;
 
             case LIT_UINT32:
-                format = Format.CUInt32;
+                format = Format.UInt32;
                 break;
 
             case LIT_UINT64:
-                format = Format.CUInt64;
+                format = Format.UInt64;
                 break;
 
             case LIT_UINT128:
-                format = Format.CUInt128;
+                format = Format.UInt128;
                 break;
 
             case LIT_UINTN:
-                format = Format.CUIntN;
+                format = Format.UIntN;
                 break;
 
             case LIT_DEC:

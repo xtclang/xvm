@@ -18,8 +18,8 @@ import static org.xvm.util.Handy.nibbleToChar;
 
 
 /**
- * Represent any of: a bit (1-bit), nibble (4-bit), and octet (checked or unchecked, signed or
- * unsigned 8-bit byte) constant.
+ * Represent any of: a bit (1-bit), nibble (4-bit), and octet (signed or unsigned 8-bit byte)
+ * constant.
  */
 public class ByteConstant
         extends ValueConstant
@@ -75,7 +75,6 @@ public class ByteConstant
                 bVal &= 0x0F;
                 break;
 
-            case CInt8:
             case Int8:
                 if (bVal < -128 || bVal > 127)
                     {
@@ -83,7 +82,6 @@ public class ByteConstant
                     }
                 break;
 
-            case CUInt8:
             case UInt8:
                 if ((bVal & ~0xFF) != 0)
                     {
@@ -120,13 +118,11 @@ public class ByteConstant
         {
         switch (format)
             {
-            case CInt8:
             case Int8:
                 return -128;
 
             case Bit:
             case Nibble:
-            case CUInt8:
             case UInt8:
                 return 0;
 
@@ -158,11 +154,9 @@ public class ByteConstant
             case Nibble:
                 return 0xF;
 
-            case CInt8:
             case Int8:
                 return 127;
 
-            case CUInt8:
             case UInt8:
                 return 255;
 
@@ -245,7 +239,7 @@ public class ByteConstant
      */
     static private boolean isSigned(Format format)
         {
-        return format == Format.CInt8 || format == Format.Int8;
+        return format == Format.Int8;
         }
 
     /**
@@ -289,32 +283,12 @@ public class ByteConstant
         return PackedInteger.valueOf(m_nVal);
         }
 
-    private Format normalize(Format format)
-        {
-        return switch (format)
-            {
-            case CInt8    -> Format.Int8;
-            case CInt16   -> Format.Int16;
-            case CInt32   -> Format.Int32;
-            case CInt64   -> Format.Int64;
-            case CInt128  -> Format.Int128;
-            case CIntN    -> Format.IntN;
-            case CUInt8   -> Format.UInt8;
-            case CUInt16  -> Format.UInt16;
-            case CUInt32  -> Format.UInt32;
-            case CUInt64  -> Format.UInt64;
-            case CUInt128 -> Format.UInt128;
-            case CUIntN   -> Format.UIntN;
-            default       -> format;
-            };
-        }
-
     @Override
     public Constant apply(Token.Id op, Constant that)
         {
         switch (that == null
-                ? op.TEXT + normalize(this.getFormat()).name()
-                : normalize(this.getFormat()).name() + op.TEXT + normalize(that.getFormat()).name())
+                ?                           op.TEXT + this.getFormat().name()
+                : this.getFormat().name() + op.TEXT + that.getFormat().name())
             {
             case "-Int8":
                 return validate(-this.m_nVal);
@@ -344,7 +318,7 @@ public class ByteConstant
             case "Int8<<IntLiteral":
             case "Int8>>IntLiteral":
             case "Int8>>>IntLiteral":
-                return apply(op, ((LiteralConstant) that).toIntConstant(Format.CInt64));
+                return apply(op, ((LiteralConstant) that).toIntConstant(Format.Int64));
 
             case "Int8+Int8":
                 return validate(this.m_nVal + ((ByteConstant) that).m_nVal);
@@ -418,7 +392,7 @@ public class ByteConstant
             case "UInt8<<IntLiteral":
             case "UInt8>>IntLiteral":
             case "UInt8>>>IntLiteral":
-                return apply(op, ((LiteralConstant) that).toIntConstant(Format.CInt64));
+                return apply(op, ((LiteralConstant) that).toIntConstant(Format.Int64));
 
             case "UInt8+UInt8":
                 return validate(this.m_nVal + ((ByteConstant) that).m_nVal);
@@ -492,7 +466,7 @@ public class ByteConstant
             case "Nibble+IntLiteral":
             case "Nibble-IntLiteral":
                 {
-                int delta = ((LiteralConstant) that).toIntConstant(Format.CInt32).getIntValue().getInt();
+                int delta = ((LiteralConstant) that).toIntConstant(Format.Int32).getIntValue().getInt();
                 if (op == Token.Id.SUB)
                     {
                     delta = -delta;
@@ -535,12 +509,10 @@ public class ByteConstant
             case Nibble:
                 return "0x" + nibbleToChar(m_nVal);
 
-            case CInt8:
             case Int8:
                 return Integer.toString(m_nVal);
 
             default:
-            case CUInt8:
             case UInt8:
                 return byteToHexString(m_nVal);
             }
@@ -560,49 +532,25 @@ public class ByteConstant
             {
             return IntConstant.toIntConstant(Format.Int, new PackedInteger(m_nVal), pool);
             }
-        else if (typeOut.equals(pool.typeCInt8()))
-            {
-            return new ByteConstant(pool, Format.CInt8, m_nVal);
-            }
         else if (typeOut.equals(pool.typeInt8()))
             {
             return new ByteConstant(pool, Format.Int8, m_nVal);
-            }
-        else if (typeOut.equals(pool.typeCInt16()))
-            {
-            return IntConstant.toIntConstant(Format.CInt16, new PackedInteger(m_nVal), pool);
             }
         else if (typeOut.equals(pool.typeInt16()))
             {
             return IntConstant.toIntConstant(Format.Int16, new PackedInteger(m_nVal), pool);
             }
-        else if (typeOut.equals(pool.typeCInt32()))
-            {
-            return IntConstant.toIntConstant(Format.CInt32, new PackedInteger(m_nVal), pool);
-            }
         else if (typeOut.equals(pool.typeInt32()))
             {
             return IntConstant.toIntConstant(Format.Int32, new PackedInteger(m_nVal), pool);
-            }
-        else if (typeOut.equals(pool.typeCInt64()))
-            {
-            return IntConstant.toIntConstant(Format.CInt64, new PackedInteger(m_nVal), pool);
             }
         else if (typeOut.equals(pool.typeInt64()))
             {
             return IntConstant.toIntConstant(Format.Int64, new PackedInteger(m_nVal), pool);
             }
-        else if (typeOut.equals(pool.typeCInt128()))
-            {
-            return IntConstant.toIntConstant(Format.CInt128, new PackedInteger(m_nVal), pool);
-            }
         else if (typeOut.equals(pool.typeInt128()))
             {
             return IntConstant.toIntConstant(Format.Int128, new PackedInteger(m_nVal), pool);
-            }
-        else if (typeOut.equals(pool.typeCIntN()))
-            {
-            return IntConstant.toIntConstant(Format.CIntN, new PackedInteger(m_nVal), pool);
             }
         else if (typeOut.equals(pool.typeIntN()))
             {
@@ -620,49 +568,25 @@ public class ByteConstant
             {
             return toByteConstant(Format.Nibble);
             }
-        else if (typeOut.equals(pool.typeCUInt8()))
-            {
-            return toByteConstant(Format.CUInt8);
-            }
         else if (typeOut.equals(pool.typeUInt8()))
             {
             return toByteConstant(Format.UInt8);
-            }
-        else if (typeOut.equals(pool.typeCUInt16()))
-            {
-            return IntConstant.toIntConstant(Format.CUInt16, new PackedInteger(m_nVal), pool);
             }
         else if (typeOut.equals(pool.typeUInt16()))
             {
             return IntConstant.toIntConstant(Format.UInt16, new PackedInteger(m_nVal), pool);
             }
-        else if (typeOut.equals(pool.typeCUInt32()))
-            {
-            return IntConstant.toIntConstant(Format.CUInt32, new PackedInteger(m_nVal), pool);
-            }
         else if (typeOut.equals(pool.typeUInt32()))
             {
             return IntConstant.toIntConstant(Format.UInt32, new PackedInteger(m_nVal), pool);
-            }
-        else if (typeOut.equals(pool.typeCUInt64()))
-            {
-            return IntConstant.toIntConstant(Format.CUInt64, new PackedInteger(m_nVal), pool);
             }
         else if (typeOut.equals(pool.typeUInt64()))
             {
             return IntConstant.toIntConstant(Format.UInt64, new PackedInteger(m_nVal), pool);
             }
-        else if (typeOut.equals(pool.typeCUInt128()))
-            {
-            return IntConstant.toIntConstant(Format.CUInt128, new PackedInteger(m_nVal), pool);
-            }
         else if (typeOut.equals(pool.typeUInt128()))
             {
             return IntConstant.toIntConstant(Format.UInt128, new PackedInteger(m_nVal), pool);
-            }
-        else if (typeOut.equals(pool.typeCUIntN()))
-            {
-            return IntConstant.toIntConstant(Format.CUIntN, new PackedInteger(m_nVal), pool);
             }
         else if (typeOut.equals(pool.typeUIntN()))
             {
@@ -722,7 +646,7 @@ public class ByteConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The format of the constant; one of: Bit, Nibble, CInt8, Int8, CUInt8, UInt8.
+     * The format of the constant; one of: Bit, Nibble, Int8, Int8, UInt8, UInt8.
      */
     private final Format m_format;
 

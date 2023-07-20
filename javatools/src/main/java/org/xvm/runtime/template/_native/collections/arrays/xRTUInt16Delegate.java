@@ -42,7 +42,7 @@ public class xRTUInt16Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeCUInt16());
+                pool.typeUInt16());
         }
 
     @Override

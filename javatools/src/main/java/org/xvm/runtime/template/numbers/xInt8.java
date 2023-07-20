@@ -41,12 +41,6 @@ public class xInt8
         }
 
     @Override
-    protected xConstrainedInteger getUncheckedTemplate()
-        {
-        return xUncheckedInt8.INSTANCE;
-        }
-
-    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ByteConstant constByte)

@@ -579,7 +579,7 @@ public class PropertyStructure
                     }
 
                 // see if the mixin applies to a Property or a Ref/Var, in which case it stays in
-                // this list; otherwise (e.g. UncheckedInt), move it into the type itself
+                // this list; otherwise (e.g. AutoFreezable), move it into the type itself
                 boolean fMove = true;
                 if (contribInto != null)
                     {

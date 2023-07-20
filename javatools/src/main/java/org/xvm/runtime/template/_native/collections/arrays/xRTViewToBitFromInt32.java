@@ -38,6 +38,6 @@ public class xRTViewToBitFromInt32
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeCInt32());
+                pool.typeInt32());
         }
     }

@@ -65,56 +65,46 @@ public class IntConstant
         boolean fUnsigned;
         switch (format)
             {
-            case CInt16:
             case Int16:
                 cBytes    = 2;
                 fUnsigned = false;
                 break;
-            case CInt32:
             case Int32:
                 cBytes    = 4;
                 fUnsigned = false;
                 break;
-            case CInt64:
             case Int64:
                 cBytes    = 8;
                 fUnsigned = false;
                 break;
             case Int:
-            case CInt128:
             case Int128:
                 cBytes    = 16;
                 fUnsigned = false;
                 break;
-            case CIntN:
             case IntN:
                 // some arbitrary limit that only exists in the Java implementation
                 cBytes    = 1024;
                 fUnsigned = false;
                 break;
 
-            case CUInt16:
             case UInt16:
                 cBytes    = 2;
                 fUnsigned = true;
                 break;
-            case CUInt32:
             case UInt32:
                 cBytes    = 4;
                 fUnsigned = true;
                 break;
-            case CUInt64:
             case UInt64:
                 cBytes    = 8;
                 fUnsigned = true;
                 break;
             case UInt:
-            case CUInt128:
             case UInt128:
                 cBytes    = 16;
                 fUnsigned = true;
                 break;
-            case CUIntN:
             case UIntN:
                 // some arbitrary limit that only exists in the Java implementation
                 cBytes    = 1024;
@@ -167,48 +157,14 @@ public class IntConstant
         switch (m_fmt)
             {
             case Int:
-            case CInt16:
             case Int16:
-            case CInt32:
             case Int32:
-            case CInt64:
             case Int64:
-            case CInt128:
             case Int128:
-            case CIntN:
             case IntN:
                 return false;
 
             case UInt:
-            case CUInt16:
-            case UInt16:
-            case CUInt32:
-            case UInt32:
-            case CUInt64:
-            case UInt64:
-            case CUInt128:
-            case UInt128:
-            case CUIntN:
-            case UIntN:
-                return true;
-
-            default:
-                throw new IllegalStateException();
-            }
-        }
-
-    /**
-     * @return true iff the format is an unchecked integer format
-     */
-    public boolean isUnchecked()
-        {
-        switch (m_fmt)
-            {
-            case Int16:
-            case Int32:
-            case Int64:
-            case Int128:
-            case IntN:
             case UInt16:
             case UInt32:
             case UInt64:
@@ -216,58 +172,8 @@ public class IntConstant
             case UIntN:
                 return true;
 
-            case Int:
-            case CInt16:
-            case CInt32:
-            case CInt64:
-            case CInt128:
-            case CIntN:
-            case UInt:
-            case CUInt16:
-            case CUInt32:
-            case CUInt64:
-            case CUInt128:
-            case CUIntN:
-                return false;
-
             default:
                 throw new IllegalStateException();
-            }
-        }
-
-    /**
-     * @return an unchecked constant value of the same magnitude
-     */
-    public IntConstant toUnchecked()
-        {
-        switch (m_fmt)
-            {
-            case Int16:
-            case Int32:
-            case Int64:
-            case Int128:
-            case IntN:
-            case UInt16:
-            case UInt32:
-            case UInt64:
-            case UInt128:
-            case UIntN:
-                return this;
-
-            case CInt16:
-            case CInt32:
-            case CInt64:
-            case CInt128:
-            case CIntN:
-            case CUInt16:
-            case CUInt32:
-            case CUInt64:
-            case CUInt128:
-            case CUIntN:
-                return new IntConstant(getConstantPool(), normalize(m_fmt), m_pint);
-
-            default:
-                throw new UnsupportedOperationException("format=" + m_fmt);
             }
         }
 
@@ -278,29 +184,21 @@ public class IntConstant
         {
         switch (m_fmt)
             {
-            case CInt16:
             case Int16:
-            case CUInt16:
             case UInt16:
                 return 2;
 
-            case CInt32:
             case Int32:
-            case CUInt32:
             case UInt32:
                 return 4;
 
-            case CInt64:
             case Int64:
-            case CUInt64:
             case UInt64:
                 return 8;
 
             case Int:
             case UInt:
-            case CInt128:
             case Int128:
-            case CUInt128:
             case UInt128:
                 return 16;
 
@@ -326,38 +224,28 @@ public class IntConstant
         {
         switch (format)
             {
-            case CInt16:
             case Int16:
                 return PackedInteger.SINT2_MIN;
 
-            case CInt32:
             case Int32:
                 return PackedInteger.SINT4_MIN;
 
-            case CInt64:
             case Int64:
                 return PackedInteger.SINT8_MIN;
 
             case Int:
-            case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MIN;
 
-            case CIntN:
             case IntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.SINTN_MIN;
 
             case UInt:
-            case CUInt16:
             case UInt16:
-            case CUInt32:
             case UInt32:
-            case CUInt64:
             case UInt64:
-            case CUInt128:
             case UInt128:
-            case CUIntN:
             case UIntN:
                 return PackedInteger.ZERO;
 
@@ -383,46 +271,36 @@ public class IntConstant
         {
         switch (format)
             {
-            case CInt16:
             case Int16:
                 return PackedInteger.SINT2_MAX;
 
-            case CInt32:
             case Int32:
                 return PackedInteger.SINT4_MAX;
 
-            case CInt64:
             case Int64:
                 return PackedInteger.SINT8_MAX;
 
             case Int:
             case UInt:
-            case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MAX;
 
-            case CIntN:
             case IntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.SINTN_MAX;
 
-            case CUInt16:
             case UInt16:
                 return PackedInteger.UINT2_MAX;
 
-            case CUInt32:
             case UInt32:
                 return PackedInteger.UINT4_MAX;
 
-            case CUInt64:
             case UInt64:
                 return PackedInteger.UINT8_MAX;
 
-            case CUInt128:
             case UInt128:
                 return PackedInteger.UINT16_MAX;
 
-            case CUIntN:
             case UIntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.UINTN_MAX;
@@ -511,22 +389,15 @@ public class IntConstant
         {
         if (n.compareTo(getMinLimit()) < 0 || n.compareTo(getMaxLimit()) > 0)
             {
-            if (isUnchecked())
+            n = n.and(switch (byteSize())
                 {
-                n = n.and(switch (byteSize())
-                    {
-                    case 2  -> PackedInteger.UINT2_MAX;
-                    case 4  -> PackedInteger.UINT4_MAX;
-                    case 8  -> PackedInteger.UINT8_MAX;
-                    case 16 -> PackedInteger.UINT16_MAX;
-                    default ->
-                        throw new IllegalStateException("Unexpected byte size: " + byteSize());
-                    });
-                }
-            else
-                {
-                throw new ArithmeticException("overflow");
-                }
+                case 2  -> PackedInteger.UINT2_MAX;
+                case 4  -> PackedInteger.UINT4_MAX;
+                case 8  -> PackedInteger.UINT8_MAX;
+                case 16 -> PackedInteger.UINT16_MAX;
+                default ->
+                    throw new IllegalStateException("Unexpected byte size: " + byteSize());
+                });
             }
 
         return getConstantPool().ensureIntConstant(n, getFormat());
@@ -547,32 +418,12 @@ public class IntConstant
         return m_pint;
         }
 
-    private Format normalize(Format format)
-        {
-        return switch (format)
-            {
-            case CInt8    -> Format.Int8;
-            case CInt16   -> Format.Int16;
-            case CInt32   -> Format.Int32;
-            case CInt64   -> Format.Int64;
-            case CInt128  -> Format.Int128;
-            case CIntN    -> Format.IntN;
-            case CUInt8   -> Format.UInt8;
-            case CUInt16  -> Format.UInt16;
-            case CUInt32  -> Format.UInt32;
-            case CUInt64  -> Format.UInt64;
-            case CUInt128 -> Format.UInt128;
-            case CUIntN   -> Format.UIntN;
-            default       -> format;
-            };
-        }
-
     @Override
     public Constant apply(Token.Id op, Constant that)
         {
         switch (that == null
-                    ? op.TEXT + normalize(this.getFormat()).name()
-                    : normalize(this.getFormat()).name() + op.TEXT + normalize(that.getFormat()).name())
+                    ?                           op.TEXT + this.getFormat().name()
+                    : this.getFormat().name() + op.TEXT + that.getFormat().name())
             {
             // TODO .is() / .as()
 
@@ -850,7 +701,7 @@ public class IntConstant
             case "UIntN<<IntLiteral":
             case "UIntN>>IntLiteral":
             case "UIntN>>>IntLiteral":
-                return apply(op, ((LiteralConstant) that).toIntConstant(Format.CInt64));
+                return apply(op, ((LiteralConstant) that).toIntConstant(Format.Int64));
 
             case "Int+Int":
             case "UInt+UInt":
@@ -1194,49 +1045,25 @@ public class IntConstant
             {
             return toIntConstant(Format.Int);
             }
-        else if (typeOut.equals(pool.typeCInt8()))
-            {
-            return toByteConstant(Format.CInt8);
-            }
         else if (typeOut.equals(pool.typeInt8()))
             {
             return toByteConstant(Format.Int8);
-            }
-        else if (typeOut.equals(pool.typeCInt16()))
-            {
-            return toIntConstant(Format.CInt16);
             }
         else if (typeOut.equals(pool.typeInt16()))
             {
             return toIntConstant(Format.Int16);
             }
-        else if (typeOut.equals(pool.typeCInt32()))
-            {
-            return toIntConstant(Format.CInt32);
-            }
         else if (typeOut.equals(pool.typeInt32()))
             {
             return toIntConstant(Format.Int32);
-            }
-        else if (typeOut.equals(pool.typeCInt64()))
-            {
-            return toIntConstant(Format.CInt64);
             }
         else if (typeOut.equals(pool.typeInt64()))
             {
             return toIntConstant(Format.Int64);
             }
-        else if (typeOut.equals(pool.typeCInt128()))
-            {
-            return toIntConstant(Format.CInt128);
-            }
         else if (typeOut.equals(pool.typeInt128()))
             {
             return toIntConstant(Format.Int128);
-            }
-        else if (typeOut.equals(pool.typeCIntN()))
-            {
-            return toIntConstant(Format.CIntN);
             }
         else if (typeOut.equals(pool.typeIntN()))
             {
@@ -1254,49 +1081,25 @@ public class IntConstant
             {
             return toByteConstant(Format.Nibble);
             }
-        else if (typeOut.equals(pool.typeCUInt8()))
-            {
-            return toByteConstant(Format.CUInt8);
-            }
         else if (typeOut.equals(pool.typeUInt8()))
             {
             return toByteConstant(Format.UInt8);
-            }
-        else if (typeOut.equals(pool.typeCUInt16()))
-            {
-            return toIntConstant(Format.CUInt16);
             }
         else if (typeOut.equals(pool.typeUInt16()))
             {
             return toIntConstant(Format.UInt16);
             }
-        else if (typeOut.equals(pool.typeCUInt32()))
-            {
-            return toIntConstant(Format.CUInt32);
-            }
         else if (typeOut.equals(pool.typeUInt32()))
             {
             return toIntConstant(Format.UInt32);
-            }
-        else if (typeOut.equals(pool.typeCUInt64()))
-            {
-            return toIntConstant(Format.CUInt64);
             }
         else if (typeOut.equals(pool.typeUInt64()))
             {
             return toIntConstant(Format.UInt64);
             }
-        else if (typeOut.equals(pool.typeCUInt128()))
-            {
-            return toIntConstant(Format.CUInt128);
-            }
         else if (typeOut.equals(pool.typeUInt128()))
             {
             return toIntConstant(Format.UInt128);
-            }
-        else if (typeOut.equals(pool.typeCUIntN()))
-            {
-            return toIntConstant(Format.CUIntN);
             }
         else if (typeOut.equals(pool.typeUIntN()))
             {

@@ -226,10 +226,10 @@ public abstract class Constant
                 return pool.ensureNibbleConstant(0);
 
             case "numbers.Int8":
-                return pool.ensureByteConstant(Format.CInt8, 0);
+                return pool.ensureByteConstant(Format.Int8, 0);
 
             case "numbers.UInt8":
-                return pool.ensureByteConstant(Format.CUInt8, 0);
+                return pool.ensureByteConstant(Format.UInt8, 0);
 
             case "numbers.Int":
                 return pool.ensureIntConstant(PackedInteger.ZERO, Format.Int);
@@ -812,30 +812,18 @@ public abstract class Constant
         Bit       ("numbers"),
         Nibble    ("numbers"),
         Int       ("numbers"),
-        CInt8     ("numbers"),  // C=Checked (aka a constrained integer)
-        Int8      ("numbers"),  // no "C" means @Unchecked
-        CInt16    ("numbers"),
+        Int8      ("numbers"),
         Int16     ("numbers"),
-        CInt32    ("numbers"),
         Int32     ("numbers"),
-        CInt64    ("numbers"),
         Int64     ("numbers"),
-        CInt128   ("numbers"),
         Int128    ("numbers"),
-        CIntN     ("numbers"),
         IntN      ("numbers"),
         UInt      ("numbers"),
-        CUInt8    ("numbers"),
         UInt8     ("numbers"),
-        CUInt16   ("numbers"),
         UInt16    ("numbers"),
-        CUInt32   ("numbers"),
         UInt32    ("numbers"),
-        CUInt64   ("numbers"),
         UInt64    ("numbers"),
-        CUInt128  ("numbers"),
         UInt128   ("numbers"),
-        CUIntN    ("numbers"),
         UIntN     ("numbers"),
         FPLiteral ("numbers"),
         Dec       ("numbers"),
@@ -1004,30 +992,18 @@ public abstract class Constant
             return switch (this)
                 {
                 case Int      -> pool.typeInt();
-                case CInt8    -> pool.typeCInt8();
                 case Int8     -> pool.typeInt8();
-                case CInt16   -> pool.typeCInt16();
                 case Int16    -> pool.typeInt16();
-                case CInt32   -> pool.typeCInt32();
                 case Int32    -> pool.typeInt32();
-                case CInt64   -> pool.typeCInt64();
                 case Int64    -> pool.typeInt64();
-                case CInt128  -> pool.typeCInt128();
                 case Int128   -> pool.typeInt128();
-                case CIntN    -> pool.typeCIntN();
                 case IntN     -> pool.typeIntN();
                 case UInt     -> pool.typeUInt();
-                case CUInt8   -> pool.typeCUInt8();
                 case UInt8    -> pool.typeUInt8();
-                case CUInt16  -> pool.typeCUInt16();
                 case UInt16   -> pool.typeUInt16();
-                case CUInt32  -> pool.typeCUInt32();
                 case UInt32   -> pool.typeUInt32();
-                case CUInt64  -> pool.typeCUInt64();
                 case UInt64   -> pool.typeUInt64();
-                case CUInt128 -> pool.typeCUInt128();
                 case UInt128  -> pool.typeUInt128();
-                case CUIntN   -> pool.typeCUIntN();
                 case UIntN    -> pool.typeUIntN();
                 case Dec      -> pool.typeDec();
                 default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());

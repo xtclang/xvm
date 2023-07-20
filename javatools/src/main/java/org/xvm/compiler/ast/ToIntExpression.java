@@ -141,19 +141,19 @@ public class ToIntExpression
         return switch (sFormat)
             {
             case "numbers.Int"     -> pool.ensureIntConstant(pint, Format.Int);
-            case "numbers.Int8"    -> pool.ensureByteConstant(Format.CInt8, pint.getInt());
-            case "numbers.UInt8"   -> pool.ensureByteConstant(Format.CUInt8, pint.getInt());
-            case "numbers.Int16"   -> pool.ensureIntConstant(pint, Format.CInt16);
-            case "numbers.Int32"   -> pool.ensureIntConstant(pint, Format.CInt32);
-            case "numbers.Int64"   -> pool.ensureIntConstant(pint, Format.CInt64);
-            case "numbers.Int128"  -> pool.ensureIntConstant(pint, Format.CInt128);
-            case "numbers.IntN"    -> pool.ensureIntConstant(pint, Format.CIntN);
+            case "numbers.Int8"    -> pool.ensureByteConstant(Format.Int8, pint.getInt());
+            case "numbers.UInt8"   -> pool.ensureByteConstant(Format.UInt8, pint.getInt());
+            case "numbers.Int16"   -> pool.ensureIntConstant(pint, Format.Int16);
+            case "numbers.Int32"   -> pool.ensureIntConstant(pint, Format.Int32);
+            case "numbers.Int64"   -> pool.ensureIntConstant(pint, Format.Int64);
+            case "numbers.Int128"  -> pool.ensureIntConstant(pint, Format.Int128);
+            case "numbers.IntN"    -> pool.ensureIntConstant(pint, Format.IntN);
             case "numbers.UInt"    -> pool.ensureIntConstant(pint, Format.UInt);
-            case "numbers.UInt16"  -> pool.ensureIntConstant(pint, Format.CUInt16);
-            case "numbers.UInt32"  -> pool.ensureIntConstant(pint, Format.CUInt32);
-            case "numbers.UInt64"  -> pool.ensureIntConstant(pint, Format.CUInt64);
-            case "numbers.UInt128" -> pool.ensureIntConstant(pint, Format.CUInt128);
-            case "numbers.UIntN"   -> pool.ensureIntConstant(pint, Format.CUIntN);
+            case "numbers.UInt16"  -> pool.ensureIntConstant(pint, Format.UInt16);
+            case "numbers.UInt32"  -> pool.ensureIntConstant(pint, Format.UInt32);
+            case "numbers.UInt64"  -> pool.ensureIntConstant(pint, Format.UInt64);
+            case "numbers.UInt128" -> pool.ensureIntConstant(pint, Format.UInt128);
+            case "numbers.UIntN"   -> pool.ensureIntConstant(pint, Format.UIntN);
 
             // converted by extract "numbers.Bit", "numbers.Nibble", "text.Char"
             default                -> pool.ensureIntConstant(pint);

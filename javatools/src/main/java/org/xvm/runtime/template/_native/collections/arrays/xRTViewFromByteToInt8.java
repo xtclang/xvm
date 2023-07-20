@@ -47,7 +47,7 @@ public class xRTViewFromByteToInt8
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeCInt8());
+                pool.typeInt8());
         }
 
 

@@ -31,7 +31,7 @@ import org.xvm.util.PackedInteger;
 
 /**
  * Abstract base class for constrained integers that fit into 64 bits
- * (Int8, UInt16, @Unchecked Int32, ...)
+ * (Int8, UInt16, Int32, ...)
  */
 public abstract class xConstrainedInteger
         extends xIntNumber
@@ -65,8 +65,6 @@ public abstract class xConstrainedInteger
 
         markNativeProperty("leadingZeroCount");
 
-        markNativeMethod("toUnchecked", VOID, null);
-
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
         markNativeMethod("retainLSBits" , INT , THIS);
@@ -91,24 +89,10 @@ public abstract class xConstrainedInteger
         invalidateTypeInfo();
         }
 
-    @Override
-    public ClassTemplate getTemplate(TypeConstant type)
-        {
-        return type instanceof AnnotatedTypeConstant typeAnno &&
-                    typeAnno.getAnnotationClass().equals(pool().clzUnchecked())
-             ? getUncheckedTemplate()
-             : this;
-        }
-
     /**
      * @return a complimentary template (signed for unsigned and vice versa)
      */
     abstract protected xConstrainedInteger getComplimentaryTemplate();
-
-    /**
-     * @return an unchecked template for this type
-     */
-    abstract protected xConstrainedInteger getUncheckedTemplate();
 
     @Override
     public boolean isGenericHandle()
@@ -318,12 +302,6 @@ public abstract class xConstrainedInteger
         {
         switch (method.getName())
             {
-            case "toUnchecked":
-                {
-                long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, getUncheckedTemplate().makeJavaLong(l));
-                }
-
             case "toInt":
             case "toInt8":
             case "toInt16":
@@ -716,8 +694,8 @@ public abstract class xConstrainedInteger
     /**
      * Convert a PackedInteger value into a handle for the type represented by this template.
      *
-     * Note: this method can throw an Overflow even if this type is unchecked since the "source"
-     *       is always IntLiteral.
+     * TODO GG re-evaluate
+     * Note: this method can throw an Overflow since the "source" is always IntLiteral.
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
@@ -731,7 +709,7 @@ public abstract class xConstrainedInteger
     /**
      * Convert a long value into a handle for the type represented by this template.
      *
-     * @param fCheck false iff the source of the value is "unchecked"
+     * @param fCheck  pass true to check the value's range
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */

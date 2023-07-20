@@ -41,7 +41,7 @@ public class xRTInt64Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeCInt64());
+                pool.typeInt64());
         }
 
     @Override

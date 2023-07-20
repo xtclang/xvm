@@ -41,7 +41,7 @@ public class xRTUInt64Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeCUInt64());
+                pool.typeUInt64());
         }
 
     @Override

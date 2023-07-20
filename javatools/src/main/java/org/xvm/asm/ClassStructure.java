@@ -3561,7 +3561,7 @@ public class ClassStructure
 
         synthesizeConstFunction("equals",   2, pool.typeBoolean());
         synthesizeConstFunction("compare",  2, pool.typeOrdered());
-        synthesizeConstFunction("hashCode", 1, pool.typeCInt64());
+        synthesizeConstFunction("hashCode", 1, pool.typeInt64());
         synthesizeAppendTo(fDisassemble);
         }
 

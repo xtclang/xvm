@@ -415,7 +415,7 @@ public abstract class TypeConstant
     /**
      * There are types, such as {@link ParameterizedTypeConstant} and {@link AnnotatedTypeConstant}
      * that allows a recursion, e.g. {@code Array<Doc | Array<Doc>>} or nesting
-     * e.g. {@code @Unchecked (@Unchecked Element)}.
+     * e.g. {@code @AutoFreezable (@AutoFreezable Element)}.
      *
      * This method measures the overall depth of that recursion or nesting.
      *
@@ -6060,7 +6060,7 @@ public abstract class TypeConstant
             {
             // check if generic types could be resolved in the specified context without
             // producing self referring cycles, e.g. List<Element> -> List<List<Element>>
-            // or @Unchecked Element -> @Unchecked @Unchecked Element
+            // or @AutoFreezable Element -> @AutoFreezable @AutoFreezable Element
             // (TODO need to make this algorithm more precise)
             typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase &&
@@ -6863,25 +6863,25 @@ public abstract class TypeConstant
                 return pool.ensureCharConstant(0);
 
             case "numbers.Int8":
-                return pool.ensureIntConstant(PackedInteger.valueOf(Byte.MIN_VALUE), Format.CInt8);
+                return pool.ensureIntConstant(PackedInteger.valueOf(Byte.MIN_VALUE), Format.Int8);
 
             case "numbers.UInt8":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt8);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt8);
 
             case "numbers.Int16":
-                return pool.ensureIntConstant(PackedInteger.valueOf(Short.MIN_VALUE), Format.CInt16);
+                return pool.ensureIntConstant(PackedInteger.valueOf(Short.MIN_VALUE), Format.Int16);
 
             case "numbers.UInt16":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt16);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt16);
 
             case "numbers.UInt32":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt32);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt32);
 
             case "numbers.UInt64":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt64);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt64);
 
             case "numbers.UInt128":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt128);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt128);
 
             case "numbers.UInt":
                 return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt);
@@ -6923,11 +6923,6 @@ public abstract class TypeConstant
                     {
                     constDefault = getConstantPool().
                             ensureSingletonConstConstant(prop.getIdentityConstant());
-                    }
-                else if (constDefault instanceof IntConstant constInt &&
-                         containsAnnotation(getConstantPool().clzUnchecked()))
-                    {
-                    constDefault = constInt.toUnchecked();
                     }
                 return constDefault;
                 }

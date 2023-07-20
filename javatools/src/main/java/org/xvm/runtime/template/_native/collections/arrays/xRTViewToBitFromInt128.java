@@ -37,6 +37,6 @@ public class xRTViewToBitFromInt128
         {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
-                getInceptionClassConstant().getType(), pool.typeCInt128());
+                getInceptionClassConstant().getType(), pool.typeInt128());
         }
     }

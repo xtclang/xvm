@@ -48,7 +48,7 @@ public class xRTViewFromByteToInt64
         {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
-                getInceptionClassConstant().getType(), pool.typeCInt64());
+                getInceptionClassConstant().getType(), pool.typeInt64());
         }
 
 

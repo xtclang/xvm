@@ -10,8 +10,9 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
+
 /**
- * Abstract super class for all unchecked constrained integers (Int8, UInt16, @Unchecked Int32, ...)
+ * Abstract super class for all unchecked constrained integers (Int8, UInt16, Int32, ...)
  */
 public abstract class xUncheckedUnsignedInt
         extends xUnsignedConstrainedInt
@@ -20,19 +21,6 @@ public abstract class xUncheckedUnsignedInt
                                  long cMinValue, long cMaxValue, int cNumBits)
         {
         super(container, structure, cMinValue, cMaxValue, cNumBits, false);
-        }
-
-    @Override
-    protected xConstrainedInteger getUncheckedTemplate()
-        {
-        return this;
-        }
-
-    @Override
-    public TypeConstant getCanonicalType()
-        {
-        return pool().ensureAnnotatedTypeConstant(
-            pool().clzUnchecked(), null, getStructure().getCanonicalType());
         }
 
     @Override

@@ -52,8 +52,6 @@ public abstract class BaseInt128
 
         markNativeProperty("leadingZeroCount");
 
-        markNativeMethod("toUnchecked", VOID, null);
-
         // @Op methods
         markNativeMethod("add"          , THIS, THIS);
         markNativeMethod("sub"          , THIS, THIS);
@@ -276,11 +274,6 @@ public abstract class BaseInt128
         {
         switch (method.getName())
             {
-            case "toUnchecked":
-                {
-                return frame.raiseException(xException.unsupportedOperation(frame, "toUnchecked"));
-                }
-
             case "toInt":
             case "toInt8":
             case "toInt16":
