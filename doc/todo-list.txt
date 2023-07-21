@@ -1,3 +1,11 @@
+- GG: Tuple serialization doesn't work
+
+- GG: make this work (MapMapping should instantiate a ListMap):
+         String str = \|{"a":"0", "b":"1"}
+                       ;
+         Map<String, String> config =
+            Schema.DEFAULT.createObjectInput(new UTF8Reader(new ByteArrayInputStream(str.utf8()))).read();
+
 - GG: add support for runtime constants that cross the module line; may need to restore the removed
       delegation logic in ConverterExpression
 
@@ -50,8 +58,6 @@
   (Mark's suggestion to evaluated keys' hashCode distribution)
 
 - GG: implement timeout for IO operations (interrupt IO executor threads)
-
-- CP: change TxManager.NO_TX to Int64.MinValue or -1
 
 - CP: need to implement "persistent" mutators for HasherMap
 
