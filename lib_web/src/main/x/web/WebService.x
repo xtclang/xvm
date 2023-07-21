@@ -12,7 +12,7 @@
  *         service Hello
  *             {
  *             @web.Get("hello")
- *             @web.Produces("text/plain")
+ *             @web.Produces(Text)
  *             String sayHello()
  *                 {
  *                 return "Hello World";
