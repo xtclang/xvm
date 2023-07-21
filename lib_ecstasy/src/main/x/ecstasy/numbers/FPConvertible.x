@@ -5,17 +5,6 @@ interface FPConvertible {
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * Convert the value to a radix-10 (decimal) floating point number.
-     *
-     * @return a decimal value
-     *
-     * @throws OutOfBounds  if the resulting value is out of the `Dec` range
-     */
-    Dec toDec() {
-        return toDecN().toDec();
-    }
-
-    /**
      * Convert the value to a 32-bit radix-10 (decimal) floating point number.
      *
      * @return a 32-bit decimal value
@@ -133,4 +122,19 @@ interface FPConvertible {
     FPLiteral toFPLiteral() {
         return toDecN().toFPLiteral();
     }
+
+    /**
+     * Alias for the `toDec64()` method, since the `Dec64` type is aliased as `Dec`.
+     */
+    static Method<FPConvertible, <>, <Dec>> toDec = toDec64;
+
+    /**
+     * Alias for the `toFloat32()` method, since the `Float32` type is aliased as `Float`.
+     */
+    static Method<FPConvertible, <>, <Float>> toFloat = toFloat32;
+
+    /**
+     * Alias for the `toFloat64()` method, since the `Float64` type is aliased as `Double`.
+     */
+    static Method<FPConvertible, <>, <Double>> toDouble = toFloat64;
 }

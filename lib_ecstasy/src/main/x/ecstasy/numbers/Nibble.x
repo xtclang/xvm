@@ -210,17 +210,8 @@ const Nibble(Bit[] bits)
 
     @Auto
     @Override
-    IntLiteral toIntLiteral(Rounding direction = TowardZero) {
+    IntLiteral toIntLiteral() {
         return new IntLiteral(toChar().toString());
-    }
-
-    /**
-     * @return the Int value corresponding to the magnitude of the nibble, in the range `[0..F]`
-     */
-    @Auto
-    @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        return toUInt8().toInt();
     }
 
     /**
@@ -228,7 +219,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int8 toInt8(Boolean checkBounds = False) {
         return toUInt8().toInt8();
     }
 
@@ -237,7 +228,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int16 toInt16(Boolean checkBounds = False) {
         return toUInt8().toInt16();
     }
 
@@ -246,7 +237,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int32 toInt32(Boolean checkBounds = False) {
         return toUInt8().toInt32();
     }
 
@@ -255,7 +246,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int64 toInt64(Boolean checkBounds = False) {
         return toUInt8().toInt64();
     }
 
@@ -264,7 +255,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int128 toInt128(Boolean checkBounds = False) {
         return toUInt8().toInt128();
     }
 
@@ -273,7 +264,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    IntN toIntN(Rounding direction = TowardZero) {
+    IntN toIntN() {
         return toUInt8().toIntN();
     }
 
@@ -283,7 +274,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt8 toUInt8(Boolean checkBounds = False) {
         return bits.toUInt8();
     }
 
@@ -292,7 +283,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt16 toUInt16(Boolean checkBounds = False) {
         return toUInt8().toUInt16();
     }
 
@@ -301,7 +292,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt32 toUInt32(Boolean checkBounds = False) {
         return toUInt8().toUInt32();
     }
 
@@ -310,7 +301,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt64 toUInt64(Boolean checkBounds = False) {
         return toUInt8().toUInt64();
     }
 
@@ -319,7 +310,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt128 toUInt128(Boolean checkBounds = False) {
         return toUInt8().toUInt128();
     }
 
@@ -328,7 +319,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
+    UIntN toUIntN() {
         return toUInt8().toUIntN();
     }
 

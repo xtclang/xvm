@@ -116,7 +116,7 @@ service DirRepository
      */
     private Boolean isCacheValid() {
         // only scan once a second (at the most)
-        if (clock.now < lastScan + Duration.SECOND) {
+        if (clock.now < lastScan + Duration.Second) {
             return True;
         }
 

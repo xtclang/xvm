@@ -38,8 +38,8 @@ const TimeZone(Int64 picos, String? name = Null) {
      *               picosecond value in order to calculate a TimeZone-adjusted picosecond value
      * @param name   the name of the TimeZone
      */
-    construct(Int64 picos, String? name = Null) {
-        assert picos.abs() <= TimeOfDay.PICOS_PER_DAY;
+    construct(Int picos, String? name = Null) {
+        assert picos.abs() <= TimeOfDay.PicosPerDay;
         this.picos = picos;
         this.name  = name;
     }
@@ -58,13 +58,8 @@ const TimeZone(Int64 picos, String? name = Null) {
      *               TimeZones
      */
     construct(String tz, Rule[] rules = []) {
-        static Int valOf(Char ch) {
-            return ch >= '0' && ch <= '9' ? ch - '0' : -999;
-        }
-
-        static Int parseInt(String s, Int of) {
-            return valOf(s[of]) * 10 + valOf(s[of+1]);
-        }
+        static Int valOf(Char ch) = ch >= '0' && ch <= '9' ? ch - '0' : -999;
+        static Int parseInt(String s, Int of) = valOf(s[of]) * 10 + valOf(s[of+1]);
 
         if (tz == "Z") {
             construct TimeZone(0);
@@ -91,7 +86,7 @@ const TimeZone(Int64 picos, String? name = Null) {
             }
 
             if (0 <= hours <= 16 && 0 <= mins <= 59) {
-                Int offset = (hours * TimeOfDay.PICOS_PER_HOUR + mins * TimeOfDay.PICOS_PER_MINUTE);
+                Int offset = (hours * TimeOfDay.PicosPerHour + mins * TimeOfDay.PicosPerMinute);
                 construct TimeZone((tz[0]=='-' ? -1 : +1) * offset.toInt64());
                 return;
             }
@@ -116,14 +111,10 @@ const TimeZone(Int64 picos, String? name = Null) {
      */
     static TimeZone UTC = new TimeZone(0, "UTC") {
         @Override
-        @RO Boolean isUTC.get() {
-            return True;
-        }
+        @RO Boolean isUTC.get() = True;
 
         @Override
-        @RO Boolean resolved.get() {
-            return True;
-        }
+        @RO Boolean resolved.get() = True;
 
         @Override
         TimeZone resolve(Time time) {
@@ -132,14 +123,10 @@ const TimeZone(Int64 picos, String? name = Null) {
         }
 
         @Override
-        @RO Int hours.get() {
-            return 0;
-        }
+        @RO Int hours.get() = 0;
 
         @Override
-        @RO Int minutes.get() {
-            return 0;
-        }
+        @RO Int minutes.get() = 0;
     };
 
     /**
@@ -147,14 +134,10 @@ const TimeZone(Int64 picos, String? name = Null) {
      */
     static TimeZone NoTZ = new TimeZone(0, "NoTZ") {
         @Override
-        @RO Boolean isNoTZ.get() {
-            return True;
-        }
+        @RO Boolean isNoTZ.get() = True;
 
         @Override
-        @RO Boolean resolved.get() {
-            return True;
-        }
+        @RO Boolean resolved.get() = True;
 
         @Override
         TimeZone resolve(Time time) {
@@ -163,14 +146,10 @@ const TimeZone(Int64 picos, String? name = Null) {
         }
 
         @Override
-        @RO Int hours.get() {
-            return 0;
-        }
+        @RO Int hours.get() = 0;
 
         @Override
-        @RO Int minutes.get() {
-            return 0;
-        }
+        @RO Int minutes.get() = 0;
 
         @Override
         Time adopt(Time orig) {
@@ -187,25 +166,19 @@ const TimeZone(Int64 picos, String? name = Null) {
     /**
      * Determine if this TimeZone is Universal Coordinated Time (UTC).
      */
-    @RO Boolean isUTC.get() {
-        return False;
-    }
+    @RO Boolean isUTC.get() = False;
 
     /**
      * Determine if this TimeZone is a special TimeZone that represents the lack of a TimeZone.
      */
-    @RO Boolean isNoTZ.get() {
-        return False;
-    }
+    @RO Boolean isNoTZ.get() = False;
 
     /**
     * The resolving rules for the TimeZone.
     */
     Rule[] rules = [];
 
-    @RO Boolean resolved.get() {
-        return rules.size == 0;
-    }
+    @RO Boolean resolved.get() = rules.size == 0;
 
     /**
      * Using this TimeZone information, obtain a TimeZone for the given Time that
@@ -221,12 +194,12 @@ const TimeZone(Int64 picos, String? name = Null) {
 
     @RO Int hours.get() {
         assert resolved;
-        return picos / TimeOfDay.PICOS_PER_HOUR;
+        return picos / TimeOfDay.PicosPerHour;
     }
 
     @RO Int minutes.get() {
         // note: calculate the remainder (may be negative), and not the modulo
-        return (picos - hours * TimeOfDay.PICOS_PER_HOUR) / TimeOfDay.PICOS_PER_MINUTE;
+        return (picos - hours * TimeOfDay.PicosPerHour) / TimeOfDay.PicosPerMinute;
     }
 
     /**
@@ -272,9 +245,9 @@ const TimeZone(Int64 picos, String? name = Null) {
             picos = picos.abs();
         }
 
-        Int64 normalized = (picos % TimeOfDay.PICOS_PER_DAY).toInt64();
-        if (normalized > 12 * TimeOfDay.PICOS_PER_HOUR) {
-            normalized -= TimeOfDay.PICOS_PER_DAY;
+        Int64 normalized = (picos % TimeOfDay.PicosPerDay).toInt64();
+        if (normalized > 12 * TimeOfDay.PicosPerHour) {
+            normalized -= TimeOfDay.PicosPerDay;
         }
 
         return negative ? -normalized : +normalized;
@@ -286,10 +259,10 @@ const TimeZone(Int64 picos, String? name = Null) {
 
         Int difference = this.picos - timezone.picos;
         if (difference < 0) {
-            difference += TimeOfDay.PICOS_PER_DAY;
+            difference += TimeOfDay.PicosPerDay;
         }
 
-        return new Duration(difference.toUInt128());
+        return new Duration(difference);
     }
 
 
@@ -328,12 +301,12 @@ const TimeZone(Int64 picos, String? name = Null) {
             // +hh:mm or -hh:mm
             size += 6;
 
-            if (picos % TimeOfDay.PICOS_PER_MINUTE != 0) {
-                Int remainder = (picos - hours * TimeOfDay.PICOS_PER_HOUR - minutes * TimeOfDay.PICOS_PER_MINUTE).abs();
-                Int seconds   = remainder / TimeOfDay.PICOS_PER_SECOND;
+            if (picos % TimeOfDay.PicosPerMinute != 0) {
+                Int remainder = (picos - hours * TimeOfDay.PicosPerHour - minutes * TimeOfDay.PicosPerMinute).abs();
+                Int seconds   = remainder / TimeOfDay.PicosPerSecond;
                 size += 3;
 
-                remainder -= seconds * TimeOfDay.PICOS_PER_SECOND;
+                remainder -= seconds * TimeOfDay.PicosPerSecond;
                 if (remainder > 0) {
                     size += 1 + Duration.picosFractionalLength(remainder);
                 }
@@ -377,17 +350,17 @@ const TimeZone(Int64 picos, String? name = Null) {
             }
             minutes.appendTo(buf);
 
-            if (picos % TimeOfDay.PICOS_PER_MINUTE != 0) {
+            if (picos % TimeOfDay.PicosPerMinute != 0) {
                 assert !iso8601;
 
-                Int remainder = (picos - hours * TimeOfDay.PICOS_PER_HOUR - minutes * TimeOfDay.PICOS_PER_MINUTE).abs();
-                Int seconds   = remainder / TimeOfDay.PICOS_PER_SECOND;
+                Int remainder = (picos - hours * TimeOfDay.PicosPerHour - minutes * TimeOfDay.PicosPerMinute).abs();
+                Int seconds   = remainder / TimeOfDay.PicosPerSecond;
                 buf.add(':');
                 if (seconds < 10) {
                     buf.add('0');
                 }
                 seconds.appendTo(buf);
-                Duration.appendPicosFractional(buf, remainder - seconds * TimeOfDay.PICOS_PER_SECOND);
+                Duration.appendPicosFractional(buf, remainder - seconds * TimeOfDay.PicosPerSecond);
             }
 
             if (showName) {

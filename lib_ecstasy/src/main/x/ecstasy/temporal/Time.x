@@ -19,7 +19,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
         // (DST "spring forward") date and time-of-day values
         assert timezone.resolved;
 
-        Int128 picos = date.epochDay.toInt128() * TimeOfDay.PICOS_PER_DAY
+        Int128 picos = date.epochDay.toInt128() * TimeOfDay.PicosPerDay
                      + timeOfDay.picos.toInt128()
                      - timezone.picos.toInt128();
 
@@ -105,7 +105,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
      * The offset (in number of picoseconds) from the epoch to the beginning of the Gregorian
      * calendar, 1582-10-14T00:00:00.
      */
-    static Int128 GREGORIAN_OFFSET = Date.GREGORIAN_OFFSET * TimeOfDay.PICOS_PER_DAY;
+    static Int128 GREGORIAN_OFFSET = Date.GREGORIAN_OFFSET * TimeOfDay.PicosPerDay;
 
     Int128 adjustedPicos.get() {
         return timezone.resolve(this).picos.toInt128() + epochPicos;
@@ -117,16 +117,14 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
     Date date.get() {
         Int128 picos = adjustedPicos;
         return new Date(picos >= 0
-                ? (picos / TimeOfDay.PICOS_PER_DAY).toInt32()
-                : -1 - ((picos.abs() - 1) / TimeOfDay.PICOS_PER_DAY).toInt32());
+                ? (picos / TimeOfDay.PicosPerDay).toInt32()
+                : -1 - ((picos.abs() - 1) / TimeOfDay.PicosPerDay).toInt32());
     }
 
     /**
      * The time-of-day portion of the date/time value.
      */
-    TimeOfDay timeOfDay.get() {
-        return new TimeOfDay((adjustedPicos % TimeOfDay.PICOS_PER_DAY).toUInt64());
-    }
+    TimeOfDay timeOfDay.get() = new TimeOfDay((adjustedPicos % TimeOfDay.PicosPerDay).toInt());
 
     /**
      * The TimeZone of the Time value.
@@ -166,7 +164,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
      */
     @Op("-") Duration sub(Time time) {
         assert this.timezone.isNoTZ == time.timezone.isNoTZ;
-        return new Duration((this.epochPicos - time.epochPicos).toUInt128());
+        return new Duration(this.epochPicos - time.epochPicos);
     }
 
     /**
@@ -204,7 +202,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
         }
         Int tzSize = iso8601 || tz.picos != 0 ? (iso8601 ? 0 : 1) + tz.estimateStringLength(iso8601) : 0;
 
-        Int fraction = (epochPicos % Duration.PICOS_PER_SECOND).toInt64();
+        Int fraction = (epochPicos % Duration.PicosPerSecond).toInt64();
         Int fractionSize = fraction == 0 ? 0 : 1 + Duration.picosFractionalLength(fraction);
 
         return 19 + fractionSize + tzSize;

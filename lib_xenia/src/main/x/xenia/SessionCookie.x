@@ -8,7 +8,7 @@ import web.TrustLevel;
 
 import HttpServer.RequestInfo;
 
-import TimeOfDay.PICOS_PER_SECOND;
+import TimeOfDay.PicosPerSecond;
 
 
 /**
@@ -133,9 +133,9 @@ const SessionCookie {
         this.cookieId     = CookieId.values[new Int(parts[1])];
         this.knownCookies = new Int(parts[2]);
         this.consent      = new CookieConsent(parts[3]);
-        this.expires      = parts[4] == "" ? Null : roundTime(new Time(new Int128(parts[4]) * PICOS_PER_SECOND));
+        this.expires      = parts[4] == "" ? Null : roundTime(new Time(new Int128(parts[4]) * PicosPerSecond));
         this.lastIp       = new IPAddress(parts[5]);
-        this.created      = roundTime(new Time(new Int128(parts[6]) * PICOS_PER_SECOND));
+        this.created      = roundTime(new Time(new Int128(parts[6]) * PicosPerSecond));
         this.version      = new Int(parts[7]);
         this.salt         = new UInt16(parts[8]);
 
@@ -400,9 +400,9 @@ const SessionCookie {
      * @return the UTC time value rounded to the nearest second
      */
     static Time roundTime(Time time) {
-        return time.timezone == UTC && time.epochPicos % PICOS_PER_SECOND == 0
+        return time.timezone == UTC && time.epochPicos % PicosPerSecond == 0
                 ? time
-                : new Time(time.epochPicos / PICOS_PER_SECOND * PICOS_PER_SECOND);
+                : new Time(time.epochPicos / PicosPerSecond * PicosPerSecond);
     }
 
     /**
@@ -413,7 +413,7 @@ const SessionCookie {
      * @return a compact string representation of the time value
      */
     static String encodeTime(Time? time) {
-        return (time?.epochPicos/PICOS_PER_SECOND).toString() : "";
+        return (time?.epochPicos/PicosPerSecond).toString() : "";
     }
 
     /**
@@ -429,7 +429,7 @@ const SessionCookie {
         }
 
         try {
-            return new Time(new Int128(seconds) * PICOS_PER_SECOND);
+            return new Time(new Int128(seconds) * PicosPerSecond);
         } catch (Exception e) {
             return Null;
         }

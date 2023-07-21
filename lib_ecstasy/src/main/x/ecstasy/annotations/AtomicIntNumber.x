@@ -1,6 +1,3 @@
-import ecstasy.numbers.Bitwise;
-
-
 /**
  * The AtomicIntNumber mixin adds atomic capabilities such as increment and decrement to every
  * atomic reference to any of the integer number types.
@@ -8,8 +5,8 @@ import ecstasy.numbers.Bitwise;
  * TODO this is AtomicIntNumber, but sub-pieces are needed, like AtomicSequential
  */
 mixin AtomicIntNumber<Referent extends IntNumber>
-        into AtomicVar<Referent>
-        incorporates conditional BitwiseOps<Referent extends Bitwise> {
+        into AtomicVar<Referent> {
+
     @Op void increment() {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.nextValue())) {}
@@ -75,39 +72,33 @@ mixin AtomicIntNumber<Referent extends IntNumber>
         while (oldValue := replaceFailed(oldValue, oldValue % n)) {}
     }
 
-    /**
-     * Bitwise operations for the atomic integer values.
-     */
-    static mixin BitwiseOps<Referent extends @Bitwise IntNumber>
-            into AtomicIntNumber<Referent> {
-        @Op void andAssign(Referent n) {
-            Referent oldValue = get();
-            while (oldValue := replaceFailed(oldValue, oldValue & n)) {}
-        }
+    @Op void andAssign(Referent n) {
+        Referent oldValue = get();
+        while (oldValue := replaceFailed(oldValue, oldValue & n)) {}
+    }
 
-        @Op void orAssign(Referent n) {
-            Referent oldValue = get();
-            while (oldValue := replaceFailed(oldValue, oldValue | n)) {}
-        }
+    @Op void orAssign(Referent n) {
+        Referent oldValue = get();
+        while (oldValue := replaceFailed(oldValue, oldValue | n)) {}
+    }
 
-        @Op void xorAssign(Referent n) {
-            Referent oldValue = get();
-            while (oldValue := replaceFailed(oldValue, oldValue ^ n)) {}
-        }
+    @Op void xorAssign(Referent n) {
+        Referent oldValue = get();
+        while (oldValue := replaceFailed(oldValue, oldValue ^ n)) {}
+    }
 
-        @Op void shiftLeftAssign(Int count) {
-            Referent oldValue = get();
-            while (oldValue := replaceFailed(oldValue, oldValue << count)) {}
-        }
+    @Op void shiftLeftAssign(Int count) {
+        Referent oldValue = get();
+        while (oldValue := replaceFailed(oldValue, oldValue << count)) {}
+    }
 
-        @Op void shiftRightAssign(Int count) {
-            Referent oldValue = get();
-            while (oldValue := replaceFailed(oldValue, oldValue >> count)) {}
-        }
+    @Op void shiftRightAssign(Int count) {
+        Referent oldValue = get();
+        while (oldValue := replaceFailed(oldValue, oldValue >> count)) {}
+    }
 
-        @Op void shiftAllRightAssign(Int count) {
-            Referent oldValue = get();
-            while (oldValue := replaceFailed(oldValue, oldValue >>> count)) {}
-        }
+    @Op void shiftAllRightAssign(Int count) {
+        Referent oldValue = get();
+        while (oldValue := replaceFailed(oldValue, oldValue >>> count)) {}
     }
 }

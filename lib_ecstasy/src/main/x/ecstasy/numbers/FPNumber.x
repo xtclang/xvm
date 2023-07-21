@@ -17,6 +17,13 @@
      */
     static FPLiteral E  = 2.718281828459045235360287471352662497757247093699959574966967627724076630353;
 
+    /**
+     * Options for rounding.
+     *
+     * These are the rounding directions defined by the IEEE 754 standard.
+     */
+    enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
@@ -358,13 +365,122 @@
 
     // ----- conversions ---------------------------------------------------------------------------
 
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
     @Override
-    IntLiteral toIntLiteral(Rounding direction = TowardZero) {
-        return round(direction).toIntN().toIntLiteral();
+    Int8 toInt8(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toInt64(checkBounds, direction).toInt8(checkBounds);
     }
 
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
     @Override
-    FPLiteral toFPLiteral() {
-        return new FPLiteral(toString());
+    Int16 toInt16(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toInt64(checkBounds, direction).toInt16(checkBounds);
     }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    Int32 toInt32(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toInt64(checkBounds, direction).toInt32(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    Int64 toInt64(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toIntN(direction).toInt64(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    Int128 toInt128(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toIntN(direction).toInt128(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    IntN toIntN(Rounding direction = TowardZero);
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toUInt64(checkBounds, direction).toUInt8(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    UInt16 toUInt16(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toUInt64(checkBounds, direction).toUInt16(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    UInt32 toUInt32(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toUInt64(checkBounds, direction).toUInt32(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    UInt64 toUInt64(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toUIntN(direction).toUInt64(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    UInt128 toUInt128(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toUIntN(direction).toUInt128(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero) = toIntN(direction).toUIntN();
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    Byte toByte(Boolean checkBounds = False, Rounding direction = TowardZero) = toUInt8(checkBounds, direction);
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    Int toInt(Boolean checkBounds = False, Rounding direction = TowardZero) = toInt64(checkBounds, direction);
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    UInt toUInt(Boolean checkBounds = False, Rounding direction = TowardZero) = toUInt64(checkBounds, direction);
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
+    IntLiteral toIntLiteral(Rounding direction = TowardZero) = round(direction).toIntN().toIntLiteral();
+
+    @Override
+    FPLiteral toFPLiteral() = new FPLiteral(toString());
 }

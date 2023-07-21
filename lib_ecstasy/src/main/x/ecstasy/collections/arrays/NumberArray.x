@@ -677,83 +677,40 @@ mixin NumberArray<Element extends Number>
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt(truncate, direction);
-    }
+    Int8 toInt8(Boolean checkBounds = False) = asBitArray().toInt8(checkBounds);
 
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt8(truncate, direction);
-    }
+    Int16 toInt16(Boolean checkBounds = False) = asBitArray().toInt16(checkBounds);
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt16(truncate, direction);
-    }
+    Int32 toInt32(Boolean checkBounds = False) = asBitArray().toInt32(checkBounds);
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt32(truncate, direction);
-    }
+    Int64 toInt64(Boolean checkBounds = False) = asBitArray().toInt64(checkBounds);
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt64(truncate, direction);
-    }
+    Int128 toInt128(Boolean checkBounds = False) = asBitArray().toInt128(checkBounds);
 
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt128(truncate, direction);
-    }
+    IntN toIntN() = asBitArray().toIntN();
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero) {
-        return asBitArray().toIntN(direction);
-    }
+    UInt8 toUInt8(Boolean checkBounds = False) = asBitArray().toUInt8(checkBounds);
 
     @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt(truncate, direction);
-    }
+    UInt16 toUInt16(Boolean checkBounds = False) = asBitArray().toUInt16(checkBounds);
 
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt8(truncate, direction);
-    }
+    UInt32 toUInt32(Boolean checkBounds = False) = asBitArray().toUInt32(checkBounds);
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt16(truncate, direction);
-    }
+    UInt64 toUInt64(Boolean checkBounds = False) = asBitArray().toUInt64(checkBounds);
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt32(truncate, direction);
-    }
+    UInt128 toUInt128(Boolean checkBounds = False) = asBitArray().toUInt128(checkBounds);
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt64(truncate, direction);
-    }
-
-    @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt128(truncate, direction);
-    }
-
-    @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
-        return asBitArray().toUIntN(direction);
-    }
-
-    @Override
-    Dec toDec() {
-        Bit[] bits = asBitArray();
-        Int   len  = bits.size;
-        assert len == 28 || len == 32 || len == 60 || len == 64 || len == 128;
-
-        return bits.toDec();
-    }
+    UIntN toUIntN() = asBitArray().toUIntN();
 
     @Override
     Dec32 toDec32() {
@@ -774,9 +731,7 @@ mixin NumberArray<Element extends Number>
     }
 
     @Override
-    DecN toDecN() {
-        return asBitArray().toDecN();
-    }
+    DecN toDecN() = asBitArray().toDecN();
 
     @Override
     Float8e4 toFloat8e4() {
@@ -821,9 +776,7 @@ mixin NumberArray<Element extends Number>
     }
 
     @Override
-    FloatN toFloatN() {
-        return asBitArray().toFloatN();
-    }
+    FloatN toFloatN() = asBitArray().toFloatN();
 
     /**
      * Convert the array of numbers to an array of bits.

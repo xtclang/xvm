@@ -23,7 +23,7 @@ service JsonLogStoreBase<Element extends immutable Const>
 
         this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;
-        this.expiry         = expiry.notLessThan(MINUTE);
+        this.expiry         = expiry.notLessThan(Minute);
         this.truncateSize   = truncateSize > 0 ? truncateSize.notLessThan(2K) : MaxValue;
         this.maxFileSize    = maxFileSize.notGreaterThan(this.truncateSize/2);
     }
@@ -143,7 +143,7 @@ service JsonLogStoreBase<Element extends immutable Const>
             oldestFile.delete();
         }
 
-        if (expiry != NONE) {
+        if (expiry != None) {
             Int expiryIndex = -1;
             CheckExpiry: for (File file : rolledFiles) {
                 assert Time? timestamp := support.isLogFile(file), timestamp != Null;

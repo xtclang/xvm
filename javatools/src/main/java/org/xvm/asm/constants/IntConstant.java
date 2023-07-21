@@ -77,7 +77,6 @@ public class IntConstant
                 cBytes    = 8;
                 fUnsigned = false;
                 break;
-            case Int:
             case Int128:
                 cBytes    = 16;
                 fUnsigned = false;
@@ -100,7 +99,6 @@ public class IntConstant
                 cBytes    = 8;
                 fUnsigned = true;
                 break;
-            case UInt:
             case UInt128:
                 cBytes    = 16;
                 fUnsigned = true;
@@ -122,7 +120,7 @@ public class IntConstant
                 throw new IllegalStateException("illegal unsigned value: " + pint);
                 }
             if (pint.getUnsignedByteSize() > cBytes
-                    || format == Format.UInt && pint.compareTo(PackedInteger.SINT16_MAX) > 0)
+                    || format == Format.UInt64 && pint.compareTo(PackedInteger.SINT16_MAX) > 0)
                 {
                 throw new IllegalStateException("value exceeds " + cBytes + " bytes: " + pint);
                 }
@@ -156,7 +154,6 @@ public class IntConstant
         {
         switch (m_fmt)
             {
-            case Int:
             case Int16:
             case Int32:
             case Int64:
@@ -164,7 +161,6 @@ public class IntConstant
             case IntN:
                 return false;
 
-            case UInt:
             case UInt16:
             case UInt32:
             case UInt64:
@@ -196,8 +192,6 @@ public class IntConstant
             case UInt64:
                 return 8;
 
-            case Int:
-            case UInt:
             case Int128:
             case UInt128:
                 return 16;
@@ -233,7 +227,6 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MIN;
 
-            case Int:
             case Int128:
                 return PackedInteger.SINT16_MIN;
 
@@ -241,7 +234,6 @@ public class IntConstant
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.SINTN_MIN;
 
-            case UInt:
             case UInt16:
             case UInt32:
             case UInt64:
@@ -280,8 +272,6 @@ public class IntConstant
             case Int64:
                 return PackedInteger.SINT8_MAX;
 
-            case Int:
-            case UInt:
             case Int128:
                 return PackedInteger.SINT16_MAX;
 
@@ -1043,7 +1033,7 @@ public class IntConstant
         ConstantPool pool = getConstantPool();
         if (typeOut.equals(pool.typeInt()))
             {
-            return toIntConstant(Format.Int);
+            return toIntConstant(Format.Int64);
             }
         else if (typeOut.equals(pool.typeInt8()))
             {
@@ -1071,7 +1061,7 @@ public class IntConstant
             }
         else if (typeOut.equals(pool.typeUInt()))
             {
-            return toIntConstant(Format.UInt);
+            return toIntConstant(Format.UInt64);
             }
         else if (typeOut.equals(pool.typeBit()))
             {

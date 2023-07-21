@@ -106,4 +106,21 @@
         // subtract 5 bits for the raw exponent length
         return bitLength / 16 + 4;
     }
+
+
+    // ----- conversions ---------------------------------------------------------------------------
+
+    @Override
+    IntN toIntN(Rounding direction = TowardZero) = round(direction).toIntN();
+
+    @Override
+    UIntN toUIntN(Rounding direction = TowardZero) = round(direction).toUIntN();
+
+    @Auto
+    @Override
+    FloatN toFloatN() = toFPLiteral().toFloatN();
+
+    @Auto
+    @Override
+    DecN toDecN() = new DecN(bits);
 }

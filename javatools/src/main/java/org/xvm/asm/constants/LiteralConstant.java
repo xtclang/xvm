@@ -471,8 +471,6 @@ public class LiteralConstant
         BigDecimal bigdec = getBigDecimal();
         switch (format)
             {
-            case Dec:
-                return Decimal.valueOf(bigdec);
             case Dec32:
                 return new Decimal32(bigdec);
             case Dec64:
@@ -777,9 +775,7 @@ public class LiteralConstant
     public Constant toDecimalConstant(Format format)
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
-        return format == Format.Dec
-                ? getConstantPool().ensureDecAConstant(getDecimal(Format.Dec))
-                : getConstantPool().ensureDecConstant(getDecimal(format));
+        return getConstantPool().ensureDecConstant(getDecimal(format));
         }
 
     /**
@@ -1607,7 +1603,7 @@ public class LiteralConstant
                     }
                 else if (typeOut.equals(pool.typeInt()))
                     {
-                    return toIntConstant(Format.Int);
+                    return toIntConstant(Format.Int64);
                     }
                 else if (typeOut.equals(pool.typeInt8()))
                     {
@@ -1635,7 +1631,7 @@ public class LiteralConstant
                     }
                 else if (typeOut.equals(pool.typeUInt()))
                     {
-                    return toIntConstant(Format.UInt);
+                    return toIntConstant(Format.UInt64);
                     }
                 else if (typeOut.equals(pool.typeUInt8()))
                     {
@@ -1675,7 +1671,7 @@ public class LiteralConstant
                 switch (sSimpleName)
                     {
                     case "Dec":
-                        return toDecimalConstant(Format.Dec);
+                        return toDecimalConstant(Format.Dec64);
                     case "Dec32":
                         return toDecimalConstant(Format.Dec32);
                     case "Dec64":
@@ -1704,7 +1700,7 @@ public class LiteralConstant
 
                 if (pool.typeInt().isA(typeOut))
                     {
-                    return toIntConstant(Format.Int);
+                    return toIntConstant(Format.Int64);
                     }
                 else if (pool.typeUInt8().isA(typeOut))
                     {
@@ -1737,7 +1733,7 @@ public class LiteralConstant
                 switch (sSimpleName)
                     {
                     case "Dec":
-                        return toDecimalConstant(Format.Dec);
+                        return toDecimalConstant(Format.Dec64);
                     case "Dec32":
                         return toDecimalConstant(Format.Dec32);
                     case "Dec64":
@@ -1765,7 +1761,7 @@ public class LiteralConstant
                     }
 
                 // go through the entire list of possibilities
-                for (Format format = Format.Dec;
+                for (Format format = Format.Dec64;
                      format.ordinal() <= Format.FloatN.ordinal(); format = format.next())
                     {
                     TypeConstant typeSupported = format.getType(pool);

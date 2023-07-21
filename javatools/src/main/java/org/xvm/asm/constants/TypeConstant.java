@@ -6884,7 +6884,7 @@ public abstract class TypeConstant
                 return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt128);
 
             case "numbers.UInt":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt64);
 
             case "numbers.Int":
             case "numbers.Int32":

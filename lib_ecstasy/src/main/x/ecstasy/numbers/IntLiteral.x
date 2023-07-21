@@ -441,7 +441,9 @@ const IntLiteral(String text)
     /**
      * Convert the value to a single Bit.
      *
-     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
      *
      * @return the corresponding Bit value
      *
@@ -449,16 +451,18 @@ const IntLiteral(String text)
      *                      and `truncate` is not `True`
      */
     @Auto
-    Bit toBit(Boolean truncate = False) {
-        Byte byte = toByte(truncate);
-        assert:bounds truncate || byte <= 1;
+    Bit toBit(Boolean checkBounds = False) {
+        Byte byte = toByte(checkBounds);
+        assert:bounds !checkBounds || byte <= 1;
         return byte & 1 == 1 ? 1 : 0;
     }
 
     /**
      * Convert the number to a 4-bit integer.
      *
-     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
      *
      * @return the corresponding Nibble value
      *
@@ -466,186 +470,135 @@ const IntLiteral(String text)
      *                      and `truncate` is not `True`
      */
     @Auto
-    Nibble toNibble(Boolean truncate = False) {
-        return Nibble.of(toInt64(truncate));
+    Nibble toNibble(Boolean checkBounds = False) {
+        return Nibble.of(toInt64(checkBounds));
     }
 
     /**
-     * Convert the value to a character value.
+     * Convert the integer literal to a character.
      *
-     * @param truncate   pass `True` to silently truncate the integer value if necessary
+     * This conversion method always checks for out-of-bounds.
      *
      * @return the corresponding Char value
      *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
-     *                      and `truncate` is not `True`
+     * @throws OutOfBounds  iff the Integer value is not in the legal Unicode codepoint range
      */
-    Char toChar(Boolean truncate = False) {
-        return new Char(toUInt32(truncate));
-    }
+    Char toChar() = new Char(toUInt32(checkBounds = True));
 
     @Override
-    IntLiteral toIntLiteral(Rounding direction = TowardZero) {
-        return this;
-    }
+    IntLiteral toIntLiteral() = this;
 
     @Auto
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
+    Int8 toInt8(Boolean checkBounds = False);
 
     @Auto
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
+    Int16 toInt16(Boolean checkBounds = False);
 
     @Auto
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero);
+    Int32 toInt32(Boolean checkBounds = False);
 
     @Auto
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero);
+    Int64 toInt64(Boolean checkBounds = False);
 
     @Auto
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero);
+    Int128 toInt128(Boolean checkBounds = False);
 
     @Auto
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Auto
-    @Override
-    IntN toIntN(Rounding direction = TowardZero) {
+    IntN toIntN() {
         TODO
     }
 
     @Auto
     @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
+    UInt8 toUInt8(Boolean checkBounds = False);
 
     @Auto
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
+    UInt16 toUInt16(Boolean checkBounds = False);
 
     @Auto
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero);
+    UInt32 toUInt32(Boolean checkBounds = False);
 
     @Auto
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero);
+    UInt64 toUInt64(Boolean checkBounds = False);
 
     @Auto
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero);
+    UInt128 toUInt128(Boolean checkBounds = False);
 
     @Auto
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
+    UIntN toUIntN();
 
     @Auto
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero);
+    Dec32 toDec32() = toFPLiteral().toDec32();
 
     @Auto
     @Override
-    Dec toDec() {
-        return toFPLiteral().toDec();
-    }
+    Dec64 toDec64() = toFPLiteral().toDec64();
 
     @Auto
     @Override
-    Dec32 toDec32() {
-        return toFPLiteral().toDec32();
-    }
+    Dec128 toDec128() = toFPLiteral().toDec128();
 
     @Auto
     @Override
-    Dec64 toDec64() {
-        return toFPLiteral().toDec64();
-    }
+    DecN toDecN() = toFPLiteral().toDecN();
 
     @Auto
     @Override
-    Dec128 toDec128() {
-        return toFPLiteral().toDec128();
-    }
+    Float8e4 toFloat8e4() = toFPLiteral().toFloat8e4();
 
     @Auto
     @Override
-    DecN toDecN() {
-        return toFPLiteral().toDecN();
-    }
+    Float8e5 toFloat8e5() = toFPLiteral().toFloat8e5();
 
     @Auto
     @Override
-    Float8e4 toFloat8e4() {
-        return toFPLiteral().toFloat8e4();
-    }
+    BFloat16 toBFloat16() = toFPLiteral().toBFloat16();
 
     @Auto
     @Override
-    Float8e5 toFloat8e5() {
-        return toFPLiteral().toFloat8e5();
-    }
+    Float16 toFloat16() = toFPLiteral().toFloat16();
 
     @Auto
     @Override
-    BFloat16 toBFloat16() {
-        return toFPLiteral().toBFloat16();
-    }
+    Float32 toFloat32() = toFPLiteral().toFloat32();
 
     @Auto
     @Override
-    Float16 toFloat16() {
-        return toFPLiteral().toFloat16();
-    }
+    Float64 toFloat64() = toFPLiteral().toFloat64();
 
     @Auto
     @Override
-    Float32 toFloat32() {
-        return toFPLiteral().toFloat32();
-    }
+    Float128 toFloat128() = toFPLiteral().toFloat128();
 
     @Auto
     @Override
-    Float64 toFloat64() {
-        return toFPLiteral().toFloat64();
-    }
+    FloatN toFloatN() = toFPLiteral().toFloatN();
 
     @Auto
     @Override
-    Float128 toFloat128() {
-        return toFPLiteral().toFloat128();
-    }
-
-    @Auto
-    @Override
-    FloatN toFloatN() {
-        return toFPLiteral().toFloatN();
-    }
-
-    @Auto
-    @Override
-    FPLiteral toFPLiteral() {
-        return new FPLiteral(text);
-    }
+    FPLiteral toFPLiteral() = new FPLiteral(text);
 
     @Override
-    String toString() {
-        return text;
-    }
+    String toString() = text;
 
 
     // ----- Stringable implementation -------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return text.size;
-    }
+    Int estimateStringLength() = text.size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return text.appendTo(buf);
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = text.appendTo(buf);
 }

@@ -232,10 +232,10 @@ public abstract class Constant
                 return pool.ensureByteConstant(Format.UInt8, 0);
 
             case "numbers.Int":
-                return pool.ensureIntConstant(PackedInteger.ZERO, Format.Int);
+                return pool.ensureIntConstant(PackedInteger.ZERO, Format.Int64);
 
             case "numbers.UInt":
-                return pool.ensureIntConstant(PackedInteger.ZERO, Format.UInt);
+                return pool.ensureIntConstant(PackedInteger.ZERO, Format.UInt64);
 
             case "numbers.Int16":
             case "numbers.Int32":
@@ -811,14 +811,12 @@ public abstract class Constant
         IntLiteral("numbers"),
         Bit       ("numbers"),
         Nibble    ("numbers"),
-        Int       ("numbers"),
         Int8      ("numbers"),
         Int16     ("numbers"),
         Int32     ("numbers"),
         Int64     ("numbers"),
         Int128    ("numbers"),
         IntN      ("numbers"),
-        UInt      ("numbers"),
         UInt8     ("numbers"),
         UInt16    ("numbers"),
         UInt32    ("numbers"),
@@ -826,7 +824,6 @@ public abstract class Constant
         UInt128   ("numbers"),
         UIntN     ("numbers"),
         FPLiteral ("numbers"),
-        Dec       ("numbers"),
         Dec32     ("numbers"),
         Dec64     ("numbers"),
         Dec128    ("numbers"),
@@ -991,21 +988,19 @@ public abstract class Constant
             {
             return switch (this)
                 {
-                case Int      -> pool.typeInt();
                 case Int8     -> pool.typeInt8();
                 case Int16    -> pool.typeInt16();
                 case Int32    -> pool.typeInt32();
                 case Int64    -> pool.typeInt64();
                 case Int128   -> pool.typeInt128();
                 case IntN     -> pool.typeIntN();
-                case UInt     -> pool.typeUInt();
                 case UInt8    -> pool.typeUInt8();
                 case UInt16   -> pool.typeUInt16();
                 case UInt32   -> pool.typeUInt32();
                 case UInt64   -> pool.typeUInt64();
                 case UInt128  -> pool.typeUInt128();
                 case UIntN    -> pool.typeUIntN();
-                case Dec      -> pool.typeDec();
+                case Dec64 -> pool.typeDec();
                 default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());
                 };
             }

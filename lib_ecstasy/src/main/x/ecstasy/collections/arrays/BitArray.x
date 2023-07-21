@@ -748,18 +748,7 @@ mixin BitArray<Element extends Bit>
     }
 
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        if (size <= 128) {
-            return new Int(this);
-        }
-
-        // verify that the bit array is sign-extended
-        assert:bounds truncate || !this[0 ..< size-128].contains(~this[size-128]);
-        return new Int(this[size-128 ..< size]);
-    }
-
-    @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int8 toInt8(Boolean checkBounds = False) {
         switch (size <=> 8) {
         case Lesser:
             // sign-extend the bit array
@@ -771,13 +760,13 @@ mixin BitArray<Element extends Bit>
 
         case Greater:
             // verify that the bit array is sign-extended
-            assert:bounds truncate || !this[0 ..< size-8].contains(~this[size-8]);
+            assert:bounds !checkBounds || !this[0 ..< size-8].contains(~this[size-8]);
             return new Int8(this[size-8 ..< size]);
         }
     }
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int16 toInt16(Boolean checkBounds = False) {
         switch (size <=> 16) {
         case Lesser:
             // sign-extend the bit array
@@ -789,13 +778,13 @@ mixin BitArray<Element extends Bit>
 
         case Greater:
             // verify that the bit array is sign-extended
-            assert:bounds truncate || !this[0 ..< size-16].contains(~this[size-16]);
+            assert:bounds !checkBounds || !this[0 ..< size-16].contains(~this[size-16]);
             return new Int16(this[size-16 ..< size]);
         }
     }
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int32 toInt32(Boolean checkBounds = False) {
         switch (size <=> 32) {
         case Lesser:
             // sign-extend the bit array
@@ -807,13 +796,13 @@ mixin BitArray<Element extends Bit>
 
         case Greater:
             // verify that the bit array is sign-extended
-            assert:bounds truncate || !this[0 ..< size-32].contains(~this[size-32]);
+            assert:bounds !checkBounds || !this[0 ..< size-32].contains(~this[size-32]);
             return new Int32(this[size-32 ..< size]);
         }
     }
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int64 toInt64(Boolean checkBounds = False) {
         switch (size <=> 64) {
         case Lesser:
             // sign-extend the bit array
@@ -825,13 +814,13 @@ mixin BitArray<Element extends Bit>
 
         case Greater:
             // verify that the bit array is sign-extended
-            assert:bounds truncate || !this[0 ..< size-64].contains(~this[size-64]);
+            assert:bounds !checkBounds || !this[0 ..< size-64].contains(~this[size-64]);
             return new Int64(this[size-64 ..< size]);
         }
     }
 
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int128 toInt128(Boolean checkBounds = False) {
         switch (size <=> 128) {
         case Lesser:
             // sign-extend the bit array
@@ -843,13 +832,13 @@ mixin BitArray<Element extends Bit>
 
         case Greater:
             // verify that the bit array is sign-extended
-            assert:bounds truncate || !this[0 ..< size-128].contains(~this[size-128]);
+            assert:bounds !checkBounds || !this[0 ..< size-128].contains(~this[size-128]);
             return new Int128(this[size-128 ..< size]);
         }
     }
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero) {
+    IntN toIntN() {
         Bit[]  bits = this;
         if (size & 0b111 != 0) {
             // sign-extend the value out to a byte (8-bit) boundary
@@ -862,18 +851,7 @@ mixin BitArray<Element extends Bit>
     }
 
     @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        if (size <= 128) {
-            return new UInt(this);
-        }
-
-        // verify that the rest of the bit array is zeros
-        assert:bounds truncate || !this[0 ..< size-128].contains(One);
-        return new UInt(this[size-128 ..< size]);
-    }
-
-    @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt8 toUInt8(Boolean checkBounds = False) {
         switch (size <=> 8) {
         case Lesser:
             val cutoff = 8 - size;
@@ -883,13 +861,13 @@ mixin BitArray<Element extends Bit>
             return new UInt8(this);
 
         case Greater:
-            assert:bounds truncate || !this[0 ..< size-8].contains(One);
+            assert:bounds !checkBounds || !this[0 ..< size-8].contains(One);
             return new UInt8(this[size-8 ..< size]);
         }
     }
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt16 toUInt16(Boolean checkBounds = False) {
         switch (size <=> 16) {
         case Lesser:
             val cutoff = 16 - size;
@@ -899,13 +877,13 @@ mixin BitArray<Element extends Bit>
             return new UInt16(this);
 
         case Greater:
-            assert:bounds truncate || !this[0 ..< size-16].contains(One);
+            assert:bounds !checkBounds || !this[0 ..< size-16].contains(One);
             return new UInt16(this[size-16 ..< size]);
         }
     }
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt32 toUInt32(Boolean checkBounds = False) {
         switch (size <=> 32) {
         case Lesser:
             val cutoff = 32 - size;
@@ -915,13 +893,13 @@ mixin BitArray<Element extends Bit>
             return new UInt32(this);
 
         case Greater:
-            assert:bounds truncate || !this[0 ..< size-32].contains(One);
+            assert:bounds !checkBounds || !this[0 ..< size-32].contains(One);
             return new UInt32(this[size-32 ..< size]);
         }
     }
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt64 toUInt64(Boolean checkBounds = False) {
         switch (size <=> 64) {
         case Lesser:
             val cutoff = 64 - size;
@@ -931,13 +909,13 @@ mixin BitArray<Element extends Bit>
             return new UInt64(this);
 
         case Greater:
-            assert:bounds truncate || !this[0 ..< size-64].contains(One);
+            assert:bounds !checkBounds || !this[0 ..< size-64].contains(One);
             return new UInt64(this[size-64 ..< size]);
         }
     }
 
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt128 toUInt128(Boolean checkBounds = False) {
         switch (size <=> 128) {
         case Lesser:
             val cutoff = 128 - size;
@@ -947,13 +925,13 @@ mixin BitArray<Element extends Bit>
             return new UInt128(this);
 
         case Greater:
-            assert:bounds truncate || !this[0 ..< size-128].contains(One);
+            assert:bounds !checkBounds || !this[0 ..< size-128].contains(One);
             return new UInt128(this[size-128 ..< size]);
         }
     }
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
+    UIntN toUIntN() {
         Bit[]  bits = this;
         if (size & 0b111 != 0) {
             // zero-extend the value out to a byte (8-bit) boundary
@@ -963,12 +941,6 @@ mixin BitArray<Element extends Bit>
         }
 
         return new UIntN(bits);
-    }
-
-    @Override
-    Dec toDec() {
-        assert:bounds size == 28 || size == 32 || size == 60 || size == 64 || size == 128;
-        return new Dec(this);
     }
 
     @Override

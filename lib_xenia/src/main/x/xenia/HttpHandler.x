@@ -125,7 +125,7 @@ service HttpHandler
         } else {
             // wait a second (TODO: repeat a couple of times)
             @Inject Timer timer;
-            timer.schedule(SECOND, () -> httpServer.close());
+            timer.schedule(Second, () -> httpServer.close());
         }
     }
 

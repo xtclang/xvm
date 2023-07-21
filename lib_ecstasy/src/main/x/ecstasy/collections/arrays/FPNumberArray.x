@@ -5,7 +5,7 @@ mixin FPNumberArray<Element extends FPNumber>
         into Array<Element>
         extends NumberArray<Element> {
 
-    typedef Number.Rounding as Rounding;
+    typedef FPNumber.Rounding as Rounding;
 
     // ----- vector operations ---------------------------------------------------------------------
 

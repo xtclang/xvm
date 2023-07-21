@@ -273,7 +273,7 @@ const ConstOrdinalList
                 Int bitCount = 8 - (bitOffset & 0x7);
                 Int bitShift = 8 - bitCount;
 
-                byte |= (curVal << bitShift).toByte(truncate=True);
+                byte |= (curVal << bitShift).toByte();
                 binVal[byteOffset] = byte;
 
                 curVal     >>>= bitCount;

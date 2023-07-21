@@ -859,7 +859,6 @@ public class NativeContainer
 
             case IntLiteral, FPLiteral:
 
-            case Int,    UInt:
             case Int8,   UInt8:
             case Int16,  UInt16:
             case Int32,  UInt32:
@@ -868,7 +867,7 @@ public class NativeContainer
             case IntN,   UIntN:
             case BFloat16:
             case Float16, Float32, Float64, Float128, FloatN:
-            case Dec,     Dec32,   Dec64,   Dec128,   DecN:
+            case          Dec32,   Dec64,   Dec128,   DecN:
 
             case Array, UInt8Array:
             case Date, TimeOfDay, Time, Duration:

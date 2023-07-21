@@ -902,7 +902,7 @@ class Lexer
             return LitTimezone, NoTZ;
         }
 
-        Int offset = hour * TimeOfDay.PICOS_PER_HOUR + minute * TimeOfDay.PICOS_PER_MINUTE;
+        Int offset = hour * TimeOfDay.PicosPerHour + minute * TimeOfDay.PicosPerMinute;
         return LitTimezone, new TimeZone((minus ? -1 : +1) * offset.toInt64());
     }
 
@@ -951,7 +951,7 @@ class Lexer
         enum Stage(Boolean naked=False) {Init(True), Head(True), Day, Sep(True), Hour, Minute, Second, Fraction, Err}
         Stage prevStage = Init;
 
-        UInt128 picos = 0;
+        Int128  picos = 0;
         Boolean any   = False;
         Boolean err   = False;
         Loop: while (True) {
@@ -979,7 +979,7 @@ class Lexer
 
             case 'D', 'd':
                 stage  = Day;
-                picos += value * Duration.PICOS_PER_DAY;
+                picos += value * Duration.PicosPerDay;
                 break;
 
             case 'T':
@@ -989,22 +989,22 @@ class Lexer
 
             case 'H', 'h':
                 stage  = Hour;
-                picos += value * Duration.PICOS_PER_HOUR;
+                picos += value * Duration.PicosPerHour;
                 break;
 
             case 'M', 'm':
                 stage  = Minute;
-                picos += value * Duration.PICOS_PER_MINUTE;
+                picos += value * Duration.PicosPerMinute;
                 break;
 
             case '.':
                 stage  = Second;
-                picos += value * Duration.PICOS_PER_SECOND;
+                picos += value * Duration.PicosPerSecond;
                 break;
 
             case 'S', 's':
                 stage  = Fraction;
-                picos += value * (prevStage == Second ? 1 : Duration.PICOS_PER_SECOND);
+                picos += value * (prevStage == Second ? 1 : Duration.PicosPerSecond);
                 break;
 
             default:
@@ -1027,7 +1027,7 @@ class Lexer
 
         if (err || !any) {
             log(Error, BadTime, [reader[before ..< reader.position].toString()], before, reader.position);
-            return LitDuration, NONE;
+            return LitDuration, None;
         }
 
         return LitDuration, new Duration(picos);

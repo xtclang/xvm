@@ -39,7 +39,7 @@ const Bit(IntLiteral literal)
      * @return the [IntLiteral] that corresponds to the bit value
      */
     @Override
-    IntLiteral toIntLiteral(Rounding direction = TowardZero) {
+    IntLiteral toIntLiteral() {
         return literal;
     }
 
@@ -52,20 +52,11 @@ const Bit(IntLiteral literal)
     }
 
     /**
-     * @return the [Int] value of either 0 or 1 that corresponds to this bit's value
-     */
-    @Auto
-    @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        return toBoolean() ? 1 : 0;
-    }
-
-    /**
      * @return the [Int8] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int8 toInt8(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -74,7 +65,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int16 toInt16(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -83,7 +74,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int32 toInt32(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -92,7 +83,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int64 toInt64(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -101,7 +92,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int128 toInt128(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -110,7 +101,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    IntN toIntN(Rounding direction = TowardZero) {
+    IntN toIntN() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -119,7 +110,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt8 toUInt8(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -128,7 +119,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt16 toUInt16(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -137,7 +128,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt32 toUInt32(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -146,7 +137,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt64 toUInt64(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -155,7 +146,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt128 toUInt128(Boolean checkBounds = False) {
         return toBoolean() ? 1 : 0;
     }
 
@@ -164,7 +155,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
+    UIntN toUIntN() {
         return toBoolean() ? 1 : 0;
     }
 

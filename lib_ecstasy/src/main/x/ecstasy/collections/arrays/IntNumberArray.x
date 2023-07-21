@@ -1,10 +1,7 @@
-import ecstasy.numbers.Bitwise;
-
-
 /**
  * Functionality specific to arrays of integer numbers.
  */
-mixin BitwiseArray<Element extends @Bitwise IntNumber>
+mixin IntNumberArray<Element extends IntNumber>
         into Array<Element>
         extends NumberArray<Element> {
 
@@ -29,7 +26,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      * @return the array containing the integer values representing the left-most (most significant)
      *         bit of each integer value in this array
      */
-    BitwiseArray leftmostBitVector(Boolean inPlace = False) {
+    IntNumberArray leftmostBitVector(Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = this[i].leftmostBit;
@@ -49,7 +46,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      * @return the array containing the integer values representing the right-most (least
      *         significant) bit of each integer value in this array
      */
-    BitwiseArray rightmostBitVector(Boolean inPlace = False) {
+    IntNumberArray rightmostBitVector(Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = this[i].rightmostBit;
@@ -72,7 +69,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      * @return the array containing the number of bits that are zero preceding the most significant
      *         (left-most) `1` bit of each value in this array
      */
-    BitwiseArray leadingZeroCountVector(Boolean inPlace = False) {
+    IntNumberArray leadingZeroCountVector(Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = toElement(this[i].leadingZeroCount);
@@ -95,7 +92,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      * @return the array containing the number of bits that are zero following the least significant
      *         (right-most) `1` bit of each value in this array
      */
-    BitwiseArray trailingZeroCountVector(Boolean inPlace = False) {
+    IntNumberArray trailingZeroCountVector(Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = toElement(this[i].trailingZeroCount);
@@ -114,7 +111,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the bit count of each integer number in this array
      */
-    BitwiseArray bitCountVector(Boolean inPlace = False) {
+    IntNumberArray bitCountVector(Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = toElement(this[i].bitCount);
@@ -134,7 +131,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting sums
      */
-    BitwiseArray andScalar(Element scalar, Boolean inPlace = False) {
+    IntNumberArray andScalar(Element scalar, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] &= scalar;
@@ -155,7 +152,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray andVector(BitwiseArray that) {
+    IntNumberArray andVector(IntNumberArray that) {
         assert:bounds this.size == that.size;
 
         if (inPlace && this.inPlace) {
@@ -177,7 +174,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting sums
      */
-    BitwiseArray orScalar(Element scalar, Boolean inPlace = False) {
+    IntNumberArray orScalar(Element scalar, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] |= scalar;
@@ -198,7 +195,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray orVector(BitwiseArray that) {
+    IntNumberArray orVector(IntNumberArray that) {
         assert:bounds this.size == that.size;
 
         if (inPlace && this.inPlace) {
@@ -220,7 +217,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting sums
      */
-    BitwiseArray xorScalar(Element scalar, Boolean inPlace = False) {
+    IntNumberArray xorScalar(Element scalar, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] ^= scalar;
@@ -241,7 +238,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray xorVector(BitwiseArray that) {
+    IntNumberArray xorVector(IntNumberArray that) {
         assert:bounds this.size == that.size;
 
         if (inPlace && this.inPlace) {
@@ -262,7 +259,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the bitwise `NOT` of each number in this array
      */
-    BitwiseArray notVector(Boolean inPlace = False) {
+    IntNumberArray notVector(Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = ~this[i];
@@ -284,7 +281,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray shiftLeftVector(Int count, Boolean inPlace = False) {
+    IntNumberArray shiftLeftVector(Int count, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] <<= count;
@@ -306,7 +303,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray shiftRightVector(Int count, Boolean inPlace = False) {
+    IntNumberArray shiftRightVector(Int count, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] >>= count;
@@ -328,7 +325,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray shiftAllRightVector(Int count, Boolean inPlace = False) {
+    IntNumberArray shiftAllRightVector(Int count, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] >>>= count;
@@ -348,7 +345,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray rotateLeftVector(Int count, Boolean inPlace = False) {
+    IntNumberArray rotateLeftVector(Int count, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = this[i].rotateLeft(count);
@@ -368,7 +365,7 @@ mixin BitwiseArray<Element extends @Bitwise IntNumber>
      *
      * @return the array containing the resulting values
      */
-    BitwiseArray rotateRightVector(Int count, Boolean inPlace = False) {
+    IntNumberArray rotateRightVector(Int count, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] = this[i].rotateRight(count);

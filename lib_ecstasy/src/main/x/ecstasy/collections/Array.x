@@ -1,7 +1,5 @@
 import ecstasy.io;
 
-import ecstasy.numbers.Bitwise;
-
 
 /**
  * Array is **the** fundamental implementation of the List interface; it is an Int-indexed container
@@ -64,7 +62,7 @@ class Array<Element>
         incorporates conditional arrays.ByteArray<Element extends Byte>
         incorporates conditional arrays.NibbleArray<Element extends Nibble>
         incorporates conditional arrays.NumberArray<Element extends Number>
-        incorporates conditional arrays.BitwiseArray<Element extends @Bitwise IntNumber>
+        incorporates conditional arrays.IntNumberArray<Element extends IntNumber>
         incorporates conditional arrays.FPNumberArray<Element extends FPNumber>
         incorporates conditional ArrayOrderer<Element extends Orderable>
         incorporates conditional ArrayHasher<Element extends Hashable> {

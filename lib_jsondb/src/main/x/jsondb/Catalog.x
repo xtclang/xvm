@@ -644,7 +644,7 @@ service Catalog<Schema extends RootSchema>
 
         Map<String, immutable Object> options = info.options;
 
-        Duration expiry     = options.getOrDefault("expiry", Duration.NONE).as(Duration);
+        Duration expiry     = options.getOrDefault("expiry", Duration.None).as(Duration);
         Int      truncate   = options.getOrDefault("truncate", Int:-1).as(Int);
         Int      maxLogSize = txManager.maxLogSize;
 

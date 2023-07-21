@@ -3,7 +3,7 @@
  */
 mixin ByteArray<Element extends Byte>
         into Array<Element>
-        extends BitwiseArray<Element> {
+        extends IntNumberArray<Element> {
     // ----- UTF-8 operations ----------------------------------------------------------------------
 
     import io.IllegalUTF;
@@ -164,7 +164,7 @@ mixin ByteArray<Element extends Byte>
      */
     (Int value, Int newIndex) unpackInt(Int index) {
         // use a signed byte to get auto sign-extension when converting to an int
-        Int8 b = this[index].toInt8(truncate=True);
+        Int8 b = this[index].toInt8();
 
         // Tiny format: the first bit of the first byte is used to indicate a single byte format,
         // in which the entire value is contained in the 7 MSBs
@@ -193,7 +193,7 @@ mixin ByteArray<Element extends Byte>
 
         Int curOffset  = index + 1;
         Int nextOffset = curOffset + byteCount;
-        Int n          = this[curOffset++].toInt8(truncate=True);   // Int8 will sign-extend
+        Int n          = this[curOffset++].toInt8();   // Int8 will sign-extend
         while (curOffset < nextOffset) {
             n = n << 8 | this[curOffset++];
         }
@@ -377,7 +377,7 @@ mixin ByteArray<Element extends Byte>
     }
 
     @Override
-    Byte[] asByteArray() {
+    Byte![] asByteArray() {                 // TODO GG why was "!" required here? interesting ...
         static class ReifiableArray
                 extends Array<Byte> {
             construct(Byte[] bytes, Mutability mutability) {

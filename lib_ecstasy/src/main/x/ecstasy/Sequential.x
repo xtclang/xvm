@@ -59,7 +59,7 @@ interface Sequential
      * @return the number of times that next() (or prev(), if negative) would need to be called to
      *         sequentially transition from _this_ to _that_
      *
-     * @throws OutOfBounds  if the span cannot be represented in a 64-bit integer value
+     * @throws OutOfBounds  if the span cannot be represented in a 64-bit signed integer value
      */
     Int stepsTo(Sequential that);
 

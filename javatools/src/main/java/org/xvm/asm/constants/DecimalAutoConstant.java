@@ -171,7 +171,7 @@ public class DecimalAutoConstant
     @Override
     public Format getFormat()
         {
-        return Format.Dec;
+        return Format.Dec64;
         }
 
     @Override
@@ -203,7 +203,7 @@ public class DecimalAutoConstant
     protected void assemble(DataOutput out)
         throws IOException
         {
-        out.writeByte(Format.Dec.ordinal());
+        out.writeByte(Format.Dec64.ordinal());
         writePackedLong(out, m_dec.getPosition());
         }
 

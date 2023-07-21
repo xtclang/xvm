@@ -14,12 +14,6 @@ const FPLiteral(String text)
 
     @Auto
     @Override
-    Dec toDec() {
-        return toDecN().toDec();
-    }
-
-    @Auto
-    @Override
     Dec32 toDec32() {
         return toDecN().toDec32();
     }

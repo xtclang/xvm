@@ -52,18 +52,21 @@ import numbers.IntConvertible;
  * * CharNums.dat - specifies the numeric string for characters that denote a numeric value
  * * CharTitles.dat - specifies the title case character for characters that have a title case form
  * * CharUppers.dat - specifies the upper case character for characters that have a upper case form
+ *
+ * Note: Conversions to integer types are **not** `@Auto`, because a Char is not considered to be a
+ * number.
  */
 const Char(UInt32 codepoint)
-        implements IntConvertible
+        delegates IntConvertible(codepoint)
         implements Sequential
         implements Destringable
         default('\u0000') {
     // ----- constructors --------------------------------------------------------------------------
 
     assert() {
-        assert codepoint <= 0x10FFFF as $"Character code-point ({codepoint}) out of Unicode range";
+        assert:bounds codepoint <= 0x10FFFF as $"Character code-point ({codepoint}) out of Unicode range";
 
-        assert !(0xD7FF < codepoint < 0xE000) as
+        assert:bounds !(0xD7FF < codepoint < 0xE000) as
                 $|Character code-point ({codepoint}) is a Unicode surrogate value;\
                  | surrogate values are not valid Unicode characters
                 ;
@@ -248,33 +251,6 @@ const Char(UInt32 codepoint)
         Int    actual = formatUtf8(bytes, 0);
         assert actual == length;
         return bytes.makeImmutable();
-    }
-
-    // conversion to integer types are **not** @Auto, because a Char is not considered to be a
-    // number, and a conversion fails if the codepoint is out of range of the desired type
-
-    /**
-     * @return the character's codepoint as an integer
-     */
-    @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        return codepoint.toInt();
-    }
-
-    /**
-     * @return the character's codepoint as a variable-length signed integer
-     */
-    @Override
-    IntN toIntN(Rounding direction = TowardZero) {
-        return codepoint.toIntN();
-    }
-
-    /**
-     * @return the character's codepoint as a 32-bit unsigned integer
-     */
-    @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
-        return codepoint;
     }
 
     /**

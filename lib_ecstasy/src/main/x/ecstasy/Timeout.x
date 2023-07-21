@@ -115,7 +115,7 @@ const Timeout
      * reaches zero.
      */
     Duration remainingTime.get() {
-        return (duration - timer.elapsed).notLessThan(Duration.NONE);
+        return (duration - timer.elapsed).notLessThan(Duration.None);
     }
 
     /**

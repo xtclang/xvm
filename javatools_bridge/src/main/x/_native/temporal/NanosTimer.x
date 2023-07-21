@@ -21,7 +21,7 @@ service NanosTimer
 
     @Override
     Duration resolution.get() {
-        return Duration.NANOSEC;
+        return Duration.Nanosec;
     }
 
     @Override

@@ -262,61 +262,6 @@ const Dec32
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    IntN toIntN(Rounding direction = TowardZero) {
-        return round(direction).toIntN();
-    }
-
-    @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
-        return round(direction).toUIntN();
-    }
-
-    @Override
-    Float8e4 toFloat8e4();
-
-    @Override
-    Float8e5 toFloat8e5();
-
-    @Override
-    BFloat16 toBFloat16();
-
-    @Override
-    Float16 toFloat16();
-
-    @Override
-    Float32 toFloat32();
-
     @Auto
     @Override
     Float64 toFloat64();
@@ -325,16 +270,8 @@ const Dec32
     @Override
     Float128 toFloat128();
 
-    @Auto
     @Override
-    FloatN toFloatN() {
-        return toFPLiteral().toFloatN();
-    }
-
-    @Override
-    Dec32 toDec32() {
-        return this;
-    }
+    Dec32 toDec32() = this;
 
     @Auto
     @Override
@@ -343,10 +280,4 @@ const Dec32
     @Auto
     @Override
     Dec128 toDec128();
-
-    @Auto
-    @Override
-    DecN toDecN() {
-        return new DecN(bits);
-    }
 }

@@ -50,13 +50,6 @@
     // ----- related types -------------------------------------------------------------------------
 
     /**
-     * Options for rounding.
-     *
-     * These are the rounding directions defined by the IEEE 754 standard.
-     */
-    enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
-
-    /**
      * Signum represents the sign of the number, whether zero, negative or positive.
      */
     enum Signum(String prefix, IntLiteral factor, Ordered ordered) {
@@ -86,7 +79,7 @@
      * The actual array of bits representing this number, ordered from left-to-right, Most
      * Significant Bit (MSB) to Least Significant Bit (LSB).
      */
-    protected Bit[] bits;
+    Bit[] bits;
 
     /**
      * The number of bits that the number uses.
@@ -299,7 +292,8 @@
      * @return the result of raising this number to the power of the specified exponent
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
-     * @throws OutOfBounds  if the resulting value is out of range for this type
+     * @throws OutOfBounds  iff this type is bounded and the resulting value would be beyond the
+     *                      bounds of this type
      */
     Number pow(Number n);
 
@@ -314,7 +308,7 @@
      * @return the number as an array of bits
      */
     Bit[] toBitArray(Array.Mutability mutability = Constant) {
-        return bits.toArray(mutability, True);
+        return bits.toArray(mutability);
     }
 
     /**
@@ -355,99 +349,9 @@
 
     // ----- Numeric interface ---------------------------------------------------------------------
 
-    /**
-     * Funky interface for Numbers to expose their metadata without needing an instance.
-     */
-    static interface Numeric
-            extends Destringable {
-        /**
-         * Construct a number from its bitwise machine representation.
-         *
-         * @param bits  an array of bit values that represent this number, ordered from left-to-right,
-         *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
-         */
-        construct(Bit[] bits);
-
-        /**
-         * Construct a number from its network-portable representation.
-         *
-         * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
-         *               as they would appear on the wire or in a file
-         */
-        construct(Byte[] bytes);
-
-        /**
-         * Determine if the numeric type is a fixed length format.
-         *
-         * @return True iff the Numeric type is a fixed length format
-         * @return (conditional) the number of bits in the format
-         */
-        static conditional Int fixedBitLength();
-
-        /**
-         * Determine the "zero" value for the numeric type.
-         *
-         * @return the zero value
-         */
-        static Numeric zero();
-
-        /**
-         * Determine the "one" value (the unit value) for the numeric type.
-         *
-         * @return the unit value
-         */
-        static Numeric one();
-
-        /**
-         * Determine the range of finite values.
-         *
-         * @return True iff the numeric type has a known range
-         * @return (conditional) the range from the lowest value (likely to be either zero or a
-         *         negative value) to the highest value
-         */
-        static conditional Range<Numeric> range();
-
-        /**
-         * Obtain a function that converts from this type to the specified numeric type.
-         *
-         * @param to  the type to convert to
-         *
-         * @return a function that converts from this type to the specified numeric type
-         */
-        static <To extends Number!> function To (Numeric) converterTo(Type<To> to);
-
-        /**
-         * Determine if the numeric type is a fixed length floating point format.
-         *
-         * @return True iff the Numeric type is a fixed length floating point format
-         * @return radix      the radix of the significand
-         * @return precision  the precision, in "digits" (of the `radix`) of this floating point
-         *                    format
-         * @return emax       the maximum exponent value for this floating point format
-         * @return emin       the minimum exponent value for the floating point format of this
-         *                    format
-         * @return bias       the exponent bias for the floating point format of this number
-         * @return significandBitLength  the size, in bits, of the significand data in the floating
-         *                    point format
-         * @return exponentBitLength  the size, in bits, of the exponent data
-         */
-//        static conditional (Int radix, Int precision, Int emax, Int emin, Int bias,
-//                            Int significandBitLength, Int exponentBitLength) fixedLengthFP();
-    }
-
     @Override
     static conditional Int fixedBitLength() {
         return False;
-    }
-
-    @Override
-    static Number zero() {
-        assert;
-    }
-
-    @Override
-    static Number one() {
-        assert;
     }
 
     @Override
@@ -458,36 +362,33 @@
     @Override
     static <To extends Number!> function To (Number) converterTo(Type<To> to) {
         return switch (to) {
-            case Int                : n -> n.toInt()                  .as(To);
-            case Int8               : n -> n.toInt8()                 .as(To);
-            case Int16              : n -> n.toInt16()                .as(To);
-            case Int32              : n -> n.toInt32()                .as(To);
-            case Int64              : n -> n.toInt64()                .as(To);
-            case Int128             : n -> n.toInt128()               .as(To);
-            case IntN               : n -> n.toIntN()                 .as(To);
+            case Int8               : n -> n.toInt8()    .as(To);
+            case Int16              : n -> n.toInt16()   .as(To);
+            case Int32              : n -> n.toInt32()   .as(To);
+            case Int64              : n -> n.toInt64()   .as(To);
+            case Int128             : n -> n.toInt128()  .as(To);
+            case IntN               : n -> n.toIntN()    .as(To);
 
-            case UInt               : n -> n.toUInt()                 .as(To);
-            case UInt8              : n -> n.toUInt8()                .as(To);
-            case UInt16             : n -> n.toUInt16()               .as(To);
-            case UInt32             : n -> n.toUInt32()               .as(To);
-            case UInt64             : n -> n.toUInt64()               .as(To);
-            case UInt128            : n -> n.toUInt128()              .as(To);
-            case UIntN              : n -> n.toUIntN()                .as(To);
+            case UInt8              : n -> n.toUInt8()   .as(To);
+            case UInt16             : n -> n.toUInt16()  .as(To);
+            case UInt32             : n -> n.toUInt32()  .as(To);
+            case UInt64             : n -> n.toUInt64()  .as(To);
+            case UInt128            : n -> n.toUInt128() .as(To);
+            case UIntN              : n -> n.toUIntN()   .as(To);
 
-            case Dec                : n -> n.toDec()                  .as(To);
-            case Dec32              : n -> n.toDec32()                .as(To);
-            case Dec64              : n -> n.toDec64()                .as(To);
-            case Dec128             : n -> n.toDec128()               .as(To);
-            case DecN               : n -> n.toDecN()                 .as(To);
+            case Dec32              : n -> n.toDec32()   .as(To);
+            case Dec64              : n -> n.toDec64()   .as(To);
+            case Dec128             : n -> n.toDec128()  .as(To);
+            case DecN               : n -> n.toDecN()    .as(To);
 
-            case Float8e4           : n -> n.toFloat8e4()             .as(To);
-            case Float8e5           : n -> n.toFloat8e5()             .as(To);
-            case BFloat16           : n -> n.toBFloat16()             .as(To);
-            case Float16            : n -> n.toFloat16()              .as(To);
-            case Float32            : n -> n.toFloat32()              .as(To);
-            case Float64            : n -> n.toFloat64()              .as(To);
-            case Float128           : n -> n.toFloat128()             .as(To);
-            case FloatN             : n -> n.toFloatN()               .as(To);
+            case Float8e4           : n -> n.toFloat8e4().as(To);
+            case Float8e5           : n -> n.toFloat8e5().as(To);
+            case BFloat16           : n -> n.toBFloat16().as(To);
+            case Float16            : n -> n.toFloat16() .as(To);
+            case Float32            : n -> n.toFloat32() .as(To);
+            case Float64            : n -> n.toFloat64() .as(To);
+            case Float128           : n -> n.toFloat128().as(To);
+            case FloatN             : n -> n.toFloatN()  .as(To);
 
             default: assert as $"unsupported convert-to type: {to}";
         };
@@ -499,5 +400,5 @@
     /**
      * The representations for "digits" in any radix up to 16 (hexadecimal).
      */
-    static Char[] DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+    static Char[] Digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
 }

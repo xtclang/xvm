@@ -2254,21 +2254,18 @@ class SkiplistMap<Key extends Orderable, Value>
             valueHeight = ((nullable ? bytesPerNum+1 : bytesPerNum) + bytesPerIndex-1) / bytesPerIndex;
 
             fromBytes = switch (numType) {
-                case Int                : a -> a.toInt()                  .as(Element);
                 case Int8               : a -> a.toInt8()                 .as(Element);
                 case Int16              : a -> a.toInt16()                .as(Element);
                 case Int32              : a -> a.toInt32()                .as(Element);
                 case Int64              : a -> a.toInt64()                .as(Element);
                 case Int128             : a -> a.toInt128()               .as(Element);
 
-                case UInt               : a -> a.toUInt()                 .as(Element);
                 case UInt8              : a -> a.toUInt8()                .as(Element);
                 case UInt16             : a -> a.toUInt16()               .as(Element);
                 case UInt32             : a -> a.toUInt32()               .as(Element);
                 case UInt64             : a -> a.toUInt64()               .as(Element);
                 case UInt128            : a -> a.toUInt128()              .as(Element);
 
-                case Dec                : a -> a.toDec()                  .as(Element);
                 case Dec32              : a -> a.toDec32()                .as(Element);
                 case Dec64              : a -> a.toDec64()                .as(Element);
                 case Dec128             : a -> a.toDec128()               .as(Element);

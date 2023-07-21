@@ -3,7 +3,6 @@
  */
 const UIntN
         extends UIntNumber
-        incorporates Bitwise
         default(0) {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -127,13 +126,7 @@ const UIntN
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int8 toInt8(Boolean checkBounds = False) {
         assert:bounds this <= Int8.MaxValue;
         return bitLength < 8
                 ? new Int8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
@@ -141,7 +134,7 @@ const UIntN
     }
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int16 toInt16(Boolean checkBounds = False) {
         assert:bounds this <= Int16.MaxValue;
         return bitLength < 16
                 ? new Int16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
@@ -149,7 +142,7 @@ const UIntN
     }
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int32 toInt32(Boolean checkBounds = False) {
         assert:bounds this <= Int32.MaxValue;
         return bitLength < 32
                 ? new Int32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
@@ -157,7 +150,7 @@ const UIntN
     }
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int64 toInt64(Boolean checkBounds = False) {
         assert:bounds this <= Int64.MaxValue;
         return bitLength < 64
                 ? new Int64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
@@ -165,7 +158,7 @@ const UIntN
     }
 
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int128 toInt128(Boolean checkBounds = False) {
         assert:bounds this <= Int128.MaxValue;
         return bitLength < 128
                 ? new Int128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
@@ -174,7 +167,7 @@ const UIntN
 
     @Auto
     @Override
-    IntN toIntN(Rounding direction = TowardZero) {
+    IntN toIntN() {
         Bit[] bits = this.bits;
         if (bits[0] == 1) {
             bits = new Bit[bits.size + 8](i -> i < 8 ? 0 : bits[i-8]);
@@ -183,7 +176,7 @@ const UIntN
     }
 
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt8 toUInt8(Boolean checkBounds = False) {
         assert:bounds this <= UInt8.MaxValue;
         return bitLength < 8
                 ? new UInt8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
@@ -191,7 +184,7 @@ const UIntN
     }
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt16 toUInt16(Boolean checkBounds = False) {
         assert:bounds this <= UInt16.MaxValue;
         return bitLength < 16
                 ? new UInt16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
@@ -199,7 +192,7 @@ const UIntN
     }
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt32 toUInt32(Boolean checkBounds = False) {
         assert:bounds this <= UInt32.MaxValue;
         return bitLength < 32
                 ? new UInt32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
@@ -207,7 +200,7 @@ const UIntN
     }
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt64 toUInt64(Boolean checkBounds = False) {
         assert:bounds this <= UInt64.MaxValue;
         return bitLength < 64
                 ? new UInt64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
@@ -215,7 +208,7 @@ const UIntN
     }
 
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt128 toUInt128(Boolean checkBounds = False) {
         assert:bounds this <= UInt64.MaxValue;
         return bitLength < 128
                 ? new UInt128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
@@ -223,7 +216,7 @@ const UIntN
     }
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
+    UIntN toUIntN() {
         return this;
     }
 

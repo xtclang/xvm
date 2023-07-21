@@ -39,9 +39,7 @@ mixin NibbleArray<Element extends Nibble>
             @Override
             Int capacity {
                 @Override
-                Int get() {
-                    return nibbles.capacity * 4;
-                }
+                Int get() = nibbles.capacity * 4;
 
                 @Override
                 void set(Int c) {
@@ -50,9 +48,7 @@ mixin NibbleArray<Element extends Nibble>
             }
 
             @Override
-            Int size.get() {
-                return nibbles.size * 4;
-            }
+            Int size.get() = nibbles.size * 4;
 
             @Override
             Var<Bit> elementAt(Int index) {
@@ -61,9 +57,7 @@ mixin NibbleArray<Element extends Nibble>
                 return new Object() {
                     Bit element {
                         @Override
-                        Boolean assigned.get() {
-                            return index < size;
-                        }
+                        Boolean assigned.get() = index < size;
 
                         @Override
                         Bit get() {
@@ -85,14 +79,10 @@ mixin NibbleArray<Element extends Nibble>
             }
 
             @Override
-            Translator insert(Int index, Bit value) {
-                throw new ReadOnly();
-            }
+            Translator insert(Int index, Bit value) = throw new ReadOnly();
 
             @Override
-            Translator delete(Int index) {
-                throw new ReadOnly();
-            }
+            Translator delete(Int index) = throw new ReadOnly();
 
             @Override
             Bit[] reify(Mutability? mutability = Null) {
@@ -127,16 +117,12 @@ mixin NibbleArray<Element extends Nibble>
             private Nibble[] nibbles;
 
             @Override
-            Mutability mutability.get() {
-                return nibbles.mutability;
-            }
+            Mutability mutability.get() = nibbles.mutability;
 
             @Override
             Int capacity {
                 @Override
-                Int get() {
-                    return nibbles.capacity / 2;
-                }
+                Int get() = nibbles.capacity / 2;
 
                 @Override
                 void set(Int c) {
@@ -216,9 +202,7 @@ mixin NibbleArray<Element extends Nibble>
      *
      * @return an array of bits corresponding to the nibbles in this array
      */
-    Bit[] toBitArray(Mutability mutability = Constant) {
-        return asBitArray().reify(mutability);
-    }
+    Bit[] toBitArray(Mutability mutability = Constant) = asBitArray().reify(mutability);
 
     /**
      * Obtain an immutable copy of this array's data that exposes the underlying data as Byte
@@ -230,144 +214,79 @@ mixin NibbleArray<Element extends Nibble>
      *
      * @throws OutOfBounds  if the nibble array size is not evenly divisible by 2
      */
-    Byte[] toByteArray(Mutability mutability = Constant) {
-        return asByteArray().reify(mutability);
-    }
+    Byte[] toByteArray(Mutability mutability = Constant) = asByteArray().reify(mutability);
 
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt(truncate, direction);
-    }
+    Int8 toInt8(Boolean checkBounds = False) = asBitArray().toInt8(checkBounds);
 
     @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt8(truncate, direction);
-    }
+    Int16 toInt16(Boolean checkBounds = False) = asBitArray().toInt16(checkBounds);
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt16(truncate, direction);
-    }
+    Int32 toInt32(Boolean checkBounds = False) = asBitArray().toInt32(checkBounds);
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt32(truncate, direction);
-    }
+    Int64 toInt64(Boolean checkBounds = False) = asBitArray().toInt64(checkBounds);
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt64(truncate, direction);
-    }
+    Int128 toInt128(Boolean checkBounds = False) = asBitArray().toInt128(checkBounds);
 
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toInt128(truncate, direction);
-    }
+    IntN toIntN() = asBitArray().toIntN();
 
     @Override
-    IntN toIntN(Rounding direction = TowardZero) {
-        return asBitArray().toIntN(direction);
-    }
+    UInt8 toUInt8(Boolean checkBounds = False) = asBitArray().toUInt8(checkBounds);
 
     @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt(truncate, direction);
-    }
+    UInt16 toUInt16(Boolean checkBounds = False) = asBitArray().toUInt16(checkBounds);
 
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt8(truncate, direction);
-    }
+    UInt32 toUInt32(Boolean checkBounds = False) = asBitArray().toUInt32(checkBounds);
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt16(truncate, direction);
-    }
+    UInt64 toUInt64(Boolean checkBounds = False) = asBitArray().toUInt64(checkBounds);
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt32(truncate, direction);
-    }
+    UInt128 toUInt128(Boolean checkBounds = False) = asBitArray().toUInt128(checkBounds);
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt64(truncate, direction);
-    }
+    UIntN toUIntN() = asBitArray().toUIntN();
 
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
-        return asBitArray().toUInt128(truncate, direction);
-    }
+    Dec32 toDec32() = asBitArray().toDec32();
 
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
-        return asBitArray().toUIntN(direction);
-    }
+    Dec64 toDec64() = asBitArray().toDec64();
 
     @Override
-    Dec toDec() {
-        return asBitArray().toDec();
-    }
+    Dec128 toDec128() = asBitArray().toDec128();
 
     @Override
-    Dec32 toDec32() {
-        return asBitArray().toDec32();
-    }
+    DecN toDecN() = asBitArray().toDecN();
 
     @Override
-    Dec64 toDec64() {
-        return asBitArray().toDec64();
-    }
+    Float8e4 toFloat8e4() = asBitArray().toFloat8e4();
 
     @Override
-    Dec128 toDec128() {
-        return asBitArray().toDec128();
-    }
+    Float8e5 toFloat8e5() = asBitArray().toFloat8e5();
 
     @Override
-    DecN toDecN() {
-        return asBitArray().toDecN();
-    }
+    BFloat16 toBFloat16() = asBitArray().toBFloat16();
 
     @Override
-    Float8e4 toFloat8e4() {
-        return asBitArray().toFloat8e4();
-    }
+    Float16 toFloat16() = asBitArray().toFloat16();
 
     @Override
-    Float8e5 toFloat8e5() {
-        return asBitArray().toFloat8e5();
-    }
+    Float32 toFloat32() = asBitArray().toFloat32();
 
     @Override
-    BFloat16 toBFloat16() {
-        return asBitArray().toBFloat16();
-    }
+    Float64 toFloat64() = asBitArray().toFloat64();
 
     @Override
-    Float16 toFloat16() {
-        return asBitArray().toFloat16();
-    }
+    Float128 toFloat128() = asBitArray().toFloat128();
 
     @Override
-    Float32 toFloat32() {
-        return asBitArray().toFloat32();
-    }
-
-    @Override
-    Float64 toFloat64() {
-        return asBitArray().toFloat64();
-    }
-
-    @Override
-    Float128 toFloat128() {
-        return asBitArray().toFloat128();
-    }
-
-    @Override
-    FloatN toFloatN() {
-        return asBitArray().toFloatN();
-    }
+    FloatN toFloatN() = asBitArray().toFloatN();
 
 
     // ----- Stringable methods --------------------------------------------------------------------

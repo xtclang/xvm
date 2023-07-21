@@ -1,6 +1,5 @@
 const UInt128
         extends UIntNumber
-        incorporates Bitwise
         default(0) {
     // ----- constants -----------------------------------------------------------------------------
 
@@ -150,82 +149,74 @@ const UInt128
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    @Auto
     @Override
-    Int toInt(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Auto
-    @Override
-    UInt toUInt(Boolean truncate = False, Rounding direction = TowardZero);
-
-    @Override
-    Int8 toInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int8 toInt8(Boolean checkBounds = False) {
         assert:bounds this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
     }
 
     @Override
-    Int16 toInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int16 toInt16(Boolean checkBounds = False) {
         assert:bounds this <= Int16.MaxValue;
         return new Int16(bits[bitLength-16 ..< bitLength]);
     }
 
     @Override
-    Int32 toInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int32 toInt32(Boolean checkBounds = False) {
         assert:bounds this <= Int32.MaxValue;
         return new Int32(bits[bitLength-32 ..< bitLength]);
     }
 
     @Override
-    Int64 toInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int64 toInt64(Boolean checkBounds = False) {
         assert:bounds this <= Int64.MaxValue;
         return new Int64(bits[bitLength-64 ..< bitLength]);
     }
 
     @Override
-    Int128 toInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    Int128 toInt128(Boolean checkBounds = False) {
         assert:bounds this <= Int128.MaxValue;
         return new Int128(bits);
     }
 
     @Auto
     @Override
-    IntN toIntN(Rounding direction = TowardZero) {
+    IntN toIntN() {
         return bits[0] == 0 ? new IntN(bits) : toUIntN().toIntN();
     }
 
     @Override
-    UInt8 toUInt8(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt8 toUInt8(Boolean checkBounds = False) {
         assert:bounds this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
     }
 
     @Override
-    UInt16 toUInt16(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt16 toUInt16(Boolean checkBounds = False) {
         assert:bounds this <= UInt16.MaxValue;
         return new UInt16(bits[bitLength-16 ..< bitLength]);
     }
 
     @Override
-    UInt32 toUInt32(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt32 toUInt32(Boolean checkBounds = False) {
         assert:bounds this <= UInt32.MaxValue;
         return new UInt32(bits[bitLength-32 ..< bitLength]);
     }
 
     @Override
-    UInt64 toUInt64(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt64 toUInt64(Boolean checkBounds = False) {
         assert:bounds this <= UInt64.MaxValue;
         return new UInt64(bits[bitLength-64 ..< bitLength]);
     }
 
     @Override
-    UInt128 toUInt128(Boolean truncate = False, Rounding direction = TowardZero) {
+    UInt128 toUInt128(Boolean checkBounds = False) {
         return this;
     }
 
     @Auto
     @Override
-    UIntN toUIntN(Rounding direction = TowardZero) {
+    UIntN toUIntN() {
         return new UIntN(bits);
     }
 
@@ -290,7 +281,7 @@ const UInt128
             if (left != 0) {
                 left.appendTo(buf);
             }
-            buf.add(DIGITS[digit.toInt64()]);
+            buf.add(Digits[digit.toInt64()]);
         }
         return buf;
     }

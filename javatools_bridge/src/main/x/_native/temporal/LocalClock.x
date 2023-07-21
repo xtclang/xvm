@@ -12,7 +12,7 @@ service LocalClock
 
     @Override
     Duration resolution.get() {
-        return Duration.MILLISEC;
+        return Duration.Millisec;
     }
 
     @Override

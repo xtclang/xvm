@@ -306,7 +306,7 @@ public class LiteralExpression
                 break;
 
             case LIT_INTA:
-                format = Format.Int;
+                format = Format.Int64;
                 break;
 
             case LIT_INT8:
@@ -334,7 +334,7 @@ public class LiteralExpression
                 break;
 
             case LIT_UINTA:
-                format = Format.UInt;
+                format = Format.UInt64;
                 break;
 
             case LIT_UINT8:
@@ -367,7 +367,7 @@ public class LiteralExpression
                 break;
 
             case LIT_DECA:
-                format = Format.Dec;
+                format = Format.Dec64;
                 break;
 
             case LIT_DEC32:

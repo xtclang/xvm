@@ -11,22 +11,18 @@ interface DataInput
     /**
      * @return  a value of type Boolean read from the stream
      */
-    Boolean readBoolean() {
-        return readByte() != 0;
-    }
+    Boolean readBoolean() = readByte() != 0;
 
     /**
      * @return  a value of type Char read from the stream
      */
-    Char readChar() {
-        return new Char(readUInt32());
-    }
+    Char readChar() = new Char(readUInt32());
 
     /**
      * @return  a value of type String read from the stream
      */
     String readString() {
-        UInt64 length = readUInt64();
+        Int length = this.readInt(); // TODO CP
         if (length == 0) {
             return "";
         }
@@ -51,177 +47,137 @@ interface DataInput
     /**
      * @return  a value of type Int8 read from the stream
      */
-    Int8 readInt8() {
-        return new Int8(readBytes(1));
-    }
+    Int8 readInt8() = new Int8(readBytes(1));
 
     /**
      * @return  a value of type Int16 read from the stream
      */
-    Int16 readInt16() {
-        return new Int16(readBytes(2));
-    }
+    Int16 readInt16() = new Int16(readBytes(2));
 
     /**
      * @return  a value of type Int32 read from the stream
      */
-    Int32 readInt32() {
-        return new Int32(readBytes(4));
-    }
+    Int32 readInt32() = new Int32(readBytes(4));
 
     /**
      * @return  a value of type Int64 (aka "Int") read from the stream
      */
-    Int64 readInt64() {
-        return new Int64(readBytes(8));
-    }
+    Int64 readInt64() = new Int64(readBytes(8));
 
     /**
      * @return  a value of type Int128 read from the stream
      */
-    Int128 readInt128() {
-        return new Int128(readBytes(16));
-    }
+    Int128 readInt128() = new Int128(readBytes(16));
 
     /**
      * @return  a value of type IntN read from the stream
      */
-    IntN readIntN() {
-        return new IntN(readBytes(readUInt64()));
-    }
+    IntN readIntN() = new IntN(readBytes(readInt()));
 
     /**
      * @return  a value of type UInt8 read from the stream
      */
-    UInt8 readUInt8() {
-        return readByte();
-    }
+    UInt8 readUInt8() = readByte();
 
     /**
      * @return  a value of type UInt16 read from the stream
      */
-    UInt16 readUInt16() {
-        return new UInt16(readBytes(2));
-    }
+    UInt16 readUInt16() = new UInt16(readBytes(2));
 
     /**
      * @return  a value of type UInt32 read from the stream
      */
-    UInt32 readUInt32() {
-        return new UInt32(readBytes(4));
-    }
+    UInt32 readUInt32() = new UInt32(readBytes(4));
 
     /**
      * @return  a value of type UInt64 (aka "UInt") read from the stream
      */
-    UInt64 readUInt64() {
-        return new UInt64(readBytes(8));
-    }
+    UInt64 readUInt64() = new UInt64(readBytes(8));
 
     /**
      * @return  a value of type UInt128 read from the stream
      */
-    UInt128 readUInt128() {
-        return new UInt128(readBytes(16));
-    }
+    UInt128 readUInt128() = new UInt128(readBytes(16));
 
     /**
      * @return  a value of type UIntN read from the stream
      */
-    UIntN readUIntN() {
-        return new UIntN(readBytes(readUInt64()));
-    }
+    UIntN readUIntN() = new UIntN(readBytes(readInt()));
 
     /**
      * @return  a value of type Dec64 read from the stream
      */
-    Dec32 readDec32() {
-        return new Dec32(readBytes(4));
-    }
+    Dec32 readDec32() = new Dec32(readBytes(4));
 
     /**
      * @return  a value of type Dec64 read from the stream
      */
-    Dec64 readDec64() {
-        return new Dec64(readBytes(8));
-    }
+    Dec64 readDec64() = new Dec64(readBytes(8));
 
     /**
      * @return  a value of type Dec128 read from the stream
      */
-    Dec128 readDec128() {
-        return new Dec128(readBytes(16));
-    }
+    Dec128 readDec128() = new Dec128(readBytes(16));
 
     /**
      * @return  a value of type DecN read from the stream
      */
-    DecN readDecN() {
-        return new DecN(readBytes(readUInt64()));
-    }
+    DecN readDecN() = new DecN(readBytes(readInt()));
 
     /**
-     * @return  a value of type Float16 read from the stream
+     * @return  a value of type Float8e4 read from the stream
      */
-    Float16 readFloat16() {
-        return new Float16(readBytes(2));
-    }
+    Float8e4 readFloat8e4() = new Float8e4(readByte().bits);
+
+    /**
+     * @return  a value of type Float8e5 read from the stream
+     */
+    Float8e5 readFloat8e5() = new Float8e5(readByte().bits);
 
     /**
      * @return  a value of type BFloat16 read from the stream
      */
-    BFloat16 readBFloat16() {
-        return new BFloat16(readBytes(2));
-    }
+    BFloat16 readBFloat16() = new BFloat16(readBytes(2));
+
+    /**
+     * @return  a value of type Float16 read from the stream
+     */
+    Float16 readFloat16() = new Float16(readBytes(2));
 
     /**
      * @return  a value of type Float32 read from the stream
      */
-    Float32 readFloat32() {
-        return new Float32(readBytes(4));
-    }
+    Float32 readFloat32() = new Float32(readBytes(4));
 
     /**
      * @return  a value of type Float64 read from the stream
      */
-    Float64 readFloat64() {
-        return new Float64(readBytes(8));
-    }
+    Float64 readFloat64() = new Float64(readBytes(8));
 
     /**
      * @return  a value of type Float128 read from the stream
      */
-    Float128 readFloat128() {
-        return new Float128(readBytes(16));
-    }
+    Float128 readFloat128()= new Float128(readBytes(16));
 
     /**
      * @return  a value of type FloatN read from the stream
      */
-    FloatN readFloatN() {
-        return new FloatN(readBytes(readUInt64()));
-    }
+    FloatN readFloatN() = new FloatN(readBytes(readInt()));
 
     /**
      * @return  a value of type Date read from the stream
      */
-    Date readDate() {
-        return new Date(readInt32());
-    }
+    Date readDate() = new Date(readInt32());
 
     /**
      * @return  a value of type TimeOfDay read from the stream
      */
-    TimeOfDay readTime() {
-        return new TimeOfDay(readUInt64());
-    }
+    TimeOfDay readTime() = new TimeOfDay(readInt());
 
     /**
      * @return  a value of type Time read from the stream
      */
-    Time readTime() {
-        return new Time(readInt128(), readTimeZone());
-    }
+    Time readTime() = new Time(readInt128(), readTimeZone());
 
     /**
      * @return  a value of type TimeZone read from the stream
@@ -250,13 +206,26 @@ interface DataInput
      * @return  a value of type Duration read from the stream
      */
     Duration readDuration() {
-        return new Duration(readUInt128());
+        return new Duration(readInt128());
     }
+
+
+    // ----- aliases -------------------------------------------------------------------------------
+
+    /**
+     * Alias for the `readInt64()` method, since the `Int64` type is aliased as `Int`.
+     */
+    static Method<DataInput, <>, <Int>> readInt = readInt64;
+
+    /**
+     * Alias for the `readUInt64()` method, since the `UInt64` type is aliased as `UInt`.
+     */
+    static Method<DataInput, <>, <UInt>> readUInt = readUInt64;
 
 
     // ----- helper functions ----------------------------------------------------------------------
 
-    static Int8 Huge = Byte:0b111111_00.toInt8(truncate=True);
+    static Int8 Huge = Byte:0b111111_00.toInt8();
 
     /**
      * Read an integer from the passed stream, which is encoded in the packed integer format.
@@ -310,7 +279,7 @@ interface DataInput
         // are bits 16..20 of the result, and the next byte provides bits 8..15 of the result, and
         // the next byte provides bits 0..7 of the result
         if (b & 0x02 != 0) {
-            Int64 n = (b >> 3).toInt64() << 8 | in.readByte();
+            Int n = (b >> 3).toInt64() << 8 | in.readByte();
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             if (b & 0x04 != 0) {
@@ -322,9 +291,9 @@ interface DataInput
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         Int size = b == Huge ? readPackedInt(in) : 1 + (b >>> 2);
-        assert:bounds size <= 16;   // an Int is limited to a 16-byte value
+        assert:bounds size <= 8;    // an Int is an 8-byte value
 
-        Int128 n = in.readInt8();
+        Int n = in.readInt8();
         while (--size > 0) {
             n = n << 8 | in.readByte();
         }

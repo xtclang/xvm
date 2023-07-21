@@ -265,9 +265,7 @@ interface DataOutput
      *
      * @param value  a value of type TimeOfDay to write to the stream
      */
-    void writeTime(TimeOfDay value) {
-        writeUInt64(value.picos);
-    }
+    void writeTime(TimeOfDay value) = writeInt(value.picos);
 
     /**
      * Write a Time value to the stream.
@@ -304,8 +302,21 @@ interface DataOutput
      * @param value  a value of type Duration to write to the stream
      */
     void writeDuration(Duration value) {
-        writeUInt128(value.picoseconds);
+        writeInt128(value.picoseconds);
     }
+
+
+    // ----- aliases -------------------------------------------------------------------------------
+
+    /**
+     * Alias for the `writeInt64()` method, since the `Int64` type is aliased as `Int`.
+     */
+    static Method<DataOutput, <Int>, <>> writeInt = writeInt64;
+
+    /**
+     * Alias for the `writeUInt64()` method, since the `UInt64` type is aliased as `UInt`.
+     */
+    static Method<DataOutput, <UInt>, <>> writeUInt = writeUInt64;
 
 
     // ----- helper functions ----------------------------------------------------------------------
@@ -394,7 +405,7 @@ interface DataOutput
     static void writePackedInt(DataOutput out, Int n) {
         // test for Tiny
         if (-64 <= n <= 63) {
-            out.writeByte((n << 1 | 0x01).toByte(truncate=True));
+            out.writeByte((n << 1 | 0x01).toByte());
             return;
         }
 
@@ -419,7 +430,7 @@ interface DataOutput
         }
 
         Int byteCount = bitCount + 7 >> 3;
-        out.writeByte((byteCount - 1 << 2).toByte(truncate=True));
+        out.writeByte((byteCount - 1 << 2).toByte());
         out.writeBytes(n128.toByteArray(), 16 - byteCount, byteCount);
     }
 

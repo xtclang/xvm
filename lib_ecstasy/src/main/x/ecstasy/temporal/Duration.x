@@ -1,27 +1,27 @@
 /**
  * A Duration represents a magnitude of time, with picosecond resolution.
  */
-const Duration(UInt128 picoseconds)
+const Duration(Int128 picoseconds)
         implements Destringable
-        default(NONE) {
+        default(None) {
 
-    static IntLiteral PICOS_PER_NANO   = 1000;
-    static IntLiteral PICOS_PER_MICRO  = 1000 * PICOS_PER_NANO;     // assume <=59 bits for micros
-    static IntLiteral PICOS_PER_MILLI  = 1000 * PICOS_PER_MICRO;    // assume <=49 bits for millis
-    static IntLiteral PICOS_PER_SECOND = 1000 * PICOS_PER_MILLI;    // assume <=39 bits for seconds
-    static IntLiteral PICOS_PER_MINUTE = 60   * PICOS_PER_SECOND;   // assume <=33 bits for minutes
-    static IntLiteral PICOS_PER_HOUR   = 60   * PICOS_PER_MINUTE;   // assume <=27 bits for hours
-    static IntLiteral PICOS_PER_DAY    = 24   * PICOS_PER_HOUR;     // assume <=22 bits for days
+    static IntLiteral PicosPerNano   = 1000;
+    static IntLiteral PicosPerMicro  = 1000 * PicosPerNano;     // assume <=59 bits for micros
+    static IntLiteral PicosPerMilli  = 1000 * PicosPerMicro;    // assume <=49 bits for millis
+    static IntLiteral PicosPerSecond = 1000 * PicosPerMilli;    // assume <=39 bits for seconds
+    static IntLiteral PicosPerMinute = 60   * PicosPerSecond;   // assume <=33 bits for minutes
+    static IntLiteral PicosPerHour   = 60   * PicosPerMinute;   // assume <=27 bits for hours
+    static IntLiteral PicosPerDay    = 24   * PicosPerHour;     // assume <=22 bits for days
 
-    static Duration NONE     = new Duration(0);
-    static Duration PICOSEC  = new Duration(1);
-    static Duration NANOSEC  = new Duration(PICOS_PER_NANO);
-    static Duration MICROSEC = new Duration(PICOS_PER_MICRO);
-    static Duration MILLISEC = new Duration(PICOS_PER_MILLI);
-    static Duration SECOND   = new Duration(PICOS_PER_SECOND);
-    static Duration MINUTE   = new Duration(PICOS_PER_MINUTE);
-    static Duration HOUR     = new Duration(PICOS_PER_HOUR);
-    static Duration DAY      = new Duration(PICOS_PER_DAY);
+    static Duration None     = new Duration(0);
+    static Duration Picosec  = new Duration(1);
+    static Duration Nanosec  = new Duration(PicosPerNano);
+    static Duration Microsec = new Duration(PicosPerMicro);
+    static Duration Millisec = new Duration(PicosPerMilli);
+    static Duration Second   = new Duration(PicosPerSecond);
+    static Duration Minute   = new Duration(PicosPerMinute);
+    static Duration Hour     = new Duration(PicosPerHour);
+    static Duration Day      = new Duration(PicosPerDay);
 
     /**
      * Construct a time duration from an ISO-8601 format string. Note that this does not include
@@ -35,7 +35,7 @@ const Duration(UInt128 picoseconds)
         //     P   nD  T   nH  nM  n.  nS
         //   0   1   2   3   4   5   6   7
 
-        UInt128 total   = 0;
+        Int128  total   = 0;
         Int     index   = 0;
         Int     length  = duration.size;
         Int     last    = length -1;
@@ -43,7 +43,7 @@ const Duration(UInt128 picoseconds)
         Boolean any     = False;    // set to True if any data has been encountered
         Boolean iso     = False;    // set to True if any of the ISO indicators are encountered
         Int     colons  = 0;        // count of the ':' characters encountered
-        UInt128 seconds = 0;        // only used for ':' delimited string
+        Int128  seconds = 0;        // only used for ':' delimited string
 
         Loop: while (index < length) {
             switch (Char ch = duration[index++]) {
@@ -69,8 +69,8 @@ const Duration(UInt128 picoseconds)
 
             case '0'..'9':
                 // parse the number as an integer
-                UInt128 part   = 0;
-                Int     digits = 0;
+                Int128 part   = 0;
+                Int    digits = 0;
                 do {
                     ++digits;
                     part = part * 10 + (ch - '0');
@@ -87,30 +87,30 @@ const Duration(UInt128 picoseconds)
                     ch = duration[index++];
                 } while (ch >= '0' && ch <= '9');
 
-                Int     stageNew;
-                UInt128 factor;
+                Int    stageNew;
+                Int128 factor;
                 switch (ch) {
                 case 'D', 'd':
                     stageNew = 2;
                     iso      = True;
-                    factor   = TimeOfDay.PICOS_PER_DAY;
+                    factor   = TimeOfDay.PicosPerDay;
                     break;
 
                 case 'H', 'h':
                     stageNew = 4;
                     iso      = True;
-                    factor   = TimeOfDay.PICOS_PER_HOUR;
+                    factor   = TimeOfDay.PicosPerHour;
                     break;
 
                 case 'M', 'm':
                     stageNew = 5;
                     iso      = True;
-                    factor   = TimeOfDay.PICOS_PER_MINUTE;
+                    factor   = TimeOfDay.PicosPerMinute;
                     break;
 
                 case '.':
                     stageNew = 6;
-                    factor   = TimeOfDay.PICOS_PER_SECOND;
+                    factor   = TimeOfDay.PicosPerSecond;
                     part    += seconds;
                     seconds  = 0;
                     break;
@@ -123,15 +123,15 @@ const Duration(UInt128 picoseconds)
                             --digits;
                         }
 
-                        static UInt128[] SCALE_10 = [               1_000_000_000_000,
-                                100_000_000_000,    10_000_000_000,     1_000_000_000,
-                                    100_000_000,        10_000_000,         1_000_000,
-                                        100_000,            10_000,             1_000,
-                                            100,                10,                 1 ];
+                        static Int128[] ScaleX10 = [               1_000_000_000_000,
+                               100_000_000_000,    10_000_000_000,     1_000_000_000,
+                                   100_000_000,        10_000_000,         1_000_000,
+                                       100_000,            10_000,             1_000,
+                                           100,                10,                 1 ];
 
-                        factor = SCALE_10[digits];
+                        factor = ScaleX10[digits];
                     } else {
-                        factor  = TimeOfDay.PICOS_PER_SECOND;
+                        factor  = TimeOfDay.PicosPerSecond;
                         part   += seconds;
                         seconds = 0;
                     }
@@ -180,7 +180,7 @@ const Duration(UInt128 picoseconds)
      * @param the number of days in the requested Duration
      */
     static Duration ofDays(Int days) {
-        return new Duration(days.toUInt128() * PICOS_PER_DAY);
+        return new Duration(days.toInt128() * PicosPerDay);
     }
 
     /**
@@ -189,7 +189,7 @@ const Duration(UInt128 picoseconds)
      * @param the number of hours in the requested Duration
      */
     static Duration ofHours(Int hours) {
-        return new Duration(hours.toUInt128() * PICOS_PER_HOUR);
+        return new Duration(hours.toInt128() * PicosPerHour);
     }
 
     /**
@@ -198,7 +198,7 @@ const Duration(UInt128 picoseconds)
      * @param the number of minutes in the requested Duration
      */
     static Duration ofMinutes(Int minutes) {
-        return new Duration(minutes.toUInt128() * PICOS_PER_MINUTE);
+        return new Duration(minutes.toInt128() * PicosPerMinute);
     }
 
     /**
@@ -207,7 +207,7 @@ const Duration(UInt128 picoseconds)
      * @param the number of seconds in the requested Duration
      */
     static Duration ofSeconds(Int seconds) {
-        return new Duration(seconds.toUInt128() * PICOS_PER_SECOND);
+        return new Duration(seconds.toInt128() * PicosPerSecond);
     }
 
     /**
@@ -215,43 +215,35 @@ const Duration(UInt128 picoseconds)
      *
      * @param the number of milliseconds in the requested Duration
      */
-    static Duration ofMillis(Int millis) {
-        return new Duration(millis.toUInt128() * PICOS_PER_MILLI);
-    }
+    static Duration ofMillis(Int millis) = new Duration(millis.toInt128() * PicosPerMilli);
 
     /**
      * Create a Duration of a certain number of microseconds.
      *
      * @param the number of microseconds in the requested Duration
      */
-    static Duration ofMicros(Int micros) {
-        return new Duration(micros.toUInt128() * PICOS_PER_MICRO);
-    }
+    static Duration ofMicros(Int micros) = new Duration(micros.toInt128() * PicosPerMicro);
 
     /**
      * Create a Duration of a certain number of nanoseconds.
      *
      * @param the number of nanoseconds in the requested Duration
      */
-    static Duration ofNanos(Int nanos) {
-        return new Duration(nanos.toUInt128() * PICOS_PER_NANO);
-    }
+    static Duration ofNanos(Int nanos) = new Duration(nanos.toInt128() * PicosPerNano);
 
     /**
      * Create a Duration of a certain number of picoseconds.
      *
      * @param the number of picoseconds in the requested Duration
      */
-    static Duration ofPicos(Int picos) {
-        return new Duration(picos.toUInt128());
-    }
+    static Duration ofPicos(Int128 picos) = new Duration(picos);
 
     /**
      * Construct a Duration based on a total number of picoseconds.
      *
      * @param picoseconds  the total number of picoseconds in the Duration
      */
-    construct(UInt128 picoseconds) {
+    construct(Int128 picoseconds) {
         assert picoseconds >= 0;
         this.picoseconds = picoseconds;
     }
@@ -272,11 +264,12 @@ const Duration(UInt128 picoseconds)
         assert minutes >= 0;
         assert seconds >= 0;
         assert millis  >= 0;
-        construct Duration(((((days     * 24
-                            + hours  ) * 60
-                            + minutes) * 60
-                            + seconds) * 1000
-                            + millis ).toUInt128() * PICOS_PER_MILLI + picos.toUInt128());
+        construct Duration(((((days                * 24
+                             + hours  )            * 60
+                             + minutes)            * 60
+                             + seconds)            * 1000
+                             + millis ).toInt128() * PicosPerMilli
+                             + picos.toInt128());
     }
 
     /**
@@ -284,27 +277,21 @@ const Duration(UInt128 picoseconds)
      *
      *   hours / 24.
      */
-    UInt32 days.get() {
-        return (picoseconds / PICOS_PER_DAY).toUInt32();
-    }
+    UInt32 days.get() = (picoseconds / PicosPerDay).toUInt32(checkBounds=True);
 
     /**
      * The total number of hours, rounded down. This is the same as:
      *
      *   minutes / 60.
      */
-    UInt32 hours.get() {
-        return (picoseconds / PICOS_PER_HOUR).toUInt32();
-    }
+    UInt32 hours.get() = (picoseconds / PicosPerHour).toUInt32(checkBounds=True);
 
     /**
      * The total number of minutes, rounded down. This is the same as:
      *
      *   seconds / 60
      */
-    UInt64 minutes.get() {
-        return (picoseconds / PICOS_PER_MINUTE).toUInt64();
-    }
+    Int minutes.get() = (picoseconds / PicosPerMinute).toInt();
 
     /**
      * The total number of seconds, rounded down. This is the same as:
@@ -315,41 +302,33 @@ const Duration(UInt128 picoseconds)
      *
      *   picoseconds / 1000000000000
      */
-    UInt64 seconds.get() {
-        return (picoseconds / PICOS_PER_SECOND).toUInt64();
-    }
+    Int seconds.get() = (picoseconds / PicosPerSecond).toInt();
 
     /**
      * The total number of milliseconds, rounded down. This is the same as:
      *
      *   microseconds / 1000
      */
-    UInt64 milliseconds.get() {
-        return (picoseconds / PICOS_PER_MILLI).toUInt64();
-    }
+    Int milliseconds.get() = (picoseconds / PicosPerMilli).toInt();
 
     /**
      * The total number of microseconds, rounded down. This is the same as:
      *
      *   nanoseconds / 1000
      */
-    UInt64 microseconds.get() {
-        return (picoseconds / PICOS_PER_MICRO).toUInt64();
-    }
+    Int microseconds.get() = (picoseconds / PicosPerMicro).toInt();
 
     /**
      * The total number of nanoseconds, rounded down. This is the same as:
      *
      *   picoseconds / 1000
      */
-    UInt nanoseconds.get() {
-        return (picoseconds / PICOS_PER_NANO).toUInt();
-    }
+    Int nanoseconds.get() = (picoseconds / PicosPerNano).toInt();
 
     /**
      * The total number of picoseconds.
      */
-    UInt128 picoseconds;
+    Int128 picoseconds;
 
 
     // ----- partial measures ----------------------------------------------------------------------
@@ -360,9 +339,7 @@ const Duration(UInt128 picoseconds)
      *
      *   hours - (days * 24)
      */
-    UInt8 hoursPart.get() {
-        return (hours % 24).toUInt8();
-    }
+    UInt8 hoursPart.get() = (hours % 24).toUInt8();
 
     /**
      * Exclusive of the time represented by hours, the number of minutes, rounded down. This is
@@ -370,9 +347,7 @@ const Duration(UInt128 picoseconds)
      *
      *   minutes - (hours * 60)
      */
-    UInt8 minutesPart.get() {
-        return (minutes % 60).toUInt8();
-    }
+    UInt8 minutesPart.get() = (minutes % 60).toUInt8();
 
     /**
      * Exclusive of the time represented by minutes, the number of seconds, rounded down. This
@@ -380,9 +355,7 @@ const Duration(UInt128 picoseconds)
      *
      *   seconds - (minutes * 60)
      */
-    UInt8 secondsPart.get() {
-        return (seconds % 60).toUInt8();
-    }
+    UInt8 secondsPart.get() = (seconds % 60).toUInt8();
 
     /**
      * Exclusive of the time represented by seconds, the number of milliseconds, rounded down.
@@ -394,9 +367,7 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt16 millisecondsPart.get() {
-        return (picosecondsPart / PICOS_PER_MILLI).toUInt16();
-    }
+    UInt16 millisecondsPart.get() = (picosecondsPart / PicosPerMilli).toUInt16();
 
     /**
      * Exclusive of the time represented by seconds, the number of microseconds, rounded down.
@@ -408,9 +379,7 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt32 microsecondsPart.get() {
-        return (picosecondsPart / PICOS_PER_MICRO).toUInt32();
-    }
+    UInt32 microsecondsPart.get() = (picosecondsPart / PicosPerMicro).toUInt32();
 
     /**
      * Exclusive of the time represented by seconds, the number of nanoseconds, rounded down.
@@ -422,9 +391,7 @@ const Duration(UInt128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt32 nanosecondsPart.get() {
-        return (picosecondsPart / PICOS_PER_NANO).toUInt32();
-    }
+    UInt32 nanosecondsPart.get()= (picosecondsPart / PicosPerNano).toUInt32();
 
     /**
      * Exclusive of the time represented by seconds, the number of picoseconds, rounded down.
@@ -432,36 +399,28 @@ const Duration(UInt128 picoseconds)
      *
      *   picoseconds - (seconds * 1000000000000)
      */
-    UInt64 picosecondsPart.get() {
-        return (picoseconds % PICOS_PER_SECOND).toUInt64();
-    }
+    Int picosecondsPart.get() = (picoseconds % PicosPerSecond).toInt();
 
     /**
      * Addition: return a sum of durations.
      */
-    @Op("+") Duration add(Duration duration) {
-        return new Duration(this.picoseconds + duration.picoseconds);
-    }
+    @Op("+") Duration add(Duration duration) = new Duration(this.picoseconds + duration.picoseconds);
 
     /**
      * Subtraction: return a difference of durations.
      */
-    @Op("-") Duration sub(Duration duration) {
-        return new Duration(this.picoseconds - duration.picoseconds);
-    }
+    @Op("-") Duration sub(Duration duration) = new Duration(this.picoseconds - duration.picoseconds);
 
     /**
      * Multiplication: return a multiple of this duration.
      */
-    @Op("*") Duration mul(Int factor) {
-        return new Duration(this.picoseconds * factor.toUInt128());
-    }
+    @Op("*") Duration mul(Int factor) = new Duration(this.picoseconds * factor.toInt128());
 
     /**
      * Multiplication: return a multiple of this duration.
      */
     @Op("*") Duration mul(Dec factor) {
-        return new Duration((this.picoseconds.toDec128() * factor.toDec128()).toUInt128());
+        return new Duration((this.picoseconds.toDec128() * factor.toDec128()).toInt128());
     }
 
     /**
@@ -469,7 +428,7 @@ const Duration(UInt128 picoseconds)
      */
     @Op("/") Duration div(Int divisor) {
         assert:bounds divisor >= 1;
-        return new Duration(this.picoseconds / divisor.toUInt128());
+        return new Duration(this.picoseconds / divisor.toInt128());
     }
 
 
@@ -524,8 +483,8 @@ const Duration(UInt128 picoseconds)
         // format:        ##:00.###...
         // format:           ##.###...
         Int length = switch () {
-            case picoseconds >= PICOS_PER_HOUR  : hours  .estimateStringLength() + 6;
-            case picoseconds >= PICOS_PER_MINUTE: minutes.estimateStringLength() + 3;
+            case picoseconds >= PicosPerHour  : hours  .estimateStringLength() + 6;
+            case picoseconds >= PicosPerMinute: minutes.estimateStringLength() + 3;
             default                             : seconds.estimateStringLength();
         };
 
@@ -577,13 +536,13 @@ const Duration(UInt128 picoseconds)
 
         Boolean zerofill = False;
 
-        if (picoseconds >= PICOS_PER_HOUR) {
+        if (picoseconds >= PicosPerHour) {
             hours.appendTo(buf);
             buf.add(':');
             zerofill = True;
         }
 
-        if (picoseconds >= PICOS_PER_MINUTE) {
+        if (picoseconds >= PicosPerMinute) {
             Int part = minutesPart;
             if (part < 10 && zerofill) {
                 buf.add('0');

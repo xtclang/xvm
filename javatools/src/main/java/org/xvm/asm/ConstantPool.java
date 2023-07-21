@@ -355,7 +355,6 @@ public class ConstantPool
                 return constant;
                 }
 
-            case Dec:
             case Dec32:
             case Dec64:
             case Dec128:
@@ -376,22 +375,20 @@ public class ConstantPool
                     }
                 return switch (format)
                     {
-                    case Dec, Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
-                    case DecN                      -> constant.toDecNConstant();
-                    case Float8e4                  -> constant.toFloat8e4Constant();
-                    case Float8e5                  -> constant.toFloat8e5Constant();
-                    case BFloat16                  -> constant.toBFloat16Constant();
-                    case Float16                   -> constant.toFloat16Constant();
-                    case Float32                   -> constant.toFloat32Constant();
-                    case Float64                   -> constant.toFloat64Constant();
-                    case Float128                  -> constant.toFloat128Constant();
-                    case FloatN                    -> constant.toFloatNConstant();
-                    default                        -> throw new IllegalStateException();
+                    case Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
+                    case DecN                 -> constant.toDecNConstant();
+                    case Float8e4             -> constant.toFloat8e4Constant();
+                    case Float8e5             -> constant.toFloat8e5Constant();
+                    case BFloat16             -> constant.toBFloat16Constant();
+                    case Float16              -> constant.toFloat16Constant();
+                    case Float32              -> constant.toFloat32Constant();
+                    case Float64              -> constant.toFloat64Constant();
+                    case Float128             -> constant.toFloat128Constant();
+                    case FloatN               -> constant.toFloatNConstant();
+                    default                   -> throw new IllegalStateException();
                     };
                 }
 
-            case Int:
-            case UInt:
             case Int16:
             case Int32:
             case Int64:
@@ -469,7 +466,7 @@ public class ConstantPool
      */
     public IntConstant ensureIntConstant(PackedInteger pint)
         {
-        return ensureIntConstant(pint, Format.Int);
+        return ensureIntConstant(pint, Format.Int64);
         }
 
 
@@ -478,7 +475,7 @@ public class ConstantPool
      *
      * @param pint    the PackedInteger value
      * @param format  the format of the integer constant, one of
-     *                {@link Format#Int}, {@link Format#UInt}, {@link Format#Int16},
+     *                {@link Format#Int64}, {@link Format#UInt64}, {@link Format#Int16},
      *                {@link Format#Int32}, {@link Format#Int64}, {@link Format#Int128},
      *                {@link Format#IntN}, {@link Format#UInt16}, {@link Format#UInt32},
      *                {@link Format#UInt64}, {@link Format#UInt128}, or {@link Format#UIntN}
@@ -489,8 +486,6 @@ public class ConstantPool
         {
         switch (format)
             {
-            case Int:
-            case UInt:
             case Int16:
             case Int32:
             case Int64:
@@ -549,7 +544,7 @@ public class ConstantPool
      */
     public DecimalAutoConstant ensureDecAConstant(Decimal dec)
         {
-        DecimalAutoConstant constant = (DecimalAutoConstant) ensureLocatorLookup(Format.Dec).get(dec);
+        DecimalAutoConstant constant = (DecimalAutoConstant) ensureLocatorLookup(Format.Dec64).get(dec);
         if (constant == null)
             {
             constant = (DecimalAutoConstant) register(new DecimalAutoConstant(this, dec));
@@ -2679,8 +2674,6 @@ public class ConstantPool
                     constant = new ByteConstant(this, format, in);
                     break;
 
-                case Int:
-                case UInt:
                 case Int16:
                 case Int32:
                 case Int64:
@@ -2692,10 +2685,6 @@ public class ConstantPool
                 case UInt128:
                 case UIntN:
                     constant = new IntConstant(this, format, in);
-                    break;
-
-                case Dec:
-                    constant = new DecimalAutoConstant(this, format, in);
                     break;
 
                 case Dec32:

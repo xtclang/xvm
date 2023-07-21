@@ -14,7 +14,7 @@ service PseudoRandom(UInt64 seed = 0)
             @Inject Clock clock;
             Time now = clock.now;
 
-            seed = now.date.epochDay.magnitude ^ now.timeOfDay.picos;
+            seed = (now.date.epochDay.magnitude ^ now.timeOfDay.picos).toUInt64();
             if (seed == 0) {
                 seed = 42; // RIP DNA
             }
@@ -52,25 +52,25 @@ service PseudoRandom(UInt64 seed = 0)
     protected UInt64[] uints(Int size) = new UInt64[size](_ -> uint64());
 
     @Override
-    Int8 int8()     = int64().toInt8(truncate=True);
+    Int8 int8()     = int64().toInt8();
 
     @Override
-    Int16 int16()   = int64().toInt16(truncate=True);
+    Int16 int16()   = int64().toInt16();
 
     @Override
-    Int32 int32()   = int64().toInt32(truncate=True);
+    Int32 int32()   = int64().toInt32();
 
     @Override
-    Int64 int64()   = uint64().toBitArray().toInt64();
+    Int64 int64()   = uint64().toInt64();
 
     @Override
-    UInt8 uint8()   = uint64().toUInt8(truncate=True);
+    UInt8 uint8()   = uint64().toUInt8();
 
     @Override
-    UInt16 uint16() = uint64().toUInt16(truncate=True);
+    UInt16 uint16() = uint64().toUInt16();
 
     @Override
-    UInt32 uint32() = uint64().toUInt32(truncate=True);
+    UInt32 uint32() = uint64().toUInt32();
 
     @Override
     UInt64 uint64() {
