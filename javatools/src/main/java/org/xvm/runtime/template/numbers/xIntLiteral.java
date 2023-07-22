@@ -352,6 +352,24 @@ public class xIntLiteral
         {
         switch (method.getName())
             {
+            // REVIEW GG is this actually necessary?
+            case "toInt8":
+            case "toInt16":
+            case "toInt32":
+            case "toInt64":
+            case "toInt128":
+            case "toUInt8":
+            case "toUInt16":
+            case "toUInt32":
+            case "toUInt64":
+            case "toUInt128":
+            case "toIntN":
+            case "toUIntN":
+            case "toFloatN":
+            case "toDecN":
+                // default argument: checkBounds = False;
+                return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
+
             case "not":
                 return invokeCompl(frame, hTarget, iReturn);
             }

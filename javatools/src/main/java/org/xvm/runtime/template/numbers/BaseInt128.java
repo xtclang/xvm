@@ -49,7 +49,25 @@ public abstract class BaseInt128
         {
         super.initNative();
 
+        markNativeProperty("bits");
+        markNativeProperty("bitCount");
+        markNativeProperty("bitLength");
+        markNativeProperty("leftmostBit");
+        markNativeProperty("rightmostBit");
         markNativeProperty("leadingZeroCount");
+        markNativeProperty("trailingZeroCount");
+
+        markNativeMethod("abs"          , null, null);
+        markNativeMethod("toInt8"       , null, null);
+        markNativeMethod("toInt16"      , null, null);
+        markNativeMethod("toInt32"      , null, null);
+        markNativeMethod("toInt64"      , null, null);
+        markNativeMethod("toInt128"     , null, null);
+        markNativeMethod("toUInt8"      , null, null);
+        markNativeMethod("toUInt16"     , null, null);
+        markNativeMethod("toUInt32"     , null, null);
+        markNativeMethod("toUInt64"     , null, null);
+        markNativeMethod("toUInt128"    , null, null);
 
         // @Op methods
         markNativeMethod("add"          , THIS, THIS);
@@ -262,6 +280,53 @@ public abstract class BaseInt128
             case "shiftAllRight":
                 return invokeShrAll(frame, hTarget, hArg, iReturn);
 
+            case "toInt8":
+            case "toInt16":
+            case "toInt32":
+            case "toInt64":
+            case "toInt128":
+            case "toUInt8":
+            case "toUInt16":
+            case "toUInt32":
+            case "toUInt64":
+            case "toUInt128":
+                {
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                ClassTemplate template = f_container.getTemplate(typeRet);
+
+                if (template == this)
+                    {
+                    return frame.assignValue(iReturn, hTarget);
+                    }
+
+                boolean  fCheckBounds = hArg == xBoolean.TRUE;
+                LongLong llValue      = ((LongLongHandle) hTarget).getValue();
+
+                if (template instanceof xConstrainedInteger templateTo)
+                    {
+                    return convertToConstrainedType(frame, templateTo, llValue, !fCheckBounds, iReturn);
+                    }
+
+                if (template instanceof BaseInt128 templateTo)
+                    {
+                    if (fCheckBounds)
+                        {
+                        if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)
+                            {
+                            // cannot assign negative value to the unsigned type
+                            return overflow(frame);
+                            }
+
+                        if (!f_fSigned && llValue.getHighValue() < 0 && templateTo.f_fSigned)
+                            {
+                            // too large value for signed LongLong
+                            return overflow(frame);
+                            }
+                        }
+                    return frame.assignValue(iReturn, templateTo.makeHandle(llValue));
+                    }
+                break;
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -283,43 +348,8 @@ public abstract class BaseInt128
             case "toUInt32":
             case "toUInt64":
             case "toUInt128":
-                {
-                TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_container.getTemplate(typeRet);
-
-                if (template == this)
-                    {
-                    return frame.assignValue(iReturn, hTarget);
-                    }
-
-                boolean  fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
-                LongLong llValue   = ((LongLongHandle) hTarget).getValue();
-
-                if (template instanceof xConstrainedInteger templateTo)
-                    {
-                    return convertToConstrainedType(frame, templateTo, llValue, fTruncate, iReturn);
-                    }
-
-                if (template instanceof BaseInt128 templateTo)
-                    {
-                    if (!fTruncate && f_fChecked)
-                        {
-                        if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)
-                            {
-                            // cannot assign negative value to the unsigned type
-                            return overflow(frame);
-                            }
-
-                        if (!f_fSigned && llValue.getHighValue() < 0 && templateTo.f_fSigned)
-                            {
-                            // too large value for signed LongLong
-                            return overflow(frame);
-                            }
-                        }
-                    return frame.assignValue(iReturn, templateTo.makeHandle(llValue));
-                    }
-                break;
-                }
+                // default argument: checkBounds = False;
+                return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -683,5 +713,5 @@ public abstract class BaseInt128
         }
 
     public final boolean f_fSigned;
-    public final boolean f_fChecked; // for now it's always false
+    public final boolean f_fChecked; // for now, it's always false
     }
