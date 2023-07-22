@@ -301,13 +301,11 @@ public abstract class xConstrainedInteger
         {
         switch (method.getName())
             {
-            case "toInt":
             case "toInt8":
             case "toInt16":
             case "toInt32":
             case "toInt64":
             case "toInt128":
-            case "toUInt":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":

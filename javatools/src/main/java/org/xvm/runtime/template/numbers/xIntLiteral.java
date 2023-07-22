@@ -72,14 +72,12 @@ public class xIntLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("toInt"             , null, new String[]{"numbers.Int64"});
         markNativeMethod("toInt8"            , null, new String[]{"numbers.Int8"});
         markNativeMethod("toInt16"           , null, new String[]{"numbers.Int16"});
         markNativeMethod("toInt32"           , null, new String[]{"numbers.Int32"});
         markNativeMethod("toInt64"           , null, new String[]{"numbers.Int64"});
         markNativeMethod("toInt128"          , null, new String[]{"numbers.Int128"});
 
-        markNativeMethod("toUInt"            , null, new String[]{"numbers.UInt64"});
         markNativeMethod("toUInt8"           , null, new String[]{"numbers.UInt8"});
         markNativeMethod("toUInt16"          , null, new String[]{"numbers.UInt16"});
         markNativeMethod("toUInt32"          , null, new String[]{"numbers.UInt32"});
@@ -322,13 +320,11 @@ public class xIntLiteral
             case "not":
                 return invokeCompl(frame, hTarget, iReturn);
 
-            case "toInt":
             case "toInt8":
             case "toInt16":
             case "toInt32":
             case "toInt64":
             case "toInt128":
-            case "toUInt":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":
@@ -342,7 +338,7 @@ public class xIntLiteral
                 ClassTemplate template = f_container.getTemplate(typeRet);
                 PackedInteger piValue  = hLiteral.getValue();
 
-                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
+                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.FALSE;
 
                 if (template instanceof xConstrainedInteger templateTo)
                     {

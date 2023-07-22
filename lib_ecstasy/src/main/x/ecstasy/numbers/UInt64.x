@@ -169,7 +169,7 @@ const UInt64
 
     @Override
     Int64 toInt64(Boolean checkBounds = False) {
-        assert:bounds this <= Int64.MaxValue;
+        assert:bounds this <= Int64.MaxValue;                   // TODO CP this is all wrong
         return new Int64(bits);
     }
 

@@ -155,9 +155,9 @@ abstract public class BaseDecFP
                     ? frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(dec.toBigDecimal().doubleValue()))
                     : overflow(frame);
 
-            case "toInt":
+            case "toInt64":
                 {
-                ObjectHandle hTrunc = ahArg[0];
+                ObjectHandle hTrunc = ahArg[0];            // TODO CP find all "hTrunc" and "fTruncate" and flip them to "check bounds"
                 ObjectHandle hRound = ahArg[1];
 
                 int iMode = hRound == ObjectHandle.DEFAULT
@@ -172,22 +172,8 @@ abstract public class BaseDecFP
                     return frame.assignValue(iReturn, xInt64.makeHandle(n.longValue()));
                     }
 
-                if (cb > 16)
-                    {
-                    if (hTrunc == xBoolean.TRUE)
-                        {
-                        // TODO GG keep only 128 bit value
-                        }
-                    else
-                        {
-                        return frame.raiseException(xException.outOfBounds(frame,
-                                "Decimal value out of Int range: " + dec));
-                        }
-                    }
-
-                // TODO gg
-                // return frame.assignValue(iReturn, xInt.makeHandle(n));
-                throw new UnsupportedOperationException();
+                return frame.raiseException(xException.outOfBounds(frame,
+                        "Decimal value out of Int range: " + dec));
                 }
 
             case "toIntN":
