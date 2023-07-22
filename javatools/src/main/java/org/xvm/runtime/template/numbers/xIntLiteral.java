@@ -306,20 +306,6 @@ public class xIntLiteral
             case "mod":
                 return invokeMod(frame, hTarget, hArg, iReturn);
 
-            }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
-
-    @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        IntNHandle hLiteral = (IntNHandle) hTarget;
-        switch (method.getName())
-            {
-            case "not":
-                return invokeCompl(frame, hTarget, iReturn);
-
             case "toInt8":
             case "toInt16":
             case "toInt32":
@@ -336,13 +322,14 @@ public class xIntLiteral
             case "toDecN":
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_container.getTemplate(typeRet);
+                IntNHandle    hLiteral = (IntNHandle) hTarget;
                 PackedInteger piValue  = hLiteral.getValue();
 
-                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.FALSE;
+                boolean fCheckBounds = hArg == xBoolean.TRUE;
 
                 if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return templateTo.convertLong(frame, piValue, !fTruncate, iReturn);
+                    return templateTo.convertLong(frame, piValue, fCheckBounds, iReturn);
                     }
 
                 if (template instanceof BaseInt128 templateTo)
@@ -350,11 +337,23 @@ public class xIntLiteral
                     BigInteger  biValue = piValue.getBigInteger();
                     LongLong    llValue = LongLong.fromBigInteger(biValue);
 
-                    return !fTruncate && templateTo.f_fSigned || llValue.signum() >= 0
-                        ? frame.assignValue(iReturn, templateTo.makeHandle(llValue))
-                        : templateTo.overflow(frame);
+                    return fCheckBounds && (!templateTo.f_fSigned && llValue.signum() < 0)
+                        ? templateTo.overflow(frame)
+                        : frame.assignValue(iReturn, templateTo.makeHandle(llValue));
                     }
                 break;
+            }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "not":
+                return invokeCompl(frame, hTarget, iReturn);
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }

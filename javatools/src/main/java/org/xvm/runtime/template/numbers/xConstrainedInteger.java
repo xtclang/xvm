@@ -290,6 +290,90 @@ public abstract class xConstrainedInteger
             case "stepsTo":
                 // the return value must be an Int!
                 return xInt64.INSTANCE.invokeSub(frame, hArg, hTarget, iReturn);
+
+            case "toInt8":
+            case "toInt16":
+            case "toInt32":
+            case "toInt64":
+            case "toInt128":
+            case "toUInt8":
+            case "toUInt16":
+            case "toUInt32":
+            case "toUInt64":
+            case "toUInt128":
+            case "toFloat16":
+            case "toFloat32":
+            case "toFloat64":
+            case "toIntN":
+            case "toUIntN":
+            case "toFloatN":
+            case "toDecN":
+            case "toChar":
+                {
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                ClassTemplate template = f_container.getTemplate(typeRet);
+
+                if (template == this)
+                    {
+                    return frame.assignValue(iReturn, hTarget);
+                    }
+
+                boolean fCheckBounds = hArg == xBoolean.TRUE;
+                if (template instanceof xConstrainedInteger templateTo)
+                    {
+                    long lValue = ((JavaLong) hTarget).getValue();
+
+                    // there is one overflow case that needs to be handled here: UInt64 -> Int*
+                    if (fCheckBounds && lValue < 0 && this instanceof xUInt64)
+                        {
+                        return templateTo.overflow(frame);
+                        }
+
+                    return templateTo.convertLong(frame, lValue, iReturn, fCheckBounds);
+                    }
+
+                if (template instanceof xUnconstrainedInteger templateTo)
+                    {
+                    PackedInteger piValue = PackedInteger.valueOf(((JavaLong) hTarget).getValue());
+                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
+                    }
+
+                if (template instanceof BaseBinaryFP templateTo)
+                    {
+                    long lValue = ((JavaLong) hTarget).getValue();
+
+                    return templateTo.convertLong(frame, lValue, iReturn);
+                    }
+
+                if (template instanceof BaseInt128 templateTo)
+                    {
+                    long lValue = ((JavaLong) hTarget).getValue();
+
+                    if (fCheckBounds && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
+                        {
+                        // cannot assign negative value to the unsigned type
+                        return overflow(frame);
+                        }
+
+                    return templateTo.convertLong(frame, lValue, iReturn);
+                    }
+
+                if (template instanceof xChar)
+                    {
+                    long l = ((JavaLong) hTarget).getValue();
+                    if (l < 0 || l > 0x10_FFFF)
+                        {
+                        if (fCheckBounds)
+                            {
+                            return overflow(frame);
+                            }
+                        l &= 0x0F_FFFF;
+                        }
+                    return frame.assignValue(iReturn, xChar.makeHandle(l));
+                    }
+
+                break;
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -319,72 +403,8 @@ public abstract class xConstrainedInteger
             case "toFloatN":
             case "toDecN":
             case "toChar":
-                {
-                TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_container.getTemplate(typeRet);
-
-                if (template == this)
-                    {
-                    return frame.assignValue(iReturn, hTarget);
-                    }
-
-                boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
-                boolean fChecked  = f_fChecked && !fTruncate;
-                if (template instanceof xConstrainedInteger templateTo)
-                    {
-                    long lValue = ((JavaLong) hTarget).getValue();
-
-                    // there is one overflow case that needs to be handled here: UInt64 -> Int*
-                    if (fChecked && lValue < 0 && this instanceof xUInt64)
-                        {
-                        return templateTo.overflow(frame);
-                        }
-
-                    return templateTo.convertLong(frame, lValue, iReturn, fChecked);
-                    }
-
-                if (template instanceof xUnconstrainedInteger templateTo)
-                    {
-                    PackedInteger piValue = PackedInteger.valueOf(((JavaLong) hTarget).getValue());
-                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
-                    }
-
-                if (template instanceof BaseBinaryFP templateTo)
-                    {
-                    long lValue = ((JavaLong) hTarget).getValue();
-
-                    return templateTo.convertLong(frame, lValue, iReturn);
-                    }
-
-                if (template instanceof BaseInt128 templateTo)
-                    {
-                    long lValue = ((JavaLong) hTarget).getValue();
-
-                    if (fChecked && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
-                        {
-                        // cannot assign negative value to the unsigned type
-                        return overflow(frame);
-                        }
-
-                    return templateTo.convertLong(frame, lValue, iReturn);
-                    }
-
-                if (template instanceof xChar)
-                    {
-                    long l = ((JavaLong) hTarget).getValue();
-                    if (l < 0 || l > 0x10_FFFF)
-                        {
-                        if (fChecked)
-                            {
-                            return overflow(frame);
-                            }
-                        l &= 0x0F_FFFF;
-                        }
-                    return frame.assignValue(iReturn, xChar.makeHandle(l));
-                    }
-
-                break;
-                }
+                // default argument: checkBounds = False;
+                return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
 
             case "neg":
                 return invokeNeg(frame, hTarget, iReturn);
