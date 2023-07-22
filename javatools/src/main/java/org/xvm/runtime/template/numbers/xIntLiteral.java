@@ -15,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Lexer;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -462,15 +463,25 @@ public class xIntLiteral
             }
         catch (NumberFormatException e)
             {
+            boolean   fNeg   = false;
             ErrorList errs   = new ErrorList(5);
             Lexer     lexer  = new Lexer(new Source(sText), errs);
             Token     tokLit = lexer.next();
+            if (tokLit.getId() == Id.SUB)
+                {
+                fNeg = true;
+                tokLit = lexer.next();
+                }
+
             if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
                 {
                 throw e;
                 }
 
-            return (PackedInteger) tokLit.getValue();
+            PackedInteger pi = (PackedInteger) tokLit.getValue();
+            return fNeg
+                    ? pi.negate()
+                    : pi;
             }
         }
 
