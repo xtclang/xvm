@@ -151,118 +151,48 @@ const UInt16
 
     @Override
     Int8 toInt8(Boolean checkBounds = False) {
-        assert:bounds this <= Int8.MaxValue;
+        assert:bounds !checkBounds || this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
     }
 
     @Override
     Int16 toInt16(Boolean checkBounds = False) {
-        assert:bounds this <= Int16.MaxValue;
+        assert:bounds !checkBounds || this <= Int16.MaxValue;
         return new Int16(bits);
     }
 
     @Auto
     @Override
-    Int32 toInt32(Boolean checkBounds = False) {
-        return new Int32(new Bit[32](i -> (i < 32-bitLength ? 0 : bits[i])));
-    }
+    Int32 toInt32(Boolean checkBounds = False) = new Int32(new Bit[32](i -> (i < 32-bitLength ? 0 : bits[i])));
 
     @Auto
     @Override
-    Int64 toInt64(Boolean checkBounds = False) {
-        return new Int64(new Bit[64](i -> (i < 64-bitLength ? 0 : bits[i])));
-    }
+    Int64 toInt64(Boolean checkBounds = False) = new Int64(new Bit[64](i -> (i < 64-bitLength ? 0 : bits[i])));
 
     @Auto
     @Override
-    Int128 toInt128(Boolean checkBounds = False) {
-        return new Int128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
-    }
-
-    @Auto
-    @Override
-    IntN toIntN() {
-        return bits[0] == 0 ? new IntN(bits) : toUIntN().toIntN();
-    }
+    Int128 toInt128(Boolean checkBounds = False) = new Int128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
 
     @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
-        assert:bounds this <= UInt8.MaxValue;
+        assert:bounds !checkBounds || this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
     }
 
     @Override
-    UInt16 toUInt16(Boolean checkBounds = False) {
-        return this;
-    }
+    UInt16 toUInt16(Boolean checkBounds = False) = this;
 
     @Auto
     @Override
-    UInt32 toUInt32(Boolean checkBounds = False) {
-        return new UInt32(new Bit[32](i -> (i < 32-bitLength ? 0 : bits[i])));
-    }
+    UInt32 toUInt32(Boolean checkBounds = False) = new UInt32(new Bit[32](i -> (i < 32-bitLength ? 0 : bits[i])));
 
     @Auto
     @Override
-    UInt64 toUInt64(Boolean checkBounds = False) {
-        return new UInt64(new Bit[64](i -> (i < 64-bitLength ? 0 : bits[i])));
-    }
+    UInt64 toUInt64(Boolean checkBounds = False) = new UInt64(new Bit[64](i -> (i < 64-bitLength ? 0 : bits[i])));
 
     @Auto
     @Override
-    UInt128 toUInt128(Boolean checkBounds = False) {
-        return new UInt128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
-    }
-
-    @Auto
-    @Override
-    UIntN toUIntN() {
-        return new UIntN(bits);
-    }
-
-    @Auto
-    @Override
-    BFloat16 toBFloat16();
-
-    @Auto
-    @Override
-    Float16 toFloat16();
-
-    @Auto
-    @Override
-    Float32 toFloat32();
-
-    @Auto
-    @Override
-    Float64 toFloat64();
-
-    @Auto
-    @Override
-    Float128 toFloat128();
-
-    @Auto
-    @Override
-    FloatN toFloatN() {
-        return toIntLiteral().toFloatN();
-    }
-
-    @Auto
-    @Override
-    Dec32 toDec32();
-
-    @Auto
-    @Override
-    Dec64 toDec64();
-
-    @Auto
-    @Override
-    Dec128 toDec128();
-
-    @Auto
-    @Override
-    DecN toDecN() {
-        return toIntLiteral().toDecN();
-    }
+    UInt128 toUInt128(Boolean checkBounds = False) = new UInt128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
 
 
     // ----- Stringable implementation -------------------------------------------------------------

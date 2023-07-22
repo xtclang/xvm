@@ -141,118 +141,94 @@ const IntN
 
     // ----- conversions ---------------------------------------------------------------------------
 
+    /**
+     * Sign-extended least significant bits.
+     */
+    private Bit[] signedLSBs(Int desired) {
+        Bit[] bits   = this.bits;
+        Int   actual = bits.size;
+        Int   short  = desired - actual;
+        return switch (short.sign) {
+            case Negative: bits[actual-desired ..< actual];
+            case Zero:     bits;
+            case Positive: new Bit[desired](i -> i < short ? bits[0] : bits[i-short]);
+        };
+    }
+
     @Override
     Int8 toInt8(Boolean checkBounds = False) {
-        assert:bounds this >= Int8.MinValue && this <= Int8.MaxValue;
-        return new Int8(bits[bitLength-8 ..< bitLength]);
+        assert:bounds !checkBounds || this >= Int8.MinValue && this <= Int8.MaxValue;
+        return new Int8(signedLSBs(8));
     }
 
     @Override
     Int16 toInt16(Boolean checkBounds = False) {
-        assert:bounds this >= Int16.MinValue && this <= Int16.MaxValue;
-        return new Int16(bits[bitLength-16 ..< bitLength]);
+        assert:bounds !checkBounds || this >= Int16.MinValue && this <= Int16.MaxValue;
+        return new Int16(signedLSBs(16));
     }
 
     @Override
     Int32 toInt32(Boolean checkBounds = False) {
-        assert:bounds this >= Int32.MinValue && this <= Int32.MaxValue;
-        return new Int32(bits[bitLength-32 ..< bitLength]);
+        assert:bounds !checkBounds || this >= Int32.MinValue && this <= Int32.MaxValue;
+        return new Int32(signedLSBs(32));
     }
 
     @Override
     Int64 toInt64(Boolean checkBounds = False) {
-        assert:bounds this >= Int64.MinValue && this <= Int64.MaxValue;
-        return new Int64(bits[bitLength-64 ..< bitLength]);
+        assert:bounds !checkBounds || this >= Int64.MinValue && this <= Int64.MaxValue;
+        return new Int64(signedLSBs(64));
     }
 
     @Override
     Int128 toInt128(Boolean checkBounds = False) {
-        assert:bounds this >= Int128.MinValue && this <= Int128.MaxValue;
-        return new Int128(bits[bitLength-128 ..< bitLength]);
+        assert:bounds !checkBounds || this >= Int128.MinValue && this <= Int128.MaxValue;
+        return new Int128(signedLSBs(128));
     }
 
     @Override
-    IntN toIntN() {
-        return this;
+    IntN toIntN() = this;
+
+    /**
+     * Zero-extended least significant bits.
+     */
+    private Bit[] unsignedLSBs(Int desired) {
+        Bit[] bits   = this.bits;
+        Int   actual = bits.size;
+        Int   short  = desired - actual;
+        return switch (short.sign) {
+            case Negative: bits[actual-desired ..< actual];
+            case Zero:     bits;
+            case Positive: new Bit[desired](i -> i < short ? 0 : bits[i-short]);
+        };
     }
 
     @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
-        assert:bounds this >= UInt8.MinValue && this <= UInt8.MaxValue;
-        return new UInt8(bits[bitLength-8 ..< bitLength]);
+        assert:bounds !checkBounds || this >= UInt8.MinValue && this <= UInt8.MaxValue;
+        return new UInt8(unsignedLSBs(8));
     }
 
     @Override
     UInt16 toUInt16(Boolean checkBounds = False) {
-        assert:bounds this >= UInt16.MinValue && this <= UInt16.MaxValue;
-        return new UInt16(bits[bitLength-16 ..< bitLength]);
+        assert:bounds !checkBounds || this >= UInt16.MinValue && this <= UInt16.MaxValue;
+        return new UInt16(unsignedLSBs(16));
     }
 
     @Override
     UInt32 toUInt32(Boolean checkBounds = False) {
-        assert:bounds this >= UInt32.MinValue && this <= UInt32.MaxValue;
-        return new UInt32(bits[bitLength-32 ..< bitLength]);
+        assert:bounds !checkBounds || this >= UInt32.MinValue && this <= UInt32.MaxValue;
+        return new UInt32(unsignedLSBs(32));
     }
 
     @Override
     UInt64 toUInt64(Boolean checkBounds = False) {
-        assert:bounds this >= UInt64.MinValue && this <= UInt64.MaxValue;
-        return new UInt64(bits[bitLength-64 ..< bitLength]);
+        assert:bounds !checkBounds || this >= UInt64.MinValue && this <= UInt64.MaxValue;
+        return new UInt64(unsignedLSBs(64));
     }
 
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) {
-        assert:bounds this >= UInt128.MinValue && this <= UInt128.MaxValue;
-        return new UInt128(bits[bitLength-128 ..< bitLength]);
-    }
-
-    @Override
-    UIntN toUIntN() {
-        assert:bounds this >= 0;
-        return new UIntN(bits);
-    }
-
-    @Auto
-    @Override
-    BFloat16 toBFloat16();
-
-    @Auto
-    @Override
-    Float16 toFloat16();
-
-    @Auto
-    @Override
-    Float32 toFloat32();
-
-    @Auto
-    @Override
-    Float64 toFloat64();
-
-    @Auto
-    @Override
-    Float128 toFloat128();
-
-    @Auto
-    @Override
-    FloatN toFloatN() {
-        return toIntLiteral().toFloatN();
-    }
-
-    @Auto
-    @Override
-    Dec32 toDec32();
-
-    @Auto
-    @Override
-    Dec64 toDec64();
-
-    @Auto
-    @Override
-    Dec128 toDec128();
-
-    @Auto
-    @Override
-    DecN toDecN() {
-        return toIntLiteral().toDecN();
+        assert:bounds !checkBounds || this >= UInt128.MinValue && this <= UInt128.MaxValue;
+        return new UInt128(unsignedLSBs(128));
     }
 }

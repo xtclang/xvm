@@ -55,6 +55,22 @@
     }
 
 
+    // ----- conversions ---------------------------------------------------------------------------
+
+    @Auto
+    @Override
+    IntN toIntN() {
+        // going from unsigned to signed, we need to make sure that the first bit is not `1`,
+        // because that will be treated as a sign bit, and cause the result to be negative
+        Bit[] bits = this.bits;
+        return new IntN(bits[0] == 0 ? bits : Byte:0.bits + bits);
+    }
+
+    @Auto
+    @Override
+    UIntN toUIntN() = new UIntN(bits);
+
+
     // ----- Stringable implementation -------------------------------------------------------------
 
     @Override

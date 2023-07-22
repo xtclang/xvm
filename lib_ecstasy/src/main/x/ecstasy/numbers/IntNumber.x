@@ -254,6 +254,70 @@
      */
     Char toHexit() = toNibble().toChar();
 
+    @Auto
+    @Override
+    IntN toIntN() = new IntN(bits);
+
+    @Override
+    UIntN toUIntN() {
+        assert:bounds this.sign != Negative;
+        return new UIntN(bits);
+    }
+
+    @Auto
+    @Override
+    Float8e4 toFloat8e4();
+
+    @Auto
+    @Override
+    Float8e5 toFloat8e5();
+
+    @Auto
+    @Override
+    BFloat16 toBFloat16();
+
+    @Auto
+    @Override
+    Float16 toFloat16();
+
+    @Auto
+    @Override
+    Float32 toFloat32();
+
+    @Auto
+    @Override
+    Float64 toFloat64();
+
+    @Auto
+    @Override
+    Float128 toFloat128();
+
+    @Auto
+    @Override
+    FloatN toFloatN() = toIntLiteral().toFloatN();
+
+    @Auto
+    @Override
+    Dec32 toDec32();
+
+    @Auto
+    @Override
+    Dec64 toDec64();
+
+    @Auto
+    @Override
+    Dec128 toDec128();
+
+    @Auto
+    @Override
+    DecN toDecN() = toIntLiteral().toDecN();
+
+    @Override
+    IntLiteral toIntLiteral() = new IntLiteral(toString());
+
+    @Override
+    FPLiteral toFPLiteral() = new FPLiteral(toString());
+
     /**
      * Obtain the number as an array of boolean values, each corresponding to one bit.
      *
@@ -262,12 +326,6 @@
      * @return the number as an array of booleans.
      */
     Boolean[] toBooleanArray() = toBitArray().toBooleanArray();
-
-    @Override
-    IntLiteral toIntLiteral() = new IntLiteral(toString());
-
-    @Override
-    FPLiteral toFPLiteral() = new FPLiteral(toString());
 
 
     // ----- Stringable ----------------------------------------------------------------------------

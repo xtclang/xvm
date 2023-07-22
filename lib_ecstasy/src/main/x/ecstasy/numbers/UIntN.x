@@ -127,7 +127,7 @@ const UIntN
 
     @Override
     Int8 toInt8(Boolean checkBounds = False) {
-        assert:bounds this <= Int8.MaxValue;
+        assert:bounds !checkBounds || this <= Int8.MaxValue;
         return bitLength < 8
                 ? new Int8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
                 : new Int8(bits[bitLength-8 ..< bitLength]);
@@ -135,7 +135,7 @@ const UIntN
 
     @Override
     Int16 toInt16(Boolean checkBounds = False) {
-        assert:bounds this <= Int16.MaxValue;
+        assert:bounds !checkBounds || this <= Int16.MaxValue;
         return bitLength < 16
                 ? new Int16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
                 : new Int16(bits[bitLength-16 ..< bitLength]);
@@ -143,7 +143,7 @@ const UIntN
 
     @Override
     Int32 toInt32(Boolean checkBounds = False) {
-        assert:bounds this <= Int32.MaxValue;
+        assert:bounds !checkBounds || this <= Int32.MaxValue;
         return bitLength < 32
                 ? new Int32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
                 : new Int32(bits[bitLength-32 ..< bitLength]);
@@ -151,7 +151,7 @@ const UIntN
 
     @Override
     Int64 toInt64(Boolean checkBounds = False) {
-        assert:bounds this <= Int64.MaxValue;
+        assert:bounds !checkBounds || this <= Int64.MaxValue;
         return bitLength < 64
                 ? new Int64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
                 : new Int64(bits[bitLength-64 ..< bitLength]);
@@ -159,25 +159,15 @@ const UIntN
 
     @Override
     Int128 toInt128(Boolean checkBounds = False) {
-        assert:bounds this <= Int128.MaxValue;
+        assert:bounds !checkBounds || this <= Int128.MaxValue;
         return bitLength < 128
                 ? new Int128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
                 : new Int128(bits[bitLength-128 ..< bitLength]);
     }
 
-    @Auto
-    @Override
-    IntN toIntN() {
-        Bit[] bits = this.bits;
-        if (bits[0] == 1) {
-            bits = new Bit[bits.size + 8](i -> i < 8 ? 0 : bits[i-8]);
-        }
-        return new IntN(bits);
-    }
-
     @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
-        assert:bounds this <= UInt8.MaxValue;
+        assert:bounds !checkBounds || this <= UInt8.MaxValue;
         return bitLength < 8
                 ? new UInt8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]))
                 : new UInt8(bits[bitLength-8 ..< bitLength]);
@@ -185,7 +175,7 @@ const UIntN
 
     @Override
     UInt16 toUInt16(Boolean checkBounds = False) {
-        assert:bounds this <= UInt16.MaxValue;
+        assert:bounds !checkBounds || this <= UInt16.MaxValue;
         return bitLength < 16
                 ? new UInt16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]))
                 : new UInt16(bits[bitLength-16 ..< bitLength]);
@@ -193,7 +183,7 @@ const UIntN
 
     @Override
     UInt32 toUInt32(Boolean checkBounds = False) {
-        assert:bounds this <= UInt32.MaxValue;
+        assert:bounds !checkBounds || this <= UInt32.MaxValue;
         return bitLength < 32
                 ? new UInt32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]))
                 : new UInt32(bits[bitLength-32 ..< bitLength]);
@@ -201,7 +191,7 @@ const UIntN
 
     @Override
     UInt64 toUInt64(Boolean checkBounds = False) {
-        assert:bounds this <= UInt64.MaxValue;
+        assert:bounds !checkBounds || this <= UInt64.MaxValue;
         return bitLength < 64
                 ? new UInt64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]))
                 : new UInt64(bits[bitLength-64 ..< bitLength]);
@@ -209,60 +199,14 @@ const UIntN
 
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) {
-        assert:bounds this <= UInt64.MaxValue;
+        assert:bounds !checkBounds || this <= UInt64.MaxValue;
         return bitLength < 128
                 ? new UInt128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]))
                 : new UInt128(bits[bitLength-128 ..< bitLength]);
     }
 
     @Override
-    UIntN toUIntN() {
-        return this;
-    }
-
-    @Auto
-    @Override
-    BFloat16 toBFloat16();
-
-    @Auto
-    @Override
-    Float16 toFloat16();
-
-    @Auto
-    @Override
-    Float32 toFloat32();
-
-    @Auto
-    @Override
-    Float64 toFloat64();
-
-    @Auto
-    @Override
-    Float128 toFloat128();
-
-    @Auto
-    @Override
-    FloatN toFloatN() {
-        return toIntLiteral().toFloatN();
-    }
-
-    @Auto
-    @Override
-    Dec32 toDec32();
-
-    @Auto
-    @Override
-    Dec64 toDec64();
-
-    @Auto
-    @Override
-    Dec128 toDec128();
-
-    @Auto
-    @Override
-    DecN toDecN() {
-        return toIntLiteral().toDecN();
-    }
+    UIntN toUIntN() = this;
 
 
     // ----- Stringable implementation -------------------------------------------------------------
