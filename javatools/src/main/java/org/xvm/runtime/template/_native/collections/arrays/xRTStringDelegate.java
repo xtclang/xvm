@@ -20,7 +20,7 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -88,7 +88,7 @@ public class xRTStringDelegate
         {
         StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt.makeHandle(hDelegate.m_asValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_asValue.length));
         }
 
     @Override

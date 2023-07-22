@@ -38,7 +38,7 @@ import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -209,7 +209,7 @@ public class xRTAlgorithms
                 }
 
             List<ObjectHandle> list = new ArrayList<>(9);
-            list.add(xInt.makeHandle(nBlockSize));
+            list.add(xInt64.makeHandle(nBlockSize));
             list.add(hImpl);
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
 

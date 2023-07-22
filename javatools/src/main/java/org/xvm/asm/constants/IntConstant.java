@@ -1031,11 +1031,7 @@ public class IntConstant
             }
 
         ConstantPool pool = getConstantPool();
-        if (typeOut.equals(pool.typeInt()))
-            {
-            return toIntConstant(Format.Int64);
-            }
-        else if (typeOut.equals(pool.typeInt8()))
+        if (typeOut.equals(pool.typeInt8()))
             {
             return toByteConstant(Format.Int8);
             }
@@ -1058,10 +1054,6 @@ public class IntConstant
         else if (typeOut.equals(pool.typeIntN()))
             {
             return toIntConstant(Format.IntN);
-            }
-        else if (typeOut.equals(pool.typeUInt()))
-            {
-            return toIntConstant(Format.UInt64);
             }
         else if (typeOut.equals(pool.typeBit()))
             {

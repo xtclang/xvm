@@ -528,11 +528,7 @@ public class ByteConstant
             }
 
         ConstantPool pool = getConstantPool();
-        if (typeOut.equals(pool.typeInt()))
-            {
-            return IntConstant.toIntConstant(Format.Int64, new PackedInteger(m_nVal), pool);
-            }
-        else if (typeOut.equals(pool.typeInt8()))
+        if (typeOut.equals(pool.typeInt8()))
             {
             return new ByteConstant(pool, Format.Int8, m_nVal);
             }
@@ -555,10 +551,6 @@ public class ByteConstant
         else if (typeOut.equals(pool.typeIntN()))
             {
             return IntConstant.toIntConstant(Format.IntN, new PackedInteger(m_nVal), pool);
-            }
-        else if (typeOut.equals(pool.typeUInt()))
-            {
-            return IntConstant.toIntConstant(Format.UInt64, new PackedInteger(m_nVal), pool);
             }
         else if (typeOut.equals(pool.typeBit()))
             {

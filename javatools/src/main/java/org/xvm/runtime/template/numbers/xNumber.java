@@ -39,8 +39,8 @@ public abstract class xNumber
         {
         String[] NAMES =
                 {
-                "Int",  "Int8",  "Int16",  "Int32",  "Int64",  "Int128",  "IntN",
-                "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "UInt128", "UIntN",
+                "Int8",  "Int16",  "Int32",  "Int64",  "Int128",  "IntN",
+                "UInt8", "UInt16", "UInt32", "UInt64", "UInt128", "UIntN",
 
                 "Float16", "Float32", "Float64", "FloatN",
 

@@ -191,7 +191,7 @@ public abstract class xConstrainedInteger
                         }
                     }
 
-                return frame.assignValue(iReturn, xInt.makeHandle(cDigits));
+                return frame.assignValue(iReturn, xInt64.makeHandle(cDigits));
                 }
 
             case "bits":
@@ -205,11 +205,11 @@ public abstract class xConstrainedInteger
             case "bitCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt.makeHandle(Long.bitCount(l)));
+                return frame.assignValue(iReturn, xInt64.makeHandle(Long.bitCount(l)));
                 }
 
             case "bitLength":
-                return frame.assignValue(iReturn, xInt.makeHandle(f_cNumBits));
+                return frame.assignValue(iReturn, xInt64.makeHandle(f_cNumBits));
 
             case "leftmostBit":
                 {
@@ -226,13 +226,13 @@ public abstract class xConstrainedInteger
             case "leadingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt.makeHandle((Long.numberOfLeadingZeros(l))));
+                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfLeadingZeros(l))));
                 }
 
             case "trailingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, xInt.makeHandle((Long.numberOfTrailingZeros(l))));
+                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfTrailingZeros(l))));
                 }
             }
 
@@ -332,21 +332,6 @@ public abstract class xConstrainedInteger
 
                 boolean fTruncate = ahArg.length > 0 && ahArg[0] == xBoolean.TRUE;
                 boolean fChecked  = f_fChecked && !fTruncate;
-                if (template instanceof xIntBase templateTo)
-                    {
-                    long l = ((JavaLong) hTarget).getValue();
-                    if (!f_fSigned && l < 0)
-                        {
-                        // positive value that doesn't fit 64 bits
-                        return frame.assignValue(iReturn,
-                            templateTo.makeLongLong(new LongLong(l, 0L)));
-                        }
-                    else
-                        {
-                        return frame.assignValue(iReturn, templateTo.makeLong(l));
-                        }
-                    }
-
                 if (template instanceof xConstrainedInteger templateTo)
                     {
                     long lValue = ((JavaLong) hTarget).getValue();

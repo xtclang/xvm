@@ -1625,7 +1625,7 @@ public class ConstantPool
      */
     public TypeConstant ensureIndexedType(TypeConstant typeElement)
         {
-        return ensureParameterizedTypeConstant(typeIndexed(), typeInt(), typeElement);
+        return ensureParameterizedTypeConstant(typeIndexed(), typeInt64(), typeElement);
         }
 
     /**
@@ -2366,14 +2366,12 @@ public class ConstantPool
     public TypeConstant      typeStringBuffer()  {TypeConstant      c = m_typeStringBuffer;  if (c == null) {m_typeStringBuffer  = c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
     public TypeConstant      typeBit()           {TypeConstant      c = m_typeBit;           if (c == null) {m_typeBit           = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
     public TypeConstant      typeNibble()        {TypeConstant      c = m_typeNibble;        if (c == null) {m_typeNibble        = c = ensureTerminalTypeConstant(clzNibble()                          );} return c;}
-    public TypeConstant      typeInt()           {TypeConstant      c = m_typeInt;           if (c == null) {m_typeInt           = c = ensureTerminalTypeConstant(clzInt()                             );} return c;}
     public TypeConstant      typeInt8()          {TypeConstant      c = m_typeInt8;          if (c == null) {m_typeInt8          = c = ensureTerminalTypeConstant(clzInt8()                            );} return c;}
     public TypeConstant      typeInt16()         {TypeConstant      c = m_typeInt16;         if (c == null) {m_typeInt16         = c = ensureTerminalTypeConstant(clzInt16()                           );} return c;}
     public TypeConstant      typeInt32()         {TypeConstant      c = m_typeInt32;         if (c == null) {m_typeInt32         = c = ensureTerminalTypeConstant(clzInt32()                           );} return c;}
     public TypeConstant      typeInt64()         {TypeConstant      c = m_typeInt64;         if (c == null) {m_typeInt64         = c = ensureTerminalTypeConstant(clzInt64()                           );} return c;}
     public TypeConstant      typeInt128()        {TypeConstant      c = m_typeInt128;        if (c == null) {m_typeInt128        = c = ensureTerminalTypeConstant(clzInt128()                          );} return c;}
     public TypeConstant      typeIntN()          {TypeConstant      c = m_typeIntN;          if (c == null) {m_typeIntN          = c = ensureTerminalTypeConstant(clzIntN()                            );} return c;}
-    public TypeConstant      typeUInt()          {TypeConstant      c = m_typeUInt;          if (c == null) {m_typeUInt          = c = ensureTerminalTypeConstant(clzUInt()                            );} return c;}
     public TypeConstant      typeByte()          { /* Just an alias */ return typeUInt8();                                                                                                                         }
     public TypeConstant      typeUInt8()         {TypeConstant      c = m_typeUInt8;         if (c == null) {m_typeUInt8         = c = ensureTerminalTypeConstant(clzUInt8()                           );} return c;}
     public TypeConstant      typeUInt16()        {TypeConstant      c = m_typeUInt16;        if (c == null) {m_typeUInt16        = c = ensureTerminalTypeConstant(clzUInt16()                          );} return c;}
@@ -2381,7 +2379,7 @@ public class ConstantPool
     public TypeConstant      typeUInt64()        {TypeConstant      c = m_typeUInt64;        if (c == null) {m_typeUInt64        = c = ensureTerminalTypeConstant(clzUInt64()                          );} return c;}
     public TypeConstant      typeUInt128()       {TypeConstant      c = m_typeUInt128;       if (c == null) {m_typeUInt128       = c = ensureTerminalTypeConstant(clzUInt128()                         );} return c;}
     public TypeConstant      typeUIntN()         {TypeConstant      c = m_typeUIntN;         if (c == null) {m_typeUIntN         = c = ensureTerminalTypeConstant(clzUIntN()                           );} return c;}
-    public TypeConstant      typeDec()           {TypeConstant      c = m_typeDec;           if (c == null) {m_typeDec           = c = ensureTerminalTypeConstant(clzDec()                             );} return c;}
+    public TypeConstant      typeDec64()         {TypeConstant      c = m_typeDec64;         if (c == null) {m_typeDec64         = c = ensureTerminalTypeConstant(clzDec64()                           );} return c;}
     public TypeConstant      typeIndexed()       {TypeConstant      c = m_typeIndexed;       if (c == null) {m_typeIndexed       = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
     public TypeConstant      typeArray()         {TypeConstant      c = m_typeArray;         if (c == null) {m_typeArray         = c = ensureTerminalTypeConstant(clzArray()                           );} return c;}
     public TypeConstant      typeMatrix()        {TypeConstant      c = m_typeMatrix;        if (c == null) {m_typeMatrix        = c = ensureTerminalTypeConstant(clzMatrix()                          );} return c;}
@@ -2457,9 +2455,6 @@ public class ConstantPool
     protected ClassConstant  clzFPLiteral()     {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"                );}
     protected ClassConstant  clzBit()           {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                      );}
     protected ClassConstant  clzNibble()        {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"                   );}
-    protected ClassConstant  clzInt()           {return (ClassConstant) getImplicitlyImportedIdentity("Int"                      );}
-    protected ClassConstant  clzUInt()          {return (ClassConstant) getImplicitlyImportedIdentity("UInt"                     );}
-    protected ClassConstant  clzDec()           {return (ClassConstant) getImplicitlyImportedIdentity("Dec"                      );}
     protected ClassConstant  clzInt8()          {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                     );}
     protected ClassConstant  clzInt16()         {return (ClassConstant) getImplicitlyImportedIdentity("Int16"                    );}
     protected ClassConstant  clzInt32()         {return (ClassConstant) getImplicitlyImportedIdentity("Int32"                    );}
@@ -2472,6 +2467,7 @@ public class ConstantPool
     protected ClassConstant  clzUInt64()        {return (ClassConstant) getImplicitlyImportedIdentity("UInt64"                   );}
     protected ClassConstant  clzUInt128()       {return (ClassConstant) getImplicitlyImportedIdentity("UInt128"                  );}
     protected ClassConstant  clzUIntN()         {return (ClassConstant) getImplicitlyImportedIdentity("UIntN"                    );}
+    protected ClassConstant  clzDec64()         {return (ClassConstant) getImplicitlyImportedIdentity("Dec64"                    );}
     protected ClassConstant  clzIndexed()       {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"           );}
     protected ClassConstant  clzInterval()      {return (ClassConstant) getImplicitlyImportedIdentity("Interval"                 );}
     protected ClassConstant  clzIterable()      {return (ClassConstant) getImplicitlyImportedIdentity("Iterable"                 );}
@@ -3941,21 +3937,19 @@ public class ConstantPool
     private transient TypeConstant      m_typeBitArray;
     private transient TypeConstant      m_typeByteArray;
     private transient TypeConstant      m_typeBinary;
-    private transient TypeConstant      m_typeInt;
     private transient TypeConstant      m_typeInt8;
     private transient TypeConstant      m_typeInt16;
     private transient TypeConstant      m_typeInt32;
     private transient TypeConstant      m_typeInt64;
     private transient TypeConstant      m_typeInt128;
     private transient TypeConstant      m_typeIntN;
-    private transient TypeConstant      m_typeUInt;
     private transient TypeConstant      m_typeUInt8;
     private transient TypeConstant      m_typeUInt16;
     private transient TypeConstant      m_typeUInt32;
     private transient TypeConstant      m_typeUInt64;
     private transient TypeConstant      m_typeUInt128;
     private transient TypeConstant      m_typeUIntN;
-    private transient TypeConstant      m_typeDec;
+    private transient TypeConstant      m_typeDec64;
     private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeMatrix;
@@ -4087,21 +4081,19 @@ public class ConstantPool
         m_typeBitArray      = null;
         m_typeByteArray     = null;
         m_typeBinary        = null;
-        m_typeInt           = null;
         m_typeInt8          = null;
         m_typeInt16         = null;
         m_typeInt32         = null;
         m_typeInt64         = null;
         m_typeInt128        = null;
         m_typeIntN          = null;
-        m_typeUInt          = null;
         m_typeUInt8         = null;
         m_typeUInt16        = null;
         m_typeUInt32        = null;
         m_typeUInt64        = null;
         m_typeUInt128       = null;
         m_typeUIntN         = null;
-        m_typeDec           = null;
+        m_typeDec64         = null;
         m_typeIndexed       = null;
         m_typeArray         = null;
         m_typeMatrix        = null;

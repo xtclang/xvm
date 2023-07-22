@@ -31,7 +31,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.xNullable;
 
 
@@ -65,14 +65,12 @@ public class xRTDelegate
             registerNativeTemplate(new xRTBitDelegate     (f_container, f_struct, true));
             registerNativeTemplate(new xRTCharDelegate    (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTIntDelegate     (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt8Delegate    (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt16Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt32Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt64Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt128Delegate  (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTUIntDelegate    (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt8Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt16Delegate  (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt32Delegate  (f_container, f_struct, true));
@@ -98,14 +96,12 @@ public class xRTDelegate
             mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
             mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
 
-            mapDelegates.put(pool.typeInt(),     xRTIntDelegate    .INSTANCE);
             mapDelegates.put(pool.typeInt8(),    xRTInt8Delegate   .INSTANCE);
             mapDelegates.put(pool.typeInt16(),   xRTInt16Delegate  .INSTANCE);
             mapDelegates.put(pool.typeInt32(),   xRTInt32Delegate  .INSTANCE);
             mapDelegates.put(pool.typeInt64(),   xRTInt64Delegate  .INSTANCE);
             mapDelegates.put(pool.typeInt128(),  xRTInt128Delegate .INSTANCE);
 
-            mapDelegates.put(pool.typeUInt(),    xRTUIntDelegate   .INSTANCE);
             mapDelegates.put(pool.typeUInt8(),   xRTUInt8Delegate  .INSTANCE);
             mapDelegates.put(pool.typeUInt16(),  xRTUInt16Delegate .INSTANCE);
             mapDelegates.put(pool.typeUInt32(),  xRTUInt32Delegate .INSTANCE);
@@ -122,7 +118,7 @@ public class xRTDelegate
             markNativeProperty("size");
 
             markNativeMethod("getElement", INT, ELEMENT_TYPE);
-            markNativeMethod("setElement", new String[] {"numbers.Int", "Element"}, VOID);
+            markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
             markNativeMethod("elementAt", INT, new String[] {"reflect.Var<Element>"});
             markNativeMethod("insert", null, THIS);
             markNativeMethod("delete", INT, THIS);
@@ -350,7 +346,7 @@ public class xRTDelegate
         {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
-        return frame.assignValue(iReturn, xInt.makeHandle(hDelegate.m_ahValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_ahValue.length));
         }
 
     /**
@@ -387,7 +383,7 @@ public class xRTDelegate
         {
         DelegateHandle hDelegate = (DelegateHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt.makeHandle(hDelegate.m_cSize));
+        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_cSize));
         }
 
     /**

@@ -15,7 +15,7 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**
@@ -86,7 +86,7 @@ public abstract class BitBasedDelegate
         {
         BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt.makeHandle((long) hDelegate.m_abValue.length << 3));
+        return frame.assignValue(iReturn, xInt64.makeHandle((long) hDelegate.m_abValue.length << 3));
         }
 
     @Override

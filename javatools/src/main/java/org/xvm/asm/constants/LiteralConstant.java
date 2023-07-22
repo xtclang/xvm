@@ -1601,10 +1601,6 @@ public class LiteralConstant
                     {
                     return toNibbleConstant();
                     }
-                else if (typeOut.equals(pool.typeInt()))
-                    {
-                    return toIntConstant(Format.Int64);
-                    }
                 else if (typeOut.equals(pool.typeInt8()))
                     {
                     return toByteConstant(Format.Int8);
@@ -1628,10 +1624,6 @@ public class LiteralConstant
                 else if (typeOut.equals(pool.typeIntN()))
                     {
                     return toIntConstant(Format.IntN);
-                    }
-                else if (typeOut.equals(pool.typeUInt()))
-                    {
-                    return toIntConstant(Format.UInt64);
                     }
                 else if (typeOut.equals(pool.typeUInt8()))
                     {
@@ -1698,7 +1690,7 @@ public class LiteralConstant
                         return toFloatNConstant();
                     }
 
-                if (pool.typeInt().isA(typeOut))
+                if (pool.typeInt64().isA(typeOut))
                     {
                     return toIntConstant(Format.Int64);
                     }

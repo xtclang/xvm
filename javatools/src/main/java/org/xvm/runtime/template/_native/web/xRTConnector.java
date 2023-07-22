@@ -51,7 +51,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -326,7 +326,7 @@ public class xRTConnector
                     : xArray.makeByteArrayHandle(abResponse, Mutability.Constant);
 
             return frame.assignValues(aiReturn,
-                    xInt.makeHandle(nResponseStatus),
+                    xInt64.makeHandle(nResponseStatus),
                     xString.makeArrayHandle(asResponseNames),
                     xString.makeArrayHandle(asResponseValues),
                     hResponseBytes

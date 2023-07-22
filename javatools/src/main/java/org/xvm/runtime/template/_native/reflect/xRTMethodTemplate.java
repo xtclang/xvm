@@ -20,7 +20,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -71,11 +71,11 @@ public class xRTMethodTemplate
 
             case "parameterCount":
                 return frame.assignValue(iReturn,
-                    xInt.makeHandle(((MethodStructure) hMethod.getComponent()).getParamCount()));
+                                         xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getParamCount()));
 
             case "returnCount":
                 return frame.assignValue(iReturn,
-                    xInt.makeHandle(((MethodStructure) hMethod.getComponent()).getReturnCount()));
+                                         xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getReturnCount()));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

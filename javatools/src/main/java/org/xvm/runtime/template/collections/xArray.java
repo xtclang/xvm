@@ -35,7 +35,7 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
@@ -851,7 +851,7 @@ public class xArray
 
                 if (method.getParamCount() == 1)
                     {
-                    if (typeParam0.equals(pool.typeInt()))
+                    if (typeParam0.equals(pool.typeInt64()))
                         {
                         // 0) construct(Int capacity = 0)
                         CONSTRUCTORS[0] = method.getIdentityConstant();
@@ -866,7 +866,7 @@ public class xArray
                     {
                     // 1) construct(Int size, Element | function Element (Int) supply)
                     // 2) construct(Mutability mutability, Element... elements)
-                    if (typeParam0.equals(pool.typeInt()))
+                    if (typeParam0.equals(pool.typeInt64()))
                         {
                         CONSTRUCTORS[1] = method.getIdentityConstant();
                         }
@@ -1000,7 +1000,7 @@ public class xArray
                 if (typeValue.isA(pool.typeFunction()))
                     {
                     TypeConstant[] atypeParam = pool.extractFunctionParams(typeValue);
-                    if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeInt()))
+                    if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeInt64()))
                         {
                         break IsFunction;
                         }
@@ -1015,7 +1015,7 @@ public class xArray
                     ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
                     Utils.ValueSupplier supplier    = (frameCaller, index) ->
                         {
-                        ahArg[0] = xInt.makeHandle(index);
+                        ahArg[0] = xInt64.makeHandle(index);
                         return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
                         };
                     return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);

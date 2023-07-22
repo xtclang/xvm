@@ -56,7 +56,6 @@ public class xFPLiteral
         markNativeMethod("toFloat64" , null, new String[]{"numbers.Float64"});
         markNativeMethod("toFloat128", null, new String[]{"numbers.Float128"});
         markNativeMethod("toFloatN"  , null, new String[]{"numbers.FloatN"});
-        markNativeMethod("toDec"     , null, new String[]{"numbers.Dec"});
         markNativeMethod("toDec32"   , null, new String[]{"numbers.Dec32"});
         markNativeMethod("toDec64"   , null, new String[]{"numbers.Dec64"});
         markNativeMethod("toDec128"  , null, new String[]{"numbers.Dec128"});

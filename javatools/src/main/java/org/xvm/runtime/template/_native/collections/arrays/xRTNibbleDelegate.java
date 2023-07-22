@@ -18,7 +18,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.collections.arrays.BitBasedDelegate.BitArrayHandle;
 
@@ -48,7 +48,7 @@ public class xRTNibbleDelegate
         ConstantPool   pool         = pool();
         ClassStructure structNibble = (ClassStructure) pool.
                 typeNibble().getSingleUnderlyingClass(false).getComponent();
-        FN_OF_INT = structNibble.findMethod("of", 1, pool.typeInt());
+        FN_OF_INT = structNibble.findMethod("of", 1, pool.typeInt64());
         PROP_BITS = (PropertyConstant) structNibble.getChild("bits").getIdentityConstant();
         }
 
@@ -202,7 +202,7 @@ public class xRTNibbleDelegate
         if (hNibble == null)
             {
             ObjectHandle[] ahArg = new ObjectHandle[FN_OF_INT.getMaxVars()];
-            ahArg[0] = xInt.makeHandle(nNibble);
+            ahArg[0] = xInt64.makeHandle(nNibble);
 
             switch (frame.call1(FN_OF_INT, null, ahArg, Op.A_STACK))
                 {

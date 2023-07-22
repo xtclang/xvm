@@ -23,7 +23,7 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -77,7 +77,7 @@ public class xOSFileNode
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                    return frame.assignValue(iReturn, xInt.makeHandle(attr.creationTime().toMillis()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.creationTime().toMillis()));
                     }
                 catch (IOException e)
                     {
@@ -90,7 +90,7 @@ public class xOSFileNode
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                    return frame.assignValue(iReturn, xInt.makeHandle(attr.lastAccessTime().toMillis()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastAccessTime().toMillis()));
                     }
                 catch (IOException e)
                     {
@@ -103,7 +103,7 @@ public class xOSFileNode
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                    return frame.assignValue(iReturn, xInt.makeHandle(attr.lastModifiedTime().toMillis()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
                     }
                 catch (IOException e)
                     {
@@ -116,7 +116,7 @@ public class xOSFileNode
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                    return frame.assignValue(iReturn, xInt.makeHandle(attr.size()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.size()));
                     }
                 catch (IOException e)
                     {

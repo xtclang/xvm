@@ -65,7 +65,7 @@ public class ToIntExpression
             }
 
         m_pintOffset = pintOffset;
-        finishValidation(null, null, expr.pool().typeInt(), expr.getTypeFit().addConversion(), val, errs);
+        finishValidation(null, null, expr.pool().typeInt64(), expr.getTypeFit().addConversion(), val, errs);
         }
 
 
@@ -79,14 +79,12 @@ public class ToIntExpression
         {
         switch (expr.getType().getEcstasyClassName())
             {
-            case "numbers.Int":
             case "numbers.Int8":
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int64":
             case "numbers.Int128":
             case "numbers.IntN":
-            case "numbers.UInt":
             case "numbers.UInt8":
             case "numbers.UInt16":
             case "numbers.UInt32":
@@ -140,7 +138,6 @@ public class ToIntExpression
         String       sFormat = expr.getType().getEcstasyClassName(); // REVIEW CP
         return switch (sFormat)
             {
-            case "numbers.Int"     -> pool.ensureIntConstant(pint, Format.Int64);
             case "numbers.Int8"    -> pool.ensureByteConstant(Format.Int8, pint.getInt());
             case "numbers.UInt8"   -> pool.ensureByteConstant(Format.UInt8, pint.getInt());
             case "numbers.Int16"   -> pool.ensureIntConstant(pint, Format.Int16);
@@ -148,7 +145,6 @@ public class ToIntExpression
             case "numbers.Int64"   -> pool.ensureIntConstant(pint, Format.Int64);
             case "numbers.Int128"  -> pool.ensureIntConstant(pint, Format.Int128);
             case "numbers.IntN"    -> pool.ensureIntConstant(pint, Format.IntN);
-            case "numbers.UInt"    -> pool.ensureIntConstant(pint, Format.UInt64);
             case "numbers.UInt16"  -> pool.ensureIntConstant(pint, Format.UInt16);
             case "numbers.UInt32"  -> pool.ensureIntConstant(pint, Format.UInt32);
             case "numbers.UInt64"  -> pool.ensureIntConstant(pint, Format.UInt64);
@@ -167,13 +163,11 @@ public class ToIntExpression
         {
         switch (expr.getType().getEcstasyClassName())
             {
-            case "numbers.Int":
             case "numbers.Int8":
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int128":
             case "numbers.IntN":
-            case "numbers.UInt":
             case "numbers.UInt8":
             case "numbers.UInt16":
             case "numbers.UInt32":

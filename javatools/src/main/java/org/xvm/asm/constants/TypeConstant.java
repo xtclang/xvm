@@ -6765,14 +6765,12 @@ public abstract class TypeConstant
             case "numbers.Bit",
                  "numbers.Nibble",
                  "text.Char",
-                 "numbers.Int",
                  "numbers.Int8",
                  "numbers.Int16",
                  "numbers.Int32",
                  "numbers.Int64",
                  "numbers.Int128",
                  "numbers.IntN",
-                 "numbers.UInt",
                  "numbers.UInt8",
                  "numbers.UInt16",
                  "numbers.UInt32",
@@ -6814,8 +6812,6 @@ public abstract class TypeConstant
             case "numbers.UInt16":
                 return 0x10000;
 
-            case "numbers.Int":
-            case "numbers.UInt":
             case "numbers.Int32":
             case "numbers.UInt32":
             case "numbers.Int64":
@@ -6883,10 +6879,6 @@ public abstract class TypeConstant
             case "numbers.UInt128":
                 return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt128);
 
-            case "numbers.UInt":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt64);
-
-            case "numbers.Int":
             case "numbers.Int32":
             case "numbers.Int64":
             case "numbers.Int128":

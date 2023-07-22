@@ -253,7 +253,7 @@ public class ForEachStatement
             TypeConstant type = switch (sName)
                 {
                 case "first", "last" -> pool.typeBoolean();
-                case "count"         -> pool.typeInt();
+                case "count"         -> pool.typeInt64();
                 case "entry"         -> getEntryType();
                 case "Key"           -> getKeyType().getType();
                 case "Value"         -> getValueType().getType();
@@ -832,14 +832,12 @@ public class ForEachStatement
                 case "numbers.Bit":
                 case "numbers.Nibble":
                 case "text.Char":
-                case "numbers.Int":
                 case "numbers.Int8":
                 case "numbers.Int16":
                 case "numbers.Int32":
                 case "numbers.Int64":
                 case "numbers.Int128":
                 case "numbers.IntN":
-                case "numbers.UInt":
                 case "numbers.UInt8":
                 case "numbers.UInt16":
                 case "numbers.UInt32":
@@ -1068,12 +1066,12 @@ public class ForEachStatement
         Register regCount = m_regCount;
         if (regCount == null)
             {
-            regCount = code.createRegister(pool.typeInt());
+            regCount = code.createRegister(pool.typeInt64());
             code.add(new Var_IN(regCount,
                     pool.ensureStringConstant(getLoopPrefix() + "count"), pool.val0()));
             }
 
-        Register regEnd = code.createRegister(pool.typeInt());
+        Register regEnd = code.createRegister(pool.typeInt64());
         code.add((new Var(regEnd)));
 
         Register regSeq = code.createRegister(typeSeq);
@@ -1081,7 +1079,7 @@ public class ForEachStatement
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
 
         code.add(new P_Get(idSize, regSeq, regEnd));
-        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeInt()));
+        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeInt64()));
         code.add(new IP_Dec(regEnd));
 
         Assignable   lvalVal  = null;
@@ -1117,7 +1115,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regCount, regEnd, regLast, pool.typeInt()));
+        code.add(new IsEq(regCount, regEnd, regLast, pool.typeInt64()));
 
         MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
         if (idConv == null)

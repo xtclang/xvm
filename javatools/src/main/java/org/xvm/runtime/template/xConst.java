@@ -42,7 +42,6 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
@@ -482,7 +481,7 @@ public class xConst
             }
         else
             {
-            return frame.assignValue(iReturn, xInt.makeHandle(0));
+            return frame.assignValue(iReturn, xInt64.makeHandle(0));
             }
         }
 

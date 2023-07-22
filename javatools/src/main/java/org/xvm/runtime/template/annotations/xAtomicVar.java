@@ -55,10 +55,6 @@ public class xAtomicVar
         ConstantPool                  pool         = f_container.getConstantPool();
         Map<TypeConstant, xAtomicVar> mapTemplates = new HashMap<>();
 
-        // Int, UInt
-        mapTemplates.put(pool.typeInt(),     new xAtomicInt(xInt .INSTANCE));       // TODO GG unchecked?
-        mapTemplates.put(pool.typeUInt(),    new xAtomicInt(xUInt.INSTANCE));       // TODO GG unchecked?
-
         // Int128, UInt128
         mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(xInt128.INSTANCE));  // TODO GG unchecked?
         mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(xUInt128.INSTANCE)); // TODO GG unchecked?

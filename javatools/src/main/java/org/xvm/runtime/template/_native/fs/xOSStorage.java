@@ -32,7 +32,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -368,7 +368,7 @@ public class xOSStorage
 
                 ObjectHandle[] ahArg = new ObjectHandle[]
                     {
-                    hPathDir, hPathNode, xBoolean.TRUE, xInt.makeHandle(iKind)
+                    hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)
                     };
                 context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
                 }

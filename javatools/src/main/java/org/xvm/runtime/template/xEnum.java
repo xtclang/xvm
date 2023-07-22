@@ -24,7 +24,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.numbers.xInt;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
@@ -180,7 +179,7 @@ public class xEnum
                 return frame.assignValue(iReturn, xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
 
             case "ordinal":
-                return frame.assignValue(iReturn, xInt.makeHandle(hEnum.getOrdinal()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getOrdinal()));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

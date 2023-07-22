@@ -169,7 +169,7 @@ abstract public class BaseDecFP
                 int        cb = (n.bitLength() + 7) / 8;
                 if (cb <= 8)
                     {
-                    return frame.assignValue(iReturn, xInt.makeHandle(n.longValue()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(n.longValue()));
                     }
 
                 if (cb > 16)
@@ -288,7 +288,7 @@ abstract public class BaseDecFP
                 int     iExp      = 0;
                 long    lMantissa = 0;
                 return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
-                        xInt.makeHandle(lMantissa), xInt.makeHandle(iExp));
+                                          xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
                 }
             }
 
@@ -393,7 +393,7 @@ abstract public class BaseDecFP
         {
         Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt.makeHandle(dec.toString().length()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(dec.toString().length()));
         }
 
     @Override

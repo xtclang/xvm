@@ -93,7 +93,7 @@ public class LiteralExpression
             case LIT_INT:
                 return pool.typeIntLiteral();
             case LIT_INTA:
-                return pool.typeInt();
+                return pool.typeInt64();
             case LIT_INT8:
                 return pool.typeInt8();
             case LIT_INT16:
@@ -108,7 +108,7 @@ public class LiteralExpression
                 return pool.typeIntN();
 
             case LIT_UINTA:
-                return pool.typeUInt();
+                return pool.typeUInt64();
             case LIT_UINT8:
                 return pool.typeUInt8();
             case LIT_UINT16:
@@ -125,7 +125,7 @@ public class LiteralExpression
             case LIT_DEC:
                 return pool.typeFPLiteral();
             case LIT_DECA:
-                return pool.typeDec();
+                return pool.typeDec64();
             case LIT_DEC32:
             case LIT_DEC64:
             case LIT_DEC128:

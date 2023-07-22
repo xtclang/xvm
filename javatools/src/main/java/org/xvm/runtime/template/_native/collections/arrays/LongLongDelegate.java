@@ -20,7 +20,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.LongArrayHandle;
 
@@ -84,7 +84,7 @@ public abstract class LongLongDelegate
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xInt.makeHandle((long) hDelegate.m_alValue.length / 2));
+                xInt64.makeHandle((long) hDelegate.m_alValue.length / 2));
         }
 
     @Override

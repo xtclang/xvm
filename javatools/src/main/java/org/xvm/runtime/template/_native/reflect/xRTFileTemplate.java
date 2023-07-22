@@ -30,7 +30,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -99,11 +99,11 @@ public class xRTFileTemplate
                     try
                         {
                         BasicFileAttributes attr = Files.readAttributes(fileOS.toPath(), BasicFileAttributes.class);
-                        return frame.assignValue(iReturn, xInt.makeHandle(attr.lastModifiedTime().toMillis()));
+                        return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
                         }
                     catch (IOException ignore) {}
                     }
-                return frame.assignValue(iReturn, xInt.makeHandle(0L));
+                return frame.assignValue(iReturn, xInt64.makeHandle(0L));
                 }
             }
 

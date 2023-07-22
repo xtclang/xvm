@@ -131,7 +131,7 @@ public class ArrayTypeExpression
         ClassConstant  idArray  = pool().clzArray();
         ClassStructure clzArray = (ClassStructure) idArray.getComponent();
 
-        return clzArray.findMethod("construct", 2, pool().typeInt()).getIdentityConstant();
+        return clzArray.findMethod("construct", 2, pool().typeInt64()).getIdentityConstant();
         }
 
 

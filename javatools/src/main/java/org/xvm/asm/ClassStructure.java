@@ -3703,7 +3703,7 @@ public class ClassStructure
                     {
                     Parameter[] aReturn = new Parameter[]
                         {
-                        new Parameter(pool, pool.typeInt(), null, null, true, 0, false)
+                        new Parameter(pool, pool.typeInt64(), null, null, true, 0, false)
                         };
                     methEstimate = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
                             aReturn, "estimateStringLength", Parameter.NO_PARAMS,

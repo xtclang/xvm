@@ -41,7 +41,7 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -173,7 +173,7 @@ public class xRef
                     h -> frame.assignValue(iReturn, xBoolean.makeHandle(!h.isMutable())));
 
             case "byteLength":
-                return frame.assignValue(iReturn, xInt.makeHandle(8)); // TODO
+                return frame.assignValue(iReturn, xInt64.makeHandle(8)); // TODO
 
             case "selfContained":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));

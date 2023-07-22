@@ -241,7 +241,7 @@ abstract public class BaseBinaryFP
                 int     iExp      = Math.getExponent(d);
                 long    lMantissa = l & MANTISSA_MASK;
                 return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
-                        xInt.makeHandle(lMantissa), xInt.makeHandle(iExp));
+                                          xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
                 }
             }
 
@@ -344,7 +344,7 @@ abstract public class BaseBinaryFP
         {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt.makeHandle(toString(d).length()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(toString(d).length()));
         }
 
     @Override

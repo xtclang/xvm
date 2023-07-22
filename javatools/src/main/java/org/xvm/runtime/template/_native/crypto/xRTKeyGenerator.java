@@ -12,7 +12,7 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyGenHandle;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
@@ -66,6 +66,6 @@ public class xRTKeyGenerator
         SecretKey key   = hKeyGen.f_generator.generateKey();
         int       nSize = key.getEncoded().length;
 
-        return frame.assignValues(aiReturn, xInt.makeHandle(nSize), new SecretHandle(key));
+        return frame.assignValues(aiReturn, xInt64.makeHandle(nSize), new SecretHandle(key));
         }
     }

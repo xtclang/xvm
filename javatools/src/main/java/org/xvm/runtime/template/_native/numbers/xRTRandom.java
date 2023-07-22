@@ -21,7 +21,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
@@ -32,11 +31,10 @@ import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xDec64;
 import org.xvm.runtime.template.numbers.xFloat32;
 import org.xvm.runtime.template.numbers.xFloat64;
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xInt8;
 import org.xvm.runtime.template.numbers.xInt16;
 import org.xvm.runtime.template.numbers.xInt32;
-import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 import org.xvm.runtime.template.numbers.xUInt8;
 import org.xvm.runtime.template.numbers.xUInt16;
@@ -252,59 +250,21 @@ public class xRTRandom
                 fSmall = true;
                 lMax   = llMax.getLowValue();
                 }
+            else
+                {
+                throw new IllegalStateException();
+                }
             }
 
         Random rnd = rnd(hTarget);
 
-        if (fSmall)
-            {
-            if (lMax <= 0)
-                {
-                return frame.raiseException(xException.illegalArgument(frame,
-                        "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
-                }
-
-            return frame.assignValue(iReturn, xInt.makeHandle(computeRandom(rnd, lMax)));
-            }
-
-        if (llMax.signum() < 0)
+        if (lMax <= 0)
             {
             return frame.raiseException(xException.illegalArgument(frame,
-                    "Illegal exclusive maximum (" + llMax +"); maximum must be > 0"));
+                    "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
             }
 
-        long lLoMax = llMax.getLowValue();
-        long lHiMax = llMax.getHighValue();
-
-        if (lLoMax == 0 && (lHiMax & (lHiMax-1)) == 0)
-            {
-            // it's a power of 2
-            LongLong ll = new LongLong(rnd.nextLong(), rnd.nextLong() & (lHiMax - 1));
-            return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
-            }
-        else if (lHiMax == Long.MAX_VALUE)
-            {
-            while (true)
-                {
-                LongLong ll = new LongLong(rnd.nextLong(), rnd.nextLong() & ~Long.MIN_VALUE);
-                if (ll.compare(llMax) < 0)
-                    {
-                    return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
-                    }
-                }
-            }
-        else
-            {
-            // see the comments in the natural code (Random.x)
-            while (true)
-                {
-                LongLong ll = new LongLong(rnd.nextLong(), computeRandom(rnd, lHiMax + 1));
-                if (ll.compare(llMax) < 0)
-                    {
-                    return frame.assignValue(iReturn, xInt.INSTANCE.makeHandle(ll));
-                    }
-                }
-            }
+        return frame.assignValue(iReturn, xInt64.makeHandle(computeRandom(rnd, lMax)));
         }
 
     /**

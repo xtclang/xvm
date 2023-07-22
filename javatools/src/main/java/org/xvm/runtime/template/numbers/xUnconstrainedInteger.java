@@ -129,14 +129,14 @@ public abstract class xUnconstrainedInteger
                 {
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 int cBits = pi.isBig() ? pi.getBigInteger().bitCount() : Long.bitCount(pi.getLong());
-                return frame.assignValue(iReturn, xInt.makeHandle(cBits));
+                return frame.assignValue(iReturn, xInt64.makeHandle(cBits));
                 }
 
             case "bitLength":
                 {
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                return frame.assignValue(iReturn, xInt.makeHandle(cBytes * 8L));
+                return frame.assignValue(iReturn, xInt64.makeHandle(cBytes * 8L));
                 }
 
             case "leftmostBit":
@@ -284,41 +284,23 @@ public abstract class xUnconstrainedInteger
             case "toUInt64":
             case "toUInt128":
                 {
-                TypeConstant  typeRet  = method.getReturn(0).getType();
-                PackedInteger pi       = ((IntNHandle) hTarget).getValue();
-                ClassTemplate template = f_container.getTemplate(typeRet);
+                TypeConstant        typeRet  = method.getReturn(0).getType();
+                PackedInteger       pi       = ((IntNHandle) hTarget).getValue();
+                xConstrainedInteger template = (xConstrainedInteger) f_container.getTemplate(typeRet);
 
-                if (template instanceof xConstrainedInteger templateTo)
+                // check for overflow
+                if (f_fChecked)
                     {
-                    // check for overflow
-                    if (f_fChecked)
-                        {
-                        int cBytes = templateTo.f_fSigned
-                            ? pi.getSignedByteSize()
-                            : pi.getUnsignedByteSize();
-                        if (cBytes * 8 > templateTo.f_cNumBits)
-                            {
-                            return template.overflow(frame);
-                            }
-                        }
-
-                    return templateTo.convertLong(frame, pi.getLong(), iReturn, f_fChecked);
-                    }
-                else
-                    {
-                    xIntBase templateTo = (xIntBase) template;
-
-                    int cBytes = templateTo.f_fSigned
+                    int cBytes = template.f_fSigned
                         ? pi.getSignedByteSize()
                         : pi.getUnsignedByteSize();
-                    if (f_fChecked && cBytes > 16)
+                    if (cBytes * 8 > template.f_cNumBits)
                         {
                         return template.overflow(frame);
                         }
-
-                    return frame.assignValue(iReturn,
-                        templateTo.makeHandle(LongLong.fromBigInteger(pi.getBigInteger())));
                     }
+
+                return template.convertLong(frame, pi.getLong(), iReturn, f_fChecked);
                 }
             }
 

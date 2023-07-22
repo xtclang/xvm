@@ -40,14 +40,12 @@ public class xRTViewToBit
             {
             registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTViewToBitFromInt    (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromInt8   (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromInt16  (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromInt32  (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromInt64  (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromInt128 (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTViewToBitFromUInt   (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromUInt8  (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromUInt16 (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromUInt32 (f_container, f_struct, true));
@@ -66,14 +64,12 @@ public class xRTViewToBit
 
             mapViews.put(pool.typeNibble(), xRTViewToBitFromNibble.INSTANCE);
 
-            mapViews.put(pool.typeInt()    , xRTViewToBitFromInt    .INSTANCE);
             mapViews.put(pool.typeInt8()   , xRTViewToBitFromInt8   .INSTANCE);
             mapViews.put(pool.typeInt16()  , xRTViewToBitFromInt16  .INSTANCE);
             mapViews.put(pool.typeInt32()  , xRTViewToBitFromInt32  .INSTANCE);
             mapViews.put(pool.typeInt64()  , xRTViewToBitFromInt64  .INSTANCE);
             mapViews.put(pool.typeInt128() , xRTViewToBitFromInt128 .INSTANCE);
 
-            mapViews.put(pool.typeUInt()   , xRTViewToBitFromUInt   .INSTANCE);
             mapViews.put(pool.typeUInt8()  , xRTViewToBitFromUInt8  .INSTANCE);
             mapViews.put(pool.typeUInt16() , xRTViewToBitFromUInt16 .INSTANCE);
             mapViews.put(pool.typeUInt32() , xRTViewToBitFromUInt32 .INSTANCE);

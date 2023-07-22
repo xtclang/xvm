@@ -28,7 +28,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xInt128;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -188,7 +188,7 @@ public class xLocalClock
             m_hTimeZone = hTimeZone = new GenericHandle(clzTimeZone);
 
             long lOffset = 0; // TODO CP
-            hTimeZone.setField(frame, "picos", xInt.makeHandle(lOffset));
+            hTimeZone.setField(frame, "picos", xInt64.makeHandle(lOffset));
             hTimeZone.setField(frame, "name",  xNullable.NULL);
             hTimeZone.setField(frame, "rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
             hTimeZone.makeImmutable();

@@ -220,7 +220,7 @@ public class AssertStatement
 
         if (interval != null)
             {
-            Expression exprNew = interval.validate(ctx, pool().typeInt(), errs);
+            Expression exprNew = interval.validate(ctx, pool().typeInt64(), errs);
             if (exprNew == null)
                 {
                 fValid = false;

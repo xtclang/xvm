@@ -19,7 +19,7 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt;
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**
@@ -65,7 +65,7 @@ public abstract class ByteBasedDelegate
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt.makeHandle(hDelegate.m_abValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_abValue.length));
         }
 
     @Override

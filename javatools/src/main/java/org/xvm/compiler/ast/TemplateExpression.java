@@ -230,7 +230,7 @@ public class TemplateExpression
         // $ = new StringBuffer(cchMin)
         TypeConstant   typeBuf  = pool.typeStringBuffer();
         TypeInfo       infoBuf  = typeBuf.ensureTypeInfo(errs);
-        TypeConstant   typeInt  = pool.typeInt();
+        TypeConstant   typeInt  = pool.typeInt64();
         MethodConstant idNewBuf = infoBuf.findConstructor(new TypeConstant[] {typeInt});
         assert idNewBuf != null;
         code.add(new New_1(idNewBuf, pool.ensureIntConstant(cchMin), m_reg$));
