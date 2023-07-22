@@ -35,7 +35,6 @@ const FPNumberMapping<Serializable extends FPNumber>
             [
             numbers.FPNumber        = (lit) -> lit.toDecN(),
             numbers.DecimalFPNumber = (lit) -> lit.toDecN(),
-            numbers.Dec             = (lit) -> lit.toDec(),
             numbers.Dec32           = (lit) -> lit.toDec32(),
             numbers.Dec64           = (lit) -> lit.toDec64(),
             numbers.Dec128          = (lit) -> lit.toDec128(),

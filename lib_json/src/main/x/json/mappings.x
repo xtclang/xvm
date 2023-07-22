@@ -10,13 +10,11 @@ package mappings {
         new BitMapping(),
         new CharMapping(),
 
-        new IntNumberMapping<ecstasy.numbers.Int     >(),
         new IntNumberMapping<ecstasy.numbers.Int8    >(),
         new IntNumberMapping<ecstasy.numbers.Int16   >(),
         new IntNumberMapping<ecstasy.numbers.Int32   >(),
         new IntNumberMapping<ecstasy.numbers.Int64   >(),
         new IntNumberMapping<ecstasy.numbers.Int128  >(),
-        new IntNumberMapping<ecstasy.numbers.UInt    >(),
         new IntNumberMapping<ecstasy.numbers.UInt8   >(),
         new IntNumberMapping<ecstasy.numbers.UInt16  >(),
         new IntNumberMapping<ecstasy.numbers.UInt32  >(),
@@ -25,7 +23,6 @@ package mappings {
         new IntNumberMapping<ecstasy.numbers.IntN    >(),
         new IntNumberMapping<ecstasy.numbers.UIntN   >(),
 
-        new  FPNumberMapping<ecstasy.numbers.Dec     >(),
         new  FPNumberMapping<ecstasy.numbers.Dec32   >(),
         new  FPNumberMapping<ecstasy.numbers.Dec64   >(),
         new  FPNumberMapping<ecstasy.numbers.Dec128  >(),

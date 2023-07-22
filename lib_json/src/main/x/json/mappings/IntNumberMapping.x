@@ -35,13 +35,11 @@ const IntNumberMapping<Serializable extends IntNumber>
             [
             numbers.IntNumber  = (lit) -> lit.toIntN(),
             numbers.UIntNumber = (lit) -> lit.toUIntN(),
-            numbers.Int        = (lit) -> lit.toInt(),
             numbers.Int8       = (lit) -> lit.toInt8(),
             numbers.Int16      = (lit) -> lit.toInt16(),
             numbers.Int32      = (lit) -> lit.toInt32(),
             numbers.Int64      = (lit) -> lit.toInt64(),
             numbers.Int128     = (lit) -> lit.toInt128(),
-            numbers.UInt       = (lit) -> lit.toUInt(),
             numbers.UInt8      = (lit) -> lit.toUInt8(),
             numbers.UInt16     = (lit) -> lit.toUInt16(),
             numbers.UInt32     = (lit) -> lit.toUInt32(),
