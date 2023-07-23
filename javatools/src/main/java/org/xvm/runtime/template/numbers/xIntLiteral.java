@@ -342,6 +342,11 @@ public class xIntLiteral
                         ? templateTo.overflow(frame)
                         : frame.assignValue(iReturn, templateTo.makeHandle(llValue));
                     }
+
+                if (template instanceof xUnconstrainedInteger templateTo)
+                    {
+                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
+                    }
                 break;
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
