@@ -73,7 +73,7 @@ public class xRTMethod
         assert typeActual.isA(pool.typeMethod());
 
         TypeConstant typeTarget = typeActual.getParamType(0);
-        TypeConstant typeP      = pool.typeTuple0();
+        TypeConstant typeP      = typeActual.getParamType(1);
         TypeConstant typeR      = typeActual.getParamType(2);
         TypeConstant typeMethod = pool.ensureParameterizedTypeConstant(
                                         pool.typeMethod(), typeTarget, typeP, typeR);
