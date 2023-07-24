@@ -60,6 +60,8 @@ const MediaType {
     static MediaType HTML        = predefine("text/html",                                     ["htm", "html"]);
     static MediaType JavaScript  = predefine(["text/javascript", "application/javascript"],   "js"  );
     static MediaType Text        = predefine("text/plain",                                    "txt" );
+    static MediaType Woff        = predefine("font/woff",                                    "woff" );
+    static MediaType Woff2       = predefine("font/woff2",                                   "woff2" );
 
     /**
      * All of the pre-defined media types.
@@ -67,7 +69,7 @@ const MediaType {
     static MediaType[] Predefined = [JavaScript, Json, JsonLD, JsonPatch, PDF, SQL, JsonAPI,
             Word, WordX, Excel, ExcelX, PowerPoint, PowerPointX, OpenOffice, FormURL, XML, XHTML,
             Zip, ZStd, CDAudio, AACAudio, MpegAudio, OGG, Opus, WAV, WEBMAudio, MIDI,
-            AVIF, JPEG, PNG, SVG, WebP, FormData, CSS, CSV, HTML, Text, ];
+            AVIF, JPEG, PNG, SVG, WebP, FormData, CSS, CSV, HTML, Text, Woff, Woff2, ];
 
 
     // ----- constructors --------------------------------------------------------------------------
