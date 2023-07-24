@@ -184,7 +184,7 @@ abstract public class Part {
   }
   // Set the self-type exactly once
   public final TVar setype( ) {
-    if( _tvar!=null ) return _tvar;
+    if( _tvar!=null ) return tvar();
     _tvar = _setype();
     
     // Recursively kids
