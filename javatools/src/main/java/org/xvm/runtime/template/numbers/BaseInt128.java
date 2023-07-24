@@ -274,6 +274,8 @@ public abstract class BaseInt128
             case "toUInt32":
             case "toUInt64":
             case "toUInt128":
+            case "toIntN":
+            case "toUIntN":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_container.getTemplate(typeRet);
@@ -289,6 +291,12 @@ public abstract class BaseInt128
                 if (template instanceof xConstrainedInteger templateTo)
                     {
                     return convertToConstrainedType(frame, templateTo, llValue, !fCheckBounds, iReturn);
+                    }
+
+                if (template instanceof xUnconstrainedInteger templateTo)
+                    {
+                    PackedInteger piValue = new PackedInteger(llValue.toBigInteger());
+                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
                     }
 
                 if (template instanceof BaseInt128 templateTo)
@@ -332,6 +340,8 @@ public abstract class BaseInt128
             case "toUInt32":
             case "toUInt64":
             case "toUInt128":
+            case "toIntN":
+            case "toUIntN":
                 // default argument: checkBounds = False;
                 return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
             }

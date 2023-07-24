@@ -169,6 +169,9 @@ public class xBitArray
                 return frame.assignValue(iReturn, new ArrayHandle(
                         xNibbleArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
                 }
+
+            case "toByteArray":
+                return invokeNative1(frame, method, hTarget, ObjectHandle.DEFAULT, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

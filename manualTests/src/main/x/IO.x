@@ -38,18 +38,18 @@ module TestIO
 
     void run()
         {
-//        testInputStream();
-//        testPacked();
-//        testJavaUTF();
-//        testUTF8Reader();
-//        testJSONLex();
-//        testJSONParse();
-//        testJSONPrint();
-//        testJSONBuild();
+        testInputStream();
+        testPacked();
+        testJavaUTF();
+        testUTF8Reader();
+        testJSONLex();
+        testJSONParse();
+        testJSONPrint();
+        testJSONBuild();
         testPoint();
-//        testMap();
-//        testMetadata();
-//        testPointers();
+        testMap();
+        testMetadata();
+        testPointers();
         }
 
     void testInputStream()

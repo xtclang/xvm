@@ -8,12 +8,12 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
@@ -30,13 +30,11 @@ import org.xvm.util.PackedInteger;
 public abstract class xUnconstrainedInteger
         extends xIntNumber
     {
-    protected xUnconstrainedInteger(Container container, ClassStructure structure,
-             boolean fUnsigned, boolean fChecked)
+    protected xUnconstrainedInteger(Container container, ClassStructure structure, boolean fUnsigned)
         {
         super(container, structure, false);
 
-        f_fChecked = fChecked;
-        f_fSigned  = !fUnsigned;
+        f_fSigned = !fUnsigned;
         }
 
     @Override
@@ -220,6 +218,37 @@ public abstract class xUnconstrainedInteger
             case "mod":
                 return invokeMod(frame, hTarget, hArg, iReturn);
 
+            case "toInt8":
+            case "toInt16":
+            case "toInt32":
+            case "toInt64":
+            case "toInt128":
+            case "toUInt8":
+            case "toUInt16":
+            case "toUInt32":
+            case "toUInt64":
+            case "toUInt128":
+                {
+                TypeConstant        typeRet  = method.getReturn(0).getType();
+                PackedInteger       pi       = ((IntNHandle) hTarget).getValue();
+                xConstrainedInteger template = (xConstrainedInteger) f_container.getTemplate(typeRet);
+
+                // check for overflow
+                boolean fCheckBounds = hArg == xBoolean.TRUE;
+                if (fCheckBounds)
+                    {
+                    int cBytes = template.f_fSigned
+                        ? pi.getSignedByteSize()
+                        : pi.getUnsignedByteSize();
+                    if (cBytes * 8 > template.f_cNumBits)
+                        {
+                        return template.overflow(frame);
+                        }
+                    }
+
+                return template.convertLong(frame, pi.getLong(), iReturn, fCheckBounds);
+                }
+
             case "toIntN":
                 {
                 ObjectHandle hResult = hTarget;
@@ -241,7 +270,7 @@ public abstract class xUnconstrainedInteger
                     TypeConstant          typeRet  = method.getReturn(0).getType();
                     xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
                     PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
-                    if (f_fChecked && pi.isNegative())
+                    if (pi.isNegative())
                         {
                         return template.overflow(frame);
                         }
@@ -281,25 +310,8 @@ public abstract class xUnconstrainedInteger
             case "toUInt32":
             case "toUInt64":
             case "toUInt128":
-                {
-                TypeConstant        typeRet  = method.getReturn(0).getType();
-                PackedInteger       pi       = ((IntNHandle) hTarget).getValue();
-                xConstrainedInteger template = (xConstrainedInteger) f_container.getTemplate(typeRet);
-
-                // check for overflow
-                if (f_fChecked)
-                    {
-                    int cBytes = template.f_fSigned
-                        ? pi.getSignedByteSize()
-                        : pi.getUnsignedByteSize();
-                    if (cBytes * 8 > template.f_cNumBits)
-                        {
-                        return template.overflow(frame);
-                        }
-                    }
-
-                return template.convertLong(frame, pi.getLong(), iReturn, f_fChecked);
-                }
+                // default argument: checkBounds = False;
+                return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -504,6 +516,5 @@ public abstract class xUnconstrainedInteger
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected final boolean f_fChecked;
     protected final boolean f_fSigned;
     }

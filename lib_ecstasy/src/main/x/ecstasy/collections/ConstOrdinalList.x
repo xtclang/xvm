@@ -36,16 +36,16 @@ const ConstOrdinalList
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
 
         Int valueCount = values.size;
-        out.writeInt128(valueCount);
+        out.writeInt(valueCount);
 
         if (valueCount > 0) {
             (Int highest, Int defaultVal) = analyzeValues(values);
-            out.writeInt128(defaultVal);
+            out.writeInt(defaultVal);
 
             // calculate bits per value
             Int bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x7F;
-            assert 0 < bitsPerVal < 128;
-            out.writeInt128(bitsPerVal);
+            assert 0 < bitsPerVal < 64;
+            out.writeInt(bitsPerVal);
 
             // calculate a minimum run length based on expected node sizes (assume 6 byte overhead)
             Int minRunLen = (6 * 8 - 1) / bitsPerVal + 1;
@@ -58,7 +58,7 @@ const ConstOrdinalList
             ensureFastNode(nodes, values, fastAccess, minRunLen);
 
             // last field in the header is the index of the first value from the first node
-            out.writeInt128(nodes.size == 0 ? valueCount : nodes[0].index);
+            out.writeInt(nodes.size == 0 ? valueCount : nodes[0].index);
 
             if (nodes.size > 0) {
                 // link the nodes' "jump" pointers
@@ -258,13 +258,13 @@ const ConstOrdinalList
      * @return a byte array containing the packed integer values
      */
     static Byte[] pack(Int[] vals, Int packFirst, Int packCount, Int bitsPerVal) {
-        Int128 mask   = (1 << bitsPerVal) - 1;
+        Int    mask   = (1 << bitsPerVal) - 1;
         Int    binLen = (packCount * bitsPerVal + 7) / 8;
         Byte[] binVal = new Byte[binLen];
 
         for (Int i = 0; i < packCount; ++i) {
-            Int128 curVal    = vals[packFirst+i] & mask;
-            Int    bitOffset = i * bitsPerVal;
+            Int curVal    = vals[packFirst+i] & mask;
+            Int bitOffset = i * bitsPerVal;
             while (curVal != 0) {
                 Int  byteOffset = bitOffset / 8;
                 Byte byte       = binVal[byteOffset];
@@ -589,14 +589,14 @@ const ConstOrdinalList
             }
 
             @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
-            out.writeInt128(jumpIndex);
+            out.writeInt(jumpIndex);
             if (jumpIndex != 0) {
-                out.writeInt128(jumpOffset);
+                out.writeInt(jumpOffset);
             }
-            out.writeInt128(nextIndex);
-            out.writeInt128(valCount);
+            out.writeInt(nextIndex);
+            out.writeInt(valCount);
             if (node.runLenEnc) {
-                out.writeInt128(val);
+                out.writeInt(val);
             } else {
                 out.writeBytes(packed);
             }
