@@ -14,7 +14,12 @@ public abstract class TCon extends Const {
   // Normal access, already set (never null)
   public final TVar tvar() { return _tvar.unified() ? (_tvar=_tvar.find()) : _tvar; }
   // Set the TVar; can be null or not
-  public final TVar setype( ) { return _tvar==null ? (_tvar = _setype()) : tvar(); }
+  public final TVar setype( ) {
+    if( _tvar!=null ) return tvar();
+    TVar tv = _setype();
+    assert !tv.unified();
+    return (_tvar=tv);
+  }
 
   // Sub TCons use this return the initial tvar; and can be assured that they
   // are called only once, and they do not need to assign to tvar.

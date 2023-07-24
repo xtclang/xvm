@@ -89,7 +89,7 @@ public class Contrib {
   }
 
   public TVar tvar() { assert _tvar!=null; return _tvar; }
-  public final TVar setype( ) { return _tvar==null ? (_tvar = _tContrib.setype()) : _tvar; }
+  public final TVar setype( ) { return _tvar==null ? (_tvar = _tContrib.setype()) : tvar(); }
   
   
   @Override public String toString() { return str(new SB()).toString(); }

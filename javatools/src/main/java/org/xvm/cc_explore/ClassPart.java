@@ -115,7 +115,11 @@ public class ClassPart extends Part {
         switch( c._comp ) {
         case Extends -> {
           _super = ((ClzCon)c._tContrib).clz();
-          assert _super._f==Format.CLASS || _super._f==Format.CONST || _super._f==Format.ENUM || _super._f==Format.MIXIN; // Class or Constant or Enum class
+          assert _super._f==Format.CLASS
+            || _super._f==Format.CONST
+            || _super._f==Format.ENUM
+            || _super._f==Format.SERVICE
+            || _super._f==Format.MIXIN; 
           // Cannot assert struct is closed, because of recursive references.
           if( c._clzs != null )  throw XEC.TODO();
         }
@@ -125,6 +129,7 @@ public class ClassPart extends Part {
           assert ctv.is_open();
           // Unify interface into class
           ctv.fresh_unify(stv,null);
+          assert !stv.unified();
           if( c._clzs != null )  throw XEC.TODO();
         }
   
@@ -141,19 +146,23 @@ public class ClassPart extends Part {
           _mixes[_mixes.length-1] = mix;
           // Unify a fresh copy of the mixin's type
           mix.setype().fresh_unify(stv,null); // Self picks up mixin fields
+          assert !stv.unified();
           // Set generic parameter types
           if( c._clzs != null )
             for( String generic : c._clzs.keySet() ) {
               TVar mix_tv = stv.arg(generic(generic)); // stv is the self, picking up the mixin
-              Part pgen = c._clzs.get(generic);
-              if( pgen!=null )
-                pgen.tvar().fresh_unify(mix_tv,null);
+              if( mix_tv!=null ) {
+                Part pgen = c._clzs.get(generic);
+                if( pgen!=null )
+                  pgen.tvar().fresh_unify(mix_tv,null);
+              }
             }
         }
 
         case Import -> {
           TVar tvi = c.setype();
           tvi.unify(stv);
+          stv = stvar();
         }
         
         default ->  // Handle other contributions
