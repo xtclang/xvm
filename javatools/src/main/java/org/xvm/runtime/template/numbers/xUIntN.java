@@ -16,7 +16,7 @@ public class xUIntN
 
     public xUIntN(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure, true);
+        super(container, structure, false);
 
         if (fInstance)
             {

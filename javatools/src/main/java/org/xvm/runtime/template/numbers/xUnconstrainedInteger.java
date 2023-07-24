@@ -34,11 +34,11 @@ import org.xvm.util.PackedInteger;
 public abstract class xUnconstrainedInteger
         extends xIntNumber
     {
-    protected xUnconstrainedInteger(Container container, ClassStructure structure, boolean fUnsigned)
+    protected xUnconstrainedInteger(Container container, ClassStructure structure, boolean fSigned)
         {
         super(container, structure, false);
 
-        f_fSigned = !fUnsigned;
+        f_fSigned = fSigned;
         }
 
     @Override
@@ -233,11 +233,16 @@ public abstract class xUnconstrainedInteger
                 TypeConstant        typeRet  = method.getReturn(0).getType();
                 PackedInteger       pi       = ((IntNHandle) hTarget).getValue();
                 xConstrainedInteger template = (xConstrainedInteger) f_container.getTemplate(typeRet);
+                long                lValue;
 
                 // check for overflow
                 boolean fCheckBounds = hArg == xBoolean.TRUE;
                 if (fCheckBounds)
                     {
+                    if (pi.isNegative())
+                        {
+                        return template.overflow(frame);
+                        }
                     int cBytes = template.f_fSigned
                         ? pi.getSignedByteSize()
                         : pi.getUnsignedByteSize();
@@ -245,9 +250,14 @@ public abstract class xUnconstrainedInteger
                         {
                         return template.overflow(frame);
                         }
+                    lValue = pi.getLong();
+                    }
+                else
+                    {
+                    lValue = pi.isBig() ? pi.getBigInteger().longValue() : pi.getLong();
                     }
 
-                return template.convertLong(frame, pi.getLong(), iReturn, fCheckBounds);
+                return template.convertLong(frame, lValue, iReturn, fCheckBounds);
                 }
             }
 
@@ -509,9 +519,9 @@ public abstract class xUnconstrainedInteger
     /**
      * NOTE: we are using the IntNHandle for objects of UnconstrainedInteger types.
      */
-    protected IntNHandle makeInt(PackedInteger iValue)
+    protected IntNHandle makeInt(PackedInteger pi)
         {
-        return new IntNHandle(getCanonicalClass(), iValue, null);
+        return new IntNHandle(getCanonicalClass(), pi, null);
         }
 
 
