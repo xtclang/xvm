@@ -23,6 +23,8 @@ public class ParamTCon extends TCon implements ClzCon {
     sb.p("<>");
     return _parms==null ? sb : _parms[0].str(sb.p(" -> "));
   }
+  @Override public ClassPart clz() { return _part; }
+  
   @Override public void resolve( CPool X ) {
     _con = (TCon)X.xget();
     _parms = TCon.tcons(X);
@@ -43,6 +45,4 @@ public class ParamTCon extends TCon implements ClzCon {
        _types[i] = _parms[i].setype();
     return _con.setype();
   }
-
-  @Override public ClassPart clz() { return _part; }
 }
