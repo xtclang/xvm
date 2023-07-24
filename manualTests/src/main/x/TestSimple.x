@@ -1,23 +1,19 @@
-module TestSimple.examples.org {
+module TestSimple {
     @Inject Console console;
 
     void run() {
-    }
 
-    Int test(Int x) {
-        switch (x) {
-        case 0:
-            return 0;
+        Int128 i = 128;
+        Byte[] bytes = i.toByteArray();
+        console.print(i.toByteArray());
 
-        case 1:
-            Int bug = x + 1;
-            function Int (Int) supply = i -> {
-                return bug + i; // "bug" used to be not "effectively final"
-            };
-            return 1;
+        IntN i2 = Int:2.as(IntN).pow(129) + 2;
 
-        default:
-            return 0;
-        }
+        console.print(i2.toByteArray());
+        console.print(i2.toBitArray());
+        console.print($"{i2.bitLength=}");
+        console.print($"{i2.leftmostBit=}");
+        console.print($"{i2.rightmostBit=}");
+        console.print($"{i2.trailingZeroCount=}");
     }
 }

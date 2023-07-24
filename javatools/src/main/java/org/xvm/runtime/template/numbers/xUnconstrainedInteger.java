@@ -1,6 +1,8 @@
 package org.xvm.runtime.template.numbers;
 
 
+import java.math.BigInteger;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -16,6 +18,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
+
+import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
@@ -43,9 +47,6 @@ public abstract class xUnconstrainedInteger
         super.initNative();
 
         markNativeProperty("leadingZeroCount");
-
-// TODO markNativeMethod("toBooleanArray", VOID, null);
-// TODO markNativeMethod("toBitArray"    , VOID, null);
 
 // TODO markNativeMethod("rotateLeft"   , INT , THIS);
 // TODO markNativeMethod("rotateRight"  , INT , THIS);
@@ -123,6 +124,14 @@ public abstract class xUnconstrainedInteger
         {
         switch (sPropName)
             {
+            case "bits":
+                {
+                PackedInteger pi     = ((IntNHandle) hTarget).m_piValue;
+                int           cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
+                return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
+                    pi.getBigInteger().toByteArray(), cBytes*8, xArray.Mutability.Constant));
+                }
+
             case "bitCount":
                 {
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
@@ -132,9 +141,9 @@ public abstract class xUnconstrainedInteger
 
             case "bitLength":
                 {
-                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
-                int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                return frame.assignValue(iReturn, xInt64.makeHandle(cBytes * 8L));
+                PackedInteger pi    = ((IntNHandle) hTarget).m_piValue;
+                int           cBits = pi.getBigInteger().bitLength();
+                return frame.assignValue(iReturn, xInt64.makeHandle(cBits));
                 }
 
             case "leftmostBit":
@@ -142,7 +151,8 @@ public abstract class xUnconstrainedInteger
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 if (pi.isBig())
                     {
-                    throw new UnsupportedOperationException(); // TODO
+                    int cBits = pi.getBigInteger().bitLength();
+                    pi = new PackedInteger(BigInteger.ONE.shiftLeft(cBits));
                     }
                 else
                     {
@@ -156,7 +166,8 @@ public abstract class xUnconstrainedInteger
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
                 if (pi.isBig())
                     {
-                    throw new UnsupportedOperationException(); // TODO
+                    int nBit = pi.getBigInteger().getLowestSetBit();
+                    pi = new PackedInteger(BigInteger.ONE.shiftLeft(nBit));
                     }
                 else
                     {
@@ -166,31 +177,21 @@ public abstract class xUnconstrainedInteger
                 }
 
             case "leadingZeroCount":
-                {
-                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
-                if (pi.isBig())
-                    {
-                    throw new UnsupportedOperationException(); // TODO
-                    }
-                else
-                    {
-                    pi = PackedInteger.valueOf(Long.numberOfLeadingZeros(pi.getLong()));
-                    }
-                return frame.assignValue(iReturn, makeInt(pi));
-                }
+                return frame.assignValue(iReturn, xInt64.makeHandle(0));
 
             case "trailingZeroCount":
                 {
                 PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
+                long          c;
                 if (pi.isBig())
                     {
-                    throw new UnsupportedOperationException(); // TODO
+                    c = pi.getBigInteger().getLowestSetBit();
                     }
                 else
                     {
-                    pi = PackedInteger.valueOf(Long.numberOfTrailingZeros(pi.getLong()));
+                    c = Long.numberOfTrailingZeros(pi.getLong());
                     }
-                return frame.assignValue(iReturn, makeInt(pi));
+                return frame.assignValue(iReturn, xInt64.makeHandle(c));
                 }
             }
 
@@ -248,37 +249,6 @@ public abstract class xUnconstrainedInteger
 
                 return template.convertLong(frame, pi.getLong(), iReturn, fCheckBounds);
                 }
-
-            case "toIntN":
-                {
-                ObjectHandle hResult = hTarget;
-                if (!f_fSigned)
-                    {
-                    TypeConstant          typeRet  = method.getReturn(0).getType();
-                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
-                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
-                    hResult = template.makeInt(pi);
-                    }
-                return frame.assignValue(iReturn, hResult);
-                }
-
-            case "toUIntN":
-                {
-                ObjectHandle hResult = hTarget;
-                if (f_fSigned)
-                    {
-                    TypeConstant          typeRet  = method.getReturn(0).getType();
-                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
-                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
-                    if (pi.isNegative())
-                        {
-                        return template.overflow(frame);
-                        }
-
-                    hResult = template.makeInt(pi);
-                    }
-                return frame.assignValue(iReturn, hResult);
-                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -312,6 +282,37 @@ public abstract class xUnconstrainedInteger
             case "toUInt128":
                 // default argument: checkBounds = False;
                 return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
+
+            case "toIntN":
+                {
+                ObjectHandle hResult = hTarget;
+                if (!f_fSigned)
+                    {
+                    TypeConstant          typeRet  = method.getReturn(0).getType();
+                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
+                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
+                    hResult = template.makeInt(pi);
+                    }
+                return frame.assignValue(iReturn, hResult);
+                }
+
+            case "toUIntN":
+                {
+                ObjectHandle hResult = hTarget;
+                if (f_fSigned)
+                    {
+                    TypeConstant          typeRet  = method.getReturn(0).getType();
+                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
+                    PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
+                    if (pi.isNegative())
+                        {
+                        return template.overflow(frame);
+                        }
+
+                    hResult = template.makeInt(pi);
+                    }
+                return frame.assignValue(iReturn, hResult);
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
