@@ -17,5 +17,5 @@ import org.xvm.cc_explore.XEC;
  */
 public class TSeqTCon extends TCon {
   @Override public SB str( SB sb ) { return sb.p("self_recur_type_marker"); }
-  TVar _setype( XEC.ModRepo repo ) { return new TVLeaf(); }
+  @Override TVar _setype( ) { return new TVLeaf(); }
 }

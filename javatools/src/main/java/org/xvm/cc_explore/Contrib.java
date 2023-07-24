@@ -12,7 +12,7 @@ import java.util.HashMap;
  * of any number of contributing components.
  */
 public class Contrib {
-  final Part.Composition _comp;
+  public final Part.Composition _comp;
   private boolean _linked;
   private final PropCon _prop;
   private final SingleCon _inject;
@@ -21,7 +21,7 @@ public class Contrib {
   // Post link values
   final HashMap<String, ClassPart> _clzs;
   
-  final TCon _tContrib;
+  public final TCon _tContrib;
   private TVar _tvar;
   
   protected Contrib( CPool X ) {

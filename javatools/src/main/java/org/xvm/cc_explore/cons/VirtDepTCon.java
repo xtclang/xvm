@@ -2,7 +2,7 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.tvar.TVar;
+import static org.xvm.cc_explore.Part.Composition.*;
 
 /**
   Exploring XEC Constants
@@ -10,7 +10,6 @@ import org.xvm.cc_explore.tvar.TVar;
 public class VirtDepTCon extends DepTCon {
   private final boolean _thisClz;
   private String _name;
-  private ClassPart _part;
   public VirtDepTCon( CPool X ) {
     super(X);
     X.u31();
@@ -21,11 +20,28 @@ public class VirtDepTCon extends DepTCon {
     super.resolve(X);
     _name =((StringCon)X.xget())._str;
   }
-  //@Override public ClassPart link(XEC.ModRepo repo) {
-  //  if( _part!=null ) return _part;
-  //  ClassPart clz = super.link(repo);
-  //  ClassPart part = (ClassPart)clz.child(_name);
-  //  assert part!=null;
-  //  return (_part = part);
-  //}
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _part!=null ) return _part;
+    ClassPart par = (ClassPart)_par.link(repo);
+    _part = search(par,null);
+    assert _part!=null;
+    return _part;
+  }
+
+  // Hunt this clz for name, plus recursively any Implements contribs.
+  // Assert only 1 found
+  Part search( ClassPart clz, Part p ) {
+    Part p0 = clz.child(_name);
+    if( p0!=null ) {
+      assert p==null || p==p0;
+      return p0;
+    }
+    if( clz._contribs != null )
+      for( Contrib c : clz._contribs )
+        if( c._comp==Implements || c._comp==Into || c._comp==Extends )
+          p = search(((ClzCon)c._tContrib).clz(),p);
+    return p;
+  }
+  
+  
 }

@@ -36,7 +36,7 @@ public class PropPart extends Part {
         c.link(repo);
   }
   @Override TVar _setype( ) {
-    if( _init!=null ) throw XEC.TODO();
+    if( _init instanceof TCon tc ) tc.setype();
     return _con.setype();
   }
 }

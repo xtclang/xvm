@@ -12,7 +12,8 @@ public abstract class PartCon extends TCon implements IdCon {
   Part _part;
   @Override public SB str(SB sb) { return _par==null ? sb : _par.str(sb.p(" -> ")); }
 
-  @Override public Part link( XEC.ModRepo repo ) {
+  @Override public Part link( XEC.ModRepo repo ) { return partlink(repo); }
+  Part partlink( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
     // Link the parent, do any replacement lookups
     Part par = _par.link(repo).link(repo);

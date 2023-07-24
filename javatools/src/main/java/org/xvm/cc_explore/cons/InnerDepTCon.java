@@ -8,7 +8,6 @@ import org.xvm.cc_explore.tvar.TVar;
  */
 public class InnerDepTCon extends DepTCon {
   private ClassCon _child;
-  private ClassPart _kclz;
   public InnerDepTCon( CPool X ) {
     super(X);
     X.u31();
@@ -17,9 +16,9 @@ public class InnerDepTCon extends DepTCon {
     super.resolve(X);
     _child = (ClassCon)X.xget();
   }
-  @Override public ClassPart link(XEC.ModRepo repo) {
-    if( _kclz != null ) return _kclz;
-    super.link(repo);
-    return (_kclz = (ClassPart)_child.link(repo));
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _part != null ) return _part;
+    _par.link(repo);
+    return (_part = (ClassPart)_child.link(repo));
   }
 }

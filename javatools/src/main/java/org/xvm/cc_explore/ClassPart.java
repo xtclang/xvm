@@ -114,9 +114,8 @@ public class ClassPart extends Part {
       for( Contrib c : _contribs ) {
         switch( c._comp ) {
         case Extends -> {
-          assert _contribs[0] == c; // Can optimize if extends are always in slot 0
           _super = ((ClzCon)c._tContrib).clz();
-          assert _super._f==Part.Format.CONST || _super._f==Part.Format.ENUM; // Class or Constant or Enum class
+          assert _super._f==Format.CLASS || _super._f==Format.CONST || _super._f==Format.ENUM || _super._f==Format.MIXIN; // Class or Constant or Enum class
           // Cannot assert struct is closed, because of recursive references.
           if( c._clzs != null )  throw XEC.TODO();
         }
@@ -135,30 +134,28 @@ public class ClassPart extends Part {
         // XTC compiler, and TODO Some Day we can verify again here.
         case Into -> { }
   
-        // This can be a mixin marker annotation, which has been checked by the
-        // XTC compiler already.
-        case Annotation -> {
-          //ClassPart mix = ifaces0(c._tContrib).clz();
-          //assert mix._f==Part.Format.MIXIN;
-          //assert mix._contribs[0]._comp==Part.Composition.Into;
-          throw XEC.TODO();
-        }
-        
-        case Incorporates -> {
+        case Incorporates, Annotation -> {
           ClassPart mix = ((ClzCon)c._tContrib).clz();
           if( _mixes==null ) _mixes = new ClassPart[1];
           else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
           _mixes[_mixes.length-1] = mix;
           // Unify a fresh copy of the mixin's type
-          mix.setype().fresh_unify(stv,null);
+          mix.setype().fresh_unify(stv,null); // Self picks up mixin fields
           // Set generic parameter types
           if( c._clzs != null )
-            for( String generic : c._clzs.keySet() )
-              //((TVStruct)tvar()).arg(mix.generic(generic)).unify( c._clzs.get( generic ).tvar() );
-              throw XEC.TODO();
-          throw XEC.TODO();
+            for( String generic : c._clzs.keySet() ) {
+              TVar mix_tv = stv.arg(generic(generic)); // stv is the self, picking up the mixin
+              Part pgen = c._clzs.get(generic);
+              if( pgen!=null )
+                pgen.tvar().fresh_unify(mix_tv,null);
+            }
         }
-  
+
+        case Import -> {
+          TVar tvi = c.setype();
+          tvi.unify(stv);
+        }
+        
         default ->  // Handle other contributions
           throw XEC.TODO();
         }        

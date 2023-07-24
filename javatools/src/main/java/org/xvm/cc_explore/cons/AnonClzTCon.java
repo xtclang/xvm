@@ -8,12 +8,11 @@ import org.xvm.cc_explore.tvar.TVar;
  */
 public class AnonClzTCon extends DepTCon {
   private ClassCon _anon;
-  private ClassPart _aclz;
   public AnonClzTCon( CPool X ) { super(X); X.u31(); }
   @Override public void resolve( CPool X ) { super.resolve(X); _anon = (ClassCon)X.xget(); }
-  //@Override public ClassPart link(XEC.ModRepo repo) {
-  //  if( _aclz!=null ) return _aclz;
-  //  super.link(repo);
-  //  return (_aclz = (ClassPart)_anon.link(repo));
-  //}
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _part!=null ) return _part;
+    _par.link(repo);
+    return (_part = _anon.link(repo));
+  }
 }

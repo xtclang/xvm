@@ -1,12 +1,9 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.TVLeaf;
 import org.xvm.cc_explore.tvar.TVar;
 import org.xvm.cc_explore.util.SB;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 
 /**
@@ -118,12 +115,12 @@ abstract public class Part {
     if( _name2kid!=null ) 
       for( String name : _name2kid.keySet() ) {
         Part kid0 = _name2kid.get(name);
-        if( kid0 instanceof PropPart pp ) {
+        //if( kid0 instanceof PropPart pp ) {
           // Do nothing?
-        } else {
+        //} else {
           Part kid = kid0.link(repo); 
           _name2kid.put(name,kid);  // Replace with upgrade and link
-        }
+        //}
       }
     return this;
   }
@@ -197,7 +194,7 @@ abstract public class Part {
     
     return _tvar;
   }
-  final TVar setype_stop_cycles( TVar tv ) { return (_tvar=tv); }
+  final void setype_stop_cycles( TVar tv ) {_tvar = tv;}
   // Sub Parts use this return the initial tvar; and can be assured that they
   // are called only once, and they do not need to assign to tvar.
   abstract TVar _setype();

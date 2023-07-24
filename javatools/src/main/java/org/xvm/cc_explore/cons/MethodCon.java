@@ -39,7 +39,5 @@ public class MethodCon extends PartCon {
   public TCon[] rawRets () { return _sig.rawRets (); }
   public TCon[] rawParms() { return _sig.rawParms(); }
 
-  @Override TVar _setype() {
-    throw XEC.TODO();
-  }
+  @Override TVar _setype() { return _sig.setype(); }
 }

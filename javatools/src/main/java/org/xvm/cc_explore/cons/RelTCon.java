@@ -13,7 +13,9 @@ public abstract class RelTCon extends TCon implements ClzCon {
     X.u31();
     X.u31();
   }
-
+  
+  @Override public RelPart clz() { assert _part!=null; return _part; }
+  
   @Override public void resolve( CPool X ) {
     _con1 = (TCon)X.xget();
     _con2 = (TCon)X.xget();
@@ -26,8 +28,6 @@ public abstract class RelTCon extends TCon implements ClzCon {
     return (_part = new RelPart(p1,p2,op()));
   }
 
-  @Override public RelPart clz() { assert _part!=null; return _part; }
-  
   // Note that the _tvar type set here is used to stop repeated setype calls
   // but isn't really any sensible TVar.
   @Override TVar _setype() {
