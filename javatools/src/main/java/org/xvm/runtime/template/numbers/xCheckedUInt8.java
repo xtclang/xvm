@@ -7,14 +7,14 @@ import org.xvm.runtime.Container;
 
 
 /**
- * Native unchecked UInt8 support.
+ * Native checked UInt8 support.
  */
-public class xUncheckedUInt8
-        extends xUncheckedUnsignedInt
+public class xCheckedUInt8
+        extends xCheckedUnsignedInt
     {
-    public static xUncheckedUInt8 INSTANCE;
+    public static xCheckedUInt8 INSTANCE;
 
-    public xUncheckedUInt8(Container container, ClassStructure structure, boolean fInstance)
+    public xCheckedUInt8(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, 0L, 0xFFL, 8);
 
@@ -27,6 +27,6 @@ public class xUncheckedUInt8
     @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
-        return xUncheckedInt8.INSTANCE;
+        return xCheckedInt8.INSTANCE;
         }
     }

@@ -29,13 +29,6 @@ public class xInt64
         }
 
     @Override
-    public void registerNativeTemplates()
-        {
-        // create unchecked template
-        registerNativeTemplate(new xUncheckedInt64(f_container, f_struct, true));
-        }
-
-    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xUInt64.INSTANCE;

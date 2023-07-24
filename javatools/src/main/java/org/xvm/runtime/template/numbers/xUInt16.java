@@ -25,13 +25,6 @@ public class xUInt16
         }
 
     @Override
-    public void registerNativeTemplates()
-        {
-        // create unchecked template
-        registerNativeTemplate(new xUncheckedUInt16(f_container, f_struct, true));
-        }
-
-    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xInt16.INSTANCE;

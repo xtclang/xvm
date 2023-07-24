@@ -7,14 +7,14 @@ import org.xvm.runtime.Container;
 
 
 /**
- * Native unchecked UInt32 support.
+ * Native checked UInt32 support.
  */
-public class xUncheckedUInt32
-        extends xUncheckedUnsignedInt
+public class xCheckedUInt32
+        extends xCheckedUnsignedInt
     {
-    public static xUncheckedUInt32 INSTANCE;
+    public static xCheckedUInt32 INSTANCE;
 
-    public xUncheckedUInt32(Container container, ClassStructure structure, boolean fInstance)
+    public xCheckedUInt32(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, 0L, 0xFFFF_FFFFL, 32);
 
@@ -27,6 +27,6 @@ public class xUncheckedUInt32
     @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
-        return xUncheckedInt32.INSTANCE;
+        return xCheckedInt32.INSTANCE;
         }
     }

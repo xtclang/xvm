@@ -239,7 +239,7 @@ public abstract class xUnconstrainedInteger
                 boolean fCheckBounds = hArg == xBoolean.TRUE;
                 if (fCheckBounds)
                     {
-                    if (pi.isNegative())
+                    if (!template.f_fSigned && pi.isNegative())
                         {
                         return template.overflow(frame);
                         }

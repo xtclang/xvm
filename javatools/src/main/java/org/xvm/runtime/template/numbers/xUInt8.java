@@ -32,13 +32,6 @@ public class xUInt8
         }
 
     @Override
-    public void registerNativeTemplates()
-        {
-        // create unchecked template
-        registerNativeTemplate(new xUncheckedUInt8(f_container, f_struct, true));
-        }
-
-    @Override
     public void initNative()
         {
         super.initNative();

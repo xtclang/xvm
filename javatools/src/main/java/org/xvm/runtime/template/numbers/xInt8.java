@@ -28,13 +28,6 @@ public class xInt8
         }
 
     @Override
-    public void registerNativeTemplates()
-        {
-        // create unchecked template
-        registerNativeTemplate(new xUncheckedInt8(f_container, f_struct, true));
-        }
-
-    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xUInt8.INSTANCE;

@@ -124,14 +124,15 @@ public abstract class xConstrainedInteger
                 xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
             }
 
-        if (f_fChecked)
+        if (!f_fSigned && pi.isNegative())
             {
-            int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-            if (cBytes * 8 > f_cNumBits)
-                {
-                return frame.raiseException(
-                    xException.outOfBounds(frame, "Overflow: " + sText));
-                }
+            return overflow(frame);
+            }
+
+        int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
+        if (cBytes * 8 > f_cNumBits)
+            {
+            return overflow(frame);
             }
 
         return convertLong(frame, pi.getLong(), iReturn, f_fChecked);
@@ -445,11 +446,6 @@ public abstract class xConstrainedInteger
         long l2 = ((JavaLong) hArg).getValue();
         long lr = l1 + l2;
 
-        if (f_fChecked && (((l1 ^ lr) & (l2 ^ lr)) << f_cAddCheckShift) < 0)
-            {
-            return overflow(frame);
-            }
-
         return frame.assignValue(iReturn, makeJavaLong(lr));
         }
 
@@ -459,11 +455,6 @@ public abstract class xConstrainedInteger
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
         long lr = l1 - l2;
-
-        if (f_fChecked && (((l1 ^ l2) & (l1 ^ lr)) << f_cAddCheckShift) < 0)
-            {
-            return overflow(frame);
-            }
 
         return frame.assignValue(iReturn, makeJavaLong(lr));
         }
@@ -475,23 +466,6 @@ public abstract class xConstrainedInteger
         long l2 = ((JavaLong) hArg).getValue();
         long lr = l1 * l2;
 
-        if (f_fChecked)
-            {
-            long a1 = Math.abs(l1);
-            long a2 = Math.abs(l2);
-            if ((a1 | a2) >>> f_cMulCheckShift != 0)
-                {
-                // see Math.multiplyExact()
-                if (((l2 != 0) && (lr / l2 != l1)) ||
-                        (l1 == f_cMinValue && l2 == -1) ||
-                        lr > f_cMaxValue || lr < f_cMinValue)
-                    {
-                    return overflow(frame);
-                    }
-                }
-            }
-
-
         return frame.assignValue(iReturn, makeJavaLong(lr));
         }
 
@@ -499,11 +473,6 @@ public abstract class xConstrainedInteger
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
-
-        if (f_fChecked && (!f_fSigned || l == f_cMinValue))
-            {
-            return overflow(frame);
-            }
 
         return frame.assignValue(iReturn, makeJavaLong(-l));
         }
@@ -513,11 +482,6 @@ public abstract class xConstrainedInteger
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        if (f_fChecked && l == f_cMinValue)
-            {
-            return overflow(frame);
-            }
-
         return frame.assignValue(iReturn, makeJavaLong(l - 1));
         }
 
@@ -525,11 +489,6 @@ public abstract class xConstrainedInteger
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
-
-        if (f_fChecked && l == f_cMaxValue)
-            {
-            return overflow(frame);
-            }
 
         return frame.assignValue(iReturn, makeJavaLong(l + 1));
         }
@@ -841,6 +800,67 @@ public abstract class xConstrainedInteger
             l = l << 8 | (aBytes[i] & 0xFF);
             }
         return l;
+        }
+
+
+    // ----- Uint64 helpers ------------------------------------------------------------------------
+
+    public static long divUnsigned(long l1, long l2)
+        {
+        if (l2 < 0)
+            {
+            // the divisor is bigger or equal than 2^63, so the answer is either 0 or 1
+            return l1 < 0 && l1 < l2 ? 1 : 0;
+            }
+
+        if (l1 < 0)
+            {
+            if (l2 == 1)
+                {
+                return l1;
+                }
+
+            // the dividend is bigger or equal then 2^63
+            long l1L = l1 & 0x7FFF_FFFF_FFFF_FFFFL;
+
+            // l1 = l1L + 2^63; r = (l1L + 2^63)/l2 =
+            // l1L/l2 + 2^63/l2 + (l1L % l2 + 2^63 % l2)/l2
+            //
+            // Note: Long.MIN_VALUE/l2 and Long.MIN_VALUE % l2 are negative values
+
+            return l1L/l2 - Long.MIN_VALUE/l2 + (l1L % l2 - Long.MIN_VALUE % l2)/l2;
+            }
+
+        return l1/l2;
+        }
+
+    public static long modUnsigned(long l1, long l2)
+        {
+        if (l2 < 0)
+            {
+            // the divisor is bigger or equal than 2^63, so the answer is trivial
+            return l1 < 0 && l1 < l2 ? l1 - l2 : l1;
+            }
+
+        if (l1 < 0)
+            {
+            if (l2 == 1)
+                {
+                return 0;
+                }
+
+            // the dividend is bigger or equal then 2^63
+            long l1L = l1 & 0x7FFF_FFFF_FFFF_FFFFL;
+
+            // l1 = l1L + 2^63; r = (l1L + 2^63) % l2 =
+            // (l1L % l2 + 2^63 % l2)/l2
+            //
+            // Note: Long.MIN_VALUE/l2 and Long.MIN_VALUE % l2 are negative values
+
+            return (l1L % l2 - Long.MIN_VALUE % l2) % l2;
+            }
+
+        return l1 % l2;
         }
 
 
