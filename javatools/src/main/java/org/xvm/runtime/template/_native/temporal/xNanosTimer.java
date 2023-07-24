@@ -24,7 +24,7 @@ import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
-import org.xvm.runtime.template.numbers.xUInt128;
+import org.xvm.runtime.template.numbers.xInt128;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
@@ -308,7 +308,7 @@ public class xNanosTimer
             GenericHandle hDuration = new GenericHandle(s_clzDuration);
             LongLong      llPicos   = new LongLong(elapsed()).mul(PICOS_PER_NANO_LL);
 
-            hDuration.setField(null, "picoseconds", xUInt128.INSTANCE.makeHandle(llPicos));
+            hDuration.setField(null, "picoseconds", xInt128.INSTANCE.makeHandle(llPicos));
             hDuration.makeImmutable();
 
             return hDuration;

@@ -358,7 +358,6 @@ public class xIntLiteral
         {
         switch (method.getName())
             {
-            // REVIEW GG is this actually necessary?
             case "toInt8":
             case "toInt16":
             case "toInt32":

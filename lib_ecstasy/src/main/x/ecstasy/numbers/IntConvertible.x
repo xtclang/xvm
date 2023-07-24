@@ -64,7 +64,7 @@ interface IntConvertible {
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
      *                      64-bit integer range
      */
-    Int64 toInt64(Boolean checkBounds = False) = toInt64(checkBounds);
+    Int64 toInt64(Boolean checkBounds = False) = toIntN().toInt64(checkBounds);
 
     /**
      * Convert the value to a signed 128-bit integer.

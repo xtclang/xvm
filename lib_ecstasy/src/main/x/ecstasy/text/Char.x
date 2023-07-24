@@ -57,7 +57,7 @@ import numbers.IntConvertible;
  * number.
  */
 const Char(UInt32 codepoint)
-        delegates IntConvertible(codepoint)
+        delegates IntConvertible-Object(codepoint)
         implements Sequential
         implements Destringable
         default('\u0000') {

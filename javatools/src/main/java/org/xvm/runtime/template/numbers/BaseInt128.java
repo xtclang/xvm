@@ -49,25 +49,9 @@ public abstract class BaseInt128
         {
         super.initNative();
 
-        markNativeProperty("bits");
-        markNativeProperty("bitCount");
-        markNativeProperty("bitLength");
-        markNativeProperty("leftmostBit");
-        markNativeProperty("rightmostBit");
         markNativeProperty("leadingZeroCount");
-        markNativeProperty("trailingZeroCount");
 
         markNativeMethod("abs"          , null, null);
-        markNativeMethod("toInt8"       , null, null);
-        markNativeMethod("toInt16"      , null, null);
-        markNativeMethod("toInt32"      , null, null);
-        markNativeMethod("toInt64"      , null, null);
-        markNativeMethod("toInt128"     , null, null);
-        markNativeMethod("toUInt8"      , null, null);
-        markNativeMethod("toUInt16"     , null, null);
-        markNativeMethod("toUInt32"     , null, null);
-        markNativeMethod("toUInt64"     , null, null);
-        markNativeMethod("toUInt128"    , null, null);
 
         // @Op methods
         markNativeMethod("add"          , THIS, THIS);

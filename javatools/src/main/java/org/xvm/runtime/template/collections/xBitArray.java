@@ -15,7 +15,6 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xBit;
-import org.xvm.runtime.template.numbers.xUInt8;
 
 import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
@@ -55,7 +54,6 @@ public class xBitArray
         mixin.markNativeMethod("asBooleanArray", VOID, null);
         mixin.markNativeMethod("asByteArray"   , VOID, null);
         mixin.markNativeMethod("asNibbleArray" , VOID, null);
-        mixin.markNativeMethod("toUInt8"       , null, null);
         mixin.markNativeMethod("toByteArray"   , null, null);
 
         invalidateTypeInfo();
@@ -170,30 +168,6 @@ public class xBitArray
 
                 return frame.assignValue(iReturn, new ArrayHandle(
                         xNibbleArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
-                }
-
-            case "toUInt8":
-                {
-                ArrayHandle hArray = (ArrayHandle) hTarget;
-                byte[]      abBits = getBits(hArray);
-                long        cBits  = hArray.m_hDelegate.m_cSize;
-
-                switch ((int) cBits)
-                    {
-                    case 0:
-                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(0));
-
-                    case 1: case 2: case 3: case 4: case 5: case 6: case 7:
-                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(
-                            (abBits[0] & 0xFF) >>> (8 - cBits)));
-
-                    case 8:
-                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(abBits[0]));
-
-                    default:
-                        return frame.raiseException(xException.outOfBounds(
-                                frame, "Array is too big: " + cBits));
-                    }
                 }
             }
 
