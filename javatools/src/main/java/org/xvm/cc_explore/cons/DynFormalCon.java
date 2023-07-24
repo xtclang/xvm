@@ -24,4 +24,8 @@ public class DynFormalCon extends FormalCon {
     _type   = (     TCon)X.xget();
     _formal = (FormalCon)X.xget();
   }  
+  @Override public Part link( XEC.ModRepo repo ) {
+    if( _part!=null ) return _part;
+    return (_part=_formal.link(repo));
+  }
 }
