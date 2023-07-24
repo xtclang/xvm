@@ -59,7 +59,8 @@ public class RelPart extends ClassPart {
     },
     Difference {
       @Override TVStruct op(TVStruct t1, TVStruct t2) {
-        throw XEC.TODO();
+        // TODO: Not sure, just returning t1
+        return t1;
       }
     };
     abstract TVStruct op(TVStruct t1, TVStruct t2);

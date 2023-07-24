@@ -189,7 +189,7 @@ public class TVStruct extends TVar {
           if( that.is_open() ) {
             that.add_fld(_flds[i],nrhs);
           } else { // RHS not open, put copy of LHS into RHS with miss_fld error
-            throw XEC.TODO();   // miss_fld
+            that.add_fld(_flds[i],new TVMiss());
           }
         } else missing = true; // Else neither side is open, field is not needed in RHS
         
