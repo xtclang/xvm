@@ -60,8 +60,8 @@ const MediaType {
     static MediaType HTML        = predefine("text/html",                                     ["htm", "html"]);
     static MediaType JavaScript  = predefine(["text/javascript", "application/javascript"],   "js"  );
     static MediaType Text        = predefine("text/plain",                                    "txt" );
-    static MediaType Woff        = predefine("font/woff",                                    "woff" );
-    static MediaType Woff2       = predefine("font/woff2",                                   "woff2" );
+    static MediaType Woff        = predefine("font/woff",                                     "woff");
+    static MediaType Woff2       = predefine("font/woff2",                                    "woff2");
 
     /**
      * All of the pre-defined media types.
