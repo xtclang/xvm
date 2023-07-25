@@ -230,34 +230,62 @@ public abstract class xUnconstrainedInteger
             case "toUInt64":
             case "toUInt128":
                 {
-                TypeConstant        typeRet  = method.getReturn(0).getType();
-                PackedInteger       pi       = ((IntNHandle) hTarget).getValue();
-                xConstrainedInteger template = (xConstrainedInteger) f_container.getTemplate(typeRet);
-                long                lValue;
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                PackedInteger pi       = ((IntNHandle) hTarget).getValue();
+                xIntNumber    template = (xIntNumber) f_container.getTemplate(typeRet);
+                long          lValue;
 
                 // check for overflow
                 boolean fCheckBounds = hArg == xBoolean.TRUE;
-                if (fCheckBounds)
+                if (template instanceof xConstrainedInteger templateTo)
                     {
-                    if (!template.f_fSigned && pi.isNegative())
+                    if (fCheckBounds)
                         {
-                        return template.overflow(frame);
+                        if (!templateTo.f_fSigned && pi.isNegative())
+                            {
+                            return templateTo.overflow(frame);
+                            }
+                        int cBytes = templateTo.f_fSigned
+                            ? pi.getSignedByteSize()
+                            : pi.getUnsignedByteSize();
+                        if (cBytes * 8 > templateTo.f_cNumBits)
+                            {
+                            return templateTo.overflow(frame);
+                            }
+                        lValue = pi.getLong();
                         }
-                    int cBytes = template.f_fSigned
-                        ? pi.getSignedByteSize()
-                        : pi.getUnsignedByteSize();
-                    if (cBytes * 8 > template.f_cNumBits)
+                    else
                         {
-                        return template.overflow(frame);
+                        lValue = pi.isBig() ? pi.getBigInteger().longValue() : pi.getLong();
                         }
-                    lValue = pi.getLong();
-                    }
-                else
-                    {
-                    lValue = pi.isBig() ? pi.getBigInteger().longValue() : pi.getLong();
+
+                    return templateTo.convertLong(frame, lValue, iReturn, fCheckBounds);
                     }
 
-                return template.convertLong(frame, lValue, iReturn, fCheckBounds);
+                if (template instanceof BaseInt128 templateTo)
+                    {
+                    if (fCheckBounds)
+                        {
+                        if (!templateTo.f_fSigned && pi.isNegative())
+                            {
+                            return templateTo.overflow(frame);
+                            }
+                        int cBytes = templateTo.f_fSigned
+                            ? pi.getSignedByteSize()
+                            : pi.getUnsignedByteSize();
+                        if (cBytes > 16)
+                            {
+                            return templateTo.overflow(frame);
+                            }
+                        }
+
+                    return frame.assignValue(iReturn, templateTo.makeHandle(
+                        pi.isBig()
+                            ? LongLong.fromBigInteger(pi.getBigInteger())
+                            : new LongLong(pi.getLong(), templateTo.f_fSigned)));
+                    }
+
+                throw new IllegalStateException("Unsupported type " + typeRet);
                 }
             }
 
