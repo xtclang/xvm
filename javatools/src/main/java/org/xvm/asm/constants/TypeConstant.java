@@ -2475,8 +2475,6 @@ public abstract class TypeConstant
         switch (struct.getFormat())
             {
             case PACKAGE:
-                assert cContribs != 0 || ((PackageStructure) struct).isModuleImport();
-                // fall through
             case MODULE:
             case ENUMVALUE:
             case ENUM:
@@ -2490,8 +2488,8 @@ public abstract class TypeConstant
                 // format)
                 typeRebase = (TypeConstant) pool.register(struct.getRebaseType());
 
-                // next up, for any class type (other than Object itself), there may be an "extends"
-                // contribution that specifies another class
+                // next up, for any class type, there may be an "extends" contribution that
+                // specifies a "super" class
                 Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
                 boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
 
@@ -2501,6 +2499,9 @@ public abstract class TypeConstant
                         {
                         log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
                         }
+
+                    // a class hierarchy root implicitly implements the root Object interface
+                    ++cContribs;
                     break;
                     }
 
@@ -2671,8 +2672,20 @@ public abstract class TypeConstant
         // the list to do
         for ( ; iContrib < cContribs; ++iContrib)
             {
-            Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = aContribType[iContrib];
+            Contribution contrib;
+            TypeConstant typeContrib;
+            if (iContrib < listContribs.size())
+                {
+                contrib     = listContribs.get(iContrib);
+                typeContrib = aContribType[iContrib];
+                }
+            else
+                {
+                // it's the implicit "implements Object" contribution
+                assert iContrib == listContribs.size();
+                typeContrib = pool.typeObject();
+                contrib     = struct.new Contribution(Composition.Implements, typeContrib);
+                }
 
             switch (contrib.getComposition())
                 {

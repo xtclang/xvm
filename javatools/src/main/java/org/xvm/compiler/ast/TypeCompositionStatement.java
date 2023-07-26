@@ -951,7 +951,7 @@ public class TypeCompositionStatement
         // interface    n   [8]     n [8]       n [9]
         //
         // [1] module/package/const/enum may explicitly extend a class or a const; otherwise
-        //    implements Object
+        //    implements Object (implicit: "Object" is not added to the structure)
         // [2] package may import a module
         // [3] class may explicitly extend a class; otherwise implements Object (the one exception is
         //     Object itself, which does NOT implement itself)
@@ -1002,7 +1002,8 @@ public class TypeCompositionStatement
                     break;
 
                 default:
-                    typeDefaultImpl = pool.typeObject();
+                    // it's implied that the default impl is pool.typeObject()
+                    typeDefaultImpl = null;
                     break;
                 }
             }
