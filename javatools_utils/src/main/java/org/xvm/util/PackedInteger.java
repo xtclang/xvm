@@ -171,9 +171,9 @@ public class PackedInteger
     public int getUnsignedByteSize()
         {
         verifyInitialized();
-        if (m_fBig ? m_bigint.signum() < 0 : m_lValue < 0)
+        if (m_fBig && m_bigint.signum() < 0)
             {
-            throw new IllegalStateException("value is signed");
+            throw new IllegalStateException("negative value");
             }
 
         int nBytes = m_fBig
@@ -322,7 +322,6 @@ public class PackedInteger
                 {
                 // the unsigned value still fits the long
                 m_lValue = bigint.longValue();
-                assert m_lValue < 0;
                 }
             else
                 {

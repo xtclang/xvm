@@ -126,13 +126,8 @@ public abstract class xUnconstrainedInteger
             {
             case "bits":
                 {
-                PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
-                if (f_fSigned && pi.isNegative())
-                    {
-                    // unanswerable question
-                    return overflow(frame);
-                    }
-                int cBytes = pi.getUnsignedByteSize();
+                PackedInteger pi     = ((IntNHandle) hTarget).m_piValue;
+                int           cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
                 return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
                     pi.getBigInteger().toByteArray(), cBytes*8, xArray.Mutability.Constant));
                 }
