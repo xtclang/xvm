@@ -332,13 +332,14 @@ public class AssertStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        ConstantPool pool = pool();
+        ConstantPool pool   = pool();
+        boolean      fDebug = isDebugOnly();
 
         if (isLinktimeConditional())
             {
             // for "assert:debug", the assertion only is evaluated if the "debug" named condition
             // exists; similarly, for "assert:test", it is evaluated only if "test" is defined
-            String sCond = isDebugOnly() ? "debug" : "test";
+            String sCond = fDebug ? "debug" : "test";
             code.add(new JumpNCond(pool.ensureNamedCondition(sCond), getEndLabel()));
             }
 
@@ -365,7 +366,7 @@ public class AssertStatement
         int cConds = getConditionCount();
         if (cConds == 0)
             {
-            if (message == null || isDebugOnly())
+            if (message == null || fDebug)
                 {
                 code.add(new Assert(pool.valFalse(), constNew));
                 }
@@ -479,9 +480,13 @@ public class AssertStatement
                 argCond = exprCond.generateArgument(ctx, code, true, true, errs);
                 }
 
-            if (message == null)
+            if (message == null || fDebug)
                 {
-                if (mapTrace.isEmpty())
+                if (fDebug)
+                    {
+                    code.add(new Assert(argCond, null));
+                    }
+                else if (mapTrace.isEmpty())
                     {
                     code.add(new AssertM(argCond, constNew, constText));
                     }
@@ -516,7 +521,7 @@ public class AssertStatement
                 }
             }
 
-        if (message != null)
+        if (message != null && !fDebug)
             {
             // throw new {sThrow}(message, null)
             code.add(labelMessage);
