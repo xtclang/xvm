@@ -4143,6 +4143,11 @@ public abstract class TypeConstant
                     }
                 }
 
+if (toString().equals("AccessType{type=immutable Array<Byte>:private}"))
+    {
+    int q= 0;
+    }
+
             List<Object> listMatches = collectPotentialSuperMethods(
                     methodContrib, nidContrib, mapVirtMethods);
 
@@ -4349,7 +4354,8 @@ public abstract class TypeConstant
                 else
                     {
                     // nidContrib directly points to a "super" method, so it must be in the list
-                    assert listMatches.contains(nidContrib);
+                    // unless the contributing method is already capped
+                    assert methodContrib.isCapped() || listMatches.contains(nidContrib);
                     }
 
                 if (methodBase != null)
