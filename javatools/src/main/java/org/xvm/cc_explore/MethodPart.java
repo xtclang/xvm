@@ -105,6 +105,25 @@ public class MethodPart extends MMethodPart {
     }
   }
 
+  // Constructor for missing set/get methods
+  MethodPart( Part par, String name ) {
+    super(par,name);
+    _methcon = null;
+    _supercon = null;
+    _supers = null;
+    _super_parts = null;
+    _finally = null;
+    _annos = null;
+    _rets = null;
+    _args = null;
+    _nDefaults = 0;
+    _cons = null;
+    _code = null; // TODO Code for e.g. set/get
+    _lines = null;
+    _indts = null;
+    _first = 0;
+  }
+
   protected boolean isConditionalReturn() {
     return (_nFlags & COND_RET_BIT) != 0;
   }
@@ -151,8 +170,8 @@ public class MethodPart extends MMethodPart {
       for( Parameter arg : _args )
         arg.link( repo );
 
-    if( _annos   !=null ) for( Annot    anno : _annos ) anno.link(repo);
-    if( _rets    !=null ) for( Parameter ret :  _rets ) ret .link(repo);
+    if( _annos !=null ) for( Annot    anno : _annos ) anno.link(repo);
+    if( _rets  !=null ) for( Parameter ret :  _rets ) ret .link(repo);
     if( _supers  !=null )
       for( int i=0; i<_supers.length; i++ )
         if( _supers[i]!=null )
@@ -161,6 +180,13 @@ public class MethodPart extends MMethodPart {
       _sibling.link(repo);
   }
 
+  // Link method constants
+  void _cons( XEC.ModRepo repo ) {
+    if( _cons !=null )
+      for( Const con : _cons )
+        con.link(repo);
+  }
+  
   TVLambda _setype() {
     if( has_tvar() ) return (TVLambda)tvar();
     TVLambda lam = new TVLambda(_args==null ? 0 : _args.length, _rets==null ? 0 : _rets.length);

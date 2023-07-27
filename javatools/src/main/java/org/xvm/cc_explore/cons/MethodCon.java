@@ -27,12 +27,15 @@ public class MethodCon extends PartCon {
     // Link the parent, do any replacement lookups
     MMethodPart mm = (MMethodPart)_par.link(repo).link(repo);
     // Find a child in the parent
-    MethodPart meth = (MethodPart)mm.child(name(),repo);
+    MethodPart meth = (MethodPart)mm.child(name()), meth0 = meth;
     // Find matching lambda
-    for( ; meth!=null;  meth = meth._sibling )
-      if( meth._methcon == this )
+    for( ; meth0!=null;  meth0 = meth0._sibling )
+      if( meth0._methcon == this || meth0.isSynthetic() )
         break;
-    return (_part = meth);
+    if( meth0==null && meth._sibling==null )
+      meth0 = meth;             // Only one choice, take it
+    assert meth0!=null;
+    return (_part = meth0);
   }
   
   @Override public String name() { return _par.name(); }
