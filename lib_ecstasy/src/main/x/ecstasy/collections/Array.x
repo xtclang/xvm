@@ -58,14 +58,14 @@ class Array<Element>
         implements List<Element>
         implements Freezable
         implements Stringable
+        incorporates conditional HashableArray<Element extends Hashable>
+        incorporates conditional OrderableArray<Element extends Orderable>
         incorporates conditional arrays.BitArray<Element extends Bit>
         incorporates conditional arrays.ByteArray<Element extends Byte>
         incorporates conditional arrays.NibbleArray<Element extends Nibble>
         incorporates conditional arrays.NumberArray<Element extends Number>
         incorporates conditional arrays.IntNumberArray<Element extends IntNumber>
-        incorporates conditional arrays.FPNumberArray<Element extends FPNumber>
-        incorporates conditional ArrayOrderer<Element extends Orderable>
-        incorporates conditional ArrayHasher<Element extends Hashable> {
+        incorporates conditional arrays.FPNumberArray<Element extends FPNumber> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -890,13 +890,173 @@ class Array<Element>
 
     // ----- Orderable mixin -----------------------------------------------------------------------
 
-    private static mixin ArrayOrderer<Element extends Orderable>
+    private static mixin OrderableArray<Element extends Orderable>
             into Array<Element>
             implements Orderable {
+        // ----- aggregation -------------------------------------------------------------------
+
+        /**
+         * Compute the minimal value in this array.
+         *
+         * @return True iff the array is not empty
+         * @return (optional) the minimum element value
+         */
+        conditional Element min() {
+            switch (Int size = size) {
+            case 0:
+                return False;
+            case 1:
+                return True, this[0];
+            default:
+                Element min = this[0];
+                for (Int i = 1; i < size; ++i) {
+                    val element = this[i];
+                    if (element < min) {
+                        min = element;
+                    }
+                }
+                return True, min;
+            }
+        }
+
+        /**
+         * Compute the maximal value in this array.
+         *
+         * @return True iff the array is not empty
+         * @return (optional) the maximum element value
+         */
+        conditional Element max() {
+            switch (Int size = size) {
+            case 0:
+                return False;
+            case 1:
+                return True, this[0];
+            default:
+                Element max = this[0];
+                for (Int i = 1; i < size; ++i) {
+                    val element = this[i];
+                    if (element > max) {
+                        max = element;
+                    }
+                }
+                return True, max;
+            }
+        }
+
+        /**
+         * Compute the range of values in this array.
+         *
+         * @return True iff the array is not empty
+         * @return (optional) the minimum value
+         * @return (optional) the maximum value
+         */
+        conditional (Element min, Element max) range() {
+            switch (Int size = size) {
+            case 0:
+                return False;
+            case 1:
+                val element = this[0];
+                return True, element, element;
+            default:
+                Element min = this[0];
+                Element max = min;
+                for (Int i : 1 ..< size) {
+                    Element next = this[i];
+                    if (next < min) {
+                        min = next;
+                    } else if (next > max) {
+                        max = next;
+                    }
+                }
+                return True, min, max;
+            }
+        }
+
+        /**
+         * Compute the median of values in this array using the [Quickselect algorithm]
+         * (https://en.wikipedia.org/wiki/Quickselect).
+         *
+         * @return one of: (i) an empty array if this array is empty; (ii) an array of one element
+         *         iff the array has an odd number of elements or the two median elements of this
+         *         evenly sized array are equal; or, (iii) the two median elements of this evenly
+         *         sized array are not equal
+         */
+        Element[] median() {
+            switch (Int size = size) {
+            case 0:
+                return [];
+            case 1:
+                return [this[0]];
+            default:
+                // this algorithm partially sorts the array, so we need a modifiable copy
+                Element[] array = new Array<Element>(Fixed, this);
+                (Element? a, Element? b) = array.quickSelect(Null, Null, 0, size - 1, size / 2);
+                assert a != Null && b != Null;
+
+                if (size & 1 == 0 && a != b) {
+                    // even case
+                    return [a, b];
+                } else {
+                    // odd case
+                    return [b];
+                }
+            }
+        }
+
+        /**
+         * The implementation of the
+         * [Quickselect algorithm](https://en.wikipedia.org/wiki/Quickselect) computing the k-th
+         * smallest element in an array.
+         */
+        protected (Element? a, Element? b) quickSelect(Element? a, Element? b, Int l, Int r, Int k) {
+            if (l <= r) {
+                Int partitionIndex = partition(l, r);
+
+                if (partitionIndex == k) {
+                    // we found the median of an odd number of elements
+                    b = this[partitionIndex];
+                    if (a != Null) {
+                        return a, b;
+                    }
+                } else if (partitionIndex == k - 1) {
+                    // we get a & b as middle element of the array
+                    a = this[partitionIndex];
+                    if (b != Null) {
+                        return a, b;
+                    }
+                }
+
+                if (partitionIndex >= k) {
+                    // find the index in first half
+                    return quickSelect(a, b, l, partitionIndex - 1, k);
+                } else {
+                    return quickSelect(a, b, partitionIndex + 1, r, k);
+                }
+            }
+            return a, b;
+
+            Int partition(Int l, Int r) {
+                Element pivot = this[r];
+                Int i = l;
+                Int j = l;
+                while (j < r) {
+                    if (this[j] < pivot) {
+                        swap(i, j);
+                        i++;
+                    }
+                    j++;
+                }
+                swap(i, r);
+                return i;
+            }
+        }
+
+        // ----- Orderable interface -----------------------------------------------------------
+
         /**
          * Compare two arrays of the same type for purposes of ordering.
          */
-        static <CompileType extends ArrayOrderer>
+        static <CompileType extends OrderableArray>
                 Ordered compare(CompileType array1, CompileType array2) {
             for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++) {
                 Ordered order = array1[i] <=> array2[i];
@@ -912,13 +1072,13 @@ class Array<Element>
 
     // ----- Hashable mixin ------------------------------------------------------------------------
 
-    private static mixin ArrayHasher<Element extends Hashable>
+    private static mixin HashableArray<Element extends Hashable>
             into Array<Element>
             implements Hashable {
         /**
          * Calculate a hash code for a given array.
          */
-        static <CompileType extends ArrayHasher> Int64 hashCode(CompileType array) {
+        static <CompileType extends HashableArray> Int64 hashCode(CompileType array) {
             Int64 hash = 0;
             for (CompileType.Element el : array) {
                 hash += CompileType.Element.hashCode(el);

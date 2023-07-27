@@ -1422,12 +1422,15 @@ interface List<Element>
     }
 
     /**
-     * Swap the elements of this list.
+     * Swap two elements within this list.
+     *
+     * @param first   an index in this array
+     * @param second  an index in this array
      */
-    void swap(Int i, Int j) {
-        Element el = this[i];
-        this[i] = this[j];
-        this[j] = el;
+    void swap(Int first, Int second) {
+        Element temp = this[first];
+        this[first ] = this[second];
+        this[second] = temp;
     }
 
     /**
