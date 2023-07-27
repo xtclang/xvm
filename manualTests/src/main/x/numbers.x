@@ -99,7 +99,7 @@ module TestNumbers {
 
         Int128 d4 = n4 / 1000;
         console.print("d4=" + d4);
-        console.print("n4=" + (d4*1000 + n4 % 1000));
+        console.print("n4=" + (d4*1000 - (1000 - n4 % 1000))); // mod is not a remainder
 
         try {
             n2++;

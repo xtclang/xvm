@@ -43,7 +43,7 @@ public class xInt128
                 LongLong ll = ((LongLongHandle) hTarget).getValue();
                 if (ll.signum() < 0)
                     {
-                    ll = ll.complement().add(LongLong.ONE);
+                    ll = ll.complement().addUnsigned(LongLong.ONE);
                     }
                 return frame.assignValue(iReturn, xUInt128.INSTANCE.makeHandle(ll));
                 }
