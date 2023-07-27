@@ -4143,11 +4143,6 @@ public abstract class TypeConstant
                     }
                 }
 
-if (toString().equals("AccessType{type=immutable Array<Byte>:private}"))
-    {
-    int q= 0;
-    }
-
             List<Object> listMatches = collectPotentialSuperMethods(
                     methodContrib, nidContrib, mapVirtMethods);
 
@@ -5720,8 +5715,13 @@ if (toString().equals("AccessType{type=immutable Array<Byte>:private}"))
             if (!typeLeft.isInterfaceType() &&
                     !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType())
                 {
-                System.err.println("rejecting isA() due to a recursion:" +
-                    " left=" + typeLeft.getValueString() + "; right=" + typeRight.getValueString());
+                String sWarning = "rejecting isA() due to a recursion:"
+                                + " left=" + typeLeft.getValueString()
+                                + "; right=" + typeRight.getValueString();
+                if (s_setWarnings.add(sWarning))
+                    {
+                    System.err.println(sWarning);
+                    }
                 }
             mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
             return Relation.INCOMPATIBLE;
@@ -7514,4 +7514,9 @@ if (toString().equals("AccessType{type=immutable Array<Byte>:private}"))
      * Cached normalized representation.
      */
     private transient TypeConstant m_typeNormalized;
+
+    /**
+     * The cache of internal warnings
+     */
+    private static final Set<String> s_setWarnings = new HashSet<>();
     }
