@@ -864,6 +864,58 @@ class Array<Element>
     }
 
 
+    // ----- List extensions -----------------------------------------------------------------------
+
+    /**
+     * Remove the specified element, but instead of deleting it from the middle of the array, move
+     * the last element of the array into the position previously occupied by the element and then
+     * delete the last element of the array.
+     *
+     * @param value  the value to remove from this array
+     *
+     * @return the resulting array, which is always `this`
+     *
+     * @throws ReadOnly  if the array does not support in-place element modification and deletion
+     */
+    Array removeUnordered(Element value) {
+        if (Int index := indexOf(value)) {
+            return deleteUnordered(index);
+        }
+
+        return this;
+    }
+
+    /**
+     * Delete the element at the specified index, shifting the contents of the entire remainder of
+     * the list as a result.
+     *
+     * Warning: This can be an incredibly expensive operation if the data structure is not
+     * explicitly intended to support efficient deletion.
+     *
+     * @param index  the index of the element to delete, which must be between `0` (inclusive)
+     *               and `size` (exclusive)
+     *
+     * @return the resultant list, which is the same as `this` for a mutable list
+     *
+     * @throws ReadOnly     if the array does not support in-place element modification and deletion
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (exclusive)
+     */
+    Array deleteUnordered(Int index) {
+        if (!inPlace) {
+            throw new ReadOnly();
+        }
+
+        Int     lastIndex   = size - 1;
+        Element lastElement = this[lastIndex];
+        delete(lastIndex);
+        if (index < lastIndex) {
+            this[index] = lastElement;
+        }
+        return this;
+    }
+
+
     // ----- Comparable ----------------------------------------------------------------------------
 
     /**

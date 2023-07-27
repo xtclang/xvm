@@ -11,6 +11,8 @@ module TestArray {
         testArrayListAdd();
         testFixedArray();
 
+        testUnordered();
+
         testFormalTypes();
 
         testAssignSideEffects();
@@ -138,6 +140,17 @@ module TestArray {
 
         Boolean[] booleans = new Boolean[3](i -> i % 2 == 0);
         console.print("booleans=" + booleans);
+    }
+
+    void testUnordered() {
+        Int[] nums = new Int[].addAll([7, 2, 5, 21, 13, 42]);
+        nums.removeUnordered(5);
+        nums.deleteUnordered(3);
+        nums.removeUnordered(13);
+        nums.deleteUnordered(nums.size-1);
+        nums.removeUnordered(7);
+        nums.deleteUnordered(0);
+        assert nums.empty;
     }
 
     void testFormalTypes() {
