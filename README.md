@@ -73,10 +73,139 @@ Manual local build for **any computer** (for advanced users):
 * `cd` into the git repo (the directory will contain [these files](https://github.com/xtclang/xvm/))
   and execute the Gradle build:
 ```
-  gradle build
+  ./gradlew build
 ```
 
-## Status:
+## Workflow and source control
+
+### Local git configuration
+
+The project comes with a local git configuration, stored in the file ".gitconfig" in the root
+of the repository. The configuration also contains various powerful and conventient shortcuts
+for common git operations.
+
+To apply the local git configuration, execute this commit from the repository root:
+
+```
+git config --local include.path ../.gitconfig
+```
+
+### Recommended git workflow
+
+*A note about this section: this workflow is supported by pretty much every
+common GUI in any common IDE, in one way or another. But in the interest of
+not having to document several instances with slightly different naming convention,
+or deliver a confusing tutorial, this section only describes the exact bare
+bones commmand line git commands that can be used to implement our workflow,
+which is also a common developer preference. All known IDEs just wrap these
+commands in one way or another.*
+
+In order to minimize git merges, and to keep master clean, with a minimum of complexity,
+the recommended workflow for submitting a pull request is as follows:
+
+Create a new branch for your change, and connect it to the upstream:
+
+```
+git checkout -B decriptive-branch-name
+git push --set-upstream origin descriptive-branch-name
+```
+
+Perform your changes, and commit them. We currently do not have any syntax requirements
+on commit descriptions, but it's a good idea to describe the purpose of the commit.
+
+```
+git commit -m "Descriptive commit message, including a github issue reference, if one exists"
+git push
+```
+
+Whenever you need to, and this is encouraged, you should rebase your local branch,
+so that your changes gets transplanted on top of everything that has been pushed to
+master, during the time you have been working on the branch.
+
+Furthermore, we recommend that you configure git pull to use rebase mode as
+its default, rather than merge. This is already enabled in our repository local
+git settings.
+
+Before you submit a pull request, you *need* to rebase it agaist master. We will
+gradually add build pipeline logic for helping out with this, and other things, but
+it's still strongly recommended that you understand the process.
+
+To do a rebase, which has the effect that your branch will contain all of master,
+with your commits moved to the end of history, execute the following commands:
+
+```
+git fetch 
+git rebase origin/master
+```
+
+If there are any conflicts, the rebase will be halted. Should this be the case, change
+your code to resolve the conflicts, and verify that it builds clean again. After it does,
+add the resolved commit and tell git to continue with the rebase:
+
+```
+git add .
+git rebase --continue
+```
+
+If you get entangled, you can always restart the rebase by reverting to the state
+where you started:
+
+```
+git rebase --abort
+```
+
+After rebasing, it's a good idea to execute "git status", to see if there are heads
+from both master and your local branch. Should this be the case, you need to resolve
+the rebase commit order by force pushing the rebased version of you local branch
+before creating the pull request for review:
+
+```
+git status
+git push -f # if needed
+```
+
+You should feel free to commit and push as much as you want in your local branch, if
+your workflow so requires. However, before submitting the finished branch as a pull
+request, do an interactive rebase and replace "pick" with "fixup" to merge any
+temporary commits with their predecessor. 
+
+* It is considered bad form to submit a pull request where there are unncessary 
+or intermediate commits, with vague descriptions. 
+
+* It is considered bad form to submit a pull request where there are commits, which 
+do not build and test cleanly. This is important, because it enables things like 
+automating git bisection to narrow down commits that may have introduced bugs, 
+and it has various other benefits. The ideal state for master, should be that 
+you can check it out at any change in its commit history, and that it will build 
+and test clean on that head.
+
+Most pull requests are small in scope, should and contain only one commit, when
+they are put up for review. If there are distinct unrelated commits, that both contribute
+to solving the issue you are working on, it's naturally fine to not squash those together,
+as it's easier to read and shows clear separation of concerns. 
+
+If you need to get rid of temporary, broken, or unbuildable commits in your branch, 
+do an interactive rebase before you submit it for review. You can execute:
+
+```
+git rebase -i HEAD~n
+```
+
+to do this, where *n* is the number of commits you are interested in modifying.
+
+*According to the git philosophy, branches should be thought of as private, plentiful
+and ephemeral. They should be created at the drop of a hat, and the branch should be 
+automatically or manually deleted after its changes have been merged to master. 
+A branch should never be reused.*
+
+The described approach is a good one to follow, since it moves any complicated source control
+issues completely to the author of a branch, without affecting master, and potentially
+breaking things for other developers. Having to modify the master branch, due to 
+unintended merge state or changes having made their way into it, is a massively more
+complex problem than handling all conflicts and similar issues in the private local
+branches.
+
+## Status
 
 Version 0.4. That's way _before_ a 1.0. In other words, Ecstasy is about as mature as Windows 3.1
 was.
@@ -155,13 +284,13 @@ go to the directory where you want to create a local copy of the Ecstasy project
 [git-scm.com](https://git-scm.com/book/en/v2/Git-Basics-Getting-a-Git-Repository).)
 
 To build the entire project, you need to have [gradle](https://gradle.org/install/), or you use the
-included Gradle Wrapper from within the `xvm` directory:
+included Gradle Wrapper from within the `xvm` directory, which is the recommended method:
 
     ./gradlew build
 
 Or on Windows: 
 
-    gradlew build
+    gradlew.bat build
 
 Note that Windows may require the `JAVA_TOOLS_OPTIONS` environment variable to be set to
 `-Dfile.encoding=UTF-8` in the Environment Variables window that can be accessed from Control Panel.
