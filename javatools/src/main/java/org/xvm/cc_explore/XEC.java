@@ -40,6 +40,8 @@ public class XEC {
     for( String lib : libs ) repo.load(lib);
     // Link the repo
     repo.link();
+    // Link the method constants
+    //repo.cons();
     // Type the repo
     repo.setype();
     
@@ -123,6 +125,12 @@ public class XEC {
       for( ModPart mod : values() )
         // Get the parent's set of child modules and link them against the repo
         mod._par.link(this);
+    }
+    // Link the method constant pools
+    void cons() {
+      VISIT.clear();
+      for( ModPart mod : values() )
+        mod.cons(this);
     }
     // Set the TVar types.
     void setype() {

@@ -27,6 +27,20 @@ public class PropPart extends Part {
     _init = X.xget();
   }
 
+  @Override public Part child(String s) {
+    Part p = super.child(s);
+    if( p!=null ) return p;
+    if( s.equals("set") ) {
+      MMethodPart set = new MMethodPart(this,s);
+      putkid(s,set);
+      set.putkid(s,new MethodPart(this,s));
+      return set;
+    }
+    if( s.equals("get") )
+      throw XEC.TODO();
+    throw XEC.TODO();
+  }
+
   @Override void link_innards( XEC.ModRepo repo ) {
     // Link all part innards
     _con.link(repo);
