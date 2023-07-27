@@ -728,11 +728,19 @@ mixin BitArray<Element extends Bit>
     }
 
     /**
-     * Convert the bit array to a nibble.
+     * Convert the bit array to a 4-bit nibble value.
      *
-     * @throws OutOfBounds  if the resulting value is out of the signed 4-bit nibble range
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @return the corresponding Nibble value
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the 4-bit
+     *                      nibble range
      */
-    Nibble toNibble() {
+    Nibble toNibble(Boolean checkBounds = False) {
         switch (size <=> 4) {
         case Lesser:
             val cutoff = 4 - size;
@@ -742,11 +750,20 @@ mixin BitArray<Element extends Bit>
             return new Nibble(this);
 
         case Greater:
-            assert:bounds !this[0 ..< size-4].contains(One);
+            assert:bounds !checkBounds || !this[0 ..< size-4].contains(One);
             return new Nibble(this[size-4 ..< size]);
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      8-bit integer range
+     */
     @Override
     Int8 toInt8(Boolean checkBounds = False) {
         switch (size <=> 8) {
@@ -765,6 +782,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      16-bit integer range
+     */
     @Override
     Int16 toInt16(Boolean checkBounds = False) {
         switch (size <=> 16) {
@@ -783,6 +809,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      32-bit integer range
+     */
     @Override
     Int32 toInt32(Boolean checkBounds = False) {
         switch (size <=> 32) {
@@ -801,6 +836,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      64-bit integer range
+     */
     @Override
     Int64 toInt64(Boolean checkBounds = False) {
         switch (size <=> 64) {
@@ -819,6 +863,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      128-bit integer range
+     */
     @Override
     Int128 toInt128(Boolean checkBounds = False) {
         switch (size <=> 128) {
@@ -850,6 +903,15 @@ mixin BitArray<Element extends Bit>
         return new IntN(bits);
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
     @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
         switch (size <=> 8) {
@@ -866,6 +928,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 16-bit integer range
+     */
     @Override
     UInt16 toUInt16(Boolean checkBounds = False) {
         switch (size <=> 16) {
@@ -882,6 +953,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 32-bit integer range
+     */
     @Override
     UInt32 toUInt32(Boolean checkBounds = False) {
         switch (size <=> 32) {
@@ -898,6 +978,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 64-bit integer range
+     */
     @Override
     UInt64 toUInt64(Boolean checkBounds = False) {
         switch (size <=> 64) {
@@ -914,6 +1003,15 @@ mixin BitArray<Element extends Bit>
         }
     }
 
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 128-bit integer range
+     */
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) {
         switch (size <=> 128) {
@@ -942,6 +1040,39 @@ mixin BitArray<Element extends Bit>
 
         return new UIntN(bits);
     }
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    Byte toByte(Boolean checkBounds = False) = toUInt8(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      64-bit integer range
+     */
+    @Override
+    Int toInt(Boolean checkBounds = False) = toInt64(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    UInt toUInt(Boolean checkBounds = False) = toUInt64(checkBounds);
 
     @Override
     Dec32 toDec32() {

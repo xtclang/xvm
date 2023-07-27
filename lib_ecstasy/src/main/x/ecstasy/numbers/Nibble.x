@@ -219,7 +219,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int8 toInt8(Boolean checkBounds = False) {
+    Int8 toInt8() {
         return toUInt8().toInt8();
     }
 
@@ -228,7 +228,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int16 toInt16(Boolean checkBounds = False) {
+    Int16 toInt16() {
         return toUInt8().toInt16();
     }
 
@@ -237,7 +237,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int32 toInt32(Boolean checkBounds = False) {
+    Int32 toInt32() {
         return toUInt8().toInt32();
     }
 
@@ -246,7 +246,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int64 toInt64(Boolean checkBounds = False) {
+    Int64 toInt64() {
         return toUInt8().toInt64();
     }
 
@@ -255,7 +255,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    Int128 toInt128(Boolean checkBounds = False) {
+    Int128 toInt128() {
         return toUInt8().toInt128();
     }
 
@@ -274,7 +274,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt8 toUInt8(Boolean checkBounds = False) {
+    UInt8 toUInt8() {
         return bits.toUInt8();
     }
 
@@ -283,7 +283,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt16 toUInt16(Boolean checkBounds = False) {
+    UInt16 toUInt16() {
         return toUInt8().toUInt16();
     }
 
@@ -292,7 +292,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt32 toUInt32(Boolean checkBounds = False) {
+    UInt32 toUInt32() {
         return toUInt8().toUInt32();
     }
 
@@ -301,7 +301,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt64 toUInt64(Boolean checkBounds = False) {
+    UInt64 toUInt64() {
         return toUInt8().toUInt64();
     }
 
@@ -310,7 +310,7 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt128 toUInt128(Boolean checkBounds = False) {
+    UInt128 toUInt128() {
         return toUInt8().toUInt128();
     }
 

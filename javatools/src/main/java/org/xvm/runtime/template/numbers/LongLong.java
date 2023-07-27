@@ -630,7 +630,7 @@ public class LongLong
             or(toUnsignedBigInteger(m_lHigh).shiftLeft(64));
         }
 
-    private static BigInteger toUnsignedBigInteger(long l)
+    public static BigInteger toUnsignedBigInteger(long l)
         {
         if (l >= 0L)
             {
@@ -674,12 +674,13 @@ public class LongLong
         return toBigInteger().toString();
         }
 
-    public static final LongLong   OVERFLOW   = new Overflow();
-    public static final LongLong   ZERO       = new LongLong(0, 0);
-    public static final LongLong   MAX_VALUE  = new LongLong(-1, Long.MAX_VALUE);
-    public static final LongLong   MIN_VALUE  = new LongLong(0, Long.MIN_VALUE);
-    public static final LongLong[] ZEROx2     = new LongLong[] {ZERO, ZERO};
-    public static final LongLong[] OVERFLOWx2 = new LongLong[] {OVERFLOW, OVERFLOW};
+    public static final LongLong   OVERFLOW     = new Overflow();
+    public static final LongLong   ZERO         = new LongLong(0, 0);
+    public static final LongLong   ONE          = new LongLong(1, 0);
+    public static final LongLong   MAX_VALUE    = new LongLong(-1, Long.MAX_VALUE);
+    public static final LongLong   MIN_VALUE    = new LongLong(0, Long.MIN_VALUE);
+    public static final LongLong[] ZEROx2       = new LongLong[] {ZERO, ZERO};
+    public static final LongLong[] OVERFLOWx2   = new LongLong[] {OVERFLOW, OVERFLOW};
 
     protected static final BigInteger BIG_MASK64 = new BigInteger("FFFFFFFFFFFFFFFF", 16);
 

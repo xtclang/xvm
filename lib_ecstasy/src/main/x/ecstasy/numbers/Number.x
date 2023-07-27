@@ -301,6 +301,159 @@
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      8-bit integer range
+     */
+    @Override
+    Int8 toInt8(Boolean checkBounds = False) = toInt64(checkBounds).toInt8(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      16-bit integer range
+     */
+    @Override
+    Int16 toInt16(Boolean checkBounds = False) = toInt64(checkBounds).toInt16(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      32-bit integer range
+     */
+    @Override
+    Int32 toInt32(Boolean checkBounds = False) = toInt64(checkBounds).toInt32(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      64-bit integer range
+     */
+    @Override
+    Int64 toInt64(Boolean checkBounds = False) = toIntN().toInt64(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then sign extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      128-bit integer range
+     */
+    @Override
+    Int128 toInt128(Boolean checkBounds = False) = toIntN().toInt128(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then zero extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    UInt8 toUInt8(Boolean checkBounds = False) = toUInt64(checkBounds).toUInt8(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then zero extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    UInt16 toUInt16(Boolean checkBounds = False) = toUInt64(checkBounds).toUInt16(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then zero extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    UInt32 toUInt32(Boolean checkBounds = False) = toUInt64(checkBounds).toUInt32(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then zero extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    UInt64 toUInt64(Boolean checkBounds = False) = toUIntN().toUInt64(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then zero extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    UInt128 toUInt128(Boolean checkBounds = False) = toUIntN().toUInt128(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    Byte toByte(Boolean checkBounds = False) = toUInt8(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
+     *                      64-bit integer range
+     */
+    @Override
+    Int toInt(Boolean checkBounds = False) = toInt64(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
+     *                     necessary number of least significant integer bits, which may lose
+     *                     magnitude or change the sign of the result
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 8-bit integer range
+     */
+    @Override
+    UInt toUInt(Boolean checkBounds = False) = toUInt64(checkBounds);
+
+    /**
      * Obtain the number as an array of bits, in left-to-right order.
      *
      * @param mutability  the mutability of the resulting array

@@ -106,6 +106,10 @@ public class xUInt64
                 return overflow(frame);
                 }
             }
+        else if (fChecked && piValue.isNegative())
+            {
+            return overflow(frame);
+            }
         else
             {
             return super.convertLong(frame, piValue, fChecked, iReturn);

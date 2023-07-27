@@ -231,12 +231,6 @@ public abstract class Constant
             case "numbers.UInt8":
                 return pool.ensureByteConstant(Format.UInt8, 0);
 
-            case "numbers.Int":
-                return pool.ensureIntConstant(PackedInteger.ZERO, Format.Int64);
-
-            case "numbers.UInt":
-                return pool.ensureIntConstant(PackedInteger.ZERO, Format.UInt64);
-
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int64":
@@ -248,8 +242,8 @@ public abstract class Constant
             case "numbers.UInt128":
             case "numbers.UIntN":
                 return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(
-                        // omit "numbers.", add "checked"
-                        "C" + type.getEcstasyClassName().substring(8)));
+                        // omit "numbers."
+                        type.getEcstasyClassName().substring(8)));
 
             case "numbers.Dec":
                 return pool.ensureDecAConstant(Decimal64.POS_ZERO);

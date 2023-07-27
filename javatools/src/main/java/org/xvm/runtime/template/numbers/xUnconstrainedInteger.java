@@ -3,6 +3,8 @@ package org.xvm.runtime.template.numbers;
 
 import java.math.BigInteger;
 
+import java.util.Arrays;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -126,10 +128,25 @@ public abstract class xUnconstrainedInteger
             {
             case "bits":
                 {
-                PackedInteger pi     = ((IntNHandle) hTarget).m_piValue;
-                int           cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
-                    pi.getBigInteger().toByteArray(), cBytes*8, xArray.Mutability.Constant));
+                PackedInteger pi       = ((IntNHandle) hTarget).m_piValue;
+                int           cb       = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
+                byte[]        ab       = pi.getBigInteger().toByteArray();
+                int           cbActual = ab.length;
+                if (cb < cbActual)
+                    {
+                    cb = cbActual;
+                    }
+                else if (cb > cbActual)
+                    {
+                    byte[] abOld = ab;
+                    ab = new byte[cb];
+                    if ((abOld[0] & 0x80) != 0)
+                        {
+                        Arrays.fill(ab, 0, cb - cbActual, (byte) 0xFF);
+                        }
+                    System.arraycopy(abOld, 0, ab, cb - cbActual, cbActual);
+                    }
+                return frame.assignValue(iReturn, xArray.makeBitArrayHandle(ab, cb*8, xArray.Mutability.Constant));
                 }
 
             case "bitCount":
@@ -235,8 +252,13 @@ public abstract class xUnconstrainedInteger
                 xIntNumber    template = (xIntNumber) f_container.getTemplate(typeRet);
                 long          lValue;
 
-                // check for overflow
+                if (template == this)
+                    {
+                    return frame.assignValue(iReturn, hTarget);
+                    }
+
                 boolean fCheckBounds = hArg == xBoolean.TRUE;
+
                 if (template instanceof xConstrainedInteger templateTo)
                     {
                     if (fCheckBounds)

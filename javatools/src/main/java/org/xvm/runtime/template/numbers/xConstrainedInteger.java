@@ -319,13 +319,13 @@ public abstract class xConstrainedInteger
                     return frame.assignValue(iReturn, hTarget);
                     }
 
+                long    lValue       = ((JavaLong) hTarget).getValue();
                 boolean fCheckBounds = hArg == xBoolean.TRUE;
                 if (template instanceof xConstrainedInteger templateTo)
                     {
-                    long lValue = ((JavaLong) hTarget).getValue();
-
-                    // there is one overflow case that needs to be handled here: UInt64 -> Int*
-                    if (fCheckBounds && lValue < 0 && this instanceof xUInt64)
+                    if (fCheckBounds && lValue < 0 &&
+                            (this instanceof xUInt64            // UInt64 -> Int*
+                             || templateTo instanceof xUInt64)) // negative value -> UInt64
                         {
                         return templateTo.overflow(frame);
                         }
@@ -335,42 +335,44 @@ public abstract class xConstrainedInteger
 
                 if (template instanceof xUnconstrainedInteger templateTo)
                     {
-                    PackedInteger piValue = PackedInteger.valueOf(((JavaLong) hTarget).getValue());
-                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
+                    PackedInteger piValue = this instanceof xUInt64
+                            ? new PackedInteger(LongLong.toUnsignedBigInteger(lValue))
+                            : PackedInteger.valueOf(lValue);
+                    return piValue.isNegative() && !templateTo.f_fSigned
+                            ? templateTo.overflow(frame)
+                            : frame.assignValue(iReturn, templateTo.makeInt(piValue));
                     }
 
                 if (template instanceof BaseBinaryFP templateTo)
                     {
-                    long lValue = ((JavaLong) hTarget).getValue();
-
                     return templateTo.convertLong(frame, lValue, iReturn);
                     }
 
                 if (template instanceof BaseInt128 templateTo)
                     {
-                    long lValue = ((JavaLong) hTarget).getValue();
-
-                    if (fCheckBounds && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
+                    if (fCheckBounds)
                         {
-                        // cannot assign negative value to the unsigned type
-                        return overflow(frame);
+                        if (f_fSigned && lValue < 0 && !templateTo.f_fSigned)
+                            {
+                            // cannot assign negative value to the unsigned type
+                            return overflow(frame);
+                            }
                         }
 
-                    return templateTo.convertLong(frame, lValue, iReturn);
+                    return templateTo.convertLong(frame, lValue, iReturn, f_fSigned);
                     }
 
                 if (template instanceof xChar)
                     {
-                    long l = ((JavaLong) hTarget).getValue();
-                    if (l < 0 || l > 0x10_FFFF)
+                    if (lValue < 0 || lValue > 0x10_FFFF)
                         {
                         if (fCheckBounds)
                             {
                             return overflow(frame);
                             }
-                        l &= 0x0F_FFFF;
+                        lValue &= 0x0F_FFFF;
                         }
-                    return frame.assignValue(iReturn, xChar.makeHandle(l));
+                    return frame.assignValue(iReturn, xChar.makeHandle(lValue));
                     }
 
                 break;

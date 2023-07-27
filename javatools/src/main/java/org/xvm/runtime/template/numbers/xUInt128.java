@@ -24,10 +24,10 @@ public class xUInt128
 
     @Override
     protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                           LongLong ll, boolean fTruncate, int iReturn)
+                                           LongLong ll, boolean fCheckBounds, int iReturn)
         {
         long lVal = ll.getLowValue();
-        if (!fTruncate)
+        if (fCheckBounds)
             {
             if (ll.getHighValue() != 0)
                 {

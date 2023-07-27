@@ -56,7 +56,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int8 toInt8(Boolean checkBounds = False) {
+    Int8 toInt8() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -65,7 +65,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int16 toInt16(Boolean checkBounds = False) {
+    Int16 toInt16() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -74,7 +74,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int32 toInt32(Boolean checkBounds = False) {
+    Int32 toInt32() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -83,7 +83,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int64 toInt64(Boolean checkBounds = False) {
+    Int64 toInt64() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -92,7 +92,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    Int128 toInt128(Boolean checkBounds = False) {
+    Int128 toInt128() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -110,7 +110,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt8 toUInt8(Boolean checkBounds = False) {
+    UInt8 toUInt8() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -119,7 +119,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt16 toUInt16(Boolean checkBounds = False) {
+    UInt16 toUInt16() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -128,7 +128,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt32 toUInt32(Boolean checkBounds = False) {
+    UInt32 toUInt32() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -137,7 +137,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt64 toUInt64(Boolean checkBounds = False) {
+    UInt64 toUInt64() {
         return toBoolean() ? 1 : 0;
     }
 
@@ -146,7 +146,7 @@ const Bit(IntLiteral literal)
      */
     @Auto
     @Override
-    UInt128 toUInt128(Boolean checkBounds = False) {
+    UInt128 toUInt128() {
         return toBoolean() ? 1 : 0;
     }
 

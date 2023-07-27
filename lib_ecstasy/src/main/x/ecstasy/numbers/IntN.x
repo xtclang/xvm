@@ -14,7 +14,10 @@ const IntN
      */
     @Override
     construct(Bit[] bits) {
-        assert bits.size >= 8 && bits.size.bitCount == 1;
+        if (bits.size & 0b111 != 0) {
+            // force the bit array to be a size that can be divided into bytes
+            bits = bits.toIntN().bits;
+        }
         super(bits);
     }
 

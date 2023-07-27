@@ -441,37 +441,29 @@ const IntLiteral(String text)
     /**
      * Convert the value to a single Bit.
      *
-     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
-     *                     necessary number of least significant integer bits, which may lose
-     *                     magnitude or change the sign of the result
-     *
      * @return the corresponding Bit value
      *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
-     *                      and `truncate` is not `True`
+     * @throws OutOfBounds  if the literal value is outside of the bit range
      */
     @Auto
-    Bit toBit(Boolean checkBounds = False) {
-        Byte byte = toByte(checkBounds);
-        assert:bounds !checkBounds || byte <= 1;
+    Bit toBit() {
+        Byte byte = toByte();
+        assert:bounds byte <= 1;
         return byte & 1 == 1 ? 1 : 0;
     }
 
     /**
      * Convert the number to a 4-bit integer.
      *
-     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
-     *                     necessary number of least significant integer bits, which may lose
-     *                     magnitude or change the sign of the result
-     *
      * @return the corresponding Nibble value
      *
-     * @throws OutOfBounds  if the resulting value is out of the unsigned 4-bit integer range
-     *                      and `truncate` is not `True`
+     * @throws OutOfBounds  if the literal value is outside of the 4-bit nibble range
      */
     @Auto
-    Nibble toNibble(Boolean checkBounds = False) {
-        return Nibble.of(toInt64(checkBounds));
+    Nibble toNibble() {
+        Byte byte = toByte();
+        assert:bounds byte <= 0xF;
+        return Nibble.of(byte);
     }
 
     /**
@@ -483,30 +475,30 @@ const IntLiteral(String text)
      *
      * @throws OutOfBounds  iff the Integer value is not in the legal Unicode codepoint range
      */
-    Char toChar() = new Char(toUInt32(checkBounds = True));
+    Char toChar() = new Char(toUInt32());
 
     @Override
     IntLiteral toIntLiteral() = this;
 
     @Auto
     @Override
-    Int8 toInt8(Boolean checkBounds = False);
+    Int8 toInt8();
 
     @Auto
     @Override
-    Int16 toInt16(Boolean checkBounds = False);
+    Int16 toInt16();
 
     @Auto
     @Override
-    Int32 toInt32(Boolean checkBounds = False);
+    Int32 toInt32();
 
     @Auto
     @Override
-    Int64 toInt64(Boolean checkBounds = False);
+    Int64 toInt64();
 
     @Auto
     @Override
-    Int128 toInt128(Boolean checkBounds = False);
+    Int128 toInt128();
 
     @Auto
     @Override
@@ -516,23 +508,23 @@ const IntLiteral(String text)
 
     @Auto
     @Override
-    UInt8 toUInt8(Boolean checkBounds = False);
+    UInt8 toUInt8();
 
     @Auto
     @Override
-    UInt16 toUInt16(Boolean checkBounds = False);
+    UInt16 toUInt16();
 
     @Auto
     @Override
-    UInt32 toUInt32(Boolean checkBounds = False);
+    UInt32 toUInt32();
 
     @Auto
     @Override
-    UInt64 toUInt64(Boolean checkBounds = False);
+    UInt64 toUInt64();
 
     @Auto
     @Override
-    UInt128 toUInt128(Boolean checkBounds = False);
+    UInt128 toUInt128();
 
     @Auto
     @Override

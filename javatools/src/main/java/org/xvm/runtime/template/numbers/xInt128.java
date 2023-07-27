@@ -43,7 +43,7 @@ public class xInt128
                 LongLong ll = ((LongLongHandle) hTarget).getValue();
                 if (ll.signum() < 0)
                     {
-                    ll = new LongLong(ll.getLowValue(), -ll.getHighValue());
+                    ll = ll.complement().add(LongLong.ONE);
                     }
                 return frame.assignValue(iReturn, xUInt128.INSTANCE.makeHandle(ll));
                 }
@@ -53,36 +53,30 @@ public class xInt128
 
     @Override
     protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                           LongLong ll, boolean fTruncate, int iReturn)
+                                           LongLong ll, boolean fCheckBounds, int iReturn)
         {
         long lHigh = ll.getHighValue();
         long lLow  = ll.getLowValue();
 
-        if (!fTruncate)
+        if (fCheckBounds)
             {
-            if (lHigh > 0 || lHigh < -1 || (lHigh == -1 && lLow >= 0))
+            // verify that there is at most 64 bits of actual information
+            if (lHigh < -1 || lHigh > 0 || (!(template instanceof xUInt64) && (lHigh < 0) != (lLow < 0)))
                 {
                 return overflow(frame);
                 }
 
             boolean fNeg = lHigh == -1;
-
             if (!template.f_fSigned && fNeg)
                 {
                 return overflow(frame);
                 }
 
-            if (template instanceof xUInt64)
+            // verify that the remaining "at most 64 bits of information" fits into the destination
+            if (template.f_cNumBits < 64 &&
+                    (lLow < template.f_cMinValue || lLow > template.f_cMaxValue))
                 {
-                // UInt64 fits to any lLow content
-                }
-            else
-                {
-                if (lLow < template.f_cMinValue ||
-                    lLow > template.f_cMaxValue)
-                    {
-                    return overflow(frame);
-                    }
+                return overflow(frame);
                 }
             }
 

@@ -73,22 +73,22 @@ public class xIntLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("toInt8"            , null, new String[]{"numbers.Int8"});
-        markNativeMethod("toInt16"           , null, new String[]{"numbers.Int16"});
-        markNativeMethod("toInt32"           , null, new String[]{"numbers.Int32"});
-        markNativeMethod("toInt64"           , null, new String[]{"numbers.Int64"});
-        markNativeMethod("toInt128"          , null, new String[]{"numbers.Int128"});
+        markNativeMethod("toInt8"   , null, new String[]{"numbers.Int8"});
+        markNativeMethod("toInt16"  , null, new String[]{"numbers.Int16"});
+        markNativeMethod("toInt32"  , null, new String[]{"numbers.Int32"});
+        markNativeMethod("toInt64"  , null, new String[]{"numbers.Int64"});
+        markNativeMethod("toInt128" , null, new String[]{"numbers.Int128"});
 
-        markNativeMethod("toUInt8"           , null, new String[]{"numbers.UInt8"});
-        markNativeMethod("toUInt16"          , null, new String[]{"numbers.UInt16"});
-        markNativeMethod("toUInt32"          , null, new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt64"          , null, new String[]{"numbers.UInt64"});
-        markNativeMethod("toUInt128"         , null, new String[]{"numbers.UInt128"});
+        markNativeMethod("toUInt8"  , null, new String[]{"numbers.UInt8"});
+        markNativeMethod("toUInt16" , null, new String[]{"numbers.UInt16"});
+        markNativeMethod("toUInt32" , null, new String[]{"numbers.UInt32"});
+        markNativeMethod("toUInt64" , null, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt128", null, new String[]{"numbers.UInt128"});
 
-        markNativeMethod("toIntN"            , null, new String[]{"numbers.IntN"});
-        markNativeMethod("toUIntN"           , null, new String[]{"numbers.UIntN"});
-        markNativeMethod("toFloatN"          , null, new String[]{"numbers.FloatN"});
-        markNativeMethod("toDecN"            , null, new String[]{"numbers.DecN"});
+        markNativeMethod("toIntN"   , null, new String[]{"numbers.IntN"});
+        markNativeMethod("toUIntN"  , null, new String[]{"numbers.UIntN"});
+        markNativeMethod("toFloatN" , null, new String[]{"numbers.FloatN"});
+        markNativeMethod("toDecN"   , null, new String[]{"numbers.DecN"});
 
         invalidateTypeInfo();
         }
@@ -306,48 +306,6 @@ public class xIntLiteral
 
             case "mod":
                 return invokeMod(frame, hTarget, hArg, iReturn);
-
-            case "toInt8":
-            case "toInt16":
-            case "toInt32":
-            case "toInt64":
-            case "toInt128":
-            case "toUInt8":
-            case "toUInt16":
-            case "toUInt32":
-            case "toUInt64":
-            case "toUInt128":
-            case "toIntN":
-            case "toUIntN":
-            case "toFloatN":
-            case "toDecN":
-                TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_container.getTemplate(typeRet);
-                IntNHandle    hLiteral = (IntNHandle) hTarget;
-                PackedInteger piValue  = hLiteral.getValue();
-
-                boolean fCheckBounds = hArg == xBoolean.TRUE;
-
-                if (template instanceof xConstrainedInteger templateTo)
-                    {
-                    return templateTo.convertLong(frame, piValue, fCheckBounds, iReturn);
-                    }
-
-                if (template instanceof BaseInt128 templateTo)
-                    {
-                    BigInteger  biValue = piValue.getBigInteger();
-                    LongLong    llValue = LongLong.fromBigInteger(biValue);
-
-                    return fCheckBounds && (!templateTo.f_fSigned && llValue.signum() < 0)
-                        ? templateTo.overflow(frame)
-                        : frame.assignValue(iReturn, templateTo.makeHandle(llValue));
-                    }
-
-                if (template instanceof xUnconstrainedInteger templateTo)
-                    {
-                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
-                    }
-                break;
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -372,8 +330,37 @@ public class xIntLiteral
             case "toUIntN":
             case "toFloatN":
             case "toDecN":
-                // default argument: checkBounds = False;
-                return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                ClassTemplate template = f_container.getTemplate(typeRet);
+                IntNHandle    hLiteral = (IntNHandle) hTarget;
+                PackedInteger piValue  = hLiteral.getValue();
+
+                if (template instanceof xConstrainedInteger templateTo)
+                    {
+                    return templateTo.convertLong(frame, piValue, true, iReturn);
+                    }
+
+                if (template instanceof BaseInt128 templateTo)
+                    {
+                    BigInteger biValue = piValue.getBigInteger();
+                    if (biValue.bitLength() > 128)
+                        {
+                        return templateTo.overflow(frame);
+                        }
+
+                    LongLong llValue = LongLong.fromBigInteger(biValue);
+                    return !templateTo.f_fSigned && llValue.signum() < 0
+                            ? templateTo.overflow(frame)
+                            : frame.assignValue(iReturn, templateTo.makeHandle(llValue));
+                    }
+
+                if (template instanceof xUnconstrainedInteger templateTo)
+                    {
+                    return piValue.isNegative() && !templateTo.f_fSigned
+                            ? templateTo.overflow(frame)
+                            : frame.assignValue(iReturn, templateTo.makeInt(piValue));
+                    }
+                break;
 
             case "not":
                 return invokeCompl(frame, hTarget, iReturn);

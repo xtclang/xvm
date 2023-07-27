@@ -115,7 +115,7 @@ public abstract class BaseInt128
         long lLo = big.longValue();
         if (cBits < 64)
             {
-            return convertLong(frame, lLo, iReturn);
+            return convertLong(frame, lLo, iReturn, f_fSigned);
             }
 
         long lHi = big.shiftRight(64).longValue();
@@ -290,13 +290,19 @@ public abstract class BaseInt128
 
                 if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return convertToConstrainedType(frame, templateTo, llValue, !fCheckBounds, iReturn);
+                    return convertToConstrainedType(frame, templateTo, llValue, fCheckBounds, iReturn);
                     }
 
                 if (template instanceof xUnconstrainedInteger templateTo)
                     {
-                    PackedInteger piValue = new PackedInteger(llValue.toBigInteger());
-                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
+                    PackedInteger piValue = new PackedInteger(f_fSigned
+                            ? llValue.toBigInteger()
+                            : llValue.toUnsignedBigInteger());
+                    // there's one special case that produces an overflow exception, even though
+                    // there is no "checkBounds" parameter on toUIntN()
+                    return !templateTo.f_fSigned && piValue.isNegative()
+                            ? overflow(frame)
+                            : frame.assignValue(iReturn, templateTo.makeInt(piValue));
                     }
 
                 if (template instanceof BaseInt128 templateTo)
@@ -650,9 +656,9 @@ public abstract class BaseInt128
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    protected int convertLong(Frame frame, long lValue, int iReturn)
+    protected int convertLong(Frame frame, long lValue, int iReturn, boolean fFromSigned)
         {
-        return frame.assignValue(iReturn, makeHandle(new LongLong(lValue, f_fSigned)));
+        return frame.assignValue(iReturn, makeHandle(new LongLong(lValue, fFromSigned)));
         }
 
     /**
@@ -661,7 +667,7 @@ public abstract class BaseInt128
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
     abstract protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                                    LongLong llValue, boolean fTruncate, int iReturn);
+                                                    LongLong llValue, boolean fCheckBounds, int iReturn);
 
     /**
      * Create a handle for the specified LongLong value.
