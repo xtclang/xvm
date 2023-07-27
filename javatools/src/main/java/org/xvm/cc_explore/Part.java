@@ -29,7 +29,7 @@ abstract public class Part {
   final int _cslen;
 
   // Map from kid name to kid.  
-  IdentityHashMap<String,Part> _name2kid;
+  public IdentityHashMap<String,Part> _name2kid;
   
   Part( Part par, int nFlags, Const id, String name, CondCon cond, CPool X ) {
     _par = par;
@@ -52,8 +52,7 @@ abstract public class Part {
     _name = name;
     _nFlags = 0;
     _cond = null;
-    _cslen = 0;
-    
+    _cslen = 0;    
   }
 
   @Override public String toString() { return str(new SB()).toString(); }
@@ -115,12 +114,8 @@ abstract public class Part {
     if( _name2kid!=null ) 
       for( String name : _name2kid.keySet() ) {
         Part kid0 = _name2kid.get(name);
-        //if( kid0 instanceof PropPart pp ) {
-          // Do nothing?
-        //} else {
-          Part kid = kid0.link(repo); 
-          _name2kid.put(name,kid);  // Replace with upgrade and link
-        //}
+        Part kid1 = kid0.link(repo); // Link and upgrade
+        _name2kid.put(name,kid1);    // Replace with link and upgrade
       }
     return this;
   }
@@ -131,10 +126,16 @@ abstract public class Part {
   // Tok, kid-specific internal linking.
   abstract void link_innards( XEC.ModRepo repo );
 
-  // Look up a child, post linking.  Does not need a repo
-  public Part child(String s) { return child(s,null); }
-  // Look up a child, during linking.  The overrides might need the repo.
-  public Part child(String s, XEC.ModRepo ignore ) {
+  public final void cons( XEC.ModRepo repo ) {
+    if( this instanceof MethodPart mp )
+      mp._cons(repo);
+    if( _name2kid!=null ) 
+      for( Part p : _name2kid.values() )
+        p.cons(repo);    
+  }
+  
+  // Look up a child.
+  public Part child(String s) {
     return _name2kid==null ? null : _name2kid.get(s);
   }
 
@@ -351,5 +352,8 @@ abstract public class Part {
   public static final int STATIC_BIT       = 0x0800, STATIC_SHIFT     = 11;
   public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
   public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT   = 13;
-  public static final int AUXILIARY_BIT    = 0x4000, AUXILIARY_SHIFT  = 14;  
+  public static final int AUXILIARY_BIT    = 0x4000, AUXILIARY_SHIFT  = 14;
+
+  public boolean isSynthetic() { return (_nFlags & SYNTHETIC_BIT) != 0; }
+
 }

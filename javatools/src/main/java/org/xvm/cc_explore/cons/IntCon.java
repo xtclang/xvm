@@ -37,17 +37,17 @@ public class IntCon extends TCon {
     }
 
     int c = switch( f ) {   // Size in bytes of int constant
-    case Int16, CInt16 -> 2;
-    case CInt32, CUInt16, CUInt32 -> 4;
-    case Int64, CInt64, CUInt64 -> 8;
-    case Int, CInt128, CUInt128, UInt -> 16;
-    case IntN, CIntN, CUIntN -> 1024;
+    case Int16, UInt16 -> 2;
+    case Int32, UInt32 -> 4;
+    case Int64, UInt64 -> 8;
+    case Int128, UInt128 -> 16;
+    case IntN, UIntN -> 1024;
     default -> { System.err.println(f); throw XEC.TODO(); }
     };
     
     boolean unsigned = switch( f ) {
-    case Int, Int16, Int64, IntN, CInt16, CInt32, CInt64, CInt128, CIntN -> false;
-    case CUInt16, CUInt32, CUInt64, CUInt128, CUIntN, UInt -> true;
+    case  Int16,  Int32,  Int64,  Int128,  IntN -> false;
+    case UInt16, UInt32, UInt64, UInt128, UIntN -> true;
     default -> { System.err.println(f); throw XEC.TODO(); }
     };
 

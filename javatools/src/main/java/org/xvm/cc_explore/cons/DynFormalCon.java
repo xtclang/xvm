@@ -26,6 +26,15 @@ public class DynFormalCon extends FormalCon {
   }  
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
-    return (_part=_formal.link(repo));
+    _type.link(repo);
+    _formal.link(repo);
+    //if( _type instanceof ParamTCon pt && pt._parms!=null ) {
+    //  _part = pt._parms[0].link(repo);
+    //  return _part;
+    //} else {
+     _part = _type.link(repo);
+    //}
+    assert _part!=null;
+    return _part;
   }
 }

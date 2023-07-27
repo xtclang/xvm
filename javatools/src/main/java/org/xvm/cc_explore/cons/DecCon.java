@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.tvar.TVBase;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
@@ -8,9 +9,11 @@ import java.math.MathContext;
 /**
   Exploring XEC Constants
  */
-public abstract class DecCon extends Const {
+public abstract class DecCon extends TCon {
   private final BigDecimal _dec;
   public DecCon( CPool X, BigDecimal dec ) { _dec = dec; }
+  @Override TVBase _setype( ) { return new TVBase(this); }
+  
 
   /**
    * Convert the passed declet to three decimal digits, and format them as a Java <tt>int</tt> in

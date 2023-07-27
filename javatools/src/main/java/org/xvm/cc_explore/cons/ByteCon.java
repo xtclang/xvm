@@ -20,5 +20,5 @@ public class ByteCon extends Const {
    *
    * @return true if the format is signed
    */
-  static private boolean isSigned(Format format) { return format == Format.CInt8 || format == Format.Int8; }
+  static private boolean isSigned(Format format) { return format == Format.Int8; }
 }

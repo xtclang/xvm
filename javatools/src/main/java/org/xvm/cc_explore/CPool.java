@@ -16,7 +16,8 @@ public class CPool {
   // Parser state
   private final byte[] _buf;
   private int x;
-  
+
+  // Parse a constant pool
   CPool( byte[] buf ) {
     _buf = buf;
     _magic = i32();
@@ -24,6 +25,12 @@ public class CPool {
     _minor = i32();
     int len = u31();
     _consts = new Const[len];
+  }
+  // Parse a code buffer
+  public CPool( byte[] buf, double ignore ) {
+    _buf = buf;
+    _magic = _major = _minor = 0;
+    _consts = null;
   }
   void parse( ) {
     int len = _consts.length;
@@ -40,13 +47,12 @@ public class CPool {
         case AnonymousClassType -> new AnonClzTCon(this);
         case Any           -> new MatchAnyCon(this,f);
         case Array, Set, Tuple -> new AryCon(this,f);
-        case Bit, CInt8, Int8, Nibble, CUInt8, UInt8 -> new ByteCon(this,f);
+        case Bit, Int8, Nibble, UInt8 -> new ByteCon(this,f);
         case BindTarget    -> new MethodBindCon(this);
         case Char          -> new CharCon(this);
         case Class         -> new ClassCon(this);
         case ConditionNamed-> new NamedCondCon(this,f); 
         case Date, Duration, FPLiteral, IntLiteral, Path, Time, TimeOfDay -> new LitCon(this,f);
-        case Dec           -> new DecACon(this);
         case DecN, FloatN  -> new FPNCon(this,f);
         case Dec32         -> new Dec32Con(this);
         case Dec64         -> new Dec64Con(this);
@@ -65,7 +71,7 @@ public class CPool {
         case FormalTypeChild -> new FormalTChildCon(this);
         case ImmutableType -> new ImmutTCon(this);
         case InnerChildType -> new InnerDepTCon(this);
-        case Int, UInt, CInt16, Int16, CInt32, Int32, CInt64, Int64, CInt128, Int128, CIntN, IntN, CUInt16, UInt16, CUInt32, UInt32, CUInt64, UInt64, CUInt128, UInt128, CUIntN, UIntN -> new IntCon(this,f);
+        case Int16, Int32, Int64, Int128, IntN, UInt16, UInt32, UInt64, UInt128, UIntN -> new IntCon(this,f);
         case IntersectionType -> new InterTCon(this);
         case IsConst, IsEnum, IsModule, IsPackage, IsClass -> new KeywordCon(f);
         case Map, MapEntry -> new MapCon(this,f);

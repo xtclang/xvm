@@ -20,11 +20,19 @@ public class RelPart extends ClassPart {
     return "["+n1+","+n2+"]";
   }
 
+  @Override Part search(String s, Part p) {
+    Part c1 = _p1.child(s);
+    Part c2 = _p2.child(s);
+    return _op.search(c1,c2);
+  }
+
   @Override TVStruct _setype() {
     TVStruct t1 = (TVStruct)_p1.setype();
     TVStruct t2 = (TVStruct)_p2.setype();
     return _op.op(t1,t2);
   }
+
+  
   public static enum Op {
     // For a Union type, the result is one of the Union members - and the
     // allowed set of fields we can use is limited to what is common across
@@ -39,6 +47,9 @@ public class RelPart extends ClassPart {
         t1._open = old;
         t3._open = true;        // Still an interface
         return (TVStruct)t3.find();
+      }
+      @Override Part search(Part c1, Part c2) {
+        return c1==c2 ? c1 : null; // Must be in both
       }
     },
     // For an Intersection type, the result is all the Intersection members,
@@ -56,13 +67,20 @@ public class RelPart extends ClassPart {
         t1._open = old;
         return (TVStruct)t3.find();
       }
+      @Override Part search(Part c1, Part c2) {
+        return c1==null ? c2 : c1; // Must be in either
+      }
     },
     Difference {
       @Override TVStruct op(TVStruct t1, TVStruct t2) {
         // TODO: Not sure, just returning t1
         return t1;
       }
+      @Override Part search(Part c1, Part c2) {
+        return c1!=null && c2==null ? c1 : null; // Must be in first not 2nd
+      }
     };
     abstract TVStruct op(TVStruct t1, TVStruct t2);
+    abstract Part search(Part c1, Part c2);
   };
 }

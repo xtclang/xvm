@@ -4,14 +4,22 @@ import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.TVLeaf;
 import org.xvm.cc_explore.tvar.TVar;
 
+import java.util.IdentityHashMap;
+
 // A bunch of methods, following the kids list
 public class MMethodPart extends Part {
   MMethodPart( Part par, int nFlags, Const id, CondCon con, CPool X ) {
     super(par,nFlags,id,null,con,X);
   }
+  
+  MMethodPart( Part par, String name ) {
+    super(par,name);
+    _name2kid = new IdentityHashMap<>();
+  }
 
+  
   @Override void putkid(String name, Part kid) {
-    MethodPart old = (MethodPart)child(kid._name,null);
+    MethodPart old = (MethodPart)child(kid._name);
     if( old==null ) _name2kid.put(kid._name,kid);
     else {
       while( old._sibling!=null ) old = old._sibling; // Follow linked list to end

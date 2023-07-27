@@ -9,7 +9,7 @@ import org.xvm.cc_explore.tvar.TVBase;
  */
 public class LitCon extends TCon {
   final Format _f;
-  String _str;                  // The actual string constant
+  public String _str;           // The actual string constant
   public LitCon( CPool X, Format f ) {
     _f = f;
     X.u31();
