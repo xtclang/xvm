@@ -33,10 +33,10 @@ public class ParamTCon extends TCon implements ClzCon {
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
     _part = (ClassPart)_con.link(repo);
-    assert _part!=null;
     if( _parms!=null )
       for( TCon parm : _parms )
         parm.link(repo);
+    assert _part!=null;
     return _part;
   }
   @Override TVar _setype() {

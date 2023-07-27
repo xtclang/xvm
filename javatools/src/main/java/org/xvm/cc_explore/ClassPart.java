@@ -2,7 +2,8 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.*;
-import org.xvm.cc_explore.util.S;
+import org.xvm.cc_explore.util.SB;
+import static org.xvm.cc_explore.Part.Composition.*;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,7 +27,7 @@ Methods may have a special arg0, also of ISA TVar.
  */
 public class ClassPart extends Part {
   private final HashMap<String,TCon> _tcons; // String->TCon mapping
-  final LitCon _path;           // File name compiling this file
+  public final LitCon _path;                 // File name compiling this file
   final Part.Format _f;         // Class, Interface, Mixin, Enum, Module, Package
 
   ClassPart _super; // Super-class.  Note that "_par" field is the containing Package, not the superclass
@@ -79,11 +80,31 @@ public class ClassPart extends Part {
         c.link( repo );
   }
 
+  
+  @Override public Part child(String s) {  return search(s,null);  }
+
+  // Hunt this clz for name, plus recursively any Implements contribs.
+  // Assert only 1 found
+  Part search( String s, Part p ) {
+    Part p0 = _name2kid==null ? null : _name2kid.get(s);
+    if( p0!=null ) {
+      assert p==null || p==p0;
+      return p0;
+    }
+    if( _contribs != null )
+      for( Contrib c : _contribs )
+        if( c._comp==Implements || c._comp==Into || c._comp==Extends || c._comp==Delegates ) {
+          c._tContrib.link(null);
+          p = ((ClzCon)c._tContrib).clz().search(s,p);
+        }
+    return p;
+  }
+  
   // Mangle a generic type name
   private String generic( String s ) {
     return (_name+".generic."+s).intern();
   }
-  
+
   @Override TVar _setype() {
     // Make the class struct, with fields
     TVStruct stv = new TVStruct(_name,true);

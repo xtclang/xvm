@@ -33,7 +33,7 @@ public class FilePart extends Part {
    * will be displayed if there is a version mismatch, which should save some frustration -- since
    * otherwise the resulting error(s) can be very hard to diagnose.
    */
-  static final int VERSION_MINOR_CUR = 20230504;
+  static final int VERSION_MINOR_CUR = 20230724;
   final int _minor;
 
   // Main module
@@ -71,7 +71,7 @@ public class FilePart extends Part {
     // Parse any children components
     parseKids(pool);
 
-    _mod = (ModPart)child(mod.name(),null);
+    _mod = (ModPart)child(mod.name());
   }
 
   @Override void link_innards( XEC.ModRepo repo ) { }
