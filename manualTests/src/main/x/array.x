@@ -19,6 +19,7 @@ module TestArray {
         testBits();
 
         testComparable();
+        testAggregation();
 
         testIterators();
 
@@ -223,6 +224,20 @@ module TestArray {
 
         Bit[] bits = [0, 1, 1, 0];
         console.print($"Array<Bit>.hashCode(bits)={Array<Bit>.hashCode(bits)}");
+    }
+
+    void testAggregation() {
+        console.print("\n** testAggregation()");
+
+        agg([]);
+        agg([42]);
+        agg([1, 2, 3]);
+        agg([5, 4, 3, 2, 1]);
+        agg([7, 5, 21, 13]);
+
+        void agg(Int[] a) {
+            console.print($"for array {a}, min={a.min() ?: "none"}, max={a.max() ?: "none"}, median={a.median()}");
+        }
     }
 
     void testIterators() {
