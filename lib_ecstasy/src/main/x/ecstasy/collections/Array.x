@@ -886,16 +886,14 @@ class Array<Element>
     }
 
     /**
-     * Delete the element at the specified index, shifting the contents of the entire remainder of
-     * the list as a result.
-     *
-     * Warning: This can be an incredibly expensive operation if the data structure is not
-     * explicitly intended to support efficient deletion.
+     * Replace the element at the specified index with the element from the end of the array, and
+     * then delete the last element of the array. This avoids shifting the contents of the entire
+     * remainder of the array.
      *
      * @param index  the index of the element to delete, which must be between `0` (inclusive)
      *               and `size` (exclusive)
      *
-     * @return the resultant list, which is the same as `this` for a mutable list
+     * @return the resulting array, which is always `this`
      *
      * @throws ReadOnly     if the array does not support in-place element modification and deletion
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
