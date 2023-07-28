@@ -3,8 +3,7 @@ package org.xvm.cc_explore;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.TVar;
 import org.xvm.cc_explore.util.SB;
-
-import java.util.IdentityHashMap;
+import org.xvm.cc_explore.util.NonBlockingHashMap;
 
 /**
    DAG structure containment of the existing components/structures.
@@ -29,7 +28,7 @@ abstract public class Part {
   final int _cslen;
 
   // Map from kid name to kid.  
-  public IdentityHashMap<String,Part> _name2kid;
+  public NonBlockingHashMap<String,Part> _name2kid;
   
   Part( Part par, int nFlags, Const id, String name, CondCon cond, CPool X ) {
     _par = par;
@@ -83,7 +82,6 @@ abstract public class Part {
       // if the child is a method, it can only be contained by a MultiMethodPart
       assert !(kid instanceof MethodPart) || (this instanceof MMethodPart);
       // Insert name->kid mapping
-      if( _name2kid==null ) _name2kid = new IdentityHashMap<>();
       putkid(kid._name,kid);
       // Here we could be lazy on the child's children, but instead are always eager.
       int len = X.u31();        // Length of serialized nested children
@@ -93,6 +91,7 @@ abstract public class Part {
   }
 
   void putkid(String name, Part kid) {
+    if( _name2kid==null ) _name2kid = new NonBlockingHashMap<>();
     assert !_name2kid.containsKey(kid._name);
     _name2kid.put(kid._name,kid);
   }

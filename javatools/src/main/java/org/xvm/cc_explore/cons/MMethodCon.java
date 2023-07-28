@@ -13,17 +13,7 @@ public class MMethodCon extends NamedCon {
     // If the parent lookup fails, see if the parent is a formal/interface and
     // lookup there
     if( _par.part() instanceof PropPart prop ) {
-      // Assume this is a single generified type, and lookup on the generic type.
-      // i.e., Looking at List<Person> and now looking up against <Person>
-      if( prop._con instanceof ParamTCon parm ) {
-        //assert parm._parms.length==1;
-        //p = (MMethodPart)parm._parms[0].link(repo).child(name(),repo);
-        throw XEC.TODO();
-      } else if( prop._con instanceof TermTCon ttcon ) {
-        throw XEC.TODO();
-      } else {
-        throw XEC.TODO();
-      }
+      throw XEC.TODO();
     } else if( _par.part() instanceof MethodPart meth ) {
       p = (MMethodPart)meth.child(_name);
     } else if( _par.part() instanceof MMethodPart mm ) {
@@ -33,9 +23,7 @@ public class MMethodCon extends NamedCon {
     // If parent lookup fails, try again in Object
     if( p==null )
       p = (MMethodPart)repo.get("ecstasy.xtclang.org").child("Object").child(name());
-    //assert p!=null;
-    if( p==null )
-      System.err.println("Cannot find "+name()+" in "+_par.name());
+    assert p!=null;
     return (_part=p);    
   }
 }
