@@ -39,6 +39,11 @@ public class ParamTCon extends TCon implements ClzCon {
     assert _part!=null;
     return _part;
   }
+  @Override int _eq( TCon tc ) {
+    ParamTCon ptc = (ParamTCon)tc; // Invariant when called
+    assert _part!=null && ptc._part!=null;
+    return _part == ptc._part ? 1 : -1;
+  }
   @Override TVar _setype() {
     if( _parms!=null )
       for( int i=0; i<_parms.length; i++ )

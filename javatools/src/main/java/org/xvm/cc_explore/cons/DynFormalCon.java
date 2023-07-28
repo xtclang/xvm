@@ -28,12 +28,12 @@ public class DynFormalCon extends FormalCon {
     if( _part!=null ) return _part;
     _type.link(repo);
     _formal.link(repo);
-    //if( _type instanceof ParamTCon pt && pt._parms!=null ) {
-    //  _part = pt._parms[0].link(repo);
-    //  return _part;
-    //} else {
+    if( _type instanceof ParamTCon pt && pt._parms!=null ) {
+      _part = pt._parms[0].link(repo);
+      return _part;
+    } else {
      _part = _type.link(repo);
-    //}
+    }
     assert _part!=null;
     return _part;
   }
