@@ -106,7 +106,7 @@ public class MethodPart extends MMethodPart {
   }
 
   // Constructor for missing set/get methods
-  MethodPart( Part par, String name ) {
+  public MethodPart( Part par, String name ) {
     super(par,name);
     _methcon = null;
     _supercon = null;
@@ -128,6 +128,27 @@ public class MethodPart extends MMethodPart {
     return (_nFlags & COND_RET_BIT) != 0;
   }
 
+  // Match against signature.
+  // -1 - Hard fail; mismatch arg/rets; or hard mismatch in an arg
+  //  0 - Weak yes; at least 1 leaf/PropCon match
+  //  1 - Hard yes; an exact arg match all args
+  public int match_sig(SigCon sig) {
+    assert sig._name.equals(_name);
+    int amlen =     _args==null ? 0 :     _args.length;
+    int aslen = sig._args==null ? 0 : sig._args.length;
+    if( amlen != aslen ) return -1;
+    int rmlen =     _rets==null ? 0 :     _rets.length;
+    int rslen = sig._rets==null ? 0 : sig._rets.length;
+    if( rmlen != rslen ) return -1;
+    int rez=1;
+    for( int i=0; i<amlen; i++ ) {
+      rez = Math.min(rez,_args[i]._con.eq(sig._args[i]));
+      if( rez == -1 ) return -1;
+    }
+    // Do not match on returns
+    return rez;
+  }
+  
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) {
     if( _supercon!=null ) _super = (MMethodPart)_supercon.link(repo);
@@ -199,6 +220,8 @@ public class MethodPart extends MMethodPart {
       for( int i=0; i<_rets.length; i++ )
         _rets[i].setype().unify(lam.arg(lam._nargs+i));
     assert !lam.unified();
+    if( _sibling != null )
+      _sibling.setype();
     return lam;
   }
   

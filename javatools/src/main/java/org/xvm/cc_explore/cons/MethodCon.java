@@ -9,7 +9,7 @@ import org.xvm.cc_explore.tvar.TVLambda;
   Exploring XEC Constants
  */
 public class MethodCon extends PartCon {
-  private SigCon _sig;
+  public SigCon _sig;
   public final int _lamidx;
   public MethodCon( CPool X ) {
     X.u31();                    // Parent
@@ -27,15 +27,27 @@ public class MethodCon extends PartCon {
     // Link the parent, do any replacement lookups
     MMethodPart mm = (MMethodPart)_par.link(repo).link(repo);
     // Find a child in the parent
-    MethodPart meth = (MethodPart)mm.child(name()), meth0 = meth;
-    // Find matching lambda
-    for( ; meth0!=null;  meth0 = meth0._sibling )
-      if( meth0._methcon == this || meth0.isSynthetic() )
-        break;
-    if( meth0==null && meth._sibling==null )
-      meth0 = meth;             // Only one choice, take it
-    assert meth0!=null;
-    return (_part = meth0);
+    MethodPart meth = (MethodPart)mm.child(name()), meth0=null,meth1=null;
+    // Assume if there is one method, it is correct
+    if( meth!=null && meth._sibling == null )
+      return (_part = meth);
+    // Find matching lambda with the easy exact test
+    for( MethodPart methx=meth; methx!=null;  methx = methx._sibling )
+      if( methx._methcon == this )
+        return (_part = methx); // Early out
+    // Find matching lambda with signature matching
+    if( meth!=null ) _sig.link(repo);
+    int rez0=0, rez1=0;
+    for( MethodPart methx=meth; methx!=null;  methx = methx._sibling ) {
+      int rez = methx.match_sig(_sig);
+      if( rez == -1 ) continue;
+      if( rez==0 ) { rez0++;  meth0=methx; }
+      else         { rez1++;  meth1=methx; }
+    }
+    if( rez1 >= 1 ) { assert rez1==1;  return (_part = meth1); }
+    if( rez0 >= 1 ) { assert rez0==1;  return (_part = meth0); }
+    // Native methods?
+    return mm.addNative();
   }
   
   @Override public String name() { return _par.name(); }
