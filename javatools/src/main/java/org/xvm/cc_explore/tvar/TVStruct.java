@@ -222,7 +222,6 @@ public class TVStruct extends TVar {
   // -------------------------------------------------------------
   @Override boolean _trial_unify_ok_impl( TVar tv3 ) {
     TVStruct that = (TVStruct)tv3; // Invariant when called
-    if( !_names.equals(that._names) ) return false;
     for( int i=0; i<_max; i++ ) {
       TVar lhs = arg(i);
       TVar rhs = that.arg(_flds[i]); // RHS lookup by field name
@@ -239,6 +238,9 @@ public class TVStruct extends TVar {
     for( int i=0; i<_max; i++ )
       if( that.arg(_flds[i])==null ) // And missing key in RHS
         return false;          // Trial unification failed
+    for( String name : _names )
+      if( !that._names.contains(name) )
+        return false;
     return true;
   }
 

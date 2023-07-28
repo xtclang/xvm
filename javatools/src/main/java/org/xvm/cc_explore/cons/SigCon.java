@@ -8,9 +8,10 @@ import org.xvm.cc_explore.util.SB;
   Exploring XEC Constants
  */
 public class SigCon extends TCon implements IdCon {
-  String _name;
-  TCon[] _args;
-  TCon[] _rets;
+  public String _name;
+  public TCon[] _args;
+  public TCon[] _rets;
+  private boolean _linked;
   
   public SigCon( CPool X ) {
     X.u31();
@@ -28,6 +29,18 @@ public class SigCon extends TCon implements IdCon {
   public TCon[] rawRets () { return _rets; }
   public TCon[] rawParms() { return _args; }
 
+  @Override public Part link(XEC.ModRepo repo) {
+    if( _linked ) return null;
+    _linked=true;
+    if( _args!=null )
+      for( TCon tcon : _args )
+        tcon.link(repo);
+    if( _rets!=null )
+      for( TCon tcon : _rets )
+        tcon.link(repo);
+    return null;
+  }
+  
   @Override TVar _setype() {
     TVLambda lam = new TVLambda(_args==null ? 0 : _args.length, _rets==null ? 0 : _rets.length);
     setype_stop_cycles(lam);    // Stop cycles
