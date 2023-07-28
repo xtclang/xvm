@@ -30,15 +30,8 @@ public class PropPart extends Part {
   @Override public Part child(String s) {
     Part p = super.child(s);
     if( p!=null ) return p;
-    if( s.equals("set") ) {
-      MMethodPart set = new MMethodPart(this,s);
-      putkid(s,set);
-      set.putkid(s,new MethodPart(this,s));
-      return set;
-    }
-    if( s.equals("get") )
-      throw XEC.TODO();
-    throw XEC.TODO();
+    MMethodPart mm = new MMethodPart(this,s);
+    return mm.addNative();
   }
 
   @Override void link_innards( XEC.ModRepo repo ) {

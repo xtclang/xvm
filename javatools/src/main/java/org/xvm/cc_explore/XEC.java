@@ -40,10 +40,10 @@ public class XEC {
     for( String lib : libs ) repo.load(lib);
     // Link the repo
     repo.link();
-    // Link the method constants
-    //repo.cons();
     // Type the repo
     repo.setype();
+    // Link the method constants
+    repo.cons();
     
     // Start the thread pool up
     XRuntime.start();

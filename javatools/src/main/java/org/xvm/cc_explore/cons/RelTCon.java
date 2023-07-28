@@ -28,6 +28,11 @@ public abstract class RelTCon extends TCon implements ClzCon {
     return (_part = new RelPart(p1,p2,op()));
   }
 
+  @Override int _eq( TCon tc ) {
+    RelTCon rt = (RelTCon)tc; // Invariant when called
+    return Math.min(_con1.eq(rt._con1), _con2.eq(rt._con2));
+  }
+
   // Note that the _tvar type set here is used to stop repeated setype calls
   // but isn't really any sensible TVar.
   @Override TVar _setype() {

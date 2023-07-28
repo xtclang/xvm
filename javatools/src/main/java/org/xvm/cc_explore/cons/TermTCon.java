@@ -20,6 +20,12 @@ public class TermTCon extends TCon implements ClzCon {
   @Override public Part link(XEC.ModRepo repo) {
     return _part==null ? (_part=_id.link(repo)) : _part;
   }
+
+  @Override int _eq( TCon tc ) {
+    TermTCon ttc = (TermTCon)tc; // Invariant when called
+    assert _part!=null && ttc._part!=null;
+    return _part == ttc._part ? 1 : -1;
+  }
   @Override TVar _setype() {
     if( _id instanceof KeywordCon ) return null;
     if( _id instanceof PartCon part ) return part.setype();
