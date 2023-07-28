@@ -105,8 +105,6 @@ tasks.register<JavaExec>("runOne") {
 
     jvmArgs("-showversion", "-Xms1024m", "-Xmx1024m", "-ea")
 
-    systemProperties.put("xvm.db.impl", System.getProperty("xvm.db.impl"))
-
     classpath(
         "${javatools.buildDir}/classes/java/main",
         "${javatools.buildDir}/resources/main",
@@ -114,41 +112,4 @@ tasks.register<JavaExec>("runOne") {
 
     args("src/main/x/$name.x")
     mainClass.set("org.xvm.runtime.TestConnector")
-}
-
-tasks.register<JavaExec>("host") {
-    group       = "Test"
-    description = "Host a \"testName\" test"
-
-    dependsOn(xdk.tasks["build"])
-
-    val name = if (project.hasProperty("testName")) project.property("testName") else ""
-
-    systemProperties.put("xvm.db.impl", System.getProperty("xvm.db.impl"))
-
-    classpath(javatoolsJar)
-
-    val opts = listOf<String>(
-        "-L", "${xdk.buildDir}/xdk/lib/",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "${xdk.buildDir}/xdk/lib/host.xtc")
-
-    mainClass.set("org.xvm.tool.Runner")
-
-    if (name == "") {
-        args(opts)
-    }
-    else {
-        args(opts + "build/$name.xtc")
-
-        doLast {
-            val console = "$buildDir/${name}/console.log"
-            if (file(console).exists()) {
-                exec() {
-                    commandLine = listOf<String>("cat", console)
-                }
-            }
-        }
-    }
 }
