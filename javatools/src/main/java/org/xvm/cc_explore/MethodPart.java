@@ -132,7 +132,7 @@ public class MethodPart extends MMethodPart {
   // -1 - Hard fail; mismatch arg/rets; or hard mismatch in an arg
   //  0 - Weak yes; at least 1 leaf/PropCon match
   //  1 - Hard yes; an exact arg match all args
-  public int match_sig(SigCon sig) {
+  public int match_sig_length(SigCon sig) {
     assert sig._name.equals(_name);
     int amlen =     _args==null ? 0 :     _args.length;
     int aslen = sig._args==null ? 0 : sig._args.length;
@@ -140,8 +140,11 @@ public class MethodPart extends MMethodPart {
     int rmlen =     _rets==null ? 0 :     _rets.length;
     int rslen = sig._rets==null ? 0 : sig._rets.length;
     if( rmlen != rslen ) return -1;
+    return 0;                   // Not yet matched insides
+  }
+  public int match_sig(SigCon sig) {
     int rez=1;
-    for( int i=0; i<amlen; i++ ) {
+    for( int i=0; i<_args.length; i++ ) {
       rez = Math.min(rez,_args[i]._con.eq(sig._args[i]));
       if( rez == -1 ) return -1;
     }
