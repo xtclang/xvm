@@ -36,16 +36,31 @@ public class MethodCon extends PartCon {
       if( methx._methcon == this )
         return (_part = methx); // Early out
     // Find matching lambda with signature matching
-    if( meth!=null ) _sig.link(repo);
     int rez0=0, rez1=0;
     for( MethodPart methx=meth; methx!=null;  methx = methx._sibling ) {
-      int rez = methx.match_sig(_sig);
+      int rez = methx.match_sig_length(_sig);
       if( rez == -1 ) continue;
       if( rez==0 ) { rez0++;  meth0=methx; }
       else         { rez1++;  meth1=methx; }
     }
     if( rez1 >= 1 ) { assert rez1==1;  return (_part = meth1); }
-    if( rez0 >= 1 ) { assert rez0==1;  return (_part = meth0); }
+    if( rez0 == 1 )                    return (_part = meth0);
+
+    // Might have to go deep
+    if( rez0 > 1 ) {
+      // Now try the sig field by field
+      _sig.link(repo);          // This can recurse
+      rez0=0; rez1=0;
+      for( MethodPart methx=meth; methx!=null;  methx = methx._sibling ) {
+        int rez = methx.match_sig_length(_sig)==0 ? methx.match_sig(_sig) : -1;
+        if( rez == -1 ) continue;
+        if( rez==0 ) { rez0++;  meth0=methx; }
+        else         { rez1++;  meth1=methx; }
+      }
+      if( rez1 >= 1 ) { assert rez1==1;  return (_part = meth1); }
+      if( rez0 >= 1 ) { assert rez0==1;  return (_part = meth1); }      
+    }
+    
     // Native methods?
     return mm.addNative();
   }

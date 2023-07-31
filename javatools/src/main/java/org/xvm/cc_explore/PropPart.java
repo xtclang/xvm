@@ -6,6 +6,9 @@ import org.xvm.cc_explore.tvar.TVar;
 /**
    Property part
    A property is basically some state (a field in a class) and a getter and setter.
+   Also used for generic parameterized types:
+      "mixin NumberArray<Element extends Number>"
+   Here "Element" is a PropCon/PropPart
  */
 public class PropPart extends Part {
   public final Const.Access _access;
@@ -30,6 +33,14 @@ public class PropPart extends Part {
   @Override public Part child(String s) {
     Part p = super.child(s);
     if( p!=null ) return p;
+    assert _par instanceof ClassPart;
+    // Generic parameters are matched here, and re-do the lookup in the generic
+    // type parameter's base type.
+    if( _con instanceof ParamTCon ptc &&
+        ptc._parms.length==1 &&
+        ptc._parms[0] instanceof TermTCon ttc )
+      return ttc.clz().child(s);
+    // Things like "get" and "set"
     MMethodPart mm = new MMethodPart(this,s);
     return mm.addNative();
   }
@@ -42,6 +53,7 @@ public class PropPart extends Part {
       for( Contrib c : _contribs )
         c.link(repo);
   }
+  
   @Override TVar _setype( ) {
     if( _init instanceof TCon tc ) tc.setype();
     return _con.setype();
