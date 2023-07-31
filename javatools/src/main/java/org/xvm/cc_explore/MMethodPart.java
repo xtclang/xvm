@@ -42,5 +42,6 @@ public class MMethodPart extends Part {
       add("equals");
       add("hashCode");
       add("set");
+      add("get");
     } };
 }
