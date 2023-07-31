@@ -32,12 +32,11 @@ interface Random {
     static Method<Random, <>, <Byte>> byte = uint8;
 
     /**
-     * Fill the passed array with random byte values.
+     * Create an array with random byte values.
      *
-     * @param bytes  an array of bytes to fill; the array mutability must be either `Mutable` or
-     *               `Fixed`
+     * @param size  the size of an array of bytes to create
      *
-     * @return the passed array
+     * @return the array of bytes
      */
     immutable Byte[] bytes(Int size) = new Byte[size](_ -> byte()).freeze(inPlace=True);
 
