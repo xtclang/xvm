@@ -1,7 +1,7 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.*;
-import org.xvm.cc_explore.cons.AnnotTCon;
+import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
 import java.util.function.Consumer;
 
@@ -93,7 +93,7 @@ public enum Op {
   VAR_N       /*0x52*/ (Op::todo),
   VAR_IN      /*0x53*/ (Op::todo),
   VAR_D       /*0x54*/ (Op::todo),
-  VAR_DN      /*0x55*/ (X -> var_dn(X)),
+  VAR_DN      /*0x55*/ (Op::var_dn),
   VAR_C       /*0x56*/ (Op::todo),
   VAR_CN      /*0x57*/ (Op::todo),
   VAR_S       /*0x58*/ (Op::todo),
@@ -271,6 +271,7 @@ public enum Op {
   static final Op[] OPS = Op.values();
   static {
     assert OPS[0x00]==NOP;
+    assert OPS[0x80]==JMP_EQ;
     assert OPS[0xFF]==RSVD_FF;
   }
 
@@ -283,18 +284,30 @@ public enum Op {
   
   // Return N
   static void ret( XClzBuilder X, int n ) {
-    if( n!=0 ) throw XEC.TODO();
+    if( n!=0 ) throw XEC.TODO();  // Multi-return
     X._sb.ip("return;").nl();
   }
 
-  private static final int CONSTANT_OFFSET = -17;
   static void var_dn( XClzBuilder X ) {
-    // yes type aware
-    int ntype = (int)X.pack64();
-    assert ntype < 0;
-    AnnotTCon anno = (AnnotTCon)X._meth._cons[CONSTANT_OFFSET - ntype];
+    // Destination is read first and is typeaware, so read the destination type.
+    AnnotTCon anno = (AnnotTCon)X.methcon();
+
+    // Read the XTC variable name
+    StringCon name = (StringCon)X.methcon();
+
+    String jtype, jrhs;
     
-    throw XEC.TODO();
+    // TODO: Handle other kinds of typed args
+    TermTCon ttc = anno.con().is_generic();
+    if( ttc==null ) throw XEC.TODO();
+    ClassPart clz = (ClassPart)ttc.part();
+    if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") ) {
+      jtype = X.jconsole_type();
+      jrhs  = X.jconsole_rhs();
+    } else  throw XEC.TODO();   // Other LHS types
+
+    // One-liner to emit special assignment
+    X._sb.ip(jtype).p(" ").p(name._str).p(" = ").p(jrhs).p(";").nl();
   }
   
 }
