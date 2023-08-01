@@ -37,11 +37,6 @@ mixin BitArray<Element extends Bit>
     BitArray and(Bit![] that, Boolean inPlace = False) {
         assert:bounds this.size == that.size;
 
-// TODO?
-//        return inPlace && this.inPlace
-//                ? this.mapIndexed((e, i) -> e & that[i], this)
-//                : new Element[size](i -> this[i] & that[i]).toArray(mutability, inPlace=True);
-
         if (inPlace && this.inPlace) {
             for (Int i : 0 ..< size) {
                 this[i] &= that[i];
