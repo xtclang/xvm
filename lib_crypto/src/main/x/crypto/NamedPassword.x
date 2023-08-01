@@ -8,4 +8,9 @@ const NamedPassword(String name, String password)
     conditional String isVisible() {
         return True, password;
     }
+
+    @Override
+    String toString() {
+        return $"{name=}; password {isVisible() ? "" : "not "}visible}";
+    }
 }

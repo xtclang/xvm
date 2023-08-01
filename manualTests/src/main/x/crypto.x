@@ -11,6 +11,10 @@
  *    keytool -genseckey -alias test_sym -keyalg AES -keysize 256\
  *            -keystore src/main/x/resources/test_store.p12 -storepass password
  *
+ * - a password entry is created by the command like:
+ *
+ *    keytool -importpass -alias test_pass
+ *            -keystore src/main/x/resources/test_store.p12 -storepass password
  */
 module TestCrypto {
     @Inject Console console;
@@ -23,6 +27,7 @@ module TestCrypto {
         File   store    = File:./resources/test_store.p12;
         String pairName = "test_pair";
         String symName  = "test_sym";
+        String pwdName  = "test_pass";
 
         @Inject(opts=new KeyStore.Info(store.contents, args[0])) KeyStore keystore;
 
@@ -61,8 +66,11 @@ module TestCrypto {
         KeyPair keyPairM = new KeyPair("test-copy", publicKeyM, privateKey);
         testDecryptor(algorithms, "RSA", keyPairM, SMALL_TEXT);
 
-        PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.fill(new Byte[8]));
+        PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.bytes(8));
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
+
+        assert CryptoPassword password := keystore.getPassword(pwdName);
+        console.print($"{password}; type={&password.actualType}");
     }
 
     void testDecryptor(Algorithms algorithms, String name, CryptoKey key, String text) {

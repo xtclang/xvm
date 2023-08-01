@@ -36,11 +36,7 @@ service RTVerifier
     @Override
     Boolean verify(Digest signature, Byte[] data) {
         Object secret;
-        if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey)) {
-            secret = key.secret;
-        } else if (Byte[] rawKey := publicKey.isVisible()) {
-            secret = rawKey;
-        } else {
+        if (!(secret := RTKeyStore.extractSecret(publicKey))) {
             throw new IllegalState($"Unsupported key {publicKey}");
         }
 

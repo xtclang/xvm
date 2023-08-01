@@ -1,9 +1,12 @@
 import libcrypto.Certificate;
 import libcrypto.Certificate.KeyUsage;
 import libcrypto.CryptoKey;
+import libcrypto.CryptoPassword;
 import libcrypto.KeyForm;
 import libcrypto.KeyStore;
 import libcrypto.KeyPair;
+import libcrypto.NamedPassword;
+import libcrypto.OpaqueKey;
 import libcrypto.PublicKey;
 import libcrypto.PrivateKey;
 import libcrypto.Signature;
@@ -23,7 +26,7 @@ service RTKeyStore
     @Lazy String[] keyNames.calc() {
         String[] names = new String[];
         for (String name : aliases) {
-            if (isKey(name)) {
+            if (Int type := entryType(name), type == EntrySecret || type == EntryPair) {
                 names += name;
             }
         }
@@ -54,6 +57,25 @@ service RTKeyStore
             return True, key;
         }
 
+        return False;
+    }
+
+    @Override
+    @RO String[] passwordNames.get() {
+        String[] names = new String[];
+        for (String name : aliases) {
+            if (Int type := entryType(name), type == EntryPassword) {
+                names += name;
+            }
+        }
+        return names.freeze(True);
+    }
+
+    @Override
+    conditional CryptoPassword getPassword(String name) {
+        if (String pwdString := getPasswordInfo(name)) {
+            return True, new NamedPassword(name, pwdString);
+        }
         return False;
     }
 
@@ -132,6 +154,39 @@ service RTKeyStore
 
     private String[] aliases.get() {TODO("Native");}
 
+    /**
+     * @return True iff the name represents an existing keystore entry
+     * #return (conditional) any of the Entry* values
+     */
+    private conditional Int entryType(String name) {TODO("Native");}
+
+    private static Int EntrySecret      = 0;
+    private static Int EntryPair        = 1;
+    private static Int EntryCertificate = 2;
+    private static Int EntryPassword    = 3;
+
+    /**
+     * @return True iff the name represents a key
+     * #return (conditional) the key info
+     */
+    private conditional (String  algorithm,
+                         Int     size,
+                         Object  secretHandle,
+                         Object? publicHandle,  // Null for symmetrical key
+                         Byte[]  publicBytes    // not empty for public/private pair
+                         )
+        getKeyInfo(String name) {TODO("Native");}
+
+    /**
+     * @return True iff the name represents an existing password
+     * #return (conditional) the password
+     */
+    private conditional String getPasswordInfo(String name) {TODO("Native");}
+
+    /**
+     * @return True iff the name represents an existing certificate
+     * #return (conditional) the certificate info
+     */
     private conditional (String    issuer,
                          Int       version,
                          Int       notBeforeYear,
@@ -152,23 +207,23 @@ service RTKeyStore
         getCertificateInfo(String name) {TODO("Native");}
 
 
-    /**
-     * @return True iff the name represents a key
-     * #return (conditional) an ordinal of the corresponding KeyForm (0=Public, 1=Secret, 2=Pair)
-     */
-    private conditional Int isKey(String name) {TODO("Native");}
+    // ----- natural helper methods  ---------------------------------------------------------------
 
     /**
-     * @return True iff the name represents a key
-     * #return (conditional) the key info
+     * Helper function to extract the native secret from the specified key.
      */
-    private conditional (String  algorithm,
-                         Int     size,
-                         Object  secretHandle,
-                         Object? publicHandle,  // Null for symmetrical key
-                         Byte[]  publicBytes    // not empty for public/private pair
-                         )
-        getKeyInfo(String name) {TODO("Native");}
+    static conditional Object extractSecret(CryptoKey key) {
+        if (OpaqueKey opaqueKey := &key.revealAs(OpaqueKey)) {
+            return extractSecret(opaqueKey);
+        }
+        if (RTCryptoKey rtKey := &key.revealAs(RTCryptoKey)) {
+            return True, rtKey.secret;
+        }
+        if (Byte[] rawKey := key.isVisible()) {
+            return True, rawKey;
+        }
+        return False;
+    }
 
 
     // ----- natural helper classes  ---------------------------------------------------------------

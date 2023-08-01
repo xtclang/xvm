@@ -19,16 +19,11 @@ service RTDecryptor
     Byte[] decrypt(Byte[] bytes) {
         assert CryptoKey privateKey ?= this.privateKey;
 
-        Object secret;
-        if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey)) {
-            secret = key.secret;
-        } else if (Byte[] rawKey := privateKey.isVisible()) {
-            secret = rawKey;
-        } else {
-            throw new IllegalState($"Unsupported key {publicKey}");
+        if (Object secret := RTKeyStore.extractSecret(privateKey)) {
+            return decrypt(cipher, secret, bytes);
         }
 
-        return decrypt(cipher, secret, bytes);
+        throw new IllegalState($"Unsupported key {privateKey}");
     }
 
     @Override

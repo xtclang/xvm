@@ -4,6 +4,8 @@ package org.xvm.runtime.template._native.crypto;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
+import java.nio.charset.StandardCharsets;
+
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -13,7 +15,6 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import java.security.cert.Certificate;
-
 import java.security.cert.X509Certificate;
 
 import java.security.interfaces.DSAParams;
@@ -30,6 +31,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+
+import javax.crypto.interfaces.PBEKey;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -98,9 +101,10 @@ public class xRTKeyStore
         {
         markNativeProperty("aliases");
 
-        markNativeMethod("isKey"             , STRING, null);
+        markNativeMethod("entryType"         , STRING, null);
         markNativeMethod("getKeyInfo"        , STRING, null);
         markNativeMethod("getCertificateInfo", STRING, null);
+        markNativeMethod("getPasswordInfo"   , STRING, null);
 
         invalidateTypeInfo();
         }
@@ -243,12 +247,20 @@ public class xRTKeyStore
         {
         switch (method.getName())
             {
-            case "isKey":
+            case "entryType":
                 {
                 KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
                 StringHandle   hName  = (StringHandle) ahArg[0];
 
-                return invokeIsKey(frame, hStore, hName, aiReturn);
+                return invokeEntryType(frame, hStore, hName, aiReturn);
+                }
+
+            case "getCertificateInfo":
+                {
+                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
+                StringHandle   hName  = (StringHandle) ahArg[0];
+
+                return invokeGetCertificateInfo(frame, hStore, hName, aiReturn);
                 }
 
             case "getKeyInfo":
@@ -259,12 +271,12 @@ public class xRTKeyStore
                 return invokeGetKeyInfo(frame, hStore, hName, aiReturn);
                 }
 
-            case "getCertificateInfo":
+            case "getPasswordInfo":
                 {
                 KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
                 StringHandle   hName  = (StringHandle) ahArg[0];
 
-                return invokeGetCertificateInfo(frame, hStore, hName, aiReturn);
+                return invokeGetPasswordInfo(frame, hStore, hName, aiReturn);
                 }
             }
 
@@ -404,25 +416,36 @@ public class xRTKeyStore
     /**
      * Native implementation of "conditional Int isKey(String name)".
      */
-    private int invokeIsKey(Frame frame, KeyStoreHandle hStore, StringHandle hName,
-                                         int[] aiReturn)
+    private int invokeEntryType(Frame frame, KeyStoreHandle hStore, StringHandle hName,
+                                int[] aiReturn)
         {
         KeyStore keyStore = hStore.f_keyStore;
         String   sName    = hName.getStringValue();
         try
             {
-            boolean fPrivate = keyStore.isKeyEntry(sName);
-
-            if (fPrivate)
+            if (keyStore.isKeyEntry(sName))
                 {
-                boolean fSecret = keyStore.getCertificate(sName) == null;
-                return frame.assignValues(aiReturn, xBoolean.TRUE, fSecret
-                        ? xInt64.makeHandle(0)   // Secret
-                        : xInt64.makeHandle(2)); // Pair
+                int nType;
+                if (keyStore.getCertificate(sName) == null)
+                    {
+                    Key key = keyStore.getKey(sName, hStore.f_achPwd);
+
+                    assert key != null;
+
+                    // unfortunately com.sun.crypto.provider.PBEKey is not public
+                    nType = key instanceof PBEKey || key.getClass().getSimpleName().equals("PBEKey")
+                            ? 3  // Password
+                            : 1; // Secret
+                    }
+                else
+                    {
+                    nType = 1; // Pair
+                    }
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(nType));
                 }
             if (keyStore.isCertificateEntry(sName))
                 {
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(1)); // Public
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(1)); // Certificate
                 }
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
@@ -451,7 +474,7 @@ public class xRTKeyStore
             {
             if (keyStore.isKeyEntry(sName))
                 {
-                Key key = hStore.f_keyStore.getKey(hName.getStringValue(), hStore.f_achPwd);
+                Key key = keyStore.getKey(sName, hStore.f_achPwd);
                 if (key == null)
                     {
                     return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -460,7 +483,7 @@ public class xRTKeyStore
                 String      sAlgorithm = key.getAlgorithm();
                 PublicKey   publicKey  = null;
                 byte[]      abPublic   = null;
-                Certificate cert       = keyStore.getCertificate(hName.getStringValue());
+                Certificate cert       = keyStore.getCertificate(sName);
                 if (cert != null)
                     {
                     publicKey = cert.getPublicKey();
@@ -498,11 +521,41 @@ public class xRTKeyStore
         }
 
     /**
+     * Native implementation of "conditional String getPasswordInfo(String name)".
+     */
+    private int invokeGetPasswordInfo(Frame frame, KeyStoreHandle hStore, StringHandle hName,
+                                      int[] aiReturn)
+        {
+        String sName = hName.getStringValue();
+        try
+            {
+            Key key = hStore.f_keyStore.getKey(sName, hStore.f_achPwd);
+            if (key instanceof PBEKey keyPwd)
+                {
+                return frame.assignValues(aiReturn,
+                        xBoolean.TRUE, xString.makeHandle(keyPwd.getPassword()));
+                }
+
+            // unfortunately com.sun.crypto.provider.PBEKey is not public
+            if (key.getClass().getSimpleName().equals("PBEKey"))
+                {
+                return frame.assignValues(aiReturn, xBoolean.TRUE,
+                        xString.makeHandle(new String(key.getEncoded(), StandardCharsets.UTF_8)));
+                }
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
+        catch (GeneralSecurityException e)
+            {
+            return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+            }
+        }
+
+    /**
      * Find a public/private key pair that could be used to encrypt tls communications.
      *
      * @return the alias for the first (in the order of iteration) PrivateKey; null if none is found
      */
-    public String findTlsKey(KeyStoreHandle hKeystore)
+    public static String findTlsKey(KeyStoreHandle hKeystore)
                 throws GeneralSecurityException
         {
         KeyStore keystore = hKeystore.f_keyStore;

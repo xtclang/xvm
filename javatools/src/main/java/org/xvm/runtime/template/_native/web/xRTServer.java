@@ -279,7 +279,7 @@ public class xRTServer
         KeyManager[] aKeyManagers;
         if (sTlsKey == null)
             {
-            if (xRTKeyStore.INSTANCE.findTlsKey(hKeystore) == null)
+            if (xRTKeyStore.findTlsKey(hKeystore) == null)
                 {
                 throw new KeyStoreException("Tls key is missing at the keystore");
                 }

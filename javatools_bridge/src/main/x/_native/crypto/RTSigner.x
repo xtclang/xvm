@@ -27,16 +27,11 @@ service RTSigner
 
     @Override
     Signature sign(Byte[] data) {
-        Object secret;
-
-        if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey)) {
-            secret = key.secret;
-        } else if (Byte[] rawKey := privateKey.isVisible()) {
-            secret = rawKey;
-        } else {
-            throw new IllegalState($"Unsupported key {privateKey}");
+        if (Object secret := RTKeyStore.extractSecret(privateKey)) {
+            return new Signature(algorithm.name, sign(signer, secret, data));
         }
-        return new Signature(algorithm.name, sign(signer, secret, data));
+
+        throw new IllegalState($"Unsupported key {privateKey}");
     }
 
     @Override

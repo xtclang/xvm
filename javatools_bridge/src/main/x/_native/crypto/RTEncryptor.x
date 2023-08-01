@@ -35,21 +35,14 @@ service RTEncryptor(String algorithm, Int blockSize)
     Byte[] encrypt(Byte[] data) {
         Object secret;
         if (CryptoKey publicKey ?= this.publicKey) {
-            if (RTCryptoKey key := &publicKey.revealAs(RTCryptoKey)) {
-                secret = key.secret;
-            } else if (Byte[] rawKey := publicKey.isVisible()) {
-                secret = rawKey;
-            } else {
+
+            if (!(secret := RTKeyStore.extractSecret(publicKey))) {
                 throw new IllegalState($"Unsupported key {publicKey}");
             }
         } else {
             assert CryptoKey privateKey ?= this.privateKey;
 
-            if (RTCryptoKey key := &privateKey.revealAs(RTCryptoKey)) {
-                secret = key.secret;
-            } else if (Byte[] rawKey := privateKey.isVisible()) {
-                secret = rawKey;
-            } else {
+            if (!(secret := RTKeyStore.extractSecret(privateKey))) {
                 throw new IllegalState($"Unsupported key {privateKey}");
             }
         }
