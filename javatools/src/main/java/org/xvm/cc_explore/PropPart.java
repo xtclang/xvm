@@ -36,10 +36,9 @@ public class PropPart extends Part {
     assert _par instanceof ClassPart;
     // Generic parameters are matched here, and re-do the lookup in the generic
     // type parameter's base type.
-    if( _con instanceof ParamTCon ptc &&
-        ptc._parms.length==1 &&
-        ptc._parms[0] instanceof TermTCon ttc )
-      return ttc.clz().child(s);
+    TermTCon genttc = _con.is_generic();
+    if( genttc!=null ) 
+      return genttc.clz().child(s);
     // Things like "get" and "set"
     MMethodPart mm = new MMethodPart(this,s);
     return mm.addNative();
@@ -58,4 +57,5 @@ public class PropPart extends Part {
     if( _init instanceof TCon tc ) tc.setype();
     return _con.setype();
   }
+
 }

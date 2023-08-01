@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.*;
+import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.util.SB;
 
 
@@ -42,9 +43,9 @@ public class XClzBuilder {
     if( construct != null ) {
       assert construct._sibling==null;
       _sb.nl();
-      _sb.ip("static {").ii().nl();
+      _sb.ip("static {").nl();
       jcode(construct);
-      _sb.di().ip("}").nl().nl();
+      _sb.ip("}").nl().nl();
     }
 
     // Output Java methods for all Module methods
@@ -52,22 +53,22 @@ public class XClzBuilder {
     for( Part part : _mod._name2kid.values() ) {
       if( part instanceof MMethodPart mmp ) {
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
-        assert mmp._name2kid.size()==1;
-        MethodPart meth = (MethodPart)mmp._name2kid.get(mmp._name);
-        jmethod_header(meth);
+        MethodPart meth = (MethodPart)mmp.child(mmp._name);
+        jmethod(meth);
       } else if( part instanceof PackagePart pp ) {
         // Self module is OK
       } else {
         throw XEC.TODO();
       }
     }
-    
+
+    // End the class body
     _sb.di().p("}").nl();
   }
   
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
-  private void jmethod_header( MethodPart m ) {
+  private void jmethod( MethodPart m ) {
     if( m._rets==null ) _sb.ip("void ");
     else throw XEC.TODO();
     _sb.p(m._name).p("(");
@@ -83,13 +84,30 @@ public class XClzBuilder {
   private void jcode( MethodPart m ) {
     _meth = m;
     _pool = new CPool(m._code,1.2);
+    _sb.ii();
     int nops = u31();           // Number of opcodes (since varying size)
     for( int i=0; i<nops; i++ ) {
-      Op.OPS[u8()]._emit.accept(this);
+      int opn = u8();
+      Op.OPS[opn]._emit.accept(this);
     }
+    _sb.di();
   }
 
   int u8 () { return _pool.u8 (); }
   int u31() { return _pool.u31(); }
   long pack64() { return _pool.pack64(); }
+
+  // Magic constant for indexing into the constant pool.
+  // Advances the parse point.
+  private static final int CONSTANT_OFFSET = -17;
+  Const methcon() {
+    long idx = pack64();
+    assert idx < 0 && ((int)idx)==idx;
+    return _meth._cons[CONSTANT_OFFSET - (int)idx];
+  }
+
+
+  // TODO: Move Console to its own class/file
+  String jconsole_type() { return "java.io.PrintStream"; }
+  String jconsole_rhs () { return "System.out"; }
 }

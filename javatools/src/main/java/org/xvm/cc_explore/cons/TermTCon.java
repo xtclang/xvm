@@ -20,6 +20,8 @@ public class TermTCon extends TCon implements ClzCon {
   @Override public Part link(XEC.ModRepo repo) {
     return _part==null ? (_part=_id.link(repo)) : _part;
   }
+  // After linking, the part call does not need the repo.
+  @Override public Part part() { return _part;  }
 
   @Override int _eq( TCon tc ) {
     TermTCon ttc = (TermTCon)tc; // Invariant when called
