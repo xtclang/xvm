@@ -9,11 +9,11 @@ import java.util.function.Consumer;
 public enum Op {
 
   NOP         /*0x00*/ (Op::todo),
-  LINE_1      /*0x01*/ (X -> line(X,1)),
-  LINE_2      /*0x02*/ (X -> line(X,2)),
-  LINE_3      /*0x03*/ (X -> line(X,3)),
-  LINE_N      /*0x04*/ (X -> line(X,X.u31())),
-  ENTER       /*0x05*/ (Op::todo),
+  LINE_1      /*0x01*/ (X -> line_n(X,1)),
+  LINE_2      /*0x02*/ (X -> line_n(X,2)),
+  LINE_3      /*0x03*/ (X -> line_n(X,3)),
+  LINE_N      /*0x04*/ (X -> line_n(X,X.u31())),
+  ENTER       /*0x05*/ (Op::enter),
   EXIT        /*0x06*/ (Op::todo),
   GUARD       /*0x07*/ (Op::todo),
   GUARD_END   /*0x08*/ (Op::todo),
@@ -84,14 +84,14 @@ public enum Op {
   NEWV_1      /*0x49*/ (Op::todo),
   NEWV_N      /*0x4A*/ (Op::todo),
   NEWV_T      /*0x4B*/ (Op::todo),
-  RETURN_0    /*0x4C*/ (X -> ret(X,0)),
+  RETURN_0    /*0x4C*/ (X -> return_n(X,0)),
   RETURN_1    /*0x4D*/ (Op::todo),
   RETURN_N    /*0x4E*/ (Op::todo),
   RETURN_T    /*0x4F*/ (Op::todo),
   VAR         /*0x50*/ (Op::todo),
   VAR_I       /*0x51*/ (Op::todo),
-  VAR_N       /*0x52*/ (Op::todo),
-  VAR_IN      /*0x53*/ (Op::todo),
+  VAR_N       /*0x52*/ (Op::var_n),
+  VAR_IN      /*0x53*/ (Op::var_in),
   VAR_D       /*0x54*/ (Op::todo),
   VAR_DN      /*0x55*/ (Op::var_dn),
   VAR_C       /*0x56*/ (Op::todo),
@@ -117,7 +117,7 @@ public enum Op {
   IS_NZERO    /*0x6A*/ (Op::todo),
   IS_NULL     /*0x6B*/ (Op::todo),
   IS_NNULL    /*0x6C*/ (Op::todo),
-  IS_EQ       /*0x6D*/ (Op::todo),
+  IS_EQ       /*0x6D*/ (Op::is_eq),
   IS_NEQ      /*0x6E*/ (Op::todo),
   IS_LT       /*0x6F*/ (Op::todo),
   IS_LTE      /*0x70*/ (Op::todo),
@@ -279,35 +279,65 @@ public enum Op {
   // Emit Java per opcode
   static void todo( XClzBuilder X ) { throw XEC.TODO(); }
 
-  // Track line numbers
-  static void line( XClzBuilder X, int n ) { }
+  // 0x01 - 0x04: Track line numbers
+  static void line_n( XClzBuilder X, int n ) { }
+
+  // 0x05: ENTER
+  static void enter( XClzBuilder X ) {
+    // I am assuming these basically enter/exit a Java lexical scope
+    if( X._lexical_depth++ > 0 ) // Not needed at the outermost scope, where the method scope has the same effect
+      throw XEC.TODO();
+  }
+
   
-  // Return N
-  static void ret( XClzBuilder X, int n ) {
+  // 0x4C - 0x4E: RETURN_0, RETURN_1, RETURN_N
+  static void return_n( XClzBuilder X, int n ) {
     if( n!=0 ) throw XEC.TODO();  // Multi-return
     X._sb.ip("return;").nl();
   }
 
+  // 0x52: VAR_N
+  static void var_n( XClzBuilder X ) {
+    // Destination is read first and is typeaware, so read the destination type.
+    String jtype = X.jtype_methcon();
+    // Read the XTC variable name.  Must not collide with any other names
+    String name = X.jname_methcon();
+    // One-liner to emit var def
+    X._sb.ip(jtype).p(" ").p(name).p(";").nl();
+  }
+
+  // 0x53: VAR_IN
+  static void var_in( XClzBuilder X ) {
+    // Destination is read first and is typeaware, so read the destination type.
+    String jtype = X.jtype_methcon();
+    // Read the XTC variable name.  Must not collide with any other names
+    String name = X.jname_methcon();
+    // RHS
+    String jval = X.jvalue_tcon((TCon)X.methcon());
+    // One-liner to emit var def
+    X._sb.ip(jtype).p(" ").p(name).p(" = ").p(jval).p(";").nl();
+  }
+  
+  // 0x55: VAR_DN
   static void var_dn( XClzBuilder X ) {
     // Destination is read first and is typeaware, so read the destination type.
     AnnotTCon anno = (AnnotTCon)X.methcon();
+    // Read the XTC variable name.  Must not collide with any other names
+    String name = X.jname_methcon();
 
-    // Read the XTC variable name
-    StringCon name = (StringCon)X.methcon();
-
-    String jtype, jrhs;
-    
     // TODO: Handle other kinds of typed args
     TermTCon ttc = anno.con().is_generic();
     if( ttc==null ) throw XEC.TODO();
-    ClassPart clz = (ClassPart)ttc.part();
-    if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") ) {
-      jtype = X.jconsole_type();
-      jrhs  = X.jconsole_rhs();
-    } else  throw XEC.TODO();   // Other LHS types
-
+    String jtype = X.jtype_ttcon(ttc);
+    String jval  = X.jvalue_ttcon(ttc);
+    
     // One-liner to emit special assignment
-    X._sb.ip(jtype).p(" ").p(name._str).p(" = ").p(jrhs).p(";").nl();
+    X._sb.ip(jtype).p(" ").p(name).p(" = ").p(jval).p(";").nl();
+  }
+
+  // 0x6D: IS_EQ
+  static void is_eq( XClzBuilder X ) {
+    throw XEC.TODO();
   }
   
 }
