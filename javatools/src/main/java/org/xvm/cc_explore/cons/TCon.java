@@ -47,4 +47,6 @@ public abstract class TCon extends Const {
       cs[i] = (TCon)X.xget();
     return cs;
   }
+
+  public TermTCon is_generic() { return null; }
 }

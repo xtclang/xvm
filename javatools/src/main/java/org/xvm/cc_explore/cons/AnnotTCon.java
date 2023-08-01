@@ -27,6 +27,7 @@ public class AnnotTCon extends TCon implements ClzCon {
     if( _an != null ) _an.link(repo);
     return (_clz = (ClassPart)_con.link(repo));
   }
+  public TCon con() { return _con; } // Getter no setter
   @Override public ClassPart clz() { return _clz; }
   @Override TVar _setype() {
     _an.setype( );
