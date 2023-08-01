@@ -1,8 +1,11 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.*;
-import org.xvm.cc_explore.cons.Const;
+import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
+
+import java.util.HashMap;
+import javax.lang.model.SourceVersion;
 
 
 // Some kind of base class for a Java class that implements an XTC Module
@@ -13,11 +16,15 @@ public class XClzBuilder {
 
   public MethodPart _meth;      // Method whose code is being parsed
   private CPool _pool;          // Parser for code buffer
+  public int _lexical_depth;    // Lexical scope depth
+  public final HashMap<String,String> _names; // Java namification
+
   
   public XClzBuilder( ModPart mod ) {
     System.err.println("Making XClz for "+mod);
     _mod = mod;
     _sb = new SB();
+    _names = new HashMap();
 
     // Let's start by assuming if we're here, we're inside the top-level
     // ecstasy package - otherwise we're nested instead the mirror for the
@@ -83,31 +90,84 @@ public class XClzBuilder {
   // Already _sb has the indent set.
   private void jcode( MethodPart m ) {
     _meth = m;
-    _pool = new CPool(m._code,1.2);
-    _sb.ii();
-    int nops = u31();           // Number of opcodes (since varying size)
+    _pool = new CPool(m._code,1.2); // Setup the constant pool parser
+    assert _lexical_depth==0;       // No scopes added
+    assert _names.isEmpty();        // No names mapping yet
+    _sb.ii();                       // Indent code
+    int nops = u31();               // Number of opcodes (since varying size)
     for( int i=0; i<nops; i++ ) {
       int opn = u8();
       Op.OPS[opn]._emit.accept(this);
     }
-    _sb.di();
+    assert _lexical_depth==0;   // All scopes back to outer
+    _names.clear();             // No names mapping
+    _sb.di();                   // Un-indent code
   }
 
   int u8 () { return _pool.u8 (); }
   int u31() { return _pool.u31(); }
   long pack64() { return _pool.pack64(); }
 
+  // --------------------------------------------------------------------------
   // Magic constant for indexing into the constant pool.
-  // Advances the parse point.
   private static final int CONSTANT_OFFSET = -17;
+  // Read a method constant.  Advances the parse point.
   Const methcon() {
     long idx = pack64();
     assert idx < 0 && ((int)idx)==idx;
     return _meth._cons[CONSTANT_OFFSET - (int)idx];
   }
 
+  // Return a java-valid name
+  String jname_methcon() {
+    String name = ((StringCon)methcon())._str;
+    final HashMap<String,String> names = _names;
+    return _names.computeIfAbsent(name, k -> {
+        // Valid java name, just keep it
+        if( SourceVersion.isIdentifier(k) && !SourceVersion.isKeyword(k) )
+          return k;
+        // Starts with "loop#", assume it is a generated loop variable for iterators
+        if( k.startsWith("loop#") ) {
+          if( !names.containsKey("i") ) return "i";
+        }
+        throw XEC.TODO();
+      });
+  }
+  
+  // Produce a java type from a method constant
+  String jtype_methcon() {
+    return jtype_ttcon( (TermTCon)methcon() );
+  }
+  
+  // Produce a java type from a TermTCon
+  String jtype_ttcon( TermTCon ttc ) {
+    ClassPart clz = (ClassPart)ttc.part();
+    if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
+      return "java.io.PrintStream";
+    if( clz._name.equals("Int64") && clz._path._str.equals("ecstasy/numbers/Int64.x") )
+      return "long";
+    if( clz._name.equals("Boolean") && clz._path._str.equals("ecstasy/Boolean.x") )
+      return "boolean";
+    throw XEC.TODO();
+  }  
 
-  // TODO: Move Console to its own class/file
-  String jconsole_type() { return "java.io.PrintStream"; }
-  String jconsole_rhs () { return "System.out"; }
+  // Produce a java value from a TCon
+  String jvalue_tcon( TCon tc ) {
+    if( tc instanceof IntCon ic ) {
+      if( ic._big != null ) throw XEC.TODO();
+      long x = ic._x;
+      String s = ""+x;
+      return (int)x == x ? s : s+"L";
+    }
+    throw XEC.TODO();
+  }
+
+  
+  // Produce a java value from a TermTCon
+  String jvalue_ttcon( TermTCon ttc ) {
+    ClassPart clz = (ClassPart)ttc.part();
+    if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
+      return "System.out";
+    throw XEC.TODO();
+  }  
 }

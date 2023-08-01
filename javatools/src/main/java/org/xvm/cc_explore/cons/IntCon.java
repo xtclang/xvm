@@ -9,8 +9,8 @@ import java.math.BigInteger;
  */
 public class IntCon extends TCon {
   private final Format _f;
-  private final long _x;          // Only valid if _big is null
-  private final BigInteger _big;  // If null, _x holds the value.  If not-null _x is 0.
+  public  final long _x;          // Only valid if _big is null
+  public  final BigInteger _big;  // If null, _x holds the value.  If not-null _x is 0.
   private static final BigInteger LONG_MIN = BigInteger.valueOf(Long.MIN_VALUE);
   private static final BigInteger LONG_MAX = BigInteger.valueOf(Long.MAX_VALUE);
   
