@@ -10,6 +10,7 @@ import org.xvm.cc_explore.xclz.XClz;
 public abstract class Container {
   final Container _par;         // Parent container
   final ModPart _mod;           // Main module
+  public XConsole console() { return _par.console(); }
   
   Container( Container par, ModPart mod ) {
     _par = par;

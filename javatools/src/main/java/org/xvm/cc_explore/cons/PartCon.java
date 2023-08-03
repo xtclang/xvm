@@ -8,7 +8,7 @@ import org.xvm.cc_explore.tvar.TVar;
   General Con class backed by matching Part class
  */
 public abstract class PartCon extends TCon implements IdCon {
-  PartCon _par;                 // Parent
+  public PartCon _par;          // Parent
   Part _part;
   @Override public SB str(SB sb) { return _par==null ? sb : _par.str(sb.p(" -> ")); }
 
