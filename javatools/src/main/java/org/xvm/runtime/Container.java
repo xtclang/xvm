@@ -471,7 +471,7 @@ public abstract class Container
         }
 
     /**
-     * TODO
+     * @return the module repository
      */
     public ModuleRepository getModuleRepository()
         {

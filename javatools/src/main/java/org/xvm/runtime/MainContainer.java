@@ -34,13 +34,6 @@ public class MainContainer
                 : maskInjection(hResource, type);
         }
 
-    @Override
-    public Container getOriginContainer(SingletonConstant constSingle)
-        {
-        // at the moment we don't store constant handles at the native container
-        return this;
-        }
-
 
     // ----- MainContainer specific functionality --------------------------------------------------
 
