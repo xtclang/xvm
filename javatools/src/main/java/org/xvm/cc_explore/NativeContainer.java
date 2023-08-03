@@ -1,8 +1,16 @@
 package org.xvm.cc_explore;
 
 class NativeContainer extends Container {
-  NativeContainer( ) { super(null,null); }
 
+  final XConsole _console;
+  
+  NativeContainer( ) {
+    super(null,null);
+    _console = new XConsole();
+  }
+
+  @Override public XConsole console() { return _console; }
+  
   // Initialize default things into the container?
   void init() {
     // +++ temporal.LocalClock
