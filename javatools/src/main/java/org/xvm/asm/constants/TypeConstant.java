@@ -4896,7 +4896,8 @@ public abstract class TypeConstant
 
             PropertyConstant  id    = prop.getIdentityConstant();
             int               nRank = nBaseRank + mapProps.size() + 1;
-            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase, fFromIface, nRank, errs);
+            PropertyInfo      info  = createPropertyInfo(prop, constId,
+                                            fRebase | prop.isNative(), fFromIface, nRank, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated())
@@ -5277,8 +5278,7 @@ public abstract class TypeConstant
             }
         else
             {
-            fNative |= prop.isNative();
-            impl     = fNative ? Implementation.Native : Implementation.Explicit;
+            impl = Implementation.Explicit;
 
             // determine if the get explicitly calls super, or explicitly blocks super
             boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
@@ -5531,10 +5531,10 @@ public abstract class TypeConstant
                             map(PropertyInfo::getRank).max(Integer::compare).orElse(0);
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
-            PropertyConstant prop = entry.getKey();
+            PropertyConstant idProp = entry.getKey();
 
-            layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, prop, entry.getValue(),
-                    mapDefaults == null ? null : mapDefaults.get(prop.getName()), nBaseRank, errs);
+            layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, idProp, entry.getValue(),
+                    mapDefaults == null ? null : mapDefaults.get(idProp.getName()), nBaseRank, errs);
             }
 
         typeTarget.layerOnMethods(idBase, false, annoMixin != null, null, mapMethods, mapVirtMethods,
@@ -5571,7 +5571,7 @@ public abstract class TypeConstant
      * @param mapProps      properties already collected from the base
      * @param mapVirtProps  virtual properties already collected from the base
      * @param idMixinProp   the identity of the property at the mixin
-     * @param infoProp      the property info from the mixin
+     * @param propMixin     the property info from the mixin
      * @param constInit     (optional) an initial value for the property
      * @param nBaseRank     the maximum rank of the base class properties
      * @param errs          the error listener
@@ -5583,7 +5583,7 @@ public abstract class TypeConstant
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
             PropertyConstant                    idMixinProp,
-            PropertyInfo                        infoProp,
+            PropertyInfo                        propMixin,
             Constant                            constInit,
             int                                 nBaseRank,
             ErrorListener                       errs)
@@ -5594,17 +5594,19 @@ public abstract class TypeConstant
 
         if (constInit != null)
             {
-            infoProp = infoProp.withInitialValue(constInit);
-            }
-        else if (propBase != null && infoProp.getIdentity().equals(propBase.getIdentity()))
-            {
-            // keep whatever the base has got
-            return;
+            propMixin = propMixin.withInitialValue(constInit);
             }
 
-        if (!infoProp.isVirtual())
+        if (!propMixin.isVirtual())
             {
-            mapProps.put(idMixinProp, infoProp);
+            // replace the base with the new info; despite the fact that the property is not virtual
+            // (private), the old id may refer to a different mixin, so unfortunately we have to
+            // scan the entire map to find the entry to remove
+            if (propBase != null)
+                {
+                mapProps.values().remove(propBase);
+                }
+            mapProps.put(idMixinProp, propMixin);
             return;
             }
 
@@ -5613,13 +5615,13 @@ public abstract class TypeConstant
             {
             if (nBaseRank > 0)
                 {
-                infoProp = infoProp.withRank(nBaseRank + infoProp.getRank());
+                propMixin = propMixin.withRank(nBaseRank + propMixin.getRank());
                 }
-            propResult = infoProp;
+            propResult = propMixin;
             }
         else
             {
-            propResult = propBase.layerOn(infoProp, false, true, errs);
+            propResult = propBase.layerOn(propMixin, false, true, errs);
             }
 
         mapProps.put(idResult, propResult);
