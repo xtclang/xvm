@@ -3,18 +3,20 @@ package org.xvm.cc_explore.xclz;
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
-import java.util.function.Consumer;
+
+import java.util.function.Function;
+import javax.lang.model.SourceVersion;
 
 // Opcodes
 public enum Op {
 
   NOP         /*0x00*/ (Op::todo),
-  LINE_1      /*0x01*/ (X -> line_n(X,1)),
-  LINE_2      /*0x02*/ (X -> line_n(X,2)),
-  LINE_3      /*0x03*/ (X -> line_n(X,3)),
-  LINE_N      /*0x04*/ (X -> line_n(X,X.u31())),
-  ENTER       /*0x05*/ (Op::enter),
-  EXIT        /*0x06*/ (Op::todo),
+  LINE_1      /*0x01*/ (X -> new XOp.Line(1)),
+  LINE_2      /*0x02*/ (X -> new XOp.Line(2)),
+  LINE_3      /*0x03*/ (X -> new XOp.Line(3)),
+  LINE_N      /*0x04*/ (X -> new XOp.Line(X.u31())),
+  ENTER       /*0x05*/ (X -> new XOp.Enter(X)),
+  EXIT        /*0x06*/ (X -> new XOp.Exit(X)),
   GUARD       /*0x07*/ (Op::todo),
   GUARD_END   /*0x08*/ (Op::todo),
   CATCH       /*0x09*/ (Op::todo),
@@ -40,15 +42,15 @@ public enum Op {
   CALL_T1     /*0x1D*/ (Op::todo),
   CALL_TN     /*0x1E*/ (Op::todo),
   CALL_TT     /*0x1F*/ (Op::todo),
-  NVOK_00     /*0x20*/ (Op::todo),
-  NVOK_01     /*0x21*/ (Op::todo),
+  NVOK_00     /*0x20*/ (X -> new XOp.NVOK_0(X,0)),
+  NVOK_01     /*0x21*/ (X -> new XOp.NVOK_0(X,1)),
   NVOK_0N     /*0x22*/ (Op::todo),
   NVOK_0T     /*0x23*/ (Op::todo),
   NVOK_10     /*0x24*/ (Op::todo),
   NVOK_11     /*0x25*/ (Op::todo),
   NVOK_1N     /*0x26*/ (Op::todo),
   NVOK_1T     /*0x27*/ (Op::todo),
-  NVOK_N0     /*0x28*/ (Op::todo),
+  NVOK_N0     /*0x28*/ (X -> new XOp.NVOK_N(X,0)),
   NVOK_N1     /*0x29*/ (Op::todo),
   NVOK_NN     /*0x2A*/ (Op::todo),
   NVOK_NT     /*0x2B*/ (Op::todo),
@@ -84,16 +86,16 @@ public enum Op {
   NEWV_1      /*0x49*/ (Op::todo),
   NEWV_N      /*0x4A*/ (Op::todo),
   NEWV_T      /*0x4B*/ (Op::todo),
-  RETURN_0    /*0x4C*/ (X -> return_n(X,0)),
+  RETURN_0    /*0x4C*/ (X -> new XOp.Return_N(0)),
   RETURN_1    /*0x4D*/ (Op::todo),
   RETURN_N    /*0x4E*/ (Op::todo),
   RETURN_T    /*0x4F*/ (Op::todo),
-  VAR         /*0x50*/ (Op::todo),
+  VAR         /*0x50*/ (X -> new XOp.Var(X)),
   VAR_I       /*0x51*/ (Op::todo),
-  VAR_N       /*0x52*/ (Op::var_n),
-  VAR_IN      /*0x53*/ (Op::var_in),
+  VAR_N       /*0x52*/ (X -> new XOp.Var_N(X)),
+  VAR_IN      /*0x53*/ (X -> new XOp.Var_IN(X)),
   VAR_D       /*0x54*/ (Op::todo),
-  VAR_DN      /*0x55*/ (Op::var_dn),
+  VAR_DN      /*0x55*/ (X -> new XOp.Var_DN(X)),
   VAR_C       /*0x56*/ (Op::todo),
   VAR_CN      /*0x57*/ (Op::todo),
   VAR_S       /*0x58*/ (Op::todo),
@@ -104,7 +106,7 @@ public enum Op {
   VAR_MN      /*0x5D*/ (Op::todo),
   RSVD_5E     /*0x5E*/ (Op::todo),
   RSVD_5F     /*0x5F*/ (Op::todo),
-  MOV         /*0x60*/ (Op::todo),
+  MOV         /*0x60*/ (X -> new XOp.Mov(X)),
   MOV_VAR     /*0x61*/ (Op::todo),
   MOV_REF     /*0x62*/ (Op::todo),
   MOV_THIS    /*0x63*/ (Op::todo),
@@ -117,7 +119,7 @@ public enum Op {
   IS_NZERO    /*0x6A*/ (Op::todo),
   IS_NULL     /*0x6B*/ (Op::todo),
   IS_NNULL    /*0x6C*/ (Op::todo),
-  IS_EQ       /*0x6D*/ (Op::is_eq),
+  IS_EQ       /*0x6D*/ (X -> new XOp.IsEQ(X)),
   IS_NEQ      /*0x6E*/ (Op::todo),
   IS_LT       /*0x6F*/ (Op::todo),
   IS_LTE      /*0x70*/ (Op::todo),
@@ -129,8 +131,8 @@ public enum Op {
   RSVD_76     /*0x76*/ (Op::todo),
   RSVD_77     /*0x77*/ (Op::todo),
   RSVD_78     /*0x78*/ (Op::todo),
-  JMP         /*0x79*/ (Op::todo),
-  JMP_TRUE    /*0x7A*/ (Op::todo),
+  JMP         /*0x79*/ (X -> new XOp.Jump(X)),
+  JMP_TRUE    /*0x7A*/ (X -> new XOp.JumpTrue(X)),
   JMP_FALSE   /*0x7B*/ (Op::todo),
   JMP_ZERO    /*0x7C*/ (Op::todo),
   JMP_NZERO   /*0x7D*/ (Op::todo),
@@ -151,7 +153,7 @@ public enum Op {
   JMP_INT     /*0x8C*/ (Op::todo),
   JMP_VAL     /*0x8D*/ (Op::todo),
   JMP_ISA     /*0x8E*/ (Op::todo),
-  JMP_VAL_N   /*0x8F*/ (Op::todo),
+  JMP_VAL_N   /*0x8F*/ (X -> new XOp.JMP_Val_N(X)),
   ASSERT      /*0x90*/ (Op::todo),
   ASSERT_M    /*0x91*/ (Op::todo),
   ASSERT_V    /*0x92*/ (Op::todo),
@@ -159,7 +161,7 @@ public enum Op {
   GP_SUB      /*0x94*/ (Op::todo),
   GP_MUL      /*0x95*/ (Op::todo),
   GP_DIV      /*0x96*/ (Op::todo),
-  GP_MOD      /*0x97*/ (Op::todo),
+  GP_MOD      /*0x97*/ (X -> new XOp.BinOp(X,"%")),
   GP_SHL      /*0x98*/ (Op::todo),
   GP_SHR      /*0x99*/ (Op::todo),
   GP_USHR     /*0x9A*/ (Op::todo),
@@ -179,7 +181,7 @@ public enum Op {
   P_SET       /*0xA8*/ (Op::todo),
   P_VAR       /*0xA9*/ (Op::todo),
   P_REF       /*0xAA*/ (Op::todo),
-  IP_INC      /*0xAB*/ (Op::todo),
+  IP_INC      /*0xAB*/ (X -> new XOp.IP_INC(X,1)),
   IP_DEC      /*0xAC*/ (Op::todo),
   IP_INCA     /*0xAD*/ (Op::todo),
   IP_DECA     /*0xAE*/ (Op::todo),
@@ -266,8 +268,8 @@ public enum Op {
   RSVD_FF     /*0xFF*/ (Op::todo),
   ;
 
-  Op( Consumer<XClzBuilder> emit ) { _emit=emit; }
-  final Consumer<XClzBuilder> _emit;
+  Op( Function<XClzBuilder,XOp> emit ) { _emit=emit; }
+  final Function<XClzBuilder,XOp> _emit;
   static final Op[] OPS = Op.values();
   static {
     assert OPS[0x00]==NOP;
@@ -275,69 +277,6 @@ public enum Op {
     assert OPS[0xFF]==RSVD_FF;
   }
 
-  // --------------------------------------------------------
-  // Emit Java per opcode
-  static void todo( XClzBuilder X ) { throw XEC.TODO(); }
+  static XOp todo( XClzBuilder X ) { throw XEC.TODO(); }
 
-  // 0x01 - 0x04: Track line numbers
-  static void line_n( XClzBuilder X, int n ) { }
-
-  // 0x05: ENTER
-  static void enter( XClzBuilder X ) {
-    // I am assuming these basically enter/exit a Java lexical scope
-    if( X._lexical_depth++ > 0 ) // Not needed at the outermost scope, where the method scope has the same effect
-      throw XEC.TODO();
-  }
-
-  
-  // 0x4C - 0x4E: RETURN_0, RETURN_1, RETURN_N
-  static void return_n( XClzBuilder X, int n ) {
-    if( n!=0 ) throw XEC.TODO();  // Multi-return
-    X._sb.ip("return;").nl();
-  }
-
-  // 0x52: VAR_N
-  static void var_n( XClzBuilder X ) {
-    // Destination is read first and is typeaware, so read the destination type.
-    String jtype = X.jtype_methcon();
-    // Read the XTC variable name.  Must not collide with any other names
-    String name = X.jname_methcon();
-    // One-liner to emit var def
-    X._sb.ip(jtype).p(" ").p(name).p(";").nl();
-  }
-
-  // 0x53: VAR_IN
-  static void var_in( XClzBuilder X ) {
-    // Destination is read first and is typeaware, so read the destination type.
-    String jtype = X.jtype_methcon();
-    // Read the XTC variable name.  Must not collide with any other names
-    String name = X.jname_methcon();
-    // RHS
-    String jval = X.jvalue_tcon((TCon)X.methcon());
-    // One-liner to emit var def
-    X._sb.ip(jtype).p(" ").p(name).p(" = ").p(jval).p(";").nl();
-  }
-  
-  // 0x55: VAR_DN
-  static void var_dn( XClzBuilder X ) {
-    // Destination is read first and is typeaware, so read the destination type.
-    AnnotTCon anno = (AnnotTCon)X.methcon();
-    // Read the XTC variable name.  Must not collide with any other names
-    String name = X.jname_methcon();
-
-    // TODO: Handle other kinds of typed args
-    TermTCon ttc = anno.con().is_generic();
-    if( ttc==null ) throw XEC.TODO();
-    String jtype = X.jtype_ttcon(ttc);
-    String jval  = X.jvalue_ttcon(ttc);
-    
-    // One-liner to emit special assignment
-    X._sb.ip(jtype).p(" ").p(name).p(" = ").p(jval).p(";").nl();
-  }
-
-  // 0x6D: IS_EQ
-  static void is_eq( XClzBuilder X ) {
-    throw XEC.TODO();
-  }
-  
 }
