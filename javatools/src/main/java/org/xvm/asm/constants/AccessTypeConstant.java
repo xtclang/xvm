@@ -182,7 +182,10 @@ public class AccessTypeConstant
                     : info.limitAccess(access);
             }
 
-        return super.buildTypeInfo(errs);
+        // the "immutable" modifier does not affect the TypeInfo
+        return m_constType instanceof ImmutableTypeConstant typeUnder
+                ? typeUnder.getUnderlyingType().ensureAccess(Access.PRIVATE).ensureTypeInfo(errs)
+                : super.buildTypeInfo(errs);
         }
 
     @Override
