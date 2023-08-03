@@ -18,13 +18,13 @@ public class AryCon extends TCon {
     X.u31();                    // Type index for whole array
     X.skipAry();                // Index for each element
   }
-  @Override public SB str(SB sb) { sb.p("[]");  return _t==null ? sb : _t.str(sb.p(" -> "));  }  
+  @Override public SB str(SB sb) { sb.p("[]");  return _t==null ? sb : _t.str(sb.p(" -> "));  }
+  public Const[] cons() { return _cons; } // No setter
   @Override public void resolve( CPool X ) {
     _t = (TCon)X.xget();
     _cons = X.consts();
   }
   @Override public Const resolveTypedefs() { throw XEC.TODO(); }
-  @Override TVBase _setype() { return new TVBase(this); }
   
   @Override public ClassPart link(XEC.ModRepo repo) {
     if( _clz!=null ) return _clz;
@@ -33,4 +33,5 @@ public class AryCon extends TCon {
         c.link(repo);
     return (_clz = (ClassPart)_t.link(repo));
   }
+  @Override TVBase _setype() { return new TVBase(this); }
 }

@@ -2,8 +2,11 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.cons.*;
+import org.xvm.cc_explore.util.NonBlockingHashMapLong;
 import org.xvm.cc_explore.util.SB;
 
+import java.lang.Character;
+import java.util.BitSet;
 import java.util.HashMap;
 import javax.lang.model.SourceVersion;
 
@@ -14,10 +17,16 @@ public class XClzBuilder {
   public final SB _sb;
   public XClz _xclz;            // Java class
 
+  // Fields for emitting a Method Code
   public MethodPart _meth;      // Method whose code is being parsed
   private CPool _pool;          // Parser for code buffer
   public int _lexical_depth;    // Lexical scope depth
-  public final HashMap<String,String> _names; // Java namification
+  public int _opn;              // Current opcode
+  final HashMap<String,String> _names; // Java namification
+  final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
+  int _nlocals;                 // Number of locals defined
+  final BitSet _jmp_to;         // True if this xcode is the target of a jump
+  
 
   
   public XClzBuilder( ModPart mod ) {
@@ -25,6 +34,8 @@ public class XClzBuilder {
     _mod = mod;
     _sb = new SB();
     _names = new HashMap();
+    _locals = new NonBlockingHashMapLong<>();
+    _jmp_to = new BitSet();
 
     // Let's start by assuming if we're here, we're inside the top-level
     // ecstasy package - otherwise we're nested instead the mirror for the
@@ -93,15 +104,28 @@ public class XClzBuilder {
     _pool = new CPool(m._code,1.2); // Setup the constant pool parser
     assert _lexical_depth==0;       // No scopes added
     assert _names.isEmpty();        // No names mapping yet
-    _sb.ii();                       // Indent code
+    assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
+
+    // Parse all opcodes into XOPs
     int nops = u31();               // Number of opcodes (since varying size)
-    for( int i=0; i<nops; i++ ) {
+    XOp[] xops = new XOp[nops];
+    for( _opn =0; _opn <nops; _opn++ ) {
       int opn = u8();
-      Op.OPS[opn]._emit.accept(this);
+      xops[_opn] = Op.OPS[opn]._emit.apply(this);
     }
-    assert _lexical_depth==0;   // All scopes back to outer
-    _names.clear();             // No names mapping
+
+    // Now pretty-print java code
+    _sb.ii();                       // Indent code
+    for( _opn =0; _opn <nops; _opn++ ) {
+      if( _jmp_to.get( _opn ) )
+        _sb.p("L").p( _opn ).p(":").nl();
+      xops[_opn].emit(_sb);
+    }
     _sb.di();                   // Un-indent code
+
+    _locals.clear(); _nlocals=0;// No locals mapping
+    _names.clear();             // No names mapping
+    assert _lexical_depth==0;   // All scopes back to outer
   }
 
   int u8 () { return _pool.u8 (); }
@@ -109,36 +133,69 @@ public class XClzBuilder {
   long pack64() { return _pool.pack64(); }
 
   // --------------------------------------------------------------------------
+
+  void define( String name ) {
+    // Track active locals
+    _locals.put(_nlocals++,name);
+  }
+
+  Const methcon() { return methcon(pack64()); }
   // Magic constant for indexing into the constant pool.
   private static final int CONSTANT_OFFSET = -17;
   // Read a method constant.  Advances the parse point.
-  Const methcon() {
-    long idx = pack64();
-    assert idx < 0 && ((int)idx)==idx;
+  Const methcon(long idx) {
+    // CONSTANT_OFFSET >= idx: uses a method constant
+    assert idx <= CONSTANT_OFFSET && ((int)idx)==idx;
     return _meth._cons[CONSTANT_OFFSET - (int)idx];
   }
 
+  // Make up a valid name
+  String jname( String jtype ) {
+    if( jtype==null ) return _jname("expr");
+    if( "long".equals(jtype) ) return _jname("x");
+    throw XEC.TODO();
+  }
+  
   // Return a java-valid name
-  String jname_methcon() {
+  String jname_methcon( ) {
     String name = ((StringCon)methcon())._str;
-    final HashMap<String,String> names = _names;
-    return _names.computeIfAbsent(name, k -> {
-        // Valid java name, just keep it
-        if( SourceVersion.isIdentifier(k) && !SourceVersion.isKeyword(k) )
-          return k;
-        // Starts with "loop#", assume it is a generated loop variable for iterators
-        if( k.startsWith("loop#") ) {
-          if( !names.containsKey("i") ) return "i";
-        }
-        throw XEC.TODO();
-      });
+    return _jname(name);
+  }
+
+  // After the basic mangle, dups are suffixed 1,2,3...
+  private String _jname( String name ) {
+    String s = _mangle(name);
+    boolean unique = true;
+    int max = 0;
+    for( String old : _locals.values() ) {
+      if( s.equals(old) ) unique = false;
+      else if( old.startsWith(s) ) {
+        int last = old.length();
+        while( Character.isDigit(old.charAt(last-1)) ) last--;
+        int num = Integer.parseInt(old.substring(last));
+        max = Math.max(max,num);
+      }
+    }
+
+    return unique ? s : s+(max+1);
+  }
+
+  // If the name is a valid java id, keep it.
+  // If the name starts "loop#", use "i"
+  // keep the valid prefix, and add $.
+  private String _mangle( String name ) {
+    // Valid java name, just keep it
+    // Valid except a keyword, add "$"
+    if( SourceVersion.isIdentifier(name) )
+      return SourceVersion.isKeyword(name) ? name+"$" : name;
+    // Starts with "loop#", assume it is a generated loop variable for iterators
+    if( name.startsWith("loop#") ) return "i";
+    // Keep valid prefix and add "$"
+    throw XEC.TODO();
   }
   
   // Produce a java type from a method constant
-  String jtype_methcon() {
-    return jtype_ttcon( (TermTCon)methcon() );
-  }
-  
+  String jtype_methcon() { return jtype_ttcon( (TermTCon)methcon() ); }  
   // Produce a java type from a TermTCon
   String jtype_ttcon( TermTCon ttc ) {
     ClassPart clz = (ClassPart)ttc.part();
@@ -151,14 +208,33 @@ public class XClzBuilder {
     throw XEC.TODO();
   }  
 
+
+  // Read an R-value.  Advances the parse point.
+  String rvalue() {
+    long idx = pack64();
+    // CONSTANT_OFFSET >= idx: uses a method constant
+    if( idx <= CONSTANT_OFFSET ) return value_tcon((TCon)methcon(idx));
+    // Predefined arguments
+    if( idx == -5 ) return "<default>";
+    String s = _locals.get(idx);
+    assert s != null;
+    return s;
+  }
+
+  // Read an L-value.  Advances the parse point.
+  String lvalue() { return _locals.get(pack64()); }
+
+  
   // Produce a java value from a TCon
-  String jvalue_tcon( TCon tc ) {
+  public static String value_tcon( TCon tc ) {
     if( tc instanceof IntCon ic ) {
       if( ic._big != null ) throw XEC.TODO();
       long x = ic._x;
       String s = ""+x;
       return (int)x == x ? s : s+"L";
     }
+    if( tc instanceof StringCon sc )
+      return "\""+sc._str+"\"";
     throw XEC.TODO();
   }
 
