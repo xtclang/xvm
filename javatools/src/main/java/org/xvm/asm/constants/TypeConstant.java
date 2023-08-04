@@ -5717,12 +5717,11 @@ public abstract class TypeConstant
             if (!typeLeft.isInterfaceType() &&
                     !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType())
                 {
-                String sWarning = "rejecting isA() due to a recursion:"
-                                + " left=" + typeLeft.getValueString()
-                                + "; right=" + typeRight.getValueString();
-                if (s_setWarnings.add(sWarning))
+                String sRecursion = " left=" + typeLeft.getValueString()
+                                  + "; right=" + typeRight.getValueString();
+                if (s_setRecursions.add(sRecursion))
                     {
-                    System.err.println(sWarning);
+                    System.err.println("rejecting isA() due to a recursion:" + sRecursion);
                     }
                 }
             mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
@@ -6353,14 +6352,14 @@ public abstract class TypeConstant
         }
 
    /**
-     * Determine if this type produces a formal type with the specified name in a context
-     * of the given access policy.
-     *
-     * @param sTypeName   the formal type name
-     * @param access      the access level to limit the check to
-     *
-     * @return {@link Usage#YES} if this type produces the formal type; {@link Usage#NO} otherwise
-     */
+    * Determine if this type produces a formal type with the specified name in a context
+    * of the given access policy.
+    *
+    * @param sTypeName   the formal type name
+    * @param access      the access level to limit the check to
+    *
+    * @return {@link Usage#YES} if this type produces the formal type; {@link Usage#NO} otherwise
+    */
     public boolean producesFormalType(String sTypeName, Access access)
         {
         Map<String, Usage> mapUsage = ensureProducesMap();
@@ -7518,7 +7517,13 @@ public abstract class TypeConstant
     private transient TypeConstant m_typeNormalized;
 
     /**
-     * The cache of internal warnings
+     * The cache of recursion pairs.
      */
-    private static final Set<String> s_setWarnings = new HashSet<>();
+    private static final Set<String> s_setRecursions;
+    static
+        {
+        // add well known recursions
+        s_setRecursions = new HashSet<>();
+        s_setRecursions.add("left=this:class(Array); right=this:class(Hashable)");
+        }
     }
