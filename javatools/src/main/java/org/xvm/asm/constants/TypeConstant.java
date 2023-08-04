@@ -5717,11 +5717,11 @@ public abstract class TypeConstant
             if (!typeLeft.isInterfaceType() &&
                     !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType())
                 {
-                String sRecursion = " left=" + typeLeft.getValueString()
+                String sRecursion = "left=" + typeLeft.getValueString()
                                   + "; right=" + typeRight.getValueString();
                 if (s_setRecursions.add(sRecursion))
                     {
-                    System.err.println("rejecting isA() due to a recursion:" + sRecursion);
+                    System.err.println("rejecting isA() due to a recursion: " + sRecursion);
                     }
                 }
             mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
