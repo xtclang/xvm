@@ -1487,7 +1487,7 @@ public class TypeCompositionStatement
         List<Parameter> listParams = constructorParams;
         if (listParams != null && !listParams.isEmpty())
             {
-            Map<String, Component> mapChildren = component.ensureChildByNameMap();
+            Map<String, Component> mapChildren = component.getChildByNameMap();
             for (Parameter param : listParams)
                 {
                 // the name should either not exist already, or if it does, it needs to be a
@@ -2055,7 +2055,7 @@ public class TypeCompositionStatement
 
         mgr.processChildren();
 
-        Map<String, Component> mapChildren        = component.ensureChildByNameMap();
+        Map<String, Component> mapChildren        = component.getChildByNameMap();
         MultiMethodStructure   constructors       = (MultiMethodStructure) mapChildren.get("construct");
         List<Parameter>        listParams         = constructorParams;
         boolean                fExplicitDefault   = false;
@@ -2362,7 +2362,7 @@ public class TypeCompositionStatement
                                         clzSuper.getFormalType(), Access.PROTECTED);
             TypeInfo     infoSuper = typeSuper.ensureTypeInfo(errs);
 
-            Map<String, Component> mapChildren = component.ensureChildByNameMap();
+            Map<String, Component> mapChildren = component.getChildByNameMap();
             boolean                fInvalidate = false;
             for (int i = 0, cParams = listParams.size(); i < cParams; ++i)
                 {
