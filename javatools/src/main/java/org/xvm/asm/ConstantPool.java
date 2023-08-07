@@ -3106,8 +3106,15 @@ public class ConstantPool
      */
     private Map<Constant, Constant> ensureConstantLookup(Format format)
         {
-        ensureLookup();
-        return m_mapConstants.get(format);
+        // seemingly unsafe operation against m_mapConstants is concurrently safe, because
+        // the only possible mutations outside of "ensureLookup", such as "disassemble()" and
+        // "optimize()" are guaranteed to be single-threaded, called from either linker or compiler
+        EnumMap<Format, Map<Constant, Constant>> map = m_mapConstants;
+        if (map.isEmpty())
+            {
+            ensureLookup();
+            }
+        return map.get(format);
         }
 
     /**
@@ -3127,10 +3134,18 @@ public class ConstantPool
      *
      * @return the map from locator to Constant
      */
-     private synchronized Map<Object, Constant> ensureLocatorLookup(Format format)
+     private Map<Object, Constant> ensureLocatorLookup(Format format)
         {
-        // lazily instantiate the locator map for the specified type
-        return m_mapLocators.computeIfAbsent(format, _format -> new ConcurrentHashMap<>());
+        Map<Object, Constant> map = m_mapLocators.get(format);
+        if (map == null)
+            {
+            // m_mapLocators is an EnumMap, which is not thread-safe
+            synchronized (this)
+                {
+                map = m_mapLocators.computeIfAbsent(format, _format -> new ConcurrentHashMap<>());
+                }
+            }
+        return map;
         }
 
     /**
