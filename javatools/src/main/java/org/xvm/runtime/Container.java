@@ -498,6 +498,15 @@ public abstract class Container
         return idModule.isEcstasyModule();
         }
 
+    /**
+     * @return true iff this container is a parent (at any depth) of the specified container
+     */
+    public boolean isParent(Container that)
+        {
+        Container parent = that.f_parent;
+        return parent != null && (this == parent || this.isParent(parent));
+        }
+
 
     // ----- x:Container API helpers ---------------------------------------------------------------
 
