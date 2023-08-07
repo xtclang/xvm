@@ -655,14 +655,14 @@ public class DebugConsole
         {
         m_setLineBreaks     = stringToBreakpoints(prefs.get("break-points", ""));
         m_setThrowBreaks    = stringToBreakpoints(prefs.get("break-throws", ""));
-        m_fBreakOnAllThrows = prefs.getBoolean("break-any-exception", false);
+        m_fBreakOnAllThrows = m_setThrowBreaks != null && m_setThrowBreaks.stream().
+                                anyMatch(bp -> bp.isEnabled() && bp.className.equals("*"));
         }
 
     private void saveBreakpoints()
         {
         prefs.put("break-points", breakpointsToString(m_setLineBreaks));
         prefs.put("break-throws", breakpointsToString(m_setThrowBreaks));
-        prefs.putBoolean("break-any-exception", m_fBreakOnAllThrows);
         }
 
     /**
@@ -2324,7 +2324,7 @@ public class DebugConsole
 
         public boolean matches(ExceptionHandle hE)
             {
-            if (!isEnabled() || !isException())
+            if (!isEnabled())
                 {
                 return false;
                 }
