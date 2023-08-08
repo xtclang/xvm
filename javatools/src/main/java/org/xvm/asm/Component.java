@@ -833,37 +833,40 @@ public abstract class Component
     /**
      * Make sure that any deferred child deserialization is complete
      */
-     protected void ensureChildren()
-        {
-        if (m_abChildren != null)
-            {
-            synchronized (this)
-                {
-                byte[] ab = m_abChildren;
-                if (ab != null)
-                    {
-                    // first grab the deferred deserialization bytes and then make sure neither this nor any
-                    // sibling retains hold of it (since it indicates that deserialization is deferred)
-                    for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
-                        {
-                        siblings.next().m_abChildren = null;
+    protected void ensureChildren() {
+        for (byte[] ab = m_abChildren; ab != null; ab = m_abChildren) {
+            synchronized (ab) { // sync on object shared by all siblings
+                if (ab.length == 0) {
+                    break; // we've recursed or the deserialization thread just completed
+                } else if (ab == m_abChildren) {
+                    byte[] empty = new byte[0];
+
+                    synchronized (empty) { // other threads may sync and wait on this object from sync(ab) above
+                        // first mark all siblings as in active serialization; this allows other threads to still sync
+                        // and wait while ensuring that this thread doesn't endless recurse
+                        for (Iterator<Component> siblings = siblings(); siblings.hasNext(); ) {
+                            siblings.next().m_abChildren = empty;
                         }
 
-                    // now read in the children
-                    DataInput in = new DataInputStream(new ByteArrayInputStream(ab));
-                    try
-                        {
-                        disassembleChildren(in, true);
-                        }
-                    catch (IOException e)
-                        {
-                        throw new IllegalStateException("IOException occurred in " + getIdentityConstant()
-                                + " during deferred read of child components", e);
+                        // now read in the children
+                        DataInput in = new DataInputStream(new ByteArrayInputStream(ab));
+                        try {
+                            disassembleChildren(in, false);
+                        } catch (IOException e) {
+                            throw new IllegalStateException("IOException occurred in " + getIdentityConstant()
+                                    + " during deferred read of child components", e);
+                        } finally {
+                            // finally make sure neither this nor any sibling retains hold of it (since it indicates that
+                            // deserialization is deferred)
+                            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); ) {
+                                siblings.next().m_abChildren = null;
+                            }
                         }
                     }
                 }
             }
         }
+    }
 
     /**
      * Visitor pattern for children of this component, optionally including all siblings, and
