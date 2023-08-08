@@ -2636,7 +2636,7 @@ public class ConstantPool
         {
         m_listConst.clear();
         m_mapConstants.clear();
-            m_mapLocators = new EnumMap<>(Format.class);
+        m_mapLocators = new EnumMap<>(Format.class); // cow "clear"
 
         // read the number of constants in the pool
         int cConst = readMagnitude(in);
@@ -3134,21 +3134,31 @@ public class ConstantPool
      *
      * @return the map from locator to Constant
      */
-    private Map<Object, Constant> ensureLocatorLookup(Format format) {
+    private Map<Object, Constant> ensureLocatorLookup(Format format)
+        {
         Map<Object, Constant> map = m_mapLocators.get(format);
-        if (map == null) {
-            // m_mapLocators is an EnumMap, which is not thread-safe; use copy-on-write
-            synchronized (this) {
-                map = m_mapLocators.get(format);
-                if (map == null) {
-                    EnumMap<Format, Map<Object, Constant>> mapNew = new EnumMap<>(m_mapLocators);
-                    mapNew.put(format, map = new ConcurrentHashMap<>());
-                    m_mapLocators = mapNew;
-                }
-            }
+        return map == null ? ensureLocatorLookupComplex(format) : map;
         }
+
+    /**
+     * Double check locking portion of {@link #ensureLocatorLookup(Format)}, extracted for hot-spotting.
+     *
+     * @param format the Constant Type
+     * @return the map from locator to Constant
+     */
+    private synchronized Map<Object, Constant> ensureLocatorLookupComplex(Format format)
+        {
+        // m_mapLocators is an EnumMap, which is not thread-safe; use copy-on-write
+        Map<Object, Constant> map = m_mapLocators.get(format);
+        if (map == null)
+            {
+            var mapLocNew = new EnumMap<>(m_mapLocators); // cow
+            mapLocNew.put(format, map = new ConcurrentHashMap<>());
+            m_mapLocators = mapLocNew;
+            }
+
         return map;
-    }
+        }
 
     /**
      * Create the necessary structures for looking up Constant objects quickly, and populate those
@@ -3845,12 +3855,12 @@ public class ConstantPool
      */
     private final EnumMap<Format, Map<Constant, Constant>> m_mapConstants = new EnumMap<>(Format.class);
 
-        /**
-         * Reverse lookup structure to find a particular constant by locator.
-         * <p>
-         * This map is not thread-safe and safety is provided via copy-on-write
-         */
-        private volatile EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
+    /**
+     * Reverse lookup structure to find a particular constant by locator.
+     * <p>
+     * This map is not thread-safe and safety is provided via copy-on-write
+     */
+    private volatile EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
 
     /**
      * Set of references to ConstantPool instances, defining the only ConstantPool references that
@@ -4175,10 +4185,11 @@ public class ConstantPool
             }
 
         // discard any previous lookup structures, since contents may have changed
-            m_mapConstants.clear();
-            m_mapLocators = new EnumMap<>(Format.class);
-            f_implicits.clear();
+        m_mapConstants.clear();
+        m_mapLocators = new EnumMap<>(Format.class); // cow "clear"
+        f_implicits.clear();
         }
+
     private transient TypeConstant      m_typeRange;
     private transient TypeConstant      m_typeInterval;
     private transient TypeConstant      m_typeIterable;
