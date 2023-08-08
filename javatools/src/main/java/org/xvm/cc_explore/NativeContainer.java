@@ -1,10 +1,10 @@
 package org.xvm.cc_explore;
 
-class NativeContainer extends Container {
+public class NativeContainer extends Container {
 
   final XConsole _console;
   
-  NativeContainer( ) {
+  public NativeContainer( ) {
     super(null,null);
     _console = new XConsole();
   }

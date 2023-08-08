@@ -274,7 +274,7 @@ public abstract class XOp {
     }
     static XClzBuilder psrc( XClzBuilder X ) { SRC = X.rvalue(); return X; }
     @Override void emit( XClzBuilder X ) {
-      X._sb.ip("if( ").p(_src).p(" ) then ");
+      X._sb.ip("if( ").p(_src).p(" ) ");
       if( _exit_loop ) X._sb.p("break;").nl();
       else throw XEC.TODO();
     }
@@ -342,13 +342,13 @@ public abstract class XOp {
     
     @Override void emit( XClzBuilder X ) {
       /*
-       val expr =
+       var expr =
          (x1==0 && x2==0) ? "FizzBuzz" :
          (x1==0) ? "Buzz" :
          (x2==0) ? "Fizz" :
          default();
       */
-      X._sb.ip("val ").p(_name).p(" = ").ii().nl();
+      X._sb.ip("var ").p(_name).p(" = ").ii().nl();
       
       // For each arm, emit guard test
       for( int i=0; i<_narms; i++ ) {
