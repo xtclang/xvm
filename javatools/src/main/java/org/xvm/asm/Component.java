@@ -847,22 +847,30 @@ public abstract class Component
      */
     private void ensureChildrenComplex()
         {
-        for (byte[] ab = m_abChildren; ab != null; ab = m_abChildren)
+        byte[] ab = m_abChildren;
+        if (ab != null)
             {
-            synchronized (ab) // sync on an object shared by all siblings
+            // sync on an object shared by all siblings
+            synchronized (ab)
                 {
                 if (ab.length == 0)
                     {
-                    break; // we've recursed or the deserialization thread just completed
+                    // we've recursed from disassembleChildren() below, or the deserialization
+                    // thread just released the empty array monitor introduced below
+                    return;
                     }
-                else if (ab == m_abChildren)
-                    {
-                    byte[] empty = new byte[0];
 
-                    synchronized (empty) // other threads may sync and wait on this object from sync(ab) above
+                if (m_abChildren != null)
+                    {
+                    assert ab == m_abChildren;
+
+                    // create an empty array to serve as a marker indicating that we are in the
+                    // process of deserialization, so threads would be forced to block on this object
+                    byte[] empty = new byte[0];
+                    synchronized (empty)
                         {
-                        // first mark all siblings as in active serialization; this allows other threads to still sync
-                        // and wait while ensuring that this thread doesn't endless recurse
+                        // mark all siblings as in active serialization; this blocks other threads
+                        // until deserialization is complete
                         for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
                             {
                             siblings.next().m_abChildren = empty;
@@ -872,6 +880,7 @@ public abstract class Component
                         DataInput in = new DataInputStream(new ByteArrayInputStream(ab));
                         try
                             {
+                            // this may recurse, hence the complexity of the synchronization above
                             disassembleChildren(in, true);
                             }
                         catch (IOException e)
@@ -882,8 +891,7 @@ public abstract class Component
                             }
                         finally
                             {
-                            // finally make sure neither this nor any sibling retains hold of it (since it indicates
-                            // that deserialization is deferred)
+                            // mark the deserialization as complete
                             for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
                                 {
                                 siblings.next().m_abChildren = null;
