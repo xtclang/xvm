@@ -9,7 +9,7 @@ import java.lang.Character;
 import java.util.BitSet;
 import java.util.HashMap;
 import javax.lang.model.SourceVersion;
-
+import java.lang.reflect.Constructor;
 
 // Some kind of base class for a Java class that implements an XTC Module
 public class XClzBuilder {
@@ -44,9 +44,15 @@ public class XClzBuilder {
     String java_class_name = "J"+mod._name;
     jclass_body(java_class_name);
     
-    System.out.println(_sb);
-    //new JFizzBuzz(new NativeContainer()).run();
-    throw XEC.TODO();
+    //System.out.println(_sb);
+    try {
+      Class<XClz> clz = XClzCompiler.compile("org.xvm.cc_explore.xclz."+java_class_name, _sb);
+      Constructor<XClz> xcon = clz.getConstructor(Container.class);
+      XClz xclz = xcon.newInstance(new NativeContainer());
+      xclz.run();
+    } catch( Exception ie ) {
+      throw XEC.TODO();
+    }
   }
 
   // Fill in the body of the matching java class
@@ -59,7 +65,7 @@ public class XClzBuilder {
     _sb.p("public class ").p(java_class_name).p(" extends XClz {").nl().ii();
 
     // Required constructor to inject the container
-    _sb.ip(java_class_name).p("( Container container ) { super(container); }").nl();
+    _sb.ip("public ").p(java_class_name).p("( Container container ) { super(container); }").nl();
     
     // Look for a module init.  This will become the Java <clinit>
     MMethodPart mm = (MMethodPart)_mod.child("construct");
@@ -96,7 +102,8 @@ public class XClzBuilder {
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
   private void jmethod( MethodPart m ) {
-    if( m._rets==null ) _sb.ip("void ");
+    _sb.ip("public ");
+    if( m._rets==null ) _sb.p("void ");
     else throw XEC.TODO();
     _sb.p(m._name).p("(");
     if( m._args!=null ) throw XEC.TODO();
@@ -263,7 +270,7 @@ public class XClzBuilder {
   String jvalue_ttcon( TermTCon ttc ) {
     ClassPart clz = (ClassPart)ttc.part();
     if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
-      return "_container._console";
+      return "_container.console()";
     throw XEC.TODO();
   }  
 }

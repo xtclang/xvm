@@ -4,7 +4,7 @@ import org.xvm.cc_explore.*;
 
 
 // Some kind of base class for a Java class that implements an XTC Module
-public abstract class XClz {
-  final Container _container;
-  XClz( Container container ) { _container = container; }
+public abstract class XClz implements Runnable {
+  public final Container _container;
+  public XClz( Container container ) { _container = container; }
 }
