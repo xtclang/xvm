@@ -2774,18 +2774,18 @@ public class TypeInfo
     private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
 
     // REVIEW is this a reasonable way to cache these?
-    private boolean m_fCacheReady;
-    private boolean m_fChildrenChecked;
+    private       boolean                         m_fCacheReady;
+    private       boolean                         m_fChildrenChecked;
     private final Map<MethodConstant, MethodInfo> f_cacheById;
-    private final Map<Object, MethodInfo> f_cacheByNid;
+    private final Map<Object, MethodInfo>         f_cacheByNid;
 
-    private transient TypeInfo m_into;
-    private transient TypeInfo m_delegates;
-    private transient Set<MethodInfo> m_setAuto;
-    private transient Set<MethodInfo> m_setOps;
-    private transient TypeConstant m_typeAuto;
-    private transient MethodConstant m_methodAuto;
-    private volatile transient Map<String, Set<MethodConstant>> m_mapOps;
-    private transient Map<String, Set<MethodConstant>> m_mapMethodsByName;
-    private transient Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
+    private transient          TypeInfo                                         m_into;
+    private transient          TypeInfo                                         m_delegates;
+    private transient          Set<MethodInfo>                                  m_setAuto;
+    private transient          Set<MethodInfo>                                  m_setOps;
+    private transient          TypeConstant                                     m_typeAuto;
+    private transient          MethodConstant                                   m_methodAuto;
+    private volatile transient Map<String, Set<MethodConstant>>                 m_mapOps;
+    private transient          Map<String, Set<MethodConstant>>                 m_mapMethodsByName;
+    private transient          Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
     }
