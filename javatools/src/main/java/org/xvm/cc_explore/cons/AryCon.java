@@ -19,6 +19,7 @@ public class AryCon extends TCon {
     X.skipAry();                // Index for each element
   }
   @Override public SB str(SB sb) { sb.p("[]");  return _t==null ? sb : _t.str(sb.p(" -> "));  }
+  public TCon type() { return _t; }       // No setter
   public Const[] cons() { return _cons; } // No setter
   @Override public void resolve( CPool X ) {
     _t = (TCon)X.xget();

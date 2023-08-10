@@ -2,8 +2,7 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.util.NonBlockingHashMapLong;
-import org.xvm.cc_explore.util.SB;
+import org.xvm.cc_explore.util.*;
 
 import java.lang.Character;
 import java.util.BitSet;
@@ -20,12 +19,13 @@ public class XClzBuilder {
   // Fields for emitting a Method Code
   public MethodPart _meth;      // Method whose code is being parsed
   private CPool _pool;          // Parser for code buffer
-  public int _lexical_depth;    // Lexical scope depth
-  public int _opn;              // Current opcode
+  public int _lexical_depth;    // Lexical depth of Enter ops
+  public int _opn;              // Current opcode index
   final HashMap<String,String> _names; // Java namification
   final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
-  int _nlocals;                 // Number of locals defined
-  XOp[] _xops;
+  int _nlocals;                 // Number of locals defined; popped when lexical scopes pop
+  XOp[] _xops;                  // Parsed/expanded xopcodes
+  private final Ary<String> _fcons; // Final static constants per method
   
   public XClzBuilder( ModPart mod ) {
     System.err.println("Making XClz for "+mod);
@@ -33,6 +33,7 @@ public class XClzBuilder {
     _sb = new SB();
     _names = new HashMap<>();
     _locals = new NonBlockingHashMapLong<>();
+    _fcons = new Ary<>(String.class);
 
     // Let's start by assuming if we're here, we're inside the top-level
     // ecstasy package - otherwise we're nested instead the mirror for the
@@ -71,6 +72,7 @@ public class XClzBuilder {
     MMethodPart mm = (MMethodPart)_mod.child("construct");
     MethodPart construct = (MethodPart)mm.child(mm._name);
     if( construct != null ) {
+      assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
       assert construct._sibling==null;
       // Skip common empty constructor
       if( !construct.is_empty_function() ) {
@@ -95,6 +97,10 @@ public class XClzBuilder {
       }
     }
 
+    // Final static constants
+    for( int i=0; i<_fcons._len; i++ )
+      throw XEC.TODO();
+    
     // End the class body
     _sb.di().p("}").nl();
   }
@@ -102,12 +108,25 @@ public class XClzBuilder {
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
   private void jmethod( MethodPart m ) {
+    assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
     _sb.ip("public ");
+    // Return type
     if( m._rets==null ) _sb.p("void ");
-    else throw XEC.TODO();
-    _sb.p(m._name).p("(");
-    if( m._args!=null ) throw XEC.TODO();
-    _sb.p(") {").nl();
+    else if( m._rets.length == 1 ) _sb.p(jtype_tcon(m._rets[0]._con)).p(' ');
+    else throw XEC.TODO(); // Multi-returns will need much help
+    // Argument list
+    _sb.p(m._name).p("( ");
+    if( m._args!=null ) {
+      for( int i = 0; i < m._args.length; i++ ) {
+        Parameter p = m._args[i];
+        _sb.p(jtype_tcon(p._con)).p(' ').p(p._name).p(", ");
+        _locals.put(i,p._name);
+        _nlocals++;
+      }
+      _sb.unchar(2);
+    }
+    // Function header
+    _sb.p(" ) {").nl();
     jcode(m);
     _sb.ip("}").nl().nl();
   }
@@ -120,13 +139,14 @@ public class XClzBuilder {
     _pool = new CPool(m._code,1.2); // Setup the constant pool parser
     assert _lexical_depth==0;       // No scopes added
     assert _names.isEmpty();        // No names mapping yet
-    assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
 
     // Parse all opcodes into XOPs
     int nops = u31();               // Number of opcodes (since varying size)
     _xops = new XOp[nops];
-    for( _opn =0; _opn <nops; _opn++ )
-      _xops[_opn] = Op.OPS[u8()]._emit.apply(this);
+    for( _opn =0; _opn <nops; _opn++ ) {
+      Op op = Op.OPS[u8()];
+      _xops[_opn] = op._emit.apply(this);
+    }
 
     // Pass#2 fixup
     // Forward branches that exactly skip an EXIT, hit it
@@ -134,7 +154,7 @@ public class XClzBuilder {
       _xops[_opn].pass2(this);
     
     // Now pretty-print java code
-    _sb.ii();                       // Indent code
+    _sb.ii();                   // Indent code
     emit(0,nops);
     _sb.di();                   // Un-indent code
 
@@ -178,8 +198,12 @@ public class XClzBuilder {
 
   // Make up a valid name
   String jname( String jtype ) {
-    if( jtype==null ) return _jname("expr");
+    //if( jtype==null ) return _jname("expr");
+    assert jtype!=null;
     if( "long".equals(jtype) ) return _jname("x");
+    if( "boolean".equals(jtype) ) return _jname("b");
+    if( jtype.startsWith( "XRange" )) return _jname("rng");
+    if( jtype.startsWith( "ArrayList" )) return _jname("ary");
     throw XEC.TODO();
   }
   
@@ -199,6 +223,7 @@ public class XClzBuilder {
       else if( old.startsWith(s) ) {
         int last = old.length();
         while( Character.isDigit(old.charAt(last-1)) ) last--;
+        if( last == old.length() ) continue; // No trailing digits to confuse
         int num = Integer.parseInt(old.substring(last));
         max = Math.max(max,num);
       }
@@ -210,7 +235,7 @@ public class XClzBuilder {
   // If the name is a valid java id, keep it.
   // If the name starts "loop#", use "i"
   // keep the valid prefix, and add $.
-  private String _mangle( String name ) {
+  private static String _mangle( String name ) {
     // Valid java name, just keep it
     // Valid except a keyword, add "$"
     if( SourceVersion.isIdentifier(name) )
@@ -222,16 +247,32 @@ public class XClzBuilder {
   }
   
   // Produce a java type from a method constant
-  String jtype_methcon() { return jtype_ttcon( (TermTCon)methcon() ); }  
+  String jtype_methcon() { return jtype_tcon( (TCon)methcon() ); }  
   // Produce a java type from a TermTCon
-  String jtype_ttcon( TermTCon ttc ) {
-    ClassPart clz = (ClassPart)ttc.part();
-    if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
-      return "XConsole";
-    if( clz._name.equals("Int64") && clz._path._str.equals("ecstasy/numbers/Int64.x") )
-      return "long";
-    if( clz._name.equals("Boolean") && clz._path._str.equals("ecstasy/Boolean.x") )
-      return "boolean";
+  static String jtype_tcon( TCon tc ) {
+    if( tc instanceof TermTCon ttc ) {
+      ClassPart clz = (ClassPart)ttc.part();
+      if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
+        return "XConsole";
+      if( clz._name.equals("Int64") && clz._path._str.equals("ecstasy/numbers/Int64.x") )
+        return "long";
+      if( clz._name.equals("Boolean") && clz._path._str.equals("ecstasy/Boolean.x") )
+        return "boolean";
+    } else if( tc instanceof ParamTCon ptc ) {
+      String telem = jtype_tcon(ptc._parms[0]);
+      ClassPart clz = ((ClzCon)ptc._con).clz();
+      if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
+        return telem+"[]";
+      if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ) {
+        if( telem.equals("long") ) return "XRangeLong"; // Shortcut class
+        else throw XEC.TODO();
+      }
+      if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
+        return "ArrayList<"+telem+">"; // Shortcut class
+      throw XEC.TODO();
+    } else if( tc instanceof ImmutTCon itc ) {
+      return jtype_tcon(itc.icon()); // Ignore immutable for now
+    }
     throw XEC.TODO();
   }  
 
@@ -243,29 +284,58 @@ public class XClzBuilder {
     if( idx <= CONSTANT_OFFSET ) return value_tcon((TCon)methcon(idx));
     // Predefined arguments
     if( idx == -5 ) return null;
+    if( idx == -1 ) return "$expr";
     String s = _locals.get(idx);
     assert s != null;
     return s;
   }
 
   // Read an L-value.  Advances the parse point.
-  String lvalue() { return _locals.get(pack64()); }
-
-  
-  // Produce a java value from a TCon
-  public static String value_tcon( TCon tc ) {
-    if( tc instanceof IntCon ic ) {
-      if( ic._big != null ) throw XEC.TODO();
-      long x = ic._x;
-      String s = ""+x;
-      return (int)x == x ? s : s+"L";
-    }
-    if( tc instanceof StringCon sc )
-      return "\""+sc._str+"\"";
-    throw XEC.TODO();
+  String lvalue() {
+    long idx = pack64();
+    if( idx== -1 ) return "$expr";
+    return _locals.get(idx);
   }
 
   
+  // Produce a java value from a TCon
+  private static final SB ASB = new SB();
+  public String value_tcon( TCon tc ) {
+    assert ASB.len()==0;
+    value_tcon(tc,false);
+    String rez = ASB.toString();
+    ASB.clear();
+    return rez;
+  }
+  private SB value_tcon( TCon tc, boolean nested ) {
+    if( tc instanceof IntCon ic ) {
+      if( ic._big != null ) throw XEC.TODO();
+      ASB.p(ic._x);
+      return (int)ic._x == ic._x ? ASB : ASB.p('L');
+    }
+    if( tc instanceof StringCon sc )
+      return ASB.p('"').p(sc._str).p('"');
+    if( tc instanceof AryCon ac ) {
+      assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
+      if( !nested )
+        ASB.p("private static final ").p(jtype_tcon(ac.type())).p(" JCON").p(_fcons._len).p(" = ");
+      ASB.p("{ ");
+      if( ac.cons()!=null ) {
+        for( Const con : ac.cons() )
+          value_tcon( (TCon)con, true ).p(", ");
+        ASB.unchar(2);
+      }
+      ASB.p(" }");
+      if( !nested ) {
+        String fcon = ASB.toString(); 
+        ASB.clear().p("JCON").p(_fcons._len);
+        _fcons.push(fcon);
+      }
+      return ASB;
+    }
+    throw XEC.TODO();
+  }
+
   // Produce a java value from a TermTCon
   String jvalue_ttcon( TermTCon ttc ) {
     ClassPart clz = (ClassPart)ttc.part();
