@@ -1,8 +1,10 @@
 module TestSimple {
-    void run() {
 
-    Boolean flag1 = True;
-    Boolean flag2 = False;
-    assert:debug flag1, flag2 as "this should be ignored but used to NPE";
+    void run() {
+        Object stringsC = ["a", "b"];
+        assert stringsC.is(Const); // this used to fail at run-time
+
+//        Object stringsM = ["c", "d"].reify(Mutable);
+//        assert !stringsM.is(Const);  // this used to fail at run-time
     }
 }
