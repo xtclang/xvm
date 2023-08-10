@@ -140,16 +140,19 @@ public class xContainerLinker
             return frame.raiseException("ResourceProvider must be a service");
             }
 
-        FileStructure file = hModule.getComponent().getFileStructure();
+        Container     container = frame.f_fiber.getCallingContainer();
+        FileStructure file      = hModule.getComponent().getFileStructure();
 
         switch (xRTFileTemplate.INSTANCE.invokeResolve(frame, file, hRepo, Op.A_STACK))
             {
             case Op.R_NEXT:
-                return completeResolveAndLink(frame, popModule(frame), hProvider, iReturn);
+                return completeResolveAndLink(frame, container, popModule(frame),
+                        hProvider, iReturn);
 
             case Op.R_CALL:
                 Frame.Continuation stepNext = frameCaller ->
-                    completeResolveAndLink(frameCaller, popModule(frameCaller), hProvider, iReturn);
+                    completeResolveAndLink(frameCaller, container, popModule(frameCaller),
+                        hProvider, iReturn);
                 frame.m_frameNext.addContinuation(stepNext);
                 return Op.R_CALL;
 
@@ -167,13 +170,11 @@ public class xContainerLinker
         return ((FileStructure) hFile.getComponent()).getModule();
         }
 
-    private int completeResolveAndLink(Frame frame, ModuleStructure moduleApp,
-                                       ObjectHandle hProvider, int iReturn)
+    private int completeResolveAndLink(Frame frame, Container container,
+                                       ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn)
         {
-        NestedContainer containerNested = new NestedContainer(
-            frame.f_context.f_container, moduleApp.getIdentityConstant(),
-            Collections.EMPTY_LIST);
-
+        NestedContainer containerNested = new NestedContainer(container,
+                moduleApp.getIdentityConstant(), Collections.EMPTY_LIST);
         return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
         }
 
@@ -226,7 +227,7 @@ public class xContainerLinker
             while (++index < aKeys.length)
                 {
                 InjectionKey key   = aKeys[index];
-                TypeHandle   hType = key.f_type.ensureTypeHandle(frameCaller.f_context.f_container);
+                TypeHandle   hType = key.f_type.ensureTypeHandle(container);
                 StringHandle hName = xString.makeHandle(key.f_sName);
                 CallChain    chain = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
 
