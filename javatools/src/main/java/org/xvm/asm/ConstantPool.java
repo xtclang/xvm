@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.Vector;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -3256,7 +3255,7 @@ public class ConstantPool
      */
     public int getInvalidationCount()
         {
-        return f_listInvalidated.size();
+        return f_listInvalidated.size(); // TODO: consider caching in VarHandle long
         }
 
     /**
@@ -3269,21 +3268,15 @@ public class ConstantPool
      */
     public Set<IdentityConstant> invalidationsSince(int cOld)
         {
-        int cNew = f_listInvalidated.size();
+        int cNew = getInvalidationCount();
         if (cOld == cNew)
             {
-            return Collections.EMPTY_SET;
+            return Collections.emptySet();
             }
 
         assert cNew > cOld;
 
-        HashSet<IdentityConstant> set = new HashSet<>();
-        for (int i = cOld; i < cNew; ++i)
-            {
-            set.add(f_listInvalidated.get(i));
-            }
-
-        return set;
+        return new HashSet<>(f_listInvalidated);
         }
 
 
@@ -4293,7 +4286,7 @@ public class ConstantPool
     /**
      * A list of classes that cause any derived TypeInfos to be invalidated.
      */
-    private final List<IdentityConstant> f_listInvalidated = new Vector<>();
+    private final Set<IdentityConstant> f_listInvalidated = ConcurrentHashMap.newKeySet();
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module,

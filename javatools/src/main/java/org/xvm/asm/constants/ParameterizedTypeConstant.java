@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -284,11 +285,13 @@ public class ParameterizedTypeConstant
             {
             fCache       = true;
             typeResolver = typeResolver.removeAccess();
-            synchronized (this)
+            long stamp = prevLock.tryOptimisticRead();
+            if (stamp != 0)
                 {
-                if (typeResolver.equals(m_typeResolverPrev))
+                TypeConstant typeResolvedPrev = m_typeResolvedPrev;
+                if (typeResolver.equals(m_typeResolverPrev) && prevLock.validate(stamp))
                     {
-                    return m_typeResolved;
+                    return typeResolvedPrev;
                     }
                 }
             }
@@ -335,10 +338,12 @@ public class ParameterizedTypeConstant
 
         if (fCache)
             {
-            synchronized (this)
+            long stamp = prevLock.tryWriteLock();
+            if (stamp != 0)
                 {
-                m_typeResolved     = typeResolved;
+                m_typeResolvedPrev = typeResolved;
                 m_typeResolverPrev = (TypeConstant) resolver;
+                prevLock.unlockWrite(stamp);
                 }
             }
         return typeResolved;
@@ -1094,8 +1099,10 @@ public class ParameterizedTypeConstant
         m_atypeParams = registerTypeConstants(pool, m_atypeParams);
 
         // invalidate cached types
+        long stamp = prevLock.writeLock();
         m_typeResolverPrev = null;
-        m_typeResolved     = null;
+        m_typeResolvedPrev = null;
+        prevLock.unlockWrite(stamp);
         }
 
     @Override
@@ -1170,6 +1177,11 @@ public class ParameterizedTypeConstant
     private TypeConstant[] m_atypeParams;
 
     /**
+     * Lock protecting {@link #m_typeResolverPrev} and {@link #m_typeResolvedPrev}
+     */
+    private final StampedLock prevLock = new StampedLock();
+
+    /**
      * Cached conversion target.
      */
     private transient TypeConstant m_typeResolverPrev;
@@ -1177,5 +1189,5 @@ public class ParameterizedTypeConstant
     /**
      * Cached conversion result.
      */
-    private transient TypeConstant m_typeResolved;
+    private transient TypeConstant m_typeResolvedPrev;
     }

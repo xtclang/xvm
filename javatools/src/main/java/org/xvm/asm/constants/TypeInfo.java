@@ -1925,42 +1925,48 @@ public class TypeInfo
      * Obtain all the matching op methods for the specified name and/or the operator string, that
      * take the specified number of params.
      *
-     * @param sName    the default op name, such as "add" (optional)
-     * @param sOp      the operator string, such as "+" (optional)
-     * @param cParams  the number of parameters for the operator method, or -1 to match any
-     *
+     * @param sName   the default op name, such as "add" (optional)
+     * @param sOp     the operator string, such as "+" (optional)
+     * @param cParams the number of parameters for the operator method, or -1 to match any
      * @return a set of zero or more method constants
      */
-    public synchronized Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams)
+    public Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams)
         {
         Map<String, Set<MethodConstant>> mapOps = m_mapOps;
         if (mapOps == null)
             {
-            m_mapOps = mapOps = new HashMap<>();
+            synchronized (this)
+                {
+                mapOps = m_mapOps;
+                if (mapOps == null)
+                    {
+                    m_mapOps = mapOps = new ConcurrentHashMap<>();
+                    }
+                }
             }
 
         String sKey = sName + sOp + cParams;
         Set<MethodConstant> setOps = mapOps.get(sKey);
         if (setOps == null)
             {
-            for (MethodInfo method : getOpMethodInfos())
+            setOps = mapOps.computeIfAbsent(sKey, key ->
                 {
-                if (method.isOp(sName, sOp, cParams))
+                Set<MethodConstant> set = null;
+                for (MethodInfo method : getOpMethodInfos())
                     {
-                    if (setOps == null)
+                    if (method.isOp(sName, sOp, cParams))
                         {
-                        setOps = new HashSet<>(7);
+                        if (set == null)
+                            {
+                            set = new HashSet<>(7);
+                            }
+                        set.add(resolveMethodConstant(method));
                         }
-                    setOps.add(resolveMethodConstant(method));
                     }
-                }
 
-            // cache the result
-            if (setOps == null)
-                {
-                setOps = Collections.EMPTY_SET;
-                }
-            mapOps.put(sKey, setOps);
+                // cache the result
+                return set == null ? Collections.emptySet() : set;
+                });
             }
 
         return setOps;
@@ -2768,18 +2774,18 @@ public class TypeInfo
     private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
 
     // REVIEW is this a reasonable way to cache these?
-    private boolean                               m_fCacheReady;
-    private boolean                               m_fChildrenChecked;
+    private boolean m_fCacheReady;
+    private boolean m_fChildrenChecked;
     private final Map<MethodConstant, MethodInfo> f_cacheById;
-    private final Map<Object, MethodInfo>         f_cacheByNid;
+    private final Map<Object, MethodInfo> f_cacheByNid;
 
-    private transient TypeInfo                         m_into;
-    private transient TypeInfo                         m_delegates;
-    private transient Set<MethodInfo>                  m_setAuto;
-    private transient Set<MethodInfo>                  m_setOps;
-    private transient TypeConstant                     m_typeAuto;
-    private transient MethodConstant                   m_methodAuto;
-    private transient Map<String, Set<MethodConstant>> m_mapOps;
+    private transient TypeInfo m_into;
+    private transient TypeInfo m_delegates;
+    private transient Set<MethodInfo> m_setAuto;
+    private transient Set<MethodInfo> m_setOps;
+    private transient TypeConstant m_typeAuto;
+    private transient MethodConstant m_methodAuto;
+    private volatile transient Map<String, Set<MethodConstant>> m_mapOps;
     private transient Map<String, Set<MethodConstant>> m_mapMethodsByName;
     private transient Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
     }

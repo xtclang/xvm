@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -691,7 +692,7 @@ public class SignatureConstant
         }
 
     @Override
-    protected synchronized int compareDetails(Constant obj)
+    protected int compareDetails(Constant obj)
         {
         if (!(obj instanceof SignatureConstant that))
             {
@@ -700,10 +701,16 @@ public class SignatureConstant
 
         if (that == m_sigPrev)
             {
-            return m_nCmpPrev;
+            long stamp    = prevLock.tryOptimisticRead();
+            int  nCmpPrev = m_nCmpPrev;
+            if (that == m_sigPrev && prevLock.validate(stamp))
+                {
+                return nCmpPrev;
+                }
             }
 
-        int n = this.m_constName.compareTo(that.m_constName);
+        boolean fCache = this.getConstantPool() == that.getConstantPool() && !containsUnresolved();
+        int     n      = this.m_constName.compareTo(that.m_constName);
         if (n == 0)
             {
             n = compareTypes(this.m_aconstParams, that.m_aconstParams);
@@ -717,13 +724,18 @@ public class SignatureConstant
                 }
             }
 
-        if (!containsUnresolved() && this.getConstantPool() == that.getConstantPool())
+        if (fCache)
             {
-            // while completely non-obvious at first look, caching this result has a tremendous impact
-            // on the big-O, by short-circuiting a recursive comparison caused by signatures containing
-            // TypeParameterConstants
-            m_sigPrev  = that;
-            m_nCmpPrev = n;
+            // while completely non-obvious at first look, caching this result has a tremendous
+            // impact on the big-O, by short-circuiting a recursive comparison caused by signatures
+            // containing TypeParameterConstants
+            long stamp = prevLock.tryWriteLock();
+            if (stamp != 0)
+                {
+                m_sigPrev  = that;
+                m_nCmpPrev = n;
+                prevLock.unlockWrite(stamp);
+                }
             }
         return n;
         }
@@ -800,7 +812,9 @@ public class SignatureConstant
         m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
 
         // clear the cache
+        long stamp = prevLock.writeLock();
         m_sigPrev = null;
+        prevLock.unlockWrite(stamp);
         }
 
     @Override
@@ -1011,6 +1025,12 @@ public class SignatureConstant
      * An indicator that this signature refers to a property.
      */
     private transient boolean m_fProperty;
+
+
+    /**
+     * Lock protecting {@link #m_sigPrev} and {@link #m_nCmpPrev}
+     */
+    private final StampedLock prevLock = new StampedLock();
 
     /**
      * Cached comparison target.
