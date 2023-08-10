@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Vector;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -3247,7 +3248,11 @@ public class ConstantPool
     public void invalidateTypeInfos(IdentityConstant id)
         {
         assert id.isClass();
-        f_listInvalidated.add((IdentityConstant) register(id));
+        synchronized (f_listInvalidated)
+            {
+            f_listInvalidated.add((IdentityConstant) register(id));
+            m_cInvalidated = f_listInvalidated.size();
+            }
         }
 
     /**
@@ -3255,7 +3260,7 @@ public class ConstantPool
      */
     public int getInvalidationCount()
         {
-        return f_listInvalidated.size(); // TODO: consider caching in VarHandle long
+        return m_cInvalidated;
         }
 
     /**
@@ -3276,7 +3281,13 @@ public class ConstantPool
 
         assert cNew > cOld;
 
-        return new HashSet<>(f_listInvalidated);
+        HashSet<IdentityConstant> set = new HashSet<>();
+        for (int i = cOld; i < cNew; ++i)
+            {
+            set.add(f_listInvalidated.get(i));
+            }
+
+        return set;
         }
 
 
@@ -4281,12 +4292,18 @@ public class ConstantPool
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
      */
-    private final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred = new TransientThreadLocal<>();
+    private final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred =
+     new TransientThreadLocal<>();
 
     /**
      * A list of classes that cause any derived TypeInfos to be invalidated.
      */
-    private final Set<IdentityConstant> f_listInvalidated = ConcurrentHashMap.newKeySet();
+    private final List<IdentityConstant> f_listInvalidated = new Vector<>();
+
+    /**
+     * Cached size of {@link #f_listInvalidated}.
+     */
+    private volatile int m_cInvalidated;
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module,
