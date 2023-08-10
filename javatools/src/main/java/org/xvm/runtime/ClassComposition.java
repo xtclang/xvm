@@ -546,7 +546,15 @@ public class ClassComposition
     /**
      * Create a map of fields that serves as a prototype for all instances of this class.
      */
-    public synchronized void ensureFieldLayout(Container container)
+    public void ensureFieldLayout(Container container)
+        {
+        if (m_mapFields == null)
+            {
+            ensureFieldLayoutImpl(container);
+            }
+        }
+
+    private synchronized void ensureFieldLayoutImpl(Container container)
         {
         if (m_mapFields != null)
             {
@@ -696,12 +704,12 @@ public class ClassComposition
                 }
             }
 
-        m_mapFields = mapFields.isEmpty()
+        m_cRegularFields = cRegular;
+        m_mapFields      = mapFields.isEmpty()
                 ? Collections.EMPTY_MAP
                 : mapFields.size() > 8
                     ? new LinkedHashMap<>(mapFields)
                     : mapFields;
-        m_cRegularFields = cRegular;
         }
 
     /**
@@ -949,7 +957,7 @@ public class ClassComposition
     /**
      * {@link FieldInfo}s for class fields keyed by extended nids.
      */
-    private Map<Object, FieldInfo> m_mapFields;
+    private volatile Map<Object, FieldInfo> m_mapFields;
 
     /**
      * The count of non-nested regular fields used for native Stringable methods on a const class.
