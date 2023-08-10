@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import java.util.concurrent.locks.StampedLock;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -701,9 +702,9 @@ public class SignatureConstant
 
         if (that == m_sigPrev)
             {
-            long stamp    = prevLock.tryOptimisticRead();
+            long stamp    = m_lockPrev.tryOptimisticRead();
             int  nCmpPrev = m_nCmpPrev;
-            if (that == m_sigPrev && prevLock.validate(stamp))
+            if (that == m_sigPrev && m_lockPrev.validate(stamp))
                 {
                 return nCmpPrev;
                 }
@@ -729,12 +730,12 @@ public class SignatureConstant
             // while completely non-obvious at first look, caching this result has a tremendous
             // impact on the big-O, by short-circuiting a recursive comparison caused by signatures
             // containing TypeParameterConstants
-            long stamp = prevLock.tryWriteLock();
+            long stamp = m_lockPrev.tryWriteLock();
             if (stamp != 0)
                 {
                 m_sigPrev  = that;
                 m_nCmpPrev = n;
-                prevLock.unlockWrite(stamp);
+                m_lockPrev.unlockWrite(stamp);
                 }
             }
         return n;
@@ -812,9 +813,9 @@ public class SignatureConstant
         m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
 
         // clear the cache
-        long stamp = prevLock.writeLock();
-        m_sigPrev = null;
-        prevLock.unlockWrite(stamp);
+        long stamp = m_lockPrev.writeLock();
+        m_sigPrev  = null;
+        m_lockPrev.unlockWrite(stamp);
         }
 
     @Override
@@ -1030,7 +1031,7 @@ public class SignatureConstant
     /**
      * Lock protecting {@link #m_sigPrev} and {@link #m_nCmpPrev}
      */
-    private final StampedLock prevLock = new StampedLock();
+    private final StampedLock m_lockPrev = new StampedLock();
 
     /**
      * Cached comparison target.

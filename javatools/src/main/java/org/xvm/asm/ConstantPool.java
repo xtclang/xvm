@@ -4293,7 +4293,7 @@ public class ConstantPool
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
      */
     private final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred =
-     new TransientThreadLocal<>();
+            new TransientThreadLocal<>();
 
     /**
      * A list of classes that cause any derived TypeInfos to be invalidated.
@@ -4318,6 +4318,6 @@ public class ConstantPool
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.
      */
-    private static final ThreadLocal<ConstantPool[]> s_tloPool = ThreadLocal
-        .withInitial(() -> new ConstantPool[1]);
+    private static final ThreadLocal<ConstantPool[]> s_tloPool =
+            ThreadLocal.withInitial(() -> new ConstantPool[1]);
     }

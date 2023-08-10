@@ -1928,6 +1928,7 @@ public class TypeInfo
      * @param sName   the default op name, such as "add" (optional)
      * @param sOp     the operator string, such as "+" (optional)
      * @param cParams the number of parameters for the operator method, or -1 to match any
+     *
      * @return a set of zero or more method constants
      */
     public Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams)
@@ -2773,7 +2774,6 @@ public class TypeInfo
      */
     private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
 
-    // REVIEW is this a reasonable way to cache these?
     private       boolean                         m_fCacheReady;
     private       boolean                         m_fChildrenChecked;
     private final Map<MethodConstant, MethodInfo> f_cacheById;
@@ -2785,7 +2785,7 @@ public class TypeInfo
     private transient          Set<MethodInfo>                                  m_setOps;
     private transient          TypeConstant                                     m_typeAuto;
     private transient          MethodConstant                                   m_methodAuto;
-    private volatile transient Map<String, Set<MethodConstant>>                 m_mapOps;
+    private transient volatile Map<String, Set<MethodConstant>>                 m_mapOps;
     private transient          Map<String, Set<MethodConstant>>                 m_mapMethodsByName;
     private transient          Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
     }

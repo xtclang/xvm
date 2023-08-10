@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import java.util.concurrent.locks.StampedLock;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -285,11 +286,11 @@ public class ParameterizedTypeConstant
             {
             fCache       = true;
             typeResolver = typeResolver.removeAccess();
-            long stamp = prevLock.tryOptimisticRead();
+            long stamp   = m_lockPrev.tryOptimisticRead();
             if (stamp != 0)
                 {
                 TypeConstant typeResolvedPrev = m_typeResolvedPrev;
-                if (typeResolver.equals(m_typeResolverPrev) && prevLock.validate(stamp))
+                if (typeResolver.equals(m_typeResolverPrev) && m_lockPrev.validate(stamp))
                     {
                     return typeResolvedPrev;
                     }
@@ -338,12 +339,12 @@ public class ParameterizedTypeConstant
 
         if (fCache)
             {
-            long stamp = prevLock.tryWriteLock();
+            long stamp = m_lockPrev.tryWriteLock();
             if (stamp != 0)
                 {
                 m_typeResolvedPrev = typeResolved;
                 m_typeResolverPrev = (TypeConstant) resolver;
-                prevLock.unlockWrite(stamp);
+                m_lockPrev.unlockWrite(stamp);
                 }
             }
         return typeResolved;
@@ -1099,10 +1100,10 @@ public class ParameterizedTypeConstant
         m_atypeParams = registerTypeConstants(pool, m_atypeParams);
 
         // invalidate cached types
-        long stamp = prevLock.writeLock();
+        long stamp = m_lockPrev.writeLock();
         m_typeResolverPrev = null;
         m_typeResolvedPrev = null;
-        prevLock.unlockWrite(stamp);
+        m_lockPrev.unlockWrite(stamp);
         }
 
     @Override
@@ -1179,7 +1180,7 @@ public class ParameterizedTypeConstant
     /**
      * Lock protecting {@link #m_typeResolverPrev} and {@link #m_typeResolvedPrev}
      */
-    private final StampedLock prevLock = new StampedLock();
+    private final StampedLock m_lockPrev = new StampedLock();
 
     /**
      * Cached conversion target.
