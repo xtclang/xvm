@@ -137,8 +137,6 @@ public class xRTFunction
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
                                  TypeConstant typeProxy)
         {
-        assert typeProxy == null || hTarget.getType().isA(typeProxy);
-
         return frame.assignValue(Op.A_STACK,
                 ((FunctionHandle) hTarget).createProxyHandle(ctxTarget));
         }
