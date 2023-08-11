@@ -44,6 +44,7 @@ public class XClzBuilder {
     // The Java class name will be the mangled module class-name.
     String java_class_name = "J"+mod._name;
     jclass_body(java_class_name);
+    System.out.println(_sb);
     
     //System.out.println(_sb);
     try {
@@ -112,14 +113,14 @@ public class XClzBuilder {
     _sb.ip("public ");
     // Return type
     if( m._rets==null ) _sb.p("void ");
-    else if( m._rets.length == 1 ) _sb.p(jtype_tcon(m._rets[0]._con)).p(' ');
+    else if( m._rets.length == 1 ) _sb.p(jtype_tcon(m._rets[0]._con,false)).p(' ');
     else throw XEC.TODO(); // Multi-returns will need much help
     // Argument list
     _sb.p(m._name).p("( ");
     if( m._args!=null ) {
       for( int i = 0; i < m._args.length; i++ ) {
         Parameter p = m._args[i];
-        _sb.p(jtype_tcon(p._con)).p(' ').p(p._name).p(", ");
+        _sb.p(jtype_tcon(p._con,false)).p(' ').p(p._name).p(", ");
         _locals.put(i,p._name);
         _nlocals++;
       }
@@ -247,31 +248,31 @@ public class XClzBuilder {
   }
   
   // Produce a java type from a method constant
-  String jtype_methcon() { return jtype_tcon( (TCon)methcon() ); }  
+  String jtype_methcon() { return jtype_tcon( (TCon)methcon(), false ); }  
   // Produce a java type from a TermTCon
-  static String jtype_tcon( TCon tc ) {
+  static String jtype_tcon( TCon tc, boolean boxed ) {
     if( tc instanceof TermTCon ttc ) {
       ClassPart clz = (ClassPart)ttc.part();
       if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
         return "XConsole";
       if( clz._name.equals("Int64") && clz._path._str.equals("ecstasy/numbers/Int64.x") )
-        return "long";
+        return boxed ? "Long" : "long";
       if( clz._name.equals("Boolean") && clz._path._str.equals("ecstasy/Boolean.x") )
-        return "boolean";
+        return boxed ? "Boolean" : "boolean";
     } else if( tc instanceof ParamTCon ptc ) {
-      String telem = jtype_tcon(ptc._parms[0]);
+      String telem = jtype_tcon(ptc._parms[0],true);
       ClassPart clz = ((ClzCon)ptc._con).clz();
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
-        return telem+"[]";
+        return "ArrayList<"+telem+">"; // Shortcut class
       if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ) {
-        if( telem.equals("long") ) return "XRangeLong"; // Shortcut class
+        if( telem.equals("Long") ) return "XRange"; // Shortcut class
         else throw XEC.TODO();
       }
       if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
         return "ArrayList<"+telem+">"; // Shortcut class
       throw XEC.TODO();
     } else if( tc instanceof ImmutTCon itc ) {
-      return jtype_tcon(itc.icon()); // Ignore immutable for now
+      return jtype_tcon(itc.icon(),boxed); // Ignore immutable for now
     }
     throw XEC.TODO();
   }  
@@ -318,7 +319,7 @@ public class XClzBuilder {
     if( tc instanceof AryCon ac ) {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
       if( !nested )
-        ASB.p("private static final ").p(jtype_tcon(ac.type())).p(" JCON").p(_fcons._len).p(" = ");
+        ASB.p("private static final ").p(jtype_tcon(ac.type(),false)).p(" JCON").p(_fcons._len).p(" = ");
       ASB.p("{ ");
       if( ac.cons()!=null ) {
         for( Const con : ac.cons() )

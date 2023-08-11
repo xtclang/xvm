@@ -77,10 +77,16 @@ public abstract class XOp {
       for( int i=0; i<nrets; i++ )
         _rets[i] = X.lvalue();
       if( nrets>1 ) throw XEC.TODO();
-      if( nrets==0 ) _dst = _rets[0];
+      if( nrets==1 ) _dst = _rets[0];
     }
     @Override void emit( XClzBuilder X ) {
-      throw XEC.TODO();
+      X._sb.i();
+      if( _dst!=null )  X._sb.p(_dst).p(" = ");
+      X._sb.p(_method).p("(");
+      for( String arg : _args )
+        X._sb.p(arg).p(", ");
+      if( _args.length>0 ) X._sb.unchar(2);
+      X._sb.p(");").nl();
     }
   }
   
@@ -179,7 +185,8 @@ public abstract class XOp {
       _arg = X.rvalue();
       _dst = X.lvalue();
     }
-    @Override void emit( XClzBuilder X ) { throw XEC.TODO(); }
+    @Override void emit( XClzBuilder X ) { emit_dst(X._sb); }
+    @Override void emit2( SB sb ) { sb.p("new ").p(_jtype).p("()"); }
   }
   
   // --------------------------------------------------------
@@ -221,17 +228,17 @@ public abstract class XOp {
   }
 
   // --------------------------------------------------------
-  // 0x50: VAR
-  public static class Var extends XOp {
+  public abstract static class AVar extends XOp {
     final String _jtype, _name;
     boolean _fold;              // Fold with next op as initializer
-    Var( XClzBuilder X ) {
-      // Destination is read first and is typeaware, so read the destination type.
+    AVar( XClzBuilder X, boolean is_typename ) {
       _jtype = X.jtype_methcon();
-      _name  = X.jname(_jtype);
-      // Track active locals
+      _name  = is_typename ? X.jname(_jtype) : X.jname_methcon();
       X.define(_name);
     }
+    // Optimize:
+    // "type name; name = init;" to
+    // "type name = init;"
     @Override void pass2( XClzBuilder X ) {
       XOp xop = X._xops[X._opn+1];
       if( xop._dst != null && xop._dst.equals(_name) ) {
@@ -246,22 +253,18 @@ public abstract class XOp {
         X._xops[++X._opn].emit2(sb.p(" = "));
       sb.p(";").nl();
     }
+  }
+
+  // --------------------------------------------------------
+  // 0x50: VAR
+  public static class Var extends AVar {
+    Var( XClzBuilder X ) { super(X,true); }
   } 
 
   // --------------------------------------------------------
   // 0x52: VAR_N
-  public static class Var_N extends XOp {
-    final String _jtype, _name;
-    Var_N( XClzBuilder X ) {
-      // Destination is read first and is typeaware, so read the destination type.
-      _jtype = X.jtype_methcon();
-      // Read the XTC variable name.  Must not collide with any other names
-      _name = X.jname_methcon();
-      X.define(_name);
-    }
-    @Override void emit( XClzBuilder X ) {
-      X._sb.ip(_jtype).p(" ").p(_name).p(";").nl();
-    }
+  public static class Var_N extends AVar {
+    Var_N( XClzBuilder X ) { super(X,false); }
   }
 
   // --------------------------------------------------------
@@ -294,7 +297,7 @@ public abstract class XOp {
       // TODO: Handle other kinds of typed args
       TermTCon ttc = anno.con().is_generic();
       if( ttc==null ) throw XEC.TODO();
-      _jtype = XClzBuilder.jtype_tcon(ttc);
+      _jtype = XClzBuilder.jtype_tcon(ttc,false);
       _jval  = X.jvalue_ttcon(ttc);    
       X.define(_name);
     }
@@ -338,7 +341,9 @@ public abstract class XOp {
   abstract static class AJump extends XOp {
     int _opn;                   // Target opcode index
     boolean _exit_loop;         // Forward, and a loop exit; set in pass 2
-    boolean _forward_ast;       // Forward, and part of structured control flow
+    boolean _forward_expr;      // Forward, and part of a "trinary"/n-way expr
+    boolean _trinary;           // Forward, head of a "trinary" expr
+    int[] _opns;                // Set if trinary is true
     
     void parse_target( XClzBuilder X ) {
       int off = (int)X.pack64();
@@ -347,33 +352,86 @@ public abstract class XOp {
     }
     
     boolean back( int self ) { return self >= _opn; }
+    
     @Override void pass2( XClzBuilder X ) {
-      if( X._xops[_opn-1] instanceof Exit )
-        _opn--;
       int self = X._opn;
       boolean back = back(self);
       _exit_loop = !back && exit_loop(X._xops,self,_opn);
-      if( back || _exit_loop || _forward_ast ) return;
+      if( back || _exit_loop || _forward_expr ) return;
       // Conditional forward jumps are either
       //    "if( pred ) S0; else S1;"
       // OR
       //    "$expr = pred ? S0 : S1;"
-
+      
       // Expect:
       //   JumpRel cond,Ldefault
       //   $expr = ...  opns[0]
       //   Jmp Lend
-      //   LINE
+      //   LINE // Optional
       // Ldefault:      opns[1] // == opns[-2]
       //   $expr = ...
       // Lend:          opns[2] // == opns[-1]
-      Jump jmp = (Jump)X._xops[_opn-2];
-      jmp._forward_ast = true;
-      int[] opns = new int[]{self+1,_opn,jmp._opn};
-      
-      
-      throw XEC.TODO();
+      XOp prior = X._xops[_opn-1];
+      if( prior instanceof Line ) prior = X._xops[_opn-1];
+      if( prior instanceof Jump jmp ) {
+        _opns = new int[]{self+1,_opn,jmp._opn};
+        _trinary = trinary(X);
+        if( _trinary ) {
+          assert _dst==null;
+          _dst = "$eval";
+        }
+      }
     }
+
+    // Check for valid "trinary" format.  If so, set up the assignments.
+    // opns[0..] = opcode index for nth branch target
+    // opsn[-2 ] = opcode index for default
+    // opsn[-1 ] = opcode index for the continuation point
+    boolean trinary( XClzBuilder X ) {
+      XOp[] xops = X._xops;
+      String dst = _dst==null ? "$expr" : _dst;
+
+      // All branch targets are in order
+      int prior = X._opn;
+      for( int i=0; i<_opns.length-1; i++ ) {
+        if( prior >= _opns[i] )
+          return false;
+        prior = _opns[i];
+      }
+
+      // All arms jump to end, except the default falls into end.
+      int end_opn = _opns[_opns.length-1];
+      for( int arm=0; arm<_opns.length-2; arm++ ) {
+        // Prior arm:                      arm
+        //   ....
+        //   dst = expr        : xops[_opns[arm+1] -3]
+        //   jmp End           : xops[_opns[arm+1] -2]
+        //   [Line, optional]  : xops[_opns[arm+1] -1]
+        // Next arm:           :           arm+1        
+        int idx = _opns[arm+1]-1;
+        if( xops[idx] instanceof Line ) idx--;
+        if( !(xops[idx] instanceof Jump jmp) ) return false;
+        if( end_opn != jmp._opn ) return false;
+        // Prior assigns to dst
+        String xdst = xops[idx-1]._dst;
+        if( !dst.equals(xdst) ) return false;
+      }
+      // Also test default, but the layout is a little different
+      XOp rez = xops[end_opn-1];
+      if( !dst.equals(rez._dst) ) return false;
+      rez._dst = null;
+
+      // All embedded forward jumps to end are "forward_expr".
+      // All assignments to _dst become null.
+      for( int arm=0; arm<_opns.length-2; arm++ ) {
+        int idx = _opns[arm+1]-1;
+        if( xops[idx] instanceof Line ) idx--;
+        ((AJump)xops[idx])._forward_expr = true;
+        xops[idx-1]._dst = null;
+      }
+      return true;
+    }
+    
     static boolean exit_loop( XOp[] xops, int self, int target ) {
       assert self < target ;
       for( int x = self+1; x<target; x++ )
@@ -411,26 +469,57 @@ public abstract class XOp {
     }
     @Override void emit( XClzBuilder X ) {
       assert !back(X._opn);
-      X._sb.ip("if( ").p(_lhs);
-      if( _op!=null )  X._sb.s().p(_op).s().p(_rhs);
-      X._sb.p(" ) ");
-      if( _exit_loop ) X._sb.p("break;").nl();
-      else throw XEC.TODO();
+      assert !_forward_expr;    // Covered by expr head
+      // _exit_loop takes a forward branch to break.  others do "if( pred )
+      // then else" and want to invert the test.
+      SB sb = X._sb;
+      if( _exit_loop ) {
+        // if( pred ) break;\n
+        tst(sb.ip("if( ")).p(" ) break;").nl();
+      } else if( _trinary ) {
+        // _dst = pred ? true : false;\n
+        assert _dst!=null;
+        sb.ip(_dst).p(" = ");
+        tst(sb).p(" ? ");
+        // Emit code, skipping trailing Line, GOTO
+        X.emit(_opns[0],_opns[1]-1);
+        sb.p(" : ");
+        X.emit(_opns[1],_opns[2]);
+        sb.p(";").nl();
+        X._opn--; // Adjust for following post-inc, start emitting at the END again
+      } else {
+        // if( pred ) {\n
+        tst(sb.ip("if( !(")).p(") ) {").nl().ii();
+        X.emit(X._opn+1,_opn);
+        sb.di().ip("}");
+        if( X._xops[X._opn-1] instanceof AJump jmp ) {
+          sb.p(" else {").ii().nl();
+          // TODO: 
+          sb.di().ip("}").nl();
+          throw XEC.TODO();
+        } else {
+          sb.nl();
+        }
+        
+      }
+    }
+    private SB tst( SB sb ) {
+      sb.p(_lhs);
+      if( _op!=null )  sb.s().p(_op).s().p(_rhs);
+      return sb;
     }
   }
   
   // --------------------------------------------------------
   // 0x8F JMP_VAL_N
-  public static class JMP_Val_N extends XOp {
+  public static class JMP_Val_N extends AJump {
     final int _narms;           // Number of switch arms
     final TCon[] _matches;      // Constants from method pool
-    final int[] _opns;          // XCode opcode numbers for each arm, default, end
     final int _nregs;           // Number of registers needed for each arm
     final String[] _regs;       // Register for each test bit
     final long _isSwitch;       // Unused?
     
     JMP_Val_N( XClzBuilder X ) {
-      // Generic Op_Switch
       _narms = X.u31();
       _matches = new TCon[_narms];
       _opns = new int[_narms+2];
@@ -451,10 +540,6 @@ public abstract class XOp {
 
     // Confirm nicely laid out and reverse to an AST.
     @Override void pass2( XClzBuilder X ) {
-      // Confirm end of each ARM except default forward jumps to same END op.
-      // END op is after default (fall thru).
-      // Each arm ENDS with a "dst" that is -1.
-      
       // Expect:
       //   Jump_Val_N L0,L1,...,Ldefault
       //   LINE
@@ -468,32 +553,10 @@ public abstract class XOp {
       //   LINE
       // Ldefault:       _opns[-2]
       //   $expr = ...
-      // Lend:           _opns[-1]
-      
-      int self = X._opn;
-      for( int i=0; i<_narms+1; i++ )
-        if( !(self < _opns[i]) )
-          throw XEC.TODO();
-      // Set the end
-      int end_opn = _opns[_narms+1] = ((Jump)X._xops[_opns[1]-2])._opn;
-      
-      if( !(_opns[_narms] < end_opn) ) throw XEC.TODO();
-      for( int i=1; i<_narms+1; i++ ) {
-        Jump jmp = (Jump)X._xops[_opns[i]-2];
-        jmp._forward_ast = true;
-        if( end_opn != jmp._opn )
-          throw XEC.TODO();
-      }
-      for( int i=0; i<_narms; i++ ) {
-        // -3: -1 is Jump, -2 is Line, -3 better assign to _name
-        XOp rez = X._xops[_opns[i+1]-3];
-        if( rez._dst.equals(_dst) ) rez._dst = null; // Print with expression syntax
-        else throw XEC.TODO();                       // Not an AST layout
-      }          
-      // No Jump, no Line on the default
-      XOp rez = X._xops[end_opn-1];
-      if( rez._dst.equals(_dst) ) rez._dst = null; // Print expression syntax
-      else throw XEC.TODO();    // Not an AST layout
+      // Lend:           _opns[-1]      
+      _opns[_narms+1] = ((Jump)X._xops[_opns[1]-2])._opn;
+      boolean tri = trinary(X);
+      assert tri;
     }
     
     @Override void emit( XClzBuilder X ) {
@@ -563,10 +626,11 @@ public abstract class XOp {
       _i1 = i1;
       _dst = X.lvalue();
     }
-    @Override void emit( XClzBuilder X ) {
-      X._sb.ip(_dst).p(" = new XRange(");
-      adj(X._sb.p(_lo),_i0).p(",");
-      adj(X._sb.p(_hi),_i1).p(");").nl();
+    @Override void emit( XClzBuilder X ) { emit_dst(X._sb); }
+    @Override void emit2( SB sb ) {
+      sb.p("new XRange(");
+      adj(sb.p(_lo),_i0).p(",");
+      adj(sb.p(_hi),_i1).p(")");
     }
     private static SB adj( SB sb, int off ) {
       return sb.p(switch( off ) {
@@ -588,9 +652,8 @@ public abstract class XOp {
       _lhs = X.rvalue();
       _dst = X.rvalue();      
     }
-    @Override void emit( XClzBuilder X ) {
-      X._sb.ip(_dst).p(" = ").p(_lhs).p(".").p(_prop).p("();").nl();
-    }
+    @Override void emit( XClzBuilder X ) { emit_dst(X._sb); }
+    @Override void emit2( SB sb ) { sb.p(_lhs).p(".").p(_prop).p("()");  }
   }
   
   // --------------------------------------------------------
@@ -616,9 +679,8 @@ public abstract class XOp {
       _idx = X.rvalue();
       _dst = X.lvalue();
     }
-    @Override void emit( XClzBuilder X ) {
-      X._sb.ip(_dst).p(" = ").p(_ary).p(".get(").p(_idx).p(");").nl();
-    }
+    @Override void emit( XClzBuilder X ) { emit_dst(X._sb); }
+    @Override void emit2( SB sb ) { sb.p(_ary).p(".get(").p(_idx).p(")"); }
   }
   
 
