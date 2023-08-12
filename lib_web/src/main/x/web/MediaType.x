@@ -51,6 +51,7 @@ const MediaType {
     static MediaType MIDI        = predefine(["audio/midi", "audio/x-midi"],                  ["mid", "midi"]);
     static MediaType AVIF        = predefine("image/avif",                                    "avif");
     static MediaType JPEG        = predefine("image/jpeg",                                    ["jpg", "jpeg", "jfif", "pjpeg", "pjp"]);
+    static MediaType ICO         = predefine(["image/x-icon", "image/vnd.microsoft.icon"],    "ico" );
     static MediaType PNG         = predefine("image/png",                                     "png" );
     static MediaType SVG         = predefine("image/svg+xml",                                 "svg" );
     static MediaType WebP        = predefine("image/webp",                                    "webp");
