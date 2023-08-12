@@ -1,12 +1,13 @@
 package org.xvm.runtime;
 
 
+import org.xvm.util.concurrent.ConcurrentLinkedBlockingQueue;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -36,9 +37,9 @@ public class Runtime
             return thread;
             };
 
-        // TODO: replace with a fair scheduling based ExecutorService; and a concurrent blocking queue
+        // TODO: replace with a fair scheduling based ExecutorService
         f_executorXVM = new ThreadPoolExecutor(parallelism, parallelism, 0, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(), factoryXVM);
+                new ConcurrentLinkedBlockingQueue<>(), factoryXVM);
 
         ThreadGroup groupIO = new ThreadGroup("IO");
         ThreadFactory factoryIO = r ->
@@ -50,7 +51,7 @@ public class Runtime
             };
 
         f_executorIO = new ThreadPoolExecutor(parallelism, 1024, 0, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(), factoryIO);
+                new ConcurrentLinkedBlockingQueue<>(), factoryIO);
         }
 
     public void start()
