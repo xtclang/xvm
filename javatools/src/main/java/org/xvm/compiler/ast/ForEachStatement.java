@@ -219,7 +219,7 @@ public class ForEachStatement
         return switch (sName)
             {
             case "first", "count"        -> true;
-            case "last"                  -> m_plan == Plan.RANGE || m_plan == Plan.SEQUENCE;
+            case "last"                  -> m_plan == Plan.RANGE || m_plan == Plan.LIST;
             case "entry", "Key", "Value" -> m_plan == Plan.MAP;
             default                      -> false;
             };
@@ -334,7 +334,7 @@ public class ForEachStatement
             //
             //   1) iterator   :  L: for (T value          : container.as(Iterator<T>)) {...}
             //   2) range      :  L: for (T value          : container.as(Range<T>   )) {...}
-            //   3) sequence   :  L: for (T value          : container.as(Sequence<T>)) {...}
+            //   3) list       :  L: for (T value          : container.as(List<T>    )) {...}
             //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
             //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
             //   6) iterable   :  L: for (T value          : container.as(Iterable<T>)) {...}
@@ -410,7 +410,7 @@ public class ForEachStatement
                     {
                     case ITERATOR -> pool.typeIterator();
                     case RANGE    -> pool.typeRange();
-                    case SEQUENCE -> pool.typeList();
+                    case LIST     -> pool.typeList();
                     case MAP      -> pool.typeMap();
                     case ITERABLE -> pool.typeIterable();
                     };
@@ -481,7 +481,7 @@ public class ForEachStatement
                         default:
                         case ITERATOR:
                         case RANGE:
-                        case SEQUENCE:
+                        case LIST:
                         case ITERABLE:
                             {
                             TypeConstant typeEl = getElementType();
@@ -705,7 +705,7 @@ public class ForEachStatement
             {
             case ITERATOR -> emitIterator(ctx, fCompletes, code, errs);
             case RANGE    -> emitRange(ctx, fCompletes, code, errs);
-            case SEQUENCE -> emitSequence(ctx, fCompletes, code, errs);
+            case LIST     -> emitList(ctx, fCompletes, code, errs);
             case MAP      -> emitMap(ctx, fCompletes, code, errs);
             case ITERABLE -> emitIterable(ctx, fCompletes, code, errs);
             };
@@ -1036,24 +1036,24 @@ public class ForEachStatement
         }
 
     /**
-     * Handle code generation for the Sequence type.
+     * Handle code generation for the List type.
      */
-    private boolean emitSequence(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitList(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool     pool     = pool();
         TypeConstant     typeElem = getElementType();
-        TypeConstant     typeSeq  = pool.ensureParameterizedTypeConstant(pool.typeList(), typeElem);
-        TypeInfo         infoSeq  = typeSeq.ensureTypeInfo(errs);
-        PropertyConstant idSize   = infoSeq.findProperty("size").getIdentity();
+        TypeConstant     typeList = pool.ensureParameterizedTypeConstant(pool.typeList(), typeElem);
+        TypeInfo         infoList = typeList.ensureTypeInfo(errs);
+        PropertyConstant idSize   = infoList.findProperty("size").getIdentity();
 
         // VAR_I   "count" Int 0            ; (optional) if no label.count exists, create a temp for it
-        // P_GET   seq.size -> "end" Int    ; get the size of the sequence
-        // JMP_GTE count end -> Exit        ; skip everything if the sequence is empty
+        // P_GET   list.size -> "end" Int   ; get the size of the list
+        // JMP_GTE count end -> Exit        ; skip everything if the list is empty
         // IP_DEC  end                      ; now "end" is the last index to iterate
         // VAR     "last" Boolean           ; (optional) if no label.last exists, create a temp for it
         // Repeat:
         // IS_EQ   count end -> last        ; compare current index to end index
-        // I_GET   seq [count] -> lval      ; whatever code Assignable generates for "lval=seq[count]"
+        // I_GET   list [count] -> lval     ; whatever code Assignable generates for "lval=list[count]"
         //                                    (with optional conversion)
         // {...}                            ; body
         // Continue:
@@ -1074,11 +1074,11 @@ public class ForEachStatement
         Register regEnd = code.createRegister(pool.typeInt64());
         code.add((new Var(regEnd)));
 
-        Register regSeq = code.createRegister(typeSeq);
-        code.add(new Var(regSeq));
-        m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
+        Register regList = code.createRegister(typeList);
+        code.add(new Var(regList));
+        m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regList), errs);
 
-        code.add(new P_Get(idSize, regSeq, regEnd));
+        code.add(new P_Get(idSize, regList, regEnd));
         code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeInt64()));
         code.add(new IP_Dec(regEnd));
 
@@ -1120,12 +1120,12 @@ public class ForEachStatement
         MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
         if (idConv == null)
             {
-            code.add(new I_Get(regSeq, regCount, argVal));
+            code.add(new I_Get(regList, regCount, argVal));
             }
         else
             {
             Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
-            code.add(new I_Get(regSeq, regCount, regTemp));
+            code.add(new I_Get(regList, regCount, regTemp));
             code.add(new Invoke_01(regTemp, idConv, argVal));
             }
 
@@ -1473,7 +1473,7 @@ public class ForEachStatement
      */
     enum Plan
         {
-        ITERATOR, RANGE, SEQUENCE, MAP, ITERABLE;
+        ITERATOR, RANGE, LIST, MAP, ITERABLE;
 
         /**
          * Look up a Plan enum by its ordinal.
