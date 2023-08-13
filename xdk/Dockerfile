@@ -16,4 +16,5 @@ RUN mkdir -p $ECSTASY_HOME/bin \
     && ln -s $ECSTASY_HOME/libexec/bin/linux_launcher $ECSTASY_HOME/bin/xtc \
     && ln -s $ECSTASY_HOME/libexec/bin/linux_launcher $ECSTASY_HOME/bin/xam
 
+CMD ["/bin/sh"]
 
