@@ -1,15 +1,26 @@
 package org.xvm.util.concurrent;
 
-import java.util.*;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Objects;
+import java.util.Queue;
+import java.util.Spliterator;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+
 import java.util.concurrent.atomic.AtomicReference;
+
 import java.util.concurrent.locks.LockSupport;
+
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
+
 import java.util.stream.Stream;
+
 
 /**
  * A lock-free {@link BlockingQueue} implementation which delegates to another thread-safe
@@ -21,18 +32,7 @@ import java.util.stream.Stream;
 public class BlockingQueueAdapter<E> implements BlockingQueue<E>
     {
     /**
-     * The delegate queue.
-     */
-    private final Queue<E> delegate;
-
-    /**
-     * "stack" of waiting threads.
-     */
-    private final ConcurrentLinkedDeque<AtomicReference<Thread>> awaiting =
-            new ConcurrentLinkedDeque<>();
-
-    /**
-     * Consgtruct a {@link BlockingQueueAdapter} which transforms the supplied thread-safe
+     * Construct a {@link BlockingQueueAdapter} which transforms the supplied thread-safe
      * {@link Queue} into a {@link BlockingQueue}.
      *
      * @param delegate the queue to delegate to for storage.
@@ -169,7 +169,7 @@ public class BlockingQueueAdapter<E> implements BlockingQueue<E>
         }
 
 
-    // BlockingQueue methods
+    // ----- BlockingQueue methods -----------------------------------------------------------------
 
     @Override
     public int remainingCapacity()
@@ -211,7 +211,7 @@ public class BlockingQueueAdapter<E> implements BlockingQueue<E>
         }
 
     @Override
-    public boolean offer(E value, long timeout, TimeUnit unit) throws InterruptedException
+    public boolean offer(E value, long timeout, TimeUnit unit)
         {
         throw new UnsupportedOperationException();
         }
@@ -247,9 +247,10 @@ public class BlockingQueueAdapter<E> implements BlockingQueue<E>
         }
 
     @Override
-    @SuppressWarnings("all") // poll(max) will never return null
+    @SuppressWarnings("all")
     public E take() throws InterruptedException
         {
+        // poll(max) will never return null
         return poll(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         }
 
@@ -265,7 +266,9 @@ public class BlockingQueueAdapter<E> implements BlockingQueue<E>
      *
      * @param timeout the timeout
      * @param unit    the unit of the timeout
+     *
      * @return the removed value or {@code null}
+     *
      * @throws InterruptedException on interrupt
      */
     private E pollInternal(long timeout, TimeUnit unit) throws InterruptedException
@@ -372,4 +375,18 @@ public class BlockingQueueAdapter<E> implements BlockingQueue<E>
             // else; it concurrently gave up; try the next parker
             }
         }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * The delegate queue.
+     */
+    private final Queue<E> delegate;
+
+    /**
+     * "stack" of waiting threads.
+     */
+    private final ConcurrentLinkedDeque<AtomicReference<Thread>> awaiting =
+            new ConcurrentLinkedDeque<>();
     }
