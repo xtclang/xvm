@@ -3552,12 +3552,14 @@ public class ClassStructure
      * Note: we should not call "registerConstants()" for generated code when called during the
      *       compilation phase; it will be done by the compiler.
      *
-     * @param fDisassemble  if true, indicates that this method is called during the "disassemble"
-     *                      phase, when the classes are constructed from its persistent storage;
-     *                      false indicates that it's called during the compilation, when classes
-     *                      are created from the source code
+     * @param fRuntime  if true, indicates that this method is called by the run-time "link" phase,
+     *                  when the classes are constructed from its persistent storage, at which point
+     *                  the actual method code needs to generated;
+     *                  false indicates that it's called during the compilation, when classes are
+     *                  created from the source code, at which point only the pertinent structures
+     *                  need to be created
      */
-    public void synthesizeConstInterface(boolean fDisassemble)
+    public void synthesizeConstInterface(boolean fRuntime)
         {
         assert getFormat() == Format.CONST;
 
@@ -3566,7 +3568,7 @@ public class ClassStructure
         synthesizeConstFunction("equals",   2, pool.typeBoolean());
         synthesizeConstFunction("compare",  2, pool.typeOrdered());
         synthesizeConstFunction("hashCode", 1, pool.typeInt64());
-        synthesizeAppendTo(fDisassemble);
+        synthesizeAppendTo(fRuntime);
         }
 
     /**
@@ -3653,7 +3655,7 @@ public class ClassStructure
      * If explicit "toString()" exists, not using the "super()", and "appendTo()" does not exist,
      * generate "appendTo()" to route to "toString" and a trivial "estimateStringLength".
      */
-    private void synthesizeAppendTo(boolean fRegisterConstants)
+    private void synthesizeAppendTo(boolean fGenerateCode)
         {
         MethodStructure methToString = findMethod("toString", 0);
         if (methToString != null && !methToString.usesSuper())
@@ -3682,24 +3684,23 @@ public class ClassStructure
                         aRet, "appendTo", aParam, /*hasCode*/ true, /*usesSuper*/ false);
                 methAppendTo.markTransient();
 
-                Code code = methAppendTo.ensureCode();
-
-                // Appender<Char> appendTo(Appender<Char> appender)
-                //    {
-                //    return this.toString().appendTo(appender);
-                //    }
-                Register regThis     = new Register(typeAppender, Op.A_THIS);
-                Register regAppender = new Register(typeAppender, 0);
-                Register regStack    = new Register(typeAppender, Op.A_STACK);
-                Register regResult   = new Register(typeAppender, Op.A_STACK);
-
-                code.add(new Invoke_01(regThis, methToString.getIdentityConstant(), regStack));
-                code.add(new Invoke_11(regStack, methAppendTo.getIdentityConstant(), regAppender, regResult));
-                code.add(new Return_1(regResult));
-
-                if (fRegisterConstants)
+                if (fGenerateCode)
                     {
-                    // REVIEW GG
+                    Code code = methAppendTo.ensureCode();
+
+                    // Appender<Char> appendTo(Appender<Char> appender)
+                    //    {
+                    //    return this.toString().appendTo(appender);
+                    //    }
+                    Register regThis     = new Register(typeAppender, Op.A_THIS);
+                    Register regAppender = new Register(typeAppender, 0);
+                    Register regStack    = new Register(typeAppender, Op.A_STACK);
+                    Register regResult   = new Register(typeAppender, Op.A_STACK);
+
+                    code.add(new Invoke_01(regThis, methToString.getIdentityConstant(), regStack));
+                    code.add(new Invoke_11(regStack, methAppendTo.getIdentityConstant(), regAppender, regResult));
+                    code.add(new Return_1(regResult));
+
                     methAppendTo.forceAssembly(pool);
                     }
 
@@ -3715,14 +3716,13 @@ public class ClassStructure
                             /*hasCode*/ true, /*usesSuper*/ false);
                     methEstimate.markTransient();
 
-                    code = methEstimate.ensureCode();
-
-                    // return 0;
-                    code.add(new Return_1(pool.val0()));
-
-                    if (fRegisterConstants)
+                    if (fGenerateCode)
                         {
-                        // REVIEW GG
+                        Code code = methEstimate.ensureCode();
+
+                        // return 0;
+                        code.add(new Return_1(pool.val0()));
+
                         methEstimate.forceAssembly(pool);
                         }
                     }
