@@ -34,6 +34,8 @@ import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo.Progress;
 
+import org.xvm.asm.node.LanguageNode.ConstantResolver;
+
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
@@ -217,6 +219,60 @@ public class ConstantPool
 
         return constant;
         }
+
+    /**
+     * @return a ConstantResolver that represents this ConstantPool
+     */
+    ConstantResolver<Constant> ensureConstantResolver()
+        {
+        ConstantResolver<Constant> res = m_constantResolver;
+        if (res == null)
+            {
+            m_constantResolver = res = new ConstantPoolConstantResolver(this);
+            }
+
+        return res;
+        }
+
+    /**
+     * A ConstantResolver implementation that represents (delegates to) a ConstantPool.
+     */
+    public static class ConstantPoolConstantResolver
+            implements ConstantResolver<Constant>
+        {
+        ConstantPoolConstantResolver(ConstantPool pool)
+            {
+            this.pool = pool;
+            }
+
+        @Override
+        public Constant register(Constant constant)
+            {
+            return pool.register(constant);
+            }
+
+        @Override
+        public Constant getConstant(int id)
+            {
+            Constant c = pool.getConstant(id);
+            assert c != null;
+            return c;
+            }
+
+        @Override
+        public int indexOf(Constant constant)
+            {
+            return constant.getPosition();
+            }
+
+        @Override
+        public String toString()
+            {
+            return "ConstantResolver{" + pool.toString() + "}";
+            }
+
+        public final ConstantPool pool;
+        };
 
     /**
      * Create a set or ConstantPools (upstream) that this ConstantPool is allowed to depend on.
@@ -4306,9 +4362,14 @@ public class ConstantPool
     private volatile int m_cInvalidated;
 
     /**
-     * NakedRef is a fundamental formal type that comes from the "_native" module,
+     * NakedRef is a fundamental formal type that comes from the "_native" module.
      */
     private transient TypeConstant m_typeNakedRef;
+
+    /**
+     * A cached ConstantResolver that uses this ConstantPool.
+     */
+    private transient ConstantResolver<Constant> m_constantResolver;
 
     /**
      * A cache of TypeInfo for parameterized NakedRef types.

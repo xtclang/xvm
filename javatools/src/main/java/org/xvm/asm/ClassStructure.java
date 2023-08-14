@@ -3281,8 +3281,7 @@ public class ClassStructure
         if (code.hasOps())
             {
             code.add(new Return_0());
-
-            code.registerConstants(pool);
+            method.forceAssembly(pool);
             }
         else
             {
@@ -3362,7 +3361,7 @@ public class ClassStructure
                 code.add(new Return_0());
                 }
 
-            code.registerConstants(pool);
+            methodDelegate.forceAssembly(pool);
             }
         return methodDelegate;
         }
@@ -3539,7 +3538,7 @@ public class ClassStructure
                     }
                 }
 
-            code.registerConstants(pool);
+            methodDelegate.forceAssembly(pool);
             }
         return methodDelegate;
         }
@@ -3700,7 +3699,8 @@ public class ClassStructure
 
                 if (fRegisterConstants)
                     {
-                    code.registerConstants(pool);
+                    // REVIEW GG
+                    methAppendTo.forceAssembly(pool);
                     }
 
                 MethodStructure methEstimate = findMethod("estimateStringLength", 0);
@@ -3722,7 +3722,8 @@ public class ClassStructure
 
                     if (fRegisterConstants)
                         {
-                        code.registerConstants(pool);
+                        // REVIEW GG
+                        methEstimate.forceAssembly(pool);
                         }
                     }
                 }

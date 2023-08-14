@@ -1627,7 +1627,7 @@ public class NameExpression
                 }
             }
 
-        code.registerConstants(pool);
+        lambda.forceAssembly(pool);
 
         return lambda.getIdentityConstant();
         }
@@ -1674,7 +1674,7 @@ public class NameExpression
 
         code.add(new P_Get(idProp, regTarget, regRet));
         code.add(new Return_1(regRet));
-        code.registerConstants(pool);
+        lambda.forceAssembly(pool);
 
         return lambda.getIdentityConstant();
         }

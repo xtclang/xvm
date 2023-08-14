@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.Op.ConstantRegistry;
+import org.xvm.asm.Op.Prefix;
+
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -35,8 +38,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
 
-import org.xvm.asm.Op.ConstantRegistry;
-import org.xvm.asm.Op.Prefix;
+import org.xvm.asm.node.LanguageNode;
+import org.xvm.asm.node.LanguageNode.ConstantResolver;
+import org.xvm.asm.node.StatementBlock;
+
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.Var_DN;
@@ -656,6 +661,8 @@ public class MethodStructure
         m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
+        m_abAst       = null;
+        m_ast         = null;
         m_code = code = new Code(this);
 
         markModified();
@@ -684,6 +691,80 @@ public class MethodStructure
             }
 
         return code.getAssembledOps();
+        }
+
+    /**
+     * @return the root LanguageNode, or null if none
+     */
+    LanguageNode<Constant> getAst()
+        {
+        // check if the AST has been provided or has already been deserialized
+        LanguageNode<Constant> ast = m_ast;
+        if (ast != null)
+            {
+            return ast;
+            }
+
+        // deserialize the AST
+        byte[] abAst = m_abAst;
+        if (abAst != null)
+            {
+            Constant[] aconstLocal = m_aconstLocal;
+            assert aconstLocal != null;
+
+            ConstantResolver<Constant> res = new ConstantResolver<Constant>()
+                {
+                @Override
+                public Constant getConstant(int id)
+                    {
+                    return aconstLocal[id];
+                    }
+
+                @Override
+                public Constant register(Constant constant)
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+
+                @Override
+                public int indexOf(Constant constant)
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+
+                @Override
+                public String toString()
+                    {
+                    return "read-only ConstantResolver for method " + MethodStructure.this;
+                    }
+                };
+
+            DataInput in = new DataInputStream(new ByteArrayInputStream(abAst));
+            try
+                {
+                m_ast = ast = LanguageNode.deserialize(in, res);
+                }
+            catch (IOException e)
+                {
+                throw new RuntimeException(e);
+                }
+            return ast;
+            }
+
+        return null;
+        }
+
+    /**
+     * @param ast  the root LanguageNode
+     */
+    void setAst(LanguageNode<Constant> ast)
+        {
+        if (ast != m_ast)
+            {
+            assert ast instanceof StatementBlock;
+            m_ast   = ast;
+            m_abAst = null;     // force a re-build of the binary form of the AST
+            }
         }
 
     /**
@@ -1052,9 +1133,9 @@ public class MethodStructure
                 m_cVars   = scope.getMaxVars();
                 m_cScopes = scope.getMaxDepth();
                 }
-            else
+            else if (needsReassembly())
                 {
-                code.ensureAssembled(getConstantPool());
+                forceAssembly(getConstantPool());
                 assert m_cScopes > 0;
                 }
             }
@@ -1069,6 +1150,78 @@ public class MethodStructure
         m_cVars   = 0;
         m_cScopes = 0;
         m_fNative = false;
+        }
+
+    boolean needsReassembly()
+        {
+        return m_code != null && m_abOps == null
+            || m_ast  != null && m_abAst == null;
+        }
+
+    public void forceAssembly(ConstantPool pool)
+        {
+        // if we need to reassembkle, we're going to throw away the bytes, so make sure that we have
+        // the deserialized form of those bytes ensured so that we can recreate the "new" version of
+        // the bytes
+        if (needsReassembly())
+            {
+            if (m_abOps != null)
+                {
+                ensureCode();
+                }
+            if (m_abAst != null)
+                {
+                getAst();
+                }
+            }
+
+        Code                   code = m_code;
+        LanguageNode<Constant> ast  = m_ast;
+        if (code != null || ast != null)
+            {
+            m_abOps = null;
+            m_abAst = null;
+
+            ConstantRegistry registry = new ConstantRegistry(pool);
+            m_registry = registry;
+
+            // pre-assemble code and AST
+            if (code != null)
+                {
+                code.prepareOps();
+                code.registerConstants(registry);
+                }
+            if (ast != null)
+                {
+                ast.prepareWrite(registry);
+                }
+
+            m_aconstLocal = m_registry.getConstantArray();
+
+            // assemble code and AST
+            if (code != null)
+                {
+                code.ensureAssembled(registry);
+                }
+            if (ast != null)
+                {
+                try
+                    {
+                    ByteArrayOutputStream collectAst = new ByteArrayOutputStream();
+                    ast.write(new DataOutputStream(collectAst), registry);
+                    m_abAst = collectAst.toByteArray();
+                    }
+                catch (IOException e)
+                    {
+                    throw new RuntimeException(e);
+                    }
+                }
+
+            m_registry = null;
+
+            assert (m_code == null) == (m_abOps == null);
+            assert (m_ast  == null) == (m_abAst == null);
+            }
         }
 
     /**
@@ -1101,7 +1254,9 @@ public class MethodStructure
             {
             m_aconstLocal = null;
             m_abOps       = null;
+            m_abAst       = null;
             m_code        = null;
+            m_ast         = null;
             m_fNative     = false;
             }
 
@@ -1804,6 +1959,9 @@ public class MethodStructure
             that.m_code = null;
             }
 
+        // REVIEW is it necessary to explicitly clone the AST? we treat it as immutable data, but it
+        //        will hold references to Constants from the pool -- does that matter?
+
         if (this.m_aconstLocal != null)
             {
             that.m_aconstLocal = this.m_aconstLocal.clone();
@@ -1960,6 +2118,20 @@ public class MethodStructure
 
         assert cConsts == 0 || cbOps > 0;
 
+        // read AST
+        byte[] abAST = null;
+        int    cbAST = readMagnitude(in);
+        if (cbAST > 0)
+            {
+            // temporarily, we are producing both byte code and persistent AST, so if there is an
+            // AST, the current assumption (until we stop emitting byte code) is that there will
+            // also be ops
+            assert cbOps > 0;
+
+            abAST = new byte[cbAST];
+            in.readFully(abAST);
+            }
+
         Source source = new Source();
         source.disassemble(in);
 
@@ -1970,7 +2142,8 @@ public class MethodStructure
         m_aParams        = aParams;
         m_aconstLocal    = aconst;
         m_abOps          = abOps;
-        m_FHasCode       = abOps != null;
+        m_abAst          = abAST;
+        m_FHasCode       = abOps != null || abAST != null;
         m_source         = source.isPresent() ? source : null;
         }
 
@@ -2007,7 +2180,7 @@ public class MethodStructure
         // (2) otherwise, if the local constants are present (because we read them in), then make
         //     sure they're all registered;
         // (3) otherwise, assume there are no local constants
-        if (m_abOps != null)
+        if (m_abOps != null || m_abAst != null)
             {
             // we didn't disassemble the individual ops, but we are responsible for registering the
             // constants that ops refer to
@@ -2016,9 +2189,23 @@ public class MethodStructure
                 m_aconstLocal = Constant.registerConstants(pool, m_aconstLocal);
                 }
             }
-        else if (m_code != null)
+        else
             {
-            m_code.registerConstants(pool);
+            ConstantRegistry registry = new ConstantRegistry(pool);
+            m_registry    = registry;
+
+            if (m_code != null)
+                {
+                m_code.prepareOps();
+                m_code.registerConstants(registry);
+                }
+
+            if (m_ast != null)
+                {
+                m_ast.prepareWrite(registry);
+                }
+
+            m_aconstLocal = registry.getConstantArray();
             }
 
         if (m_source != null)
@@ -2063,21 +2250,6 @@ public class MethodStructure
                 }
             }
 
-        // produce the op bytes and "local constant pool"
-        if (m_abOps == null && m_code != null)
-            {
-            try
-                {
-                m_code.ensureAssembled(getConstantPool());
-                }
-            catch (UnsupportedOperationException e)
-                {
-                System.err.println("Error in MethodStructure.assemble() for "
-                        + this.getParent().getContainingClass().getName() + "."
-                        + this.getName() + ": " + e);
-                }
-            }
-
         // write out the "local constant pool"
         Constant[] aconst  = m_aconstLocal;
         int        cConsts = aconst == null ? 0 : aconst.length;
@@ -2087,7 +2259,22 @@ public class MethodStructure
             writePackedLong(out, aconst[i].getPosition());
             }
 
-        // write out the bytes (if there are any)
+        // produce the op bytes if necessary
+        if (m_abOps == null && m_code != null)
+            {
+            try
+                {
+                m_code.ensureAssembled(m_registry);
+                }
+            catch (UnsupportedOperationException e)
+                {
+                System.err.println("Error in MethodStructure.assemble() of ops for "
+                                       + this.getParent().getContainingClass().getName() + "."
+                                       + this.getName() + ": " + e);
+                }
+            }
+
+        // write out the op bytes (if there are any)
         byte[] abOps = m_abOps;
         int    cbOps = abOps == null ? 0 : abOps.length;
         writePackedLong(out, cbOps);
@@ -2096,7 +2283,37 @@ public class MethodStructure
             out.write(abOps);
             }
 
+        // produce the AST bytes if necessary
+        if (m_abAst == null && m_ast != null)
+            {
+            try
+                {
+                ByteArrayOutputStream collectAst = new ByteArrayOutputStream();
+                m_ast.write(new DataOutputStream(collectAst), m_registry);
+                m_abAst = collectAst.toByteArray();
+                }
+            catch (IOException e)
+                {
+                System.err.println("Error in MethodStructure.assemble() of AST for "
+                                       + this.getParent().getContainingClass().getName() + "."
+                                       + this.getName() + ": " + e);
+                throw new IOException(e);
+                }
+            }
+
+        // write out the AST bytes (if there are any)
+        byte[] abAst = m_abAst;
+        int    cbAst = abAst == null ? 0 : abAst.length;
+        writePackedLong(out, cbAst);
+        if (cbAst > 0)
+            {
+            out.write(abAst);
+            }
+
         (m_source == null ? new Source() : m_source).assemble(out);
+
+        // the registry is only used during the "preassemble" and "assemble" steps
+        m_registry = null;
         }
 
     @Override
@@ -2579,28 +2796,6 @@ public class MethodStructure
                 }
             }
 
-        protected ConstantRegistry ensureConstantRegistry(ConstantPool pool)
-            {
-            ConstantRegistry registry;
-            if (f_method.m_abOps == null)
-                {
-                f_method.m_registry = registry = new ConstantRegistry(pool);
-
-                Op[] aop = ensureOps();
-                for (Op op : aop)
-                    {
-                    op.registerConstants(registry);
-                    }
-                }
-            else
-                {
-                registry = f_method.m_registry;
-                assert registry != null;
-                }
-
-            return registry;
-            }
-
         /**
          * Walk through all the code paths, determining what code is reachable versus unreachable,
          * and eliminate the unreachable code.
@@ -2683,33 +2878,22 @@ public class MethodStructure
             while (!op.isReachable());
             }
 
-        /**
-         * Address and simulate ops, eliminate dead code and after that register the ops with a
-         * method constant registry.
-         */
-        public void registerConstants(ConstantPool pool)
+        protected void prepareOps()
             {
-            if (f_method.m_abOps == null)
-                {
-                // it is possible that the elimination of dead code makes it possible to find new
-                // redundant code, and vice versa
-                do
-                    {
-                    eliminateDeadCode();
-                    }
-                while (eliminateRedundantCode());
-                // note that the last call to eliminateRedundantCode() did not modify the code, so
-                // each op will already have been stamped with the correct address and scope depth
+            // TODO CP why does this fail?
+            //  assert m_aop == null;
 
-                try
-                    {
-                    ensureAssembled(pool);
-                    }
-                catch (RuntimeException e)
-                    {
-                    throw new IllegalStateException("Fail to register constants: " + f_method, e);
-                    }
+            assert f_method.m_abOps == null;
+
+            // it is possible that the elimination of dead code makes it possible to find new
+            // redundant code, and vice versa
+            do
+                {
+                eliminateDeadCode();
                 }
+            while (eliminateRedundantCode());
+            // note that the last call to eliminateRedundantCode() did not modify the code, so
+            // each op will already have been stamped with the correct address and scope depth
             }
 
         /**
@@ -2810,36 +2994,39 @@ public class MethodStructure
             f_method.m_cScopes = scope.getMaxDepth();
             }
 
-        protected synchronized void ensureAssembled(ConstantPool pool)
+        protected void registerConstants(ConstantRegistry registry)
             {
-            if (f_method.m_abOps == null)
+            for (Op op : ensureOps())
                 {
-                // populate the local constant registry
-                ConstantRegistry registry = ensureConstantRegistry(pool);
-
-                // assemble the ops into bytes
-                ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
-                DataOutputStream      outData  = new DataOutputStream(outBytes);
-                try
-                    {
-                    Op[] aOp = ensureOps();
-
-                    writePackedLong(outData, aOp.length);
-                    for (Op op : aOp)
-                        {
-                        op.write(outData, registry);
-                        }
-                    }
-                catch (IOException e)
-                    {
-                    throw new IllegalStateException(e);
-                    }
-
-                f_method.m_abOps       = outBytes.toByteArray();
-                f_method.m_aconstLocal = registry.getConstantArray();
-                f_method.m_registry    = null;
-                f_method.markModified();
+                op.registerConstants(registry);
                 }
+            }
+
+        protected synchronized void ensureAssembled(ConstantRegistry registry)
+            {
+            assert f_method.m_abOps == null;
+
+            // assemble the ops into bytes
+            ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+            DataOutputStream      outData  = new DataOutputStream(outBytes);
+            try
+                {
+                Op[] aOp = ensureOps();
+
+                writePackedLong(outData, aOp.length);
+                for (Op op : aOp)
+                    {
+                    op.write(outData, registry);
+                    }
+                }
+            catch (IOException e)
+                {
+                throw new IllegalStateException(e);
+                }
+
+            f_method.m_abOps       = outBytes.toByteArray();
+            f_method.m_aconstLocal = registry.getConstantArray();
+            f_method.markModified();
             }
 
         private Op[] ensureOps()
@@ -3285,6 +3472,11 @@ public class MethodStructure
     private byte[] m_abOps;
 
     /**
+     * The serialized form of the AST.
+     */
+    private byte[] m_abAst;
+
+    /**
      * The constants used by the Ops.
      */
     Constant[] m_aconstLocal;
@@ -3298,6 +3490,11 @@ public class MethodStructure
      * The method's code (for assembling new code).
      */
     private transient Code m_code;
+
+    /**
+     * The method's AST.
+     */
+    private transient LanguageNode<Constant> m_ast;
 
     /**
      * The max number of registers used by the method. Calculated from the ops.

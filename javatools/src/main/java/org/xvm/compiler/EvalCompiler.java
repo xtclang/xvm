@@ -138,7 +138,7 @@ public class EvalCompiler
             lambda.configureLambda(aparamParams, 0, aparamRets);
             lambda.getIdentityConstant().setSignature(
                     pool.ensureSignatureConstant("->", atypeParams, atypeRets));
-            lambda.ensureCode().registerConstants(pool);
+            lambda.forceAssembly(pool);
 
             m_aiArg = astMethod.getArguments();
             return lambda;

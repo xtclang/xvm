@@ -17,6 +17,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.node.LanguageNode;
+
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;
@@ -699,6 +701,7 @@ public abstract class Op
      * together all the constants used by the ops.
      */
     public static class ConstantRegistry
+            implements LanguageNode.ConstantResolver<Constant>
         {
         /**
          * Construct a ConstantRegistry.
@@ -718,6 +721,7 @@ public abstract class Op
          *
          * @return the constant reference to use (may be different from the passed constant)
          */
+        @Override
         public Constant register(Constant constant)
             {
             ensureRegistering();
@@ -735,7 +739,11 @@ public abstract class Op
             constant = f_pool.register(constant);
 
             // keep track of how many times each constant is registered
-            f_mapConstants.compute(constant, (k, count) -> count == null ? 1 : 1 + count);
+            if (m_mapConstants == null)
+                {
+                m_mapConstants = new HashMap<>();
+                }
+            m_mapConstants.compute(constant, (k, count) -> count == null ? 1 : 1 + count);
 
             return constant;
             }
@@ -751,17 +759,28 @@ public abstract class Op
             }
 
         /**
+         * @return the array of constants, in optimized order
+         */
+        @Override
+        public Constant getConstant(int id)
+            {
+            return getConstantArray()[id];
+            }
+
+        /**
          * Obtain the index of the specified constant, as it appears in the optimized order.
          *
          * @param constant  the constant to get the index of
          *
          * @return the index of the constant in the array returned by {@link #getConstantArray()}
          */
+        @Override
         public int indexOf(Constant constant)
             {
             ensureOptimized();
 
-            Integer index = f_mapConstants.get(constant);
+            Map<Constant, Integer> map = m_mapConstants;
+            Integer index = map == null ? null : map.get(constant);
             if (index == null)
                 {
                 throw new IllegalArgumentException("missing constant: " + constant);
@@ -792,18 +811,25 @@ public abstract class Op
                 // (backwards order, such that the most often used come first, since the variable
                 // length index encoding uses fewer bytes for lower indexes, the result is more
                 // compact)
-                Map<Constant, Integer> mapConstants = f_mapConstants;
-                Constant[] aconst = mapConstants.keySet().toArray(Constant.NO_CONSTS);
-                Arrays.sort(aconst, Constants.DEBUG
-                        ? Comparator.naturalOrder()
-                        : (o1, o2) -> mapConstants.get(o2) - mapConstants.get(o1));
-                m_aconst = aconst;
-
-                // now re-use the map of constants to point to the constant indexes, for when we
-                // need to look up index by constant
-                for (int i = 0, c = aconst.length; i < c; ++i)
+                Map<Constant, Integer> mapConstants = m_mapConstants;
+                if (mapConstants == null)
                     {
-                    mapConstants.put(aconst[i], i);
+                    m_aconst = Constant.NO_CONSTS;
+                    }
+                else
+                    {
+                    Constant[] aconst = mapConstants.keySet().toArray(Constant.NO_CONSTS);
+                    Arrays.sort(aconst, Constants.DEBUG
+                            ? Comparator.naturalOrder()
+                            : (o1, o2) -> mapConstants.get(o2) - mapConstants.get(o1));
+                    m_aconst = aconst;
+
+                    // now re-use the map of constants to point to the constant indexes, for when we
+                    // need to look up index by constant
+                    for (int i = 0, c = aconst.length; i < c; ++i)
+                        {
+                        mapConstants.put(aconst[i], i);
+                        }
                     }
                 }
             }
@@ -819,7 +845,7 @@ public abstract class Op
          * the registry optimizes its constant ordering, the map holds the index of each constant
          * (in the local "constant pool", not the real constant pool.)
          */
-        private final Map<Constant, Integer> f_mapConstants = new HashMap<>();
+        private Map<Constant, Integer> m_mapConstants;
 
         /**
          * The array of constants in their optimized order.
