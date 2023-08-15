@@ -182,6 +182,8 @@ public abstract class LanguageAST<C> {
      */
     public abstract static class StmtAST<C> extends LanguageAST<C> {}
 
+    static StmtAST[] NO_STMTS = new StmtAST[0];
+
     /**
      * Class hierarchy root for all expressions.
      */
@@ -202,16 +204,10 @@ public abstract class LanguageAST<C> {
         public abstract C getType(int i);
     }
 
+    static ExprAST[] NO_EXPRS = new ExprAST[0];
+
 
     // ----- internal ------------------------------------------------------------------------------
-
-    private static final HashSet<String> ALREADY_DISPLAYED = new HashSet();
-
-    static void reportUnimplemented(String msg) {
-        if (ALREADY_DISPLAYED.add(msg)) {
-            System.err.println(msg);
-        }
-    }
 
     static <C> LanguageAST<C> instantiate(NodeType nodeType) {
         return switch (nodeType) {
@@ -231,7 +227,7 @@ public abstract class LanguageAST<C> {
 //            case FOR_ITERABLE_STMT  -> new ;
 //            case CONTINUE_LOOP_STMT -> new ;
 //            case BREAK_STMT         -> new ;
-//            case RETURN_STMT        -> new ;
+            case RETURN_STMT        -> new ReturnStmtAST<C>();
 //            case TRY_USING_STMT     -> new ;
 //            case TRY_CATCH_STMT     -> new ;
 //            case TRY_FINALLY_STMT   -> new ;
@@ -253,5 +249,13 @@ public abstract class LanguageAST<C> {
 //            case LOGICAL_AND_EXPR   -> new ;
             default -> throw new IllegalStateException("unknown nodeType: " + nodeType);
         };
+    }
+
+    private static final HashSet<String> ALREADY_DISPLAYED = new HashSet();
+
+    static void reportUnimplemented(String msg) {
+        if (ALREADY_DISPLAYED.add(msg)) {
+            System.err.println(msg);
+        }
     }
 }

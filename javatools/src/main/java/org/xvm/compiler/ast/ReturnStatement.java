@@ -13,6 +13,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.ReturnStmtAST;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
@@ -352,6 +354,8 @@ public class ReturnStatement
                 }
             code.add(new Jump(expr.body.getEndLabel()));
 
+            // TODO holder <- AST
+
             // "return" does not complete
             return false;
             }
@@ -371,10 +375,12 @@ public class ReturnStatement
             // TODO cExprs != 1
             Argument arg = listExprs.get(0).generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
+            // TODO holder <- AST
             }
         else if (m_fConditionalTernary)
             {
             ((TernaryExpression) listExprs.get(0)).generateConditionalReturn(ctx, code, errs);
+            // TODO holder <- AST
             }
         else
             {
@@ -384,6 +390,7 @@ public class ReturnStatement
                 {
                 case 0:
                     code.add(new Return_0());
+                    holder.setAst(this, new ReturnStmtAST<>());
                     break;
 
                 case 1:
@@ -468,6 +475,7 @@ public class ReturnStatement
                                     }
                                 }
                         }
+                    holder.setAst(this, new ReturnStmtAST<>(new ExprAST[]{expr.getExprAST()}));
                     break;
                     }
 
@@ -475,7 +483,8 @@ public class ReturnStatement
                     {
                     assert cRets == cExprs;
 
-                    Argument[] aArgs = new Argument[cRets];
+                    Argument[]          aArgs = new Argument[cRets];
+                    ExprAST<Constant>[] aASTs = new ExprAST[cRets];
                     for (int i = 0; i < cRets; ++i)
                         {
                         Expression expr = listExprs.get(i);
@@ -484,6 +493,7 @@ public class ReturnStatement
                         aArgs[i] = i == cExprs-1
                                 ? arg
                                 : expr.ensurePointInTime(code, arg);
+                        aASTs[i] = expr.getExprAST();
                         }
 
                     Label labelFalse = fConditional ? new Label("false") : null;
@@ -499,6 +509,7 @@ public class ReturnStatement
                         code.add(labelFalse);
                         code.add(new Return_1(pool.valFalse()));
                         }
+                    holder.setAst(this, new ReturnStmtAST<>(aASTs));
                     break;
                     }
                 }

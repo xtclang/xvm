@@ -30,8 +30,8 @@ import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.ReturnStmtAST;
 import org.xvm.asm.ast.StmtBlockAST;
-import org.xvm.asm.ast.StmtNotImplAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -376,7 +376,7 @@ public class StatementBlock
                     int                 newSize  = oldSize + 1;
                     StmtAST<Constant>[] newStmts = new StmtAST[newSize];
                     System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
-                    newStmts[oldSize] = new StmtNotImplAST<>("return"); // TODO CP
+                    newStmts[oldSize] = new ReturnStmtAST<>();
                     ast = new StmtBlockAST(newStmts);
                     }
                 }

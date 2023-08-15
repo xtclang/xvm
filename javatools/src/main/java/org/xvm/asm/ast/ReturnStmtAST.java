@@ -12,47 +12,49 @@ import org.xvm.asm.ast.LanguageAST.StmtAST;
 
 import org.xvm.util.Handy;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.STMT_BLOCK;
+import static org.xvm.asm.ast.LanguageAST.NodeType.RETURN_STMT;
 
 
 /**
  * Zero or more nested statements.
  */
-public class StmtBlockAST<C>
+public class ReturnStmtAST<C>
         extends StmtAST<C> {
 
-    private StmtAST<C>[] stmts;
+    private ExprAST<C>[] exprs;
 
-    StmtBlockAST() {}
+    public ReturnStmtAST() {
+        this.exprs = NO_EXPRS;
+    }
 
-    public StmtBlockAST(StmtAST<C>[] stmts) {
-        assert stmts != null && Arrays.stream(stmts).allMatch(Objects::nonNull);
-        this.stmts = stmts;
+    public ReturnStmtAST(ExprAST<C>[] exprs) {
+        assert exprs == null || Arrays.stream(exprs).allMatch(Objects::nonNull);
+        this.exprs = exprs == null ? NO_EXPRS : exprs;
     }
 
     @Override
     public NodeType nodeType() {
-        return STMT_BLOCK;
+        return RETURN_STMT;
     }
 
-    public StmtAST<C>[] getStmts() {
-        return stmts; // note: caller must not modify returned array in any way
+    public ExprAST<C>[] getexprs() {
+        return exprs; // note: caller must not modify returned array in any way
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int count = Handy.readMagnitude(in);
-        StmtAST<C>[] stmts = new StmtAST[count];
+        ExprAST<C>[] exprs = count == 0 ? NO_EXPRS : new ExprAST[count];
         for (int i = 0; i < count; ++i) {
-            stmts[i] = deserialize(in, res);
+            exprs[i] = deserialize(in, res);
         }
-        this.stmts = stmts;
+        this.exprs = exprs;
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        for (StmtAST child : stmts) {
+        for (ExprAST child : exprs) {
             child.prepareWrite(res);
         }
     }
@@ -61,8 +63,8 @@ public class StmtBlockAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        Handy.writePackedLong(out, stmts.length);
-        for (StmtAST child : stmts) {
+        Handy.writePackedLong(out, exprs.length);
+        for (ExprAST child : exprs) {
             child.write(out, res);
         }
     }
@@ -70,17 +72,15 @@ public class StmtBlockAST<C>
     @Override
     public String dump() {
         StringBuilder buf = new StringBuilder();
-        buf.append("{");
-        for (StmtAST child : stmts) {
-            buf.append('\n')
-               .append(Handy.indentLines(child.dump(), "  "));
+        buf.append(this);
+        for (ExprAST child : exprs) {
+            buf.append('\n').append(Handy.indentLines(child.dump(), "  "));
         }
-        buf.append("\n}");
         return buf.toString();
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[" + stmts.length + "]";
+        return getClass().getSimpleName() + ":" + exprs.length;
     }
 }
