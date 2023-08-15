@@ -1,4 +1,4 @@
-package org.xvm.asm.node;
+package org.xvm.asm.ast;
 
 
 import java.io.DataInput;
@@ -8,28 +8,30 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.node.LanguageNode.StatementNode;
+import org.xvm.asm.ast.LanguageAST.StmtAST;
 
 import org.xvm.util.Handy;
+
+import static org.xvm.asm.ast.LanguageAST.NodeType.STMT_BLOCK;
 
 
 /**
  * Zero or more nested statements.
  */
-public class StatementBlock<C>
-        extends StatementNode<C> {
+public class StmtBlockAST<C>
+    extends StmtAST<C> {
 
-    StatementBlock() {}
+    StmtBlockAST() {}
 
-    public StatementBlock(StatementNode<C>[] stmts) {
+    public StmtBlockAST(StmtAST<C>[] stmts) {
         assert stmts != null && Arrays.stream(stmts).allMatch(Objects::nonNull);
         this.stmts = stmts;
     }
 
-    StatementNode<C>[] stmts;
+    StmtAST<C>[] stmts;
 
     @Override
-    public int nodeType() {
+    public NodeType nodeType() {
         return STMT_BLOCK;
     }
 
@@ -37,7 +39,7 @@ public class StatementBlock<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int count = Handy.readMagnitude(in);
-        StatementNode<C>[] stmts = new StatementNode[count];
+        StmtAST<C>[] stmts = new StmtAST[count];
         for (int i = 0; i < count; ++i) {
             stmts[i] = deserialize(in, res);
         }
@@ -46,7 +48,7 @@ public class StatementBlock<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        for (StatementNode child : stmts) {
+        for (StmtAST child : stmts) {
             child.prepareWrite(res);
         }
     }
@@ -54,9 +56,9 @@ public class StatementBlock<C>
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType());
+        out.writeByte(nodeType().ordinal());
         Handy.writePackedLong(out, stmts.length);
-        for (StatementNode child : stmts) {
+        for (StmtAST child : stmts) {
             child.write(out, res);
         }
     }
@@ -65,7 +67,7 @@ public class StatementBlock<C>
     public String dump() {
         StringBuilder buf = new StringBuilder();
         buf.append("{");
-        for (StatementNode child : stmts) {
+        for (StmtAST child : stmts) {
             buf.append('\n')
                .append(Handy.indentLines(child.dump(), "  "));
         }

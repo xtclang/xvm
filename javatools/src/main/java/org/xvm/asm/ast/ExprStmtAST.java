@@ -1,30 +1,32 @@
-package org.xvm.asm.node;
+package org.xvm.asm.ast;
 
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.node.LanguageNode.StatementNode;
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+
+import static org.xvm.asm.ast.LanguageAST.NodeType.EXPR_STMT;
 
 
 /**
  * An expression whose return values are ignored, and which is treated as a statement.
  */
-public class ExpressionStatement<C>
-        extends StatementNode<C> {
+public class ExprStmtAST<C>
+    extends StmtAST<C> {
 
-    ExpressionStatement() {}
+    ExprStmtAST() {}
 
-    public ExpressionStatement(ExpressionNode expr) {
+    public ExprStmtAST(ExprAST expr) {
         assert expr != null;
         this.expr = expr;
     }
 
-    ExpressionNode<C> expr;
+    ExprAST<C> expr;
 
     @Override
-    public int nodeType() {
+    public NodeType nodeType() {
         return EXPR_STMT;
     }
 
@@ -42,7 +44,7 @@ public class ExpressionStatement<C>
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType());
+        out.writeByte(nodeType().ordinal());
         expr.write(out, res);
     }
 

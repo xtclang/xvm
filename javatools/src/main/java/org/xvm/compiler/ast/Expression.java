@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.Arrays;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.ExprNotImplAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -1160,6 +1164,26 @@ public abstract class Expression
                 ? aTypes
                 : new TypeConstant[] {getType()};
         }
+
+    /**
+     * Obtain an ExpressionNode that represents this AST node and can be used to serialize the AST.
+     * This method must not be called until after the expression has been validated.
+     *
+     * @return an "AST node" from the expression branch of the LanguageNode hierarchy of classes
+     */
+    public ExprAST<Constant> getExprAST()
+        {
+        assert isValidated();
+        if (alreadyFailedToProvideExpressionNode.add(this.getClass()))
+            {
+            System.err.println("TODO implement getExpressionNode() for Expression: "
+                                   + this.getClass().getSimpleName());
+            }
+
+        return new ExprNotImplAST(this.getClass().getSimpleName(), getTypes());
+        }
+
+    private static HashSet<Class> alreadyFailedToProvideExpressionNode = new HashSet<>();
 
     /**
      * Query the expression to determine if it would be a good candidate for tracing.

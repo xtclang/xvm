@@ -34,7 +34,7 @@ import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo.Progress;
 
-import org.xvm.asm.node.LanguageNode.ConstantResolver;
+import org.xvm.asm.ast.LanguageAST.ConstantResolver;
 
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;

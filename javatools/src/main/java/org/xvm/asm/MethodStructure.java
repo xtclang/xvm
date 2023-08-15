@@ -38,9 +38,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
 
-import org.xvm.asm.node.LanguageNode;
-import org.xvm.asm.node.LanguageNode.ConstantResolver;
-import org.xvm.asm.node.StatementBlock;
+import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.LanguageAST.ConstantResolver;
+import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Nop;
@@ -696,10 +696,10 @@ public class MethodStructure
     /**
      * @return the root LanguageNode, or null if none
      */
-    LanguageNode<Constant> getAst()
+    LanguageAST<Constant> getAst()
         {
         // check if the AST has been provided or has already been deserialized
-        LanguageNode<Constant> ast = m_ast;
+        LanguageAST<Constant> ast = m_ast;
         if (ast != null)
             {
             return ast;
@@ -742,7 +742,7 @@ public class MethodStructure
             DataInput in = new DataInputStream(new ByteArrayInputStream(abAst));
             try
                 {
-                m_ast = ast = LanguageNode.deserialize(in, res);
+                m_ast = ast = LanguageAST.deserialize(in, res);
                 }
             catch (IOException e)
                 {
@@ -757,11 +757,11 @@ public class MethodStructure
     /**
      * @param ast  the root LanguageNode
      */
-    void setAst(LanguageNode<Constant> ast)
+    void setAst(LanguageAST<Constant> ast)
         {
         if (ast != m_ast)
             {
-            assert ast instanceof StatementBlock;
+            assert ast instanceof StmtBlockAST;
             m_ast   = ast;
             m_abAst = null;     // force a re-build of the binary form of the AST
             }
@@ -1176,7 +1176,7 @@ public class MethodStructure
             }
 
         Code                   code = m_code;
-        LanguageNode<Constant> ast  = m_ast;
+        LanguageAST<Constant> ast  = m_ast;
         if (code != null || ast != null)
             {
             m_abOps = null;
@@ -3494,7 +3494,7 @@ public class MethodStructure
     /**
      * The method's AST.
      */
-    private transient LanguageNode<Constant> m_ast;
+    private transient LanguageAST<Constant> m_ast;
 
     /**
      * The max number of registers used by the method. Calculated from the ops.

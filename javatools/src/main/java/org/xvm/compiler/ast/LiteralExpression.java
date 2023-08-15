@@ -9,6 +9,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+
+import org.xvm.asm.ast.LitExprAST;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -263,6 +266,12 @@ public class LiteralExpression
         assert constVal != null;
         return finishValidation(ctx, typeRequired, typeActual, TypeFit.Fit, constVal, errs);
         }
+
+        @Override
+        public ExprAST<Constant> getExprAST()
+            {
+            return new LitExprAST<>(getType(), getLiteralConstant());
+            }
 
 
     // ----- helpers -------------------------------------------------------------------------------

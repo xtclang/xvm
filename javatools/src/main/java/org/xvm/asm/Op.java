@@ -17,7 +17,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.asm.node.LanguageNode;
+import org.xvm.asm.ast.LanguageAST;
 
 import org.xvm.asm.op.*;
 
@@ -701,7 +701,7 @@ public abstract class Op
      * together all the constants used by the ops.
      */
     public static class ConstantRegistry
-            implements LanguageNode.ConstantResolver<Constant>
+            implements LanguageAST.ConstantResolver<Constant>
         {
         /**
          * Construct a ConstantRegistry.
