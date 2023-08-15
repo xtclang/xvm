@@ -9,8 +9,12 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.StmtNotImplAST;
 
 import org.xvm.asm.op.Label;
 
@@ -206,14 +210,16 @@ public abstract class Statement
     /**
      * Generate the generic assembly code that wraps the contents of any statement.
      *
-     * @param ctx         the compilation context for the statement
-     * @param fReachable  true iff the statement is reachable
-     * @param code        the code object to which the assembly is added
-     * @param errs        the error listener to log to
+     * @param ctx        the compilation context for the statement
+     * @param fReachable true iff the statement is reachable
+     * @param code       the code object to which the assembly is added
+     * @param holder     the holder to collect the AST from this statement
+     * @param errs       the error listener to log to
      *
      * @return true iff the statement completes
      */
-    protected final boolean completes(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected final boolean completes(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                                      ErrorListener errs)
         {
         if (fReachable)
             {
@@ -224,7 +230,7 @@ public abstract class Statement
             code = code.blackhole();
             }
 
-        boolean fCompletes = fReachable && emit(ctx, fReachable, code, errs);
+        boolean fCompletes = fReachable && emit(ctx, fReachable, code, holder, errs);
 
         if (m_labelEnd != null)
             {
@@ -237,14 +243,16 @@ public abstract class Statement
     /**
      * Generate the statement-specific assembly code.
      *
-     * @param ctx         the compilation context for the statement
-     * @param fReachable  true iff the statement is reachable
-     * @param code        the code object to which the assembly is added
-     * @param errs        the error listener to log to
+     * @param ctx        the compilation context for the statement
+     * @param fReachable true iff the statement is reachable
+     * @param code       the code object to which the assembly is added
+     * @param holder     the holder to collect the AST from this statement
+     * @param errs       the error listener to log to
      *
      * @return true iff the statement completes
      */
-    protected abstract boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs);
+    protected abstract boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                                    ErrorListener errs);
 
     /**
      * The break info.
@@ -263,6 +271,30 @@ public abstract class Statement
         public final Map<String, Assignment> mapAssign;
         public final Map<String, Argument> mapNarrow;
         public final Label label;
+        }
+
+    /**
+     * Holder for LanguageAST objects as they percolate up the emit() call tree.
+     */
+    static class AstHolder
+        {
+        StmtAST<Constant> getAst(Statement stmt)
+            {
+            assert stmt != null;
+            return stmt == this.stmt
+                    ? ast
+                    : new StmtNotImplAST<>(stmt.getClass().getSimpleName());
+            }
+
+        void setAst(Statement stmt, StmtAST<Constant> ast)
+            {
+            assert stmt != null && ast != null;
+            this.stmt = stmt;
+            this.ast  = ast;
+            }
+
+        private Statement         stmt;
+        private StmtAST<Constant> ast;
         }
 
 

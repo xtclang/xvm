@@ -11,6 +11,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.compiler.ast.Statement.AstHolder;
+
 import org.xvm.util.Severity;
 
 
@@ -259,12 +261,14 @@ public class StatementExpression
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         m_aLVal = aLVal;
-        if (body.completes(ctx, true, code, errs) &&
+        AstHolder holder = new AstHolder();
+        if (body.completes(ctx, true, code, holder, errs) &&
                 m_atypeRequired != null && m_atypeRequired.length > 0)
             {
             errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                     getEndPosition(), getEndPosition());
             }
+        // TODO CP save off the ast node from the holder
         }
 
 

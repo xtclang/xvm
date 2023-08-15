@@ -659,7 +659,8 @@ public class ForEachStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean fCompletes = fReachable;
 
@@ -668,7 +669,7 @@ public class ForEachStatement
         // strip any declarations off of the LValues (we'll handle them separately)
         for (VariableDeclarationStatement stmt : getCondition().takeDeclarations())
             {
-            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+            fCompletes = stmt.completes(ctx, fCompletes, code, holder, errs);
             }
 
         if (isLabeled())
@@ -703,11 +704,11 @@ public class ForEachStatement
 
         fCompletes = switch (m_plan)
             {
-            case ITERATOR -> emitIterator(ctx, fCompletes, code, errs);
-            case RANGE    -> emitRange(ctx, fCompletes, code, errs);
-            case LIST     -> emitList(ctx, fCompletes, code, errs);
-            case MAP      -> emitMap(ctx, fCompletes, code, errs);
-            case ITERABLE -> emitIterable(ctx, fCompletes, code, errs);
+            case ITERATOR -> emitIterator(ctx, fCompletes, code, holder, errs);
+            case RANGE    -> emitRange(ctx, fCompletes, code, holder, errs);
+            case LIST     -> emitList(ctx, fCompletes, code, holder, errs);
+            case MAP      -> emitMap(ctx, fCompletes, code, holder, errs);
+            case ITERABLE -> emitIterable(ctx, fCompletes, code, holder, errs);
             };
 
         code.add(new Exit());
@@ -718,7 +719,8 @@ public class ForEachStatement
     /**
      * Handle code generation for the Iterator type.
      */
-    private boolean emitIterator(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitIterator(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                                 ErrorListener errs)
         {
         ConstantPool pool     = pool();
         TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), getElementType());
@@ -727,14 +729,14 @@ public class ForEachStatement
         code.add(new Var(regIter));
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regIter), errs);
 
-        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
+        return emitAnyIterator(ctx, fReachable, code, holder, regIter, errs);
         }
 
     /**
      * Helper that generates code using the passed Iterator register.
      */
-    private boolean emitAnyIterator(Context ctx, boolean fReachable, Code code, Register regIter,
-                                    ErrorListener errs)
+    private boolean emitAnyIterator(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                                    Register regIter, ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -798,7 +800,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
+        block.completes(ctx, fReachable, code, holder, errs);
 
         if (hasContinueLabel())
             {
@@ -820,7 +822,8 @@ public class ForEachStatement
     /**
      * Handle code generation for the Range (Interval) type.
      */
-    private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitRange(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                              ErrorListener errs)
         {
         // code simplification for intrinsic sequential types
         boolean      fConstant   = m_exprRValue.isConstant();
@@ -844,13 +847,13 @@ public class ForEachStatement
                 case "numbers.UInt64":
                 case "numbers.UInt128":
                 case "numbers.UIntN":
-                    return emitConstantRange(ctx, fReachable, code, typeElement, errs);
+                    return emitConstantRange(ctx, fReachable, code, holder, typeElement, errs);
                 }
 
             if (typeElement.isExplicitClassIdentity(false) &&
                 typeElement.getExplicitClassFormat() == Component.Format.ENUM)
                 {
-                return emitConstantRange(ctx, fReachable, code, typeElement, errs);
+                return emitConstantRange(ctx, fReachable, code, holder, typeElement, errs);
                 }
             }
 
@@ -861,14 +864,14 @@ public class ForEachStatement
             return false;
             }
 
-        return emitVariableRange(ctx, fReachable, code, typeElement, errs);
+        return emitVariableRange(ctx, fReachable, code, holder, typeElement, errs);
         }
 
     /**
      * Handle optimized code generation for the Interval type when the Range is a constant value.
      */
     private boolean emitConstantRange(Context ctx, boolean fReachable, Code code,
-                                      TypeConstant typeSeq, ErrorListener errs)
+                                      AstHolder holder, TypeConstant typeSeq, ErrorListener errs)
         {
         ConstantPool  pool  = pool();
         RangeConstant range = (RangeConstant) m_exprRValue.toConstant();
@@ -912,7 +915,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
+        block.completes(ctx, fReachable, code, holder, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -934,7 +937,7 @@ public class ForEachStatement
      * Handle optimized code generation for the Interval type when the Range is not a constant.
      */
     private boolean emitVariableRange(Context ctx, boolean fReachable, Code code,
-                                      TypeConstant typeSeq, ErrorListener errs)
+                                      AstHolder holder, TypeConstant typeSeq, ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -1007,7 +1010,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
+        block.completes(ctx, fReachable, code, holder, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -1038,7 +1041,8 @@ public class ForEachStatement
     /**
      * Handle code generation for the List type.
      */
-    private boolean emitList(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitList(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                             ErrorListener errs)
         {
         ConstantPool     pool     = pool();
         TypeConstant     typeElem = getElementType();
@@ -1158,7 +1162,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
+        block.completes(ctx, fReachable, code, holder, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -1175,7 +1179,8 @@ public class ForEachStatement
     /**
      * Handle code generation for the Map type.
      */
-    private boolean emitMap(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitMap(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                            ErrorListener errs)
         {
         ConstantPool pool      = pool();
         TypeConstant typeKey   = getKeyType();
@@ -1368,7 +1373,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
+        block.completes(ctx, fReachable, code, holder, errs);
 
         if (hasContinueLabel())
             {
@@ -1390,7 +1395,8 @@ public class ForEachStatement
     /**
      * Handle code generation for the Iterable type.
      */
-    private boolean emitIterable(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitIterable(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                                 ErrorListener errs)
         {
         ConstantPool pool        = pool();
         TypeConstant typeElement = getElementType();
@@ -1410,7 +1416,7 @@ public class ForEachStatement
 
         code.add(new Invoke_01(argAble, idIterator, regIter));
 
-        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
+        return emitAnyIterator(ctx, fReachable, code, holder, regIter, errs);
         }
 
     /**

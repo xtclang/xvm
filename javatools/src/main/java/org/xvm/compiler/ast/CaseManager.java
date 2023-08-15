@@ -33,6 +33,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.Branch;
+import org.xvm.compiler.ast.Statement.AstHolder;
 
 import org.xvm.util.BitCube;
 import org.xvm.util.ListMap;
@@ -1396,7 +1397,8 @@ public class CaseManager<CookieType>
             Expression exprCond;
             if (node instanceof AssignmentStatement stmt)
                 {
-                if (!stmt.completes(ctx, true, code, errs))
+                AstHolder holder = new AstHolder(); // TODO CP
+                if (!stmt.completes(ctx, true, code, holder, errs))
                     {
                     m_fCondAborts = true;
                     }

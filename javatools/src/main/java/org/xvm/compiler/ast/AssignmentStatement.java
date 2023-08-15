@@ -780,7 +780,8 @@ public class AssignmentStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean      fCompletes = fReachable;
         ConstantPool pool       = pool();
@@ -803,7 +804,7 @@ public class AssignmentStatement
 
                 if (lvalue instanceof Statement stmt)
                     {
-                    fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+                    fCompletes = stmt.completes(ctx, fCompletes, code, holder, errs);
                     }
 
                 Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
@@ -819,7 +820,7 @@ public class AssignmentStatement
                 {
                 if (lvalue instanceof Statement stmt)
                     {
-                    fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+                    fCompletes = stmt.completes(ctx, fCompletes, code, holder, errs);
                     }
 
                 if (op.getId() == Id.COND_NN_ASN)

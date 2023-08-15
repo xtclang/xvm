@@ -295,7 +295,8 @@ public class SwitchStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         CaseManager<CaseGroup> mgr = m_casemgr;
 
@@ -307,7 +308,7 @@ public class SwitchStatement
             CaseGroup groupStart = mgr.getCookie(mgr.getSwitchConstantLabel());
             for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
                 {
-                emitCaseGroup(ctx, fReachable, code, iGroup, errs);
+                emitCaseGroup(ctx, fReachable, code, holder, iGroup, errs);
                 if (m_listGroups.get(iGroup).labelContinueTo == null)
                     {
                     // if there was no "continue", then we're done
@@ -335,7 +336,7 @@ public class SwitchStatement
 
         for (int iGroup = 0, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
             {
-            emitCaseGroup(ctx, fReachable, code, iGroup, errs);
+            emitCaseGroup(ctx, fReachable, code, holder, iGroup, errs);
             }
 
         if (mgr.hasDeclarations())
@@ -353,7 +354,7 @@ public class SwitchStatement
         return mgr.isCompletable();
         }
 
-    private void emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup, ErrorListener errs)
+    private void emitCaseGroup(Context ctx, boolean fReachable, Code code, AstHolder holder, int iGroup, ErrorListener errs)
         {
         boolean   fCompletes = fReachable;
         CaseGroup group      = m_listGroups.get(iGroup);
@@ -401,7 +402,7 @@ public class SwitchStatement
                     }
                 }
 
-            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+            fCompletes = stmt.completes(ctx, fCompletes, code, holder, errs);
             }
 
         if (group.fScope)

@@ -6,7 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -98,7 +98,8 @@ public class TypedefStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, MethodStructure.Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         return true;
         }

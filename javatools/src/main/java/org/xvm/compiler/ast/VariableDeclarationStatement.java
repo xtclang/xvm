@@ -248,7 +248,8 @@ public class VariableDeclarationStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         ConstantPool   pool      = pool();
         StringConstant constName = pool.ensureStringConstant(getName());

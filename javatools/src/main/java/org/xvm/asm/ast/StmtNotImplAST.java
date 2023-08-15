@@ -19,7 +19,7 @@ public class StmtNotImplAST<C>
 
     StmtNotImplAST() {}
 
-    public StmtNotImplAST(String name, C[] types) {
+    public StmtNotImplAST(String name) {
         assert name != null;
         this.name = name;
     }

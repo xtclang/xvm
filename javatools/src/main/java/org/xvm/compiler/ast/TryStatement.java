@@ -321,7 +321,8 @@ public class TryStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean      fCompletes = fReachable;
         ConstantPool pool       = pool();
@@ -338,7 +339,7 @@ public class TryStatement
             aFinallyClose = new FinallyStart[c];
             for (int i = 0; i < c; ++i)
                 {
-                fCompletes = resources.get(i).completes(ctx, fCompletes, code, errs);
+                fCompletes = resources.get(i).completes(ctx, fCompletes, code, holder, errs);
                 FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
                 aFinallyClose[i] = opFinally;
                 code.add(new GuardAll(opFinally));
@@ -375,7 +376,7 @@ public class TryStatement
 
         // the "guarded" body of the using/try statement
         block.suppressScope();
-        boolean fBlockCompletes = block.completes(ctx, fCompletes, code, errs);
+        boolean fBlockCompletes = block.completes(ctx, fCompletes, code, holder, errs);
 
         // the "catch" blocks
         boolean fAnyCatchCompletes = false;
@@ -388,7 +389,7 @@ public class TryStatement
                 {
                 CatchStatement stmtCatch = catches.get(i);
                 stmtCatch.setCatchLabel(labelCatchEnd);
-                fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
+                fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, holder, errs);
                 }
             }
 
@@ -401,7 +402,7 @@ public class TryStatement
 
             code.add(labelCatchEnd); // the normal flow is to jump to the "FinallyStart" op
             code.add(opFinallyBlock);
-            boolean fFinallyCompletes = catchall.completes(ctx, fCompletes, code, errs);
+            boolean fFinallyCompletes = catchall.completes(ctx, fCompletes, code, holder, errs);
 
             fTryCompletes &= fFinallyCompletes;
 

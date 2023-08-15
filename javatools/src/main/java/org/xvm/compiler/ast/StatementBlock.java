@@ -29,6 +29,10 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.StmtBlockAST;
+import org.xvm.asm.ast.StmtNotImplAST;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -352,7 +356,9 @@ public class StatementBlock
             return false;
             }
 
-        boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+        AstHolder holder     = new AstHolder();
+        boolean   fCompletes = that.completes(ctx.emittingContext(code), true, code, holder, errs);
+        StmtAST   ast        = holder.getAst(this);
 
         if (fCompletes)
             {
@@ -361,6 +367,18 @@ public class StatementBlock
                 {
                 // a void method has an implicit "return;" at the end of it
                 code.add(new Return_0());
+
+                // add the return statement to the AST
+                if (ast instanceof StmtBlockAST astBlock)
+                    {
+                    StmtAST<Constant>[] oldStmts = astBlock.getStmts();
+                    int                 oldSize  = oldStmts.length;
+                    int                 newSize  = oldSize + 1;
+                    StmtAST<Constant>[] newStmts = new StmtAST[newSize];
+                    System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
+                    newStmts[oldSize] = new StmtNotImplAST<>("return"); // TODO CP
+                    ast = new StmtBlockAST(newStmts);
+                    }
                 }
             else
                 {
@@ -376,6 +394,7 @@ public class StatementBlock
             code.add(new Nop());
             }
 
+        ctx.getMethod().setAst(ast);
         return true;
         }
 
@@ -449,11 +468,13 @@ public class StatementBlock
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean fCompletable = fReachable;
 
-        List<Statement> stmts = this.stmts;
+        List<Statement>     stmts = this.stmts;
+        StmtAST<Constant>[] asts  = EMPTY_AST;
         if (stmts != null && !stmts.isEmpty())
             {
             // there is an implicit scope for the top-most statement block of a method
@@ -484,6 +505,7 @@ public class StatementBlock
                 }
 
             boolean fLoggedUnreachable = false;
+            ArrayList<StmtAST<Constant>> listAsts = new ArrayList<>((stmts.size()));
             for (Statement stmt : stmts)
                 {
                 if (!fReachable && !fLoggedUnreachable && !(stmt instanceof ComponentStatement))
@@ -492,7 +514,12 @@ public class StatementBlock
                     fLoggedUnreachable = true;
                     }
 
-                fCompletable &= stmt.completes(ctx, fReachable, code, errs);
+                fCompletable &= stmt.completes(ctx, fReachable, code, holder, errs);
+
+                if (fReachable && !(stmt instanceof ComponentStatement))
+                    {
+                    listAsts.add(holder.getAst(stmt));
+                    }
 
                 if (fReachable && !fCompletable)
                     {
@@ -511,8 +538,11 @@ public class StatementBlock
                 {
                 code.add(new Exit());
                 }
+
+            asts = listAsts.toArray(new StmtAST[0]);
             }
 
+        holder.setAst(this, new StmtBlockAST<>(asts));
         return fCompletable;
         }
 
@@ -1800,5 +1830,6 @@ public class StatementBlock
     private transient boolean m_fSuppressScope;
     private transient boolean m_fTerminatedAbnormally;
 
+    private static final StmtAST<Constant>[] EMPTY_AST = new StmtAST[0];
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }

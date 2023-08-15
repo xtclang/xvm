@@ -324,7 +324,8 @@ public class ReturnStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         AstNode container    = getCodeContainer();
         boolean fConditional = container.isReturnConditional();

@@ -696,7 +696,7 @@ public class MethodStructure
     /**
      * @return the root LanguageNode, or null if none
      */
-    LanguageAST<Constant> getAst()
+    public LanguageAST<Constant> getAst()
         {
         // check if the AST has been provided or has already been deserialized
         LanguageAST<Constant> ast = m_ast;
@@ -757,7 +757,7 @@ public class MethodStructure
     /**
      * @param ast  the root LanguageNode
      */
-    void setAst(LanguageAST<Constant> ast)
+    public void setAst(LanguageAST<Constant> ast)
         {
         if (ast != m_ast)
             {

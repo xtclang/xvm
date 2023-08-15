@@ -596,7 +596,8 @@ public class ForStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean fCompletes = fReachable;
 
@@ -621,7 +622,7 @@ public class ForStatement
         Label[]         aInitLabel = m_alabelInitGround;
         for (int i = 0; i < cInit; ++i)
             {
-            fCompletes = listInit.get(i).completes(ctx, fCompletes, code, errs);
+            fCompletes = listInit.get(i).completes(ctx, fCompletes, code, holder, errs);
 
             Label labelGround = aInitLabel == null ? null : aInitLabel[i];
             if (labelGround != null)
@@ -673,7 +674,7 @@ public class ForStatement
                 AstNode cond = getCondition(i);
                 if (cond instanceof AssignmentStatement stmtCond)
                     {
-                    fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
+                    fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, holder, errs);
 
                     code.add(stmtCond.isNegated()
                             ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
@@ -695,7 +696,7 @@ public class ForStatement
             block.suppressScope();
             }
 
-        fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
+        fCompletes &= block.completes(ctx, fBlockReachable, code, holder, errs) || !fAlwaysTrue;
 
         if (hasContinueLabel())
             {
@@ -707,7 +708,7 @@ public class ForStatement
         Label[]         aUpdateLabel = m_alabelUpdateGround;
         for (int i = 0; i < cUpdate; ++i)
             {
-            fCompletes &= listUpdate.get(i).completes(ctx, fCompletes, code, errs) || !fAlwaysTrue;
+            fCompletes &= listUpdate.get(i).completes(ctx, fCompletes, code, holder, errs) || !fAlwaysTrue;
 
             Label labelGround = aUpdateLabel == null ? null : aUpdateLabel[i];
             if (labelGround != null)

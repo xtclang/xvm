@@ -504,7 +504,8 @@ public class WhileStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean  fCompletes    = fReachable;
         boolean  fDoWhile      = isDoWhile();
@@ -544,7 +545,7 @@ public class WhileStatement
             if (!fDoWhile)
                 {
                 // while(false) {body} - optimized out completely (unreachable)
-                block.completes(ctx, false, code, errs);
+                block.completes(ctx, false, code, holder, errs);
                 return fCompletes;
                 }
 
@@ -559,7 +560,7 @@ public class WhileStatement
             //   Break:
             code.add(new Enter());
             emitLabelVarCreation(code, regFirst, regCount);
-            fCompletes = block.completes(ctx, fCompletes, code, errs);
+            fCompletes = block.completes(ctx, fCompletes, code, holder, errs);
             code.add(new Exit());
             code.add(getContinueLabel());
             return fCompletes;
@@ -596,7 +597,7 @@ public class WhileStatement
             Op opLast = code.getLastOp();
 
             block.suppressScope();
-            block.completes(ctx, fCompletes, code, errs);
+            block.completes(ctx, fCompletes, code, holder, errs);
 
             if (code.getLastOp() == opLast)
                 {
@@ -640,10 +641,10 @@ public class WhileStatement
 
             // we explicitly do NOT check the block completion, since our completion is not dependent on
             // the block's ability to complete (since the loop may execute zero times)
-            block.completes(ctx, fCompletes, code, errs);
+            block.completes(ctx, fCompletes, code, holder, errs);
 
             code.add(getContinueLabel());
-            fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
+            fCompletes = emitConditionTest(ctx, fCompletes, code, holder, errs);
             code.add(new Exit());
             return fCompletes;
             }
@@ -681,7 +682,7 @@ public class WhileStatement
                     {
                     for (VariableDeclarationStatement stmtDecl : stmtCond.takeDeclarations())
                         {
-                        fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
+                        fCompletes &= stmtDecl.completes(ctx, fCompletes, code, holder, errs);
                         }
                     }
                 }
@@ -691,11 +692,11 @@ public class WhileStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fCompletes, code, errs);
+        block.completes(ctx, fCompletes, code, holder, errs);
 
         code.add(getContinueLabel());
         emitLabelVarUpdate(code, regFirst, regCount, labelInit);
-        fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
+        fCompletes = emitConditionTest(ctx, fCompletes, code, holder, errs);
         if (fOwnScope)
             {
             code.add(new Exit());
@@ -761,7 +762,8 @@ public class WhileStatement
             }
         }
 
-    private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                                      ErrorListener errs)
         {
         boolean fCompletes = fReachable;
         for (int i = 0, c = getConditionCount(); i < c; ++i)
@@ -770,7 +772,7 @@ public class WhileStatement
             boolean fLast = i == c-1;
             if (cond instanceof AssignmentStatement stmtCond)
                 {
-                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
+                fCompletes &= stmtCond.completes(ctx, fCompletes, code, holder, errs);
 
                 if (fLast)
                     {

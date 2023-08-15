@@ -18,6 +18,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
@@ -727,7 +728,8 @@ public class PropertyDeclarationStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, MethodStructure.Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean fCompletes = fReachable;
 
@@ -765,7 +767,7 @@ public class PropertyDeclarationStatement
             code.add(new P_Var(idProp, regThis, regPropRef));
             code.add(new P_Get(idAssigned, regPropRef, regAssigned));
             code.add(new JumpTrue(regAssigned, labelSkipAssign));
-            fCompletes = assignment.completes(ctx, fCompletes, code, errs);
+            fCompletes = assignment.completes(ctx, fCompletes, code, holder, errs);
             code.add(labelSkipAssign);
             }
 

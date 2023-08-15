@@ -102,7 +102,8 @@ public class ExpressionStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
+                           ErrorListener errs)
         {
         boolean fCompletes = fReachable & expr.isCompletable();
 

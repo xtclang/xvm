@@ -35,6 +35,11 @@ public class StmtBlockAST<C>
         return STMT_BLOCK;
     }
 
+    public StmtAST<C>[] getStmts() {
+        // it would be nice if Java had a way of exposing container data without exposing mutability
+        return stmts;
+    }
+
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
