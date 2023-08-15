@@ -17,14 +17,14 @@ import static org.xvm.util.Handy.writeUtf8String;
 public class StmtNotImplAST<C>
         extends StmtAST<C> {
 
+    private String name;
+
     StmtNotImplAST() {}
 
     public StmtNotImplAST(String name) {
         assert name != null;
         this.name = name;
     }
-
-    String name;
 
     @Override
     public NodeType nodeType() {

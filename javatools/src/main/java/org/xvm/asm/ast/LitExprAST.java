@@ -17,7 +17,10 @@ import static org.xvm.util.Handy.writePackedLong;
  * An expression whose return values are ignored, and which is treated as a statement.
  */
 public class LitExprAST<C>
-    extends ExprAST<C> {
+        extends ExprAST<C> {
+
+    private C type;
+    private C literal;
 
     LitExprAST() {}
 
@@ -26,9 +29,6 @@ public class LitExprAST<C>
         this.type    = type;
         this.literal = literal;
     }
-
-    C type;
-    C literal;
 
     public C getType() {
         return type;
@@ -39,7 +39,7 @@ public class LitExprAST<C>
     }
 
     @Override
-    C getType(int i) {
+    public C getType(int i) {
         assert i == 0;
         return type;
     }

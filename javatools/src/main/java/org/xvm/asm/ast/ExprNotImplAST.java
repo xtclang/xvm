@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.Objects;
+
 import org.xvm.asm.ast.LanguageAST.ExprAST;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -21,6 +22,9 @@ import static org.xvm.util.Handy.writeUtf8String;
 public class ExprNotImplAST<C>
         extends ExprAST<C> {
 
+    private String   name;
+    private Object[] types;
+
     ExprNotImplAST() {}
 
     public ExprNotImplAST(String name, C[] types) {
@@ -28,9 +32,6 @@ public class ExprNotImplAST<C>
         this.name  = name;
         this.types = types;
     }
-
-    String   name;
-    Object[] types;
 
     @Override
     public NodeType nodeType() {

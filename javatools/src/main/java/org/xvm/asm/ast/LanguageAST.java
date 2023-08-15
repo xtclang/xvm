@@ -189,7 +189,7 @@ public abstract class LanguageAST<C> {
         /**
          * @return the number of values yielded by the expression
          */
-        int getCount() {
+        public int getCount() {
             // subclasses that can yield more than one value must override this
             return 1;
         }
@@ -199,7 +199,7 @@ public abstract class LanguageAST<C> {
          *
          * @return the type constant of the i-th value yielded by the expression
          */
-        abstract C getType(int i);
+        public abstract C getType(int i);
     }
 
 

@@ -14,7 +14,9 @@ import static org.xvm.asm.ast.LanguageAST.NodeType.EXPR_STMT;
  * An expression whose return values are ignored, and which is treated as a statement.
  */
 public class ExprStmtAST<C>
-    extends StmtAST<C> {
+        extends StmtAST<C> {
+
+    private ExprAST<C> expr;
 
     ExprStmtAST() {}
 
@@ -22,8 +24,6 @@ public class ExprStmtAST<C>
         assert expr != null;
         this.expr = expr;
     }
-
-    ExprAST<C> expr;
 
     @Override
     public NodeType nodeType() {

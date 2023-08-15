@@ -19,7 +19,9 @@ import static org.xvm.asm.ast.LanguageAST.NodeType.STMT_BLOCK;
  * Zero or more nested statements.
  */
 public class StmtBlockAST<C>
-    extends StmtAST<C> {
+        extends StmtAST<C> {
+
+    private StmtAST<C>[] stmts;
 
     StmtBlockAST() {}
 
@@ -27,8 +29,6 @@ public class StmtBlockAST<C>
         assert stmts != null && Arrays.stream(stmts).allMatch(Objects::nonNull);
         this.stmts = stmts;
     }
-
-    StmtAST<C>[] stmts;
 
     @Override
     public NodeType nodeType() {
