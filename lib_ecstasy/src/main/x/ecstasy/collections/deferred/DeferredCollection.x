@@ -172,12 +172,17 @@
     }
 
     @Override
+    Collection<Element> filter(function Boolean(Element) match) {
+        return alreadyReified
+            ? reified.filter(match)
+            : new FilteredCollection<Element>(this, match);
+    }
+
+    @Override
     <Result extends Collection<Element>> Result filter(function Boolean(Element) match,
-                                                       Aggregator<Element, Result>? collector = Null) {
+                                                       Aggregator<Element, Result> collector) {
         if (alreadyReified) {
-            return reified.filter(match, collector).as(Result);
-        } else if (collector == Null) {
-            return new FilteredCollection<Element>(this, match).as(Result);
+            return reified.filter(match, collector);
         } else {
             collector.Accumulator accum = collector.init();
             for (Element e : this) {
@@ -190,15 +195,21 @@
     }
 
     @Override
-    <Result extends Collection<Element>>
-    (Result matches, Result misses) partition(function Boolean(Element)    match,
-                                              Aggregator<Element, Result>? collector = Null) {
+    (Collection<Element> matches, Collection<Element> misses) partition(function Boolean(Element) match) {
         if (alreadyReified) {
-            return  reified.partition(match, collector);
-        } else if (collector == Null) {
+            return reified.partition(match);
+        } else {
             PartitionedCollection<Element> matches = new PartitionedCollection(this, match);
-            PartitionedCollection<Element> misses  = matches.inverse;
-            return matches.as(Result), misses.as(Result);
+            return matches, matches.inverse;
+        }
+    }
+
+    @Override
+    <Result extends Collection<Element>>
+    (Result matches, Result misses) partition(function Boolean(Element)   match,
+                                              Aggregator<Element, Result> collector) {
+        if (alreadyReified) {
+            return reified.partition(match, collector);
         } else {
             collector.Accumulator matches = collector.init();
             collector.Accumulator misses  = collector.init();
@@ -210,13 +221,17 @@
     }
 
     @Override
+    <Value> Collection<Value> map(function Value(Element) transform) {
+        return alreadyReified
+            ? reified.map(transform)
+            : new MappedCollection<Value, Element>(this, transform);
+    }
+
+    @Override
     <Value, Result extends Collection<Value>>
-            Result map(function Value(Element)    transform,
-                       Aggregator<Value, Result>? collector = Null) {
+            Result map(function Value(Element) transform, Aggregator<Value, Result> collector) {
         if (alreadyReified) {
-            return reified.map(transform, collector).as(Result);
-        } else if (collector == Null) {
-            return new MappedCollection<Value, Element>(this, transform).as(Result);
+            return reified.map(transform, collector);
         } else {
             collector.Accumulator accum = collector.init();
             for (Element e : this) {
@@ -227,21 +242,32 @@
     }
 
     @Override
+    <Value> Collection<Value> flatMap(function Iterable<Value>(Element) flatten) {
+        // TODO CP need to alter delegates clause to not delegate this method
+        return flatMap((e, dest) -> dest.addAll(flatten(e)));
+    }
+
+    @Override
     <Value, Result extends Collection<Value>>
             Result flatMap(function Iterable<Value>(Element) flatten,
-                           Aggregator<Value, Result>?        collector = Null) {
+                           Aggregator<Value, Result>         collector) {
         // TODO CP need to alter delegates clause to not delegate this method
         return flatMap((e, dest) -> dest.addAll(flatten(e)), collector);
     }
 
     @Override
+    <Value> Collection<Value> flatMap(function void(Element, Appender<Value>) flatten) {
+        return alreadyReified
+            ? reified.flatMap(flatten)
+            : new FlatMappedCollection<Value, Element>(this, flatten);
+    }
+
+    @Override
     <Value, Result extends Collection<Value>>
             Result flatMap(function void(Element, Appender<Value>) flatten,
-                           Aggregator<Value, Result>?              collector = Null) {
+                           Aggregator<Value, Result>               collector) {
         if (alreadyReified) {
-            return reified.flatMap(flatten, collector).as(Result);
-        } else if (collector == Null) {
-            return new FlatMappedCollection<Value, Element>(this, flatten).as(Result);
+            return reified.flatMap(flatten, collector);
         } else {
             collector.Accumulator accum = collector.init();
             for (Element e : this) {
@@ -290,10 +316,14 @@
     }
 
     @Override
-    <Result extends Collection<Element>> Result distinct(Aggregator<Element, Result>? collector = Null) {
-        if (!alreadyReified && collector == Null) {
-            return new DistinctCollection<Element>(this).as(Result);
-        }
+    Set<Element> distinct() {
+        return alreadyReified
+            ? reified.distinct()
+            : new DistinctCollection<Element>(this);
+    }
+
+    @Override
+    <Result extends Collection<Element>> Result distinct(Aggregator<Element, Result> collector) {
         return reified.distinct(collector);
     }
 

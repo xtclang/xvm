@@ -80,8 +80,7 @@ class DistinctCollection<Element>
     Boolean containsAll(Collection<Element> values) = (original ?: reified).containsAll(values);
 
     @Override
-    <Result extends Collection<Element>>
-            Result distinct(Aggregator<Element, Result>? collector = Null) {
-        return collector == Null ? this.as(Result) : super(collector);
+    Set<Element> distinct() {
+        return this;
     }
 }

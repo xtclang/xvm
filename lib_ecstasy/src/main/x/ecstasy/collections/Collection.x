@@ -253,26 +253,34 @@ interface Collection<Element>
      * Evaluate the contents of this `Collection` using the provided criteria, and produce a
      * resulting `Collection` that contains only the elements that match.
      *
-     * @param match      a function that evaluates an element of the `Collection` for inclusion
-     * @param collector  an optional [Aggregator] to use to collect the results
+     * @param match  a function that evaluates an element of the `Collection` for inclusion
      *
      * @return the resulting `Collection` containing the elements that matched the criteria; the
      *         returned `Collection` may depend on this `Collection`, so [reify] the result if
      *         subsequent changes to this `Collection` must not alter the contents of the returned
      *         `Collection`
-     *
      */
     @Concurrent
-    <Result extends Collection!> Result filter(function Boolean(Element)    match,
-                                               Aggregator<Element, Result>? collector = Null) {
-        if (collector == Null) {
-            if (Int count := knownSize(), count == 0) {
-                Element[] empty = [];
-                return empty.as(Result);
-            }
-            return new deferred.FilteredCollection<Element>(this, match).as(Result);
+    Collection! filter(function Boolean(Element) match) {
+        if (Int count := knownSize(), count == 0) {
+            return [];
         }
+        return new deferred.FilteredCollection<Element>(this, match);
+    }
 
+    /**
+     * Evaluate the contents of this `Collection` using the provided criteria, and produce a
+     * resulting `Collection` that contains only the elements that match.
+     *
+     * @param match      a function that evaluates an element of the `Collection` for inclusion
+     * @param collector  an [Aggregator] to use to collect the results
+     *
+     * @return the resulting `Collection` containing the elements that matched the provided criteria
+     *         and further "reduced" by the specified collector
+     */
+    @Concurrent
+    <Result extends Collection!> Result filter(function Boolean(Element)   match,
+                                               Aggregator<Element, Result> collector) {
         collector.Accumulator accumulator = collector.init();
         if (&accumulator == &this) {
             accumulator = this.removeAll(e -> !match(e));
@@ -291,7 +299,6 @@ interface Collection<Element>
      * those that do not.
      *
      * @param match      a function that evaluates an element of the `Collection` for inclusion
-     * @param collector  an optional [Aggregator] to use to collect the results
      *
      * @return matches   the list of elements that match the provided criteria; the returned
      *                   `Collection` may depend on this `Collection`, so [reify] the result if
@@ -303,16 +310,29 @@ interface Collection<Element>
      *                   contents of the returned `Collection`
      */
     @Concurrent
-    <Result extends Collection!>
-    (Result matches, Result misses) partition(function Boolean(Element)    match,
-                                              Aggregator<Element, Result>? collector = Null) {
-        if (collector == Null) {
-            import deferred.PartitionedCollection;
-            PartitionedCollection<Element> matches = new PartitionedCollection(this, match);
-            PartitionedCollection<Element> misses  = matches.inverse;
-            return matches.as(Result), misses.as(Result);
-        }
+    (Collection! matches, Collection! misses) partition(function Boolean(Element) match) {
+        import deferred.PartitionedCollection;
 
+        PartitionedCollection<Element> matches = new PartitionedCollection(this, match);
+        return matches, matches.inverse;
+    }
+
+    /**
+     * Partition the elements of the collection into those that match the provided criteria, and
+     * those that do not.
+     *
+     * @param match      a function that evaluates an element of the `Collection` for inclusion
+     * @param collector  an [Aggregator] to use to collect the results
+     *
+     * @return matches   the `Collection` of elements that match the provided criteria and further
+     *                   "reduced" by the specified collector
+     * @return misses    the `Collection` of elements that **do not** match the provided criteria
+     *                   and further "reduced" by the specified collector
+     */
+    @Concurrent
+    <Result extends Collection!>
+    (Result matches, Result misses) partition(function Boolean(Element)   match,
+                                              Aggregator<Element, Result> collector) {
         Appender<Element> matches = collector.init();
         Appender<Element> misses  = collector.init();
         if (&matches == &this) {
@@ -347,24 +367,33 @@ interface Collection<Element>
      *
      * @param transform  a function that creates a "mapped" element from each element in this
      *                   `Collection`
-     * @param collector  an optional [Aggregator] to use to collect the results
      *
-     * @return the resulting `Collection` containing the elements that matched the criteria; the
-     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
+     * @return the resulting `Collection` containing values "mapped from" values in this `Collection`;
+     *         the returned `Collection` may depend on this `Collection`, so [reify] the result if
      *         subsequent changes to this `Collection` must not alter the contents of the returned
      *         `Collection`
      */
-    <Value, Result extends Collection!<Value>>
-            Result map(function Value(Element)    transform,
-                       Aggregator<Value, Result>? collector = Null) {
-        if (collector == Null) {
-            if (Int count := knownSize(), count == 0) {
-                Value[] empty = [];
-                return empty.as(Result);
-            }
-            return new deferred.MappedCollection<Value, Element>(this, transform).as(Result);
+    <Value> Collection!<Value> map(function Value(Element) transform) {
+        if (Int count := knownSize(), count == 0) {
+            return [];
         }
+        return new deferred.MappedCollection<Value, Element>(this, transform);
+    }
 
+    /**
+     * Build a `Collection` that has one value "mapped from" each value in this `Collection`, using
+     * the provided function.
+     *
+     * @param transform  a function that creates a "mapped" element from each element in this
+     *                   `Collection`
+     * @param collector  an [Aggregator] to use to collect the results
+     *
+     * @return the resulting `Collection` containing values "mapped from" values in this `Collection`
+     *         and further "reduced" by the specified collector
+     */
+    <Value, Result extends Collection!<Value>>
+            Result map(function Value(Element)   transform,
+                       Aggregator<Value, Result> collector) {
         Iterator<Element> iter = iterator();
 
         Appender<Value> dest = collector.init(knownSize() ?: 0);
@@ -387,19 +416,34 @@ interface Collection<Element>
      * Build a `Collection` that has zero or more elements "flattened from" each element of this
      * collection.
      *
-     * @param transform  a function that provides an iter the "flattened" elements from each element in this
-     *                   `Collection`
-     * @param collector  an optional [Aggregator] to use to collect the results
+     * @param flatten  a function that provides an iterator of the "flattened" elements from each
+     *                 element in this `Collection`
      *
-     * @return the resulting `Collection` containing the elements that matched the criteria; the
-     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
-     *         subsequent changes to this `Collection` must not alter the contents of the returned
-     *         `Collection`
+     * @return the resulting `Collection` containing the elements "flattened from" each element of
+     *         this collection; the returned `Collection` may depend on this `Collection`, so
+     *         [reify] the result if subsequent changes to this `Collection` must not alter the
+     *         contents of the returned `Collection`
+     */
+    @Concurrent
+    <Value> Collection!<Value> flatMap(function Iterable<Value>(Element) flatten) {
+        return flatMap((e, dest) -> dest.addAll(flatten(e)));
+    }
+
+    /**
+     * Build a `Collection` that has zero or more elements "flattened from" each element of this
+     * collection.
+     *
+     * @param flatten  a function that provides an iterator of the "flattened" elements from each
+     *                 element in this `Collection`
+     * @param collector  an [Aggregator] to use to collect the results
+     *
+     * @return the resulting `Collection` containing the elements "flattened from" each element of
+     *         this collection and further "reduced" by the specified collector
      */
     @Concurrent
     <Value, Result extends Collection!<Value>>
             Result flatMap(function Iterable<Value>(Element) flatten,
-                           Aggregator<Value, Result>?        collector = Null) {
+                           Aggregator<Value, Result>         collector) {
         return flatMap((e, dest) -> dest.addAll(flatten(e)), collector);
     }
 
@@ -407,28 +451,37 @@ interface Collection<Element>
      * Build a `Collection` that has zero or more elements "flattened from" each element of this
      * collection.
      *
-     * @param transform  a function that creates the "flattened" elements from each element in this
-     *                   `Collection`
-     * @param collector  an optional [Aggregator] to use to collect the results
+     * @param flatten  a function that creates the "flattened" elements from each element in this
+     *                 `Collection`
      *
-     * @return the resulting `Collection` containing the elements that matched the criteria; the
-     *         returned `Collection` may depend on this `Collection`, so [reify] the result if
-     *         subsequent changes to this `Collection` must not alter the contents of the returned
-     *         `Collection`
+     * @return the resulting `Collection` containing the elements "flattened from" each element of
+     *         this collection; the returned `Collection` may depend on this `Collection`, so
+     *         [reify] the result if subsequent changes to this `Collection` must not alter the
+     *         contents of the returned `Collection`
+     */
+    @Concurrent
+    <Value> Collection!<Value> flatMap(function void(Element, Appender<Value>) flatten) {
+        if (Int count := knownSize(), count == 0) {
+            return [];
+        }
+        return new deferred.FlatMappedCollection<Value, Element>(this, flatten);
+    }
+
+    /**
+     * Build a `Collection` that has zero or more elements "flattened from" each element of this
+     * collection.
+     *
+     * @param flatten    a function that creates the "flattened" elements from each element in this
+     *                   `Collection`
+     * @param collector  an [Aggregator] to use to collect the results
+     *
+     * @return the resulting `Collection` containing the elements "flattened from" each element of
+     *         this collection and further "reduced" by the specified collector
      */
     @Concurrent
     <Value, Result extends Collection!<Value>>
             Result flatMap(function void(Element, Appender<Value>) flatten,
-                           Aggregator<Value, Result>?              collector = Null) {
-
-        if (collector == Null) {
-            if (Int count := knownSize(), count == 0) {
-                Value[] empty = [];
-                return empty.as(Result);
-            }
-            return new deferred.FlatMappedCollection<Value, Element>(this, flatten).as(Result);
-        }
-
+                           Aggregator<Value, Result>               collector) {
         Appender<Value>     result  = collector.init();
         Boolean             inPlace = &this == &result;
         Appender<Value>     dest    = inPlace ? new Value[] : result;
@@ -443,23 +496,30 @@ interface Collection<Element>
     }
 
     /**
-     * Build a distinct [Set] of elements found in this collection.
+     * Build a distinct set of elements found in this collection.
      *
-     * @param collector  an optional [Aggregator] to use to collect the results
-     *
-     * @return the resulting `Collection` containing the distinct set of elements
+     * @return the resulting [Set] of distinct elements from this `Collection`; the returned `Set`
+     *         may depend on this `Collection`, so [reify] the result if subsequent changes to this
+     *         `Collection` must not alter the contents of the returned `Set`
      */
     @Concurrent
-    <Result extends Collection!<Element>>
-    Result distinct(Aggregator<Element, Result>? collector = Null) {
-        if (collector == Null) {
-            if (Int count := knownSize(), count == 0) {
-                Element[] empty = [];
-                return empty.as(Result);
-            }
-            return new deferred.DistinctCollection<Element>(this).as(Result);
+    Set<Element> distinct() {
+        if (Int count := knownSize(), count == 0) {
+            return [];
         }
+        return new deferred.DistinctCollection<Element>(this);
+    }
 
+    /**
+     * Build a distinct set of elements found in this collection.
+     *
+     * @param collector  an [Aggregator] to use to collect the results
+     *
+     * @return the resulting `Collection` containing the distinct set of elements and further
+     *         "reduced" by the specified collector
+     */
+    @Concurrent
+    <Result extends Collection<Element>> Result distinct(Aggregator<Element, Result> collector) {
         Collection<Element> src  = this;
         Appender<Element>   dest = collector.init();
         if (&src == &dest) {
@@ -520,21 +580,34 @@ interface Collection<Element>
      * collection into a key and value.
      *
      * @param transform  the function that transforms an Element into a Key and a Value
-     * @param dest       the optional map to contribute to
      *
      * @return the resulting `Map`
      */
     @Concurrent
+    <Key, Value> Map<Key, Value> associate(function (Key, Value) (Element) transform) {
+        return associate(transform, new MapCollector<Key, Value>());
+    }
+
+    /**
+     * Create a [Map] from the contents of this `Collection` by transforming each element of the
+     * collection into a key and value.
+     *
+     * @param transform  the function that transforms an Element into a Key and a Value
+     * @param collector  a [MapCollector] to use to collect the results
+     *
+     * @return the resulting `Map`, further "reduced" by the specified collector
+     */
+    @Concurrent
     <Key, Value, Result extends Map<Key, Value>>
-    Result associate(function (Key, Value) (Element)   transform,
-                     MapCollector<Key, Value, Result>? collector = Null) {
+    Result associate(function (Key, Value) (Element)  transform,
+                     MapCollector<Key, Value, Result> collector) {
         Int             cap = knownSize() ?: 0;
-        Map<Key, Value> map = collector?.init(cap) : new ListMap(cap);
+        Map<Key, Value> map = collector.init(cap);
         forEach(e -> {
             (Key k, Value v) = transform(e);
             map.put(k, v);
         });
-        return collector?.reduce(map) : map.as(Result);
+        return collector.reduce(map);
     }
 
     /**
@@ -545,14 +618,30 @@ interface Collection<Element>
      * previously existing map entry for the same key.
      *
      * @param keyFor  the function that provides a `Key` for each `Element`
-     * @param dest    the optional `Map` to contribute to
      *
      * @return the resulting `Map`
      */
     @Concurrent
+    <Key> Map<Key, Element> associateBy(function Key(Element) keyFor) {
+        return associate(e -> (keyFor(e), e));
+    }
+
+    /**
+     * Create a [Map] from the contents of this `Collection` by using each element as a value in the
+     * resulting map, and obtaining a corresponding key for that element using the provided
+     * function. In the case that the same key is generated for more than one element, then the last
+     * element with the same key will be present in the resulting map, having replaced any
+     * previously existing map entry for the same key.
+     *
+     * @param keyFor     the function that provides a `Key` for each `Element`
+     * @param collector  a [MapCollector] to use to collect the results
+     *
+     * @return the resulting `Map`, further "reduced" by the specified collector
+     */
+    @Concurrent
     <Key, Result extends Map<Key, Element>>
-    Result associateBy(function Key(Element)               keyFor,
-                       MapCollector<Key, Element, Result>? collector = Null) {
+    Result associateBy(function Key(Element)              keyFor,
+                       MapCollector<Key, Element, Result> collector) {
         return associate(e -> (keyFor(e), e), collector);
     }
 
@@ -564,14 +653,30 @@ interface Collection<Element>
      * map, having replaced any previously existing map entry for the same key.
      *
      * @param valueFor  the function that provides a `Value` for each `Element`
-     * @param dest      the optional map to contribute to
      *
      * @return the resulting `Map`
      */
     @Concurrent
+    <Value> Map<Element, Value> associateWith(function Value(Element) valueFor) {
+        return associate(e -> (e, valueFor(e)));
+    }
+
+    /**
+     * Create a [Map] from the contents of this `Collection` by using each element as a key in the
+     * resulting map, and obtaining a corresponding value for that element using the provided
+     * function. In the case that multiple elements in the collection are identical, then the last
+     * encountered identical element and its corresponding value will be present in the resulting
+     * map, having replaced any previously existing map entry for the same key.
+     *
+     * @param valueFor   the function that provides a `Value` for each `Element`
+     * @param collector  a [MapCollector] to use to collect the results
+     *
+     * @return the resulting `Map`, further "reduced" by the specified collector
+     */
+    @Concurrent
     <Value, Result extends Map<Element, Value>>
-    Result associateWith(function Value(Element)               valueFor,
-                         MapCollector<Element, Value, Result>? collector = Null) {
+    Result associateWith(function Value(Element)              valueFor,
+                         MapCollector<Element, Value, Result> collector) {
         return associate(e -> (e, valueFor(e)), collector);
     }
 
@@ -584,20 +689,37 @@ interface Collection<Element>
      * the inverse of the [flatMap] method.
      *
      * @param keyFor  the function that provides a `Key` for each `Element`
-     * @param dest    the optional map to contribute to
      *
      * @return the resulting `Map` of collections of elements
      */
     @Concurrent
+    <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element) keyFor) {
+        return groupBy(keyFor, new MapCollector<Key, Collection!<Element>>());
+    }
+
+    /**
+     * Create a [Map] from the contents of this `Collection` by evaluating each element to obtain a
+     * key for that element using the provided function, and then placing that element into a
+     * collection that is associated with that key inside the resulting map. In the case that the
+     * same key is generated for more than one element, then **all** of those elements will be
+     * added to the collection associated with that key. The behavior of this method is conceptually
+     * the inverse of the [flatMap] method.
+     *
+     * @param keyFor     the function that provides a `Key` for each `Element`
+     * @param collector  a [MapCollector] to use to collect the results
+     *
+     * @return the resulting `Map` of collections of elements, further "reduced" by the specified collector
+     */
+    @Concurrent
     <Key, Result extends Map<Key, Collection!<Element>>>
-    Result groupBy(function Key(Element)                            keyFor,
-                   MapCollector<Key, Collection!<Element>, Result>? collector = Null) {
+    Result groupBy(function Key(Element)                           keyFor,
+                   MapCollector<Key, Collection!<Element>, Result> collector) {
         Int                            cap = knownSize() ?: 0;
-        Map<Key, Collection!<Element>> map = collector?.init(cap) : new ListMap(cap);
+        Map<Key, Collection!<Element>> map = collector.init(cap);
         forEach(e -> {
             map.computeIfAbsent(keyFor(e), () -> new ListSet<Element>()).add(e);
         });
-        return collector?.reduce(map) : map.as(Result);
+        return collector.reduce(map);
     }
 
     /**
@@ -611,18 +733,42 @@ interface Collection<Element>
      *      Collection<String> bag    = ...
      *      Map<String, Int>   counts = bag.groupWith((_, c) -> c+1, (_) -> 1);
      *
-     * @param update  a function that affects the entry in the map corresponding to each element
-     * @param dest    the optional map to contribute to
+     * @param accumulate  a function that modifies the value that is already associated with a key
+     * @param initial     a function that creates an initial value for a key
      *
      * @return the resulting `Map`
      */
     @Concurrent
+    <Value> Map<Element, Value> groupWith(function Value(Element, Value) accumulate,
+                                          function Value(Element)        initial) {
+        return groupWith(accumulate, initial, new MapCollector<Element, Value>());
+    }
+
+    /**
+     * Create a [Map] from the contents of this `Collection` by using each element as a key, and
+     * using one of the two specified functions to either create an initial value for that key, or
+     * for modifying the value that is already associated with that key.
+     *
+     * For example, to count the occurrences of each element in a collection, this produces a map
+     * keyed by the element, with the corresponding value being the count of occurrences:
+     *
+     *      Collection<String> bag    = ...
+     *      Map<String, Int>   counts = bag.groupWith((_, c) -> c+1, (_) -> 1);
+     *
+     * @param accumulate  a function that modifies the value that is already associated with a key
+     * @param initial     a function that creates an initial value for a key
+     * @param collector  a [MapCollector] to use to collect the results
+     *
+     * @return the resulting `Map` of collections of elements, further "reduced" by the specified
+     *         collector
+     */
+    @Concurrent
     <Value, Result extends Map<Element, Value>>
-    Result groupWith(function Value(Element, Value)        accumulate,
-                     function Value(Element)               initial,
-                     MapCollector<Element, Value, Result>? collector = Null) {
+    Result groupWith(function Value(Element, Value)       accumulate,
+                     function Value(Element)              initial,
+                     MapCollector<Element, Value, Result> collector) {
         Int                 cap = knownSize() ?: 0;
-        Map<Element, Value> map = collector?.init(cap) : new ListMap(cap);
+        Map<Element, Value> map = collector.init(cap);
         forEach(e -> {
             map.process(e, entry -> {
                 entry.value = entry.exists
@@ -631,7 +777,7 @@ interface Collection<Element>
                 return Null;
             });
         });
-        return collector?.reduce(map) : map.as(Result);
+        return collector.reduce(map);
     }
 
     /**
@@ -639,8 +785,9 @@ interface Collection<Element>
      *
      * @param order  an optional [Type.Orderer] to control the sort order; `Null` means to use the
      *               element type's natural order
+     * @param collector  an optional [Aggregator] to use to collect the results
      *
-     * @return a sorted list
+     * @return a sorted list, further reduced by the collector (if specified)
      *
      * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Element] is not
      *                               [Orderable]
