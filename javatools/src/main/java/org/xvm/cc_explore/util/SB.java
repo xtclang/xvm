@@ -36,6 +36,7 @@ public final class SB {
   public SB i( ) { return i(0); }
   public SB ip(String s) { return i().p(s); }
   public SB s() { _sb.append(' '); return this; }
+  public int indent() { return _indent; }
 
   // Increase indentation
   public SB ii( int i) { _indent += i; return this; }
