@@ -132,6 +132,11 @@ public class XClzBuilder {
     _sb.ip("}").nl().nl();
   }
 
+  private void jcode_ast( MethodPart m ) {
+    _meth = m;
+    _pool = new CPool(m._ast,1.2); // Setup the constant pool parser
+    throw XEC.TODO();
+  }
   // Generate a Java string code for this MethodPart
   // Already wrapped in the `ret fcn_name(args) {` and `}`.
   // Already _sb has the indent set.
@@ -189,7 +194,7 @@ public class XClzBuilder {
 
   Const methcon() { return methcon(pack64()); }
   // Magic constant for indexing into the constant pool.
-  private static final int CONSTANT_OFFSET = -17;
+  private static final int CONSTANT_OFFSET = -16;
   // Read a method constant.  Advances the parse point.
   Const methcon(long idx) {
     // CONSTANT_OFFSET >= idx: uses a method constant
@@ -284,7 +289,7 @@ public class XClzBuilder {
     // CONSTANT_OFFSET >= idx: uses a method constant
     if( idx <= CONSTANT_OFFSET ) return value_tcon((TCon)methcon(idx));
     // Predefined arguments
-    if( idx == -5 ) return null;
+    if( idx == -4 ) return null; // Default
     if( idx == -1 ) return "$expr";
     String s = _locals.get(idx);
     assert s != null;

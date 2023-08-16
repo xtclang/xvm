@@ -37,6 +37,8 @@ public class MethodPart extends MMethodPart {
 
   // The XEC bytecodes
   public final byte[] _code;
+  // The XEC AST
+  public final byte[] _ast;
   
   // The source code
   public final String[] _lines; // Source lines
@@ -94,6 +96,8 @@ public class MethodPart extends MMethodPart {
     _code = X.bytes();
     assert _cons==null || _code.length>0;
 
+    _ast = X.bytes();
+
     // Read the source code
     int n = X.u31();
     _first = n > 0 ? X.u31() : -1;
@@ -120,6 +124,7 @@ public class MethodPart extends MMethodPart {
     _nDefaults = 0;
     _cons = null;
     _code = null; // TODO Code for e.g. set/get
+    _ast = null;
     _lines = null;
     _indts = null;
     _first = 0;
