@@ -4,6 +4,8 @@ import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.*;
 
+import org.xvm.asm.ast.LanguageAST.NodeType;
+
 import java.lang.Character;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -79,7 +81,7 @@ public class XClzBuilder {
       if( !construct.is_empty_function() ) {
         _sb.nl();
         _sb.ip("static {").nl();
-        jcode(construct);
+        jcode_ast(construct);
         _sb.ip("}").nl().nl();
       }
     }
@@ -127,16 +129,29 @@ public class XClzBuilder {
       _sb.unchar(2);
     }
     // Function header
-    _sb.p(" ) {").nl();
-    jcode(m);
-    _sb.ip("}").nl().nl();
+    _sb.p(" ) ");
+    jcode_ast(m);
+    _sb.nl();
   }
 
   private void jcode_ast( MethodPart m ) {
     _meth = m;
     _pool = new CPool(m._ast,1.2); // Setup the constant pool parser
-    throw XEC.TODO();
+    AST ast = ast();
+    ast.jcode(_sb);
   }
+
+  AST ast() {
+    NodeType op = NodeType.valueOf(u8());
+    return switch( op ) {
+    case STMT_NOT_IMPL_YET -> new TODOAST(this);
+    case STMT_BLOCK -> new BlockAST(this);
+    case RETURN_STMT -> new ReturnAST(this);
+    default -> throw XEC.TODO();
+    };
+  }
+
+  
   // Generate a Java string code for this MethodPart
   // Already wrapped in the `ret fcn_name(args) {` and `}`.
   // Already _sb has the indent set.
@@ -184,6 +199,7 @@ public class XClzBuilder {
   int u8 () { return _pool.u8 (); }
   int u31() { return _pool.u31(); }
   long pack64() { return _pool.pack64(); }
+  String utf8() { return _pool.utf8(); }
 
   // --------------------------------------------------------------------------
 
