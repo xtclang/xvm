@@ -1,14 +1,11 @@
 package org.xvm.cc_explore;
 
-import org.xvm.cc_explore.cons.Const;
-
 import java.io.FileFilter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 
 /**
    Exploring XTC bytecodes.  Fakes as a XEC runtime translator to JVM bytecodes.
