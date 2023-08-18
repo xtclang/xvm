@@ -37,7 +37,7 @@ public class ReturnStmtAST<C>
         return RETURN_STMT;
     }
 
-    public ExprAST<C>[] getexprs() {
+    public ExprAST<C>[] getExprs() {
         return exprs; // note: caller must not modify returned array in any way
     }
 

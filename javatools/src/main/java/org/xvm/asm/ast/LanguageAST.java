@@ -7,6 +7,8 @@ import java.io.IOException;
 
 import java.util.HashSet;
 
+import org.xvm.util.Handy;
+
 
 /**
  * A serializable AST-like node to be used for an AST interpreter or back end compiler.
@@ -89,7 +91,48 @@ public abstract class LanguageAST<C> {
     @Override
     public String toString() {
         reportUnimplemented("TODO implement toString() for " + this.getClass().getSimpleName());
-        return this.getClass().getSimpleName();
+        return nodeType().name();
+    }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    public static <C> ExprAST<C>[] readExprArray(DataInput in, ConstantResolver<C> res)
+            throws IOException {
+        int count = Handy.readMagnitude(in);
+        ExprAST<C>[] exprs = new ExprAST[count];
+        for (int i = 0; i < count; ++i) {
+            exprs[i] = deserialize(in, res);
+        }
+        return exprs;
+    }
+
+    public static <C> StmtAST<C>[] readStmtArray(DataInput in, ConstantResolver<C> res)
+            throws IOException {
+        int count = Handy.readMagnitude(in);
+        StmtAST<C>[] stmts = new StmtAST[count];
+        for (int i = 0; i < count; ++i) {
+            stmts[i] = deserialize(in, res);
+        }
+        return stmts;
+    }
+
+    public static <C> LanguageAST<C>[] readASTArray(DataInput in, ConstantResolver<C> res)
+            throws IOException {
+        int count = Handy.readMagnitude(in);
+        LanguageAST<C>[] nodes = new LanguageAST[count];
+        for (int i = 0; i < count; ++i) {
+            nodes[i] = deserialize(in, res);
+        }
+        return nodes;
+    }
+
+    public static <C> void writeASTArray(DataOutput out, ConstantResolver<C> res, LanguageAST<C>[] nodes)
+            throws IOException {
+        Handy.writePackedLong(out, nodes.length);
+        for (LanguageAST child : nodes) {
+            child.write(out, res);
+        }
     }
 
 
@@ -177,6 +220,8 @@ public abstract class LanguageAST<C> {
         }
     }
 
+    static LanguageAST[] NO_ASTS = new LanguageAST[0];
+
     /**
      * Class hierarchy root for all statements.
      */
@@ -213,13 +258,13 @@ public abstract class LanguageAST<C> {
         return switch (nodeType) {
             case STMT_NOT_IMPL_YET  -> new StmtNotImplAST<C>();
             case STMT_BLOCK         -> new StmtBlockAST<C>();
-//            case IF_THEN_STMT       -> new ;
-//            case IF_ELSE_STMT       -> new ;
+            case IF_THEN_STMT       -> new IfStmtAST<C>(false);
+            case IF_ELSE_STMT       -> new IfStmtAST<C>(true);
 //            case SWITCH_STMT        -> new ;
-//            case LOOP_STMT          -> new ;
-//            case WHILE_DO_STMT      -> new ;
-//            case DO_WHILE_STMT      -> new ;
-//            case FOR_STMT           -> new ;
+            case LOOP_STMT          -> new LoopStmtAST<C>();
+            case WHILE_DO_STMT      -> new WhileStmtAST<C>();
+            case DO_WHILE_STMT      -> new DoWhileStmtAST<C>();
+            case FOR_STMT           -> new ForStmtAST<>();
 //            case FOR_ITERATOR_STMT  -> new ;
 //            case FOR_RANGE_STMT     -> new ;
 //            case FOR_LIST_STMT      -> new ;

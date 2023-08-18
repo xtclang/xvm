@@ -42,12 +42,7 @@ public class StmtBlockAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count = Handy.readMagnitude(in);
-        StmtAST<C>[] stmts = new StmtAST[count];
-        for (int i = 0; i < count; ++i) {
-            stmts[i] = deserialize(in, res);
-        }
-        this.stmts = stmts;
+        this.stmts = readStmtArray(in, res);
     }
 
     @Override
@@ -61,10 +56,7 @@ public class StmtBlockAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        Handy.writePackedLong(out, stmts.length);
-        for (StmtAST child : stmts) {
-            child.write(out, res);
-        }
+        writeASTArray(out, res, stmts);
     }
 
     @Override
