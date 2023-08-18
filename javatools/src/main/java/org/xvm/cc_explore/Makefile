@@ -10,8 +10,6 @@
 SHELL := /bin/bash
 .DELETE_ON_ERROR:
 
-DATE=`date +%Y%m%d`
-
 # for printing variable values
 # usage: make print-VARIABLE
 #        > VARIABLE = value_of_variable
@@ -34,6 +32,9 @@ else
 		SEP = :
 	endif
 endif
+# Forward slash instead of backslash for 
+DESK2 = $(subst \,/,$(DESK))
+XVM_ROOT = $(DESK2)/xvm
 # Find a reasonable ctags.
 CTAGS = $(shell which ctags)
 # Hack for MacOS: /usr/bin/ctags is unfriendly, so look for ctags from brew
@@ -87,6 +88,28 @@ JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
 
 test:	$(classes) $(test_classes)
 	$(JVM) --enable-preview org.xvm.cc_explore.XEC -L ../xdk/build/xdk/lib -L ../xdk/build/xdk/javatools/ ../doc/examples/FizzBuzz.xtc 123
+
+
+# Assuming a minor version change in XTC, install a new XTC on windows
+XTC = $(XVM_ROOT)/xdk/build/xdk/bin/xtc.exe
+
+install_xtc:	$(XTC)
+
+$(XTC):	$(XVM_ROOT)/xdk/build/xdk/bin/windows_launcher.exe
+	cp $(XVM_ROOT)/xdk/build/xdk/bin/windows_launcher.exe $(XTC)
+
+
+# Assuming a minor version change in XTC, rebuild XTC examples
+EXM = $(XVM_ROOT)/doc/examples
+examples_x = $(wildcard $(EXM)/*.x)
+examples_xtc = $(examples_x:x=xtc)
+
+examples:	$(examples_x:x=xtc) $(XTC)
+
+$(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x
+	@echo "compiling " $@ " because " $?
+	@$(XTC) $? -o $(EXM)
+
 
 tags:	../TAGS
 
