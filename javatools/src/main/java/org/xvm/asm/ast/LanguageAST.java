@@ -184,7 +184,7 @@ public abstract class LanguageAST<C> {
         FOR_LIST_STMT,      // for(var v : iterator){...}
         FOR_MAP_STMT,       // for((var k, var v)) : map){...} etc.
         FOR_ITERABLE_STMT,  // for(var v : iterable){...}
-        CONTINUE_LOOP_STMT, // continue; or continue Label;
+        CONTINUE_STMT,      // continue; or continue Label;
         BREAK_STMT,         // break; or break Label;
         EXPR_STMT,          // foo(); etc.
         RETURN_STMT,        // return expr;
@@ -270,8 +270,8 @@ public abstract class LanguageAST<C> {
 //            case FOR_LIST_STMT      -> new ;
 //            case FOR_MAP_STMT       -> new ;
 //            case FOR_ITERABLE_STMT  -> new ;
-//            case CONTINUE_LOOP_STMT -> new ;
-//            case BREAK_STMT         -> new ;
+            case CONTINUE_STMT      -> new ContinueStmtAST<C>();
+            case BREAK_STMT         -> new BreakStmtAST<C>();
             case RETURN_STMT        -> new ReturnStmtAST<C>();
 //            case TRY_USING_STMT     -> new ;
 //            case TRY_CATCH_STMT     -> new ;
