@@ -99,10 +99,10 @@ $(XTC):	$(XVM_ROOT)/xdk/build/xdk/bin/windows_launcher.exe
 	cp $(XVM_ROOT)/xdk/build/xdk/bin/windows_launcher.exe $(XTC)
 
 
+# Build examples, .xtc from .x
 # Assuming a minor version change in XTC, rebuild XTC examples
 EXM = $(XVM_ROOT)/doc/examples
 examples_x = $(wildcard $(EXM)/*.x)
-examples_xtc = $(examples_x:x=xtc)
 
 examples:	$(examples_x:x=xtc) $(XTC)
 
