@@ -43,8 +43,6 @@ import org.xvm.util.Severity;
 
 /**
  * Compiler context for compiling a method body.
- *
- * REVIEW it does not appear that this correctly handles '_'
  */
 public class Context
     {
