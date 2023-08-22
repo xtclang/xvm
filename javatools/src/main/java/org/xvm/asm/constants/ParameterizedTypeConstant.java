@@ -351,10 +351,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints()
+    public TypeConstant resolveConstraints(boolean fPendingOnly)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveConstraints();
+        TypeConstant constResolved = constOriginal.resolveConstraints(fPendingOnly);
         boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
@@ -364,7 +364,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveConstraints();
+            TypeConstant constParamResolved = constParamOriginal.resolveConstraints(fPendingOnly);
             if (constParamOriginal != constParamResolved)
                 {
                 if (aconstResolved == aconstOriginal)

@@ -616,6 +616,17 @@ public abstract class Expression
                 }
             }
 
+        if (typeActual.containsUnresolved())
+            {
+            // if the type contains any PendingTypeConstant, resolve it down to its constraints
+            typeActual = typeActual.resolveConstraints(true);
+
+            // Note: there still remains a scenario, when "typeActual" contains unresolved types -
+            //       specifically an annotated type with not-yet-resolved parameters;
+            //       see the corresponding resolution logic in VariableDeclarationStatement#emit()
+            //       and NewExpression#generateDynamicParameters()
+            }
+
         m_fit    = fit;
         m_oType  = typeActual;
         m_oConst = constVal;
@@ -795,13 +806,8 @@ public abstract class Expression
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (atypeActual == null)
             {
-            assert !fit.isFit();
-            assert aconstVal == null;
-
-            m_fit    = TypeFit.NoFit;
-            m_oType  = atypeRequired == null ? pool.typeObject() : atypeRequired;
-            m_oConst = null;
-
+            assert !fit.isFit() && aconstVal == null && errs.hasSeriousErrors();
+            m_fit = TypeFit.NoFit;
             return null;
             }
 
@@ -810,34 +816,37 @@ public abstract class Expression
         if (cTypeReqs > cActual && fit.isFit())
             {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
-            fit = TypeFit.NoFit;
+            m_fit = TypeFit.NoFit;
+            return null;
             }
 
         boolean fCloneActual = true;
 
         // for expressions that yield constant values, make sure that the types reflect that
-        if (aconstVal != null)
+        for (int i = 0; i < cActual; ++i)
             {
-            for (int i = 0; i < cActual; ++i)
+            TypeConstant typeActual = atypeActual[i];
+            if (typeActual.containsUnresolved())
                 {
-                TypeConstant typeActual = atypeActual[i];
-                Constant     constVal   = aconstVal[i];
+                // see the comment in "finishValidation()"
+                typeActual = typeActual.resolveConstraints(true);
+                }
 
-                if (constVal != null
-                        && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
-                        &&  !typeActual.isA(pool.typeService()))
+            Constant constVal = aconstVal == null ? null : aconstVal[i];
+            if (constVal != null
+                    && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
+                    && !typeActual.isA(pool.typeService()))
+                {
+                TypeConstant typeImm = typeActual.freeze();
+
+                if (!typeActual.equals(typeImm))
                     {
-                    TypeConstant typeImm = typeActual.freeze();
-
-                    if (!typeActual.equals(typeImm))
+                    if (fCloneActual)
                         {
-                        if (fCloneActual)
-                            {
-                            atypeActual  = atypeActual.clone();
-                            fCloneActual = false;
-                            }
-                        atypeActual[i] = typeImm;
+                        atypeActual  = atypeActual.clone();
+                        fCloneActual = false;
                         }
+                    atypeActual[i] = typeImm;
                     }
                 }
             }
@@ -917,7 +926,7 @@ public abstract class Expression
             }
 
         m_fit    = fit;
-        m_oType  = fit.isFit() || atypeRequired == null ? atypeActual : atypeRequired;
+        m_oType  = fit.isFit() || atypeRequired == null ? atypeActual : null;
         m_oConst = aconstVal;
 
         if (!fit.isFit())

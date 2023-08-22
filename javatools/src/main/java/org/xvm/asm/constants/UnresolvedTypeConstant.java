@@ -290,10 +290,10 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints()
+    public TypeConstant resolveConstraints(boolean fPendingOnly)
         {
         return isTypeResolved()
-                ? getResolvedType().resolveConstraints()
+                ? getResolvedType().resolveConstraints(fPendingOnly)
                 : this;
         }
 

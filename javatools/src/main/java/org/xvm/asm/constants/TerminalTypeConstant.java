@@ -595,21 +595,23 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints()
+    public TypeConstant resolveConstraints(boolean fPendingOnly)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().resolveConstraints();
+            return constId.getReferredToType().resolveConstraints(fPendingOnly);
             }
 
-        Constant constId = getDefiningConstant();
-        if (constId instanceof FormalConstant constFormal)
+        if (!fPendingOnly)
             {
-            return constFormal.getConstraintType().resolveConstraints();
+            Constant constId = getDefiningConstant();
+            if (constId instanceof FormalConstant constFormal)
+                {
+                return constFormal.getConstraintType().resolveConstraints(fPendingOnly);
+                }
             }
-
         return this;
         }
 

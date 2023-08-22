@@ -1065,8 +1065,20 @@ public abstract class TypeConstant
      */
     public TypeConstant resolveConstraints()
         {
+        return resolveConstraints(false);
+        }
+
+    /**
+     * If this type contains any formal type, replace that formal type with its constraint type.
+     *
+     * @param fPendingOnly  if true, only the {@link PendingTypeConstant} constraints to be resolved
+     *
+     * @return the resulting type
+     */
+    public TypeConstant resolveConstraints(boolean fPendingOnly)
+        {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveConstraints();
+        TypeConstant constResolved = constOriginal.resolveConstraints(fPendingOnly);
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);

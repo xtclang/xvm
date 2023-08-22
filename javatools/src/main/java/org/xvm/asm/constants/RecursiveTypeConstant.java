@@ -139,7 +139,7 @@ public class RecursiveTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints()
+    public TypeConstant resolveConstraints(boolean fPendingOnly)
         {
         return this;
         }

@@ -133,10 +133,10 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints()
+    public TypeConstant resolveConstraints(boolean fPendingOnly)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveConstraints();
+        TypeConstant constResolved = constOriginal.resolveConstraints(fPendingOnly);
         return constResolved == constOriginal
                 ? this
                 : constResolved.freeze();

@@ -166,10 +166,10 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints()
+    public TypeConstant resolveConstraints(boolean fPendingOnly)
         {
         TypeConstant constOriginal = getParentType();
-        TypeConstant constResolved = constOriginal.resolveConstraints();
+        TypeConstant constResolved = constOriginal.resolveConstraints(fPendingOnly);
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
