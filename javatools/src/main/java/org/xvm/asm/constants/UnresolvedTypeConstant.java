@@ -91,6 +91,7 @@ public class UnresolvedTypeConstant
         return type;
         }
 
+
     // ----- ResolvableConstant methods ------------------------------------------------------------
 
     @Override
@@ -108,6 +109,7 @@ public class UnresolvedTypeConstant
             m_type = (TypeConstant) constant;
             }
         }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 

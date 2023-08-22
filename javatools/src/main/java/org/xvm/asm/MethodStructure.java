@@ -712,7 +712,7 @@ public class MethodStructure
             Constant[] aconstLocal = m_aconstLocal;
             assert aconstLocal != null;
 
-            ConstantResolver<Constant> res = new ConstantResolver<Constant>()
+            ConstantResolver<Constant> res = new ConstantResolver<>()
                 {
                 @Override
                 public Constant getConstant(int id)
@@ -942,20 +942,21 @@ public class MethodStructure
      * For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
      * actual return type: Number this method would return a map {"T":Number, "U":String}
      *
-     * @param pool         the ConstantPool to use
-     * @param typeTarget   (optional) the target type; if specified must be used to validate and
-     *                     resolve all formal type parameters for a function called with an explicit
-     *                     left-hand-side type
-     * @param atypeArgs    the actual argument types
-     * @param atypeReturns (optional) the actual return types
-     * @param fAllowFormal if false, all type parameters must be fully resolved; otherwise place a
-     *                     corresponding {@link PendingTypeConstant} to the resolution map
+     * @param pool           the ConstantPool to use
+     * @param typeTarget     (optional) the target type; if specified must be used to validate and
+     *                       resolve all formal type parameters for a function called with an explicit
+     *                       left-hand-side type
+     * @param atypeArgs      the actual argument types
+     * @param atypeReturns   (optional) the actual return types
+     * @param fAllowPending  if false, all type parameters must be fully resolved; otherwise place a
+     *                       corresponding {@link PendingTypeConstant} to the resolution map
+     *
      * @return a ListMap of the resolved types in the natural order, keyed by the names; conflicting
      *         types will be not in the map
      */
     public ListMap<FormalConstant, TypeConstant> resolveTypeParameters(ConstantPool pool,
                 TypeConstant typeTarget, TypeConstant[] atypeArgs, TypeConstant[] atypeReturns,
-                boolean fAllowFormal)
+                boolean fAllowPending)
         {
         int                                   cTypeParams   = getTypeParamCount();
         ListMap<FormalConstant, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
@@ -1055,7 +1056,7 @@ public class MethodStructure
                     }
 
                 TypeConstant typeConstraint = typeParam.getParamType(0);
-                if (fAllowFormal)
+                if (fAllowPending)
                     {
                     // no extra knowledge; assume that anything goes
                     TypeConstant typePending = new PendingTypeConstant(pool, typeConstraint);
@@ -1160,7 +1161,7 @@ public class MethodStructure
 
     public void forceAssembly(ConstantPool pool)
         {
-        // if we need to reassembkle, we're going to throw away the bytes, so make sure that we have
+        // if we need to reassemble, we're going to throw away the bytes, so make sure that we have
         // the deserialized form of those bytes ensured so that we can recreate the "new" version of
         // the bytes
         if (needsReassembly())

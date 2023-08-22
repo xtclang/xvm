@@ -3107,7 +3107,7 @@ public class InvocationExpression
      *         the error list
      */
     private GenericTypeResolver makeTypeParameterResolver(Context ctx, MethodStructure method,
-            boolean fAllowFormal, TypeConstant typeTarget, TypeConstant[] atypeReturn, ErrorListener errs)
+            boolean fAllowPending, TypeConstant typeTarget, TypeConstant[] atypeReturn, ErrorListener errs)
         {
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
@@ -3120,7 +3120,7 @@ public class InvocationExpression
         transformTypeArguments(ctx, method, listArgs, atypeArgs);
 
         Map<FormalConstant, TypeConstant> mapTypeParams =
-                method.resolveTypeParameters(pool(), typeTarget, atypeArgs, atypeReturn, fAllowFormal);
+                method.resolveTypeParameters(pool(), typeTarget, atypeArgs, atypeReturn, fAllowPending);
 
         if (mapTypeParams.size() == method.getTypeParamCount())
             {
