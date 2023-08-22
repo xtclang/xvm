@@ -659,17 +659,17 @@ public class ForEachStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
+        boolean   fCompletes = fReachable;
+        AstHolder holder     = ctx.getHolder();
 
         code.add(new Enter());
 
         // strip any declarations off of the LValues (we'll handle them separately)
         for (VariableDeclarationStatement stmt : getCondition().takeDeclarations())
             {
-            fCompletes = stmt.completes(ctx, fCompletes, code, holder, errs);
+            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
 
         if (isLabeled())
@@ -800,7 +800,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, holder, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         if (hasContinueLabel())
             {
@@ -915,7 +915,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, holder, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -1010,7 +1010,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, holder, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -1162,7 +1162,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, holder, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -1373,7 +1373,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, holder, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         if (hasContinueLabel())
             {

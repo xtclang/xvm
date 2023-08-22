@@ -356,9 +356,8 @@ public class StatementBlock
             return false;
             }
 
-        AstHolder holder     = new AstHolder();
-        boolean   fCompletes = that.completes(ctx.emittingContext(code), true, code, holder, errs);
-        StmtAST   ast        = holder.getAst(this);
+        boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+        StmtAST ast        = ctx.getHolder().getAst(this);
 
         if (fCompletes)
             {
@@ -468,13 +467,13 @@ public class StatementBlock
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletable = fReachable;
 
-        List<Statement>     stmts = this.stmts;
-        StmtAST<Constant>[] asts  = EMPTY_AST;
+        AstHolder           holder = ctx.getHolder();
+        List<Statement>     stmts  = this.stmts;
+        StmtAST<Constant>[] asts   = EMPTY_AST;
         if (stmts != null && !stmts.isEmpty())
             {
             // there is an implicit scope for the top-most statement block of a method
@@ -514,7 +513,7 @@ public class StatementBlock
                     fLoggedUnreachable = true;
                     }
 
-                fCompletable &= stmt.completes(ctx, fReachable, code, holder, errs);
+                fCompletable &= stmt.completes(ctx, fReachable, code, errs);
 
                 if (fReachable && !(stmt instanceof ComponentStatement))
                     {
@@ -640,6 +639,7 @@ public class StatementBlock
             super(null, false);
             f_stmt   = stmt;
             f_method = method;
+            f_holder = new AstHolder(); // temporary
             }
 
         @Override
@@ -651,6 +651,11 @@ public class StatementBlock
         public StatementBlock getStatementBlock()
             {
             return f_stmt;
+            }
+
+        public AstHolder getHolder()
+            {
+            return f_holder;
             }
 
         /**
@@ -1522,7 +1527,7 @@ public class StatementBlock
          *
          * @return a Context that can be used while emitting code
          */
-        public Context emittingContext(Code code)
+        public RootContext emittingContext(Code code)
             {
             if (m_fEmitting)
                 {
@@ -1636,8 +1641,10 @@ public class StatementBlock
 
         private final StatementBlock  f_stmt;
         private final MethodStructure f_method;
+        private final AstHolder       f_holder;
         private       Context         m_ctxValidating;
         private       boolean         m_fEmitting;
+
 
         /**
          * A lazily created mapping of captured variables that is collected during the validation

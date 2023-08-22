@@ -61,9 +61,7 @@ public class ExprNotImplAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        for (int i = 0, count = types.length; i < count; ++i) {
-            types[i] = res.register((C) types[i]);
-        }
+         res.registerAll(types);
     }
 
     @Override

@@ -210,16 +210,14 @@ public abstract class Statement
     /**
      * Generate the generic assembly code that wraps the contents of any statement.
      *
-     * @param ctx        the compilation context for the statement
-     * @param fReachable true iff the statement is reachable
-     * @param code       the code object to which the assembly is added
-     * @param holder     the holder to collect the AST from this statement
-     * @param errs       the error listener to log to
+     * @param ctx         the compilation context for the statement
+     * @param fReachable  true iff the statement is reachable
+     * @param code        the code object to which the assembly is added
+     * @param errs        the error listener to log to
      *
      * @return true iff the statement completes
      */
-    protected final boolean completes(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                                      ErrorListener errs)
+    protected final boolean completes(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         if (fReachable)
             {
@@ -230,7 +228,7 @@ public abstract class Statement
             code = code.blackhole();
             }
 
-        boolean fCompletes = fReachable && emit(ctx, fReachable, code, holder, errs);
+        boolean fCompletes = fReachable && emit(ctx, fReachable, code, errs);
 
         if (m_labelEnd != null)
             {
@@ -243,16 +241,14 @@ public abstract class Statement
     /**
      * Generate the statement-specific assembly code.
      *
-     * @param ctx        the compilation context for the statement
-     * @param fReachable true iff the statement is reachable
-     * @param code       the code object to which the assembly is added
-     * @param holder     the holder to collect the AST from this statement
-     * @param errs       the error listener to log to
+     * @param ctx         the compilation context for the statement
+     * @param fReachable  true iff the statement is reachable
+     * @param code        the code object to which the assembly is added
+     * @param errs        the error listener to log to
      *
      * @return true iff the statement completes
      */
-    protected abstract boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                                    ErrorListener errs);
+    protected abstract boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs);
 
     /**
      * The break info.
@@ -294,6 +290,7 @@ public abstract class Statement
             }
 
         private Statement         stmt;
+        private Expression        expr;
         private StmtAST<Constant> ast;
         }
 

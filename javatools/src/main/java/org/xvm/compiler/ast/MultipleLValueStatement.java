@@ -206,8 +206,7 @@ public class MultipleLValueStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable;
 
@@ -221,7 +220,7 @@ public class MultipleLValueStatement
             AstNode node = LVals.get(i);
             if (node instanceof Statement stmt)
                 {
-                fCompletes = stmt.completes(ctx, fCompletes, code, holder, errs);
+                fCompletes = stmt.completes(ctx, fCompletes, code, errs);
                 }
 
             Label labelGround = peekShortCircuitLabel(i);

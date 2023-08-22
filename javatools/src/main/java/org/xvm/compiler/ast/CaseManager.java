@@ -1398,7 +1398,7 @@ public class CaseManager<CookieType>
             if (node instanceof AssignmentStatement stmt)
                 {
                 AstHolder holder = new AstHolder(); // TODO CP
-                if (!stmt.completes(ctx, true, code, holder, errs))
+                if (!stmt.completes(ctx, true, code, errs))
                     {
                     m_fCondAborts = true;
                     }

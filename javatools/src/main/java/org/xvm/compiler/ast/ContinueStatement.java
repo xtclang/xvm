@@ -60,8 +60,7 @@ public class ContinueStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         code.add(new Jump(getJumpLabel()));
         return false;

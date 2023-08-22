@@ -81,6 +81,6 @@ public class ReturnStmtAST<C>
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + ":" + exprs.length;
+        return nodeType().name() + ":" + exprs.length;
     }
 }

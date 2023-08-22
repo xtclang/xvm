@@ -326,8 +326,7 @@ public class ReturnStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         AstNode container    = getCodeContainer();
         boolean fConditional = container.isReturnConditional();
@@ -367,6 +366,7 @@ public class ReturnStatement
         int              cRets     = atypeRets == null ? 0 : atypeRets.length;
         List<Expression> listExprs = this.exprs;
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
+        AstHolder        holder    = ctx.getHolder();
 
         if (m_fTupleReturn)
             {

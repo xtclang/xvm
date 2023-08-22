@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.math.BigDecimal;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
@@ -267,11 +268,11 @@ public class LiteralExpression
         return finishValidation(ctx, typeRequired, typeActual, TypeFit.Fit, constVal, errs);
         }
 
-        @Override
-        public ExprAST<Constant> getExprAST()
-            {
-            return new LitExprAST<>(getType(), getLiteralConstant());
-            }
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return new LitExprAST<>(getType(), getLiteralConstant());
+        }
 
 
     // ----- helpers -------------------------------------------------------------------------------

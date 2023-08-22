@@ -143,7 +143,7 @@ public abstract class LanguageAST<C> {
      *
      * @param <C>  the class of a constant from the pool
      */
-    public static interface ConstantResolver<C> {
+    public interface ConstantResolver<C> {
         /**
          * @param constant  a constant that must be present in the constant pool, or null
          *
@@ -164,6 +164,15 @@ public abstract class LanguageAST<C> {
          * @return the index in the constant pool of that constant
          */
         int indexOf(C constant);
+
+        /**
+         * Helper method to register an array of constants by changing the array content.
+         */
+        default void registerAll(Object[] constants) {
+            for (int i = 0, c = constants.length; i < c; i++) {
+                constants[i] = register((C) constants[i]);
+            }
+        }
     }
 
     /**
@@ -197,6 +206,8 @@ public abstract class LanguageAST<C> {
         ASSIGN_STMT,        // lvalue op rvalue, for
         EXPR_NOT_IMPL_YET,  // "a node for some expression form has not yet been implemented"
         LIT_EXPR,
+        REGISTER_EXPR,      // "register" expr
+        INVOKE_EXPR,        // invoke expr
         SWITCH_EXPR,
         MULTI_COND,         // >1 ","-delimited conditions
         DECL_COND,          // condition that declares variable
@@ -227,7 +238,7 @@ public abstract class LanguageAST<C> {
      */
     public abstract static class StmtAST<C> extends LanguageAST<C> {}
 
-    static StmtAST[] NO_STMTS = new StmtAST[0];
+    public static StmtAST[] NO_STMTS = new StmtAST[0];
 
     /**
      * Class hierarchy root for all expressions.
@@ -249,7 +260,7 @@ public abstract class LanguageAST<C> {
         public abstract C getType(int i);
     }
 
-    static ExprAST[] NO_EXPRS = new ExprAST[0];
+    public static ExprAST[] NO_EXPRS = new ExprAST[0];
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -270,6 +281,8 @@ public abstract class LanguageAST<C> {
 //            case FOR_LIST_STMT      -> new ;
 //            case FOR_MAP_STMT       -> new ;
 //            case FOR_ITERABLE_STMT  -> new ;
+//            case CONTINUE_LOOP_STMT -> new ;
+//            case BREAK_STMT         -> new ;
             case CONTINUE_STMT      -> new ContinueStmtAST<C>();
             case BREAK_STMT         -> new BreakStmtAST<C>();
             case RETURN_STMT        -> new ReturnStmtAST<C>();
@@ -283,6 +296,8 @@ public abstract class LanguageAST<C> {
             case EXPR_STMT          -> new ExprStmtAST<C>();
             case EXPR_NOT_IMPL_YET  -> new ExprNotImplAST<C>();
             case LIT_EXPR           -> new LitExprAST<C>();
+            case REGISTER_EXPR      -> new RegisterAST<>();
+            case INVOKE_EXPR        -> new InvokeExprAST<>();
 //            case SWITCH_EXPR        -> new ;
 //            case MULTI_COND         -> new ;
 //            case DECL_COND          -> new ;

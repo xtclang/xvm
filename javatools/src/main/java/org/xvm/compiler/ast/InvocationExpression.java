@@ -15,6 +15,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -25,6 +26,11 @@ import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
+
+import org.xvm.asm.ast.InvokeExprAST;
+import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -1427,6 +1433,7 @@ public class InvocationExpression
                             int        cDefaults = cAll - cTypeParams - cArgs;
                             Argument   arg0      = null;
                             Argument[] aArgs     = null;
+                            ExprAST[]  aAsts;
                             char       chArgs;
 
                             assert cTypeParams + cArgs + cDefaults == cAll;
@@ -1435,39 +1442,52 @@ public class InvocationExpression
                                 {
                                 chArgs = '0';
                                 aArgs  = NO_RVALUES;
+                                aAsts  = LanguageAST.NO_EXPRS;
                                 }
                             else if (cAll == 1)
                                 {
                                 chArgs = '1';
                                 if (cArgs == 1)
                                     {
-                                    arg0 = args.get(0).generateArgument(ctx, code, true, true, errs);
+                                    Expression expr = args.get(0);
+                                    arg0  = expr.generateArgument(ctx, code, true, true, errs);
+                                    aAsts = new ExprAST[] {expr.getExprAST()};
                                     }
                                 else if (cTypeParams == 1)
                                     {
-                                    arg0 = aargTypeParams[0];
+                                    arg0  = aargTypeParams[0];
+                                    aAsts = new ExprAST[] {new RegisterAST(arg0.getType(), 0)};
                                     }
                                 else // (cDefaults == 1)
                                     {
                                     arg0 = Register.DEFAULT;
+                                    aAsts = new ExprAST[] {new RegisterAST(
+                                                idMethod.getRawParams()[0], Op.A_DEFAULT)};
                                     }
                                 }
                             else
                                 {
                                 chArgs = 'N';
                                 aArgs  = new Argument[cAll];
+                                aAsts  = new ExprAST[cAll];
 
                                 if (cTypeParams > 0)
                                     {
                                     System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
+                                    for (int i = 0; i < cTypeParams; i++)
+                                        {
+                                        aAsts[i] = new RegisterAST(aargTypeParams[i], i);
+                                        }
                                     }
 
                                 for (int i = 0; i < cArgs; ++i)
                                     {
-                                    Argument arg = args.get(i).generateArgument(ctx, code, true, true, errs);
+                                    Expression expr = args.get(i);
+                                    Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
                                     aArgs[cTypeParams + i] = i == cArgs-1
                                             ? arg
                                             : ensurePointInTime(code, arg);
+                                    aAsts[i] = expr.getExprAST();
                                     }
 
                                 for (int i = 0; i < cDefaults; ++i)
@@ -1587,6 +1607,7 @@ public class InvocationExpression
                                     throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
                                 }
 
+                            m_astInvoke = new InvokeExprAST<>(idMethod, getTypes(), m_astTarget, aAsts);
                             return;
                             }
                         else // _NOT_ m_fCall
@@ -1931,6 +1952,10 @@ public class InvocationExpression
             }
         }
 
+    /**
+     *
+     * @return the Argument for the target and set the {@link #m_astTarget}
+     */
     private Argument generateTarget(Context ctx, Code code, Expression exprLeft,
                                     boolean fLocalPropOk, boolean fTargetOnStack, ErrorListener errs)
         {
@@ -1938,31 +1963,42 @@ public class InvocationExpression
         Argument argTarget;
         if (exprLeft == null)
             {
-            if (m_targetInfo == null)
+            TargetInfo targetInfo = m_targetInfo;
+            Register   regTarget;
+            if (targetInfo == null)
                 {
-                argTarget = ctx.generateThisRegister(code);
+                regTarget = ctx.generateThisRegister(code);
                 }
             else
                 {
-                TypeConstant typeTarget = m_targetInfo.getTargetType();
-                int          cStepsOut  = m_targetInfo.getStepsOut();
+                TypeConstant typeTarget = targetInfo.getTargetType();
+                int          cStepsOut  = targetInfo.getStepsOut();
 
                 if (cStepsOut > 0)
                     {
-                    argTarget = code.createRegister(typeTarget, fTargetOnStack);
-                    code.add(new MoveThis(m_targetInfo.getStepsOut(), argTarget));
+                    regTarget = code.createRegister(typeTarget, fTargetOnStack);
+                    code.add(new MoveThis(targetInfo.getStepsOut(), regTarget));
                     }
                 else
                     {
-                    argTarget = new Register(typeTarget, Op.A_THIS);
+                    regTarget = new Register(typeTarget, Op.A_THIS);
                     }
                 }
+            argTarget   = regTarget;
+            m_astTarget = new RegisterAST<>(regTarget.getType(), regTarget);
             }
         else
             {
-            argTarget = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
+            argTarget   = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
+            m_astTarget = exprLeft.getExprAST();
             }
         return argTarget;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return m_astInvoke == null ? super.getExprAST() : m_astInvoke;
         }
 
 
@@ -3341,6 +3377,9 @@ public class InvocationExpression
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient MethodConstant  m_idConvert;       // conversion method
     private transient boolean         m_fAutoFuture;     // implicit FutureVar
+
+    private transient ExprAST<Constant> m_astTarget;
+    private transient ExprAST<Constant> m_astInvoke;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
     }

@@ -105,10 +105,9 @@ public class LabeledStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        return stmt.completes(ctx, fReachable, code, holder, errs);
+        return stmt.completes(ctx, fReachable, code, errs);
         }
 
 

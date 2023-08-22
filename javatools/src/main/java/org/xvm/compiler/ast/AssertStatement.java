@@ -330,8 +330,7 @@ public class AssertStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool pool   = pool();
         boolean      fDebug = isDebugOnly();
@@ -454,7 +453,7 @@ public class AssertStatement
             if (cond instanceof AssignmentStatement stmtCond)
                 {
                 fNegated    = stmtCond.isNegated();
-                fCompletes &= stmtCond.completes(ctx, fCompletes, code, holder, errs);
+                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 argCond = stmtCond.getConditionRegister();
                 }
             else

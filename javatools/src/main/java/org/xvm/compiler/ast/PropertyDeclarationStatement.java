@@ -728,8 +728,7 @@ public class PropertyDeclarationStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable;
 
@@ -767,7 +766,7 @@ public class PropertyDeclarationStatement
             code.add(new P_Var(idProp, regThis, regPropRef));
             code.add(new P_Get(idAssigned, regPropRef, regAssigned));
             code.add(new JumpTrue(regAssigned, labelSkipAssign));
-            fCompletes = assignment.completes(ctx, fCompletes, code, holder, errs);
+            fCompletes = assignment.completes(ctx, fCompletes, code, errs);
             code.add(labelSkipAssign);
             }
 

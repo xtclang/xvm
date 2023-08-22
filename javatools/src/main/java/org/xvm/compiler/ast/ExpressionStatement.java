@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.ExprStmtAST;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
@@ -102,14 +103,14 @@ public class ExpressionStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable & expr.isCompletable();
 
         // so an expression is being used as a statement; blackhole the results
         expr.generateAssignments(ctx, code, Expression.NO_LVALUES, errs);
 
+        ctx.getHolder().setAst(this, new ExprStmtAST<>(expr.getExprAST()));
         return fCompletes;
         }
 

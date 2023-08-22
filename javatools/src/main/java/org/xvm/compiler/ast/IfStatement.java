@@ -229,8 +229,7 @@ public class IfStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
@@ -245,7 +244,7 @@ public class IfStatement
                     // "if (false) {stmtThen} else {stmtElse}" is compiled as "{stmtElse}"
                     return stmtElse == null
                             ? fReachable
-                            : stmtElse.completes(ctx, fReachable, code, holder, errs);
+                            : stmtElse.completes(ctx, fReachable, code, errs);
                     }
 
                 assert ((Expression) cond).isConstantTrue();
@@ -261,7 +260,7 @@ public class IfStatement
         // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
         if (fAlwaysTrue)
             {
-            return stmtThen.completes(ctx, fReachable, code, holder, errs);
+            return stmtThen.completes(ctx, fReachable, code, errs);
             }
 
 
@@ -308,7 +307,7 @@ public class IfStatement
             boolean fCompletes;
             if (cond instanceof AssignmentStatement stmtCond)
                 {
-                fCompletes = stmtCond.completes(ctx, fReachable, code, holder, errs);
+                fCompletes = stmtCond.completes(ctx, fReachable, code, errs);
                 if (stmtCond.isNegated())
                     {
                     code.add(new JumpTrue(stmtCond.getConditionRegister(), labelElse));
@@ -353,7 +352,7 @@ public class IfStatement
 
         if (fCompletesThen)
             {
-            fCompletesThen = stmtThen.completes(ctx, fCompletesThen, code, holder, errs);
+            fCompletesThen = stmtThen.completes(ctx, fCompletesThen, code, errs);
             if (stmtElse != null)
                 {
                 code.add(new Jump(labelExit));
@@ -363,7 +362,7 @@ public class IfStatement
         code.add(labelElse);
         if (fCompletesElse && stmtElse != null)
             {
-            fCompletesElse = stmtElse.completes(ctx, fCompletesElse, code, holder, errs);
+            fCompletesElse = stmtElse.completes(ctx, fCompletesElse, code, errs);
             }
 
         code.add(labelExit);

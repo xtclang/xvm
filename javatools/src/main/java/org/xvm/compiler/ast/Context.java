@@ -32,6 +32,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.ast.Statement.AstHolder;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
@@ -160,6 +161,14 @@ public class Context
         return argThis == null
                 ? getThisClass().getFormalType()
                 : argThis.getType().removeAccess();
+        }
+
+    /**
+     * @return the AST holder
+     */
+    public AstHolder getHolder()
+        {
+        return getOuterContext().getHolder();
         }
 
     /**

@@ -295,10 +295,10 @@ public class SwitchStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        CaseManager<CaseGroup> mgr = m_casemgr;
+        CaseManager<CaseGroup> mgr    = m_casemgr;
+        AstHolder              holder = ctx.getHolder();
 
         // check for the extremely rare possibility that the switch condition is a constant, and we
         // can tell which branch to use (discarding the rest of the possible case branches)
@@ -402,7 +402,7 @@ public class SwitchStatement
                     }
                 }
 
-            fCompletes = stmt.completes(ctx, fCompletes, code, holder, errs);
+            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
 
         if (group.fScope)

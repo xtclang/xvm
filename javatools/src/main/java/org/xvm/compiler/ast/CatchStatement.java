@@ -144,14 +144,13 @@ public class CatchStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         assert m_opCatch != null && m_labelEndCatch != null;
 
         code.add(m_opCatch);
         block.suppressScope();
-        boolean fCompletes = block.completes(ctx, fReachable, code, holder, errs);
+        boolean fCompletes = block.completes(ctx, fReachable, code, errs);
         code.add(new CatchEnd(m_labelEndCatch));
         return fCompletes;
         }

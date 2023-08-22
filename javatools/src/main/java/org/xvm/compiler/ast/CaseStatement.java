@@ -102,8 +102,7 @@ public class CaseStatement
         }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                           ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         // the case statement is a marker; it's just data, not an actual compilable AST node
         throw new IllegalStateException();

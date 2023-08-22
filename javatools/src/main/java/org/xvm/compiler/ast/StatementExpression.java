@@ -261,8 +261,7 @@ public class StatementExpression
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         m_aLVal = aLVal;
-        AstHolder holder = new AstHolder();
-        if (body.completes(ctx, true, code, holder, errs) &&
+        if (body.completes(ctx, true, code, errs) &&
                 m_atypeRequired != null && m_atypeRequired.length > 0)
             {
             errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
