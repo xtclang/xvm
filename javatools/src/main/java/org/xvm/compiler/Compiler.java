@@ -1393,6 +1393,10 @@ public class Compiler
      */
     public static final String SUPER_MISSING                      = "COMPILER-195";
     /**
+     * A "try" must have either "catch" or "finally" block.
+     */
+    public static final String TRY_WITHOUT_CATCH                  = "COMPILER-196";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

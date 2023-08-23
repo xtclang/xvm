@@ -125,7 +125,15 @@ public class TryStatement
         {
         boolean fValid = true;
 
-        if (resources != null)
+        if (resources == null)
+            {
+            if (catches == null && catchall == null)
+                {
+                log(errs, Severity.ERROR, Compiler.TRY_WITHOUT_CATCH);
+                fValid = false;
+                }
+            }
+        else
             {
             // the using/try-with-resources section provides a context to the rest of the
             // statement (it is the outermost layer of the "onion")
