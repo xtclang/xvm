@@ -290,7 +290,6 @@ public abstract class Statement
             }
 
         private Statement         stmt;
-        private Expression        expr;
         private StmtAST<Constant> ast;
         }
 

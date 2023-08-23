@@ -94,8 +94,8 @@ public abstract class GotoStatement
             while (true)
                 {
                 AstNode nodeParent = node.getParent();
-                if (nodeParent instanceof LabeledStatement
-                        && ((LabeledStatement) nodeParent).getName().equals(sLabel))
+                if (nodeParent instanceof LabeledStatement stmtLabeled
+                        && stmtLabeled.getName().equals(sLabel))
                     {
                     return (Statement) node;
                     }
