@@ -7,9 +7,9 @@ import java.io.IOException;
 
 import org.xvm.asm.ast.LanguageAST.StmtAST;
 
-import org.xvm.util.Handy;
-
 import static org.xvm.asm.ast.LanguageAST.NodeType.LOOP_STMT;
+
+import static org.xvm.util.Handy.indentLines;
 
 /**
  * A "while(True){...}" statement.
@@ -55,7 +55,7 @@ public class LoopStmtAST<C>
 
     @Override
     public String dump() {
-        return this + "\n" + Handy.indentLines(body.dump(), "  ");
+        return this + "\n" + indentLines(body.dump(), "  ");
     }
 
     @Override

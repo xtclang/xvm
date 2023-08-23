@@ -5,9 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.util.Handy;
-
 import static org.xvm.asm.ast.LanguageAST.NodeType.DO_WHILE_STMT;
+
+import static org.xvm.util.Handy.indentLines;
 
 
 /**
@@ -51,8 +51,8 @@ public class DoWhileStmtAST<C>
 
     @Override
     public String dump() {
-        return "do\n" + Handy.indentLines(body.dump(), "  ") +
-               "\nwhile\n" + Handy.indentLines(cond.dump(), "  ");
+        return "do\n" + indentLines(body.dump(), "  ") +
+               "\nwhile\n" + indentLines(cond.dump(), "  ");
     }
 
     @Override

@@ -10,9 +10,11 @@ import java.util.Objects;
 
 import org.xvm.asm.ast.LanguageAST.StmtAST;
 
-import org.xvm.util.Handy;
-
 import static org.xvm.asm.ast.LanguageAST.NodeType.RETURN_STMT;
+
+import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -44,7 +46,7 @@ public class ReturnStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count = Handy.readMagnitude(in);
+        int count = readMagnitude(in);
         ExprAST<C>[] exprs = count == 0 ? NO_EXPRS : new ExprAST[count];
         for (int i = 0; i < count; ++i) {
             exprs[i] = deserialize(in, res);
@@ -63,7 +65,7 @@ public class ReturnStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        Handy.writePackedLong(out, exprs.length);
+        writePackedLong(out, exprs.length);
         for (ExprAST child : exprs) {
             child.write(out, res);
         }
@@ -74,7 +76,7 @@ public class ReturnStmtAST<C>
         StringBuilder buf = new StringBuilder();
         buf.append(this);
         for (ExprAST child : exprs) {
-            buf.append('\n').append(Handy.indentLines(child.dump(), "  "));
+            buf.append('\n').append(indentLines(child.dump(), "  "));
         }
         return buf.toString();
     }

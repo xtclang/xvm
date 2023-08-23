@@ -10,10 +10,9 @@ import java.util.Objects;
 
 import org.xvm.asm.ast.LanguageAST.ExprAST;
 
-import org.xvm.util.Handy;
-
 import static org.xvm.asm.ast.LanguageAST.NodeType.INVOKE_EXPR;
 
+import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -77,7 +76,7 @@ public class InvokeExprAST<C>
             throws IOException {
         this.method = res.getConstant(readMagnitude(in));
 
-        int      typeCount = Handy.readMagnitude(in);
+        int      typeCount = readMagnitude(in);
         Object[] retTypes  = new Object[typeCount];
         for (int i = 0; i < typeCount; i++) {
             retTypes[i] = res.getConstant(readMagnitude(in));
@@ -85,7 +84,7 @@ public class InvokeExprAST<C>
         this.retTypes = retTypes;
         this.target   = deserialize(in, res);
 
-        int          argCount = Handy.readMagnitude(in);
+        int          argCount = readMagnitude(in);
         ExprAST<C>[] args     = argCount == 0 ? NO_EXPRS : new ExprAST[argCount];
         for (int i = 0; i < argCount; ++i) {
             args[i] = deserialize(in, res);
@@ -113,13 +112,13 @@ public class InvokeExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, res.indexOf(method));
-        Handy.writePackedLong(out, retTypes.length);
+        writePackedLong(out, retTypes.length);
         for (Object type : retTypes) {
             writePackedLong(out, res.indexOf((C) type));
         }
         target.write(out, res);
 
-        Handy.writePackedLong(out, args.length);
+        writePackedLong(out, args.length);
         for (ExprAST child : args) {
             if (child != null) {
                 child.write(out, res);
@@ -132,7 +131,7 @@ public class InvokeExprAST<C>
         StringBuilder buf = new StringBuilder();
         buf.append(this);
         for (ExprAST child : args) {
-            buf.append('\n').append(Handy.indentLines(child.dump(), "  "));
+            buf.append('\n').append(indentLines(child.dump(), "  "));
         }
         return buf.toString();
     }

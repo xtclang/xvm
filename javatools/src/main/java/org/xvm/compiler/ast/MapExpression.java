@@ -13,6 +13,10 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.MapExprAST;
+
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
@@ -435,22 +439,46 @@ public class MapExpression
         }
 
     /**
-     * Helper method to generate an array of keys or values.
+     * Helper method to generate an array of keys or values and set the {@link #m_aKeyAST} and
+     * {@link #m_aValueAST}.
      */
     private Argument[] collectArguments(Context ctx, Code code, boolean fKeys, ErrorListener errs)
         {
-        List<Expression> list  = fKeys ? keys : values;
-        int              cArgs = list.size();
-        Argument[]       aArg  = new Argument[cArgs];
+        List<Expression>    list  = fKeys ? keys : values;
+        int                 cArgs = list.size();
+        Argument[]          aArg  = new Argument[cArgs];
+        ExprAST<Constant>[] aAST  = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i)
             {
-            Argument arg = list.get(i).generateArgument(ctx, code, true, false, errs);
+            Expression expr = list.get(i);
+            Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
             aArg[i] = i == cArgs-1
                     ? arg
                     : ensurePointInTime(code, arg);
+            aAST[i] = expr.getExprAST();
+            }
+
+        if (fKeys)
+            {
+            m_aKeyAST = aAST;
+            }
+        else
+            {
+            m_aValueAST = aAST;
             }
         return aArg;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        if (m_aKeyAST == null)
+            {
+            assert isConstant();
+            return new ConstantExprAST<>(getType(), toConstant());
+            }
+        return new MapExprAST<>(getType(), m_aKeyAST, m_aValueAST);
         }
 
 
@@ -494,6 +522,9 @@ public class MapExpression
     protected List<Expression> keys;
     protected List<Expression> values;
     protected long             lEndPos;
+
+    private transient ExprAST<Constant>[] m_aKeyAST;
+    private transient ExprAST<Constant>[] m_aValueAST;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MapExpression.class, "type", "keys", "values");
     }

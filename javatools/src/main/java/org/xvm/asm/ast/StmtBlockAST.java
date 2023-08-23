@@ -10,9 +10,9 @@ import java.util.Objects;
 
 import org.xvm.asm.ast.LanguageAST.StmtAST;
 
-import org.xvm.util.Handy;
-
 import static org.xvm.asm.ast.LanguageAST.NodeType.STMT_BLOCK;
+
+import static org.xvm.util.Handy.indentLines;
 
 
 /**
@@ -65,7 +65,7 @@ public class StmtBlockAST<C>
         buf.append("{");
         for (StmtAST child : stmts) {
             buf.append('\n')
-               .append(Handy.indentLines(child.dump(), "  "));
+               .append(indentLines(child.dump(), "  "));
         }
         buf.append("\n}");
         return buf.toString();

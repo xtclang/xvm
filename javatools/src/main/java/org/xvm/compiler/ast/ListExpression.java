@@ -14,6 +14,10 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.ListExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
+
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
@@ -432,22 +436,38 @@ public class ListExpression
         }
 
     /**
-     * Helper method to generate an array of arguments.
+     * Helper method to generate an array of arguments and set the {@link #m_astList}.
      */
     private Argument[] collectArguments(Context ctx, Code code, ErrorListener errs)
         {
         List<Expression> listExprs = exprs;
         int              cArgs     = listExprs.size();
         Argument[]       aArgs     = new Argument[cArgs];
+        ExprAST[]        aArgAST   = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i)
             {
-            Argument arg = listExprs.get(i).generateArgument(ctx, code, true, false, errs);
+            Expression expr = listExprs.get(i);
+            Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
             aArgs[i] = i == cArgs-1
                     ? arg
                     : ensurePointInTime(code, arg);
+            aArgAST[i] = expr.getExprAST();
             }
+
+        m_astList = new ListExprAST(getType(), aArgAST);
         return aArgs;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        if (m_astList == null)
+            {
+            assert isConstant();
+            m_astList = new ConstantExprAST<>(getType(), toConstant());
+            }
+        return m_astList;
         }
 
 
@@ -492,6 +512,8 @@ public class ListExpression
     protected List<Expression> exprs;
     protected long             lStartPos;
     protected long             lEndPos;
+
+    private transient ExprAST<Constant> m_astList;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ListExpression.class, "type", "exprs");
     }

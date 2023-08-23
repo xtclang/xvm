@@ -7,7 +7,8 @@ import java.io.IOException;
 
 import java.util.HashSet;
 
-import org.xvm.util.Handy;
+import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -99,7 +100,7 @@ public abstract class LanguageAST<C> {
 
     public static <C> ExprAST<C>[] readExprArray(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count = Handy.readMagnitude(in);
+        int count = readMagnitude(in);
         ExprAST<C>[] exprs = new ExprAST[count];
         for (int i = 0; i < count; ++i) {
             exprs[i] = deserialize(in, res);
@@ -109,7 +110,7 @@ public abstract class LanguageAST<C> {
 
     public static <C> StmtAST<C>[] readStmtArray(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count = Handy.readMagnitude(in);
+        int count = readMagnitude(in);
         StmtAST<C>[] stmts = new StmtAST[count];
         for (int i = 0; i < count; ++i) {
             stmts[i] = deserialize(in, res);
@@ -119,7 +120,7 @@ public abstract class LanguageAST<C> {
 
     public static <C> LanguageAST<C>[] readASTArray(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count = Handy.readMagnitude(in);
+        int count = readMagnitude(in);
         LanguageAST<C>[] nodes = new LanguageAST[count];
         for (int i = 0; i < count; ++i) {
             nodes[i] = deserialize(in, res);
@@ -129,7 +130,7 @@ public abstract class LanguageAST<C> {
 
     public static <C> void writeASTArray(DataOutput out, ConstantResolver<C> res, LanguageAST<C>[] nodes)
             throws IOException {
-        Handy.writePackedLong(out, nodes.length);
+        writePackedLong(out, nodes.length);
         for (LanguageAST child : nodes) {
             child.write(out, res);
         }
@@ -205,7 +206,9 @@ public abstract class LanguageAST<C> {
         ANY_STORE_STMT,
         ASSIGN_STMT,        // lvalue op rvalue, for
         EXPR_NOT_IMPL_YET,  // "a node for some expression form has not yet been implemented"
-        LIT_EXPR,
+        CONSTANT_EXPR,
+        LIST_EXPR,
+        MAP_EXPR,
         REGISTER_EXPR,      // "register" expr
         INVOKE_EXPR,        // invoke expr
         SWITCH_EXPR,
@@ -282,7 +285,6 @@ public abstract class LanguageAST<C> {
 //            case FOR_MAP_STMT       -> new ;
 //            case FOR_ITERABLE_STMT  -> new ;
 //            case CONTINUE_LOOP_STMT -> new ;
-//            case BREAK_STMT         -> new ;
             case CONTINUE_STMT      -> new ContinueStmtAST<C>();
             case BREAK_STMT         -> new BreakStmtAST<C>();
             case RETURN_STMT        -> new ReturnStmtAST<C>();
@@ -295,7 +297,9 @@ public abstract class LanguageAST<C> {
 //            case ASSIGN_STMT        -> new ;
             case EXPR_STMT          -> new ExprStmtAST<C>();
             case EXPR_NOT_IMPL_YET  -> new ExprNotImplAST<C>();
-            case LIT_EXPR           -> new LitExprAST<C>();
+            case CONSTANT_EXPR      -> new ConstantExprAST<C>();
+            case LIST_EXPR          -> new ListExprAST<>();
+            case MAP_EXPR           -> new MapExprAST<>();
             case REGISTER_EXPR      -> new RegisterAST<>();
             case INVOKE_EXPR        -> new InvokeExprAST<>();
 //            case SWITCH_EXPR        -> new ;
