@@ -80,8 +80,7 @@ public class ForStmtAST<C>
 
     @Override
     public String dump() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(this);
+        StringBuilder buf = new StringBuilder("for ");
         if (init.length <= 1 && update.length <= 1) {
             buf.append('(')
                .append(init.length == 0 ? "" : init[0])
@@ -104,5 +103,10 @@ public class ForStmtAST<C>
         }
         buf.append("\n{").append(Handy.indentLines(body.dump(), "  ")).append("\n}");
         return buf.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "for (,,) {}";
     }
 }

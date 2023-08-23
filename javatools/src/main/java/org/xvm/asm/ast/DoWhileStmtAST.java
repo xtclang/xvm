@@ -51,10 +51,12 @@ public class DoWhileStmtAST<C>
 
     @Override
     public String dump() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(this);
-        buf.append("\ndo\n").append(Handy.indentLines(body.dump(), "  "));
-        buf.append("\nwhile\n").append(Handy.indentLines(cond.dump(), "  "));
-        return buf.toString();
+        return "do\n" + Handy.indentLines(body.dump(), "  ") +
+               "\nwhile\n" + Handy.indentLines(cond.dump(), "  ");
+    }
+
+    @Override
+    public String toString() {
+        return "do {} while(" + cond.toString() + ")";
     }
 }

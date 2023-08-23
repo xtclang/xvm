@@ -59,10 +59,12 @@ public class WhileStmtAST<C>
 
     @Override
     public String dump() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(this);
-        buf.append('\n').append(Handy.indentLines(cond.dump(), "  "));
-        buf.append("\ndo\n").append(Handy.indentLines(body.dump(), "  "));
-        return buf.toString();
+        return "while\n" + Handy.indentLines(cond.dump(), "  ") +
+               "\ndo\n" + Handy.indentLines(body.dump(), "  ");
+    }
+
+    @Override
+    public String toString() {
+        return "while (" + cond.toString() + ") {}";
     }
 }

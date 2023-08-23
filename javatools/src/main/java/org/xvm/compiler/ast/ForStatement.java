@@ -13,11 +13,18 @@ import java.util.Map.Entry;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.ConditionAST;
+import org.xvm.asm.ast.ForStmtAST;
+import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+
+import org.xvm.asm.ast.StmtBlockAST;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.asm.op.Enter;
@@ -598,7 +605,8 @@ public class ForStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
+        boolean   fCompletes = fReachable;
+        AstHolder holder     = ctx.getHolder();
 
         code.add(new Enter());
 
@@ -619,9 +627,13 @@ public class ForStatement
         List<Statement> listInit   = init;
         int             cInit      = listInit.size();
         Label[]         aInitLabel = m_alabelInitGround;
+        StmtAST[]       aInitAST   = new StmtAST[cInit];
         for (int i = 0; i < cInit; ++i)
             {
-            fCompletes = listInit.get(i).completes(ctx, fCompletes, code, errs);
+            Statement stmt = listInit.get(i);
+            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+
+            aInitAST[i] = holder.getAst(stmt);
 
             Label labelGround = aInitLabel == null ? null : aInitLabel[i];
             if (labelGround != null)
@@ -660,15 +672,26 @@ public class ForStatement
                 }
             }
 
-        boolean fBlockReachable = fCompletes;
+        boolean                 fBlockReachable = fCompletes;
+        LanguageAST<Constant>[] aCondAST        = null;
+
         if (fAlwaysFalse)
             {
             code.add(new Jump(getEndLabel()));
             fBlockReachable = false;
+
+            // degenerate case: we don't need to generate neither the "condition" nor "update" AST
+            holder.setAst(this, new StmtBlockAST<>(aInitAST));
             }
-        else if (!fAlwaysTrue)
+        else if (fAlwaysTrue)
             {
-            for (int i = 0, c = getConditionCount(); i < c; ++i)
+            aCondAST = new LanguageAST[0];
+            }
+        else
+            {
+            int cConds = getConditionCount();
+            aCondAST = new LanguageAST[cConds];
+            for (int i = 0; i < cConds; ++i)
                 {
                 AstNode cond = getCondition(i);
                 if (cond instanceof AssignmentStatement stmtCond)
@@ -678,12 +701,16 @@ public class ForStatement
                     code.add(stmtCond.isNegated()
                             ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
                             : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
+
+                    aCondAST[i] = holder.getAst(stmtCond);
                     }
                 else
                     {
                     Expression exprCond = (Expression) cond;
                     exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
                     fBlockReachable &= exprCond.isCompletable();
+
+                    aCondAST[i] = exprCond.getExprAST();
                     }
                 }
             }
@@ -697,6 +724,8 @@ public class ForStatement
 
         fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
+        StmtAST<Constant> astBody = fAlwaysFalse ? null : holder.getAst(block);
+
         if (hasContinueLabel())
             {
             code.add(getContinueLabel());
@@ -705,9 +734,16 @@ public class ForStatement
         List<Statement> listUpdate   = update;
         int             cUpdate      = listUpdate.size();
         Label[]         aUpdateLabel = m_alabelUpdateGround;
+        StmtAST[]       aUpdateAST   = new StmtAST[cUpdate];
         for (int i = 0; i < cUpdate; ++i)
             {
-            fCompletes &= listUpdate.get(i).completes(ctx, fCompletes, code, errs) || !fAlwaysTrue;
+            Statement stmt = listUpdate.get(i);
+            fCompletes &= stmt.completes(ctx, fCompletes, code, errs) || !fAlwaysTrue;
+
+            if (!fAlwaysFalse)
+                {
+                aUpdateAST[i] = holder.getAst(stmt);
+                }
 
             Label labelGround = aUpdateLabel == null ? null : aUpdateLabel[i];
             if (labelGround != null)
@@ -737,6 +773,11 @@ public class ForStatement
             code.add(new Exit());
             }
 
+        if (!fAlwaysFalse)
+            {
+            holder.setAst(this,
+                    new ForStmtAST<>(aInitAST, new ConditionAST<>(aCondAST), aUpdateAST, astBody));
+            }
         return !fAlwaysTrue && fCompletes;
         }
 

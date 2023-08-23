@@ -55,9 +55,11 @@ public class LoopStmtAST<C>
 
     @Override
     public String dump() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(this);
-        buf.append("\n").append(Handy.indentLines(body.dump(), "  "));
-        return buf.toString();
+        return this + "\n" + Handy.indentLines(body.dump(), "  ");
+    }
+
+    @Override
+    public String toString() {
+        return "while(True){}";
     }
 }

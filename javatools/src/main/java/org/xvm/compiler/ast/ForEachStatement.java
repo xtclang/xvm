@@ -19,6 +19,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -667,9 +669,17 @@ public class ForEachStatement
         code.add(new Enter());
 
         // strip any declarations off of the LValues (we'll handle them separately)
-        for (VariableDeclarationStatement stmt : getCondition().takeDeclarations())
+
+        VariableDeclarationStatement[] aInitStmt = getCondition().takeDeclarations();
+        int                            cInit     = aInitStmt.length;
+        StmtAST[]                      aInitAST = new StmtAST[cInit];
+        for (int i = 0; i < cInit; i++)
             {
+            VariableDeclarationStatement stmt = aInitStmt[i];
+
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+
+            aInitAST[i] = holder.getAst(stmt);
             }
 
         if (isLabeled())
@@ -1504,7 +1514,8 @@ public class ForEachStatement
 
     protected StatementBlock           block;
 
-    private transient Label            m_labelContinue;                                           private transient Expression       m_exprLValue;
+    private transient Label            m_labelContinue;
+    private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
     private transient Context          m_ctxLabelVars;

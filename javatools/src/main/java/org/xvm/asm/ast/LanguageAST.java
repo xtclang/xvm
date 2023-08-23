@@ -189,8 +189,8 @@ public abstract class LanguageAST<C> {
         DO_WHILE_STMT,      // do{...}while(cond);
         FOR_STMT,           // for(init,cond,next){...}
         FOR_ITERATOR_STMT,  // for(var v : iterator){...}
-        FOR_RANGE_STMT,     // for(var v : iterator){...}
-        FOR_LIST_STMT,      // for(var v : iterator){...}
+        FOR_RANGE_STMT,     // for(var v : range){...}
+        FOR_LIST_STMT,      // for(var v : list){...}
         FOR_MAP_STMT,       // for((var k, var v)) : map){...} etc.
         FOR_ITERABLE_STMT,  // for(var v : iterable){...}
         CONTINUE_STMT,      // continue; or continue Label;

@@ -13,11 +13,18 @@ import java.util.Map.Entry;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.ConditionAST;
+import org.xvm.asm.ast.DoWhileStmtAST;
+import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.LoopStmtAST;
+import org.xvm.asm.ast.WhileStmtAST;
 
 import org.xvm.asm.constants.StringConstant;
 
@@ -506,11 +513,12 @@ public class WhileStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean  fCompletes    = fReachable;
-        boolean  fDoWhile      = isDoWhile();
-        Register regFirst      = m_regFirst;
-        Register regCount      = m_regCount;
-        boolean  fHasLabelVars = regFirst != null || regCount != null;
+        boolean   fCompletes    = fReachable;
+        boolean   fDoWhile      = isDoWhile();
+        Register  regFirst      = m_regFirst;
+        Register  regCount      = m_regCount;
+        boolean   fHasLabelVars = regFirst != null || regCount != null;
+        AstHolder holder        = ctx.getHolder();
 
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
@@ -562,6 +570,9 @@ public class WhileStatement
             fCompletes = block.completes(ctx, fCompletes, code, errs);
             code.add(new Exit());
             code.add(getContinueLabel());
+
+            holder.setAst(this, holder.getAst(block));
+
             return fCompletes;
             }
 
@@ -608,7 +619,9 @@ public class WhileStatement
                 code.add(new Jump(getRepeatLabel()));
                 code.add(new Exit());
                 }
-            return false;     // while(true) never completes naturally
+
+            holder.setAst(this, new LoopStmtAST<>(holder.getAst(block)));
+            return false; // while(true) never completes naturally
             }
 
         if (fDoWhile)
@@ -645,6 +658,8 @@ public class WhileStatement
             code.add(getContinueLabel());
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
             code.add(new Exit());
+
+            holder.setAst(this, new DoWhileStmtAST<>(holder.getAst(block), m_astCond));
             return fCompletes;
             }
 
@@ -700,6 +715,8 @@ public class WhileStatement
             {
             code.add(new Exit());
             }
+
+        holder.setAst(this, new WhileStmtAST<>(m_astCond, holder.getAst(block)));
         return fCompletes;
         }
 
@@ -761,13 +778,20 @@ public class WhileStatement
             }
         }
 
+    /**
+     * Emit the condition test code and set the {@link #m_astCond}
+     */
     private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
-        for (int i = 0, c = getConditionCount(); i < c; ++i)
+        boolean                 fCompletes = fReachable;
+        AstHolder               holder     = ctx.getHolder();
+        int                     cConds     = getConditionCount();
+        LanguageAST<Constant>[] aCondASTs  = new LanguageAST[cConds];
+
+        for (int i = 0; i < cConds; ++i)
             {
             AstNode cond  = getCondition(i);
-            boolean fLast = i == c-1;
+            boolean fLast = i == cConds-1;
             if (cond instanceof AssignmentStatement stmtCond)
                 {
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
@@ -784,6 +808,7 @@ public class WhileStatement
                         ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
                         : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
                     }
+                aCondASTs[i] = holder.getAst(stmtCond);
                 }
             else
                 {
@@ -797,9 +822,12 @@ public class WhileStatement
                     exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
                     }
                 fCompletes &= exprCond.isCompletable();
+
+                aCondASTs[i] = exprCond.getExprAST();
                 }
             }
 
+        m_astCond = new ConditionAST<>(aCondASTs);
         return fCompletes;
         }
 
@@ -870,6 +898,11 @@ public class WhileStatement
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
     private transient List<Entry<AstNode, Map<String, Assignment>>> m_listContinues;
+
+    /**
+     * ConditionAST produced by {@link #emitConditionTest}.
+     */
+    private transient ConditionAST<Constant> m_astCond;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
     }

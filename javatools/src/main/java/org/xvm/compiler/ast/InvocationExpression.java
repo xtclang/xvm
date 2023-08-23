@@ -1953,7 +1953,6 @@ public class InvocationExpression
         }
 
     /**
-     *
      * @return the Argument for the target and set the {@link #m_astTarget}
      */
     private Argument generateTarget(Context ctx, Code code, Expression exprLeft,
