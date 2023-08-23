@@ -22,12 +22,12 @@ public class BreakStmtAST<C>
 
     private int depth;
 
-    public BreakStmtAST() {
-        depth = 0;
+    BreakStmtAST() {
+        depth = -1;
     }
 
     public BreakStmtAST(int depth) {
-        assert depth > 0 & depth < 1024;            // arbitrary limit to catch obvious math bugs
+        assert depth >= 0 & depth < 1024;            // arbitrary limit to catch obvious math bugs
         this.depth = depth;
     }
 

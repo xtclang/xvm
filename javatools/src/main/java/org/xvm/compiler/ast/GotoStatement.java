@@ -90,7 +90,7 @@ public abstract class GotoStatement
         if (isLabeled())
             {
             String  sLabel = getLabeledName();
-            AstNode node = getParent();
+            AstNode node   = getParent();
             while (true)
                 {
                 AstNode nodeParent = node.getParent();
@@ -129,6 +129,45 @@ public abstract class GotoStatement
                 }
 
             node = node.getParent();
+            }
+        }
+
+    /**
+     * @return the "depth" of the statement that this "goto" statement refers to
+     */
+    protected int getTargetDepth()
+        {
+        if (!isLabeled())
+            {
+            return 0;
+            }
+
+        int     nDepth = 0;
+        String  sLabel = getLabeledName();
+        AstNode node   = getParent();
+        while (true)
+            {
+            AstNode nodeParent = node.getParent();
+            if (nodeParent instanceof LabeledStatement stmtLabeled
+                    && stmtLabeled.getName().equals(sLabel))
+                {
+                return nDepth;
+                }
+
+            if (node instanceof Statement stmt
+                    && stmt.isNaturalGotoStatementTarget())
+                {
+                nDepth++;
+                }
+
+            if (nodeParent.isComponentNode() || nodeParent instanceof StatementExpression)
+                {
+                // cannot pass a component boundary (and StatementExpression is a "pretend"
+                // component boundary, because it's supposed to act like a lambda)
+                return -1;
+                }
+
+            node = nodeParent;
             }
         }
 

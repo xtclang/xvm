@@ -22,12 +22,12 @@ public class ContinueStmtAST<C>
 
     private int depth;
 
-    public ContinueStmtAST() {
-        depth = 0;
+    ContinueStmtAST() {
+        depth = -1;
     }
 
     public ContinueStmtAST(int depth) {
-        assert depth > 0 & depth < 1024;            // arbitrary limit to catch obvious math bugs
+        assert depth >= 0 & depth < 1024;            // arbitrary limit to catch obvious math bugs
         this.depth = depth;
     }
 
