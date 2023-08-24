@@ -672,14 +672,14 @@ public class ForEachStatement
 
         VariableDeclarationStatement[] aInitStmt = getCondition().takeDeclarations();
         int                            cInit     = aInitStmt.length;
-        StmtAST[]                      aInitAST = new StmtAST[cInit];
+        StmtAST[]                      aAstInit = new StmtAST[cInit];
         for (int i = 0; i < cInit; i++)
             {
             VariableDeclarationStatement stmt = aInitStmt[i];
 
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
 
-            aInitAST[i] = holder.getAst(stmt);
+            aAstInit[i] = holder.getAst(stmt);
             }
 
         if (isLabeled())

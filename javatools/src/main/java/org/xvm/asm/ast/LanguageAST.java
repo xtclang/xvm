@@ -246,9 +246,8 @@ public abstract class LanguageAST<C> {
         BREAK_STMT,         // break; or break Label;
         EXPR_STMT,          // foo(); etc.
         RETURN_STMT,        // return expr;
-        TRY_STMT,           // using(res){...}, try(res){...}
-                            // try{...} catch(T e){...}
-                            // try{...} finally{...}
+        TRY_CATCH_STMT,     // using(res){...}, try(res){...} [catch(T e){...}]
+        TRY_FINALLY_STMT,   // try{...} [catch(T e){...}] finally{...}
         REG_DECL_STMT,
         REG_STORE_STMT,
         ANY_STORE_STMT,
@@ -336,7 +335,7 @@ public abstract class LanguageAST<C> {
             case CONTINUE_STMT      -> new ContinueStmtAST<C>();
             case BREAK_STMT         -> new BreakStmtAST<C>();
             case RETURN_STMT        -> new ReturnStmtAST<C>();
-            case TRY_STMT           -> new TryStmtAST<>();
+            case TRY_CATCH_STMT -> new TryCatchStmtAST<>();
 //            case REG_DECL_STMT      -> new ;
 //            case REG_STORE_STMT     -> new ;
 //            case ANY_STORE_STMT     -> new ;

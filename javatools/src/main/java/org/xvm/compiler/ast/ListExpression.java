@@ -443,7 +443,7 @@ public class ListExpression
         List<Expression> listExprs = exprs;
         int              cArgs     = listExprs.size();
         Argument[]       aArgs     = new Argument[cArgs];
-        ExprAST[]        aArgAST   = new ExprAST[cArgs];
+        ExprAST[]        aAstArgs  = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i)
             {
@@ -452,10 +452,10 @@ public class ListExpression
             aArgs[i] = i == cArgs-1
                     ? arg
                     : ensurePointInTime(code, arg);
-            aArgAST[i] = expr.getExprAST();
+            aAstArgs[i] = expr.getExprAST();
             }
 
-        m_astList = new ListExprAST(getType(), aArgAST);
+        m_astList = new ListExprAST(getType(), aAstArgs);
         return aArgs;
         }
 

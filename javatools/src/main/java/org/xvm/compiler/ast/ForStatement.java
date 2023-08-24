@@ -627,13 +627,13 @@ public class ForStatement
         List<Statement> listInit   = init;
         int             cInit      = listInit.size();
         Label[]         aInitLabel = m_alabelInitGround;
-        StmtAST[]       aInitAST   = new StmtAST[cInit];
+        StmtAST[]       aAstInit   = new StmtAST[cInit];
         for (int i = 0; i < cInit; ++i)
             {
             Statement stmt = listInit.get(i);
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
 
-            aInitAST[i] = holder.getAst(stmt);
+            aAstInit[i] = holder.getAst(stmt);
 
             Label labelGround = aInitLabel == null ? null : aInitLabel[i];
             if (labelGround != null)
@@ -681,7 +681,7 @@ public class ForStatement
             fBlockReachable = false;
 
             // degenerate case: we don't need to generate neither the "condition" nor "update" AST
-            holder.setAst(this, new StmtBlockAST<>(aInitAST));
+            holder.setAst(this, new StmtBlockAST<>(aAstInit));
             }
         else if (fAlwaysTrue)
             {
@@ -734,7 +734,7 @@ public class ForStatement
         List<Statement> listUpdate   = update;
         int             cUpdate      = listUpdate.size();
         Label[]         aUpdateLabel = m_alabelUpdateGround;
-        StmtAST[]       aUpdateAST   = new StmtAST[cUpdate];
+        StmtAST[]       aAstUpdate   = new StmtAST[cUpdate];
         for (int i = 0; i < cUpdate; ++i)
             {
             Statement stmt = listUpdate.get(i);
@@ -742,7 +742,7 @@ public class ForStatement
 
             if (!fAlwaysFalse)
                 {
-                aUpdateAST[i] = holder.getAst(stmt);
+                aAstUpdate[i] = holder.getAst(stmt);
                 }
 
             Label labelGround = aUpdateLabel == null ? null : aUpdateLabel[i];
@@ -776,7 +776,7 @@ public class ForStatement
         if (!fAlwaysFalse)
             {
             holder.setAst(this,
-                    new ForStmtAST<>(aInitAST, new ConditionAST<>(aCondAST), aUpdateAST, astBody));
+                    new ForStmtAST<>(aAstInit, new ConditionAST<>(aCondAST), aAstUpdate, astBody));
             }
         return !fAlwaysTrue && fCompletes;
         }

@@ -72,6 +72,13 @@ public class StmtBlockAST<C>
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[" + stmts.length + "]";
+        StringBuilder buf = new StringBuilder();
+        buf.append("{");
+        for (StmtAST child : stmts) {
+            buf.append('\n')
+               .append(indentLines(child.toString(), "  "));
+        }
+        buf.append("\n}");
+        return buf.toString();
     }
 }
