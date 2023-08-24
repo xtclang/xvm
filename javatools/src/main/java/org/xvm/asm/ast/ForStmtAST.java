@@ -54,7 +54,7 @@ public class ForStmtAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         init   = readStmtArray(in, res);
-        cond   = deserialize(in, res);
+        cond   = new ConditionAST<>(in, res);
         update = readStmtArray(in, res);
         body   = deserialize(in, res);
     }

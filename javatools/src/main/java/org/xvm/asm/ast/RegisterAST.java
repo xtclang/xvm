@@ -11,6 +11,7 @@ import org.xvm.asm.ast.LanguageAST.ExprAST;
 import static org.xvm.asm.ast.LanguageAST.NodeType.REGISTER_EXPR;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -53,7 +54,7 @@ public class RegisterAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         type       = res.getConstant(readMagnitude(in));
-        registerId = readMagnitude(in);
+        registerId = readPackedInt(in);
     }
 
     @Override

@@ -20,7 +20,10 @@ public class ConditionAST<C>
 
     private LanguageAST<C>[] conds;
 
-    ConditionAST() {}
+    ConditionAST(DataInput in, ConstantResolver<C> res)
+            throws IOException {
+        read(in, res);
+    }
 
     public ConditionAST(LanguageAST<C>[] conds) {
         assert conds == null || Arrays.stream(conds).allMatch(Objects::nonNull);

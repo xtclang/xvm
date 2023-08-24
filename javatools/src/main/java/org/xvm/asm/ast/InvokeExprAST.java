@@ -75,7 +75,7 @@ public class InvokeExprAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         method   = res.getConstant(readMagnitude(in));
-        retTypes = readASTArray(in, res);
+        retTypes = readConstArray(in, res);
         target   = deserialize(in, res);
         args     = readExprArray(in, res);
     }

@@ -38,7 +38,7 @@ public class DoWhileStmtAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         body = deserialize(in, res);
-        cond = deserialize(in, res);
+        cond = new ConditionAST<>(in, res);
     }
 
     @Override

@@ -38,11 +38,14 @@ public class WhileStmtAST<C>
         return cond;
     }
 
+    public StmtAST<C> getBody() {
+        return body;
+    }
+
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond = new ConditionAST<C>();
-        cond.read(in, res);
+        cond = new ConditionAST<>(in, res);
         body = deserialize(in, res);
     }
 

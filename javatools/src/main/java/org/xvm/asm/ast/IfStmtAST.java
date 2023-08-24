@@ -62,7 +62,7 @@ public class IfStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond     = deserialize(in, res);
+        cond     = new ConditionAST<>(in, res);
         thenStmt = deserialize(in, res);
         if (!noElse) {
             elseStmt = deserialize(in, res);
