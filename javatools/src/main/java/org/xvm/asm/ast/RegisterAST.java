@@ -65,6 +65,7 @@ public class RegisterAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         writePackedLong(out, res.indexOf((C) type));
         writePackedLong(out, getRegister());
     }

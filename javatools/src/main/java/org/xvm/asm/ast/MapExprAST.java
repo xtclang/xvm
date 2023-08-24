@@ -32,7 +32,7 @@ public class MapExprAST<C>
         assert type != null;
         assert keys   != null && Arrays.stream(keys  ).allMatch(Objects::nonNull);
         assert values != null && Arrays.stream(values).allMatch(Objects::nonNull);
-        assert  keys.length == values.length;
+        assert keys.length == values.length;
         this.type   = type;
         this.keys   = keys;
         this.values = values;
@@ -64,48 +64,26 @@ public class MapExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        type = res.getConstant(readMagnitude(in));
-
-        int          keyCount = readMagnitude(in);
-        ExprAST<C>[] keys     = keyCount == 0 ? NO_EXPRS : new ExprAST[keyCount];
-        for (int i = 0; i < keyCount; i++) {
-            keys[i] = deserialize(in, res);
-        }
-        this.keys = keys;
-
-        int          valueCount = readMagnitude(in);
-        ExprAST<C>[] values     = valueCount == 0 ? NO_EXPRS : new ExprAST[valueCount];
-        for (int i = 0; i < valueCount; i++) {
-            values[i] = deserialize(in, res);
-        }
-        this.values = values;
+        type   = res.getConstant(readMagnitude(in));
+        keys   = readExprArray(in, res);
+        values = readExprArray(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         type = res.register(type);
-        for (ExprAST key : keys) {
-            key.prepareWrite(res);
-        }
-        for (ExprAST value : values) {
-            value.prepareWrite(res);
-        }
+        prepareWriteASTArray(res, keys);
+        prepareWriteASTArray(res, values);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        writePackedLong(out, res.indexOf(type));
 
-        writePackedLong(out, keys.length);
-        for (ExprAST<C> key : keys) {
-            key.write(out, res);
-        }
-        writePackedLong(out, values.length);
-        for (ExprAST<C> value : values) {
-            value.write(out, res);
-        }
+        writePackedLong(out, res.indexOf(type));
+        writeASTArray(out, res, keys);
+        writeASTArray(out, res, values);
     }
 
     @Override

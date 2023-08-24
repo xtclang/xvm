@@ -9,8 +9,6 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import static org.xvm.util.Handy.indentLines;
-import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -42,28 +40,18 @@ public class ConditionAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count = readMagnitude(in);
-        LanguageAST<C>[] conds = count == 0 ? NO_EXPRS : new LanguageAST[count];
-        for (int i = 0; i < count; ++i) {
-            conds[i] = deserialize(in, res);
-        }
-        this.conds = conds;
+        conds = readASTArray(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        for (LanguageAST cond : conds) {
-            cond.prepareWrite(res);
-        }
+        prepareWriteASTArray(res, conds);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        writePackedLong(out, conds.length);
-        for (LanguageAST cond : conds) {
-            cond.write(out, res);
-        }
+        writeASTArray(out, res, conds);
     }
 
     @Override

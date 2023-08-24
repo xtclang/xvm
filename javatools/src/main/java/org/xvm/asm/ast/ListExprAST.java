@@ -56,34 +56,23 @@ public class ListExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        type = res.getConstant(readMagnitude(in));
-
-        int          valueCount = readMagnitude(in);
-        ExprAST<C>[] values     = valueCount == 0 ? NO_EXPRS : new ExprAST[valueCount];
-        for (int i = 0; i < valueCount; i++) {
-            values[i] = deserialize(in, res);
-        }
-        this.values = values;
+        type   = res.getConstant(readMagnitude(in));
+        values = readExprArray(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         type = res.register(type);
-        for (ExprAST value : values) {
-            value.prepareWrite(res);
-        }
+        prepareWriteASTArray(res, values);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        writePackedLong(out, res.indexOf(type));
 
-        writePackedLong(out, values.length);
-        for (ExprAST<C> value : values) {
-            value.write(out, res);
-        }
+        writePackedLong(out, res.indexOf(type));
+        writeASTArray(out, res, values);
     }
 
     @Override

@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+
 import static org.xvm.asm.ast.LanguageAST.NodeType.DO_WHILE_STMT;
 
 import static org.xvm.util.Handy.indentLines;
@@ -14,12 +16,17 @@ import static org.xvm.util.Handy.indentLines;
  * A "do..while" statement.
  */
 public class DoWhileStmtAST<C>
-        extends WhileStmtAST<C> {
+        extends StmtAST<C> {
+
+    private StmtAST<C>      body;
+    private ConditionAST<C> cond;
 
     DoWhileStmtAST() {}
 
     public DoWhileStmtAST(StmtAST<C> body, ConditionAST<C> cond) {
-        super(cond, body);
+        assert body != null && cond != null;
+        this.body = body;
+        this.cond = cond;
     }
 
     @Override
@@ -31,8 +38,7 @@ public class DoWhileStmtAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         body = deserialize(in, res);
-        cond = new ConditionAST<C>();
-        cond.read(in, res);
+        cond = deserialize(in, res);
     }
 
     @Override
@@ -45,6 +51,7 @@ public class DoWhileStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         body.write(out, res);
         cond.write(out, res);
     }

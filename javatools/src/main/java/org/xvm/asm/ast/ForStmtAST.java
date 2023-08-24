@@ -4,6 +4,9 @@ package org.xvm.asm.ast;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+
 import org.xvm.util.Handy;
 
 import static org.xvm.asm.ast.LanguageAST.NodeType.FOR_STMT;
@@ -13,11 +16,12 @@ import static org.xvm.asm.ast.LanguageAST.NodeType.FOR_STMT;
  * A "for(init;cond;update){...}" statement.
  */
 public class ForStmtAST<C>
-        extends LoopStmtAST<C> {
+        extends StmtAST<C> {
 
-    protected StmtAST<C>[]    init;
-    protected ConditionAST<C> cond;
-    protected StmtAST<C>[]    update;
+    private StmtAST<C>[]    init;
+    private ConditionAST<C> cond;
+    private StmtAST<C>[]    update;
+    private StmtAST<C>      body;
 
     ForStmtAST() {}
 
@@ -50,21 +54,16 @@ public class ForStmtAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         init   = readStmtArray(in, res);
-        cond   = new ConditionAST<C>();
-        cond.read(in, res);
+        cond   = deserialize(in, res);
         update = readStmtArray(in, res);
         body   = deserialize(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        for (StmtAST stmt : init) {
-            stmt.prepareWrite(res);
-        }
+        prepareWriteASTArray(res, init);
         cond.prepareWrite(res);
-        for (StmtAST stmt : update) {
-            stmt.prepareWrite(res);
-        }
+        prepareWriteASTArray(res, update);
         body.prepareWrite(res);
     }
 
@@ -72,6 +71,7 @@ public class ForStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         writeASTArray(out, res, init);
         cond.write(out, res);
         writeASTArray(out, res, update);

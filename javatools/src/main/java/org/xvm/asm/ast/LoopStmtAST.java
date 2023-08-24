@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.indentLines;
 public class LoopStmtAST<C>
         extends StmtAST<C> {
 
-    protected StmtAST<C> body;
+    private StmtAST<C> body;
 
     LoopStmtAST() {}
 
@@ -50,6 +50,7 @@ public class LoopStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         body.write(out, res);
     }
 

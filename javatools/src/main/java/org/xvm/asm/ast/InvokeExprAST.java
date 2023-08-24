@@ -74,36 +74,18 @@ public class InvokeExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        this.method = res.getConstant(readMagnitude(in));
-
-        int      typeCount = readMagnitude(in);
-        Object[] retTypes  = new Object[typeCount];
-        for (int i = 0; i < typeCount; i++) {
-            retTypes[i] = res.getConstant(readMagnitude(in));
-        }
-        this.retTypes = retTypes;
-        this.target   = deserialize(in, res);
-
-        int          argCount = readMagnitude(in);
-        ExprAST<C>[] args     = argCount == 0 ? NO_EXPRS : new ExprAST[argCount];
-        for (int i = 0; i < argCount; ++i) {
-            args[i] = deserialize(in, res);
-        }
-        this.args = args;
+        method   = res.getConstant(readMagnitude(in));
+        retTypes = readASTArray(in, res);
+        target   = deserialize(in, res);
+        args     = readExprArray(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         method = res.register(method);
         res.registerAll(retTypes);
-
         target.prepareWrite(res);
-
-        for (ExprAST child : args) {
-            if (child != null) {
-                child.prepareWrite(res);
-            }
-        }
+        prepareWriteASTArray(res, args);
     }
 
     @Override
@@ -112,18 +94,9 @@ public class InvokeExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, res.indexOf(method));
-        writePackedLong(out, retTypes.length);
-        for (Object type : retTypes) {
-            writePackedLong(out, res.indexOf((C) type));
-        }
+        writeConstArray(out, res, retTypes);
         target.write(out, res);
-
-        writePackedLong(out, args.length);
-        for (ExprAST child : args) {
-            if (child != null) {
-                child.write(out, res);
-            }
-        }
+        writeASTArray(out, res, args);
     }
 
     @Override

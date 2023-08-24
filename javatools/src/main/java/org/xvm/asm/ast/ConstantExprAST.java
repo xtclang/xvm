@@ -66,6 +66,7 @@ public class ConstantExprAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         writePackedLong(out, res.indexOf(type));
         writePackedLong(out, res.indexOf(value));
     }

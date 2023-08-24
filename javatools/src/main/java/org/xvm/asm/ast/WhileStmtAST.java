@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.ast.LanguageAST.StmtAST;
+
 import static org.xvm.asm.ast.LanguageAST.NodeType.WHILE_DO_STMT;
 
 import static org.xvm.util.Handy.indentLines;
@@ -14,9 +16,10 @@ import static org.xvm.util.Handy.indentLines;
  * A "while..do" statement.
  */
 public class WhileStmtAST<C>
-        extends LoopStmtAST<C> {
+        extends StmtAST<C> {
 
-    protected ConditionAST<C> cond;
+    private ConditionAST<C> cond;
+    private StmtAST<C>      body;
 
     WhileStmtAST() {}
 
@@ -53,6 +56,7 @@ public class WhileStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         cond.write(out, res);
         body.write(out, res);
     }

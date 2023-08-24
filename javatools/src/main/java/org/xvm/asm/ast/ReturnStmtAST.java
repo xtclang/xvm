@@ -13,8 +13,6 @@ import org.xvm.asm.ast.LanguageAST.StmtAST;
 import static org.xvm.asm.ast.LanguageAST.NodeType.RETURN_STMT;
 
 import static org.xvm.util.Handy.indentLines;
-import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -46,29 +44,20 @@ public class ReturnStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count = readMagnitude(in);
-        ExprAST<C>[] exprs = count == 0 ? NO_EXPRS : new ExprAST[count];
-        for (int i = 0; i < count; ++i) {
-            exprs[i] = deserialize(in, res);
-        }
-        this.exprs = exprs;
+        exprs = readExprArray(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        for (ExprAST child : exprs) {
-            child.prepareWrite(res);
-        }
+        prepareWriteASTArray(res, exprs);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        writePackedLong(out, exprs.length);
-        for (ExprAST child : exprs) {
-            child.write(out, res);
-        }
+
+        writeASTArray(out, res, exprs);
     }
 
     @Override

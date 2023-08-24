@@ -58,6 +58,7 @@ public class ContinueStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         writePackedLong(out, depth);
     }
 

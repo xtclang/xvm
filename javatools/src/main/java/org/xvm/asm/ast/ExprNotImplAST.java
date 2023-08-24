@@ -10,9 +10,7 @@ import java.util.Objects;
 
 import org.xvm.asm.ast.LanguageAST.ExprAST;
 
-import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readUtf8String;
-import static org.xvm.util.Handy.writePackedLong;
 import static org.xvm.util.Handy.writeUtf8String;
 
 
@@ -51,12 +49,8 @@ public class ExprNotImplAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        name = readUtf8String(in);
-        int count = readMagnitude(in);
-        types = new Object[count];
-        for (int i = 0; i < count; ++i) {
-            types[i] = res.getConstant(readMagnitude(in));
-        }
+        name  = readUtf8String(in);
+        types = readConstArray(in, res);
     }
 
     @Override
@@ -68,10 +62,9 @@ public class ExprNotImplAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         writeUtf8String(out, name);
-        for (int i = 0, count = types.length; i < count; ++i) {
-            writePackedLong(out, res.indexOf((C) types[i]));
-        }
+        writeConstArray(out, res, types);
     }
 
     @Override

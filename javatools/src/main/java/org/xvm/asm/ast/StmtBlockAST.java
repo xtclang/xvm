@@ -42,20 +42,19 @@ public class StmtBlockAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        this.stmts = readStmtArray(in, res);
+        stmts = readStmtArray(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        for (StmtAST child : stmts) {
-            child.prepareWrite(res);
-        }
+        prepareWriteASTArray(res, stmts);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         writeASTArray(out, res, stmts);
     }
 

@@ -44,6 +44,7 @@ public class StmtNotImplAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         writeUtf8String(out, name);
     }
 

@@ -62,8 +62,7 @@ public class IfStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond = new ConditionAST<C>();
-        cond.read(in, res);
+        cond     = deserialize(in, res);
         thenStmt = deserialize(in, res);
         if (!noElse) {
             elseStmt = deserialize(in, res);
@@ -83,6 +82,7 @@ public class IfStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+
         cond.write(out, res);
         thenStmt.write(out, res);
         if (!noElse) {

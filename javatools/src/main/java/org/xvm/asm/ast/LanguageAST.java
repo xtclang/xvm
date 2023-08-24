@@ -98,9 +98,27 @@ public abstract class LanguageAST<C> {
 
     // ----- helpers -------------------------------------------------------------------------------
 
+    public static <C> Object[] readConstArray(DataInput in, ConstantResolver<C> res)
+            throws IOException {
+        int count  = readMagnitude(in);
+        if (count == 0) {
+            return NO_CONSTS;
+        }
+
+        Object[] values = new Object[count];
+        for (int i = 0; i < count; ++i) {
+            values[i] = res.getConstant(readMagnitude(in));
+        }
+        return values;
+    }
+
     public static <C> ExprAST<C>[] readExprArray(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int count = readMagnitude(in);
+        if (count == 0) {
+            return NO_EXPRS;
+        }
+
         ExprAST<C>[] exprs = new ExprAST[count];
         for (int i = 0; i < count; ++i) {
             exprs[i] = deserialize(in, res);
@@ -111,6 +129,10 @@ public abstract class LanguageAST<C> {
     public static <C> StmtAST<C>[] readStmtArray(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int count = readMagnitude(in);
+        if (count == 0) {
+            return NO_STMTS;
+        }
+
         StmtAST<C>[] stmts = new StmtAST[count];
         for (int i = 0; i < count; ++i) {
             stmts[i] = deserialize(in, res);
@@ -121,6 +143,10 @@ public abstract class LanguageAST<C> {
     public static <C> LanguageAST<C>[] readASTArray(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int count = readMagnitude(in);
+        if (count == 0) {
+            return NO_ASTS;
+        }
+
         LanguageAST<C>[] nodes = new LanguageAST[count];
         for (int i = 0; i < count; ++i) {
             nodes[i] = deserialize(in, res);
@@ -128,11 +154,33 @@ public abstract class LanguageAST<C> {
         return nodes;
     }
 
+    // nodes can have nulls at the tail
+    public static <C> void prepareWriteASTArray(ConstantResolver<C> res, LanguageAST<C>[] nodes) {
+        for (LanguageAST node : nodes) {
+            if (node != null) {
+                node.prepareWrite(res);
+            }
+        }
+    }
+
+    public static <C> void writeConstArray(DataOutput out, ConstantResolver<C> res, Object[] values)
+            throws IOException {
+        int count = values.length;
+
+        writePackedLong(out, count);
+        for (int i = 0; i < count; ++i) {
+            writePackedLong(out, res.indexOf((C) values[i]));
+        }
+    }
+
+    // nodes can have nulls at the tail
     public static <C> void writeASTArray(DataOutput out, ConstantResolver<C> res, LanguageAST<C>[] nodes)
             throws IOException {
         writePackedLong(out, nodes.length);
         for (LanguageAST child : nodes) {
-            child.write(out, res);
+            if (child != null) {
+                child.write(out, res);
+            }
         }
     }
 
@@ -198,9 +246,9 @@ public abstract class LanguageAST<C> {
         BREAK_STMT,         // break; or break Label;
         EXPR_STMT,          // foo(); etc.
         RETURN_STMT,        // return expr;
-        TRY_USING_STMT,     // using(res){...} or try(res){...}
-        TRY_CATCH_STMT,     // try{...}catch(T e){...} etc.
-        TRY_FINALLY_STMT,   // try{...}finally{...}
+        TRY_STMT,           // using(res){...}, try(res){...}
+                            // try{...} catch(T e){...}
+                            // try{...} finally{...}
         REG_DECL_STMT,
         REG_STORE_STMT,
         ANY_STORE_STMT,
@@ -241,8 +289,6 @@ public abstract class LanguageAST<C> {
      */
     public abstract static class StmtAST<C> extends LanguageAST<C> {}
 
-    public static StmtAST[] NO_STMTS = new StmtAST[0];
-
     /**
      * Class hierarchy root for all expressions.
      */
@@ -263,7 +309,9 @@ public abstract class LanguageAST<C> {
         public abstract C getType(int i);
     }
 
-    public static ExprAST[] NO_EXPRS = new ExprAST[0];
+    public static StmtAST[] NO_STMTS  = new StmtAST[0];
+    public static ExprAST[] NO_EXPRS  = new ExprAST[0];
+    public static Object[]  NO_CONSTS = new Object[0];
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -288,9 +336,7 @@ public abstract class LanguageAST<C> {
             case CONTINUE_STMT      -> new ContinueStmtAST<C>();
             case BREAK_STMT         -> new BreakStmtAST<C>();
             case RETURN_STMT        -> new ReturnStmtAST<C>();
-//            case TRY_USING_STMT     -> new ;
-//            case TRY_CATCH_STMT     -> new ;
-//            case TRY_FINALLY_STMT   -> new ;
+            case TRY_STMT           -> new TryStmtAST<>();
 //            case REG_DECL_STMT      -> new ;
 //            case REG_STORE_STMT     -> new ;
 //            case ANY_STORE_STMT     -> new ;
