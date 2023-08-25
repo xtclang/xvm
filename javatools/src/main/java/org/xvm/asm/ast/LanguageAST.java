@@ -343,8 +343,12 @@ public abstract class LanguageAST<C> {
 
     static <C> LanguageAST<C> instantiate(NodeType nodeType) {
         return switch (nodeType) {
-            case RegisterExpr -> new RegisterAST<>();
-            case InvokeExpr -> new InvokeExprAST<>();
+            case RegAlloc           -> new RegAllocAST<C>(false);
+            case NamedRegAlloc      -> new RegAllocAST<C>(true);
+            case Assign             -> new AssignAST<>(false);
+            case BinOpAssign        -> new AssignAST<>(true);
+            case RegisterExpr       -> new RegisterAST<>();
+            case InvokeExpr         -> new InvokeExprAST<>();
 
             case STMT_BLOCK         -> new StmtBlockAST<C>();
             case IF_THEN_STMT       -> new IfStmtAST<C>(false);
