@@ -26,7 +26,7 @@ public class InvokeExprAST<C>
     private C            method;
     private Object[]     retTypes;
     private ExprAST<C>   target;
-    private ExprAST<C>[] args; // can have the tail of nulls for "default" args
+    private ExprAST<C>[] args;
 
     InvokeExprAST() {
     }
@@ -35,8 +35,9 @@ public class InvokeExprAST<C>
      * Construct an InvokeExprAST.
      */
     public InvokeExprAST(C method, C[] retTypes, ExprAST target, ExprAST<C>[] args) {
-        assert method   != null;
+        assert method   != null && target != null;
         assert retTypes != null && Arrays.stream(retTypes).allMatch(Objects::nonNull);
+        assert args     == null || Arrays.stream(args).allMatch(Objects::nonNull);
 
         this.method   = method;
         this.retTypes = retTypes;

@@ -1484,15 +1484,17 @@ public class InvocationExpression
                                     {
                                     Expression expr = args.get(i);
                                     Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
-                                    aArgs[cTypeParams + i] = i == cArgs-1
-                                            ? arg
-                                            : ensurePointInTime(code, arg);
-                                    aAsts[i] = expr.getExprAST();
+                                    int        iArg = cTypeParams + i;
+                                    aArgs[iArg] = i == cArgs-1 ? arg : ensurePointInTime(code, arg);
+                                    aAsts[iArg] = expr.getExprAST();
                                     }
 
                                 for (int i = 0; i < cDefaults; ++i)
                                     {
-                                    aArgs[cTypeParams + cArgs + i] = Register.DEFAULT;
+                                    int iArg = cTypeParams + cArgs + i;
+                                    aArgs[iArg] = Register.DEFAULT;
+                                    aAsts[iArg] = new RegisterAST(
+                                            idMethod.getRawParams()[cArgs + i], Op.A_DEFAULT);
                                     }
                                 }
 

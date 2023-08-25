@@ -100,7 +100,7 @@ public abstract class LanguageAST<C> {
 
     public static <C> Object[] readConstArray(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        int count  = readMagnitude(in);
+        int count = readMagnitude(in);
         if (count == 0) {
             return NO_CONSTS;
         }
@@ -154,12 +154,9 @@ public abstract class LanguageAST<C> {
         return nodes;
     }
 
-    // nodes can have nulls at the tail
     public static <C> void prepareWriteASTArray(ConstantResolver<C> res, LanguageAST<C>[] nodes) {
         for (LanguageAST node : nodes) {
-            if (node != null) {
-                node.prepareWrite(res);
-            }
+            node.prepareWrite(res);
         }
     }
 
@@ -173,14 +170,11 @@ public abstract class LanguageAST<C> {
         }
     }
 
-    // nodes can have nulls at the tail
     public static <C> void writeASTArray(DataOutput out, ConstantResolver<C> res, LanguageAST<C>[] nodes)
             throws IOException {
         writePackedLong(out, nodes.length);
         for (LanguageAST child : nodes) {
-            if (child != null) {
-                child.write(out, res);
-            }
+            child.write(out, res);
         }
     }
 
@@ -335,7 +329,8 @@ public abstract class LanguageAST<C> {
             case CONTINUE_STMT      -> new ContinueStmtAST<C>();
             case BREAK_STMT         -> new BreakStmtAST<C>();
             case RETURN_STMT        -> new ReturnStmtAST<C>();
-            case TRY_CATCH_STMT -> new TryCatchStmtAST<>();
+            case TRY_CATCH_STMT     -> new TryCatchStmtAST<>();
+            case TRY_FINALLY_STMT   -> new TryFinallyStmtAST<>();
 //            case REG_DECL_STMT      -> new ;
 //            case REG_STORE_STMT     -> new ;
 //            case ANY_STORE_STMT     -> new ;
