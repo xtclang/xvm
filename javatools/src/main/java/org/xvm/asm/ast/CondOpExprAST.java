@@ -18,6 +18,13 @@ public class CondOpExprAST<C>
 
     public CondOpExprAST(Operator op, ExprAST<C> expr1, ExprAST<C> expr2) {
         super(op, expr1, expr2);
+
+        assert switch (op) {
+            case CondOr, CondXor, CondAnd, CompEq, CompNeq,
+                 CompLt, CompGt, CompLtEq, CompGtEq, CompOrd
+                    -> true;
+            default -> false;
+            };
     }
 
     @Override
@@ -38,10 +45,10 @@ public class CondOpExprAST<C>
 
         type = switch (getOp())
             {
-            case CondOr, CondAnd ->
+            case CondOr, CondXor, CondAnd, CompEq, CompNeq ->
                 res.typeForName("Boolean");
 
-            case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq, CompOrd ->
+            case CompLt, CompGt, CompLtEq, CompGtEq, CompOrd ->
                 res.typeForName("Ordered");
 
             default -> throw new IllegalStateException();

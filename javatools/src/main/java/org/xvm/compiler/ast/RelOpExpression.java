@@ -1145,7 +1145,7 @@ public class RelOpExpression
                 return new DivRemExprAST<>(getTypes(), ast1, ast2);
 
             case COND_XOR:
-                return new CondOpExprAST<>(Operator.BitXor, ast1, ast2);
+                return new CondOpExprAST<>(Operator.CondXor, ast1, ast2);
 
             case BIT_OR:
                 op = Operator.BitOr;
@@ -1194,7 +1194,7 @@ public class RelOpExpression
                 break;
             default:
                 throw new UnsupportedOperationException(operator.getValueText());
-            };
+            }
 
          return new RelOpExprAST<>(getType(), op, ast1, ast2);
         }
