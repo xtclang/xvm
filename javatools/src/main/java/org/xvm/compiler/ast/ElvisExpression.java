@@ -8,6 +8,10 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.RelOpExprAST;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpNotNull;
@@ -352,6 +356,13 @@ public class ElvisExpression
         code.add(labelEnd);
         }
 
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return new RelOpExprAST<>(getType(), Operator.CondElse,
+            expr1.getExprAST(), expr2.getExprAST());
+        }
+
     protected Label getEndLabel()
         {
         Label labelEnd = m_labelEnd;
@@ -362,9 +373,10 @@ public class ElvisExpression
         return labelEnd;
         }
 
+
     // ----- fields --------------------------------------------------------------------------------
 
-    private static    int s_nCounter;
+    private static int s_nCounter;
 
     /**
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".

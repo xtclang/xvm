@@ -6,6 +6,10 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.RelOpExprAST;
+
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -139,6 +143,12 @@ public class AsExpression
             {
             super.generateAssignment(ctx, code, LVal, errs);
             }
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return new RelOpExprAST<>(getType(), Operator.As, expr1.getExprAST(), expr2.getExprAST());
         }
 
     private TypeConstant getTargetType()
