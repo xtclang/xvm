@@ -15,6 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.CondOpExprAST;
 import org.xvm.asm.ast.DivRemExprAST;
 import org.xvm.asm.ast.LanguageAST.ExprAST;
 import org.xvm.asm.ast.RelOpExprAST;
@@ -1134,33 +1135,68 @@ public class RelOpExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        if (operator.getId() == Id.DIVREM)
-            {
-            return new DivRemExprAST<>(getTypes(), expr1.getExprAST(), expr2.getExprAST());
-            }
+        ExprAST<Constant> ast1 = expr1.getExprAST();
+        ExprAST<Constant> ast2 = expr2.getExprAST();
 
-        Operator op = switch (operator.getId())
+        Operator op;
+        switch (operator.getId())
             {
-            case BIT_OR    -> Operator.BitOr;
-            case BIT_XOR   -> Operator.BitXor;
-            case COND_XOR  -> Operator.CondOr;
-            case BIT_AND   -> Operator.BitAnd;
-            case I_RANGE_I -> Operator.RangeII;
-            case E_RANGE_I -> Operator.RangeEI;
-            case I_RANGE_E -> Operator.RangeIE;
-            case E_RANGE_E -> Operator.RangeEE;
-            case SHL       -> Operator.Shl;
-            case SHR       -> Operator.Shr;
-            case USHR      -> Operator.Ushr;
-            case ADD       -> Operator.Add;
-            case SUB       -> Operator.Sub;
-            case MUL       -> Operator.Mul;
-            case DIVREM    -> Operator.DivRem;
-            case DIV       -> Operator.Div;
-            case MOD       -> Operator.Mod;
-            default        -> throw new UnsupportedOperationException(operator.getValueText());
+            case DIVREM:
+                return new DivRemExprAST<>(getTypes(), ast1, ast2);
+
+            case COND_XOR:
+                return new CondOpExprAST<>(Operator.BitXor, ast1, ast2);
+
+            case BIT_OR:
+                op = Operator.BitOr;
+                break;
+            case BIT_XOR:
+                op = Operator.BitXor;
+                break;
+            case BIT_AND:
+                op = Operator.BitAnd;
+                break;
+            case I_RANGE_I:
+                op = Operator.RangeII;
+                break;
+            case E_RANGE_I:
+                op = Operator.RangeEI;
+                break;
+            case I_RANGE_E:
+                op = Operator.RangeIE;
+                break;
+            case E_RANGE_E:
+                op = Operator.RangeEE;
+                break;
+            case SHL:
+                op = Operator.Shl;
+                break;
+            case SHR:
+                op = Operator.Shr;
+                break;
+            case USHR:
+                op = Operator.Ushr;
+                break;
+            case ADD:
+                op = Operator.Add;
+                break;
+            case SUB:
+                op = Operator.Sub;
+                break;
+            case MUL:
+                op = Operator.Mul;
+                break;
+            case DIV:
+                op = Operator.Div;
+                break;
+            case MOD:
+                op = Operator.Mod;
+                break;
+            default:
+                throw new UnsupportedOperationException(operator.getValueText());
             };
-        return new RelOpExprAST<>(getType(), op, expr1.getExprAST(), expr2.getExprAST());
+
+         return new RelOpExprAST<>(getType(), op, ast1, ast2);
         }
 
 

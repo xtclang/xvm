@@ -8,6 +8,10 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.CondOpExprAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -254,6 +258,13 @@ public class CondOpExpression
             }
 
         super.generateAssignment(ctx, code, LVal, errs);
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return new CondOpExprAST<>(isAnd() ? Operator.CondAnd : Operator.CondOr,
+                expr1.getExprAST(), expr2.getExprAST());
         }
 
 

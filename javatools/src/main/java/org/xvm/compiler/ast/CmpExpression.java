@@ -10,6 +10,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
 import org.xvm.asm.OpTest;
 
+import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.CondOpExprAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -567,6 +571,24 @@ public class CmpExpression
 
         super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
         }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        Operator op = switch (operator.getId())
+            {
+            case COMP_EQ   -> Operator.CompEq;
+            case COMP_NEQ  -> Operator.CompNeq;
+            case COMP_LT   -> Operator.CompLt;
+            case COMP_GT   -> Operator.CompGt;
+            case COMP_LTEQ -> Operator.CompLtEq;
+            case COMP_GTEQ -> Operator.CompGtEq;
+            case COMP_ORD  -> Operator.CompOrd;
+            default -> throw new UnsupportedOperationException(operator.getValueText());
+            };
+        return new CondOpExprAST<>(op, expr1.getExprAST(), expr2.getExprAST());
+        }
+
 
     // ----- fields --------------------------------------------------------------------------------
 

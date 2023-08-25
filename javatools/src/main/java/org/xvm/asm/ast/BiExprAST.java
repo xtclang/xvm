@@ -25,6 +25,7 @@ public abstract class BiExprAST<C>
         Colon       (":"   ), // an "else" for nullability checks
         CondElse    ("?:"  ), // the "elvis" operator
         CondOr      ("||"  ),
+        CondXor     ("^^"  ),
         CondAnd     ("&&"  ),
         BitOr       ("|"   ),
         BitXor      ("^"   ),
@@ -35,6 +36,7 @@ public abstract class BiExprAST<C>
         CompGt      (">"   ),
         CompLtEq    ("<="  ),
         CompGtEq    (">="  ),
+        CompOrd     ("<=>" ),
         As          ("as"  ),
         Is          ("is"  ),
         RangeII     (".."  ),

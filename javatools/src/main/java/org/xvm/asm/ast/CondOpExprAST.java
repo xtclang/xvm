@@ -41,7 +41,7 @@ public class CondOpExprAST<C>
             case CondOr, CondAnd ->
                 res.typeForName("Boolean");
 
-            case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq ->
+            case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq, CompOrd ->
                 res.typeForName("Ordered");
 
             default -> throw new IllegalStateException();
