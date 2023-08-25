@@ -4,9 +4,10 @@ package org.xvm.compiler;
 import java.io.File;
 import java.io.IOException;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for the Source class.
@@ -23,38 +24,38 @@ public class SourceTest
             {
             builder.append(source.next());
             }
-        Assert.assertEquals(sCode, builder.toString());
+        assertEquals(sCode, builder.toString());
         }
 
-//    @Test
+    @Test @Disabled
     public void testFile1()
             throws IOException
         {
         Source source = new Source(
                 new File(SourceTest.class.getResource("Source_1.x").getPath()), 0);
-        Assert.assertEquals(0, source.getLine());
-        Assert.assertEquals(0, source.getOffset());
+        assertEquals(0, source.getLine());
+        assertEquals(0, source.getOffset());
 
         char[] ach = "this is a test\nof Unicode\n".toCharArray();
         int of = 0;
         while (source.hasNext())
             {
             char ch = source.next();
-            Assert.assertEquals(ach[of++], ch);
+            assertEquals(ach[of++], ch);
             }
 
-        Assert.assertEquals(2, source.getLine());
-        Assert.assertEquals(0, source.getOffset());
+        assertEquals(2, source.getLine());
+        assertEquals(0, source.getOffset());
         }
 
-//    @Test
+    @Test @Disabled
     public void testFile1Rewind()
             throws IOException
         {
         Source source = new Source(
                 new File(SourceTest.class.getResource("Source_1.x").getPath()), 0);
-        Assert.assertEquals(0, source.getLine());
-        Assert.assertEquals(0, source.getOffset());
+        assertEquals(0, source.getLine());
+        assertEquals(0, source.getOffset());
 
         while (source.hasNext())
             {
@@ -72,18 +73,18 @@ public class SourceTest
             int  iLinePost2   = source.getLine();
             int  iOffsetPost2 = source.getOffset();
 
-            Assert.assertEquals(iLinePre1   , iLinePre2   );
-            Assert.assertEquals(iOffsetPre1 , iOffsetPre2 );
-            Assert.assertEquals(ch1         , ch2         );
-            Assert.assertEquals(iLinePost1  , iLinePost2  );
-            Assert.assertEquals(iOffsetPost1, iOffsetPost2);
+            assertEquals(iLinePre1   , iLinePre2   );
+            assertEquals(iOffsetPre1 , iOffsetPre2 );
+            assertEquals(ch1         , ch2         );
+            assertEquals(iLinePost1  , iLinePost2  );
+            assertEquals(iOffsetPost1, iOffsetPost2);
             }
 
-        Assert.assertEquals(2, source.getLine());
-        Assert.assertEquals(0, source.getOffset());
+        assertEquals(2, source.getLine());
+        assertEquals(0, source.getOffset());
         }
 
-//    @Test
+    @Test @Disabled
     public void testFile1Reset()
             throws IOException
         {
@@ -112,11 +113,11 @@ public class SourceTest
         int iLinePost2    = source.getLine();
         int iOffsetPost2  = source.getOffset();
 
-        Assert.assertEquals(iLinePre1     , iLinePre2     );
-        Assert.assertEquals(iOffsetPre1   , iOffsetPre2   );
-        Assert.assertEquals(sb1.toString(), sb2.toString());
-        Assert.assertEquals(iLinePost1    , iLinePost2    );
-        Assert.assertEquals(iOffsetPost1  , iOffsetPost2  );
+        assertEquals(iLinePre1     , iLinePre2     );
+        assertEquals(iOffsetPre1   , iOffsetPre2   );
+        assertEquals(sb1.toString(), sb2.toString());
+        assertEquals(iLinePost1    , iLinePost2    );
+        assertEquals(iOffsetPost1  , iOffsetPost2  );
         }
 
     @Test
@@ -137,22 +138,22 @@ public class SourceTest
 
             if (Lexer.isLineTerminator(ch))
                 {
-                Assert.assertEquals(iLinePre + 1, iLinePost);
-                Assert.assertEquals(0, ofPost);
+                assertEquals(iLinePre + 1, iLinePost);
+                assertEquals(0, ofPost);
                 }
             else if (ch >= '0' && ch <= '9')
                 {
-                Assert.assertEquals(ch - '0', source.getLine());
-                Assert.assertEquals(0, ofPre);
-                Assert.assertEquals(1, ofPost);
+                assertEquals(ch - '0', source.getLine());
+                assertEquals(0, ofPre);
+                assertEquals(1, ofPost);
                 }
 
             source.rewind();
-            Assert.assertEquals(iLinePre, source.getLine());
-            Assert.assertEquals(ofPre, source.getOffset());
-            Assert.assertEquals(ch, source.next());
-            Assert.assertEquals(iLinePost, source.getLine());
-            Assert.assertEquals(ofPost, source.getOffset());
+            assertEquals(iLinePre, source.getLine());
+            assertEquals(ofPre, source.getOffset());
+            assertEquals(ch, source.next());
+            assertEquals(iLinePost, source.getLine());
+            assertEquals(ofPost, source.getOffset());
             }
         }
     }

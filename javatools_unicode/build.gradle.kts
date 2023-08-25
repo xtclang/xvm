@@ -17,16 +17,13 @@ dependencies {
     implementation("org.xtclang.xvm:javatools_utils:")
 }
 
-// TODO: Temporary copying the source and target version logic. Tool chains are on the way in,
-//  with Java version configuration in one and only one place, but we need this for the GitHub
-//  Gradle verification action to not assume Java 11 here, and attempting to include dependencies
-//  targeting >= Java 17.
+// TODO: All Java configuration will move to build-logic in the Gradle language support branch,
+//   but we leave this here for the moment.
 java {
-    // Java 17 is the latest "Long Term Support" (LTS) release, as of late 2021
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
 
 application {
-    getMainClass().set("org.xvm.tool.BuildUnicodeTables")
+    mainClass.set("org.xvm.tool.BuildUnicodeTables")
 }

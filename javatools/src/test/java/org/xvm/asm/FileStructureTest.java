@@ -9,7 +9,8 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorListener.ErrorInfo;
 
@@ -19,36 +20,38 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
-
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.byteArrayToHexDump;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.xvm.util.Handy.byteArrayToHexDump;
 
 /**
  * Tests of XVM FileStructure.
  */
 public class FileStructureTest
     {
-//    @Test
+    @Test @Disabled("TODO: Reenable test")
     public void testEmptyModule()
             throws IOException
         {
         FileStructure structfile = new FileStructure("Test");
-        Assert.assertEquals("Test", structfile.getModuleName());
-        Assert.assertEquals("Test", structfile.getModule().getName());
-        Assert.assertTrue(structfile.getModule().isPackageContainer());
-        Assert.assertTrue(structfile.getModule().isClassContainer());
-        Assert.assertTrue(structfile.getModule().isMethodContainer());
-        Assert.assertEquals(Constants.Access.PUBLIC, structfile.getModule().getAccess());
+        assertEquals("Test", structfile.getModuleName());
+        assertEquals("Test", structfile.getModule().getName());
+        assertTrue(structfile.getModule().isPackageContainer());
+        assertTrue(structfile.getModule().isClassContainer());
+        assertTrue(structfile.getModule().isMethodContainer());
+        assertEquals(Constants.Access.PUBLIC, structfile.getModule().getAccess());
 
         testFileStructure(structfile);
         }
 
-//    @Test
+    @Test @Disabled("TODO: Reenable test")
     public void testMinimumModule()
             throws IOException
         {
@@ -58,7 +61,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-//    @Test
+    @Test @Disabled("TODO: Reenable test")
     public void testBaseClass()
             throws IOException
         {
@@ -67,7 +70,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-//    @Test
+    @Test @Disabled
     public void testListClass()
             throws IOException
         {
@@ -82,7 +85,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-//    @Test
+    @Test @Disabled("TODO: Reenable test")
     public void testMapClass()
             throws IOException
         {
@@ -110,7 +113,7 @@ public class FileStructureTest
         List<Statement>          stmts    = parser.parseSource().getStatements();
         TypeCompositionStatement module   = (TypeCompositionStatement) stmts.get(stmts.size() - 1);
         Compiler                 compiler = new Compiler(module, errlist);
-        Assert.assertEquals(0, errlist.getSeriousErrorCount());
+        assertEquals(0, errlist.getSeriousErrorCount());
         return compiler.generateInitialFileStructure();
         }
 
@@ -142,7 +145,7 @@ public class FileStructureTest
 
         if (sev != null)
             {
-            Assert.assertEquals(sev, errlist.getSeverity());
+            assertEquals(sev, errlist.getSeverity());
             }
 
         if (sCode != null)
@@ -156,7 +159,7 @@ public class FileStructureTest
                     break;
                     }
                 }
-            Assert.assertTrue(fFound);
+            assertTrue(fFound);
             }
 
         return struct;
@@ -177,7 +180,7 @@ public class FileStructureTest
             }
 
         FileStructure structfile2 = new FileStructure(new ByteArrayInputStream(ab));
-        Assert.assertEquals(structfile.getModuleName(), structfile2.getModuleName());
+        assertEquals(structfile.getModuleName(), structfile2.getModuleName());
 
         if (DEBUG)
             {
@@ -187,7 +190,7 @@ public class FileStructureTest
             structfile2.dump(new PrintWriter(System.out, true));
             }
 
-        Assert.assertEquals(structfile, structfile2);
+        assertEquals(structfile, structfile2);
 
         out = new ByteArrayOutputStream();
         structfile2.writeTo(out);
@@ -203,19 +206,19 @@ public class FileStructureTest
                 FileStructure structfile3 = new FileStructure(new ByteArrayInputStream(ab2));
                 System.out.println("structfile3:");
                 structfile3.dump(new PrintWriter(System.out, true));
-                Assert.assertEquals(structfile.getModuleName(), structfile3.getModuleName());
+                assertEquals(structfile.getModuleName(), structfile3.getModuleName());
                 }
             }
 
-        Assert.assertArrayEquals(ab, ab2);
+        assertArrayEquals(ab, ab2);
         }
 
-//    @Test
+    @Test @Disabled("TODO: Reenable test")
     public void testFoo()
             throws IOException
         {
         FileStructure structfile = new FileStructure("test");
-        Assert.assertEquals("test", structfile.getModuleName());
+        assertEquals("test", structfile.getModuleName());
 
         ModuleStructure  structmodule  = structfile.getModule();
         PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes", null);

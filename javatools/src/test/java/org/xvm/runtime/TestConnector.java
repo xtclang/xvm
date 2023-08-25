@@ -2,7 +2,6 @@ package org.xvm.runtime;
 
 
 import java.io.File;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -16,11 +15,11 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.compiler.BuildRepository;
+
 import org.xvm.tool.Compiler;
 import org.xvm.tool.Disassembler;
 
 import org.xvm.util.Handy;
-
 
 /**
  * The connector test.

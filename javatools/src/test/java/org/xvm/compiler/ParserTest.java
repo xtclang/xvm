@@ -3,14 +3,11 @@ package org.xvm.compiler;
 
 import java.io.File;
 
-import java.util.List;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorList;
 
 import org.xvm.compiler.ast.Statement;
-
 
 /**
  * Test of the Ecstasy parser
@@ -45,22 +42,24 @@ public class ParserTest
     @Test
     public void testSimpleModule()
         {
-        Source source = new Source("module Test {}");
-        parse(source);
+        parse("module Test {}");
         }
 
     @Test
     public void testSimpleInterface()
         {
-        Source source = new Source("interface SortedMap extends Map {}");
-        parse(source);
+        parse("interface SortedMap extends Map {}");
         }
 
     @Test
     public void testSimpleDelegates()
         {
-        Source source = new Source("class DependentFutureRef delegates Ref(value) {}");
-        parse(source);
+        parse("class DependentFutureRef delegates Ref(value) {}");
+        }
+
+    static void parse(String value)
+        {
+            parse(new Source(value));
         }
 
     static void parse(Source source)
@@ -74,11 +73,8 @@ public class ParserTest
         out("error list (" + errlist.getSeriousErrorCount()
                 + " of " + errlist.getSeriousErrorMax() + ", sev="
                 + errlist.getSeverity() + "):");
-        List<ErrorList.ErrorInfo> list = errlist.getErrors();
-        for (ErrorList.ErrorInfo info : list)
-            {
-            out(info);
-            }
+
+        errlist.getErrors().forEach(ParserTest::out);
         }
 
     /**

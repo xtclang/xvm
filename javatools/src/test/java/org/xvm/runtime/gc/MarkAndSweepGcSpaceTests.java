@@ -1,13 +1,23 @@
 package org.xvm.runtime.gc;
 
-import org.junit.Test;
+
 import org.xvm.util.LongMuterator;
 import org.xvm.util.ShallowSizeOf;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.PrimitiveIterator;
+import java.util.Set;
 import java.util.function.LongConsumer;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests of the {@link MarkAndSweepGcSpace}.
