@@ -28,7 +28,7 @@ public class StmtNotImplAST<C>
 
     @Override
     public NodeType nodeType() {
-        return NodeType.STMT_NOT_IMPL_YET;
+        return NodeType.StmtNotImplYet;
     }
 
     @Override

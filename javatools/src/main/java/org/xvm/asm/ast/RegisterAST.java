@@ -8,7 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Register;
 import org.xvm.asm.ast.LanguageAST.ExprAST;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.REGISTER_EXPR;
+import static org.xvm.asm.ast.LanguageAST.NodeType.RegisterExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
@@ -47,7 +47,7 @@ public class RegisterAST<C>
 
     @Override
     public NodeType nodeType() {
-        return REGISTER_EXPR;
+        return RegisterExpr;
     }
 
     @Override

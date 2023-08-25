@@ -669,16 +669,13 @@ public class ForEachStatement
         code.add(new Enter());
 
         // strip any declarations off of the LValues (we'll handle them separately)
-
         VariableDeclarationStatement[] aInitStmt = getCondition().takeDeclarations();
         int                            cInit     = aInitStmt.length;
         StmtAST[]                      aAstInit = new StmtAST[cInit];
         for (int i = 0; i < cInit; i++)
             {
             VariableDeclarationStatement stmt = aInitStmt[i];
-
-            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-
+            fCompletes  = stmt.completes(ctx, fCompletes, code, errs);
             aAstInit[i] = holder.getAst(stmt);
             }
 

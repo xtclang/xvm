@@ -33,7 +33,7 @@ public class ExprNotImplAST<C>
 
     @Override
     public NodeType nodeType() {
-        return NodeType.EXPR_NOT_IMPL_YET;
+        return NodeType.ExprNotImplYet;
     }
 
     @Override

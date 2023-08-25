@@ -39,6 +39,13 @@ public abstract class LanguageAST<C> {
         return node;
     }
 
+    public static <C, N extends AssignableAST<C>> N deserializeAssignable(DataInput in, ConstantResolver<C> res)
+            throws IOException {
+        N node = (N) instantiate(NodeType.valueOf(in.readUnsignedByte())); // TODO
+        node.readAssignable(in, res);
+        return node;
+    }
+
 
     // ----- LanguageNode public interface ---------------------------------------------------------
 
@@ -47,7 +54,7 @@ public abstract class LanguageAST<C> {
      */
     public NodeType nodeType() {
         reportUnimplemented("TODO implement nodeType() for " + this.getClass().getSimpleName());
-        return NodeType.STMT_NOT_IMPL_YET;
+        return NodeType.StmtNotImplYet;
     }
 
     /**
@@ -222,7 +229,32 @@ public abstract class LanguageAST<C> {
      * Enumeration of instantiable LanguageAST node types.
      */
     public enum NodeType {
-        STMT_NOT_IMPL_YET,  // "a node for some statement form has not yet been implemented"
+        RegAlloc,           // int x; (classified as an expression to simplify "l-value" design)
+        NamedRegAlloc,      // int _; (classified as an expression to simplify "l-value" design)
+        Assign,             // x=y;
+        BinOpAssign,        // x*=y;
+
+        RegisterExpr,       // _ (unnamed register expr)
+        InvokeExpr,         // foo() (method)
+
+        ASSIGN_EXPR,        // (x <- y)
+        LIT_EXPR,
+        SWITCH_EXPR,
+        MULTI_COND,         // >1 ","-delimited conditions
+        NOT_COND,           // if (!(String s ?= foo())){...}
+        NOT_NULL_COND,      // if (String s ?= foo()){...}
+        NOT_FALSE_COND,     // if (String s := bar()){...}
+        AND_EXPR,
+        OR_EXPR,
+        NOT_EXPR,
+        XOR_EXPR,
+        LOGICAL_OR_EXPR,
+        LOGICAL_AND_EXPR,
+
+        CONSTANT_EXPR,
+        LIST_EXPR,
+        MAP_EXPR,
+
         STMT_BLOCK,         // {...}, do{...}while(False); etc.
         IF_THEN_STMT,       // if(cond){...}
         IF_ELSE_STMT,       // if(cond){...}else{...}
@@ -243,24 +275,12 @@ public abstract class LanguageAST<C> {
         TRY_CATCH_STMT,     // using(res){...}, try(res){...} [catch(T e){...}]
         TRY_FINALLY_STMT,   // try{...} [catch(T e){...}] finally{...}
         REG_DECL_STMT,
-        REG_STORE_STMT,
+        REG_STORE_STMT,     // x=expr;
         ANY_STORE_STMT,
         ASSIGN_STMT,        // lvalue op rvalue, for
-        EXPR_NOT_IMPL_YET,  // "a node for some expression form has not yet been implemented"
-        CONSTANT_EXPR,
-        LIST_EXPR,
-        MAP_EXPR,
-        REGISTER_EXPR,      // "register" expr
-        INVOKE_EXPR,        // invoke expr
-        SWITCH_EXPR,
-        MULTI_COND,         // >1 ","-delimited conditions
-        DECL_COND,          // condition that declares variable
-        AND_EXPR,
-        OR_EXPR,
-        NOT_EXPR,
-        XOR_EXPR,
-        LOGICAL_OR_EXPR,
-        LOGICAL_AND_EXPR,
+
+        ExprNotImplYet,     // "a node for some expression form has not yet been implemented" (TODO delete this when done)
+        StmtNotImplYet,     // "a node for some statement form has not yet been implemented" (TODO delete this when done)
         ;
 
         private static final NodeType[] NODE_TYPES = NodeType.values();
@@ -302,6 +322,18 @@ public abstract class LanguageAST<C> {
         public abstract C getType(int i);
     }
 
+    public abstract static class AssignableAST<C> extends ExprAST<C> {
+        public void readAssignable(DataInput in, ConstantResolver<C> res)
+                throws IOException {
+            read(in, res);
+        }
+
+        public void writeAssignable(DataOutput out, ConstantResolver<C> res)
+                throws IOException {
+            write(out, res);
+        }
+    }
+
     public static StmtAST[] NO_STMTS  = new StmtAST[0];
     public static ExprAST[] NO_EXPRS  = new ExprAST[0];
     public static Object[]  NO_CONSTS = new Object[0];
@@ -311,7 +343,9 @@ public abstract class LanguageAST<C> {
 
     static <C> LanguageAST<C> instantiate(NodeType nodeType) {
         return switch (nodeType) {
-            case STMT_NOT_IMPL_YET  -> new StmtNotImplAST<C>();
+            case RegisterExpr -> new RegisterAST<>();
+            case InvokeExpr -> new InvokeExprAST<>();
+
             case STMT_BLOCK         -> new StmtBlockAST<C>();
             case IF_THEN_STMT       -> new IfStmtAST<C>(false);
             case IF_ELSE_STMT       -> new IfStmtAST<C>(true);
@@ -336,12 +370,9 @@ public abstract class LanguageAST<C> {
 //            case ANY_STORE_STMT     -> new ;
 //            case ASSIGN_STMT        -> new ;
             case EXPR_STMT          -> new ExprStmtAST<C>();
-            case EXPR_NOT_IMPL_YET  -> new ExprNotImplAST<C>();
             case CONSTANT_EXPR      -> new ConstantExprAST<C>();
             case LIST_EXPR          -> new ListExprAST<>();
             case MAP_EXPR           -> new MapExprAST<>();
-            case REGISTER_EXPR      -> new RegisterAST<>();
-            case INVOKE_EXPR        -> new InvokeExprAST<>();
 //            case SWITCH_EXPR        -> new ;
 //            case MULTI_COND         -> new ;
 //            case DECL_COND          -> new ;
@@ -351,6 +382,9 @@ public abstract class LanguageAST<C> {
 //            case XOR_EXPR           -> new ;
 //            case LOGICAL_OR_EXPR    -> new ;
 //            case LOGICAL_AND_EXPR   -> new ;
+
+            case ExprNotImplYet -> new ExprNotImplAST<C>();
+            case StmtNotImplYet -> new StmtNotImplAST<C>();
             default -> throw new IllegalStateException("unknown nodeType: " + nodeType);
         };
     }

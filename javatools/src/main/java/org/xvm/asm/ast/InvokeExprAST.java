@@ -10,7 +10,7 @@ import java.util.Objects;
 
 import org.xvm.asm.ast.LanguageAST.ExprAST;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.INVOKE_EXPR;
+import static org.xvm.asm.ast.LanguageAST.NodeType.InvokeExpr;
 
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readMagnitude;
@@ -57,7 +57,7 @@ public class InvokeExprAST<C>
 
     @Override
     public NodeType nodeType() {
-        return INVOKE_EXPR;
+        return InvokeExpr;
     }
 
     public ExprAST<C> getTarget() {
