@@ -209,6 +209,13 @@ public abstract class LanguageAST<C> {
         C getConstant(int id);
 
         /**
+         * @param name  the type name
+         *
+         * @return the type constant from the constant pool for the specified name
+         */
+        C typeForName(String name);
+
+        /**
          * @param constant a constant that must be present in the constant pool
          *
          * @return the index in the constant pool of that constant
@@ -244,12 +251,10 @@ public abstract class LanguageAST<C> {
         NOT_COND,           // if (!(String s ?= foo())){...}
         NOT_NULL_COND,      // if (String s ?= foo()){...}
         NOT_FALSE_COND,     // if (String s := bar()){...}
-        AND_EXPR,
-        OR_EXPR,
-        NOT_EXPR,
-        XOR_EXPR,
-        LOGICAL_OR_EXPR,
-        LOGICAL_AND_EXPR,
+
+        RelOpExpr,          // "&&", "||", "^", etc.
+        CondOpExpr,         // "<", ">=", etc.
+        // UnaryOpExpr,        // "~", "!", etc
 
         CONSTANT_EXPR,
         LIST_EXPR,
@@ -380,12 +385,8 @@ public abstract class LanguageAST<C> {
 //            case SWITCH_EXPR        -> new ;
 //            case MULTI_COND         -> new ;
 //            case DECL_COND          -> new ;
-//            case AND_EXPR           -> new ;
-//            case OR_EXPR            -> new ;
-//            case NOT_EXPR           -> new ;
-//            case XOR_EXPR           -> new ;
-//            case LOGICAL_OR_EXPR    -> new ;
-//            case LOGICAL_AND_EXPR   -> new ;
+            case RelOpExpr -> new RelOpExprAST<>();
+            case CondOpExpr -> new CondOpExprAST<>();
 
             case ExprNotImplYet -> new ExprNotImplAST<C>();
             case StmtNotImplYet -> new StmtNotImplAST<C>();

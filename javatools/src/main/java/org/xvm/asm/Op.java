@@ -758,13 +758,16 @@ public abstract class Op
             return m_aconst;
             }
 
-        /**
-         * @return the array of constants, in optimized order
-         */
         @Override
         public Constant getConstant(int id)
             {
             return getConstantArray()[id];
+            }
+
+        @Override
+        public Constant typeForName(String name)
+            {
+            return f_pool.getImplicitlyImportedIdentity(name).getType();
             }
 
         /**

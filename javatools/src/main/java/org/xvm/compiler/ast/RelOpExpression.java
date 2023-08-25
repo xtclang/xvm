@@ -14,6 +14,10 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
+import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.RelOpExprAST;
+
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -58,8 +62,8 @@ import org.xvm.util.Severity;
  * <li><tt>BIT_AND:    "&"</tt> - </li>
  * <li><tt>DOTDOT:     ".."</tt> - </li>
  * <li><tt>SHL:        "<<"</tt> - </li>
- * <li><tt>SHR:        ">><tt>"</tt> - </li>
- * <li><tt>USHR:       ">>><tt>"</tt> - </li>
+ * <li><tt>SHR:        ">>"</tt> - </li>
+ * <li><tt>USHR:       ">>>"</tt> - </li>
  * <li><tt>ADD:        "+"</tt> - </li>
  * <li><tt>SUB:        "-"</tt> - </li>
  * <li><tt>MUL:        "*"</tt> - </li>
@@ -1124,6 +1128,33 @@ public class RelOpExpression
                 generateAssignment(ctx, code, new Assignable(), errs);
                 break;
             }
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        Operator op = switch (operator.getId())
+            {
+            case BIT_OR    -> Operator.BitOr;
+            case BIT_XOR   -> Operator.BitXor;
+            case COND_XOR  -> Operator.CondOr;
+            case BIT_AND   -> Operator.BitAnd;
+            case I_RANGE_I -> Operator.RangeII;
+            case E_RANGE_I -> Operator.RangeEI;
+            case I_RANGE_E -> Operator.RangeIE;
+            case E_RANGE_E -> Operator.RangeEE;
+            case SHL       -> Operator.Shl;
+            case SHR       -> Operator.Shr;
+            case USHR      -> Operator.Ushr;
+            case ADD       -> Operator.Add;
+            case SUB       -> Operator.Sub;
+            case MUL       -> Operator.Mul;
+            case DIVREM    -> Operator.DivRem;
+            case DIV       -> Operator.Div;
+            case MOD       -> Operator.Mod;
+            default        -> throw new UnsupportedOperationException(operator.getValueText());
+            };
+        return new RelOpExprAST<>(getType(), op, expr1.getExprAST(), expr2.getExprAST());
         }
 
 

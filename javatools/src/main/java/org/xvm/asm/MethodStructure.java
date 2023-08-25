@@ -709,7 +709,8 @@ public class MethodStructure
         byte[] abAst = m_abAst;
         if (abAst != null)
             {
-            Constant[] aconstLocal = m_aconstLocal;
+            ConstantPool pool        = getConstantPool();
+            Constant[]   aconstLocal = m_aconstLocal;
             assert aconstLocal != null;
 
             ConstantResolver<Constant> res = new ConstantResolver<>()
@@ -724,6 +725,12 @@ public class MethodStructure
                 public Constant register(Constant constant)
                     {
                     throw new UnsupportedOperationException();
+                    }
+
+                @Override
+                public Constant typeForName(String name)
+                    {
+                    return pool.getImplicitlyImportedIdentity(name).getType();
                     }
 
                 @Override

@@ -23,12 +23,12 @@ import org.xvm.util.Severity;
 /**
  * Generic expression for something that follows the pattern "operator expression".
  */
-public class PrefixExpression
+public abstract class PrefixExpression
         extends Expression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PrefixExpression(Token operator, Expression expr)
+    protected PrefixExpression(Token operator, Expression expr)
         {
         this.operator = operator;
         this.expr     = expr;

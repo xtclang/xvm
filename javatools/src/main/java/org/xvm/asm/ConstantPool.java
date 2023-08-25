@@ -260,6 +260,12 @@ public class ConstantPool
             }
 
         @Override
+        public Constant typeForName(String name)
+            {
+            return pool.getImplicitlyImportedIdentity(name).getType();
+            }
+
+        @Override
         public int indexOf(Constant constant)
             {
             return constant.getPosition();

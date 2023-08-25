@@ -13,6 +13,7 @@ import org.xvm.compiler.Token;
  * <li><tt>COLON:      ":"</tt> - an "else" for nullability checks</li>
  * <li><tt>COND_ELSE:  "?:"</tt> - the "elvis" operator</li>
  * <li><tt>COND_OR:    "||"</tt> - </li>
+ * <li><tt>COND_XOR:   "^^"</tt> - </li>
  * <li><tt>COND_AND:   "&&"</tt> - </li>
  * <li><tt>BIT_OR:     "|"</tt> - </li>
  * <li><tt>BIT_XOR:    "^"</tt> - </li>
@@ -20,16 +21,15 @@ import org.xvm.compiler.Token;
  * <li><tt>COMP_EQ:    "=="</tt> - </li>
  * <li><tt>COMP_NEQ:   "!="</tt> - </li>
  * <li><tt>COMP_LT:    "<"</tt> - </li>
- * <li><tt>COMP_GT:    "><tt>"</tt> - </li>
+ * <li><tt>COMP_GT:    ">"</tt> - </li>
  * <li><tt>COMP_LTEQ:  "<="</tt> - </li>
  * <li><tt>COMP_GTEQ:  ">="</tt> - </li>
  * <li><tt>COMP_ORD:   "<=><tt>"</tt> - </li>
  * <li><tt>AS:         "as"</tt> - </li>
  * <li><tt>IS:         "is"</tt> - </li>
- * <li><tt>INSTANCEOF: "instanceof"</tt> - </li>
  * <li><tt>DOTDOT:     ".."</tt> - </li>
  * <li><tt>SHL:        "<<"</tt> - </li>
- * <li><tt>SHR:        ">><tt>"</tt> - </li>
+ * <li><tt>SHR:        ">>"</tt> - </li>
  * <li><tt>USHR:       ">>><tt>"</tt> - </li>
  * <li><tt>ADD:        "+"</tt> - </li>
  * <li><tt>SUB:        "-"</tt> - </li>
