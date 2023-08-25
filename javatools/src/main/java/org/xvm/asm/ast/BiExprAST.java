@@ -25,6 +25,7 @@ public abstract class BiExprAST<C>
         Colon       (":"   ), // an "else" for nullability checks
         CondElse    ("?:"  ), // the "elvis" operator
         CondOr      ("||"  ),
+        CondAnd     ("&&"  ),
         BitOr       ("|"   ),
         BitXor      ("^"   ),
         BitAnd      ("&"   ),
@@ -78,6 +79,9 @@ public abstract class BiExprAST<C>
     public ExprAST<C> getExpr2() {
         return expr2;
     }
+
+    @Override
+    public abstract C getType(int i);
 
     @Override
     public abstract NodeType nodeType();

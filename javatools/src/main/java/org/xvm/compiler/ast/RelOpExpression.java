@@ -15,6 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.DivRemExprAST;
 import org.xvm.asm.ast.LanguageAST.ExprAST;
 import org.xvm.asm.ast.RelOpExprAST;
 
@@ -1133,6 +1134,11 @@ public class RelOpExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
+        if (operator.getId() == Id.DIVREM)
+            {
+            return new DivRemExprAST<>(getTypes(), expr1.getExprAST(), expr2.getExprAST());
+            }
+
         Operator op = switch (operator.getId())
             {
             case BIT_OR    -> Operator.BitOr;

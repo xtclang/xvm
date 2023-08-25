@@ -253,6 +253,8 @@ public abstract class LanguageAST<C> {
         NOT_FALSE_COND,     // if (String s := bar()){...}
 
         RelOpExpr,          // "&&", "||", "^", etc.
+        DivRemExpr,         // (x /% y)
+        IsExpr,             // x.is(y)
         CondOpExpr,         // "<", ">=", etc.
         // UnaryOpExpr,        // "~", "!", etc
 
@@ -385,11 +387,14 @@ public abstract class LanguageAST<C> {
 //            case SWITCH_EXPR        -> new ;
 //            case MULTI_COND         -> new ;
 //            case DECL_COND          -> new ;
-            case RelOpExpr -> new RelOpExprAST<>();
-            case CondOpExpr -> new CondOpExprAST<>();
+            case RelOpExpr          -> new RelOpExprAST<>();
+            case DivRemExpr         -> new RelOpExprAST<>();
+            case IsExpr             -> new IsExprAST<>();
+            case CondOpExpr         -> new CondOpExprAST<>();
 
-            case ExprNotImplYet -> new ExprNotImplAST<C>();
-            case StmtNotImplYet -> new StmtNotImplAST<C>();
+            case ExprNotImplYet     -> new ExprNotImplAST<C>();
+            case StmtNotImplYet     -> new StmtNotImplAST<C>();
+
             default -> throw new IllegalStateException("unknown nodeType: " + nodeType);
         };
     }

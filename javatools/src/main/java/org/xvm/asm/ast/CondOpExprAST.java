@@ -6,7 +6,8 @@ import java.io.IOException;
 
 
 /**
- * An expressions that follow the pattern "expression operator expression" and produces a Boolean.
+ * An expressions that follow the pattern "expression operator expression" and produces a "Boolean"
+ * or "Ordered" result.
  */
 public class CondOpExprAST<C>
         extends BiExprAST<C> {
@@ -21,6 +22,7 @@ public class CondOpExprAST<C>
 
     @Override
     public C getType(int i) {
+        assert i == 0;
         return type;
     }
 
@@ -34,6 +36,15 @@ public class CondOpExprAST<C>
             throws IOException {
         super.read(in, res);
 
-        type = res.typeForName("Boolean");
+        type = switch (getOp())
+            {
+            case CondOr, CondAnd ->
+                res.typeForName("Boolean");
+
+            case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq ->
+                res.typeForName("Ordered");
+
+            default -> throw new IllegalStateException();
+            };
     }
 }
