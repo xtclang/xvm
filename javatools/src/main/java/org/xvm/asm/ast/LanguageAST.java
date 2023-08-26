@@ -256,7 +256,8 @@ public abstract class LanguageAST<C> {
         DivRemExpr,         // (x /% y)
         IsExpr,             // x.is(y)
         CondOpExpr,         // "<", ">=", etc.
-        // UnaryOpExpr,        // "~", "!", etc
+        UnaryOpExpr,        // "+", "-", etc.
+        NotExpr,            // (!x)
 
         CONSTANT_EXPR,
         LIST_EXPR,
@@ -391,6 +392,8 @@ public abstract class LanguageAST<C> {
             case DivRemExpr         -> new RelOpExprAST<>();
             case IsExpr             -> new IsExprAST<>();
             case CondOpExpr         -> new CondOpExprAST<>();
+            case UnaryOpExpr        -> new UnaryOpExprAST<>();
+            case NotExpr            -> new NotExprAST<>();
 
             case ExprNotImplYet     -> new ExprNotImplAST<C>();
             case StmtNotImplYet     -> new StmtNotImplAST<C>();

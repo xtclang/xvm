@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.util.List;
 
+import java.lang.reflect.Field;
+
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -10,7 +12,6 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
 
-import java.lang.reflect.Field;
 
 
 /**

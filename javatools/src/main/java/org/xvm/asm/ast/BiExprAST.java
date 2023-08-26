@@ -116,6 +116,7 @@ public abstract class BiExprAST<C>
     public String dump() {
         return expr1.dump() + " " + op.text + " " + expr2.dump();
     }
+
     @Override
     public String toString() {
         return expr1 + " " + op.text + " " + expr2;

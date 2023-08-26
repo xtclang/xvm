@@ -5,7 +5,13 @@ import java.lang.reflect.Field;
 
 import java.util.Set;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.asm.ast.NotExprAST;
+import org.xvm.asm.ast.PrefixExprAST.Operator;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -169,6 +175,7 @@ public abstract class PrefixExpression
         return null;
         }
 
+
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
@@ -187,6 +194,38 @@ public abstract class PrefixExpression
     public boolean isShortCircuiting()
         {
         return expr.isShortCircuiting();
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        Operator op;
+        switch (operator.getId())
+            {
+            case NOT:
+                return new NotExprAST<>(expr.getExprAST());
+
+            case ADD:
+                op = Operator.Plus;
+                break;
+            case SUB:
+                op = Operator.Minus;
+                break;
+            case BIT_NOT:
+                op = Operator.Compl;
+                break;
+            case INC:
+                op = Operator.Inc;
+                break;
+            case DEC:
+                op = Operator.Dec;
+                break;
+
+            default:
+                throw new UnsupportedOperationException(operator.getValueText());
+            }
+
+        return new UnaryOpExprAST<>(getType(), op, expr.getExprAST());
         }
 
 
