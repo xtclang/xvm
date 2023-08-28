@@ -392,17 +392,22 @@ public class ThrowExpression
         ConstantPool   pool     = pool();
         ClassConstant  constEx  = pool.ensureEcstasyClassConstant(sThrow);
         MethodConstant constNew = constEx.findConstructor(pool.typeString१(), pool.typeException१());
+        Argument       argMsg;
         if (message == null)
             {
-            code.add(new Assert(pool.valFalse(), constNew));
+            String sMsg = keyword.getId() == Token.Id.TODO ?
+                    "TODO" :
+                    "Assertion failed";
+            argMsg = pool.ensureStringConstant(sMsg);
             }
         else
             {
-            Argument argEx  = code.createRegister(constEx.getType());
-            Argument argMsg = message.generateArgument(ctx, code, false, false, errs);
-            code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
-            code.add(new Throw(argEx));
+            argMsg = message.generateArgument(ctx, code, false, false, errs);
             }
+
+        Argument argEx = code.createRegister(constEx.getType());
+        code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
+        code.add(new Throw(argEx));
         }
 
 
