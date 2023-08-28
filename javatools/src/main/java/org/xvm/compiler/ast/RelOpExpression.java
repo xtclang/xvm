@@ -1205,7 +1205,7 @@ public class RelOpExpression
                 throw new UnsupportedOperationException(operator.getValueText());
             }
 
-         return new RelOpExprAST<>(getType(), op, ast1, ast2);
+        return new RelOpExprAST<>(getType(), op, ast1, ast2);
         }
 
 

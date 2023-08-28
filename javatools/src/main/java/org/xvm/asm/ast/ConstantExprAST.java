@@ -73,6 +73,6 @@ public class ConstantExprAST<C>
 
     @Override
     public String toString() {
-        return type + " value: " + value;
+        return value.toString();
     }
 }
