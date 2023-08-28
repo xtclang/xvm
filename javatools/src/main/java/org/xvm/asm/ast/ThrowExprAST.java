@@ -18,7 +18,6 @@ public class ThrowExprAST<C>
         extends ExprAST<C>
     {
     private C          type;
-
     private ExprAST<C> throwable;
     private ExprAST<C> message; // could be null
 

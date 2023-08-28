@@ -259,6 +259,7 @@ public abstract class LanguageAST<C> {
         UnaryOpExpr,        // "+", "-", etc.
         NotExpr,            // (!x)
         ThrowExpr,
+        AssertStmt,
 
         CONSTANT_EXPR,
         LIST_EXPR,
@@ -396,6 +397,7 @@ public abstract class LanguageAST<C> {
             case UnaryOpExpr        -> new UnaryOpExprAST<>();
             case NotExpr            -> new NotExprAST<>();
             case ThrowExpr          -> new ThrowExprAST<>();
+            case AssertStmt         -> new AssertStmtAST<>();
 
             case ExprNotImplYet     -> new ExprNotImplAST<C>();
             case StmtNotImplYet     -> new StmtNotImplAST<C>();

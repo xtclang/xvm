@@ -10,9 +10,15 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.AssertStmtAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -231,6 +237,7 @@ public class AssertStatement
                 if (!interval.isRuntimeConstant())
                     {
                     interval.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                    fValid = false;
                     }
                 }
             }
@@ -265,8 +272,7 @@ public class AssertStatement
                     {
                     if (stmtNew != stmtOld)
                         {
-                        cond = stmtNew;
-                        conds.set(i, cond);
+                        conds.set(i, stmtNew);
                         }
                     }
                 }
@@ -283,8 +289,7 @@ public class AssertStatement
                     {
                     if (exprNew != exprOld)
                         {
-                        cond = exprNew;
-                        conds.set(i, cond);
+                        conds.set(i, exprNew);
                         }
 
                     if (exprNew.isConstantFalse() && alwaysEvaluated())
@@ -324,30 +329,40 @@ public class AssertStatement
             ctx.setReachable(false);
             }
 
-        return fValid
-                ? this
-                : null;
+        return fValid ? this : null;
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool pool   = pool();
+        AstHolder    holder = ctx.getHolder();
         boolean      fDebug = isDebugOnly();
 
         if (isLinktimeConditional())
             {
+            // TODO GG: create an IfStmtAST based on a "named" condition
             // for "assert:debug", the assertion only is evaluated if the "debug" named condition
             // exists; similarly, for "assert:test", it is evaluated only if "test" is defined
             String sCond = fDebug ? "debug" : "test";
             code.add(new JumpNCond(pool.ensureNamedCondition(sCond), getEndLabel()));
             }
 
+        ExprAST<Constant> astInterval = null;
         if (isNotAlways())
             {
-            code.add(isOnlyOnce()
-                    ? new JumpNFirst(getEndLabel())
-                    : new JumpNSample(interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
+            // TODO GG: create an IfStmtAST based on a ":once" or ":rnd" assert qualifier
+            if (isOnlyOnce())
+                {
+                code.add(new JumpNFirst(getEndLabel()));
+                }
+            else
+                {
+                assert interval != null;
+                code.add(new JumpNSample(
+                    interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
+                astInterval = interval.getExprAST();
+                }
             }
 
         String sThrow = switch (keyword.getId())
@@ -366,6 +381,7 @@ public class AssertStatement
         int cConds = getConditionCount();
         if (cConds == 0)
             {
+            ExprAST<Constant> astMessage = null;
             if (message == null || fDebug)
                 {
                 code.add(new Assert(pool.valFalse(), constNew));
@@ -379,13 +395,17 @@ public class AssertStatement
                 Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
                 code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
                 code.add(new Throw(argEx));
+
+                astMessage = message.getExprAST();
                 }
 
+            holder.setAst(this, new AssertStmtAST<>(LanguageAST.NO_STMTS, astInterval, astMessage));
             return !alwaysEvaluated();
             }
 
-        boolean fCompletes   = fReachable;
-        Label   labelMessage = new Label("CustomMessage");
+        boolean                 fCompletes   = fReachable;
+        Label                   labelMessage = new Label("CustomMessage");
+        LanguageAST<Constant>[] aAstCond     = new LanguageAST[cConds];
         for (int i = 0; i < cConds; ++i)
             {
             AstNode cond = getCondition(i);
@@ -455,6 +475,8 @@ public class AssertStatement
                 fNegated    = stmtCond.isNegated();
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 argCond = stmtCond.getConditionRegister();
+
+                aAstCond[i] = ctx.getHolder().getAst(stmtCond);
                 }
             else
                 {
@@ -467,17 +489,22 @@ public class AssertStatement
                             ? new Assert(pool.valFalse(), constNew)
                             : new Jump(labelMessage));
                     fCompletes = false;
+
+                    aAstCond[i] = new ConstantExprAST<>(pool.typeBoolean(), pool.valFalse());
                     continue;
                     }
 
                 // "assert True" is a no-op
                 if (exprCond.isConstantTrue())
                     {
+                    aAstCond[i] = new ConstantExprAST<>(pool.typeBoolean(), pool.valTrue());
                     continue;
                     }
 
                 fCompletes &= exprCond.isCompletable();
                 argCond = exprCond.generateArgument(ctx, code, true, true, errs);
+
+                aAstCond[i] = exprCond.getExprAST();
                 }
 
             if (message == null || fDebug)
@@ -521,6 +548,7 @@ public class AssertStatement
                 }
             }
 
+        ExprAST<Constant> astMessage = null;
         if (message != null && !fDebug)
             {
             // throw new {sThrow}(message, null)
@@ -529,8 +557,11 @@ public class AssertStatement
             Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
             code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
             code.add(new Throw(argEx));
+
+            astMessage = message.getExprAST();
             }
 
+        holder.setAst(this, new AssertStmtAST<>(aAstCond, astInterval, astMessage));
         return fCompletes;
         }
 
