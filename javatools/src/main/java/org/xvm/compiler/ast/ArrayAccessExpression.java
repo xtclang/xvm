@@ -13,6 +13,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.ArrayAccessExprAST;
+import org.xvm.asm.ast.LanguageAST;
+
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.RangeConstant;
@@ -737,6 +740,16 @@ public class ArrayAccessExpression
                 }
             return new Assignable(argArray, aArgIndexes);
             }
+        }
+
+    @Override
+    public LanguageAST.ExprAST<Constant> getExprAST()
+        {
+        if (indexes.size() == 1)
+            {
+            return new ArrayAccessExprAST<>(expr.getExprAST(), indexes.get(0).getExprAST());
+            }
+        throw notImplemented();
         }
 
 

@@ -252,6 +252,8 @@ public abstract class LanguageAST<C> {
         NOT_NULL_COND,      // if (String s ?= foo()){...}
         NOT_FALSE_COND,     // if (String s := bar()){...}
 
+        ArrayAccessExpr,    // x[i]
+        MatrixAccessExpr,   // x[i, j]
         RelOpExpr,          // "&&", "||", "^", etc.
         DivRemExpr,         // (x /% y)
         IsExpr,             // x.is(y)
@@ -391,6 +393,7 @@ public abstract class LanguageAST<C> {
 //            case SWITCH_EXPR        -> new ;
 //            case MULTI_COND         -> new ;
 //            case DECL_COND          -> new ;
+            case ArrayAccessExpr    -> new ArrayAccessExprAST<C>();
             case RelOpExpr          -> new RelOpExprAST<>();
             case DivRemExpr         -> new RelOpExprAST<>();
             case IsExpr             -> new IsExprAST<>();
