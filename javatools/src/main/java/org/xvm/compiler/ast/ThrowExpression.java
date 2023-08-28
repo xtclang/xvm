@@ -3,17 +3,21 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.ThrowExprAST;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.New_N;
 import org.xvm.asm.op.Throw;
@@ -26,11 +30,6 @@ import org.xvm.util.Severity;
 
 /**
  * A "throw expression" is a commonly non-completing expression that throws an exception.
- *
- * <p/>TODO serious issues with types, because the expression cannot complete, yet it factors into
- *          type analysis. for example, "if (x?.y : assert)" does not evaluate to Boolean
- *      -> need to create a "subtype of all types" pseudo-type for compile-time that non-completing
- *         expressions can report as their type (that has an isA() implementation that returns true)
  */
 public class ThrowExpression
         extends Expression
@@ -110,7 +109,6 @@ public class ThrowExpression
     @Override
     public boolean isTodo()
         {
-        // REVIEW should this include "assert:TODO"/"assert:TODO False" for both expression and statement?
         return keyword.getId() == Token.Id.TODO;
         }
 
@@ -358,15 +356,62 @@ public class ThrowExpression
      */
     protected void generateThrow(Context ctx, Code code, ErrorListener errs)
         {
+        Argument argEx;
+        if (keyword.getId() == Token.Id.THROW)
+            {
+            assert message == null;
+            argEx = expr.generateArgument(ctx, code, true, true, errs);
+            }
+        else
+            {
+            assert expr == null;
+
+            // throw new {sThrow}(message, null)
+            ConstantPool   pool     = pool();
+            ClassConstant  constEx  = computeExceptionClass();
+            MethodConstant constNew = constEx.findConstructor(pool.typeString१(), pool.typeException१());
+            Argument       argMsg   = message == null
+                    ? pool.ensureStringConstant(computeMessage())
+                    : message.generateArgument(ctx, code, false, false, errs);
+
+            argEx = code.createRegister(constEx.getType());
+            code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
+            }
+        code.add(new Throw(argEx));
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        ExprAST<Constant> astEx;
+        ExprAST<Constant> astMsg;
+        if (keyword.getId() == Token.Id.THROW)
+            {
+            assert message == null;
+
+            astEx  = expr.getExprAST();
+            astMsg = null;
+            }
+        else
+            {
+            assert expr == null;
+
+            ConstantPool  pool    = pool();
+            ClassConstant constEx = computeExceptionClass();
+
+            astEx  = new ConstantExprAST<>(constEx.getType(), constEx);
+            astMsg = message == null
+                    ? new ConstantExprAST<>(pool.typeString(), pool.ensureStringConstant(computeMessage()))
+                    : message.getExprAST();
+            }
+        return new ThrowExprAST<>(getType(), astEx, astMsg);
+        }
+
+    private ClassConstant computeExceptionClass()
+        {
         String sThrow;
         switch (keyword.getId())
             {
-            case THROW:
-                assert message == null;
-                Argument arg = expr.generateArgument(ctx, code, true, true, errs);
-                code.add(new Throw(arg));
-                return;
-
             case ASSERT:
                 sThrow = "IllegalState";
                 break;
@@ -387,27 +432,12 @@ public class ThrowExpression
             default:
                 throw new IllegalStateException("keyword="+keyword);
             }
+        return pool().ensureEcstasyClassConstant(sThrow);
+        }
 
-        // throw new {sThrow}(message, null)
-        ConstantPool   pool     = pool();
-        ClassConstant  constEx  = pool.ensureEcstasyClassConstant(sThrow);
-        MethodConstant constNew = constEx.findConstructor(pool.typeString१(), pool.typeException१());
-        Argument       argMsg;
-        if (message == null)
-            {
-            String sMsg = keyword.getId() == Token.Id.TODO ?
-                    "TODO" :
-                    "Assertion failed";
-            argMsg = pool.ensureStringConstant(sMsg);
-            }
-        else
-            {
-            argMsg = message.generateArgument(ctx, code, false, false, errs);
-            }
-
-        Argument argEx = code.createRegister(constEx.getType());
-        code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
-        code.add(new Throw(argEx));
+    private String computeMessage()
+        {
+        return keyword.getId() == Token.Id.TODO ? "TODO" : "Assertion failed";
         }
 
 
@@ -456,7 +486,7 @@ public class ThrowExpression
     protected Token      keyword;
     protected Expression expr;
     protected Expression message;
-    private   long       lEndPos;
+    private final long   lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ThrowExpression.class, "expr", "message");
     }
