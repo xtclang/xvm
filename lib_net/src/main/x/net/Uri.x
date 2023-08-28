@@ -1913,16 +1913,16 @@ const Uri
     }
 
     private @Lazy Int64 hashCache.calc() {
-        return (scheme?   .hashCode() : 481667)
-            ^^ (authority?.hashCode() : 240073)
-            ^^ (user?     .hashCode() : 778777)
-            ^^ (host?     .hashCode() : 174263)
-            ^^ (ip?       .hashCode() : 425857)
-            ^^ (port?     .hashCode() : 855391)
-            ^^ (path?     .hashCode() : 380447)
-            ^^ (query?    .hashCode() : 273323)
-            ^^ (opaque?   .hashCode() : 444487)
-            ^^ (fragment? .hashCode() : 277373);
+        return (scheme?  .hashCode() : 481667)
+            ^ (authority?.hashCode() : 240073)
+            ^ (user?     .hashCode() : 778777)
+            ^ (host?     .hashCode() : 174263)
+            ^ (ip?       .hashCode() : 425857)
+            ^ (port?     .hashCode() : 855391)
+            ^ (path?     .hashCode() : 380447)
+            ^ (query?    .hashCode() : 273323)
+            ^ (opaque?   .hashCode() : 444487)
+            ^ (fragment? .hashCode() : 277373);
     }
 
     @Override

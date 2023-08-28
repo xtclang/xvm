@@ -633,6 +633,15 @@ public class RelOpExpression
             return finishValidations(ctx, atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
             }
 
+        // there is one additional check: only the Boolean type supports COND_XOR op ("^^")
+        if (operator.getId() == Id.COND_XOR && atypeResults != null && atypeResults.length > 0
+                && !atypeResults[0].equals(pool().typeBoolean()))
+            {
+            operator.log(errs, getSource(), Severity.ERROR, Compiler.MISSING_OPERATOR,
+                            operator.getValueText(), atypeResults[0].getValueString());
+            return null;
+            }
+
         // determine if the result of this expression is itself constant
         Constant[] aconstResult = null;
         if (expr1New.isConstant() && expr2New.isConstant())
