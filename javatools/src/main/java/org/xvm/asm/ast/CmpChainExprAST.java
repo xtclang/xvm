@@ -29,8 +29,8 @@ public class CmpChainExprAST<C>
     CmpChainExprAST() {}
 
     public CmpChainExprAST(ExprAST<C>[] exprs, Operator[] ops) {
-        assert exprs != null && Arrays.stream(exprs).anyMatch(Objects::nonNull);
-        assert ops   != null && Arrays.stream(ops).anyMatch(Objects::nonNull);
+        assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);
+        assert ops   != null && Arrays.stream(ops).allMatch(Objects::nonNull);
         assert ops.length == exprs.length - 1;
 
         for (Operator op : ops) {
