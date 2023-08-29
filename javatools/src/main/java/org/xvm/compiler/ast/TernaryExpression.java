@@ -4,9 +4,13 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.TernaryExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -508,6 +512,12 @@ public class TernaryExpression
                 break;
                 }
             }
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return new TernaryExprAST<>(cond.getExprAST(), exprThen.getExprAST(), exprElse.getExprAST());
         }
 
 

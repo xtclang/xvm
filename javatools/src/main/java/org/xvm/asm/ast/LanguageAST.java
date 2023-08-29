@@ -255,12 +255,15 @@ public abstract class LanguageAST<C> {
         ArrayAccessExpr,    // x[i]
         MatrixAccessExpr,   // x[i, j]
         RelOpExpr,          // "&&", "||", "^", etc.
-        DivRemExpr,         // (x /% y)
+        DivRemExpr,         // x /% y
         IsExpr,             // x.is(y)
         CondOpExpr,         // "<", ">=", etc.
         CmpChainExpr,       // x < y <= z, etc.
         UnaryOpExpr,        // "+", "-", etc.
-        NotExpr,            // (!x)
+        NotExpr,            // !x
+        NotNullExpr,        // x?
+        TernaryExpr,        // x ? y : z
+        TemplateExpr,
         ThrowExpr,
         AssertStmt,
 
@@ -401,6 +404,9 @@ public abstract class LanguageAST<C> {
             case CmpChainExpr       -> new CmpChainExprAST<>();
             case UnaryOpExpr        -> new UnaryOpExprAST<>();
             case NotExpr            -> new NotExprAST<>();
+            case NotNullExpr        -> new NotNullExprAST<>();
+            case TernaryExpr        -> new TernaryExprAST<C>();
+            case TemplateExpr       -> new TemplateExprAST<>();
             case ThrowExpr          -> new ThrowExprAST<>();
             case AssertStmt         -> new AssertStmtAST<>();
 

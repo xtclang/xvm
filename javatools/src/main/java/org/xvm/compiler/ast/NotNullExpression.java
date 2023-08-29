@@ -4,10 +4,14 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.NotNullExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -283,6 +287,12 @@ public class NotNullExpression
         Argument arg = expr.generateArgument(ctx, code, true, false, errs);
         code.add(new JumpNull(arg, m_labelShort));
         LVal.assign(arg, code, errs);
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return new NotNullExprAST<>(expr.getExprAST());
         }
 
 

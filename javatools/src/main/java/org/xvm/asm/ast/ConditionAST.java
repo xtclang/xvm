@@ -60,7 +60,6 @@ public class ConditionAST<C>
     @Override
     public String dump() {
         StringBuilder buf = new StringBuilder();
-        buf.append(this);
         for (LanguageAST cond : conds) {
             buf.append('\n').append(indentLines(cond.dump(), "  "));
         }
@@ -69,6 +68,10 @@ public class ConditionAST<C>
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + ":" + conds.length;
+        StringBuilder buf = new StringBuilder();
+        for (LanguageAST cond : conds) {
+            buf.append('\n').append(indentLines(cond.toString(), "  "));
+        }
+        return buf.toString();
     }
 }

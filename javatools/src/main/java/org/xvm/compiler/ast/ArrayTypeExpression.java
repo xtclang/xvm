@@ -6,8 +6,12 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -134,22 +138,25 @@ public class ArrayTypeExpression
         return clzArray.findMethod("construct", 2, pool().typeInt64()).getIdentityConstant();
         }
 
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        if (indexes == null && dims == 0)
+            {
+            TypeConstant typeArray = pool().ensureArrayType(getType());
+            return new ConstantExprAST<>(typeArray, typeArray);
+            }
+        throw notImplemented(); // MatrixTypeExprAST
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
-        final ConstantPool pool = pool();
+        ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant(ctx, errs));
-// TODO
-//        AstNode parent = getParent();
-//        while (parent instanceof TypeExpression)
-//            {
-//            parent = parent.getParent();
-//            }
-//        ClassConstant clz = parent instanceof NewExpression ? pool.clzArray() : pool.clzList();
-//        return pool.ensureClassTypeConstant(clz, null, type.ensureTypeConstant(ctx));
         }
 
     @Override
