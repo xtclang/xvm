@@ -6,12 +6,8 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -136,17 +132,6 @@ public class ArrayTypeExpression
         ClassStructure clzArray = (ClassStructure) idArray.getComponent();
 
         return clzArray.findMethod("construct", 2, pool().typeInt64()).getIdentityConstant();
-        }
-
-    @Override
-    public ExprAST<Constant> getExprAST()
-        {
-        if (indexes == null && dims == 0)
-            {
-            TypeConstant typeArray = pool().ensureArrayType(getType());
-            return new ConstantExprAST<>(typeArray, typeArray);
-            }
-        throw notImplemented(); // MatrixTypeExprAST
         }
 
 
