@@ -1986,7 +1986,7 @@ public class InvocationExpression
                     }
                 }
             argTarget   = regTarget;
-            m_astTarget = new RegisterAST<>(regTarget.getType(), regTarget);
+            m_astTarget = new RegisterAST<>(regTarget.getType());
             }
         else
             {

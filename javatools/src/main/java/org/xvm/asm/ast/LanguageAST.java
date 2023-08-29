@@ -7,7 +7,10 @@ import java.io.IOException;
 
 import java.util.HashSet;
 
+import static org.xvm.asm.Op.CONSTANT_OFFSET;
+
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -39,11 +42,58 @@ public abstract class LanguageAST<C> {
         return node;
     }
 
-    public static <C, N extends AssignableAST<C>> N deserializeAssignable(DataInput in, ConstantResolver<C> res)
+    static <C, N extends ExprAST<C>> N deserializeExpr(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        N node = (N) instantiate(NodeType.valueOf(in.readUnsignedByte())); // TODO
-        node.readAssignable(in, res);
-        return node;
+        int n = readPackedInt(in);
+        if (n < CONSTANT_OFFSET) {
+            // calculate constant pool identity
+            int id   = CONSTANT_OFFSET - n;
+            C   val  = res.getConstant(id);
+            C   type = res.typeOf(val);
+            return (N) new ConstantExprAST<C>(type, val);
+        } else if (n < 0 || n >= 32) {
+            // special id or register number
+            int id = n < 0 ? n : n-32;
+            return (N) res.getRegister(id);
+        } else {
+            N node = (N) switch (n) {
+                case  0 -> new RegAllocAST<C>(false);
+                case  1 -> new RegAllocAST<C>(true);
+                case  2 -> new AssignAST<>(false);
+                case  3 -> new AssignAST<>(true);
+                case  4 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case  5 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case  6 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case  7 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case  8 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case  9 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 10 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 11 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 12 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 13 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 14 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 15 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 16 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 17 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 18 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 19 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 20 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 21 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 22 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 23 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 24 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 25 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 26 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 27 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 28 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 29 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 30 -> throw new UnsupportedOperationException("id="+n); // TODO
+                case 31 -> deserialize(in, res); // escape
+                default -> throw new IllegalStateException();
+            };
+            node.readExpr(in, res);
+            return node;
+        }
     }
 
 
@@ -216,11 +266,44 @@ public abstract class LanguageAST<C> {
         C typeForName(String name);
 
         /**
+         * @param value  some constant
+         *
+         * @return the type constant for the value constant
+         */
+        C typeOf(C value);
+
+        /**
          * @param constant a constant that must be present in the constant pool
          *
          * @return the index in the constant pool of that constant
          */
         int indexOf(C constant);
+
+        /**
+         * Used during deserialization: Notify the resolver that a register scope is being entered.
+         */
+        void enter();
+
+        /**
+         * Used during deserialization: Register a register.
+         *
+         * @param reg  the register to register
+         */
+        void register(RegisterAST<C> reg);
+
+        /**
+         * Used during deserialization: Obtain a previously registered register.
+         *
+         * @param regId  the id of a previously registered register
+         *
+         * @return the previously registered register
+         */
+        RegisterAST<C> getRegister(int regId);
+
+        /**
+         * Used during deserialization: Notify the resolver that a register scope is being exited.
+         */
+        void exit();
 
         /**
          * Helper method to register an array of constants by changing the array content.
@@ -336,15 +419,13 @@ public abstract class LanguageAST<C> {
          * @return the type constant of the i-th value yielded by the expression
          */
         public abstract C getType(int i);
-    }
 
-    public abstract static class AssignableAST<C> extends ExprAST<C> {
-        public void readAssignable(DataInput in, ConstantResolver<C> res)
+        public void readExpr(DataInput in, ConstantResolver<C> res)
                 throws IOException {
             read(in, res);
         }
 
-        public void writeAssignable(DataOutput out, ConstantResolver<C> res)
+        public void writeExpr(DataOutput out, ConstantResolver<C> res)
                 throws IOException {
             write(out, res);
         }

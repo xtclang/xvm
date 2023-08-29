@@ -11,7 +11,6 @@ import static org.xvm.asm.ast.LanguageAST.NodeType.Assign;
 import static org.xvm.asm.ast.LanguageAST.NodeType.BinOpAssign;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -21,9 +20,9 @@ import static org.xvm.util.Handy.writePackedLong;
 public class AssignAST<C>
         extends ExprAST<C> {
 
-    AssignableAST<C> lhs;
-    Operator         op;
-    ExprAST<C>       rhs;
+    ExprAST<C> lhs;
+    Operator   op;
+    ExprAST<C> rhs;
 
     public enum Operator {
         Asn           ("="   ),     // includes "<-" expression
@@ -81,7 +80,7 @@ public class AssignAST<C>
      * @param op    assignment operator
      * @param rhs   right-hand-side expression to assign to
      */
-    public AssignAST(AssignableAST<C> lhs, Operator op, ExprAST<C> rhs) {
+    public AssignAST(ExprAST<C> lhs, Operator op, ExprAST<C> rhs) {
         assert lhs != null && op != null && rhs != null;
         this.lhs = lhs;
         this.op  = op;
@@ -105,11 +104,11 @@ public class AssignAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        lhs = deserializeAssignable(in, res);
+        lhs = deserializeExpr(in, res);
         if (nodeType() != Assign) {
             op = Operator.valueOf(readMagnitude(in));
         }
-        rhs = deserialize(in, res);
+        rhs = deserializeExpr(in, res);
     }
 
     @Override
@@ -122,8 +121,8 @@ public class AssignAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        lhs.writeAssignable(out, res);
-        rhs.write(out, res);
+        lhs.writeExpr(out, res);
+        rhs.writeExpr(out, res);
     }
 
     @Override

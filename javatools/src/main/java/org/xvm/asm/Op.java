@@ -5,15 +5,23 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.RegisterAST;
+
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -706,11 +714,13 @@ public abstract class Op
         /**
          * Construct a ConstantRegistry.
          *
-         * @param pool  the underlying ConstantPool
+         * @param method  the MethodStructure
+         * @param pool    the underlying ConstantPool
          */
-        public ConstantRegistry(ConstantPool pool)
+        public ConstantRegistry(MethodStructure method, ConstantPool pool)
             {
-            f_pool = pool;
+            f_method = method;
+            f_pool   = pool;
             }
 
         /**
@@ -791,6 +801,196 @@ public abstract class Op
             return index;
             }
 
+        @Override
+        public Constant typeOf(Constant value)
+            {
+            return value.getType();
+            }
+
+        @Override
+        public void enter()
+            {
+            scopes.push(regs.size());
+            }
+
+        @Override
+        public void register(RegisterAST<Constant> reg)
+            {
+            assert reg != null;
+            int regId = reg.getRegId();
+            if (regId < 0)
+                {
+                switch (regId)
+                    {
+                    case Op.A_IGNORE:
+                    case Op.A_IGNORE_ASYNC:
+                    case Op.A_DEFAULT:
+                    case Op.A_THIS:
+                    case Op.A_TARGET:
+                    case Op.A_PUBLIC:
+                    case Op.A_PROTECTED:
+                    case Op.A_PRIVATE:
+                    case Op.A_STRUCT:
+                    case Op.A_CLASS:
+                    case Op.A_SERVICE:
+                    case Op.A_SUPER:
+                        // weird that this is being set from the outside; just ignore it, since we
+                        // provide our own
+                        break;
+
+                    default:
+                        throw new IllegalArgumentException("regId=" + regId);
+                    }
+                }
+            else
+                {
+                if (reg.isRegIdAssigned())
+                    {
+                    assert regId == regs.size();
+                    }
+
+                regId = regs.size();
+                reg.setRegId(regId);
+                regs.add(reg);
+                }
+            }
+
+        @Override
+        public RegisterAST<Constant> getRegister(int regId)
+            {
+            RegisterAST<Constant> reg = regId >= 0 ? regs.get(regId) : specialRegs[-1-regId];
+            if (reg == null)
+                {
+                TypeConstant type = null;
+                String       name = null;
+
+                TypeConstant typeThis = f_method.getContainingClass().getFormalType();
+                // REVIEW GG do we need "cSteps" on the resulting register?
+                switch (regId)
+                    {
+                    case Op.A_IGNORE:
+                    case Op.A_IGNORE_ASYNC:
+                        type = f_pool.typeObject();
+                        name = "_";
+                        break;
+
+                    case Op.A_DEFAULT:
+                        type = f_pool.typeObject(); // technically wrong, but no better answer
+                        name = "?";
+                        break;
+
+                    case Op.A_THIS:
+                        assert !f_method.isConstructor() && !f_method.isValidator();
+                        assert !f_method.isStatic();
+                        type = typeThis;
+                        name = "this";
+                        break;
+
+                    case Op.A_TARGET:
+                        assert !f_method.isConstructor() && !f_method.isValidator();
+                        assert !f_method.isStatic();
+                        type = typeThis;
+                        name = "this:target";
+                        break;
+
+                    case Op.A_PUBLIC:
+                        assert !f_method.isConstructor() && !f_method.isValidator();
+                        assert !f_method.isStatic();
+                        type = f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
+                        name = "this:public";
+                        break;
+
+                    case Op.A_PROTECTED:
+                        assert !f_method.isConstructor() && !f_method.isValidator();
+                        assert !f_method.isStatic();
+                        type = f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
+                        name = "this:protected";
+                        break;
+
+                    case Op.A_PRIVATE:
+                        assert !f_method.isConstructor() && !f_method.isValidator();
+                        assert !f_method.isStatic();
+                        type = f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
+                        name = "this:private";
+                        break;
+
+                    case Op.A_STRUCT:
+                        assert !f_method.isConstructor() && !f_method.isValidator();
+                        assert !f_method.isStatic();
+                        type = f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
+                                f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
+                        name = "this:struct";
+                        break;
+
+                    case Op.A_CLASS:
+                        type = f_pool.ensureParameterizedTypeConstant(f_pool.typeClass(),
+                                f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
+                                f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
+                                f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
+                                f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
+                                    f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT)));
+                        name = "this:class";
+                        break;
+
+                    case Op.A_SERVICE:
+                        type = f_pool.typeService();
+                        name = "this:service";
+                        break;
+
+                    case Op.A_SUPER:
+                        assert f_method.isSuperAllowed();
+                        MethodConstant    idMethod   = f_method.getIdentityConstant();
+                        Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                        TypeConstant      typeCtx    = f_pool.ensureAccessTypeConstant(typeThis, access);
+                        TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                        MethodInfo        infoMethod = infoType.getMethodById(idMethod);
+                        SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
+
+                        if (sigSuper == null)
+                            {
+                            if (f_method.isConstructor()
+                                    && f_method.getContainingClass().containsAnnotation(f_pool.clzOverride()))
+                                {
+                                // an "@Override" virtual child may not have a compile-time super;
+                                // assume an identical signature
+                                sigSuper = idMethod.getSignature();
+                                }
+                            else
+                                {
+                                return null;
+                                }
+                            }
+
+                        type = sigSuper.asFunctionType();
+                        name = "super";
+                        break;
+                    }
+
+                if (type == null)
+                    {
+                    throw new IllegalStateException("missing register " + regId);
+                    }
+                else
+                    {
+                    reg = new RegisterAST<>(regId, type, name == null ? null : f_pool.ensureStringConstant(name));
+                    specialRegs[-1-regId] = reg;
+                    }
+                }
+                return reg;
+            }
+
+        @Override
+        public void exit()
+            {
+            int cPrev = scopes.pop();
+            int cCur  = regs.size();
+            assert cCur >= cPrev;
+            while (cCur > cPrev)
+                {
+                regs.remove(--cCur);
+                }
+            }
+
         /**
          * Internal: Make sure this ConstantRegistry is still being used to register constants.
          */
@@ -810,32 +1010,44 @@ public abstract class Op
             {
             if (m_aconst == null)
                 {
-                // first, create an array of all the constants, sorted by how often they are used
-                // (backwards order, such that the most often used come first, since the variable
-                // length index encoding uses fewer bytes for lower indexes, the result is more
-                // compact)
-                Map<Constant, Integer> mapConstants = m_mapConstants;
-                if (mapConstants == null)
+                if (f_method.m_aconstLocal != null && m_mapConstants == null)
                     {
-                    m_aconst = Constant.NO_CONSTS;
+                    m_aconst = f_method.m_aconstLocal;
                     }
                 else
                     {
-                    Constant[] aconst = mapConstants.keySet().toArray(Constant.NO_CONSTS);
-                    Arrays.sort(aconst, Constants.DEBUG
-                            ? Comparator.naturalOrder()
-                            : (o1, o2) -> mapConstants.get(o2) - mapConstants.get(o1));
-                    m_aconst = aconst;
-
-                    // now re-use the map of constants to point to the constant indexes, for when we
-                    // need to look up index by constant
-                    for (int i = 0, c = aconst.length; i < c; ++i)
+                    // first, create an array of all the constants, sorted by how often they are used
+                    // (backwards order, such that the most often used come first, since the variable
+                    // length index encoding uses fewer bytes for lower indexes, the result is more
+                    // compact)
+                    Map<Constant, Integer> mapConstants = m_mapConstants;
+                    if (mapConstants == null)
                         {
-                        mapConstants.put(aconst[i], i);
+                        m_aconst = Constant.NO_CONSTS;
+                        }
+                    else
+                        {
+                        Constant[] aconst = mapConstants.keySet().toArray(Constant.NO_CONSTS);
+                        Arrays.sort(aconst, Constants.DEBUG
+                                ? Comparator.naturalOrder()
+                                : (o1, o2) -> mapConstants.get(o2) - mapConstants.get(o1));
+                        m_aconst = aconst;
+
+                        // now re-use the map of constants to point to the constant indexes, for when we
+                        // need to look up index by constant
+                        for (int i = 0, c = aconst.length; i < c; ++i)
+                            {
+                            mapConstants.put(aconst[i], i);
+                            }
                         }
                     }
                 }
             }
+
+        /**
+         * The method that this {@link ConstantRegistry} is resolving within the context of.
+         */
+        private final MethodStructure f_method;
 
         /**
          * The underlying ConstantPool.
@@ -854,6 +1066,23 @@ public abstract class Op
          * The array of constants in their optimized order.
          */
         private Constant[] m_aconst;
+
+        /**
+         * The working set of registers. This is a point-in-time data structure used during reading
+         * the AST and during simulation (i.e. when registers ids are being calculated).
+         */
+        private final ArrayList<RegisterAST<Constant>> regs = new ArrayList<>();
+
+        /**
+         * A Stack of scopes entered but not exited. Each value in the stack is the number of
+         * registers that existed at the time the corresponding scope was entered.
+         */
+        private final Stack<Integer> scopes = new Stack<>();
+
+        /**
+         * The "special" registers, such as "this".
+         */
+        private final RegisterAST<Constant>[] specialRegs = new RegisterAST[-Op.CONSTANT_OFFSET];
         }
 
 
@@ -1972,6 +2201,8 @@ public abstract class Op
 
     /**
      * Pre-defined return register: a frame-local stack
+     *
+     * Note: This id is used by the Op codes and related runtime, but is not used by the binary AST.
      */
     public static final int A_STACK         = -1;
 
@@ -2037,14 +2268,20 @@ public abstract class Op
 
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)
+     *
+     * Note: This id is used by the Op code based runtime, but is not used by the binary AST.
      */
     public final static int A_MULTI         = -14;
     /**
      * Pre-defined argument: an indicator for a "tuple return" (internal)
+     *
+     * Note: This id is used by the Op code based runtime, but is not used by the binary AST.
      */
     public final static int A_TUPLE         = -15;
     /**
      * Pre-defined and compile-time only argument: A label.
+     *
+     * Note: This id is used by the compiler, but is not used by the Op codes or binary AST.
      */
     public final static int A_LABEL         = -16;
 

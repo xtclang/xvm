@@ -24,11 +24,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Stack;
 import java.util.Vector;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.Constant.Format;
+
+import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.TypeConstant.Relation;
@@ -272,10 +275,116 @@ public class ConstantPool
             }
 
         @Override
+        public Constant typeOf(Constant value)
+            {
+            return value.getType();
+            }
+
+        @Override
+        public void enter()
+            {
+            scopes.push(regs.size());
+            }
+
+        @Override
+        public void register(RegisterAST<Constant> reg)
+            {
+            assert reg != null;
+            int regId = reg.getRegId();
+            if (regId < 0)
+                {
+                switch (regId)
+                    {
+                    case Op.A_IGNORE:
+                    case Op.A_IGNORE_ASYNC:
+                    case Op.A_DEFAULT:
+                    case Op.A_THIS:
+                    case Op.A_TARGET:
+                    case Op.A_PUBLIC:
+                    case Op.A_PROTECTED:
+                    case Op.A_PRIVATE:
+                    case Op.A_STRUCT:
+                    case Op.A_CLASS:
+                    case Op.A_SERVICE:
+                    case Op.A_SUPER:
+                        specialRegs[-1-regId] = reg;
+                        break;
+
+                    default:
+                        throw new IllegalArgumentException("regId=" + regId);
+                    }
+                }
+            else
+                {
+                if (reg.isRegIdAssigned())
+                    {
+                    assert regId == regs.size();
+                    }
+
+                regId = regs.size();
+                reg.setRegId(regId);
+                regs.add(reg);
+                }
+            }
+
+        @Override
+        public RegisterAST<Constant> getRegister(int regId)
+            {
+            RegisterAST<Constant> reg = regId >= 0 ? regs.get(regId) : specialRegs[-1-regId];
+            if (reg == null)
+                {
+                // the information that we can guess at here is insufficient for compilation, but it
+                // should suffice for casual disassembly purposes
+                reg = switch (regId)
+                    {
+                    case Op.A_IGNORE       -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("_"));
+                    case Op.A_IGNORE_ASYNC -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("_"));
+                    case Op.A_DEFAULT      -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("?"));
+                    case Op.A_THIS         -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("this"));
+                    case Op.A_TARGET       -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("this"));
+                    case Op.A_PUBLIC       -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("this:public"));
+                    case Op.A_PROTECTED    -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("this:protected"));
+                    case Op.A_PRIVATE      -> new RegisterAST<>(regId, pool.typeObject(),   pool.ensureStringConstant("this:private"));
+                    case Op.A_STRUCT       -> new RegisterAST<>(regId, pool.typeStruct(),   pool.ensureStringConstant("this:struct"));
+                    case Op.A_CLASS        -> new RegisterAST<>(regId, pool.typeClass(),    pool.ensureStringConstant("this:class"));
+                    case Op.A_SERVICE      -> new RegisterAST<>(regId, pool.typeService(),  pool.ensureStringConstant("this:service"));
+                    case Op.A_SUPER        -> new RegisterAST<>(regId, pool.typeFunction(), pool.ensureStringConstant("super"));
+                    default                -> null;
+                    };
+
+                if (reg == null)
+                    {
+                    throw new IllegalStateException("missing register " + regId);
+                    }
+                else
+                    {
+                    specialRegs[-1-regId] = reg;
+                    }
+                }
+            return reg;
+            }
+
+        @Override
+        public void exit()
+            {
+            int cPrev = scopes.pop();
+            int cCur  = regs.size();
+            assert cCur >= cPrev;
+            while (cCur > cPrev)
+                {
+                regs.remove(--cCur);
+                }
+            }
+
+        @Override
         public String toString()
             {
             return "ConstantResolver{" + pool.toString() + "}";
             }
+
+        private final ArrayList<RegisterAST<Constant>> regs = new ArrayList<>();
+        private final Stack<Integer> scopes = new Stack<>();
+        private final RegisterAST<Constant>[] specialRegs = new RegisterAST[-Op.CONSTANT_OFFSET];
 
         public final ConstantPool pool;
         };

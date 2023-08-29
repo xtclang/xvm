@@ -713,39 +713,8 @@ public class MethodStructure
             Constant[]   aconstLocal = m_aconstLocal;
             assert aconstLocal != null;
 
-            ConstantResolver<Constant> res = new ConstantResolver<>()
-                {
-                @Override
-                public Constant getConstant(int id)
-                    {
-                    return aconstLocal[id];
-                    }
-
-                @Override
-                public Constant register(Constant constant)
-                    {
-                    throw new UnsupportedOperationException();
-                    }
-
-                @Override
-                public Constant typeForName(String name)
-                    {
-                    return pool.getImplicitlyImportedIdentity(name).getType();
-                    }
-
-                @Override
-                public int indexOf(Constant constant)
-                    {
-                    throw new UnsupportedOperationException();
-                    }
-
-                @Override
-                public String toString()
-                    {
-                    return "read-only ConstantResolver for method " + MethodStructure.this;
-                    }
-                };
-
+            // REVIEW GG the ConstantRegistry should pull the data from the method
+            ConstantResolver<Constant> res = new ConstantRegistry(this, pool);
             DataInput in = new DataInputStream(new ByteArrayInputStream(abAst));
             try
                 {
@@ -1190,7 +1159,7 @@ public class MethodStructure
             m_abOps = null;
             m_abAst = null;
 
-            ConstantRegistry registry = new ConstantRegistry(pool);
+            ConstantRegistry registry = new ConstantRegistry(this, pool);
             m_registry = registry;
 
             // pre-assemble code and AST
@@ -2199,8 +2168,8 @@ public class MethodStructure
             }
         else
             {
-            ConstantRegistry registry = new ConstantRegistry(pool);
-            m_registry    = registry;
+            ConstantRegistry registry = new ConstantRegistry(this, pool);
+            m_registry = registry;
 
             if (m_code != null)
                 {
