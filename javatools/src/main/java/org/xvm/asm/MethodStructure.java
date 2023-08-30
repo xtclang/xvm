@@ -2411,8 +2411,6 @@ public class MethodStructure
                     aop[i].resolveCode(this, aconst);
                     }
                 }
-            // TODO REMOVE: TEMPORARY test of AST deserialization
-            method.getAst();
             }
 
         Code(MethodStructure method, Code wrappee)

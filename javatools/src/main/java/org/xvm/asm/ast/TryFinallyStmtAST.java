@@ -20,7 +20,7 @@ public class TryFinallyStmtAST<C>
 
     TryFinallyStmtAST() {}
 
-    public TryFinallyStmtAST(BinaryAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches, BinaryAST<C> catchAll) {
+    public TryFinallyStmtAST(ExprAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches, BinaryAST<C> catchAll) {
         super(resources, body, catches);
 
         assert catchAll != null;

@@ -72,7 +72,15 @@ public class RegAllocAST<C>
     protected void readExpr(DataInput in, ConstantResolver<C> res)
             throws IOException {
         assert reg == NAMED || reg == UNNAMED;
-        // TODO
+
+        C type = res.getConstant(readPackedInt(in));
+        C name = null;
+        if (nodeType() == NamedRegAlloc) {
+            name = res.getConstant(readPackedInt(in));
+        }
+
+        reg = new RegisterAST<>(type, name);
+        res.register(reg);
     }
 
     @Override

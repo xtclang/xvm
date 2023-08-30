@@ -15,6 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.TryCatchStmtAST;
 
 import org.xvm.asm.ast.TryFinallyStmtAST;
@@ -341,8 +342,8 @@ public class TryStatement
         ConstantPool pool       = pool();
         AstHolder    holder     = ctx.getHolder();
 
-        BinaryAST<Constant>[] aAstResources = null;
-        BinaryAST<Constant>[] aAstCatches   = null;
+        ExprAST<Constant>[]   aAstResources = null;
+        BinaryAST<Constant>[] aAstCatches   = null; // TODO GG what is this? the "catch()" or the "{...}" body thereof? because we need BOTH
         BinaryAST<Constant>   astCatchAll   = null;
         BinaryAST<Constant>   astBlock;
 
@@ -356,12 +357,12 @@ public class TryStatement
 
             int c = resources.size();
             aFinallyClose = new FinallyStart[c];
-            aAstResources = new BinaryAST[c];
+            aAstResources = new ExprAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 Statement stmt = resources.get(i);
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                aAstResources[i] = holder.getAst(stmt);
+                aAstResources[i] = (ExprAST<Constant>) holder.getAst(stmt);
 
                 FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
                 aFinallyClose[i] = opFinally;

@@ -19,18 +19,18 @@ import static org.xvm.util.Handy.indentLines;
 public class TryCatchStmtAST<C>
         extends BinaryAST<C> {
 
-    private BinaryAST<C>[] resources;
+    private ExprAST<C>[]   resources;
     private BinaryAST<C>   body;
     private BinaryAST<C>[] catches;
 
     TryCatchStmtAST() {}
 
-    public TryCatchStmtAST(BinaryAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches) {
+    public TryCatchStmtAST(ExprAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches) {
         assert resources == null || Arrays.stream(resources).allMatch(Objects::nonNull);
         assert body != null;
         assert catches == null || Arrays.stream(catches).allMatch(Objects::nonNull);
 
-        this.resources = resources == null ? NO_ASTS : resources;
+        this.resources = resources == null ? NO_EXPRS : resources;
         this.body      = body;
         this.catches   = catches == null   ? NO_ASTS : catches;
     }
@@ -39,7 +39,7 @@ public class TryCatchStmtAST<C>
         return resources;
     }
 
-    public BinaryAST<C> getBosy() {
+    public BinaryAST<C> getBody() {
         return body;
     }
 
@@ -56,7 +56,7 @@ public class TryCatchStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        resources = readASTArray(in, res);
+        resources = readExprArray(in, res);
         body      = readAST(in, res);
         catches   = readASTArray(in, res);
     }

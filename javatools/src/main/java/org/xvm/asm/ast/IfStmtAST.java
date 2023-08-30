@@ -60,11 +60,17 @@ public class IfStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
+        res.enter();
         cond     = readExprAST(in, res);
+        res.enter();
         thenStmt = readAST(in, res);
+        res.exit();
         if (!noElse) {
+            res.enter();
             elseStmt = readAST(in, res);
+            res.exit();
         }
+        res.exit();
     }
 
     @Override

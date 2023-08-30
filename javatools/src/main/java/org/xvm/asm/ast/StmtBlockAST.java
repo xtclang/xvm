@@ -41,7 +41,9 @@ public class StmtBlockAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
+        res.enter();
         stmts = readASTArray(in, res);
+        res.exit();
     }
 
     @Override
