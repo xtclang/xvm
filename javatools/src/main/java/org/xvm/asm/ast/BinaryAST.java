@@ -111,7 +111,7 @@ public abstract class BinaryAST<C> {
         protected void writeExpr(DataOutput out, ConstantResolver<C> res)
                 throws IOException {
             // any subclass that has a short form must override this
-            out.writeByte(31);
+            writePackedLong(out, 31);
             write(out, res);
         }
     }
