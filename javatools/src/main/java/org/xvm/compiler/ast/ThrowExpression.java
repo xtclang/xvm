@@ -404,7 +404,13 @@ public class ThrowExpression
                     ? new ConstantExprAST<>(pool.typeString(), pool.ensureStringConstant(computeMessage()))
                     : message.getExprAST();
             }
-        return new ThrowExprAST<>(getType(), astEx, astMsg);
+
+        TypeConstant typeResult = getType();
+        if (typeResult == null)
+            {
+            typeResult = pool().typeObject();
+            }
+        return new ThrowExprAST<>(typeResult, astEx, astMsg);
         }
 
     private ClassConstant computeExceptionClass()

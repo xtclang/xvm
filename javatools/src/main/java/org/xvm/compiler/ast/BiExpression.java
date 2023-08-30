@@ -3,6 +3,16 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
+
+import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.CondOpExprAST;
+import org.xvm.asm.ast.DivRemExprAST;
+import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.RelOpExprAST;
+
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.Token;
 
 
@@ -109,6 +119,87 @@ public abstract class BiExpression
     public boolean isCompletable()
         {
         return expr1.isCompletable() && expr2.isCompletable();
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        ExprAST<Constant> ast1 = expr1.getExprAST();
+        ExprAST<Constant> ast2 = expr2.getExprAST();
+
+        Operator op;
+        switch (operator.getId())
+            {
+            case DIVREM:
+                return new DivRemExprAST<>(getTypes(), ast1, ast2);
+
+            case COND_XOR:
+                return new CondOpExprAST<>(Operator.CondXor, ast1, ast2);
+
+            case COLON:
+                op = Operator.Else;
+                break;
+            case COND_ELSE:
+                op = Operator.CondElse;
+                break;
+            case BIT_OR:
+                op = Operator.BitOr;
+                break;
+            case BIT_XOR:
+                op = Operator.BitXor;
+                break;
+            case BIT_AND:
+                op = Operator.BitAnd;
+                break;
+            case I_RANGE_I:
+                op = Operator.RangeII;
+                break;
+            case E_RANGE_I:
+                op = Operator.RangeEI;
+                break;
+            case I_RANGE_E:
+                op = Operator.RangeIE;
+                break;
+            case E_RANGE_E:
+                op = Operator.RangeEE;
+                break;
+            case SHL:
+                op = Operator.Shl;
+                break;
+            case SHR:
+                op = Operator.Shr;
+                break;
+            case USHR:
+                op = Operator.Ushr;
+                break;
+            case ADD:
+                op = Operator.Add;
+                break;
+            case SUB:
+                op = Operator.Sub;
+                break;
+            case MUL:
+                op = Operator.Mul;
+                break;
+            case DIV:
+                op = Operator.Div;
+                break;
+            case MOD:
+                op = Operator.Mod;
+                break;
+            case AS:
+                op = Operator.As;
+                break;
+            default:
+                throw new UnsupportedOperationException(operator.getValueText());
+            }
+
+        TypeConstant typeResult = getType();
+        if (typeResult == null)
+            {
+            typeResult = pool().typeObject();
+            }
+        return new RelOpExprAST<>(typeResult, op, ast1, ast2);
         }
 
 

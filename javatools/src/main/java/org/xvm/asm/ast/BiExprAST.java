@@ -22,7 +22,7 @@ public abstract class BiExprAST<C>
     private ExprAST<C> expr2;
 
     public enum Operator {
-        Colon       (":"   ), // an "else" for nullability checks
+        Else        (":"   ), // an "else" for nullability checks
         CondElse    ("?:"  ), // the "elvis" operator
         CondOr      ("||"  ),
         CondXor     ("^^"  ),

@@ -14,12 +14,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
-import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.asm.ast.CondOpExprAST;
-import org.xvm.asm.ast.DivRemExprAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
-import org.xvm.asm.ast.RelOpExprAST;
-
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -1139,73 +1133,6 @@ public class RelOpExpression
                 generateAssignment(ctx, code, new Assignable(), errs);
                 break;
             }
-        }
-
-    @Override
-    public ExprAST<Constant> getExprAST()
-        {
-        ExprAST<Constant> ast1 = expr1.getExprAST();
-        ExprAST<Constant> ast2 = expr2.getExprAST();
-
-        Operator op;
-        switch (operator.getId())
-            {
-            case DIVREM:
-                return new DivRemExprAST<>(getTypes(), ast1, ast2);
-
-            case COND_XOR:
-                return new CondOpExprAST<>(Operator.CondXor, ast1, ast2);
-
-            case BIT_OR:
-                op = Operator.BitOr;
-                break;
-            case BIT_XOR:
-                op = Operator.BitXor;
-                break;
-            case BIT_AND:
-                op = Operator.BitAnd;
-                break;
-            case I_RANGE_I:
-                op = Operator.RangeII;
-                break;
-            case E_RANGE_I:
-                op = Operator.RangeEI;
-                break;
-            case I_RANGE_E:
-                op = Operator.RangeIE;
-                break;
-            case E_RANGE_E:
-                op = Operator.RangeEE;
-                break;
-            case SHL:
-                op = Operator.Shl;
-                break;
-            case SHR:
-                op = Operator.Shr;
-                break;
-            case USHR:
-                op = Operator.Ushr;
-                break;
-            case ADD:
-                op = Operator.Add;
-                break;
-            case SUB:
-                op = Operator.Sub;
-                break;
-            case MUL:
-                op = Operator.Mul;
-                break;
-            case DIV:
-                op = Operator.Div;
-                break;
-            case MOD:
-                op = Operator.Mod;
-                break;
-            default:
-                throw new UnsupportedOperationException(operator.getValueText());
-            }
-
-        return new RelOpExprAST<>(getType(), op, ast1, ast2);
         }
 
 
