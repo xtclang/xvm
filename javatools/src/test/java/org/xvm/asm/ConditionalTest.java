@@ -2,11 +2,11 @@ package org.xvm.asm;
 
 
 import java.io.IOException;
-
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
@@ -16,13 +16,17 @@ import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionedCondition;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for ConditionalConstant and related structures.
  */
 public class ConditionalTest
     {
-//    @Test
+    @Test @Disabled
     public void testSimple()
         {
         FileStructure       file   = new FileStructure("test");
@@ -32,42 +36,42 @@ public class ConditionalTest
         AllCondition        condB  = pool.ensureAllCondition(condX, condY);
         AnyCondition        condE  = pool.ensureAnyCondition(condX, condY);
 
-        Assert.assertFalse(condX.isTerminalInfluenceBruteForce());
-        Assert.assertFalse(condY.isTerminalInfluenceBruteForce());
-        Assert.assertFalse(condB.isTerminalInfluenceBruteForce());
-        Assert.assertTrue( condE.isTerminalInfluenceBruteForce());
+        assertFalse(condX.isTerminalInfluenceBruteForce());
+        assertFalse(condY.isTerminalInfluenceBruteForce());
+        assertFalse(condB.isTerminalInfluenceBruteForce());
+        assertTrue(condE.isTerminalInfluenceBruteForce());
 
         Set<ConditionalConstant> setX = condX.terminals();
         Set<ConditionalConstant> setY = condY.terminals();
         Set<ConditionalConstant> setB = condB.terminals();
         Set<ConditionalConstant> setE = condE.terminals();
 
-        Assert.assertTrue(setX.size() == 1 && setX.contains(condX));
-        Assert.assertTrue(setY.size() == 1 && setY.contains(condY));
-        Assert.assertTrue(setB.size() == 2 && setB.contains(condX) && setB.contains(condY));
-        Assert.assertTrue(setE.size() == 2 && setE.contains(condX) && setE.contains(condY));
+        assertTrue(setX.size() == 1 && setX.contains(condX));
+        assertTrue(setY.size() == 1 && setY.contains(condY));
+        assertTrue(setB.size() == 2 && setB.contains(condX) && setB.contains(condY));
+        assertTrue(setE.size() == 2 && setE.contains(condX) && setE.contains(condY));
 
         Map<ConditionalConstant, Influence> mapX = condX.terminalInfluences();
         Map<ConditionalConstant, Influence> mapY = condY.terminalInfluences();
         Map<ConditionalConstant, Influence> mapB = condB.terminalInfluences();
         Map<ConditionalConstant, Influence> mapE = condE.terminalInfluences();
 
-        Assert.assertEquals(1, mapX.size());
-        Assert.assertEquals(mapX.get(condX), Influence.IDENTITY);
+        assertEquals(1, mapX.size());
+        assertEquals(mapX.get(condX), Influence.IDENTITY);
 
-        Assert.assertEquals(1, mapY.size());
-        Assert.assertEquals(mapY.get(condY), Influence.IDENTITY);
+        assertEquals(1, mapY.size());
+        assertEquals(mapY.get(condY), Influence.IDENTITY);
 
-        Assert.assertEquals(2, mapB.size());
-        Assert.assertEquals(mapB.get(condX), Influence.AND);
-        Assert.assertEquals(mapB.get(condY), Influence.AND);
+        assertEquals(2, mapB.size());
+        assertEquals(mapB.get(condX), Influence.AND);
+        assertEquals(mapB.get(condY), Influence.AND);
 
-        Assert.assertEquals(2, mapE.size());
-        Assert.assertEquals(mapE.get(condX), Influence.OR);
-        Assert.assertEquals(mapE.get(condY), Influence.OR);
+        assertEquals(2, mapE.size());
+        assertEquals(mapE.get(condX), Influence.OR);
+        assertEquals(mapE.get(condY), Influence.OR);
         }
 
-//    @Test
+    @Test @Disabled
     public void testDiamond()
             throws IOException
         {
@@ -98,10 +102,10 @@ public class ConditionalTest
 
         FileStructureTest.testFileStructure(file);
 
-        Assert.assertSame(pkg.getChild("foo"), clz.getChild("foo"));
-        Assert.assertTrue(pkg.getChild("foo") instanceof MultiMethodStructure);
+        assertSame(pkg.getChild("foo"), clz.getChild("foo"));
+        assertTrue(pkg.getChild("foo") instanceof MultiMethodStructure);
 
-        Assert.assertTrue(method.getParent() instanceof MultiMethodStructure);
-        Assert.assertTrue(method.getParent().getParent() instanceof CompositeComponent);
+        assertTrue(method.getParent() instanceof MultiMethodStructure);
+        assertTrue(method.getParent().getParent() instanceof CompositeComponent);
         }
     }

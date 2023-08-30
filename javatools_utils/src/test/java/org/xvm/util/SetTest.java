@@ -13,9 +13,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests of the Handy class.
@@ -91,16 +94,18 @@ public class SetTest
             }
         }
 
-//    @Test
+    @Test @Disabled
     public void sizeTestHashSet()
         {
         sizeTest(new HashSet<>());
         }
-//    @Test
+
+    @Test @Disabled
     public void sizeTestListSet()
         {
         sizeTest(new ListSet<>());
         }
+
     static void sizeTest(Set<Integer> set)
         {
         int  c     = 0;
@@ -115,6 +120,7 @@ public class SetTest
                 }
             }
         }
+
     static void speedTest()
         {
         for (int i = 0, p=990, c = 1000; i < c; ++i)
@@ -122,6 +128,7 @@ public class SetTest
             speedTest(i>p);
             }
         }
+
     static void speedTest(boolean fPrint)
         {
         int cIters = fPrint ? 1000 : 100;
@@ -141,6 +148,7 @@ public class SetTest
             out("HashSet @" + (l1-l0) + "ms vs. ListSet @" + (l2-l1) + "ms");
             }
         }
+
     static void speedTest(Set<Integer> set)
         {
         for (int i = 0, c = 1000; i <= c; ++i)
@@ -179,6 +187,7 @@ public class SetTest
         }
 
     static boolean fReplay;
+
     static void replayTest(String sTest)
         {
         fReplay = true;
@@ -349,27 +358,27 @@ public class SetTest
         {
         ListSet<String> set = new ListSet<>();
 
-        Assert.assertTrue(set.isEmpty());
-        Assert.assertEquals(0, set.size());
-        Assert.assertFalse(set.contains("a"));
-        Assert.assertFalse(set.contains("m"));
-        Assert.assertFalse(set.contains("z"));
-        Assert.assertFalse(set.contains("Z"));
+        assertTrue(set.isEmpty());
+        assertEquals(0, set.size());
+        assertFalse(set.contains("a"));
+        assertFalse(set.contains("m"));
+        assertFalse(set.contains("z"));
+        assertFalse(set.contains("Z"));
 
         for (char ch = 'a'; ch <= 'z'; ++ch)
             {
             set.add(String.valueOf(ch));
             }
 
-        Assert.assertFalse(set.isEmpty());
-        Assert.assertEquals(26, set.size());
-        Assert.assertTrue(set.contains("a"));
-        Assert.assertTrue(set.contains("m"));
-        Assert.assertTrue(set.contains("z"));
-        Assert.assertFalse(set.contains("Z"));
+        assertFalse(set.isEmpty());
+        assertEquals(26, set.size());
+        assertTrue(set.contains("a"));
+        assertTrue(set.contains("m"));
+        assertTrue(set.contains("z"));
+        assertFalse(set.contains("Z"));
 
-        Assert.assertEquals("b", set.get(1));
-        Assert.assertEquals("y", set.get(24));
+        assertEquals("b", set.get(1));
+        assertEquals("y", set.get(24));
         }
 
     public interface Op
@@ -409,7 +418,7 @@ public class SetTest
         @Override
         public void test(Set set)
             {
-            Assert.assertEquals(fExpect, set.add(oAdd));
+            assertEquals(fExpect, set.add(oAdd));
             }
 
         @Override
@@ -449,7 +458,7 @@ public class SetTest
         @Override
         public void test(Set set)
             {
-            Assert.assertEquals(fExpect, set.remove(oRemove));
+            assertEquals(fExpect, set.remove(oRemove));
             }
 
         @Override
@@ -483,7 +492,7 @@ public class SetTest
         @Override
         public void test(Set set)
             {
-            Assert.assertEquals(nExpect, set.size());
+            assertEquals(nExpect, set.size());
             }
 
         @Override
@@ -546,7 +555,7 @@ public class SetTest
         @Override
         public void test(Set set)
             {
-            Assert.assertEquals(nExpect, iter(set));
+            assertEquals(nExpect, iter(set));
             }
 
         int iter(Set set)
@@ -603,7 +612,7 @@ public class SetTest
             Iterator iter = set.iterator();
             for (int c = 0; c < cIter; ++c)
                 {
-                Assert.assertTrue(iter.hasNext());
+                assertTrue(iter.hasNext());
                 iter.next();
                 }
             }
@@ -684,13 +693,13 @@ public class SetTest
             }
 
         Iterator<String> iter = set.iterator();
-        Assert.assertEquals("z", set.last());
+        assertEquals("z", set.last());
         for (char ch = 'a'; ch <= 'z'; ++ch)
             {
-            Assert.assertTrue(iter.hasNext());
-            Assert.assertEquals(String.valueOf(ch), iter.next());
+            assertTrue(iter.hasNext());
+            assertEquals(String.valueOf(ch), iter.next());
             }
-        Assert.assertFalse(iter.hasNext());
+        assertFalse(iter.hasNext());
         }
 
     @Test

@@ -16,15 +16,15 @@ import java.util.Random;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import static org.xvm.util.Handy.appendByteArrayAsHex;
 import static org.xvm.util.Handy.appendByteAsHex;
 import static org.xvm.util.Handy.hexStringToByteArray;
 import static org.xvm.util.PackedInteger.readLong;
 import static org.xvm.util.PackedInteger.writeLong;
-
 
 /**
  * Tests of the PackedIntegerTest class.
@@ -40,7 +40,7 @@ public class PackedIntegerTest
             {
             StringBuilder sb = new StringBuilder();
             writeLong(dos(sb), i);
-            Assert.assertEquals("i="+i, 2, sb.length());
+            assertEquals(2, sb.length(), "i=" + i);
             }
 
         // small (or large+1)
@@ -50,7 +50,7 @@ public class PackedIntegerTest
                 {
                 StringBuilder sb = new StringBuilder();
                 writeLong(dos(sb), i);
-                Assert.assertEquals("i="+i, 4, sb.length());
+                assertEquals(4, sb.length(), "i=" + i);
                 }
             }
 
@@ -61,7 +61,7 @@ public class PackedIntegerTest
                 {
                 StringBuilder sb = new StringBuilder();
                 writeLong(dos(sb), i);
-                Assert.assertEquals("i="+i, 6, sb.length());
+                assertEquals(6, sb.length(), "i=" + i);
                 }
             }
         }
@@ -80,7 +80,7 @@ public class PackedIntegerTest
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(outRaw.toByteArray()));
         for (long i = -17000000; i < 17000000; ++i)
             {
-            Assert.assertEquals(i, readLong(in));
+            assertEquals(i, readLong(in));
             }
 
         try
@@ -113,7 +113,7 @@ public class PackedIntegerTest
             for (int i = 0; i < 40; ++i)
                 {
                 long lCheck = readLong(in);
-                Assert.assertEquals(lOrig >> i, lCheck);
+                assertEquals(lOrig >> i, lCheck);
                 }
 
             try
@@ -233,9 +233,9 @@ public class PackedIntegerTest
         StringBuilder sb = new StringBuilder();
         pint.writeObject(dos(sb));
         PackedInteger pint2 = new PackedInteger(dis(sb.toString()));
-        Assert.assertEquals(pint, pint2);
+        assertEquals(pint, pint2);
         BigInteger bigint2 = pint2.getBigInteger();
-        Assert.assertEquals(bigint, bigint2);
+        assertEquals(bigint, bigint2);
         }
 
     private static DataInput dis(String s)

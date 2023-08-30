@@ -3,12 +3,14 @@ package org.xvm.asm;
 
 import java.io.IOException;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests for the module structure and module-level rules and functionality.
@@ -16,7 +18,7 @@ import org.xvm.util.Severity;
 public class ModuleStructureTest
         extends FileStructureTest
     {
-//    @Test
+    @Test @Disabled
     public void testParseSimple()
             throws IOException
         {
@@ -24,7 +26,7 @@ public class ModuleStructureTest
         testFileStructure(compile(src, null, null));
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalParams()
         {
         // this should fail because a module can't have type params
@@ -32,7 +34,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalExtends()
         {
         // this should fail because a module can't have type params
@@ -40,7 +42,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.MULTIPLE_EXTEND_CLAUSES);
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalImport()
         {
         // this should fail because a module doesn't "import"
@@ -48,7 +50,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalImportEmbedded()
         {
         // this should fail because a module doesn't "import"
@@ -56,7 +58,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalImportDesired()
         {
         // this should fail because a module doesn't "import"
@@ -64,7 +66,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalImportRequired()
         {
         // this should fail because a module doesn't "import"
@@ -72,7 +74,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalImportOptional()
         {
         // this should fail because a module doesn't "import"
@@ -80,7 +82,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testParseIllegalInto()
         {
         // this should fail because a module does mix "into" something
@@ -88,16 +90,16 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testModuleDoc()
         {
         String src = "/**\n * This is a module that\n\t* has some doc.\r\n */\nmodule Test {}";
         FileStructure   struct = compile(src, null, null);
         ModuleStructure module = struct.getModule();
-        Assert.assertEquals(module.getDocumentation(), "This is a module that\nhas some doc.");
+        assertEquals(module.getDocumentation(), "This is a module that\nhas some doc.");
         }
 
-//    @Test
+    @Test @Disabled
     public void testIllegalConstructorParams()
         {
         // this should fail because a module can't have constructor params (without defaults)
@@ -105,7 +107,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED);
         }
 
-//    @Test
+    @Test @Disabled
     public void testLegalConstructorParams()
             throws IOException
         {
@@ -114,7 +116,7 @@ public class ModuleStructureTest
         testFileStructure(compile(src, null, null));
         }
 
-//    @Test
+    @Test @Disabled
     public void testLegalPublic()
             throws IOException
         {
@@ -123,7 +125,7 @@ public class ModuleStructureTest
         testFileStructure(compile(src, null, null));
         }
 
-//    @Test
+    @Test @Disabled
     public void testIllegalPublicPublic()
         {
         // this should fail because a module can't be public x2
@@ -131,7 +133,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.DUPLICATE_MODIFIER);
         }
 
-//    @Test
+    @Test @Disabled
     public void testIllegalPrivate()
         {
         // this should fail because a module can't be private
@@ -139,7 +141,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
         }
 
-//    @Test
+    @Test @Disabled
     public void testIllegalProtected()
         {
         // this should fail because a module can't be protected
@@ -147,7 +149,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
         }
 
-//    @Test
+    @Test @Disabled
     public void testIllegalStatic()
         {
         // this should fail because a module can't be declared static
@@ -155,7 +157,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
         }
 
-//    @Test
+    @Test @Disabled
     public void testConditional()
             throws IOException
         {
