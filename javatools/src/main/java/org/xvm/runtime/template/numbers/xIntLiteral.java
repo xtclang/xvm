@@ -454,6 +454,10 @@ public class xIntLiteral
             }
         catch (NumberFormatException e)
             {
+            if (sText.length() == 0)
+                {
+                throw e;
+                }
             boolean   fNeg   = false;
             ErrorList errs   = new ErrorList(5);
             Lexer     lexer  = new Lexer(new Source(sText), errs);
