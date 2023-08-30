@@ -41,15 +41,14 @@ public class LoopStmtAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        body.prepareWrite(res);
+        prepareAST(body, res);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
-        body.write(out, res);
+        writeAST(body, out, res);
     }
 
     @Override

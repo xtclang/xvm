@@ -14,7 +14,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.StmtNotImplAST;
+import org.xvm.asm.ast.NotImplAST;
 
 import org.xvm.asm.op.Label;
 
@@ -279,7 +279,7 @@ public abstract class Statement
             assert stmt != null;
             return stmt == this.stmt
                     ? ast
-                    : new StmtNotImplAST<>(stmt.getClass().getSimpleName());
+                    : new NotImplAST<>(stmt.getClass().getSimpleName());
             }
 
         void setAst(Statement stmt, BinaryAST<Constant> ast)

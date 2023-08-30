@@ -17,10 +17,10 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.IfThenStmt;
 public class IfStmtAST<C>
         extends BinaryAST<C> {
 
-    private ExprAST<C> cond;
-    private BinaryAST<C>      thenStmt;
-    private boolean         noElse;
-    private BinaryAST<C>      elseStmt;
+    private ExprAST<C>   cond;
+    private BinaryAST<C> thenStmt;
+    private boolean      noElse;
+    private BinaryAST<C> elseStmt;
 
     IfStmtAST(boolean hasElse) {
         noElse = !hasElse;
@@ -69,22 +69,19 @@ public class IfStmtAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        cond.prepareWrite(res);
-        thenStmt.prepareWrite(res);
-        if (!noElse) {
-            elseStmt.prepareWrite(res);
-        }
+        prepareAST(cond, res);
+        prepareAST(thenStmt, res);
+        prepareAST(elseStmt, res);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
-        cond.writeExpr(out, res);
-        thenStmt.write(out, res);
+        writeExprAST(cond, out, res);
+        writeAST(thenStmt, out, res);
         if (!noElse) {
-            elseStmt.write(out, res);
+            writeAST(elseStmt, out, res);
         }
     }
 

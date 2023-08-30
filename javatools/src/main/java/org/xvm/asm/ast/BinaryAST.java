@@ -26,7 +26,7 @@ public abstract class BinaryAST<C> {
      */
     public NodeType nodeType() {
         reportUnimplemented("TODO implement nodeType() for " + this.getClass().getSimpleName());
-        return NodeType.StmtNotImplYet;
+        return NodeType.NotImplYet;
     }
 
     /**
@@ -207,8 +207,7 @@ public abstract class BinaryAST<C> {
         TryCatchStmt,       // using(res){...}, try(res){...} [catch(T e){...}]
         TryFinallyStmt,     // try{...} [catch(T e){...}] finally{...}
 
-        ExprNotImplYet,     // "a node for some expression form has not yet been implemented" (TODO delete this when done)
-        StmtNotImplYet,     // "a node for some statement form has not yet been implemented" (TODO delete this when done)
+        NotImplYet,         // "a node for some form has not yet been implemented" (TODO delete this when done)
         ;
 
         /**
@@ -259,8 +258,7 @@ public abstract class BinaryAST<C> {
                 case TryFinallyStmt     -> new TryFinallyStmtAST<>();
                 case AssertStmt         -> new AssertStmtAST<>();
 
-                case ExprNotImplYet     -> new ExprNotImplAST<C>();
-                case StmtNotImplYet     -> new StmtNotImplAST<C>();
+                case NotImplYet         -> new NotImplAST<C>();
 
                 default -> throw new UnsupportedOperationException("nodeType: " + this);
             };
@@ -447,7 +445,7 @@ public abstract class BinaryAST<C> {
 
     protected static <C> void writeConstArray(Object[] values, DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        int count = values.length;
+        int count = values == null ? 0 : values.length;
         writePackedLong(out, count);
         for (int i = 0; i < count; ++i) {
             writePackedLong(out, res.indexOf((C) values[i]));
@@ -470,9 +468,10 @@ public abstract class BinaryAST<C> {
 
     protected static <C> void writeExprArray(ExprAST<C>[] nodes, DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        writePackedLong(out, nodes.length);
-        for (ExprAST child : nodes) {
-            child.writeExpr(out, res);
+        int count = nodes == null ? 0 : nodes.length;
+        writePackedLong(out, count);
+        for (int i = 0; i < count; ++i) {
+            nodes[i].writeExpr(out, res);
         }
     }
 

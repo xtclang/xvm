@@ -20,7 +20,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ExprNotImplAST;
+import org.xvm.asm.ast.NotImplAST;
 import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -1189,7 +1189,7 @@ public abstract class Expression
                                    + this.getClass().getSimpleName());
             }
 
-        return new ExprNotImplAST(this.getClass().getSimpleName(), getTypes());
+        return new NotImplAST(this.getClass().getSimpleName(), getTypes());
         }
 
     private static HashSet<Class> alreadyFailedToProvideExpressionNode = new HashSet<>();
