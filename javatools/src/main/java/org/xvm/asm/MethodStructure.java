@@ -38,8 +38,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
 
-import org.xvm.asm.ast.LanguageAST;
-import org.xvm.asm.ast.LanguageAST.ConstantResolver;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.ConstantResolver;
 import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.op.Construct_0;
@@ -696,10 +696,10 @@ public class MethodStructure
     /**
      * @return the root LanguageNode, or null if none
      */
-    public LanguageAST<Constant> getAst()
+    public BinaryAST<Constant> getAst()
         {
         // check if the AST has been provided or has already been deserialized
-        LanguageAST<Constant> ast = m_ast;
+        BinaryAST<Constant> ast = m_ast;
         if (ast != null)
             {
             return ast;
@@ -718,7 +718,7 @@ public class MethodStructure
             DataInput in = new DataInputStream(new ByteArrayInputStream(abAst));
             try
                 {
-                m_ast = ast = LanguageAST.deserialize(in, res);
+                m_ast = ast = BinaryAST.readAST(in, res);
                 }
             catch (IOException e)
                 {
@@ -733,7 +733,7 @@ public class MethodStructure
     /**
      * @param ast  the root LanguageNode
      */
-    public void setAst(LanguageAST<Constant> ast)
+    public void setAst(BinaryAST<Constant> ast)
         {
         if (ast != m_ast)
             {
@@ -1153,7 +1153,7 @@ public class MethodStructure
             }
 
         Code                  code = m_code;
-        LanguageAST<Constant> ast  = m_ast;
+        BinaryAST<Constant> ast  = m_ast;
         if (code != null || ast != null)
             {
             m_abOps = null;
@@ -3473,7 +3473,7 @@ public class MethodStructure
     /**
      * The method's AST.
      */
-    private transient LanguageAST<Constant> m_ast;
+    private transient BinaryAST<Constant> m_ast;
 
     /**
      * The max number of registers used by the method. Calculated from the ops.

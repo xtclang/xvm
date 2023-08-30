@@ -5,17 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
 import static org.xvm.util.Handy.readUtf8String;
 import static org.xvm.util.Handy.writeUtf8String;
 
 
 /**
  * Place-holder that advertises that an implementation was missing.
+ * TODO delete this class when binary AST work is complete
  */
 public class StmtNotImplAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
     private String name;
 

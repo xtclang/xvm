@@ -13,7 +13,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ReturnStmtAST;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -390,7 +390,7 @@ public class ReturnStatement
                 {
                 case 0:
                     code.add(new Return_0());
-                    holder.setAst(this, new ReturnStmtAST<>());
+                    holder.setAst(this, new ReturnStmtAST<>(null));
                     break;
 
                 case 1:

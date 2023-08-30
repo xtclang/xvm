@@ -5,7 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 
 /**
@@ -52,9 +52,9 @@ public class TernaryExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond     = deserialize(in, res);
-        exprThen = deserialize(in, res);
-        exprElse = deserialize(in, res);
+        cond     = readAST(in, res);
+        exprThen = readAST(in, res);
+        exprElse = readAST(in, res);
     }
 
     @Override

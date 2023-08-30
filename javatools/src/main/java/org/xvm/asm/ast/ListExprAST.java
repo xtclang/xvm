@@ -8,12 +8,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.LIST_EXPR;
+import static org.xvm.asm.ast.BinaryAST.NodeType.ListExpr;
 
 
 /**
@@ -50,7 +50,7 @@ public class ListExprAST<C>
 
     @Override
     public NodeType nodeType() {
-        return LIST_EXPR;
+        return ListExpr;
     }
 
     @Override
@@ -63,7 +63,7 @@ public class ListExprAST<C>
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         type = res.register(type);
-        prepareWriteASTArray(res, values);
+        prepareASTArray(values, res);
     }
 
     @Override
@@ -72,7 +72,7 @@ public class ListExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, res.indexOf(type));
-        writeASTArray(out, res, values);
+        writeExprArray(values, out, res);
     }
 
     @Override

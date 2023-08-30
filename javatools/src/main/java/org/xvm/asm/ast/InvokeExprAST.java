@@ -8,9 +8,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.InvokeExpr;
+import static org.xvm.asm.ast.BinaryAST.NodeType.InvokeExpr;
 
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readMagnitude;
@@ -77,7 +77,7 @@ public class InvokeExprAST<C>
             throws IOException {
         method   = res.getConstant(readMagnitude(in));
         retTypes = readConstArray(in, res);
-        target   = deserialize(in, res);
+        target   = readExprAST(in, res);
         args     = readExprArray(in, res);
     }
 
@@ -86,7 +86,7 @@ public class InvokeExprAST<C>
         method = res.register(method);
         res.registerAll(retTypes);
         target.prepareWrite(res);
-        prepareWriteASTArray(res, args);
+        prepareASTArray(args, res);
     }
 
     @Override
@@ -95,9 +95,9 @@ public class InvokeExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, res.indexOf(method));
-        writeConstArray(out, res, retTypes);
-        target.write(out, res);
-        writeASTArray(out, res, args);
+        writeConstArray(retTypes, out, res);
+        target.writeExpr(out, res);
+        writeExprArray(args, out, res);
     }
 
     @Override

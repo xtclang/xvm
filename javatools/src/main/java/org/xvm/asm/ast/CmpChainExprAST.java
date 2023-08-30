@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -70,7 +70,7 @@ public class CmpChainExprAST<C>
 
         ExprAST<C>[] exprs = new ExprAST[count];
         for (int i = 0; i < count; ++i) {
-            exprs[i] = deserialize(in, res);
+            exprs[i] = readAST(in, res);
         }
         Operator[] ops = new Operator[count-1];
         for (int i = 0; i < count-1; ++i) {
@@ -83,7 +83,7 @@ public class CmpChainExprAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        prepareWriteASTArray(res, exprs);
+        prepareASTArray(exprs, res);
     }
 
     @Override

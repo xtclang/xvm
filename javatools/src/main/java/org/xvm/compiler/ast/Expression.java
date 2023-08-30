@@ -21,7 +21,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ExprNotImplAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;

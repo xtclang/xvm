@@ -5,7 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -56,9 +56,9 @@ public class ThrowExprAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         type      = res.getConstant(readMagnitude(in));
-        throwable = deserialize(in, res);
+        throwable = readAST(in, res);
         if (readMagnitude(in) > 0) {
-            message = deserialize(in, res);
+            message = readAST(in, res);
         }
     }
 

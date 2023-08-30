@@ -8,7 +8,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CondOpExprAST;
 import org.xvm.asm.ast.DivRemExprAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.RelOpExprAST;
 
 import org.xvm.asm.constants.TypeConstant;

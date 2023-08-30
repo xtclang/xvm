@@ -5,37 +5,35 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
 import org.xvm.util.Handy;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.IF_ELSE_STMT;
-import static org.xvm.asm.ast.LanguageAST.NodeType.IF_THEN_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.IfElseStmt;
+import static org.xvm.asm.ast.BinaryAST.NodeType.IfThenStmt;
 
 
 /**
  * Zero or more nested statements.
  */
 public class IfStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
-    private ConditionAST<C> cond;
-    private StmtAST<C>      thenStmt;
+    private ExprAST<C> cond;
+    private BinaryAST<C>      thenStmt;
     private boolean         noElse;
-    private StmtAST<C>      elseStmt;
+    private BinaryAST<C>      elseStmt;
 
     IfStmtAST(boolean hasElse) {
         noElse = !hasElse;
     }
 
-    public IfStmtAST(ConditionAST<C> cond, StmtAST<C> thenStmt) {
+    public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt) {
         assert cond != null && thenStmt != null;
         this.cond     = cond;
         this.thenStmt = thenStmt;
         this.noElse   = true;
     }
 
-    public IfStmtAST(ConditionAST<C> cond, StmtAST<C> thenStmt, StmtAST<C> elseStmt) {
+    public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt, BinaryAST<C> elseStmt) {
         assert cond != null && thenStmt != null && elseStmt != null;
         this.cond     = cond;
         this.thenStmt = thenStmt;
@@ -44,28 +42,28 @@ public class IfStmtAST<C>
 
     @Override
     public NodeType nodeType() {
-        return noElse ? IF_THEN_STMT : IF_ELSE_STMT;
+        return noElse ? IfThenStmt : IfElseStmt;
     }
 
-    public ConditionAST<C> getCond() {
+    public ExprAST<C> getCond() {
         return cond;
     }
 
-    public StmtAST<C> getThen() {
+    public BinaryAST<C> getThen() {
         return thenStmt;
     }
 
-    public StmtAST<C> getElse() {
+    public BinaryAST<C> getElse() {
         return elseStmt;
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond     = new ConditionAST<>(in, res);
-        thenStmt = deserialize(in, res);
+        cond     = readExprAST(in, res);
+        thenStmt = readAST(in, res);
         if (!noElse) {
-            elseStmt = deserialize(in, res);
+            elseStmt = readAST(in, res);
         }
     }
 
@@ -83,7 +81,7 @@ public class IfStmtAST<C>
             throws IOException {
         out.writeByte(nodeType().ordinal());
 
-        cond.write(out, res);
+        cond.writeExpr(out, res);
         thenStmt.write(out, res);
         if (!noElse) {
             elseStmt.write(out, res);

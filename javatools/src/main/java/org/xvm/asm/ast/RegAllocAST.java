@@ -5,10 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.NamedRegAlloc;
-import static org.xvm.asm.ast.LanguageAST.NodeType.RegAlloc;
+import static org.xvm.asm.ast.BinaryAST.NodeType.NamedRegAlloc;
+import static org.xvm.asm.ast.BinaryAST.NodeType.RegAlloc;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -69,7 +69,7 @@ public class RegAllocAST<C>
     }
 
     @Override
-    public void readExpr(DataInput in, ConstantResolver<C> res)
+    protected void readExpr(DataInput in, ConstantResolver<C> res)
             throws IOException {
         assert reg == NAMED || reg == UNNAMED;
         // TODO

@@ -11,7 +11,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.IsExprAST;
-import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
@@ -310,7 +310,7 @@ public class IsExpression
         }
 
     @Override
-    public LanguageAST.ExprAST<Constant> getExprAST()
+    public BinaryAST.ExprAST<Constant> getExprAST()
         {
         TypeConstant[] atypeRet = getTypes();
         return new IsExprAST<>(atypeRet.length == 1 ? null : atypeRet[1],

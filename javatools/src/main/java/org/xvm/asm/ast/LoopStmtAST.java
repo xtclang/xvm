@@ -5,9 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
-import static org.xvm.asm.ast.LanguageAST.NodeType.LOOP_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.LoopStmt;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -15,30 +13,30 @@ import static org.xvm.util.Handy.indentLines;
  * A "while(True){...}" statement.
  */
 public class LoopStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
-    private StmtAST<C> body;
+    private BinaryAST<C> body;
 
     LoopStmtAST() {}
 
-    public LoopStmtAST(StmtAST<C> body) {
+    public LoopStmtAST(BinaryAST<C> body) {
         assert body != null;
         this.body = body;
     }
 
     @Override
     public NodeType nodeType() {
-        return LOOP_STMT;
+        return LoopStmt;
     }
 
-    public StmtAST<C> getBody() {
+    public BinaryAST<C> getBody() {
         return body;
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        body = deserialize(in, res);
+        body = readAST(in, res);
     }
 
     @Override

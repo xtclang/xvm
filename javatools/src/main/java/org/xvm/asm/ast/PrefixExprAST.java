@@ -5,7 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -62,7 +62,7 @@ public abstract class PrefixExprAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         op   = Operator.values()[readMagnitude(in)];
-        expr = deserialize(in, res);
+        expr = readAST(in, res);
     }
 
     @Override

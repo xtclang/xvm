@@ -19,7 +19,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.BinaryAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -671,7 +671,7 @@ public class ForEachStatement
         // strip any declarations off of the LValues (we'll handle them separately)
         VariableDeclarationStatement[] aInitStmt = getCondition().takeDeclarations();
         int                            cInit     = aInitStmt.length;
-        StmtAST[]                      aAstInit = new StmtAST[cInit];
+        BinaryAST[]                    aAstInit  = new BinaryAST[cInit];
         for (int i = 0; i < cInit; i++)
             {
             VariableDeclarationStatement stmt = aInitStmt[i];

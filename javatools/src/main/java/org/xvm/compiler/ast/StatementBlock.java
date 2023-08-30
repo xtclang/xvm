@@ -29,7 +29,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ReturnStmtAST;
 import org.xvm.asm.ast.StmtBlockAST;
 
@@ -357,7 +357,7 @@ public class StatementBlock
             }
 
         boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
-        StmtAST ast        = ctx.getHolder().getAst(this);
+        BinaryAST ast        = ctx.getHolder().getAst(this);
 
         if (fCompletes)
             {
@@ -370,12 +370,12 @@ public class StatementBlock
                 // add the return statement to the AST
                 if (ast instanceof StmtBlockAST astBlock)
                     {
-                    StmtAST<Constant>[] oldStmts = astBlock.getStmts();
+                    BinaryAST<Constant>[] oldStmts = astBlock.getStmts();
                     int                 oldSize  = oldStmts.length;
                     int                 newSize  = oldSize + 1;
-                    StmtAST<Constant>[] newStmts = new StmtAST[newSize];
+                    BinaryAST<Constant>[] newStmts = new BinaryAST[newSize];
                     System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
-                    newStmts[oldSize] = new ReturnStmtAST<>();
+                    newStmts[oldSize] = new ReturnStmtAST<>(null);
                     ast = new StmtBlockAST(newStmts);
                     }
                 }
@@ -473,7 +473,7 @@ public class StatementBlock
 
         AstHolder           holder = ctx.getHolder();
         List<Statement>     stmts  = this.stmts;
-        StmtAST<Constant>[] asts   = EMPTY_AST;
+        BinaryAST<Constant>[] asts   = EMPTY_AST;
         if (stmts != null && !stmts.isEmpty())
             {
             // there is an implicit scope for the top-most statement block of a method
@@ -504,7 +504,7 @@ public class StatementBlock
                 }
 
             boolean fLoggedUnreachable = false;
-            ArrayList<StmtAST<Constant>> listAsts = new ArrayList<>((stmts.size()));
+            ArrayList<BinaryAST<Constant>> listAsts = new ArrayList<>((stmts.size()));
             for (Statement stmt : stmts)
                 {
                 if (!fReachable && !fLoggedUnreachable && !(stmt instanceof ComponentStatement))
@@ -538,7 +538,7 @@ public class StatementBlock
                 code.add(new Exit());
                 }
 
-            asts = listAsts.toArray(new StmtAST[0]);
+            asts = listAsts.toArray(new BinaryAST[0]);
             }
 
         holder.setAst(this, new StmtBlockAST<>(asts));
@@ -1837,6 +1837,6 @@ public class StatementBlock
     private transient boolean m_fSuppressScope;
     private transient boolean m_fTerminatedAbnormally;
 
-    private static final StmtAST<Constant>[] EMPTY_AST = new StmtAST[0];
+    private static final BinaryAST<Constant>[] EMPTY_AST = new BinaryAST[0];
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }

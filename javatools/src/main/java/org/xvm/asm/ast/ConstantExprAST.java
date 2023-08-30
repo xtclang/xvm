@@ -5,11 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.asm.Op.CONSTANT_OFFSET;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.CONSTANT_EXPR;
+import static org.xvm.asm.ast.BinaryAST.NodeType.ConstantExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -48,7 +48,7 @@ public class ConstantExprAST<C>
 
     @Override
     public NodeType nodeType() {
-        return CONSTANT_EXPR;
+        return ConstantExpr;
     }
 
     @Override
@@ -59,7 +59,7 @@ public class ConstantExprAST<C>
     }
 
     @Override
-    public void readExpr(DataInput in, ConstantResolver<C> res)
+    protected void readExpr(DataInput in, ConstantResolver<C> res)
             throws IOException {
         // this should never be called; the "read" is done inline by the deserializeExpr() function
         throw new UnsupportedOperationException();
@@ -78,7 +78,7 @@ public class ConstantExprAST<C>
     }
 
     @Override
-    public void writeExpr(DataOutput out, ConstantResolver<C> res)
+    protected void writeExpr(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         // instead of writing out the node type followed by the constant, we encode the constant
         // explicitly in a special range that indicates that the expression is a constant expr

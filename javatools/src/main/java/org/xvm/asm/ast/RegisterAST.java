@@ -7,9 +7,9 @@ import java.io.IOException;
 
 import org.xvm.asm.Op;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.RegisterExpr;
+import static org.xvm.asm.ast.BinaryAST.NodeType.RegisterExpr;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -105,18 +105,19 @@ public class RegisterAST<C>
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        // REVIEW at some point, this method should not be being called at all, i.e. this should assert
-        out.writeByte(nodeType().ordinal());
-        writeExpr(out, res);
+        throw new UnsupportedOperationException("Use 'writeExpr' instead");
     }
 
     @Override
-    public void writeExpr(DataOutput out, ConstantResolver<C> res)
+    protected void writeExpr(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         writePackedLong(out, regId < 0 ? regId : 32 + regId);
     }
 
-    // TODO dump
+    @Override
+    public String dump() {
+        return "(" + type + ")#" + regId;
+    }
 
     @Override
     public String toString() {

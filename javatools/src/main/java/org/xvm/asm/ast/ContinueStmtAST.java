@@ -5,9 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
-import static org.xvm.asm.ast.LanguageAST.NodeType.CONTINUE_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.ContinueStmt;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -18,7 +16,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * start of the next iteration in a loop.
  */
 public class ContinueStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
     private int depth;
 
@@ -33,7 +31,7 @@ public class ContinueStmtAST<C>
 
     @Override
     public NodeType nodeType() {
-        return CONTINUE_STMT;
+        return ContinueStmt;
     }
 
     /**
@@ -58,7 +56,6 @@ public class ContinueStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
         writePackedLong(out, depth);
     }
 

@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.util.Handy.readUtf8String;
 import static org.xvm.util.Handy.writeUtf8String;
@@ -16,6 +16,7 @@ import static org.xvm.util.Handy.writeUtf8String;
 
 /**
  * Place-holder that advertises that an implementation was missing.
+ * TODO delete this class when binary AST work is complete
  */
 public class ExprNotImplAST<C>
         extends ExprAST<C> {
@@ -64,7 +65,7 @@ public class ExprNotImplAST<C>
         out.writeByte(nodeType().ordinal());
 
         writeUtf8String(out, name);
-        writeConstArray(out, res, types);
+        writeConstArray(types, out, res);
     }
 
     @Override

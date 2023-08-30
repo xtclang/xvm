@@ -25,7 +25,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.BinaryAST;
 
 import org.xvm.asm.op.*;
 
@@ -709,7 +709,7 @@ public abstract class Op
      * together all the constants used by the ops.
      */
     public static class ConstantRegistry
-            implements LanguageAST.ConstantResolver<Constant>
+            implements BinaryAST.ConstantResolver<Constant>
         {
         /**
          * Construct a ConstantRegistry.

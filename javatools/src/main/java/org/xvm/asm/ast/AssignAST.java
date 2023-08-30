@@ -5,17 +5,19 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.Assign;
-import static org.xvm.asm.ast.LanguageAST.NodeType.BinOpAssign;
+import static org.xvm.asm.ast.BinaryAST.NodeType.Assign;
+import static org.xvm.asm.ast.BinaryAST.NodeType.BinOpAssign;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Allocate a register, i.e. declare a local variable. This AST node is only an "expression" in the
- * sense that the variable (the register itself) can be used as an expression.
+ * Assign an "L-Value", i.e. store a value in a variable, a property, an array element, etc.
+ * This AST node is only an "expression" in the sense that the "left hand side" can itself be used
+ * as an expression.
  */
 public class AssignAST<C>
         extends ExprAST<C> {
@@ -104,11 +106,11 @@ public class AssignAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        lhs = deserializeExpr(in, res);
+        lhs = readExprAST(in, res);
         if (nodeType() != Assign) {
             op = Operator.valueOf(readMagnitude(in));
         }
-        rhs = deserializeExpr(in, res);
+        rhs = readExprAST(in, res);
     }
 
     @Override
@@ -122,6 +124,9 @@ public class AssignAST<C>
             throws IOException {
         out.writeByte(nodeType().ordinal());
         lhs.writeExpr(out, res);
+        if (nodeType() != Assign) {
+            writePackedLong(out, op.ordinal());
+        }
         rhs.writeExpr(out, res);
     }
 

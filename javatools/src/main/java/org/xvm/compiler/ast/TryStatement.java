@@ -14,7 +14,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.TryCatchStmtAST;
 
 import org.xvm.asm.ast.TryFinallyStmtAST;
@@ -341,10 +341,10 @@ public class TryStatement
         ConstantPool pool       = pool();
         AstHolder    holder     = ctx.getHolder();
 
-        StmtAST<Constant>[] aAstResources = null;
-        StmtAST<Constant>[] aAstCatches   = null;
-        StmtAST<Constant>   astCatchAll   = null;
-        StmtAST<Constant>   astBlock;
+        BinaryAST<Constant>[] aAstResources = null;
+        BinaryAST<Constant>[] aAstCatches   = null;
+        BinaryAST<Constant>   astCatchAll   = null;
+        BinaryAST<Constant>   astBlock;
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyClose = null;
@@ -356,7 +356,7 @@ public class TryStatement
 
             int c = resources.size();
             aFinallyClose = new FinallyStart[c];
-            aAstResources = new StmtAST[c];
+            aAstResources = new BinaryAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 Statement stmt = resources.get(i);
@@ -388,7 +388,7 @@ public class TryStatement
             {
             int c = catches.size();
             aCatchStart = new CatchStart[c];
-            aAstCatches = new StmtAST[c];
+            aAstCatches = new BinaryAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 CatchStatement stmt = catches.get(i);
@@ -413,7 +413,7 @@ public class TryStatement
             code.add(new GuardEnd(labelCatchEnd));
 
             int c = catches.size();
-            aAstCatches = new StmtAST[c];
+            aAstCatches = new BinaryAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 CatchStatement stmtCatch = catches.get(i);

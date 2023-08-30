@@ -13,7 +13,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.StmtNotImplAST;
 
 import org.xvm.asm.op.Label;
@@ -270,11 +270,11 @@ public abstract class Statement
         }
 
     /**
-     * Holder for LanguageAST objects as they percolate up the emit() call tree.
+     * Holder for BinaryAST objects as they percolate up the emit() call tree.
      */
     static class AstHolder
         {
-        StmtAST<Constant> getAst(Statement stmt)
+        BinaryAST<Constant> getAst(Statement stmt)
             {
             assert stmt != null;
             return stmt == this.stmt
@@ -282,7 +282,7 @@ public abstract class Statement
                     : new StmtNotImplAST<>(stmt.getClass().getSimpleName());
             }
 
-        void setAst(Statement stmt, StmtAST<Constant> ast)
+        void setAst(Statement stmt, BinaryAST<Constant> ast)
             {
             assert stmt != null && ast != null;
             this.stmt = stmt;
@@ -290,7 +290,7 @@ public abstract class Statement
             }
 
         private Statement         stmt;
-        private StmtAST<Constant> ast;
+        private BinaryAST<Constant> ast;
         }
 
 

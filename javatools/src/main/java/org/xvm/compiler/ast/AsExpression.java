@@ -7,7 +7,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.RelOpExprAST;
 
 import org.xvm.asm.constants.CastTypeConstant;

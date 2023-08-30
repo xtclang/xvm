@@ -28,8 +28,8 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.ast.InvokeExprAST;
-import org.xvm.asm.ast.LanguageAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -1442,7 +1442,7 @@ public class InvocationExpression
                                 {
                                 chArgs = '0';
                                 aArgs  = NO_RVALUES;
-                                aAsts  = LanguageAST.NO_EXPRS;
+                                aAsts  = BinaryAST.NO_EXPRS;
                                 }
                             else if (cAll == 1)
                                 {
