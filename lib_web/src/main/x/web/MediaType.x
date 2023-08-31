@@ -70,7 +70,7 @@ const MediaType {
     static MediaType[] Predefined = [JavaScript, Json, JsonLD, JsonPatch, PDF, SQL, JsonAPI,
             Word, WordX, Excel, ExcelX, PowerPoint, PowerPointX, OpenOffice, FormURL, XML, XHTML,
             Zip, ZStd, CDAudio, AACAudio, MpegAudio, OGG, Opus, WAV, WEBMAudio, MIDI,
-            AVIF, JPEG, PNG, SVG, WebP, FormData, CSS, CSV, HTML, Text, Woff, Woff2, ];
+            AVIF, JPEG, ICO, PNG, SVG, WebP, FormData, CSS, CSV, HTML, Text, Woff, Woff2, ];
 
 
     // ----- constructors --------------------------------------------------------------------------
