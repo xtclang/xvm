@@ -9,8 +9,11 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.UnpackExprAST;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -129,6 +132,14 @@ public class UnpackExpression
             }
 
         return aRegs;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return isConstant()
+                ? new ConstantExprAST<>(getType(), toConstant())
+                : new UnpackExprAST<>(expr.getExprAST());
         }
 
 
