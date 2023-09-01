@@ -4,9 +4,14 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -123,6 +128,12 @@ public class NonBindingExpression
         // presence of other named arguments (see AstNode.rearrangeNamedArgs);
         // note that "generateArgument" is never called when a method binding is performed
         return Register.DEFAULT;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return new RegisterAST<>(Op.A_DEFAULT, getType(), null);
         }
 
 

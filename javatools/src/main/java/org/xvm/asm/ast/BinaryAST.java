@@ -184,8 +184,8 @@ public abstract class BinaryAST<C> {
         ConstantExpr,
         ListExpr,
         TupleExpr,
-        UnpackExpr,
         MapExpr,
+        SyntheticExpr,
 
         StmtBlock,          // {...}, do{...}while(False); etc.
         IfThenStmt,         // if(cond){...}
@@ -230,8 +230,8 @@ public abstract class BinaryAST<C> {
                 case ConstantExpr       -> new ConstantExprAST<C>();
                 case ListExpr           -> new ListExprAST<>();
                 case TupleExpr          -> new TupleExprAST<>();
-                case UnpackExpr         -> new UnpackExprAST<>();
                 case MapExpr            -> new MapExprAST<>();
+                case SyntheticExpr      -> new SyntheticExprAST<>();
                 case ArrayAccessExpr    -> new ArrayAccessExprAST<C>();
                 case RelOpExpr          -> new RelOpExprAST<>();
                 case DivRemExpr         -> new RelOpExprAST<>();

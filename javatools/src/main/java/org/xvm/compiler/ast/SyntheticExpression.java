@@ -3,7 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.SyntheticExprAST;
+import org.xvm.asm.ast.SyntheticExprAST.Operation;
 
 import org.xvm.compiler.Compiler.Stage;
 
@@ -95,6 +101,43 @@ public abstract class SyntheticExpression
     public boolean isShortCircuiting()
         {
         return expr.isShortCircuiting();
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        if (isConstant())
+            {
+            return new ConstantExprAST<>(getType(), toConstant());
+            }
+
+        Operation op;
+        if (this instanceof PackExpression)
+            {
+            op = Operation.Pack;
+            }
+        else if (this instanceof UnpackExpression)
+            {
+            op = Operation.Unpack;
+            }
+        else if (this instanceof ConvertExpression)
+            {
+            op = Operation.Convert;
+            }
+        else if (this instanceof ToIntExpression)
+            {
+            op = Operation.ToInt;
+            }
+        else if (this instanceof TraceExpression)
+            {
+            op = Operation.Trace;
+            }
+        else
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        return new SyntheticExprAST<>(op, getType(), expr.getExprAST());
         }
 
 
