@@ -15,8 +15,8 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST.ExprAST;
-import org.xvm.asm.ast.ListExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.TupleExprAST;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -562,7 +562,7 @@ public class TupleExpression
             {
             aAstArg[i] = listExprs.get(i).getExprAST();
             }
-        return new ListExprAST(getType(), aAstArg);
+        return new TupleExprAST<>(getType(), aAstArg);
         }
 
 
