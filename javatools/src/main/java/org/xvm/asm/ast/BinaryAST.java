@@ -183,6 +183,7 @@ public abstract class BinaryAST<C> {
 
         ConstantExpr,
         ListExpr,
+        TupleExpr,
         MapExpr,
 
         StmtBlock,          // {...}, do{...}while(False); etc.
