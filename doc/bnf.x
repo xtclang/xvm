@@ -495,7 +495,7 @@ ReturnValue
     ExpressionList
 
 SwitchStatement
-    "switch" "(" SwitchCondition-opt ")" "{" SwitchBlocks "}"
+    "switch" "(" SwitchCondition ")" "{" SwitchBlocks "}"
 
 SwitchCondition
     SwitchConditionExpression
