@@ -2418,9 +2418,14 @@ public class MethodStructure
                 }
             catch (Throwable e)
                 {
-                System.err.println("AST error: " + e.getMessage());
+                if (alreadyReported.add(e.getClass()))
+                    {
+                    System.err.println("AST error: " + e.getMessage());
+                    }
                 }
             }
+
+        private static HashSet<Class> alreadyReported = new HashSet<>();
 
         Code(MethodStructure method, Code wrappee)
             {
