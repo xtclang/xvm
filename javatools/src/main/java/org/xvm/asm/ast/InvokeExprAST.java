@@ -5,28 +5,20 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Arrays;
-import java.util.Objects;
-
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.asm.ast.BinaryAST.NodeType.InvokeExpr;
 
-import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Invocation expression.
+ * Invocation expression for method or "constant" function calls.
  */
 public class InvokeExprAST<C>
-        extends ExprAST<C> {
+        extends CallableExprAST<C> {
 
-    private C            method;
-    private Object[]     retTypes;
-    private ExprAST<C>   target;
-    private ExprAST<C>[] args;
+    private C          method;
+    private ExprAST<C> target;
 
     InvokeExprAST() {
     }
@@ -35,24 +27,12 @@ public class InvokeExprAST<C>
      * Construct an InvokeExprAST.
      */
     public InvokeExprAST(C method, C[] retTypes, ExprAST target, ExprAST<C>[] args) {
-        assert method   != null && target != null;
-        assert retTypes != null && Arrays.stream(retTypes).allMatch(Objects::nonNull);
-        assert args     == null || Arrays.stream(args).allMatch(Objects::nonNull);
+        super(retTypes, args);
 
-        this.method   = method;
-        this.retTypes = retTypes;
-        this.target   = target;
-        this.args     = args == null ? NO_EXPRS : args;
-    }
+        assert method != null && target != null;
 
-    @Override
-    public int getCount() {
-        return retTypes.length;
-    }
-
-    @Override
-    public C getType(int i) {
-        return (C) retTypes[i];
+        this.method = method;
+        this.target = target;
     }
 
     @Override
@@ -68,50 +48,39 @@ public class InvokeExprAST<C>
         return method;
     }
 
-    public ExprAST<C>[] getArgs() {
-        return args; // note: caller must not modify returned array in any way
-    }
-
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        method   = res.getConstant(readMagnitude(in));
-        retTypes = readConstArray(in, res);
-        target   = readExprAST(in, res);
-        args     = readExprArray(in, res);
+        super.read(in, res);
+
+        method = res.getConstant(readMagnitude(in));
+        target = readExprAST(in, res);
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
+        super.prepareWrite(res);
+
         method = res.register(method);
-        res.registerAll(retTypes);
         target.prepareWrite(res);
-        prepareASTArray(args, res);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
+        super.write(out, res);
 
         writePackedLong(out, res.indexOf(method));
-        writeConstArray(retTypes, out, res);
         target.writeExpr(out, res);
-        writeExprArray(args, out, res);
     }
 
     @Override
     public String dump() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(this);
-        for (ExprAST child : args) {
-            buf.append('\n').append(indentLines(child.dump(), "  "));
-        }
-        return buf.toString();
+        return target.dump() + '.' + method + "\n(" + super.dump() + ")\n";
     }
 
     @Override
     public String toString() {
-        return nodeType().name() + ":" + retTypes.length + " " + method;
+        return target.toString() + '.' + method + '(' + super.toString() + ')';
     }
 }

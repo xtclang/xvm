@@ -157,7 +157,8 @@ public abstract class BinaryAST<C> {
         Escape,             // reserved #31; not an expression
 
         RegisterExpr,       // _ (unnamed register expr)
-        InvokeExpr,         // foo() (method)
+        InvokeExpr,         // foo() (method)   (foo is a const)
+        CallExpr,           // foo() (function) (foo is a register/property)
 
         AssignExpr,         // (x <- y)                                         // TODO
         SwitchExpr,                                                             // TODO
@@ -228,6 +229,7 @@ public abstract class BinaryAST<C> {
                      RegisterExpr       -> throw new IllegalStateException();
 
                 case InvokeExpr         -> new InvokeExprAST<>();
+                case CallExpr           -> new CallExprAST<>();
                 case ConstantExpr       -> new ConstantExprAST<>();
                 case ListExpr           -> new ListExprAST<>();
                 case TupleExpr          -> new TupleExprAST<>();

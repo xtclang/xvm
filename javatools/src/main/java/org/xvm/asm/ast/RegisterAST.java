@@ -22,7 +22,7 @@ public class RegisterAST<C>
         extends ExprAST<C> {
 
     /**
-     * A value that we will is illegal to use as a register id.
+     * A value that is illegal to use as a register id.
      */
     private static final int UNASSIGNED_ID = Integer.MAX_VALUE;
 
