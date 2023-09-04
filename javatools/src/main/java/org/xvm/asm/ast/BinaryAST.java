@@ -190,6 +190,7 @@ public abstract class BinaryAST<C> {
         MapExpr,
         SyntheticExpr,
         ConvertExpr,
+        StmtExpr,
 
         StmtBlock,          // {...}, do{...}while(False); etc.
         IfThenStmt,         // if(cond){...}
@@ -240,6 +241,7 @@ public abstract class BinaryAST<C> {
                 case MapExpr            -> new MapExprAST<>();
                 case SyntheticExpr      -> new SyntheticExprAST<>();
                 case ConvertExpr        -> new ConvertExprAST<>();
+                case StmtExpr           -> new StmtExprAST<>();
                 case ArrayAccessExpr    -> new ArrayAccessExprAST<>();
                 case RelOpExpr          -> new RelOpExprAST<>();
                 case DivRemExpr         -> new DivRemExprAST<>();

@@ -3,15 +3,17 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.StmtExprAST;
 
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
-
-import org.xvm.compiler.ast.Statement.AstHolder;
 
 import org.xvm.util.Severity;
 
@@ -267,7 +269,13 @@ public class StatementExpression
             errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                     getEndPosition(), getEndPosition());
             }
-        // TODO CP save off the ast node from the holder
+        m_astBody = ctx.getHolder().getAst(body);
+        }
+
+    @Override
+    public BinaryAST.ExprAST<Constant> getExprAST()
+        {
+        return new StmtExprAST<>(m_astBody, getTypes());
         }
 
 
@@ -337,9 +345,10 @@ public class StatementExpression
 
     protected StatementBlock body;
 
-    private transient TypeConstant[] m_atypeRequired;
-    private transient TypeCollector  m_collector;
-    private transient Assignable[]   m_aLVal;
+    private transient TypeConstant[]      m_atypeRequired;
+    private transient TypeCollector       m_collector;
+    private transient Assignable[]        m_aLVal;
+    private transient BinaryAST<Constant> m_astBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
     }
