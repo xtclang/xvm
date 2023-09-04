@@ -33,23 +33,25 @@ public class RegisterAST<C>
 
     RegisterAST() {}
 
-    public RegisterAST(C type) {
+    RegisterAST(C type) {
         this(type, null);
     }
 
-    public RegisterAST(C type, C name) {
+    RegisterAST(C type, C name) {
         assert type != null;
         this.type  = type;
         this.name  = name;
     }
 
     /**
+     * Special constructor used to create "special" registers and representation of parameters.
+     *
      * @param regId  the register id; a "special" (internal, hard-coded) register id is allowed
      * @param type   the type of the register, or null if not applicable
      * @param name   the type of the register, or null if not applicable
      */
     public RegisterAST(int regId, C type, C name) {
-        assert regId > Op.CONSTANT_OFFSET;
+        assert regId > Op.CONSTANT_OFFSET && regId < 255; // arbitrary temporary limit
         this.regId = regId;
         this.type  = type;
         this.name  = name;

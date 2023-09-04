@@ -12,25 +12,25 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.IfThenStmt;
 
 
 /**
- * Zero or more nested statements.
+ * Supports the "if..then" and "if..then..else" statements.
  */
 public class IfStmtAST<C>
         extends BinaryAST<C> {
 
     private ExprAST<C>   cond;
     private BinaryAST<C> thenStmt;
-    private boolean      noElse;
+    private boolean      hasElse;
     private BinaryAST<C> elseStmt;
 
     IfStmtAST(boolean hasElse) {
-        noElse = !hasElse;
+        this.hasElse = hasElse;
     }
 
     public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt) {
         assert cond != null && thenStmt != null;
         this.cond     = cond;
         this.thenStmt = thenStmt;
-        this.noElse   = true;
+        this.hasElse  = false;
     }
 
     public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt, BinaryAST<C> elseStmt) {
@@ -42,7 +42,7 @@ public class IfStmtAST<C>
 
     @Override
     public NodeType nodeType() {
-        return noElse ? IfThenStmt : IfElseStmt;
+        return hasElse ? IfElseStmt : IfThenStmt;
     }
 
     public ExprAST<C> getCond() {
@@ -61,11 +61,11 @@ public class IfStmtAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
-        cond     = readExprAST(in, res);
+        cond = readExprAST(in, res);
         res.enter();
         thenStmt = readAST(in, res);
         res.exit();
-        if (!noElse) {
+        if (hasElse) {
             res.enter();
             elseStmt = readAST(in, res);
             res.exit();
@@ -75,9 +75,17 @@ public class IfStmtAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
+        res.enter();
         prepareAST(cond, res);
+        res.enter();
         prepareAST(thenStmt, res);
-        prepareAST(elseStmt, res);
+        res.exit();
+        if (hasElse) {
+            res.enter();
+            prepareAST(elseStmt, res);
+            res.exit();
+        }
+        res.exit();
     }
 
     @Override
@@ -86,7 +94,7 @@ public class IfStmtAST<C>
         out.writeByte(nodeType().ordinal());
         writeExprAST(cond, out, res);
         writeAST(thenStmt, out, res);
-        if (!noElse) {
+        if (hasElse) {
             writeAST(elseStmt, out, res);
         }
     }
@@ -97,7 +105,7 @@ public class IfStmtAST<C>
         buf.append(this);
         buf.append('\n').append(Handy.indentLines(cond.dump(), "  "));
         buf.append("\nthen\n").append(Handy.indentLines(thenStmt.dump(), "  "));
-        if (!noElse) {
+        if (hasElse) {
             buf.append("\nelse\n").append(Handy.indentLines(elseStmt.dump(), "  "));
         }
         return buf.toString();

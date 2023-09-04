@@ -1752,7 +1752,7 @@ public abstract class Expression
         Register reg;
         if (fUsedOnce)
             {
-            reg = new Register(type, Op.A_STACK);
+            reg = new Register(type, null, Op.A_STACK);
             }
         else
             {
@@ -2039,7 +2039,7 @@ public abstract class Expression
             log(errs, Severity.ERROR, Compiler.NO_THIS);
             }
 
-        return new Register(type, nReg);
+        return new Register(type, null, nReg);
         }
 
     /**
@@ -2055,7 +2055,7 @@ public abstract class Expression
      */
     protected Register generateBlackHole(TypeConstant type)
         {
-        return new Register(type == null ? pool().typeObject() : type, Op.A_IGNORE);
+        return new Register(type == null ? pool().typeObject() : type, null, Op.A_IGNORE);
         }
 
     /**
@@ -2601,7 +2601,7 @@ public abstract class Expression
 
                     if (fUsedOnce)
                         {
-                        Register reg = new Register(getType(), Op.A_STACK);
+                        Register reg = new Register(getType(), null, Op.A_STACK);
                         code.add(new L_Get(getProperty(), reg));
                         return reg;
                         }
@@ -2616,7 +2616,7 @@ public abstract class Expression
                     Register reg;
                     if (fUsedOnce)
                         {
-                        reg = new Register(getType(), Op.A_STACK);
+                        reg = new Register(getType(), null, Op.A_STACK);
                         }
                     else
                         {
@@ -2632,7 +2632,7 @@ public abstract class Expression
                     Register reg;
                     if (fUsedOnce)
                         {
-                        reg = new Register(getType(), Op.A_STACK);
+                        reg = new Register(getType(), null, Op.A_STACK);
                         }
                     else
                         {

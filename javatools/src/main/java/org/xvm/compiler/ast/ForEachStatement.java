@@ -781,7 +781,7 @@ public class ForEachStatement
         Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
         boolean    fTempVal = !lvalVal.isLocalArgument();
         Argument   argVal   = fTempVal
-                ? new Register(lvalVal.getType(), Op.A_STACK)
+                ? new Register(lvalVal.getType(), null, Op.A_STACK)
                 : lvalVal.getLocalArgument();
 
         Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
@@ -795,7 +795,7 @@ public class ForEachStatement
             }
         else
             {
-            Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+            Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
             code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regTemp}));
             code.add(new JumpFalse(regCond, getEndLabel()));
             code.add(new Invoke_01(regTemp, idConv, argVal));
@@ -1113,7 +1113,7 @@ public class ForEachStatement
             lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
             fTempVal = !lvalVal.isLocalArgument();
             argVal   = fTempVal
-                    ? new Register(typeElem, Op.A_STACK)
+                    ? new Register(typeElem, null, Op.A_STACK)
                     : lvalVal.getLocalArgument();
             }
 
@@ -1135,7 +1135,7 @@ public class ForEachStatement
             }
         else
             {
-            Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+            Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
             code.add(new I_Get(regList, regCount, regTemp));
             code.add(new Invoke_01(regTemp, idConv, argVal));
             }
@@ -1246,7 +1246,7 @@ public class ForEachStatement
             PropertyConstant idKey     = infoEntry.findProperty("key").getIdentity();
             PropertyConstant idValue   = infoEntry.findProperty("value").getIdentity();
 
-            Register regSet = new Register(typeAble, Op.A_STACK);
+            Register regSet = new Register(typeAble, null, Op.A_STACK);
             code.add(new P_Get(idEntries, argMap, regSet));
             Register regIter = code.createRegister(typeIter);
             code.add(new Var(regIter));
@@ -1273,7 +1273,7 @@ public class ForEachStatement
             Assignable lvalKey  = aLVal[0];
             boolean    fTempKey = !lvalKey.isLocalArgument();
             Argument   argKey   = fTempKey
-                    ? new Register(typeKey, Op.A_STACK)
+                    ? new Register(typeKey, null, Op.A_STACK)
                     : lvalKey.getLocalArgument();
 
             MethodConstant idConvKey = m_aidConvKey == null ? null : m_aidConvKey[0];
@@ -1283,7 +1283,7 @@ public class ForEachStatement
                 }
             else
                 {
-                Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+                Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
                 code.add(new P_Get(idKey, regEntry, regTemp));
                 code.add(new Invoke_01(regTemp, idConvKey, argKey));
                 }
@@ -1298,7 +1298,7 @@ public class ForEachStatement
                 Assignable lvalVal  = aLVal[1];
                 boolean    fTempVal = !lvalVal.isLocalArgument();
                 Argument   argVal   = fTempVal
-                        ? new Register(typeValue, Op.A_STACK)
+                        ? new Register(typeValue, null, Op.A_STACK)
                         : lvalVal.getLocalArgument();
 
                 MethodConstant idConvVal = m_aidConvKey == null ? null : m_aidConvKey[1];
@@ -1308,7 +1308,7 @@ public class ForEachStatement
                     }
                 else
                     {
-                    Register regTemp = new Register(m_atypeConv[1], Op.A_STACK);
+                    Register regTemp = new Register(m_atypeConv[1], null, Op.A_STACK);
                     code.add(new P_Get(idValue, regEntry, regTemp));
                     code.add(new Invoke_01(regTemp, idConvVal, argVal));
                     }
@@ -1339,7 +1339,7 @@ public class ForEachStatement
             // JMP Repeat                       ; loop
             // Exit:
             PropertyConstant idKeys = infoMap.findProperty("keys").getIdentity();
-            Register         regSet = new Register(typeAble, Op.A_STACK);
+            Register         regSet = new Register(typeAble, null, Op.A_STACK);
             code.add(new P_Get(idKeys, argMap, regSet));
 
             Register regIter = code.createRegister(typeIter);
@@ -1355,7 +1355,7 @@ public class ForEachStatement
 
             boolean    fTempKey = !lvalKey.isLocalArgument();
             Argument   argKey   = fTempKey
-                    ? new Register(typeKey, Op.A_STACK)
+                    ? new Register(typeKey, null, Op.A_STACK)
                     : lvalKey.getLocalArgument();
 
             MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
@@ -1366,7 +1366,7 @@ public class ForEachStatement
                 }
             else
                 {
-                Register regTemp = new Register(m_atypeConv[0], Op.A_STACK);
+                Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
                 code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regTemp}));
                 code.add(new JumpFalse(regCond, getEndLabel()));
                 code.add(new Invoke_01(regTemp, idConv, argKey));

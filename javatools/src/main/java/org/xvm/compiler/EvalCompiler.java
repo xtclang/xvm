@@ -290,7 +290,7 @@ public class EvalCompiler
                 Frame.VarInfo info = aInfo[iVar];
                 if (info != null && info.getName().equals(sName))
                     {
-                    Register reg = new Register(info.getType(), f_listRegisters.size());
+                    Register reg = new Register(info.getType(), null, f_listRegisters.size());
 
                     f_mapCapture.put(sName, reg);
                     f_listRegisters.add(iVar);
@@ -305,7 +305,7 @@ public class EvalCompiler
                 {
                 if (sName.equals("this"))
                     {
-                    Register reg = new Register(getThisType(), Op.A_THIS);
+                    Register reg = new Register(getThisType(), null, Op.A_THIS);
                     ensureNameMap().put(sName, reg);
                     return reg;
                     }

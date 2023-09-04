@@ -853,7 +853,8 @@ public class LambdaExpression
                 if (fBindTarget & fBindParams)
                     {
                     Register regThis = ctx.generateThisRegister(code);
-                    Register regTemp = new Register(idLambda.getSignature().asFunctionType(), Op.A_STACK);
+                    Register regTemp = new Register(idLambda.getSignature().asFunctionType(), null,
+                                                    Op.A_STACK);
                     code.add(new MBind(regThis, idLambda, regTemp));
                     code.add(new FBind(regTemp, anBind, aBindArgs, argResult));
                     }
@@ -1072,7 +1073,7 @@ public class LambdaExpression
                     if (argFormal instanceof TargetInfo infoGeneric)
                         {
                         typeFormal = infoGeneric.getType(); // type of type
-                        regFormal  = new Register(typeFormal, Op.A_STACK);
+                        regFormal  = new Register(typeFormal, null, Op.A_STACK);
 
                         // make sure that every lambda's parameter of this generic type is redefined
                         // to point to the corresponding lambda's type parameter
@@ -1081,7 +1082,7 @@ public class LambdaExpression
 
                         if (infoGeneric.getStepsOut() > 0)
                             {
-                            Register regTarget = new Register(infoGeneric.getTargetType(), Op.A_STACK);
+                            Register regTarget = new Register(infoGeneric.getTargetType(), null, Op.A_STACK);
                             code.add(new MoveThis(infoGeneric.getStepsOut(), regTarget));
                             code.add(new P_Get(idGeneric, regTarget, regFormal));
                             }
@@ -1133,7 +1134,7 @@ public class LambdaExpression
                                 ? regCapture.ensureRegType(true)
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
-                        Register regVar = new Register(typeCapture, Op.A_STACK);
+                        Register regVar = new Register(typeCapture, null, Op.A_STACK);
                         code.add(new MoveVar(regVal, regVar));
                         regCapture = regVar;
                         fImplicitDeref = true;
@@ -1146,7 +1147,7 @@ public class LambdaExpression
                                 ? regCapture.ensureRegType(true)
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
-                        Register regVar = new Register(typeCapture, Op.A_STACK);
+                        Register regVar = new Register(typeCapture, null, Op.A_STACK);
                         code.add(new MoveRef(regVal, regVar));
                         regCapture     = regVar;
                         fImplicitDeref = true;

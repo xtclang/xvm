@@ -35,9 +35,19 @@ public class RegAllocAST<C>
         reg = named ? NAMED : UNNAMED;
     }
 
-    public RegAllocAST(RegisterAST<C> reg) {
+    // REVIEW
+    RegAllocAST(RegisterAST<C> reg) {
         assert reg != null && !reg.isRegIdSpecial();
         this.reg = reg;
+    }
+
+    public RegAllocAST(C type, C name) {
+        assert type != null;
+        this.reg = new RegisterAST<>(type, name);
+    }
+
+    public RegisterAST<C> getRegister() {
+        return reg;
     }
 
     public C getType() {

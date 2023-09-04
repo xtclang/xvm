@@ -978,11 +978,11 @@ public class NewExpression
                     {
                     if (m_nParentSteps == 0)
                         {
-                        argOuter = new Register(ctx.getThisType(), Op.A_THIS);
+                        argOuter = new Register(ctx.getThisType(), null, Op.A_THIS);
                         }
                     else
                         {
-                        argOuter = new Register(typeTarget.getParentType(), Op.A_STACK);
+                        argOuter = new Register(typeTarget.getParentType(), null, Op.A_STACK);
                         code.add(new MoveThis(m_nParentSteps, argOuter));
                         }
                     }
@@ -997,16 +997,16 @@ public class NewExpression
                 Register regType;
                 if (m_plan == Plan.Virtual)
                     {
-                    Register regThis = new Register(ctx.getThisType(), Op.A_TARGET);
+                    Register regThis = new Register(ctx.getThisType(), null, Op.A_TARGET);
 
-                    regType = new Register(pool().typeType(), Op.A_STACK);
+                    regType = new Register(pool().typeType(), null, Op.A_STACK);
                     code.add(new MoveType(regThis, regType));
                     }
                 else
                     {
                     if (typeTarget.isGenericType())
                         {
-                        regType = new Register(pool().typeType(), Op.A_STACK);
+                        regType = new Register(pool().typeType(), null, Op.A_STACK);
                         code.add(new L_Get(m_idFormal, regType));
                         }
                     else
@@ -1378,7 +1378,7 @@ public class NewExpression
 
         if (cParams == 1)
             {
-            code.add(new Construct_1(idSuper, new Register(aParams[0].getType(), 0)));
+            code.add(new Construct_1(idSuper, new Register(aParams[0].getType(), null, 0)));
             }
         else
             {
@@ -1386,7 +1386,7 @@ public class NewExpression
             Register[] aArgs = new Register[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
-                aArgs[i] = new Register(aParams[i].getType(), i);
+                aArgs[i] = new Register(aParams[i].getType(), null, i);
                 }
             code.add(new Construct_N(idSuper, aArgs));
             }
@@ -1442,7 +1442,7 @@ public class NewExpression
                 {
                 // it's a read/write capture; obtain the Var of the capture
                 type = pool.ensureParameterizedTypeConstant(pool.typeVar(), type);
-                arg  = new Register(type, Op.A_STACK);
+                arg  = new Register(type, null, Op.A_STACK);
                 code.add(new MoveVar(reg, arg));
                 }
             else if (!reg.isEffectivelyFinal())
@@ -1450,7 +1450,7 @@ public class NewExpression
                 // it's a read-only capture, but since we were unable to prove that the
                 // register was effectively final, we need to capture the Ref
                 type = pool.ensureParameterizedTypeConstant(pool.typeRef(), type);
-                arg  = new Register(type, Op.A_STACK);
+                arg  = new Register(type, null, Op.A_STACK);
                 code.add(new MoveRef(reg, arg));
                 }
 
@@ -1478,7 +1478,7 @@ public class NewExpression
             Parameter    param = aNewParams[iNewParam];
             String       sName = param.getName();
             TypeConstant type  = param.getType();
-            Register     reg   = new Register(type, iNewParam);
+            Register     reg   = new Register(type, null, iNewParam);
 
             // create the property as a private synthetic
             PropertyStructure prop = clzAnon.createProperty(
@@ -1506,14 +1506,14 @@ public class NewExpression
                 break;
 
             case 1:
-                codeConstr.add(new Construct_1(idOld, new Register(aNewParams[0].getType(), 0)));
+                codeConstr.add(new Construct_1(idOld, new Register(aNewParams[0].getType(), null, 0)));
                 break;
 
             default:
                 Register[] aArgs = new Register[cOldParams];
                 for (int i = 0; i < cOldParams; ++i)
                     {
-                    aArgs[i] = new Register(aOldParams[i].getType(), i);
+                    aArgs[i] = new Register(aOldParams[i].getType(), null, i);
                     }
                 codeConstr.add(new Construct_N(constrOld.getIdentityConstant(), aArgs));
                 break;

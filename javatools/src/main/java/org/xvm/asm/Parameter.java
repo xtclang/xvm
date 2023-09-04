@@ -299,6 +299,14 @@ public class Parameter
         }
 
     /**
+     * @return the name of the parameter or return value, or null if there is none
+     */
+    public StringConstant getNameConstant()
+        {
+        return m_constName;
+        }
+
+    /**
      * Specify that the parameter will have a default value.
      * <p/>
      * This is a temporary value that is used as a place-holder until the property's actual value is
@@ -374,7 +382,7 @@ public class Parameter
             {
             TypeConstant typeVar = getType();
             TypeConstant typeVal = typeVar.getParamType(0);
-            Register     reg     = new Register(typeVal, method);
+            Register     reg     = new Register(typeVal, null, method);
             reg.specifyRegType(typeVar);
 
             m_regDeref = reg;

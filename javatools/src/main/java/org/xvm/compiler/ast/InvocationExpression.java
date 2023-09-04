@@ -1085,7 +1085,7 @@ public class InvocationExpression
                             Argument[] aargTypeParam = new Argument[cTypeParams];
                             for (int i = 0; i < cTypeParams; i++)
                                 {
-                                aargTypeParam[i] = new Register(pool.typeType(), i);
+                                aargTypeParam[i] = new Register(pool.typeType(), null, i);
                                 }
                             m_aargTypeParams = aargTypeParam;
                             }
@@ -1277,7 +1277,7 @@ public class InvocationExpression
                 {
                 for (int i = 0; i < cRVals; i++)
                     {
-                    Register reg = code.createRegister(atype[i]);
+                    Register reg = code.createRegister(atype[i], null);
                     code.add(new Var_D(reg));
 
                     aLVal[i] = new Assignable(reg);
@@ -1288,7 +1288,7 @@ public class InvocationExpression
                 Argument[] aargResult = new Argument[cRVals];
                 for (int i = 0; i < cRVals; i++)
                     {
-                    Register regVar = code.createRegister(atype[i]);
+                    Register regVar = code.createRegister(atype[i], null);
 
                     code.add(new MoveVar(aLVal[i].getRegister(), regVar));
                     aargResult[i] = regVar;
@@ -1304,7 +1304,7 @@ public class InvocationExpression
 
                 for (int i = 0; i < cRVals; i++)
                     {
-                    Register reg = code.createRegister(pool.ensureFutureVar(atype[i]));
+                    Register reg = code.createRegister(pool.ensureFutureVar(atype[i]), null);
 
                     code.add(new Var_D(reg));
 
@@ -1348,7 +1348,7 @@ public class InvocationExpression
             else
                 {
                 aargResult[i] = new Register(pool.typeObject(),
-                                    fAsync ? Op.A_IGNORE_ASYNC : Op.A_IGNORE);
+                                             null, fAsync ? Op.A_IGNORE_ASYNC : Op.A_IGNORE);
                 }
             }
 
@@ -1464,13 +1464,12 @@ public class InvocationExpression
                                 else if (cTypeParams == 1)
                                     {
                                     arg0  = aargTypeParams[0];
-                                    aAsts = new ExprAST[] {new RegisterAST(arg0.getType(), 0)};
+                                    aAsts = new ExprAST[] {((Register) arg0).getRegisterAST()};
                                     }
                                 else // (cDefaults == 1)
                                     {
                                     arg0 = Register.DEFAULT;
-                                    aAsts = new ExprAST[] {new RegisterAST(
-                                                idMethod.getRawParams()[0], Op.A_DEFAULT)};
+                                    aAsts = new ExprAST[] {new RegisterAST(Op.A_DEFAULT, idMethod.getRawParams()[0], null)};
                                     }
                                 }
                             else
@@ -1704,7 +1703,7 @@ public class InvocationExpression
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
             typeFn = m_idConvert.getRawReturns()[0];
-            Register regFn = new Register(typeFn, Op.A_STACK);
+            Register regFn = new Register(typeFn, null, Op.A_STACK);
             code.add(new Invoke_01(argFn, m_idConvert, regFn));
             argFn = regFn;
             astFn = new ConvertExprAST<>(typeFn, astFn, m_idConvert);
@@ -2029,7 +2028,7 @@ public class InvocationExpression
                     }
                 else
                     {
-                    regTarget = new Register(typeTarget, Op.A_THIS);
+                    regTarget = new Register(typeTarget, null, Op.A_THIS);
                     }
                 }
             argTarget   = regTarget;

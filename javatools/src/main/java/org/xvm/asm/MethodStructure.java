@@ -2504,7 +2504,19 @@ public class MethodStructure
          */
         public Register createRegister(TypeConstant type)
             {
-            return new Register(type, getMethodStructure());
+            return createRegister(type, null);
+            }
+
+        /**
+         * Produce a regular (not on stack) register.
+         *
+         * @param type  the type of the register
+         * @param sName  the name of the register (REVIEW GG String or StringConstant)
+         */
+        public Register createRegister(TypeConstant type, String sName)
+            {
+            StringConstant nameConst = sName == null ? null : f_method.getConstantPool().ensureStringConstant(sName);
+            return new Register(type, nameConst, getMethodStructure());
             }
 
         /**
@@ -2516,9 +2528,23 @@ public class MethodStructure
          */
         public Register createRegister(TypeConstant type, boolean fUsedOnce)
             {
+            return createRegister(type, null, fUsedOnce);
+            }
+
+        /**
+         * Produce a register.
+         *
+         * @param type       the type of the register
+         * @param sName      the name of the register (REVIEW GG String or StringConstant)
+         * @param fUsedOnce  true iff the value will be used once and only once (such that the local
+         *                   stack can be utilized for storage)
+         */
+        public Register createRegister(TypeConstant type, String sName, boolean fUsedOnce)
+            {
+            StringConstant nameConst = sName == null ? null : f_method.getConstantPool().ensureStringConstant(sName);
             return fUsedOnce
-                    ? new Register(type, Op.A_STACK)
-                    : new Register(type, getMethodStructure());
+                    ? new Register(type, nameConst, Op.A_STACK)
+                    : new Register(type, nameConst, getMethodStructure());
             }
 
         /**
@@ -2742,7 +2768,7 @@ public class MethodStructure
             public Register lastRegister()
                 {
                 MethodStructure method = getMethodStructure();
-                return new Register(method.getConstantPool().typeObject(), method);
+                return new Register(method.getConstantPool().typeObject(), null, method);
                 }
 
             @Override

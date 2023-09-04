@@ -9,11 +9,16 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.RegAllocAST;
+import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -271,7 +276,7 @@ public class AssignmentStatement
                 case COND_ASN:
                 case COND_NN_ASN:
                 case COLON:
-                    m_regCond = reg = new Register(pool().typeBoolean(), Op.A_STACK);
+                    m_regCond = reg = new Register(pool().typeBoolean(), null, Op.A_STACK);
                     break;
 
                 default:
@@ -797,7 +802,17 @@ public class AssignmentStatement
                         && rvalue.supportsCompactInit((VariableDeclarationStatement) lvalue))
                     {
                     assert lvalueExpr.isCompletable();
-                    rvalue.generateCompactInit(ctx, code, (VariableDeclarationStatement) lvalue,  errs);
+                    rvalue.generateCompactInit(ctx, code, stmtVar,  errs);
+
+// TODO
+//                    RegisterAST<Constant> reg = stmtVar.getRegister(). new RegisterAST<>(stmtVar.getType());
+//                    BinaryAST<Constant> = new RegAllocAST<Constant>()
+//                    // TODO AST
+//                        lvalue.
+//                        if (lvalue instanceof VariableDeclarationStatement)
+//                            new A
+//                        rvalue.getExprAST();
+
                     break;
                     }
 
@@ -812,6 +827,9 @@ public class AssignmentStatement
                     rvalue.generateAssignments(ctx, code, LVals, errs);
                     fCompletes &= rvalue.isCompletable();
                     }
+
+                // TODO AST
+
                 break;
                 }
 

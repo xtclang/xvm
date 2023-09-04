@@ -1583,7 +1583,7 @@ public class TerminalTypeConstant
             {
             TypeParameterConstant constTypeParam = (TypeParameterConstant) constant;
 
-            return new Register(getType(), constTypeParam.getRegister());
+            return new Register(getType(), null, constTypeParam.getRegister());
             }
 
         return super.getTypeArgument();

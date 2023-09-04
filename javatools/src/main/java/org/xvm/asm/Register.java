@@ -1,6 +1,10 @@
 package org.xvm.asm;
 
 
+import org.xvm.asm.ast.RegAllocAST;
+import org.xvm.asm.ast.RegisterAST;
+
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -15,10 +19,11 @@ public class Register
     /**
      * Construct an unknown Register of the specified type.
      *
-     * @param type    the TypeConstant specifying the Register type
-     * @param method  the enclosing method
+     * @param type       the TypeConstant specifying the Register type
+     * @param constName  the name given to the register, if any; otherwise null
+     * @param method     the enclosing method
      */
-    public Register(TypeConstant type, MethodStructure method)
+    public Register(TypeConstant type, StringConstant constName, MethodStructure method)
         {
         if (type == null)
             {
@@ -31,6 +36,7 @@ public class Register
 
         m_fRO        = false;
         m_type       = type;
+        m_constName  = constName;
         m_iArg       = UNKNOWN + (method == null ? 0 : method.getUnassignedRegisterIndex());
         f_nOrigIndex = m_iArg;
         }
@@ -38,11 +44,12 @@ public class Register
     /**
      * Construct a Register of the specified type.
      *
-     * @param type  the TypeConstant specifying the Register type
-     * @param iArg  the argument index, which is either a pre-defined argument index, or a register
-     *              ID
+     * @param type       the TypeConstant specifying the Register type
+     * @param constName  the name given to the register, if any; otherwise null
+     * @param iArg       the argument index, which is either a pre-defined argument index, or a
+     *                   register ID
      */
-    public Register(TypeConstant type, int iArg)
+    public Register(TypeConstant type, StringConstant constName, int iArg)
         {
         if (type == null)
             {
@@ -65,6 +72,7 @@ public class Register
 
         m_fRO        = isPredefinedReadonly(iArg);
         m_type       = type;
+        m_constName  = constName;
         m_iArg       = iArg;
         f_nOrigIndex = iArg;
         }
@@ -440,6 +448,26 @@ public class Register
         return m_fMarkedUnassigned;
         }
 
+    /**
+     * @return a RegisterAST that represents this register
+     */
+    public RegAllocAST<Constant> getRegAllocAST()
+        {
+        if (m_bastAlloc == null)
+            {
+            m_bastAlloc = new RegAllocAST<>(m_type, m_constName);
+            }
+        return m_bastAlloc;
+        }
+
+    /**
+     * @return a RegisterAST that represents this register
+     */
+    public RegisterAST<Constant> getRegisterAST()
+        {
+        return getRegAllocAST().getRegister();
+        }
+
     @Override
     public boolean equals(Object obj)
         {
@@ -631,7 +659,7 @@ public class Register
          */
         protected ShadowRegister(TypeConstant typeNew, int iArg)
             {
-            super(typeNew, iArg);
+            super(typeNew, null, iArg);
             }
 
         @Override
@@ -835,12 +863,12 @@ public class Register
     /**
      * Register representing a default method argument.
      */
-    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
+    public static final Register DEFAULT = new Register(null, null, Op.A_DEFAULT);
 
     /**
      * Register representing an "async ignore" return.
      */
-    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
+    public static final Register ASYNC = new Register(null, null, Op.A_IGNORE_ASYNC);
 
     /**
      * An index threshold that represents an unknown or otherwise unassigned registers. Any index
@@ -852,6 +880,11 @@ public class Register
      * The type of the value that will be held in the register.
      */
     private TypeConstant m_type;
+
+    /**
+     * The optional name of the register.
+     */
+    private StringConstant m_constName;
 
     /**
      * The type of the register itself (typically null).
@@ -889,4 +922,9 @@ public class Register
      * Explicitly "@Unassigned" register (allow compiler access).
      */
     private boolean m_fMarkedUnassigned;
+
+    /**
+     * The Binary AST register allocation that is required in order for this register to exist.
+     */
+    private transient RegAllocAST<Constant> m_bastAlloc;
     }

@@ -356,7 +356,7 @@ public class StatementBlock
             return false;
             }
 
-        boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+        boolean   fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
         BinaryAST ast        = ctx.getHolder().getAst(this);
 
         if (fCompletes)
@@ -1377,7 +1377,7 @@ public class StatementBlock
 
             if (cSteps == 0)
                 {
-                arg = new Register(type, nReg);
+                arg = new Register(type, null, nReg);
                 }
             else
                 {
@@ -1409,12 +1409,12 @@ public class StatementBlock
                     Register reg;
                     if (param.isTypeParameter())
                         {
-                        reg = new Register(param.asTypeParameterType(idMethod).getType(), i);
+                        reg = new Register(param.asTypeParameterType(idMethod).getType(), null, i);
                         reg.markEffectivelyFinal();
                         }
                     else
                         {
-                        reg = new Register(param.getType(), i);
+                        reg = new Register(param.getType(), null, i);
                         }
                     mapByName.put(sName, reg);
 

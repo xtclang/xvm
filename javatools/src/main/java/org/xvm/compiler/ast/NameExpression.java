@@ -1072,7 +1072,7 @@ public class NameExpression
                             {
                             int          cSteps   = m_targetInfo.getStepsOut();
                             TypeConstant type     = m_targetInfo.getType();
-                            Register     regOuter = new Register(type, Op.A_STACK);
+                            Register     regOuter = new Register(type, null, Op.A_STACK);
                             code.add(new MoveThis(cSteps, regOuter, type.getAccess()));
                             code.add(new P_Get(idProp, regOuter, argLVal));
                             break;
@@ -1105,7 +1105,7 @@ public class NameExpression
                                 ? typeTarget.getParentType()
                                 : pool().typeObject();
 
-                        Register regOuter = new Register(typeOuter, Op.A_STACK);
+                        Register regOuter = new Register(typeOuter, null, Op.A_STACK);
                         code.add(new P_Get(idProp, argTarget, regOuter));
                         code.add(new MoveRef(regOuter, argLVal));
                         }
@@ -1138,12 +1138,12 @@ public class NameExpression
                         if (cSteps > 0)
                             {
                             TypeConstant typeTarget = m_targetInfo.getTargetType();
-                            argTarget = new Register(typeTarget, Op.A_STACK);
+                            argTarget = new Register(typeTarget, null, Op.A_STACK);
                             code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
                             }
                         else
                             {
-                            argTarget = new Register(ctx.getThisType(), Op.A_THIS);
+                            argTarget = new Register(ctx.getThisType(), null, Op.A_THIS);
                             }
                         }
                     else
@@ -1157,7 +1157,7 @@ public class NameExpression
                         }
                     else
                         {
-                        Register regFn = new Register(pool().typeFunction(), Op.A_STACK);
+                        Register regFn = new Register(pool().typeFunction(), null, Op.A_STACK);
                         code.add(new MBind(argTarget, idMethod, regFn));
                         bindTypeParameters(ctx, code, regFn, argLVal);
                         }
@@ -1307,7 +1307,7 @@ public class NameExpression
                         {
                         int          cSteps    = m_targetInfo.getStepsOut();
                         TypeConstant typeOuter = m_targetInfo.getType();
-                        Register     regOuter  = new Register(typeOuter, Op.A_STACK);
+                        Register     regOuter  = new Register(typeOuter, null, Op.A_STACK);
 
                         code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
                         if (idProp.isFutureVar())
@@ -1378,7 +1378,7 @@ public class NameExpression
                             ? typeTarget.getParentType()
                             : pool.typeObject();
 
-                    Register regOuter = new Register(typeOuter, Op.A_STACK);
+                    Register regOuter = new Register(typeOuter, null, Op.A_STACK);
                     code.add(new P_Get(idProp, argTarget, regOuter));
 
                     TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
@@ -1437,12 +1437,12 @@ public class NameExpression
                     if (cSteps > 0)
                         {
                         TypeConstant typeTarget = m_targetInfo.getTargetType();
-                        argTarget = new Register(typeTarget, Op.A_STACK);
+                        argTarget = new Register(typeTarget, null, Op.A_STACK);
                         code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
                         }
                     else
                         {
-                        argTarget = new Register(ctx.getThisType(), Op.A_THIS);
+                        argTarget = new Register(ctx.getThisType(), null, Op.A_THIS);
                         }
                     }
                 else
@@ -1521,7 +1521,7 @@ public class NameExpression
                 pool.ensureSignatureConstant("->", atypeParam, atypeReturn));
 
         Code     code      = lambda.createCode();
-        Register regTarget = new Register(atypeParam[0], 0);
+        Register regTarget = new Register(atypeParam[0], null, 0);
         switch (cParams-1)
             {
             case 0:
@@ -1535,7 +1535,7 @@ public class NameExpression
 
                     case 1:
                         {
-                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        Register regRet = new Register(atypeReturn[0], null, Op.A_STACK);
                         code.add(new Invoke_01(regTarget, idMethod, regRet));
                         code.add(new Return_1(regRet));
                         break;
@@ -1546,7 +1546,7 @@ public class NameExpression
                         Register[] aregRet = new Register[cReturns];
                         for (int i = 0; i < cReturns; i++)
                             {
-                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            aregRet[i] = new Register(atypeReturn[i], null, Op.A_STACK);
                             }
                         code.add(new Invoke_0N(regTarget, idMethod, aregRet));
                         code.add(new Return_N(aregRet));
@@ -1558,7 +1558,7 @@ public class NameExpression
 
             case 1:
                 {
-                Register regParam = new Register(atypeParam[1], 1);
+                Register regParam = new Register(atypeParam[1], null, 1);
                 switch (cReturns)
                     {
                     case 0:
@@ -1568,7 +1568,7 @@ public class NameExpression
 
                     case 1:
                         {
-                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        Register regRet = new Register(atypeReturn[0], null, Op.A_STACK);
                         code.add(new Invoke_11(regTarget, idMethod, regParam, regRet));
                         code.add(new Return_1(regRet));
                         break;
@@ -1579,7 +1579,7 @@ public class NameExpression
                         Register[] aregRet = new Register[cReturns];
                         for (int i = 0; i < cReturns; i++)
                             {
-                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            aregRet[i] = new Register(atypeReturn[i], null, Op.A_STACK);
                             }
                         code.add(new Invoke_1N(regTarget, idMethod, regParam, aregRet));
                         code.add(new Return_N(aregRet));
@@ -1594,7 +1594,7 @@ public class NameExpression
                 Register[] aregParam = new Register[cParams];
                 for (int i = 1; i < cParams; i++)
                     {
-                    aregParam[i] = new Register(atypeParam[i], i);
+                    aregParam[i] = new Register(atypeParam[i], null, i);
                     }
                 switch (cReturns)
                     {
@@ -1605,7 +1605,7 @@ public class NameExpression
 
                     case 1:
                         {
-                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        Register regRet = new Register(atypeReturn[0], null, Op.A_STACK);
                         code.add(new Invoke_N1(regTarget, idMethod, aregParam, regRet));
                         code.add(new Return_1(regRet));
                         break;
@@ -1616,7 +1616,7 @@ public class NameExpression
                         Register[] aregRet = new Register[cReturns];
                         for (int i = 0; i < cReturns; i++)
                             {
-                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            aregRet[i] = new Register(atypeReturn[i], null, Op.A_STACK);
                             }
                         code.add(new Invoke_NN(regTarget, idMethod, aregParam, aregRet));
                         code.add(new Return_N(aregRet));
@@ -1669,8 +1669,8 @@ public class NameExpression
                     new TypeConstant[]{typeParam}, new TypeConstant[]{typeReturn}));
 
         Code     code      = lambda.createCode();
-        Register regTarget = new Register(typeParam, 0);
-        Register regRet    = new Register(typeReturn, Op.A_STACK);
+        Register regTarget = new Register(typeParam, null, 0);
+        Register regRet    = new Register(typeReturn, null, Op.A_STACK);
 
         code.add(new P_Get(idProp, regTarget, regRet));
         code.add(new Return_1(regRet));
@@ -1693,13 +1693,13 @@ public class NameExpression
             case Outer:
                 {
                 int cSteps = m_targetInfo.getStepsOut();
-                Register regOuter = new Register(m_targetInfo.getTargetType(), Op.A_STACK);
+                Register regOuter = new Register(m_targetInfo.getTargetType(), null, Op.A_STACK);
                 code.add(new MoveThis(cSteps, regOuter, Access.PRIVATE));
                 return regOuter;
                 }
 
             case This:
-                return new Register(ctx.getThisType(), Op.A_THIS);
+                return new Register(ctx.getThisType(), null, Op.A_THIS);
 
             case Left:
                 assert !idProp.getComponent().isStatic();
@@ -1739,7 +1739,7 @@ public class NameExpression
             else if (type.isTypeParameter())
                 {
                 int iReg = ((TypeParameterConstant) constFormal).getRegister();
-                aArgBind[i] = new Register(type, iReg);
+                aArgBind[i] = new Register(type, null, iReg);
                 }
             else
                 {
@@ -1782,7 +1782,7 @@ public class NameExpression
                             }
 
                         case This:
-                            argTarget = new Register(clz.getFormalType(), Op.A_THIS);
+                            argTarget = new Register(clz.getFormalType(), null, Op.A_THIS);
                             break;
 
                         case Outer:
@@ -1790,7 +1790,7 @@ public class NameExpression
                                 {
                                 clz = clz.getContainingClass();
                                 }
-                            argTarget = new Register(clz.getFormalType(), Op.A_STACK);
+                            argTarget = new Register(clz.getFormalType(), null, Op.A_STACK);
                             code.add(new MoveThis(target.getStepsOut(), argTarget));
                             break;
 
@@ -2256,7 +2256,7 @@ public class NameExpression
                                 {
                                 TypeConstant typeTarget = constTarget.getType().
                                         adoptParameters(pool, ctx.getThisType());
-                                return m_arg = new Register(typeTarget, Op.A_THIS);
+                                return m_arg = new Register(typeTarget, null, Op.A_THIS);
                                 }
 
                             // if the left is a class, then the result is a sequence of at

@@ -810,7 +810,7 @@ public abstract class Op
         @Override
         public void enter()
             {
-            scopes.push(regs.size());
+            m_stackScopes.push(m_listRegs.size());
             }
 
         @Override
@@ -846,19 +846,19 @@ public abstract class Op
                 {
                 if (reg.isRegIdAssigned())
                     {
-                    assert regId == regs.size();
+                    assert regId == m_listRegs.size();
                     }
 
-                regId = regs.size();
+                regId = m_listRegs.size();
                 reg.setRegId(regId);
-                regs.add(reg);
+                m_listRegs.add(reg);
                 }
             }
 
         @Override
         public RegisterAST<Constant> getRegister(int regId)
             {
-            RegisterAST<Constant> reg = regId >= 0 ? regs.get(regId) : specialRegs[-1-regId];
+            RegisterAST<Constant> reg = regId >= 0 ? m_listRegs.get(regId) : m_aregSpecial[-1-regId];
             if (reg == null)
                 {
                 TypeConstant type = null;
@@ -973,7 +973,7 @@ public abstract class Op
                 else
                     {
                     reg = new RegisterAST<>(regId, type, name == null ? null : f_pool.ensureStringConstant(name));
-                    specialRegs[-1-regId] = reg;
+                    m_aregSpecial[-1-regId] = reg;
                     }
                 }
                 return reg;
@@ -982,12 +982,12 @@ public abstract class Op
         @Override
         public void exit()
             {
-            int cPrev = scopes.pop();
-            int cCur  = regs.size();
+            int cPrev = m_stackScopes.pop();
+            int cCur  = m_listRegs.size();
             assert cCur >= cPrev;
             while (cCur > cPrev)
                 {
-                regs.remove(--cCur);
+                m_listRegs.remove(--cCur);
                 }
             }
 
@@ -1071,18 +1071,18 @@ public abstract class Op
          * The working set of registers. This is a point-in-time data structure used during reading
          * the AST and during simulation (i.e. when registers ids are being calculated).
          */
-        private final ArrayList<RegisterAST<Constant>> regs = new ArrayList<>();
+        private final ArrayList<RegisterAST<Constant>> m_listRegs = new ArrayList<>();
 
         /**
          * A Stack of scopes entered but not exited. Each value in the stack is the number of
          * registers that existed at the time the corresponding scope was entered.
          */
-        private final Stack<Integer> scopes = new Stack<>();
+        private final Stack<Integer> m_stackScopes = new Stack<>();
 
         /**
          * The "special" registers, such as "this".
          */
-        private final RegisterAST<Constant>[] specialRegs = new RegisterAST[-Op.CONSTANT_OFFSET];
+        private final RegisterAST<Constant>[] m_aregSpecial = new RegisterAST[-Op.CONSTANT_OFFSET];
         }
 
 

@@ -1826,7 +1826,7 @@ public class Context
             nReg = Op.A_THIS;
             }
 
-        return new Register(type, nReg);
+        return new Register(type, null, nReg);
         }
 
     /**
@@ -1836,7 +1836,7 @@ public class Context
      */
     public Register createRegister(TypeConstant type)
         {
-        return new Register(type, getMethod());
+        return new Register(type, null, getMethod());
         }
 
     @Override
