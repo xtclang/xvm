@@ -109,7 +109,7 @@ public abstract class SyntheticExpression
         {
         if (isConstant())
             {
-            return new ConstantExprAST<>(getType(), toConstant());
+            return new ConstantExprAST<>(toConstant());
             }
 
         if (this instanceof ConvertExpression exprConv)

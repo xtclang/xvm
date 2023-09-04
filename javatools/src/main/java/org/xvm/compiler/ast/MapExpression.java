@@ -476,7 +476,7 @@ public class MapExpression
         if (m_aKeyAST == null)
             {
             assert isConstant();
-            return new ConstantExprAST<>(getType(), toConstant());
+            return new ConstantExprAST<>(toConstant());
             }
         return new MapExprAST<>(getType(), m_aKeyAST, m_aValueAST);
         }

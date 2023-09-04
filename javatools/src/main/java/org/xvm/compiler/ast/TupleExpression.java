@@ -551,7 +551,7 @@ public class TupleExpression
         {
         if (isConstant())
             {
-            return new ConstantExprAST<>(getType(), toConstant());
+            return new ConstantExprAST<>(toConstant());
             }
 
         List<Expression>    listExprs = exprs;

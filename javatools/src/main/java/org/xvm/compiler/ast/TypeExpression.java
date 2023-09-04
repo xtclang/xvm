@@ -266,7 +266,7 @@ public abstract class TypeExpression
     public ExprAST<Constant> getExprAST()
         {
         TypeConstant type = getType();
-        return new ConstantExprAST<>(type, type);
+        return new ConstantExprAST<>(type);
         }
 
     /**

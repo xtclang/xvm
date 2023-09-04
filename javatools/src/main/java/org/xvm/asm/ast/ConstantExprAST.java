@@ -21,14 +21,14 @@ import static org.xvm.util.Handy.writePackedLong;
 public class ConstantExprAST<C>
         extends ExprAST<C> {
 
-    private C value;
+    private           C value;
     private transient C type;
 
     ConstantExprAST() {}
 
-    public ConstantExprAST(C type, C value) {
-        assert type != null && value != null;
-        this.type  = type;
+    public ConstantExprAST(C value) {
+        assert value != null;
+
         this.value = value;
     }
 

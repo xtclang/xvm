@@ -270,7 +270,7 @@ public class LiteralExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        return new ConstantExprAST<>(getType(), getLiteralConstant());
+        return new ConstantExprAST<>(getLiteralConstant());
         }
 
 

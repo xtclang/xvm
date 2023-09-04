@@ -459,7 +459,7 @@ public class ListExpression
         {
         if (isConstant())
             {
-            return new ConstantExprAST<>(getType(), toConstant());
+            return new ConstantExprAST<>(toConstant());
             }
 
         List<Expression>    listExprs = exprs;

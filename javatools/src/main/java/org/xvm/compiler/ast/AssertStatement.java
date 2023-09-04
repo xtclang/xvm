@@ -490,14 +490,14 @@ public class AssertStatement
                             : new Jump(labelMessage));
                     fCompletes = false;
 
-                    aAstCond[i] = new ConstantExprAST<>(pool.typeBoolean(), pool.valFalse());
+                    aAstCond[i] = new ConstantExprAST<>(pool.valFalse());
                     continue;
                     }
 
                 // "assert True" is a no-op
                 if (exprCond.isConstantTrue())
                     {
-                    aAstCond[i] = new ConstantExprAST<>(pool.typeBoolean(), pool.valTrue());
+                    aAstCond[i] = new ConstantExprAST<>(pool.valTrue());
                     continue;
                     }
 

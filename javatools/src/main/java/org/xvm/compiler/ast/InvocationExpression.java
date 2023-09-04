@@ -1377,7 +1377,7 @@ public class InvocationExpression
             if (m_argMethod instanceof MethodConstant idMethod)
                 {
                 idMethod = rebaseMethodConstant(idMethod, m_method);
-                astFn    = new ConstantExprAST<>(idMethod.getType(), idMethod);
+                astFn    = new ConstantExprAST<>(idMethod);
 
                 if (m_method.isFunction() || m_method.isConstructor())
                     {
@@ -1656,7 +1656,7 @@ public class InvocationExpression
                             MethodConstant idMethod = (MethodConstant) prop.getInitialValue();
 
                             argFn = code.createRegister(idMethod.getSignature().asFunctionType());
-                            astFn = new ConstantExprAST<>(idProp.getType(), idProp);
+                            astFn = new ConstantExprAST<>(idProp);
 
                             code.add(new MBind(argTarget, idMethod, argFn));
                             }
@@ -1985,7 +1985,7 @@ public class InvocationExpression
                 {
                 ExprAST<Constant> astTarget = argFn instanceof Register regFn
                         ? new RegisterAST<>(regFn.getIndex(), regFn.getType(), null) // TODO CP: regFn.getRegister
-                        : new ConstantExprAST<>(argFn.getType(), (Constant) argFn);
+                        : new ConstantExprAST<>((Constant) argFn);
                 if (lval.isLocalArgument())
                     {
                     code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));

@@ -378,10 +378,9 @@ public abstract class BinaryAST<C> {
         int n = readPackedInt(in);
         if (n < CONSTANT_OFFSET) {
             // calculate constant pool identity
-            int id   = CONSTANT_OFFSET - n;
-            C   val  = res.getConstant(id);
-            C   type = res.typeOf(val);
-            return (N) new ConstantExprAST<>(type, val);
+            int id  = CONSTANT_OFFSET - n;
+            C   val = res.getConstant(id);
+            return (N) new ConstantExprAST<>(val);
         }
 
         if (n < 0 || n >= 32) {

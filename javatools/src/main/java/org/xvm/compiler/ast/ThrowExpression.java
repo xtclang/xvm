@@ -399,9 +399,9 @@ public class ThrowExpression
             ConstantPool  pool    = pool();
             ClassConstant constEx = computeExceptionClass();
 
-            astEx  = new ConstantExprAST<>(constEx.getType(), constEx);
+            astEx  = new ConstantExprAST<>(constEx);
             astMsg = message == null
-                    ? new ConstantExprAST<>(pool.typeString(), pool.ensureStringConstant(computeMessage()))
+                    ? new ConstantExprAST<>(pool.ensureStringConstant(computeMessage()))
                     : message.getExprAST();
             }
 
