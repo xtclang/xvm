@@ -159,6 +159,8 @@ public abstract class BinaryAST<C> {
         RegisterExpr,       // _ (unnamed register expr)
         InvokeExpr,         // foo() (method)   (foo is a const)
         CallExpr,           // foo() (function) (foo is a register/property)
+        BindMethodExpr,     // bind method's target
+        BindFunctionExpr,   // bind function's arguments
 
         AssignExpr,         // (x <- y)                                         // TODO
         SwitchExpr,                                                             // TODO
@@ -230,6 +232,8 @@ public abstract class BinaryAST<C> {
 
                 case InvokeExpr         -> new InvokeExprAST<>();
                 case CallExpr           -> new CallExprAST<>();
+                case BindMethodExpr     -> new BindMethodAST<>();
+                case BindFunctionExpr   -> new BindFunctionAST<>();
                 case ConstantExpr       -> new ConstantExprAST<>();
                 case ListExpr           -> new ListExprAST<>();
                 case TupleExpr          -> new TupleExprAST<>();

@@ -27,6 +27,8 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.ast.BindFunctionAST;
+import org.xvm.asm.ast.BindMethodAST;
 import org.xvm.asm.ast.CallExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ConvertExprAST;
@@ -1624,6 +1626,7 @@ public class InvocationExpression
                             // to the function handling
                             argFn = code.createRegister(idMethod.getSignature().asFunctionType());
                             code.add(new MBind(argTarget, idMethod, argFn));
+                            astFn = new BindMethodAST<>(m_astTarget, idMethod, argFn.getType());
                             }
                         }
                     else // _NOT_ m_fBindTarget
@@ -1916,8 +1919,9 @@ public class InvocationExpression
             }
 
         // see if we need to bind (or partially bind) the function
-        int[]      aiArg = null;
-        Argument[] aArg  = null;
+        int[]               aiArg = null;
+        Argument[]          aArg  = null;
+        ExprAST<Constant>[] aAst  = null;
 
         // count the number of parameters to bind, which includes all type parameters and all
         // default values, so for a function:
@@ -1939,10 +1943,12 @@ public class InvocationExpression
             {
             aiArg = new int[cBind];
             aArg  = new Argument[cBind];
+            aAst  = new ExprAST[cBind];
             for (int i = 0; i < cTypeParams; ++i)
                 {
                 aiArg[i] = i;
                 aArg [i] = aargTypeParams[i];
+                aAst [i] = new RegisterAST(aargTypeParams[i], i);
                 }
 
             for (int i = 0, iBind = cTypeParams; i < cArgs; ++i)
@@ -1953,6 +1959,7 @@ public class InvocationExpression
                     aiArg[iBind] = cTypeParams + i;
                     aArg [iBind] = ensurePointInTime(code,
                             exprArg.generateArgument(ctx, code, false, true, errs));
+                    aAst [iBind] = exprArg.getExprAST();
 
                     iBind++;
                     }
@@ -1963,6 +1970,7 @@ public class InvocationExpression
             // non-bound super(...) function still needs to bind a target
             aiArg = new int[0];
             aArg  = NO_RVALUES;
+            aAst  = ExprAST.NO_EXPRS;
             }
 
         if (cLVals > 0)
@@ -1971,16 +1979,24 @@ public class InvocationExpression
             if (aiArg == null)
                 {
                 lval.assign(argFn, code, errs);
-                }
-            else if (lval.isLocalArgument())
-                {
-                code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
+                m_astInvoke = astFn;
                 }
             else
                 {
-                Register regFn = code.createRegister(getType());
-                code.add(new FBind(argFn, aiArg, aArg, regFn));
-                lval.assign(regFn, code, errs);
+                ExprAST<Constant> astTarget = argFn instanceof Register regFn
+                        ? new RegisterAST<>(regFn.getIndex(), regFn.getType(), null) // TODO CP: regFn.getRegister
+                        : new ConstantExprAST<>(argFn.getType(), (Constant) argFn);
+                if (lval.isLocalArgument())
+                    {
+                    code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
+                    }
+                else
+                    {
+                    Register regFn = code.createRegister(getType());
+                    code.add(new FBind(argFn, aiArg, aArg, regFn));
+                    lval.assign(regFn, code, errs);
+                    }
+                m_astInvoke = new BindFunctionAST<>(astTarget, aiArg, aAst, getType());
                 }
             }
         }
