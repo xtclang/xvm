@@ -8,6 +8,7 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ConvertExprAST;
 import org.xvm.asm.ast.SyntheticExprAST;
 import org.xvm.asm.ast.SyntheticExprAST.Operation;
 
@@ -111,6 +112,11 @@ public abstract class SyntheticExpression
             return new ConstantExprAST<>(getType(), toConstant());
             }
 
+        if (this instanceof ConvertExpression exprConv)
+            {
+            return new ConvertExprAST<>(getType(), expr.getExprAST(), exprConv.getConversionMethod());
+            }
+
         Operation op;
         if (this instanceof PackExpression)
             {
@@ -119,10 +125,6 @@ public abstract class SyntheticExpression
         else if (this instanceof UnpackExpression)
             {
             op = Operation.Unpack;
-            }
-        else if (this instanceof ConvertExpression)
-            {
-            op = Operation.Convert;
             }
         else if (this instanceof ToIntExpression)
             {

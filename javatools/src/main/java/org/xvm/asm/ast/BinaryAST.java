@@ -186,6 +186,7 @@ public abstract class BinaryAST<C> {
         TupleExpr,
         MapExpr,
         SyntheticExpr,
+        ConvertExpr,
 
         StmtBlock,          // {...}, do{...}while(False); etc.
         IfThenStmt,         // if(cond){...}
@@ -218,51 +219,52 @@ public abstract class BinaryAST<C> {
         <C> BinaryAST<C> instantiate() {
             return switch (this) {
                 case None               -> null;
-                case RegAlloc           -> new RegAllocAST<C>(false);
-                case NamedRegAlloc      -> new RegAllocAST<C>(true);
+                case RegAlloc           -> new RegAllocAST<>(false);
+                case NamedRegAlloc      -> new RegAllocAST<>(true);
                 case Assign             -> new AssignAST<>(false);
                 case BinOpAssign        -> new AssignAST<>(true);
 
-                case Escape             -> throw new IllegalStateException();
-                case RegisterExpr       -> throw new IllegalStateException();
+                case Escape,
+                     RegisterExpr       -> throw new IllegalStateException();
 
                 case InvokeExpr         -> new InvokeExprAST<>();
-                case ConstantExpr       -> new ConstantExprAST<C>();
+                case ConstantExpr       -> new ConstantExprAST<>();
                 case ListExpr           -> new ListExprAST<>();
                 case TupleExpr          -> new TupleExprAST<>();
                 case MapExpr            -> new MapExprAST<>();
                 case SyntheticExpr      -> new SyntheticExprAST<>();
-                case ArrayAccessExpr    -> new ArrayAccessExprAST<C>();
+                case ConvertExpr        -> new ConvertExprAST<>();
+                case ArrayAccessExpr    -> new ArrayAccessExprAST<>();
                 case RelOpExpr          -> new RelOpExprAST<>();
-                case DivRemExpr         -> new RelOpExprAST<>();
+                case DivRemExpr         -> new DivRemExprAST<>();
                 case IsExpr             -> new IsExprAST<>();
                 case CondOpExpr         -> new CondOpExprAST<>();
                 case CmpChainExpr       -> new CmpChainExprAST<>();
                 case UnaryOpExpr        -> new UnaryOpExprAST<>();
                 case NotExpr            -> new NotExprAST<>();
                 case NotNullExpr        -> new NotNullExprAST<>();
-                case TernaryExpr        -> new TernaryExprAST<C>();
+                case TernaryExpr        -> new TernaryExprAST<>();
                 case TemplateExpr       -> new TemplateExprAST<>();
                 case ThrowExpr          -> new ThrowExprAST<>();
 
-                case StmtBlock          -> new StmtBlockAST<C>();
-                case IfThenStmt         -> new IfStmtAST<C>(false);
-                case IfElseStmt         -> new IfStmtAST<C>(true);
-                case LoopStmt           -> new LoopStmtAST<C>();
-                case WhileDoStmt        -> new WhileStmtAST<C>();
-                case DoWhileStmt        -> new DoWhileStmtAST<C>();
+                case StmtBlock          -> new StmtBlockAST<>();
+                case IfThenStmt         -> new IfStmtAST<>(false);
+                case IfElseStmt         -> new IfStmtAST<>(true);
+                case LoopStmt           -> new LoopStmtAST<>();
+                case WhileDoStmt        -> new WhileStmtAST<>();
+                case DoWhileStmt        -> new DoWhileStmtAST<>();
                 case ForStmt            -> new ForStmtAST<>();
-                case ContinueStmt       -> new ContinueStmtAST<C>();
-                case BreakStmt          -> new BreakStmtAST<C>();
-                case Return0Stmt        -> new ReturnStmtAST<C>(this);
-                case Return1Stmt        -> new ReturnStmtAST<C>(this);
-                case ReturnNStmt        -> new ReturnStmtAST<C>(this);
+                case ContinueStmt       -> new ContinueStmtAST<>();
+                case BreakStmt          -> new BreakStmtAST<>();
+                case Return0Stmt,
+                     Return1Stmt,
+                     ReturnNStmt        -> new ReturnStmtAST<>(this);
         // TODO case ReturnTStmt        ->
                 case TryCatchStmt       -> new TryCatchStmtAST<>();
                 case TryFinallyStmt     -> new TryFinallyStmtAST<>();
                 case AssertStmt         -> new AssertStmtAST<>();
 
-                case NotImplYet         -> new NotImplAST<C>();
+                case NotImplYet         -> new NotImplAST<>();
 
                 default -> throw new UnsupportedOperationException("nodeType: " + this);
             };
@@ -339,9 +341,9 @@ public abstract class BinaryAST<C> {
 
     public static <C> BinaryAST<C> makeStatement(BinaryAST<C>[] stmts) {
         return switch (stmts == null ? 0 : stmts.length) {
-            case 0  -> new StmtBlockAST<C>(NO_ASTS);
+            case 0  -> new StmtBlockAST<>(NO_ASTS);
             case 1  -> stmts[0];
-            default -> new StmtBlockAST<C>(stmts);
+            default -> new StmtBlockAST<>(stmts);
         };
     }
 
@@ -373,7 +375,7 @@ public abstract class BinaryAST<C> {
             int id   = CONSTANT_OFFSET - n;
             C   val  = res.getConstant(id);
             C   type = res.typeOf(val);
-            return (N) new ConstantExprAST<C>(type, val);
+            return (N) new ConstantExprAST<>(type, val);
         }
 
         if (n < 0 || n >= 32) {
