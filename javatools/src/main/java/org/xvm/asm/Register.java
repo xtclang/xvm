@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.RegAllocAST;
 import org.xvm.asm.ast.RegisterAST;
 
@@ -461,9 +462,9 @@ public class Register
         }
 
     /**
-     * @return a RegisterAST that represents this register
+     * @return a RegisterAST (or NarrowedAST) that represents this register
      */
-    public RegisterAST<Constant> getRegisterAST()
+    public ExprAST<Constant> getRegisterAST()
         {
         return getRegAllocAST().getRegister();
         }
