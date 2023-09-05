@@ -1767,8 +1767,6 @@ public class NameExpression
                 Argument argTarget;
                 if (left == null)
                     {
-                    ClassStructure clz = ctx.getThisClass();
-
                     switch (m_propAccessPlan)
                         {
                         case SingletonParent:
@@ -1782,10 +1780,12 @@ public class NameExpression
                             }
 
                         case This:
-                            argTarget = new Register(clz.getFormalType(), Op.A_THIS);
+                            argTarget = new Register(ctx.getThisType(), Op.A_THIS);
                             break;
 
                         case Outer:
+                            {
+                            ClassStructure clz = ctx.getThisClass();
                             for (int nDepth = target.getStepsOut(); --nDepth >= 0;)
                                 {
                                 clz = clz.getContainingClass();
@@ -1793,6 +1793,7 @@ public class NameExpression
                             argTarget = new Register(clz.getFormalType(), Op.A_STACK);
                             code.add(new MoveThis(target.getStepsOut(), argTarget));
                             break;
+                            }
 
                         default:
                             throw new IllegalStateException();
