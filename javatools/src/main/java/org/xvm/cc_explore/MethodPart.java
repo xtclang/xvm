@@ -2,6 +2,7 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.TVLambda;
+import org.xvm.cc_explore.xclz.AST;
 import org.xvm.cc_explore.xclz.Op;
 
 public class MethodPart extends MMethodPart {
@@ -38,7 +39,7 @@ public class MethodPart extends MMethodPart {
   // The XEC bytecodes
   public final byte[] _code;
   // The XEC AST
-  public final byte[] _ast;
+  public final AST _ast;
   
   // The source code
   public final String[] _lines; // Source lines
@@ -96,7 +97,8 @@ public class MethodPart extends MMethodPart {
     _code = X.bytes();
     assert _cons==null || _code.length>0;
 
-    _ast = X.bytes();
+    // Read and skip the AST
+    _ast = AST.parse(X);
 
     // Read the source code
     int n = X.u31();

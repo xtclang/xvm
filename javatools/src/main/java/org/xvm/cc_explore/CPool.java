@@ -212,6 +212,11 @@ public class CPool {
   public byte[] bytes(int len) {
     return Arrays.copyOfRange(_buf,x,x+=len);
   }
+
+  //
+  public int cur_pos() { return x; }
+  public void set_pos(int x) { this.x=x; }
+
   
   // Skip an array of idxs
   public int skipAry() {
