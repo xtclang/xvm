@@ -307,6 +307,8 @@ public class VariableDeclarationStatement
             code.add(new Var_N(reg, constName));
             }
 
+        ctx.getHolder().setAst(this, reg.getRegAllocAST());
+
         return fReachable;
         }
 
