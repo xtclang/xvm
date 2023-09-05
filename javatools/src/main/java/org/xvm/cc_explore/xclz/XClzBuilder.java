@@ -4,8 +4,6 @@ import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.*;
 
-import org.xvm.asm.ast.LanguageAST.NodeType;
-
 import java.lang.Character;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -136,19 +134,7 @@ public class XClzBuilder {
 
   private void jcode_ast( MethodPart m ) {
     _meth = m;
-    _pool = new CPool(m._ast,1.2); // Setup the constant pool parser
-    AST ast = ast();
-    ast.jcode(_sb);
-  }
-
-  AST ast() {
-    NodeType op = NodeType.valueOf(u8());
-    return switch( op ) {
-    case STMT_NOT_IMPL_YET -> new TODOAST(this);
-    case STMT_BLOCK -> new BlockAST(this);
-    case RETURN_STMT -> new ReturnAST(this);
-    default -> throw XEC.TODO();
-    };
+    m._ast.jcode(_sb);
   }
 
   
