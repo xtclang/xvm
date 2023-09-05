@@ -20,6 +20,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.NotImplAST;
 import org.xvm.asm.ast.BinaryAST.ExprAST;
 
@@ -1175,7 +1176,9 @@ public abstract class Expression
         }
 
     /**
-     * Obtain an ExpressionNode that represents this AST node and can be used to serialize the AST.
+     * Obtain a {@link ExprAST binady expression expression} that represents this AST node and can
+     * be used to serialize the AST.
+     * <p/>
      * This method must not be called until after the expression has been validated.
      *
      * @return an "AST node" from the expression branch of the LanguageNode hierarchy of classes
@@ -1193,6 +1196,23 @@ public abstract class Expression
         }
 
     private static HashSet<Class> alreadyFailedToProvideExpressionNode = new HashSet<>();
+
+    /**
+     * Convert the specified argument to a {@link ExprAST binady expression expression}.
+     */
+    protected static ExprAST<Constant> toExprAst(Argument arg)
+        {
+        if (arg instanceof Register reg)
+            {
+            return reg.getRegisterAST();
+            }
+        if (arg instanceof Constant constant)
+            {
+            return new ConstantExprAST<>(constant);
+            }
+
+        throw new UnsupportedOperationException(arg.toString());
+        }
 
     /**
      * Query the expression to determine if it would be a good candidate for tracing.

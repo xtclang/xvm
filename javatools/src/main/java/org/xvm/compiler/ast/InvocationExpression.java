@@ -1464,7 +1464,7 @@ public class InvocationExpression
                                 else if (cTypeParams == 1)
                                     {
                                     arg0  = aargTypeParams[0];
-                                    aAsts = new ExprAST[] {((Register) arg0).getRegisterAST()};
+                                    aAsts = new ExprAST[] {toExprAst(arg0)};
                                     }
                                 else // (cDefaults == 1)
                                     {
@@ -1483,7 +1483,7 @@ public class InvocationExpression
                                     System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
                                     for (int i = 0; i < cTypeParams; i++)
                                         {
-                                        aAsts[i] = new RegisterAST(aargTypeParams[i], i);
+                                        aAsts[i] = toExprAst(aargTypeParams[i]);
                                         }
                                     }
 
@@ -1500,8 +1500,8 @@ public class InvocationExpression
                                     {
                                     int iArg = cTypeParams + cArgs + i;
                                     aArgs[iArg] = Register.DEFAULT;
-                                    aAsts[iArg] = new RegisterAST(
-                                            idMethod.getRawParams()[cArgs + i], Op.A_DEFAULT);
+                                    aAsts[iArg] = new RegisterAST(Op.A_DEFAULT,
+                                            idMethod.getRawParams()[cArgs + i], null);
                                     }
                                 }
 
@@ -1676,7 +1676,7 @@ public class InvocationExpression
                     if (m_argMethod instanceof Register regFn)
                         {
                         argFn = regFn;
-                        astFn = null; // TODO CP: regFn.getRegisterAST()
+                        astFn = regFn.getRegisterAST();
                         }
                     else
                         {
@@ -1744,12 +1744,12 @@ public class InvocationExpression
                     else if (cTypeParams == 1)
                         {
                         arg0  = aargTypeParams[0];
-                        aAsts = new ExprAST[] {new RegisterAST(arg0.getType(), 0)};
+                        aAsts = new ExprAST[] {toExprAst(arg0)};
                         }
                     else // (cDefaults == 1)
                         {
                         arg0  = Register.DEFAULT;
-                        aAsts = new ExprAST[] {new RegisterAST(atypeParams[0], Op.A_DEFAULT)};
+                        aAsts = new ExprAST[] {new RegisterAST(Op.A_DEFAULT, atypeParams[0], null)};
                         }
                     break;
 
@@ -1763,7 +1763,7 @@ public class InvocationExpression
                         System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
                         for (int i = 0; i < cTypeParams; i++)
                             {
-                            aAsts[i] = new RegisterAST(aargTypeParams[i], i);
+                            aAsts[i] = toExprAst(aArgs[i]);
                             }
                         }
 
@@ -1780,7 +1780,7 @@ public class InvocationExpression
                         {
                         int iArg = cTypeParams + cArgs + i;
                         aArgs[iArg] = Register.DEFAULT;
-                        aAsts[iArg] = new RegisterAST(atypeParams[cArgs + i], Op.A_DEFAULT);
+                        aAsts[iArg] = new RegisterAST(Op.A_DEFAULT, atypeParams[i], null);
                         }
                     break;
                 }
@@ -1947,7 +1947,7 @@ public class InvocationExpression
                 {
                 aiArg[i] = i;
                 aArg [i] = aargTypeParams[i];
-                aAst [i] = new RegisterAST(aargTypeParams[i], i);
+                aAst [i] = toExprAst(aargTypeParams[i]);
                 }
 
             for (int i = 0, iBind = cTypeParams; i < cArgs; ++i)
@@ -1983,7 +1983,7 @@ public class InvocationExpression
             else
                 {
                 ExprAST<Constant> astTarget = argFn instanceof Register regFn
-                        ? new RegisterAST<>(regFn.getIndex(), regFn.getType(), null) // TODO CP: regFn.getRegister
+                        ? regFn.getRegisterAST()
                         : new ConstantExprAST<>((Constant) argFn);
                 if (lval.isLocalArgument())
                     {
@@ -2032,7 +2032,7 @@ public class InvocationExpression
                     }
                 }
             argTarget   = regTarget;
-            m_astTarget = new RegisterAST<>(regTarget.getType());
+            m_astTarget = regTarget.getRegisterAST();
             }
         else
             {
