@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -17,6 +18,8 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssignAST;
 import org.xvm.asm.ast.AssignAST.Operator;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -372,12 +375,6 @@ public class AssignmentStatement
 
 
     // ----- compilation ---------------------------------------------------------------------------
-
-    @Override
-    public boolean isLValueSyntax()
-        {
-        return true;
-        }
 
     @Override
     public Expression getLValueExpression()
@@ -785,8 +782,9 @@ public class AssignmentStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean      fCompletes = fReachable;
-        ConstantPool pool       = pool();
+        boolean             fCompletes = fReachable;
+        ConstantPool        pool       = pool();
+        BinaryAST<Constant> bast       = null;
 
         switch (getCategory())
             {
@@ -801,8 +799,7 @@ public class AssignmentStatement
                     {
                     assert lvalueExpr.isCompletable();
                     rvalue.generateCompactInit(ctx, code, stmtVar,  errs);
-                    ctx.getHolder().setAst(this, new AssignAST<>(
-                            stmtVar.getLValueExpression().getExprAST(), Operator.Asn, rvalue.getExprAST()));
+                    bast = new AssignAST<>(stmtVar.getRegister().getRegAllocAST(), Operator.Asn, rvalue.getExprAST());
                     break;
                     }
 
@@ -818,8 +815,10 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     }
 
-                // TODO AST
-
+                ExprAST<Constant> bastLVal = lvalue instanceof Statement stmt
+                        ? (ExprAST<Constant>) ctx.getHolder().getAst(stmt)
+                        : lvalueExpr.getExprAST();
+                bast = new AssignAST<>(bastLVal, Operator.Asn, rvalue.getExprAST());
                 break;
                 }
 
@@ -830,6 +829,7 @@ public class AssignmentStatement
                     fCompletes = stmt.completes(ctx, fCompletes, code, errs);
                     }
 
+                Operator operAsn;
                 if (op.getId() == Id.COND_NN_ASN)
                     {
                     Argument arg = rvalue.generateArgument(ctx, code, false, false, errs);
@@ -855,6 +855,8 @@ public class AssignmentStatement
                         // assignment did NOT happen, so the conditional register should be False
                         code.add(new Move(pool.valFalse(), regCond));
                         }
+
+                    operAsn = Operator.AsnIfNotNull;
                     }
                 else
                     {
@@ -893,6 +895,16 @@ public class AssignmentStatement
                             }
                         fCompletes &= rvalue.isCompletable();
                         }
+
+                    operAsn = Operator.AsnIfNotFalse;
+                    }
+
+                if (fCompletes)
+                    {
+                    ExprAST<Constant> bastLVal = lvalue instanceof Statement stmt
+                            ? (ExprAST<Constant>) ctx.getHolder().getAst(stmt)
+                            : lvalueExpr.getExprAST();
+                    bast = new AssignAST<>(bastLVal, operAsn, rvalue.getExprAST());
                     }
                 break;
                 }
@@ -907,18 +919,22 @@ public class AssignmentStatement
                     {
                     Argument argLVal   = LVal.generateArgument(ctx, code, true, true, errs);
                     Label    labelSkip = new Label(op.getValueText() + " _skip_assign");
+                    Operator operAsn;
                     switch (op.getId())
                         {
                         case COND_AND_ASN:
                             code.add(new JumpFalse(argLVal, labelSkip));
+                            operAsn = Operator.AsnIfWasTrue;
                             break;
 
                         case COND_OR_ASN:
                             code.add(new JumpTrue(argLVal, labelSkip));
+                            operAsn = Operator.AsnIfWasFalse;
                             break;
 
                         case COND_ELSE_ASN:
                             code.add(new JumpNotNull(argLVal, labelSkip));
+                            operAsn = Operator.AsnIfWasNull;
                             break;
 
                         default:
@@ -927,6 +943,11 @@ public class AssignmentStatement
                     rvalue.generateAssignment(ctx, code, LVal, errs);
                     fCompletes &= rvalue.isCompletable();
                     code.add(labelSkip);
+
+                    if (fCompletes)
+                        {
+                        bast = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
+                        }
                     }
                 break;
                 }
@@ -940,6 +961,23 @@ public class AssignmentStatement
                     if (fCompletes &= rvalue.isCompletable())
                         {
                         LVal.assignInPlaceResult(op, argRVal, code, errs);
+
+                        Operator operAsn = switch (op.getId())
+                            {
+                            case ADD_ASN     -> Operator.AddAsn;
+                            case SUB_ASN     -> Operator.SubAsn;
+                            case MUL_ASN     -> Operator.MulAsn;
+                            case DIV_ASN     -> Operator.DivAsn;
+                            case MOD_ASN     -> Operator.ModAsn;
+                            case SHL_ASN     -> Operator.ShiftLAsn;
+                            case SHR_ASN     -> Operator.ShiftRAsn;
+                            case USHR_ASN    -> Operator.UShiftRAsn;
+                            case BIT_AND_ASN -> Operator.AndAsn;
+                            case BIT_OR_ASN  -> Operator.OrAsn;
+                            case BIT_XOR_ASN -> Operator.XorAsn;
+                            default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
+                            };
+                        bast = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
                         }
                     }
                 break;
@@ -947,6 +985,11 @@ public class AssignmentStatement
 
             default:
                 throw new IllegalStateException();
+            }
+
+        if (bast != null)
+            {
+            ctx.getHolder().setAst(this, bast);
             }
 
         return fCompletes;
