@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
@@ -22,6 +23,11 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
+
+import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.BindFunctionAST;
+import org.xvm.asm.ast.BindMethodAST;
+import org.xvm.asm.ast.ConstantExprAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -819,7 +825,9 @@ public class LambdaExpression
             {
             // if no binding is required (either MBIND or FBIND) then the resulting argument is the
             // identity of the lambda function itself
-            return m_lambda.getIdentityConstant();
+            MethodConstant idLambda = m_lambda.getIdentityConstant();
+            m_astLambda = new ConstantExprAST<>(idLambda);
+            return idLambda;
             }
 
         return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
@@ -834,17 +842,25 @@ public class LambdaExpression
         boolean fBindTarget = !m_lambda.isFunction();
         boolean fBindParams = cBindArgs > 0;
 
-        int[] anBind = null;
+        int[]               anBind = null;
+        ExprAST<Constant>[] aAst   = null;
         if (fBindParams)
             {
             anBind = new int[cBindArgs];
+            aAst   = new ExprAST[cBindArgs];
             for (int i = 0; i < cBindArgs; ++i)
                 {
+                Argument argBind = aBindArgs[i];
                 anBind[i] = i;
+                aAst[i]   = argBind instanceof Register regBind
+                        ? regBind.getRegisterAST()
+                        : new ConstantExprAST<>((Constant) argBind);
                 }
             }
 
         MethodConstant idLambda = m_lambda.getIdentityConstant();
+
+        m_astLambda = new ConstantExprAST<>(idLambda);
         if (fBindTarget | fBindParams)
             {
             if (LVal.isLocalArgument())
@@ -857,15 +873,22 @@ public class LambdaExpression
                                                     Op.A_STACK);
                     code.add(new MBind(regThis, idLambda, regTemp));
                     code.add(new FBind(regTemp, anBind, aBindArgs, argResult));
+
+                    m_astLambda = new BindMethodAST<>(regThis.getRegisterAST(), idLambda, regTemp.getType());
+                    m_astLambda = new BindFunctionAST<>(m_astLambda, anBind, aAst, getType());
                     }
                 else if (fBindTarget)
                     {
                     Register regThis = ctx.generateThisRegister(code);
                     code.add(new MBind(regThis, idLambda, argResult));
+
+                    m_astLambda = new BindMethodAST<>(regThis.getRegisterAST(), idLambda, getType());
                     }
-                else if (fBindParams)
+                else // if (fBindParams)
                     {
                     code.add(new FBind(idLambda, anBind, aBindArgs, argResult));
+
+                    m_astLambda = new BindFunctionAST<>(m_astLambda, anBind, aAst, getType());
                     }
                 }
             else
@@ -899,6 +922,16 @@ public class LambdaExpression
         LambdaExpression exprClone = (LambdaExpression) super.clone();
         exprClone.m_lambda = null;
         return exprClone;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return m_astLambda == null
+                ? isConstant()
+                    ? new ConstantExprAST<>(toConstant())
+                    : super.getExprAST()
+                : m_astLambda;
         }
 
 
@@ -1256,15 +1289,6 @@ public class LambdaExpression
         }
 
     /**
-     * @return the LambdaContext stored off after the successful validation
-     */
-    protected LambdaContext getValidatedContext()
-        {
-        assert isValidated();
-        return m_ctxLambda;
-        }
-
-    /**
      * @return true iff lambda requires "this"
      */
     protected boolean isRequiredThis()
@@ -1491,14 +1515,12 @@ public class LambdaExpression
         @Override
         protected void initNameMap(Map<String, Argument> mapByName)
             {
-            Context        ctxOuter    = getOuterContext();
-            TypeConstant[] atypeParams = f_atypeParams;
-            String[]       asParams    = f_asParams;
-            int            cParams     = atypeParams == null ? 0 : atypeParams.length;
+            Context ctxOuter = getOuterContext();
+            int     cParams  = f_atypeParams == null ? 0 : f_atypeParams.length;
             for (int i = 0; i < cParams; ++i)
                 {
-                TypeConstant type  = atypeParams[i];
-                String       sName = asParams[i];
+                TypeConstant type  = f_atypeParams[i];
+                String       sName = f_asParams[i];
                 if (sName != null && !sName.equals(Id.ANY.TEXT) &&
                             type != null && !type.containsUnresolved())
                     {
@@ -1560,6 +1582,8 @@ public class LambdaExpression
      * A cached array of bound arguments. Private to calculateBindings().
      */
     private transient Argument[] m_aBindArgs = NO_RVALUES;
+
+    private transient ExprAST<Constant> m_astLambda;
 
     private static final Field[] CHILD_FIELDS =
             fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
