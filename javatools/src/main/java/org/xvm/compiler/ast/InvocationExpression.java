@@ -3425,6 +3425,9 @@ public class InvocationExpression
     private transient MethodConstant  m_idConvert;       // conversion method
     private transient boolean         m_fAutoFuture;     // implicit FutureVar
 
+    /**
+     * Cached ExprAST nodes for the target and the invocation.
+     */
     private transient ExprAST<Constant> m_astTarget;
     private transient ExprAST<Constant> m_astInvoke;
 

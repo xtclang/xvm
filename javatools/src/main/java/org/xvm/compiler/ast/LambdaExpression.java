@@ -1583,6 +1583,9 @@ public class LambdaExpression
      */
     private transient Argument[] m_aBindArgs = NO_RVALUES;
 
+    /**
+     * A cached ExprAST node for the lambda.
+     */
     private transient ExprAST<Constant> m_astLambda;
 
     private static final Field[] CHILD_FIELDS =

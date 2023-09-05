@@ -46,7 +46,7 @@ public class NotNullExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        expr = readAST(in, res);
+        expr = readExprAST(in, res);
     }
 
     @Override
@@ -59,7 +59,7 @@ public class NotNullExprAST<C>
             throws IOException {
         out.writeByte(nodeType().ordinal());
 
-        expr.write(out, res);
+        expr.writeExpr(out, res);
     }
 
     @Override

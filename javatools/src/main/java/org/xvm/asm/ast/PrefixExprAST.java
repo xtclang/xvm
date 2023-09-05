@@ -62,7 +62,7 @@ public abstract class PrefixExprAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         op   = Operator.values()[readMagnitude(in)];
-        expr = readAST(in, res);
+        expr = readExprAST(in, res);
     }
 
     @Override
@@ -76,7 +76,7 @@ public abstract class PrefixExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, op.ordinal());
-        expr.write(out, res);
+        expr.writeExpr(out, res);
     }
 
     @Override

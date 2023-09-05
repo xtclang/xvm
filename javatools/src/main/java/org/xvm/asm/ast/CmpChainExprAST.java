@@ -70,7 +70,7 @@ public class CmpChainExprAST<C>
 
         ExprAST<C>[] exprs = new ExprAST[count];
         for (int i = 0; i < count; ++i) {
-            exprs[i] = readAST(in, res);
+            exprs[i] = readExprAST(in, res);
         }
         Operator[] ops = new Operator[count-1];
         for (int i = 0; i < count-1; ++i) {
@@ -94,7 +94,7 @@ public class CmpChainExprAST<C>
         int count = exprs.length;
         writePackedLong(out, count);
         for (ExprAST expr : exprs) {
-            expr.write(out, res);
+            expr.writeExpr(out, res);
         }
         for (Operator op : ops) {
             writePackedLong(out, op.ordinal());

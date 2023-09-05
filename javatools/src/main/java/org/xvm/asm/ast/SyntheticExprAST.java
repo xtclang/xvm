@@ -53,7 +53,7 @@ public class SyntheticExprAST<C>
             throws IOException {
         operation      = Operation.values()[readMagnitude(in)];
         type           = res.getConstant(readMagnitude(in));
-        underlyingExpr = readAST(in, res);
+        underlyingExpr = readExprAST(in, res);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class SyntheticExprAST<C>
 
         writePackedLong(out, operation.ordinal());
         writePackedLong(out, res.indexOf(type));
-        underlyingExpr.write(out, res);
+        underlyingExpr.writeExpr(out, res);
     }
 
     @Override
