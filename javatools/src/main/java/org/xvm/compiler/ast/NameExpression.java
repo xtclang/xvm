@@ -1780,7 +1780,7 @@ public class NameExpression
                             }
 
                         case This:
-                            argTarget = new Register(ctx.getThisType(), Op.A_THIS);
+                            argTarget = new Register(ctx.getThisType(), null, Op.A_THIS);
                             break;
 
                         case Outer:
