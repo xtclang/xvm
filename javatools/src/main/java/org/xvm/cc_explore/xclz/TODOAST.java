@@ -1,11 +1,11 @@
 package org.xvm.cc_explore.xclz;
 
-import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.CPool;
 import org.xvm.cc_explore.util.SB;
 
 class TODOAST extends AST {
   final String _name;
-  TODOAST( XClzBuilder X ) {
+  TODOAST( CPool X ) {
     super(X,0);
     _name = X.utf8();
   }
