@@ -89,6 +89,12 @@ public class RegisterAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        // we don't have information here that would allow us to exclude type params
+        return !isRegIdSpecial() || getRegId() == Op.A_IGNORE || getRegId() == Op.A_IGNORE_ASYNC;
+    }
+
+    @Override
     public NodeType nodeType() {
         return RegisterExpr;
     }

@@ -40,6 +40,11 @@ public class ArrayAccessExprAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        return true;
+    }
+
+    @Override
     public NodeType nodeType() {
         return NodeType.ArrayAccessExpr;
     }

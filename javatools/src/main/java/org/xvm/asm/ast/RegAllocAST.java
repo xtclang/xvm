@@ -41,6 +41,12 @@ public class RegAllocAST<C>
         this.reg = reg;
     }
 
+    /**
+     * Construct a register.
+     *
+     * @param type  the type that the register can hold
+     * @param name  the name of the local variable that the register is being created for, or null
+     */
     public RegAllocAST(C type, C name) {
         assert type != null;
         this.reg = new RegisterAST<>(type, name);
@@ -64,6 +70,11 @@ public class RegAllocAST<C>
     public C getType(int i) {
         assert i == 0;
         return getType();
+    }
+
+    @Override
+    public boolean isAssignable() {
+        return true;
     }
 
     @Override

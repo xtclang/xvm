@@ -28,6 +28,8 @@ public class AssignAST<C>
 
     public enum Operator {
         Asn           ("="   ),     // includes "<-" expression
+        CondAsn       (":="  ),     // if (lvalue := expr) {...}, hidden Boolean lvalue
+        CondNotNullAsn("?="  ),     // if (lvalue ?= expr) {...}, hidden Boolean lvalue
         AddAsn        ("+="  ),
         SubAsn        ("-="  ),
         MulAsn        ("*="  ),
@@ -39,11 +41,11 @@ public class AssignAST<C>
         AndAsn        ("&="  ),
         OrAsn         ("|="  ),
         XorAsn        ("^="  ),
-        CondAndAsn    ("&&=" ),
-        CondOrAsn     ("||=" ),
-        CondAsn       (":="  ),
-        CondNotNullAsn("?="  ),
-        CondElseAsn   ("?:=" ),
+        AsnIfWasTrue  ("&&=" ),
+        AsnIfWasFalse ("||=" ),
+        AsnIfNotFalse (":="  ),     // x := y; (note: this is not used for a condition, e.g. if)
+        AsnIfNotNull  ("?="  ),     // x ?= y; (note: this is not used for a condition, e.g. if)
+        AsnIfWasNull  ("?:=" ),
         ;
 
         public final String text;
@@ -83,7 +85,7 @@ public class AssignAST<C>
      * @param rhs   right-hand-side expression to assign to
      */
     public AssignAST(ExprAST<C> lhs, Operator op, ExprAST<C> rhs) {
-        assert lhs != null && op != null && rhs != null;
+        assert lhs != null /* TODO GG && lhs.isAssignable() */ && op != null && rhs != null;
         this.lhs = lhs;
         this.op  = op;
         this.rhs = rhs;

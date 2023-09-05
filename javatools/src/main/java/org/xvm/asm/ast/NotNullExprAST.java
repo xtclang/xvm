@@ -34,6 +34,11 @@ public class NotNullExprAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        return expr.isAssignable();
+    }
+
+    @Override
     public NodeType nodeType() {
         return NodeType.NotNullExpr;
     }

@@ -45,6 +45,11 @@ public class TernaryExprAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        return exprThen.isAssignable() && exprElse.isAssignable();
+    }
+
+    @Override
     public NodeType nodeType() {
         return NodeType.TernaryExpr;
     }
@@ -68,7 +73,6 @@ public class TernaryExprAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
         cond    .write(out, res);
         exprThen.write(out, res);
         exprElse.write(out, res);

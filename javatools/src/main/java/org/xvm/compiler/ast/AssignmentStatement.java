@@ -9,16 +9,14 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.RegAllocAST;
-import org.xvm.asm.ast.RegisterAST;
+import org.xvm.asm.ast.AssignAST;
+import org.xvm.asm.ast.AssignAST.Operator;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -803,16 +801,8 @@ public class AssignmentStatement
                     {
                     assert lvalueExpr.isCompletable();
                     rvalue.generateCompactInit(ctx, code, stmtVar,  errs);
-
-// TODO
-//                    RegisterAST<Constant> reg = stmtVar.getRegister(). new RegisterAST<>(stmtVar.getType());
-//                    BinaryAST<Constant> = new RegAllocAST<Constant>()
-//                    // TODO AST
-//                        lvalue.
-//                        if (lvalue instanceof VariableDeclarationStatement)
-//                            new A
-//                        rvalue.getExprAST();
-
+                    ctx.getHolder().setAst(this, new AssignAST<>(
+                            stmtVar.getLValueExpression().getExprAST(), Operator.Asn, rvalue.getExprAST()));
                     break;
                     }
 

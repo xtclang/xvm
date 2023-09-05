@@ -97,6 +97,14 @@ public abstract class BinaryAST<C> {
         public abstract C getType(int i);
 
         /**
+         * @return true iff this expression can theoretically be used as an L-Value; this is
+         *         primarily intended to be used by assertions
+         */
+        public boolean isAssignable() {
+            return false;
+        }
+
+        /**
          * Read the "expression short form" formatted data. The short form identifier in the range
          * 0..30 has already been consumed.
          */
@@ -127,9 +135,9 @@ public abstract class BinaryAST<C> {
         RegAlloc,           // int x; (classified as an expression to simplify "l-value" design)
         NamedRegAlloc,      // int _; (classified as an expression to simplify "l-value" design)
         Assign,             // x=y;
-        BinOpAssign,        // x*=y;
-        Expr05,
-        Expr06,
+        BinOpAssign,        // x*=y; etc.
+        CondAssign,         // (Boolean _, x) := y
+        CondNotNullAssign,  // (Boolean _, x) ?= y
         Expr07,
         Expr08,
         Expr09,
