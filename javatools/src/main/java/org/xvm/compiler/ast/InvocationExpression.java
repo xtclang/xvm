@@ -2014,7 +2014,7 @@ public class InvocationExpression
             Register   regTarget;
             if (targetInfo == null)
                 {
-                regTarget = ctx.generateThisRegister(code);
+                regTarget = ctx.generateThisRegister();
                 }
             else
                 {

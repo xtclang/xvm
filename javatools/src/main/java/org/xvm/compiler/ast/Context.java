@@ -20,7 +20,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -1795,11 +1794,9 @@ public class Context
      * from the compile time "this" computed by {@link MethodStructure#getThisSteps()} for code
      * inside the properties.
      *
-     * @param code  the code
-     *
      * @return the Register to use for {@link Op#A_THIS} variable
      */
-    public Register generateThisRegister(Code code)
+    public Register generateThisRegister()
         {
         TypeConstant typeThis = getThisClass().getFormalType();
         Component    parent   = getMethod().getParent().getParent();

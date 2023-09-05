@@ -868,7 +868,7 @@ public class LambdaExpression
                 Argument argResult = LVal.getLocalArgument();
                 if (fBindTarget & fBindParams)
                     {
-                    Register regThis = ctx.generateThisRegister(code);
+                    Register regThis = ctx.generateThisRegister();
                     Register regTemp = new Register(idLambda.getSignature().asFunctionType(), null,
                                                     Op.A_STACK);
                     code.add(new MBind(regThis, idLambda, regTemp));
@@ -879,7 +879,7 @@ public class LambdaExpression
                     }
                 else if (fBindTarget)
                     {
-                    Register regThis = ctx.generateThisRegister(code);
+                    Register regThis = ctx.generateThisRegister();
                     code.add(new MBind(regThis, idLambda, argResult));
 
                     m_astLambda = new BindMethodAST<>(regThis.getRegisterAST(), idLambda, getType());
