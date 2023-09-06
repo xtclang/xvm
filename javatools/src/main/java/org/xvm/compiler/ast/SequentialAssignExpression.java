@@ -4,8 +4,13 @@ package org.xvm.compiler.ast;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -148,6 +153,20 @@ public class SequentialAssignExpression
     protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
         {
         // do not go inside of this expression (it's the result of this expression that matters)
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        Operator op = isPre()
+                ? isInc()
+                    ? Operator.PreInc
+                    : Operator.PreDec
+                : isInc()
+                    ? Operator.PostInc
+                    : Operator.PostDec;
+
+        return new UnaryOpExprAST<>(expr.getExprAST(), op, getType());
         }
 
 
