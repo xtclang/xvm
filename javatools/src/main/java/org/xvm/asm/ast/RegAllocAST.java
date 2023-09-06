@@ -110,6 +110,7 @@ public class RegAllocAST<C>
         // other use sites for the RegisterAST rely solely on the register's id
         reg.type = res.register(reg.type);
         reg.name = res.register(reg.name);
+        res.register(reg);
     }
 
     @Override
