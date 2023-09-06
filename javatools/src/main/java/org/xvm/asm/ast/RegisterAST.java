@@ -124,11 +124,11 @@ public class RegisterAST<C>
 
     @Override
     public String dump() {
-        return "(" + type + ")#" + regId;
+        return "(" + type + ")#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
     }
 
     @Override
     public String toString() {
-        return "#" + regId;
+        return "#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
     }
 }

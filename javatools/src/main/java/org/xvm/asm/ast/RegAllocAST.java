@@ -128,7 +128,7 @@ public class RegAllocAST<C>
 
     @Override
     public String toString() {
-        return "#" + reg.getRegId() + ": "
+        return reg.toString() + ": "
                 + reg.type + " " + (reg.name == null ? "_" : reg.name.toString());
     }
 }
