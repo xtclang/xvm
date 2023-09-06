@@ -108,6 +108,12 @@ public class AssignAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
+        readExpr(in, res);
+    }
+
+    @Override
+    protected void readExpr(DataInput in, ConstantResolver<C> res)
+            throws IOException {
         lhs = readExprAST(in, res);
         if (nodeType() != Assign) {
             op = Operator.valueOf(readMagnitude(in));
@@ -125,6 +131,18 @@ public class AssignAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
+        writeBody(out, res);
+    }
+
+    @Override
+    public void writeExpr(DataOutput out, ConstantResolver<C> res)
+            throws IOException {
+        writePackedLong(out, nodeType().ordinal());
+        writeBody(out, res);
+    }
+
+    private void writeBody(DataOutput out, ConstantResolver<C> res)
+            throws IOException {
         lhs.writeExpr(out, res);
         if (nodeType() != Assign) {
             writePackedLong(out, op.ordinal());
