@@ -79,14 +79,13 @@ public class RegAllocAST<C>
 
     @Override
     public NodeType nodeType() {
-        return reg == UNNAMED || reg.getName() == null ? RegAlloc : NamedRegAlloc;
+        return reg == NAMED || reg.getName() != null ? NamedRegAlloc : RegAlloc;
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        assert reg == NAMED || reg == UNNAMED;
-        reg = res.getRegister(readPackedInt(in));
+        readExpr(in, res);
     }
 
     @Override

@@ -388,7 +388,7 @@ public abstract class BinaryAST<C> {
     protected static <C, N extends ExprAST<C>> N readExprAST(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int n = readPackedInt(in);
-        if (n < CONSTANT_OFFSET) {
+        if (n <= CONSTANT_OFFSET) {
             // calculate constant pool identity
             int id  = CONSTANT_OFFSET - n;
             C   val = res.getConstant(id);
