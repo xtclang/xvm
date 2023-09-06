@@ -57,6 +57,10 @@ public class UnaryOpExprAST<C>
         this.op = op;
     }
 
+    public Operator getOp() {
+        return op;
+    }
+
     @Override
     public NodeType nodeType() {
         return NodeType.UnaryOpExpr;

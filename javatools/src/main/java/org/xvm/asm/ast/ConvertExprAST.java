@@ -25,6 +25,10 @@ public class ConvertExprAST<C>
         this.convMethod = convMethod;
     }
 
+    public C getConvMethod() {
+        return convMethod;
+    }
+
     @Override
     public NodeType nodeType() {
         return NodeType.ConvertExpr;
