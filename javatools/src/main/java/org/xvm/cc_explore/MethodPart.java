@@ -39,7 +39,7 @@ public class MethodPart extends MMethodPart {
   // The XEC bytecodes
   public final byte[] _code;
   // The XEC AST
-  public final AST _ast;
+  public final byte[] _ast;
   
   // The source code
   public final String[] _lines; // Source lines
@@ -97,8 +97,8 @@ public class MethodPart extends MMethodPart {
     _code = X.bytes();
     assert _cons==null || _code.length>0;
 
-    // Read and skip the AST
-    _ast = AST.parse(X);
+    // Read and skip the AST bytes
+    _ast = X.bytes();
 
     // Read the source code
     int n = X.u31();

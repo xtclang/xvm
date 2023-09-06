@@ -27,7 +27,7 @@ public abstract class Container {
   // Move an instanceof XClzCompiler here.  Need a private Java ClassLoader per
   // Container; might as well have the XCompiler support here.  The private
   // classLoaders means XTC Container classes are unrelated to each other and
-  // can e.g. name-shadown.  All modules in a container should have a "blank"
+  // can e.g. name-shadow.  All modules in a container should have a "blank"
   // or "simple" top-level name, since they already have a private classLoader
   // and so already have namespace.
   

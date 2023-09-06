@@ -133,8 +133,12 @@ public class XClzBuilder {
   }
 
   private void jcode_ast( MethodPart m ) {
+    // Build the AST from bytes
     _meth = m;
-    m._ast.jcode(_sb);
+    _pool = new CPool(m._ast,1.2); // Setup the constant pool parser
+    AST ast = AST.parse(this);
+    // Pretty print as Java
+    ast.jcode(_sb);
   }
 
   
@@ -204,6 +208,11 @@ public class XClzBuilder {
     return _meth._cons[CONSTANT_OFFSET - (int)idx];
   }
 
+  Const methcon_ast() { return methcon_ast((int)pack64()); }
+  Const methcon_ast(int idx) { return _meth._cons[idx]; }
+
+
+  
   // Make up a valid name
   String jname( String jtype ) {
     //if( jtype==null ) return _jname("expr");
@@ -218,6 +227,11 @@ public class XClzBuilder {
   // Return a java-valid name
   String jname_methcon( ) {
     String name = ((StringCon)methcon())._str;
+    return _jname(name);
+  }
+  // Return a java-valid name
+  String jname_methcon_ast( ) {
+    String name = ((StringCon)methcon_ast())._str;
     return _jname(name);
   }
 
@@ -256,6 +270,7 @@ public class XClzBuilder {
   
   // Produce a java type from a method constant
   String jtype_methcon() { return jtype_tcon( (TCon)methcon(), false ); }  
+  String jtype_methcon_ast() { return jtype_tcon( (TCon)methcon_ast(), false ); }  
   // Produce a java type from a TermTCon
   static String jtype_tcon( TCon tc, boolean boxed ) {
     if( tc instanceof TermTCon ttc ) {
