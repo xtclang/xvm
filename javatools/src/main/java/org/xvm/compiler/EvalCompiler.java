@@ -305,7 +305,7 @@ public class EvalCompiler
                 {
                 if (sName.equals("this"))
                     {
-                    Register reg = new Register(getThisType(), null, Op.A_THIS);
+                    Register reg = getThisRegister();
                     ensureNameMap().put(sName, reg);
                     return reg;
                     }

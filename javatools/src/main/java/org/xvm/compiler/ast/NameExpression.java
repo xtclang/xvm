@@ -1143,7 +1143,7 @@ public class NameExpression
                             }
                         else
                             {
-                            argTarget = new Register(ctx.getThisType(), null, Op.A_THIS);
+                            argTarget = ctx.getThisRegister();
                             }
                         }
                     else
@@ -1442,7 +1442,7 @@ public class NameExpression
                         }
                     else
                         {
-                        argTarget = new Register(ctx.getThisType(), null, Op.A_THIS);
+                        argTarget = ctx.getThisRegister();
                         }
                     }
                 else
@@ -1699,7 +1699,7 @@ public class NameExpression
                 }
 
             case This:
-                return new Register(ctx.getThisType(), null, Op.A_THIS);
+                return ctx.getThisRegister();
 
             case Left:
                 assert !idProp.getComponent().isStatic();
@@ -2257,7 +2257,7 @@ public class NameExpression
                                 {
                                 TypeConstant typeTarget = constTarget.getType().
                                         adoptParameters(pool, ctx.getThisType());
-                                return m_arg = new Register(typeTarget, null, Op.A_THIS);
+                                return m_arg = ctx.getThisRegister().narrowType(typeTarget);
                                 }
 
                             // if the left is a class, then the result is a sequence of at

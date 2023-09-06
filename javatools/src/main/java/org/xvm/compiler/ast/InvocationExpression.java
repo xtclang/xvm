@@ -35,6 +35,7 @@ import org.xvm.asm.ast.ConvertExprAST;
 import org.xvm.asm.ast.InvokeExprAST;
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.OuterExprAST;
 import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -2014,25 +2015,31 @@ public class InvocationExpression
             Register   regTarget;
             if (targetInfo == null)
                 {
-                regTarget = ctx.generateThisRegister();
+                regTarget   = ctx.getThisRegister();
+                m_astTarget = regTarget.getRegisterAST();
                 }
             else
                 {
                 TypeConstant typeTarget = targetInfo.getTargetType();
                 int          cStepsOut  = targetInfo.getStepsOut();
-
                 if (cStepsOut > 0)
                     {
                     regTarget = code.createRegister(typeTarget, fTargetOnStack);
-                    code.add(new MoveThis(targetInfo.getStepsOut(), regTarget));
+                    code.add(new MoveThis(cStepsOut, regTarget));
+                    m_astTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cStepsOut);
                     }
                 else
                     {
-                    regTarget = new Register(typeTarget, null, Op.A_THIS);
+                    regTarget = ctx.getThisRegister();
+                    if (!typeTarget.equals(regTarget.getType()))
+                        {
+                        // most likely the typeTarget has "private" access
+                        regTarget = regTarget.narrowType(typeTarget);
+                        }
+                    m_astTarget = regTarget.getRegisterAST();
                     }
                 }
-            argTarget   = regTarget;
-            m_astTarget = regTarget.getRegisterAST();
+            argTarget = regTarget;
             }
         else
             {

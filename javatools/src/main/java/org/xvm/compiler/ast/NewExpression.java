@@ -978,7 +978,7 @@ public class NewExpression
                     {
                     if (m_nParentSteps == 0)
                         {
-                        argOuter = new Register(ctx.getThisType(), null, Op.A_THIS);
+                        argOuter = ctx.getThisRegister();
                         }
                     else
                         {

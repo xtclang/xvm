@@ -15,6 +15,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -24,6 +25,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
+
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -160,6 +163,54 @@ public class Context
         return argThis == null
                 ? getThisClass().getFormalType()
                 : argThis.getType().removeAccess();
+        }
+
+    /**
+     * @return the Register for "this"
+     */
+    public Register getThisRegister()
+        {
+        Register regThis = m_regThis;
+        if (regThis == null)
+            {
+            TypeConstant typeThis = getThisType();
+
+            // we used to adjust the type for "this" inside the property, but that seems to be
+            // unnecessary anymore; leaving the code as a reminder just in case
+            //
+            // Component parent = getMethod().getParent().getParent();
+            //
+            // while (parent instanceof MethodStructure)
+            //     {
+            //     parent = parent.getParent().getParent();
+            //     }
+            // if (parent instanceof PropertyStructure prop && prop.isRefAnnotated())
+            //     {
+            //     typeThis = prop.getIdentityConstant().getRefType(typeThis);
+            //     }
+
+            ConstantPool pool = pool();
+            if (isConstructor())
+                {
+                TypeConstant typeStruct = pool.ensureAccessTypeConstant(typeThis, Access.STRUCT);
+                regThis = new Register(typeStruct, pool.ensureStringConstant("this"), Op.A_STRUCT);
+                }
+            else
+                {
+                regThis = new Register(typeThis, pool.ensureStringConstant("this"), Op.A_THIS);
+                }
+
+            m_regThis = regThis;
+            }
+        return regThis;
+        }
+
+    /**
+     * @return the Register for "this"
+     */
+    public ExprAST<Constant> getThisRegisterAST()
+        {
+        return getThisRegister().getRegisterAST();
         }
 
     /**
@@ -3059,4 +3110,9 @@ public class Context
      * represents the assignments that may have occurred by this point.
      */
     private Map<String, Assignment> m_mapAssigned;
+
+    /**
+     * Cached "this register".
+     */
+    private Register m_regThis;
     }

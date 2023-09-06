@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 
 import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.NarrowedExprAST;
 import org.xvm.asm.ast.RegAllocAST;
 import org.xvm.asm.ast.RegisterAST;
 
@@ -450,7 +451,7 @@ public class Register
         }
 
     /**
-     * @return a RegisterAST that represents this register
+     * @return a {@link RegAllocAST} that represents this register
      */
     public RegAllocAST<Constant> getRegAllocAST()
         {
@@ -462,7 +463,7 @@ public class Register
         }
 
     /**
-     * @return a RegisterAST (or NarrowedAST) that represents this register
+     * @return a {@link RegisterAST} (or {@link NarrowedExprAST}) that represents this register
      */
     public ExprAST<Constant> getRegisterAST()
         {
@@ -828,6 +829,25 @@ public class Register
             }
 
         @Override
+        public RegAllocAST<Constant> getRegAllocAST()
+            {
+            // shadow doens't have an "alloc" register
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public ExprAST<Constant> getRegisterAST()
+            {
+            NarrowedExprAST<Constant> astNarrowed = m_astNarrowed;
+            if (astNarrowed == null)
+                {
+                astNarrowed = m_astNarrowed = new NarrowedExprAST<>(
+                    Register.this.getRegisterAST(), getType());
+                }
+            return astNarrowed;
+            }
+
+        @Override
         public boolean isNormal()
             {
             return Register.this.isNormal();
@@ -855,7 +875,12 @@ public class Register
         /**
          * Indicates that this register is a replacement of the original.
          */
-        protected boolean m_fInPlace = false;
+        private boolean m_fInPlace = false;
+
+        /**
+         * Cached NarrowedExprAST.
+         */
+        private NarrowedExprAST<Constant> m_astNarrowed;
         }
 
 
