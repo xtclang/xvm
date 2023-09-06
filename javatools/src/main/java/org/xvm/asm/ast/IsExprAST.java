@@ -21,7 +21,7 @@ public class IsExprAST<C>
 
     IsExprAST() {}
 
-    public IsExprAST(C typeOfType, ExprAST<C> expr1, ExprAST<C> expr2) {
+    public IsExprAST(ExprAST<C> expr1, ExprAST<C> expr2, C typeOfType) {
         super(expr1, Operator.Is, expr2);
 
         this.typeOfType = typeOfType;
@@ -59,7 +59,7 @@ public class IsExprAST<C>
         super.readBody(in, res);
 
         if (readMagnitude(in) != 0) {
-            typeOfType  = res.getConstant(readMagnitude(in));
+            typeOfType = res.getConstant(readMagnitude(in));
         }
         booleanType = res.typeForName("Boolean");
     }

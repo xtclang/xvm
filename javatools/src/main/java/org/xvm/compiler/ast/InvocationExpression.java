@@ -27,14 +27,14 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.BindFunctionAST;
 import org.xvm.asm.ast.BindMethodAST;
 import org.xvm.asm.ast.CallExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ConvertExprAST;
-import org.xvm.asm.ast.InvokeExprAST;
-import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.InvokeExprAST;
 import org.xvm.asm.ast.OuterExprAST;
 import org.xvm.asm.ast.RegisterAST;
 

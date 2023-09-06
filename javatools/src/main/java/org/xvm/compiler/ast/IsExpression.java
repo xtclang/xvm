@@ -314,8 +314,8 @@ public class IsExpression
     public ExprAST<Constant> getExprAST()
         {
         TypeConstant[] atypeRet = getTypes();
-        return new IsExprAST<>(atypeRet.length == 1 ? null : atypeRet[1],
-                expr1.getExprAST(), expr2.getExprAST());
+        return new IsExprAST<>(expr1.getExprAST(), expr2.getExprAST(),
+                atypeRet.length == 1 ? null : atypeRet[1]);
         }
 
 

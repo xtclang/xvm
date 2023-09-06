@@ -712,7 +712,6 @@ public class MethodStructure
             Constant[]   aconstLocal = m_aconstLocal;
             assert aconstLocal != null;
 
-            // REVIEW GG the ConstantRegistry should pull the data from the method
             ConstantResolver<Constant> res = new ConstantRegistry(this, pool);
             DataInput in = new DataInputStream(new ByteArrayInputStream(abAst));
             try
