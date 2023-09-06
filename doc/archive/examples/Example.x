@@ -1244,14 +1244,14 @@ catch (Deadlock e)
     // ...
     }
 
-// a service is (obviously) an instance of Service, and Service has a “Boolean reentrant;”
+// a service is (obviously) an instance of Service, and Service has a "Boolean reentrant;"
 // property; setting to false disallows reentrancy (causes an exception if reentrance is
 // attempted)
 
-// lastly, based on the obvious truth that “a call to console.log() should NEVER EVER CAUSE
-// RE-ENTRANCY” etc., a service will be declarable in a way to say “i don’t care whether
+// lastly, based on the obvious truth that "a call to console.log() should NEVER EVER CAUSE
+// RE-ENTRANCY" etc., a service will be declarable in a way to say "i don’t care whether
 // you’re in a critical section or not; i promise to never do anything that will call you
-// back”, which is to say “from here on down is a terminal”
+// back", which is to say "from here on down is a terminal"
 @nevergonnagiveyouup @nevergonnaletyoudown @nevergonnarunaroundanddesertyou service Logger
     {
     // ...

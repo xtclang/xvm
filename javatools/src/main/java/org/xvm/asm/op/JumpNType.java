@@ -19,7 +19,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
- * JMP_NTYPE rvalue, rvalue-type, addr ; jump if type of the value is NOT “instanceof" specified type
+ * JMP_NTYPE rvalue, rvalue-type, addr ; jump if type of the value is NOT "instanceof" specified type
  */
 public class JumpNType
         extends OpCondJump

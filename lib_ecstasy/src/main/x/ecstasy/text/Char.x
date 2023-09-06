@@ -291,7 +291,7 @@ const Char(UInt32 codepoint)
          // case 0x000B:        //   U+000B     11  VT      Vertical Tab
          // case 0x000C:        //   U+000C     12  FF      Form Feed
          // case 0x000D:        //   U+000D     13  CR      Carriage Return
-         // case 0x001A:        //   U+001A     26  SUB     End-of-File, or “control-Z”
+         // case 0x001A:        //   U+001A     26  SUB     End-of-File, or "control-Z"
          // case 0x001C:        //   U+001C     28  FS      File Separator
          // case 0x001D:        //   U+001D     29  GS      Group Separator
          // case 0x001E:        //   U+001E     30  RS      Record Separator

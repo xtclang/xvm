@@ -172,8 +172,8 @@
 +JMP_LTE    rvalue1, rvalue2, addr                  ; jump if value-1 is less than or equal to value-2
 +JMP_GT     rvalue1, rvalue2, addr                  ; jump if value-1 is greater than value-2
 +JMP_GTE    rvalue1, rvalue2, addr                  ; jump if value-1 is greater than or equal to value-2
-+JMP_TYPE   rvalue, TYPE, addr                      ; jump if type of the value is “instanceof" specified type
-+JMP_NTYPE  rvalue, TYPE, addr                      ; jump if type of the value is NOT “instanceof" specified type
++JMP_TYPE   rvalue, TYPE, addr                      ; jump if type of the value is "instanceof" specified type
++JMP_NTYPE  rvalue, TYPE, addr                      ; jump if type of the value is NOT "instanceof" specified type
 +JMP_COND   COND, addr                              ; jump if the link-time condition evaluates to True
 +JMP_NCOND  COND, addr                              ; jump if the link-time condition evaluates to False
 +JMP_NFIRST addr                                    ; jump if this is NOT the first time the op has been executed

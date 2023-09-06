@@ -110,7 +110,7 @@
  *     transactional changes are likely to be invalidated by other transactions that complete in a
  *     shorter period of time
  *
- * * The app has a Tx (a Client.Transaction object), and at some point it calls “commit()”
+ * * The app has a Tx (a Client.Transaction object), and at some point it calls "commit()"
  * * * This can occur concurrently across any number of different Tx objects
  * * * The assumption is that we have lots of CPU cores, so we want to maximize throughput by doing
  *     as much as possible concurrently

@@ -44,7 +44,7 @@ Ecstasy was designed explicitly for cloud applications<ref>https://xtclang.blogs
 * Correctness, aka Predictability. The behavior of a language must be obvious, correct, and predictable. This also incorporates The Principle of Least Surprise.
 * Security. While generally not a priority for language design, it is self-evident that security is not something that one adds to a system; security is either in the foundation and the substrate of a system, or it does not exist. Specifically, a language must not make possible the access to (or even make detectable the existence of) any resource that is not explicitly granted to the running software.
 * Composability. High-level computer languages are about composition. Specifically, a language should enable a developer to locate each piece of design and logic in its one best and natural place.
-* Readability. Code is written once, and referenced many times. What we call “code” should be a thing of beauty, where form follows function.
+* Readability. Code is written once, and referenced many times. What we call "code" should be a thing of beauty, where form follows function.
 * Lastly, a language must be recursive in its design. There is no other mechanism that predictably folds in complexity and naturally enables encapsulation. It’s turtles, the whole way down.
 }}
 

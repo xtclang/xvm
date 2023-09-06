@@ -60,7 +60,7 @@ static service Outer
 
 // so basically any type expression / class name / etc. that
 
-// lambdas need a way to resolve names and “capture” references:
+// lambdas need a way to resolve names and "capture" references:
 class Outer
     {
     Int iProp;

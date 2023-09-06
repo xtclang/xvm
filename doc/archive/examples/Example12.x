@@ -1836,7 +1836,7 @@ console.println(╔════════════════════�
                 ║This is the end of the report.   ║
                 ╚═════════════════════════════════╝);
 
-console.println($“list={{L: for (var v : list) {$.add(“{L.count}={v}”);}}}”)
+console.println($"list={{L: for (var v : list) {$.add("{L.count}={v}");}}}")
 
 // functions
 
@@ -2300,7 +2300,7 @@ String s = $|...
 
 // also handles long long long lines well:
 
-String s = "When she had a child, it had to be sent out to nurse. When he came home, the lad was spoilt as if he were a prince. His mother stuffed him with jam; his father let him run about barefoot, and, playing the philosopher, even said he might as well go about quite naked like the young of animals. As opposed to the maternal ideas, he had a certain virile idea of childhood on which he sought to mould his son, wishing him to be brought up hardily, like a Spartan, to give him a strong constitution. He sent him to bed without any fire, taught him to drink off large draughts of rum and to jeer at religious processions. But, peaceable by nature, the lad answered only poorly to his notions. His mother always kept him near her; she cut out cardboard for him, told him tales, entertained him with endless monologues full of melancholy gaiety and charming nonsense. In her life’s isolation she centered on the child’s head all her shattered, broken little vanities. She dreamed of high station; she already saw him, tall, handsome, clever, settled as an engineer or in the law. She taught him to read, and even, on an old piano, she had taught him two or three little songs. But to all this Monsieur Bovary, caring little for letters, said, “It was not worth while. Would they ever have the means to send him to a public school, to buy him a practice, or start him in business? Besides, with cheek a man always gets on in the world.” Madame Bovary bit her lips, and the child knocked about the village.\nHe went after the labourers, drove away with clods of earth the ravens that were flying about. He ate blackberries along the hedges, minded the geese with a long switch, went haymaking during ..."
+String s = "When she had a child, it had to be sent out to nurse. When he came home, the lad was spoilt as if he were a prince. His mother stuffed him with jam; his father let him run about barefoot, and, playing the philosopher, even said he might as well go about quite naked like the young of animals. As opposed to the maternal ideas, he had a certain virile idea of childhood on which he sought to mould his son, wishing him to be brought up hardily, like a Spartan, to give him a strong constitution. He sent him to bed without any fire, taught him to drink off large draughts of rum and to jeer at religious processions. But, peaceable by nature, the lad answered only poorly to his notions. His mother always kept him near her; she cut out cardboard for him, told him tales, entertained him with endless monologues full of melancholy gaiety and charming nonsense. In her life’s isolation she centered on the child’s head all her shattered, broken little vanities. She dreamed of high station; she already saw him, tall, handsome, clever, settled as an engineer or in the law. She taught him to read, and even, on an old piano, she had taught him two or three little songs. But to all this Monsieur Bovary, caring little for letters, said, "It was not worth while. Would they ever have the means to send him to a public school, to buy him a practice, or start him in business? Besides, with cheek a man always gets on in the world." Madame Bovary bit her lips, and the child knocked about the village.\nHe went after the labourers, drove away with clods of earth the ravens that were flying about. He ate blackberries along the hedges, minded the geese with a long switch, went haymaking during ..."
 
 // or:
 
@@ -2318,9 +2318,9 @@ String s = `|When she had a child, it had to be sent out to nurse. When he came 
          + `| broken little vanities. She dreamed of high station; she already saw him, tall,
          + `| handsome, clever, settled as an engineer or in the law. She taught him to read, and
          + `| even, on an old piano, she had taught him two or three little songs. But to all this
-         + `| Monsieur Bovary, caring little for letters, said, “It was not worth while. Would they
+         + `| Monsieur Bovary, caring little for letters, said, "It was not worth while. Would they
          + `| ever have the means to send him to a public school, to buy him a practice, or start him
-         + `| in business? Besides, with cheek a man always gets on in the world.” Madame Bovary bit
+         + `| in business? Besides, with cheek a man always gets on in the world." Madame Bovary bit
          + `| her lips, and the child knocked about the village.
             |He went after the labourers, drove away with clods of earth the ravens that were flying
          + `| about. He ate blackberries along the hedges, minded the geese with a long switch, went

@@ -2945,7 +2945,7 @@ public class Lexer
             //   U+000B  11  VT   Vertical Tab
             //   U+000C  12  FF   Form Feed
             //   U+000D  13  CR   Carriage Return
-            //   U+001A  26  SUB  End-of-File, or “control-Z”
+            //   U+001A  26  SUB  End-of-File, or "control-Z"
             //   U+001C  28  FS   File Separator
             //   U+001D  29  GS   Group Separator
             //   U+001E  30  RS   Record Separator

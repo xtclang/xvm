@@ -441,7 +441,7 @@ ecommerce.tableFor(Item).add(new Item(456, "AM-G7-XYZ", "Best whoozymawhatzit ev
  *
  * Retention policies also have to be effective at getting rid of things
  *
- * Some retention policies are not fixed, per se; they are reactive: “Keep on XXXgb of this stuff”
+ * Some retention policies are not fixed, per se; they are reactive: "Keep on XXXgb of this stuff"
  *
  */
 
