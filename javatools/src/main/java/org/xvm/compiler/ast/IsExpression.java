@@ -10,8 +10,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.IsExprAST;
-import org.xvm.asm.ast.BinaryAST;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
@@ -310,7 +311,7 @@ public class IsExpression
         }
 
     @Override
-    public BinaryAST.ExprAST<Constant> getExprAST()
+    public ExprAST<Constant> getExprAST()
         {
         TypeConstant[] atypeRet = getTypes();
         return new IsExprAST<>(atypeRet.length == 1 ? null : atypeRet[1],

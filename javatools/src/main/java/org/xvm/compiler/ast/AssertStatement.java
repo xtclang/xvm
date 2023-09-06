@@ -18,7 +18,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ast.AssertStmtAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;

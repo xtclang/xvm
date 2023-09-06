@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 
 /**
  * A base class for expressions that delegate to an underlying expression.
@@ -34,7 +32,7 @@ public abstract class DelegatingExprAST<C>
     public abstract NodeType nodeType();
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         expr = readExprAST(in, res);
     }
@@ -45,10 +43,8 @@ public abstract class DelegatingExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         expr.writeExpr(out, res);
     }
 }

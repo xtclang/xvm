@@ -44,7 +44,7 @@ public class BreakStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         depth = readMagnitude(in);
     }
@@ -53,9 +53,8 @@ public class BreakStmtAST<C>
     public void prepareWrite(ConstantResolver<C> res) {}
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
         writePackedLong(out, depth);
     }
 

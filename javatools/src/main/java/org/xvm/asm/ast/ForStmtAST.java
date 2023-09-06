@@ -52,7 +52,7 @@ public class ForStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
         init   = readAST(in, res);
@@ -77,9 +77,8 @@ public class ForStmtAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
         writeAST(init, out, res);
         writeExprAST(cond, out, res);
         writeAST(update, out, res);

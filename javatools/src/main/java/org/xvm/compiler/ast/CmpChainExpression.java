@@ -17,7 +17,7 @@ import org.xvm.asm.OpTest;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CmpChainExprAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;

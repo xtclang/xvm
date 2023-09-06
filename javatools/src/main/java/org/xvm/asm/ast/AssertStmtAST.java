@@ -49,7 +49,7 @@ public class AssertStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int flags = readMagnitude(in);
 
@@ -72,10 +72,8 @@ public class AssertStmtAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         int flags = (cond     == null ? 0 : 1)
                   | (interval == null ? 0 : 2)
                   | (message  == null ? 0 : 4);

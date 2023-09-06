@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.asm.Op.CONSTANT_OFFSET;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.ConstantExpr;
@@ -52,16 +50,10 @@ public class ConstantExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         value = res.getConstant(readMagnitude(in));
         type  = res.typeOf(value);
-    }
-
-    @Override
-    protected void readExpr(DataInput in, ConstantResolver<C> res) {
-        // this should never be called; the "read" is done inline by the readExprAST() method
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -70,9 +62,8 @@ public class ConstantExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
         writePackedLong(out, res.indexOf(value));
     }
 

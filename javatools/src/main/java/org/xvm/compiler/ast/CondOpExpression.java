@@ -10,7 +10,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CondOpExprAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -263,8 +263,8 @@ public class CondOpExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        return new CondOpExprAST<>(isAnd() ? Operator.CondAnd : Operator.CondOr,
-                expr1.getExprAST(), expr2.getExprAST());
+        return new CondOpExprAST<>(expr1.getExprAST(), isAnd() ? Operator.CondAnd : Operator.CondOr,
+                                   expr2.getExprAST());
         }
 
 

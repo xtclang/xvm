@@ -9,7 +9,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.TernaryExprAST;
 
 import org.xvm.asm.constants.TypeConstant;

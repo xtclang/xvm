@@ -7,8 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Op;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.asm.ast.BinaryAST.NodeType.RegisterExpr;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -100,9 +98,9 @@ public class RegisterAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        regId = readPackedInt(in);
+        throw new IllegalStateException("Use 'readExpr' instead");
     }
 
     @Override
@@ -111,9 +109,9 @@ public class RegisterAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        throw new UnsupportedOperationException("Use 'writeExpr' instead");
+        throw new IllegalStateException("Use 'writeExpr' instead");
     }
 
     @Override

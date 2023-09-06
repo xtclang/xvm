@@ -19,7 +19,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.ast.AssignAST;
 import org.xvm.asm.ast.AssignAST.Operator;
 import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 

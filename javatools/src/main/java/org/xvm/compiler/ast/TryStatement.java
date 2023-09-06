@@ -15,7 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.TryCatchStmtAST;
 
 import org.xvm.asm.ast.TryFinallyStmtAST;

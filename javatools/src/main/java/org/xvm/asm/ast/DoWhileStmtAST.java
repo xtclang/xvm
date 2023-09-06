@@ -32,7 +32,7 @@ public class DoWhileStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
         body = readAST(in, res);
@@ -49,9 +49,8 @@ public class DoWhileStmtAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
         writeAST(body, out, res);
         writeExprAST(cond, out, res);
     }

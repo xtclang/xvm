@@ -34,7 +34,7 @@ import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ConvertExprAST;
 import org.xvm.asm.ast.InvokeExprAST;
 import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.OuterExprAST;
 import org.xvm.asm.ast.RegisterAST;
 

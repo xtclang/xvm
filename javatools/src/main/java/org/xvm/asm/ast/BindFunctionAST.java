@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static org.xvm.asm.ast.BinaryAST.ExprAST;
 import static org.xvm.asm.ast.BinaryAST.NodeType.BindFunctionExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -69,7 +68,7 @@ public class BindFunctionAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         target = readExprAST(in, res);
 
@@ -96,7 +95,7 @@ public class BindFunctionAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         target.writeExpr(out, res);
 

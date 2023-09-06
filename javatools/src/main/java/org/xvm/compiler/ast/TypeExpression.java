@@ -5,7 +5,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 

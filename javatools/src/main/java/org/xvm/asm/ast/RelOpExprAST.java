@@ -19,8 +19,8 @@ public class RelOpExprAST<C>
 
     RelOpExprAST() {}
 
-    public RelOpExprAST(C type, Operator op, ExprAST<C> expr1, ExprAST<C> expr2) {
-        super(op, expr1, expr2);
+    public RelOpExprAST(ExprAST<C> expr1, Operator op, ExprAST<C> expr2, C type) {
+        super(expr1, op, expr2);
 
         assert type != null;
         this.type = type;
@@ -38,9 +38,9 @@ public class RelOpExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        super.read(in, res);
+        super.readBody(in, res);
 
         type = res.getConstant(readMagnitude(in));
     }
@@ -53,9 +53,9 @@ public class RelOpExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        super.write(out, res);
+        super.writeBody(out, res);
 
         writePackedLong(out, res.indexOf(type));
     }

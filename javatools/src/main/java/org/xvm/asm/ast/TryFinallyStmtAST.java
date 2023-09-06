@@ -25,7 +25,7 @@ public class TryFinallyStmtAST<C>
 
         assert catchAll != null;
 
-        this.catchAll  = catchAll;
+        this.catchAll = catchAll;
     }
 
     public BinaryAST<C> getCatchAll() {
@@ -38,11 +38,11 @@ public class TryFinallyStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        super.read(in, res);
+        super.readBody(in, res);
 
-        catchAll  = readAST(in, res);
+        catchAll = readAST(in, res);
     }
 
     @Override
@@ -53,9 +53,9 @@ public class TryFinallyStmtAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        super.write(out, res);
+        super.writeBody(out, res);
 
         catchAll.write(out, res);
     }

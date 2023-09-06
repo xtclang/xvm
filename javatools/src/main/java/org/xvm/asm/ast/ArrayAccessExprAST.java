@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 
 /**
  * A single dimensional array access expression.
@@ -50,7 +48,7 @@ public class ArrayAccessExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         array = readExprAST(in, res);
         index = readExprAST(in, res);
@@ -63,10 +61,8 @@ public class ArrayAccessExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         array.writeExpr(out, res);
         index.writeExpr(out, res);
     }

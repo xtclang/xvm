@@ -14,7 +14,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.ArrayAccessExprAST;
-import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -743,7 +743,7 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public BinaryAST.ExprAST<Constant> getExprAST()
+    public ExprAST<Constant> getExprAST()
         {
         if (indexes.size() == 1)
             {

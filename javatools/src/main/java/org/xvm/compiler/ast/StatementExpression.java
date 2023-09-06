@@ -8,6 +8,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.StmtExprAST;
 
 import org.xvm.asm.constants.TypeCollector;
@@ -273,7 +274,7 @@ public class StatementExpression
         }
 
     @Override
-    public BinaryAST.ExprAST<Constant> getExprAST()
+    public ExprAST<Constant> getExprAST()
         {
         return new StmtExprAST<>(m_astBody, getTypes());
         }

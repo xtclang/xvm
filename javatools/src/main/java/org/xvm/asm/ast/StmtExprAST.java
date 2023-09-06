@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.asm.ast.BinaryAST.NodeType.StmtExpr;
 
 
@@ -48,7 +46,7 @@ public class StmtExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         stmt  = readAST(in, res);
         types = readConstArray(in, res);
@@ -61,9 +59,8 @@ public class StmtExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
         stmt.write(out, res);
         writeConstArray(types, out, res);
     }

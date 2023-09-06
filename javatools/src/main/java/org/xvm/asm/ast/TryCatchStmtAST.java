@@ -54,7 +54,7 @@ public class TryCatchStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         resources = readExprArray(in, res);
         body      = readAST(in, res);
@@ -69,10 +69,8 @@ public class TryCatchStmtAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         writeExprArray(resources, out, res);
         body.write(out, res);
         writeASTArray(catches, out, res);

@@ -39,7 +39,7 @@ public class StmtBlockAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
         stmts = readASTArray(in, res);
@@ -59,9 +59,14 @@ public class StmtBlockAST<C>
         if (stmts.length == 0) {
             out.writeByte(None.ordinal());
         } else {
-            out.writeByte(nodeType().ordinal());
-            writeASTArray(stmts, out, res);
+            super.write(out, res);
         }
+    }
+
+    @Override
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+            throws IOException {
+        writeASTArray(stmts, out, res);
     }
 
     @Override

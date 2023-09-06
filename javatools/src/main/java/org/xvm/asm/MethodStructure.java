@@ -40,7 +40,6 @@ import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.BinaryAST.ConstantResolver;
-import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Nop;
@@ -694,7 +693,7 @@ public class MethodStructure
         }
 
     /**
-     * @return the root LanguageNode, or null if none
+     * @return the root BinaryAST, or null if none
      */
     public BinaryAST<Constant> getAst()
         {
@@ -731,7 +730,7 @@ public class MethodStructure
         }
 
     /**
-     * @param ast  the root LanguageNode
+     * @param ast  the root BinaryAST
      */
     public void setAst(BinaryAST<Constant> ast)
         {

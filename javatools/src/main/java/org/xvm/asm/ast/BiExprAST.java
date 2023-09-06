@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -17,8 +15,8 @@ import static org.xvm.util.Handy.writePackedLong;
 public abstract class BiExprAST<C>
         extends ExprAST<C> {
 
-    private Operator   op;
     private ExprAST<C> expr1;
+    private Operator   op;
     private ExprAST<C> expr2;
 
     public enum Operator {
@@ -63,19 +61,19 @@ public abstract class BiExprAST<C>
 
     BiExprAST() {}
 
-    protected BiExprAST(Operator op, ExprAST<C> expr1, ExprAST<C> expr2) {
-        assert op != null && expr1 != null && expr2 != null;
-        this.op    = op;
+    protected BiExprAST(ExprAST<C> expr1, Operator op, ExprAST<C> expr2) {
+        assert expr1 != null && op != null && expr2 != null;
         this.expr1 = expr1;
+        this.op    = op;
         this.expr2 = expr2;
-    }
-
-    public Operator getOp() {
-        return op;
     }
 
     public ExprAST<C> getExpr1() {
         return expr1;
+    }
+
+    public Operator getOp() {
+        return op;
     }
 
     public ExprAST<C> getExpr2() {
@@ -89,10 +87,10 @@ public abstract class BiExprAST<C>
     public abstract NodeType nodeType();
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        op    = Operator.values()[readMagnitude(in)];
         expr1 = readExprAST(in, res);
+        op    = Operator.values()[readMagnitude(in)];
         expr2 = readExprAST(in, res);
     }
 
@@ -103,12 +101,10 @@ public abstract class BiExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
-        writePackedLong(out, op.ordinal());
         expr1.writeExpr(out, res);
+        writePackedLong(out, op.ordinal());
         expr2.writeExpr(out, res);
     }
 

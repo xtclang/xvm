@@ -22,7 +22,7 @@ public class IsExprAST<C>
     IsExprAST() {}
 
     public IsExprAST(C typeOfType, ExprAST<C> expr1, ExprAST<C> expr2) {
-        super(Operator.Is, expr1, expr2);
+        super(expr1, Operator.Is, expr2);
 
         this.typeOfType = typeOfType;
     }
@@ -54,9 +54,9 @@ public class IsExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        super.read(in, res);
+        super.readBody(in, res);
 
         if (readMagnitude(in) != 0) {
             typeOfType  = res.getConstant(readMagnitude(in));
@@ -74,9 +74,9 @@ public class IsExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        super.write(out, res);
+        super.writeBody(out, res);
 
         if (typeOfType == null) {
             writePackedLong(out, 0);

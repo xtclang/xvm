@@ -24,10 +24,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.BindFunctionAST;
 import org.xvm.asm.ast.BindMethodAST;
 import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;

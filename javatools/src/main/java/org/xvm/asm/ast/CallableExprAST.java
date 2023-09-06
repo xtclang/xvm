@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.util.Handy.indentLines;
 
 
@@ -26,9 +24,7 @@ public abstract class CallableExprAST<C>
     }
 
     /**
-     * Construct an InvokeExprAST.
-     *
-     * @param target  could be null for function calls
+     * Construct an CallableExprAST.
      */
     protected CallableExprAST(C[] retTypes, ExprAST<C>[] args) {
         assert retTypes != null && Arrays.stream(retTypes).allMatch(Objects::nonNull);
@@ -56,7 +52,7 @@ public abstract class CallableExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         retTypes = readConstArray(in, res);
         args     = readExprArray(in, res);
@@ -69,10 +65,8 @@ public abstract class CallableExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         writeConstArray(retTypes, out, res);
         writeExprArray(args, out, res);
     }

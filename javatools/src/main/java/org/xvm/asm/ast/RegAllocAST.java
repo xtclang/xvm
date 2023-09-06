@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.asm.ast.BinaryAST.NodeType.NamedRegAlloc;
 import static org.xvm.asm.ast.BinaryAST.NodeType.RegAlloc;
 
@@ -83,13 +81,7 @@ public class RegAllocAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
-            throws IOException {
-        readExpr(in, res);
-    }
-
-    @Override
-    protected void readExpr(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         assert reg == NAMED || reg == UNNAMED;
 
@@ -113,20 +105,7 @@ public class RegAllocAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
-            throws IOException {
-        out.writeByte(nodeType().ordinal());
-        writeBody(out, res);
-    }
-
-    @Override
-    public void writeExpr(DataOutput out, ConstantResolver<C> res)
-            throws IOException {
-        writePackedLong(out, nodeType().ordinal());
-        writeBody(out, res);
-    }
-
-    private void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         // what is notable about the serialization format is that it does *not* include the register
         // id (number); register ids are required to be gap-less and ascending, so the id can be

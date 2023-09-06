@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.indentLines;
 public class ReturnStmtAST<C>
         extends BinaryAST<C> {
 
-    private NodeType     nodeType;
+    private final NodeType nodeType;
     private ExprAST<C>[] exprs;
 
     ReturnStmtAST(NodeType nodeType) {
@@ -53,7 +53,7 @@ public class ReturnStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         switch (nodeType) {
         case Return0Stmt:
@@ -78,9 +78,8 @@ public class ReturnStmtAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType.ordinal());
         switch (nodeType) {
         case Return0Stmt:
             break;

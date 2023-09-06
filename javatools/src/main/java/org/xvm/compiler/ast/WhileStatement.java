@@ -20,9 +20,9 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-import org.xvm.asm.ast.DoWhileStmtAST;
 import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.DoWhileStmtAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.LoopStmtAST;
 import org.xvm.asm.ast.WhileStmtAST;
 

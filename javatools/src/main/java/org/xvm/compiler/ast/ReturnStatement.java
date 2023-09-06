@@ -13,8 +13,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ReturnStmtAST;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;

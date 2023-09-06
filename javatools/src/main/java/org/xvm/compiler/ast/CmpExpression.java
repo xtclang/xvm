@@ -12,7 +12,7 @@ import org.xvm.asm.OpTest;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CondOpExprAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -586,7 +586,7 @@ public class CmpExpression
             case COMP_ORD  -> Operator.CompOrd;
             default -> throw new UnsupportedOperationException(operator.getValueText());
             };
-        return new CondOpExprAST<>(op, expr1.getExprAST(), expr2.getExprAST());
+        return new CondOpExprAST<>(expr1.getExprAST(), op, expr2.getExprAST());
         }
 
 

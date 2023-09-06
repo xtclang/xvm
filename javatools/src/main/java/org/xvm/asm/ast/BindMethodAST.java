@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import static org.xvm.asm.ast.BinaryAST.ExprAST;
 import static org.xvm.asm.ast.BinaryAST.NodeType.BindMethodExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -58,7 +57,7 @@ public class BindMethodAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         target = readExprAST(in, res);
         method = res.getConstant(readMagnitude(in));
@@ -73,7 +72,7 @@ public class BindMethodAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         target.writeExpr(out, res);
         writePackedLong(out, res.indexOf(method));

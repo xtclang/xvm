@@ -26,7 +26,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;

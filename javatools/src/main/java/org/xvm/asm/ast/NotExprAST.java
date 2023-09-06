@@ -31,9 +31,9 @@ public class NotExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        super.read(in, res);
+        super.readBody(in, res);
 
         booleanType = res.typeForName("Boolean");
     }

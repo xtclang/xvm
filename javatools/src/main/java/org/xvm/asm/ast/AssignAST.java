@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.asm.ast.BinaryAST.NodeType.Assign;
 import static org.xvm.asm.ast.BinaryAST.NodeType.BinOpAssign;
 
@@ -101,18 +99,13 @@ public class AssignAST<C>
         return lhs.getType(i);
     }
 
-    @Override public NodeType nodeType() {
+    @Override
+    public NodeType nodeType() {
         return op == Operator.Asn ? Assign : BinOpAssign;
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
-            throws IOException {
-        readExpr(in, res);
-    }
-
-    @Override
-    protected void readExpr(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         lhs = readExprAST(in, res);
         if (nodeType() != Assign) {
@@ -128,20 +121,7 @@ public class AssignAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
-            throws IOException {
-        out.writeByte(nodeType().ordinal());
-        writeBody(out, res);
-    }
-
-    @Override
-    public void writeExpr(DataOutput out, ConstantResolver<C> res)
-            throws IOException {
-        writePackedLong(out, nodeType().ordinal());
-        writeBody(out, res);
-    }
-
-    private void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         lhs.writeExpr(out, res);
         if (nodeType() != Assign) {

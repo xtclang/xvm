@@ -22,7 +22,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.NotImplAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -1181,7 +1181,7 @@ public abstract class Expression
      * <p/>
      * This method must not be called until after the expression has been validated.
      *
-     * @return an "AST node" from the expression branch of the LanguageNode hierarchy of classes
+     * @return an "AST node" from the expression branch of the BinaryAST hierarchy of classes
      */
     public ExprAST<Constant> getExprAST()
         {

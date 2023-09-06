@@ -50,18 +50,18 @@ public class PropertyExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        super.read(in, res);
+        super.readBody(in, res);
 
         property = res.getConstant(readMagnitude(in));
         type     = res.typeOf(property);
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        super.write(out, res);
+        super.writeBody(out, res);
 
         writePackedLong(out, res.indexOf(property));
     }

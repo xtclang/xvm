@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -62,7 +60,7 @@ public class MapExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         type   = res.getConstant(readMagnitude(in));
         keys   = readExprArray(in, res);
@@ -77,10 +75,8 @@ public class MapExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         writePackedLong(out, res.indexOf(type));
         writeExprArray(keys, out, res);
         writeExprArray(values, out, res);

@@ -8,7 +8,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CondOpExprAST;
 import org.xvm.asm.ast.DivRemExprAST;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.RelOpExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -134,7 +134,7 @@ public abstract class BiExpression
                 return new DivRemExprAST<>(getTypes(), ast1, ast2);
 
             case COND_XOR:
-                return new CondOpExprAST<>(Operator.CondXor, ast1, ast2);
+                return new CondOpExprAST<>(ast1, Operator.CondXor, ast2);
 
             case COLON:
                 op = Operator.Else;
@@ -199,7 +199,7 @@ public abstract class BiExpression
             {
             typeResult = pool().typeObject();
             }
-        return new RelOpExprAST<>(typeResult, op, ast1, ast2);
+        return new RelOpExprAST<>(ast1, op, ast2, typeResult);
         }
 
 

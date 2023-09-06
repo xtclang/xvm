@@ -17,7 +17,7 @@ public class DivRemExprAST<C>
     DivRemExprAST() {}
 
     public DivRemExprAST(Object[] types, ExprAST<C> expr1, ExprAST<C> expr2) {
-        super(Operator.DivRem, expr1, expr2);
+        super(expr1, Operator.DivRem, expr2);
 
         assert types != null && types.length == 2;
         this.types = types;
@@ -39,9 +39,9 @@ public class DivRemExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        super.read(in, res);
+        super.readBody(in, res);
 
         types = readConstArray(in, res);
     }
@@ -54,9 +54,9 @@ public class DivRemExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        super.write(out, res);
+        super.writeBody(out, res);
 
         writeConstArray(types, out, res);
     }

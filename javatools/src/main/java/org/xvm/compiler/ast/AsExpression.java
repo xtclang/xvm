@@ -7,7 +7,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.RelOpExprAST;
 
 import org.xvm.asm.constants.CastTypeConstant;
@@ -148,7 +148,7 @@ public class AsExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        return new RelOpExprAST<>(getType(), Operator.As, expr1.getExprAST(), expr2.getExprAST());
+        return new RelOpExprAST<>(expr1.getExprAST(), Operator.As, expr2.getExprAST(), getType());
         }
 
     private TypeConstant getTargetType()

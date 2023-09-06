@@ -14,8 +14,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.TupleExprAST;
 
 import org.xvm.asm.constants.ArrayConstant;

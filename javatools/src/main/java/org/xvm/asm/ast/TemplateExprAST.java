@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.Objects;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 
 /**
@@ -45,7 +44,7 @@ public class TemplateExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         exprs = readExprArray(in, res);
 
@@ -58,10 +57,8 @@ public class TemplateExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         writeExprArray(exprs, out, res);
     }
 

@@ -58,7 +58,7 @@ public class IfStmtAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
         cond = readExprAST(in, res);
@@ -89,9 +89,8 @@ public class IfStmtAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
         writeExprAST(cond, out, res);
         writeAST(thenStmt, out, res);
         if (hasElse) {

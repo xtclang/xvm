@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
-
 
 /**
  * A base class for expressions that follow the pattern "expression operator expression".
@@ -55,7 +53,7 @@ public class TernaryExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         cond     = readExprAST(in, res);
         exprThen = readExprAST(in, res);
@@ -70,9 +68,8 @@ public class TernaryExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
         cond    .writeExpr(out, res);
         exprThen.writeExpr(out, res);
         exprElse.writeExpr(out, res);

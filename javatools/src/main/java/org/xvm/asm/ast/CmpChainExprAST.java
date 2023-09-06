@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -64,7 +63,7 @@ public class CmpChainExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         int count = readMagnitude(in);
 
@@ -87,10 +86,8 @@ public class CmpChainExprAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
         int count = exprs.length;
         writePackedLong(out, count);
         for (ExprAST expr : exprs) {

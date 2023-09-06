@@ -16,8 +16,8 @@ public class CondOpExprAST<C>
 
     CondOpExprAST() {}
 
-    public CondOpExprAST(Operator op, ExprAST<C> expr1, ExprAST<C> expr2) {
-        super(op, expr1, expr2);
+    public CondOpExprAST(ExprAST<C> expr1, Operator op, ExprAST<C> expr2) {
+        super(expr1, op, expr2);
 
         assert switch (op) {
             case CondOr, CondXor, CondAnd, CompEq, CompNeq,
@@ -39,9 +39,9 @@ public class CondOpExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        super.read(in, res);
+        super.readBody(in, res);
 
         type = switch (getOp())
             {

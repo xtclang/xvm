@@ -24,28 +24,21 @@ public abstract class BinaryAST<C> {
     /**
      * @return the byte value (as an int in the range 0..255) that indicates the node type
      */
-    public NodeType nodeType() {
-        reportUnimplemented("TODO implement nodeType() for " + this.getClass().getSimpleName());
-        return NodeType.NotImplYet;
-    }
+    protected abstract NodeType nodeType();
 
     /**
-     * Populate the LanguageNode with data from the passed stream.
+     * Populate the BinaryAST with data from the passed stream.
      *
      * @param in   the stream to read from
      * @param res  the ConstantResolver to use to look up constants
      */
-    public void read(DataInput in, ConstantResolver<C> res)
-            throws IOException {
-        reportUnimplemented("TODO implement read() for " + this.getClass().getSimpleName());
-    }
+    protected abstract void readBody(DataInput in, ConstantResolver<C> res)
+            throws IOException;
 
     /**
      * @param res  the ConstantResolver to register constants on
      */
-    public void prepareWrite(ConstantResolver<C> res) {
-        reportUnimplemented("TODO implement prepareWrite() for " + this.getClass().getSimpleName());
-    }
+    public abstract void prepareWrite(ConstantResolver<C> res);
 
     /**
      * Write the node to the provided stream.
@@ -54,8 +47,17 @@ public abstract class BinaryAST<C> {
      */
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        reportUnimplemented("TODO implement write() for " + this.getClass().getSimpleName());
+        out.writeByte(nodeType().ordinal());
+        writeBody(out, res);
     }
+
+    /**
+     * Write the "body" (the contents) of the node to the provided stream.
+     *
+     * @param out  a DataOutput stream
+     */
+    protected abstract void writeBody(DataOutput out, ConstantResolver<C> res)
+            throws IOException;
 
     /**
      * @return a String describing this node and its tree of contained nodes, for debugging purposes
@@ -72,63 +74,6 @@ public abstract class BinaryAST<C> {
     public String toString() {
         reportUnimplemented("TODO implement toString() for " + this.getClass().getSimpleName());
         return nodeType().name();
-    }
-
-
-    // ----- expression AST interface --------------------------------------------------------------
-
-    /**
-     * Class hierarchy root for all expressions.
-     */
-    public abstract static class ExprAST<C> extends BinaryAST<C> {
-        /**
-         * @return the number of values yielded by the expression
-         */
-        public int getCount() {
-            // subclasses that can yield more than one value must override this
-            return 1;
-        }
-
-        /**
-         * @param i  a value in the range {@code 0 ..< getCount()}
-         *
-         * @return the type constant of the i-th value yielded by the expression
-         */
-        public abstract C getType(int i);
-
-        /**
-         * @return true iff this expression can theoretically be used as an L-Value; this is
-         *         primarily intended to be used by assertions
-         */
-        public boolean isAssignable() {
-            return false;
-        }
-
-        /**
-         * Read the "expression short form" formatted data. The short form identifier in the range
-         * 0..30 has already been consumed.
-         */
-        protected void readExpr(DataInput in, ConstantResolver<C> res)
-                throws IOException {
-            if (nodeType().ordinal() <= NodeType.Escape.ordinal()) {
-                throw new UnsupportedOperationException("nodeType=" + nodeType());
-            }
-
-            read(in, res);
-        }
-
-        /**
-         * Write the "expression short form" formatted data.
-         */
-        protected void writeExpr(DataOutput out, ConstantResolver<C> res)
-                throws IOException {
-            if (nodeType().ordinal() <= NodeType.Escape.ordinal()) {
-                throw new UnsupportedOperationException("nodeType=" + nodeType());
-            }
-
-            writePackedLong(out, NodeType.Escape.ordinal());
-            write(out, res);
-        }
     }
 
 
@@ -337,7 +282,7 @@ public abstract class BinaryAST<C> {
      * @return the node deserialized from the stream
      *
      * @param <C> the class representing constants in the pool
-     * @param <N> the class representing the expected LanguageNode sub-class
+     * @param <N> the class representing the expected BinaryAST sub-class
      *
      * @throws IOException  indicates a corrupt stream
      */
@@ -347,7 +292,7 @@ public abstract class BinaryAST<C> {
         if (node == null) {
             node = (N) new StmtBlockAST<C>(NO_ASTS);
         } else {
-            node.read(in, res);
+            node.readBody(in, res);
         }
         return node;
     }
@@ -421,14 +366,14 @@ public abstract class BinaryAST<C> {
         }
 
         N node = (N) nodeType.instantiate();
-        node.readExpr(in, res);
+        node.readBody(in, res);
         return node;
     }
 
     protected static <C> void writeExprAST(ExprAST<C> node, DataOutput out, ConstantResolver<C> res)
         throws IOException {
         if (node == null) {
-            out.writeByte(NodeType.None.ordinal());
+            writePackedLong(out, NodeType.None.ordinal());
         } else {
             node.writeExpr(out, res);
         }

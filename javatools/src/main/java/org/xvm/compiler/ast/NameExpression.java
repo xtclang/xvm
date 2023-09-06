@@ -27,8 +27,8 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
-import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.OuterExprAST;
 import org.xvm.asm.ast.PropertyExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST;
