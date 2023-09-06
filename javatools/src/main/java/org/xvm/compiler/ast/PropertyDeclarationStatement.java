@@ -755,13 +755,13 @@ public class PropertyDeclarationStatement
             ConstantPool     pool            = pool();
             PropertyConstant idProp          = (PropertyConstant) exprProp.getIdentity(ctx);
             TypeConstant     typeVar         = idProp.getRefType(ctx.getThisType().ensureAccess(Access.PRIVATE));
-            Register         regPropRef      = new Register(typeVar, Op.A_STACK);
-            Register         regAssigned     = new Register(pool.typeBoolean(), Op.A_STACK);
+            Register         regPropRef      = new Register(typeVar, null, Op.A_STACK);
+            Register         regAssigned     = new Register(pool.typeBoolean(), null, Op.A_STACK);
             Label            labelSkipAssign = new Label("skip_assign_" + idProp.getName());
             PropertyConstant idAssigned      = typeVar.ensureTypeInfo(errs)
                                                .findProperty("assigned").getIdentity();
 
-            Register regThis = ctx.generateThisRegister(code);
+            Register regThis = ctx.getThisRegister();
 
             code.add(new P_Var(idProp, regThis, regPropRef));
             code.add(new P_Get(idAssigned, regPropRef, regAssigned));

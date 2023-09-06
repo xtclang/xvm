@@ -20,9 +20,9 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ConditionAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.DoWhileStmtAST;
-import org.xvm.asm.ast.LanguageAST;
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.LoopStmtAST;
 import org.xvm.asm.ast.WhileStmtAST;
 
@@ -163,10 +163,11 @@ public class WhileStatement
             // this occurs only during validate()
             assert m_ctxLabelVars != null;
 
-            String sLabel = ((LabeledStatement) getParent()).getName();
-            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
+            String sLabel   = ((LabeledStatement) getParent()).getName();
+            String sRegName = sLabel + '.' + sName;
+            Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sRegName);
 
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64());
+            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sRegName);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             if (fFirst)
@@ -783,10 +784,10 @@ public class WhileStatement
      */
     private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean                 fCompletes = fReachable;
-        AstHolder               holder     = ctx.getHolder();
-        int                     cConds     = getConditionCount();
-        LanguageAST<Constant>[] aCondASTs  = new LanguageAST[cConds];
+        boolean             fCompletes = fReachable;
+        AstHolder           holder     = ctx.getHolder();
+        int                 cConds     = getConditionCount();
+        ExprAST<Constant>[] aCondASTs  = new ExprAST[cConds];
 
         for (int i = 0; i < cConds; ++i)
             {
@@ -808,7 +809,7 @@ public class WhileStatement
                         ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
                         : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
                     }
-                aCondASTs[i] = holder.getAst(stmtCond);
+                aCondASTs[i] = (ExprAST<Constant>) holder.getAst(stmtCond);
                 }
             else
                 {
@@ -827,7 +828,7 @@ public class WhileStatement
                 }
             }
 
-        m_astCond = new ConditionAST<>(aCondASTs);
+        m_astCond = BinaryAST.makeCondition(aCondASTs);
         return fCompletes;
         }
 
@@ -900,9 +901,9 @@ public class WhileStatement
     private transient List<Entry<AstNode, Map<String, Assignment>>> m_listContinues;
 
     /**
-     * ConditionAST produced by {@link #emitConditionTest}.
+     * ExprAST produced by {@link #emitConditionTest}.
      */
-    private transient ConditionAST<Constant> m_astCond;
+    private transient ExprAST<Constant> m_astCond;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
     }

@@ -5,37 +5,35 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
 import org.xvm.util.Handy;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.IF_ELSE_STMT;
-import static org.xvm.asm.ast.LanguageAST.NodeType.IF_THEN_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.IfElseStmt;
+import static org.xvm.asm.ast.BinaryAST.NodeType.IfThenStmt;
 
 
 /**
- * Zero or more nested statements.
+ * Supports the "if..then" and "if..then..else" statements.
  */
 public class IfStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
-    private ConditionAST<C> cond;
-    private StmtAST<C>      thenStmt;
-    private boolean         noElse;
-    private StmtAST<C>      elseStmt;
+    private ExprAST<C>   cond;
+    private BinaryAST<C> thenStmt;
+    private boolean      hasElse;
+    private BinaryAST<C> elseStmt;
 
     IfStmtAST(boolean hasElse) {
-        noElse = !hasElse;
+        this.hasElse = hasElse;
     }
 
-    public IfStmtAST(ConditionAST<C> cond, StmtAST<C> thenStmt) {
+    public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt) {
         assert cond != null && thenStmt != null;
         this.cond     = cond;
         this.thenStmt = thenStmt;
-        this.noElse   = true;
+        this.hasElse  = false;
     }
 
-    public IfStmtAST(ConditionAST<C> cond, StmtAST<C> thenStmt, StmtAST<C> elseStmt) {
+    public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt, BinaryAST<C> elseStmt) {
         assert cond != null && thenStmt != null && elseStmt != null;
         this.cond     = cond;
         this.thenStmt = thenStmt;
@@ -44,49 +42,60 @@ public class IfStmtAST<C>
 
     @Override
     public NodeType nodeType() {
-        return noElse ? IF_THEN_STMT : IF_ELSE_STMT;
+        return hasElse ? IfElseStmt : IfThenStmt;
     }
 
-    public ConditionAST<C> getCond() {
+    public ExprAST<C> getCond() {
         return cond;
     }
 
-    public StmtAST<C> getThen() {
+    public BinaryAST<C> getThen() {
         return thenStmt;
     }
 
-    public StmtAST<C> getElse() {
+    public BinaryAST<C> getElse() {
         return elseStmt;
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond     = new ConditionAST<>(in, res);
-        thenStmt = deserialize(in, res);
-        if (!noElse) {
-            elseStmt = deserialize(in, res);
+        res.enter();
+        cond = readExprAST(in, res);
+        res.enter();
+        thenStmt = readAST(in, res);
+        res.exit();
+        if (hasElse) {
+            res.enter();
+            elseStmt = readAST(in, res);
+            res.exit();
         }
+        res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        cond.prepareWrite(res);
-        thenStmt.prepareWrite(res);
-        if (!noElse) {
-            elseStmt.prepareWrite(res);
+        res.enter();
+        prepareAST(cond, res);
+        res.enter();
+        prepareAST(thenStmt, res);
+        res.exit();
+        if (hasElse) {
+            res.enter();
+            prepareAST(elseStmt, res);
+            res.exit();
         }
+        res.exit();
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
-        cond.write(out, res);
-        thenStmt.write(out, res);
-        if (!noElse) {
-            elseStmt.write(out, res);
+        writeExprAST(cond, out, res);
+        writeAST(thenStmt, out, res);
+        if (hasElse) {
+            writeAST(elseStmt, out, res);
         }
     }
 
@@ -96,7 +105,7 @@ public class IfStmtAST<C>
         buf.append(this);
         buf.append('\n').append(Handy.indentLines(cond.dump(), "  "));
         buf.append("\nthen\n").append(Handy.indentLines(thenStmt.dump(), "  "));
-        if (!noElse) {
+        if (hasElse) {
             buf.append("\nelse\n").append(Handy.indentLines(elseStmt.dump(), "  "));
         }
         return buf.toString();

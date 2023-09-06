@@ -3140,10 +3140,10 @@ public class TypeCompositionStatement
 
                             TypeConstant typeConstraint = entry.getValue().getType();
 
-                            Register regActualType = new Register(typeConstraint, Op.A_STACK);
+                            Register regActualType = new Register(typeConstraint, null, Op.A_STACK);
                             code.add(new L_Get(propFormal.getIdentity(), regActualType));
 
-                            Register regIs = new Register(pool.typeBoolean(), Op.A_STACK);
+                            Register regIs = new Register(pool.typeBoolean(), null, Op.A_STACK);
                             code.add(new IsType(regActualType, typeConstraint, regIs));
                             code.add(new JumpFalse(regIs, labelSkipSuper));
                             }

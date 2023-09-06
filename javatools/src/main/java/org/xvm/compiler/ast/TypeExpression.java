@@ -5,7 +5,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -266,7 +266,7 @@ public abstract class TypeExpression
     public ExprAST<Constant> getExprAST()
         {
         TypeConstant type = getType();
-        return new ConstantExprAST<>(type, type);
+        return new ConstantExprAST<>(type);
         }
 
     /**

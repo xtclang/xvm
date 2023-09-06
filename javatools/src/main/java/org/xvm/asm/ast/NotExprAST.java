@@ -9,14 +9,14 @@ import java.io.IOException;
  * A Boolean "not" (!) expression.
  */
 public class NotExprAST<C>
-        extends PrefixExprAST<C> {
-
+        extends DelegatingExprAST<C>
+    {
     private transient C booleanType;
 
     NotExprAST() {}
 
     public NotExprAST(ExprAST<C> expr) {
-        super(Operator.Not, expr);
+        super(expr);
     }
 
     @Override

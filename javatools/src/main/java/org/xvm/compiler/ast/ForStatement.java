@@ -19,12 +19,11 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ConditionAST;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ForStmtAST;
-import org.xvm.asm.ast.LanguageAST;
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
 import org.xvm.asm.ast.StmtBlockAST;
+
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.asm.op.Enter;
@@ -270,7 +269,7 @@ public class ForStatement
             String sLabel = ((LabeledStatement) getParent()).getName();
             Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
 
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64());
+            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sLabel + '.' + sName);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             if (fFirst)
@@ -627,7 +626,7 @@ public class ForStatement
         List<Statement> listInit   = init;
         int             cInit      = listInit.size();
         Label[]         aInitLabel = m_alabelInitGround;
-        StmtAST[]       aAstInit   = new StmtAST[cInit];
+        BinaryAST[]     aAstInit   = new BinaryAST[cInit];
         for (int i = 0; i < cInit; ++i)
             {
             Statement stmt = listInit.get(i);
@@ -672,8 +671,8 @@ public class ForStatement
                 }
             }
 
-        boolean                 fBlockReachable = fCompletes;
-        LanguageAST<Constant>[] aCondAST        = null;
+        boolean             fBlockReachable = fCompletes;
+        ExprAST<Constant>[] aCondAST        = null;
 
         if (fAlwaysFalse)
             {
@@ -685,12 +684,12 @@ public class ForStatement
             }
         else if (fAlwaysTrue)
             {
-            aCondAST = new LanguageAST[0];
+            aCondAST = BinaryAST.NO_EXPRS;
             }
         else
             {
             int cConds = getConditionCount();
-            aCondAST = new LanguageAST[cConds];
+            aCondAST = new ExprAST[cConds];
             for (int i = 0; i < cConds; ++i)
                 {
                 AstNode cond = getCondition(i);
@@ -702,7 +701,7 @@ public class ForStatement
                             ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
                             : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
 
-                    aCondAST[i] = holder.getAst(stmtCond);
+                    aCondAST[i] = (ExprAST<Constant>) holder.getAst(stmtCond);
                     }
                 else
                     {
@@ -724,7 +723,7 @@ public class ForStatement
 
         fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
-        StmtAST<Constant> astBody = fAlwaysFalse ? null : holder.getAst(block);
+        BinaryAST<Constant> astBody = fAlwaysFalse ? null : holder.getAst(block);
 
         if (hasContinueLabel())
             {
@@ -734,7 +733,7 @@ public class ForStatement
         List<Statement> listUpdate   = update;
         int             cUpdate      = listUpdate.size();
         Label[]         aUpdateLabel = m_alabelUpdateGround;
-        StmtAST[]       aAstUpdate   = new StmtAST[cUpdate];
+        BinaryAST[]       aAstUpdate   = new BinaryAST[cUpdate];
         for (int i = 0; i < cUpdate; ++i)
             {
             Statement stmt = listUpdate.get(i);
@@ -776,7 +775,10 @@ public class ForStatement
         if (!fAlwaysFalse)
             {
             holder.setAst(this,
-                    new ForStmtAST<>(aAstInit, new ConditionAST<>(aCondAST), aAstUpdate, astBody));
+                    new ForStmtAST<>(BinaryAST.makeStatement(aAstInit),
+                                     BinaryAST.makeCondition(aCondAST),
+                                     BinaryAST.makeStatement(aAstUpdate),
+                                     astBody));
             }
         return !fAlwaysTrue && fCompletes;
         }

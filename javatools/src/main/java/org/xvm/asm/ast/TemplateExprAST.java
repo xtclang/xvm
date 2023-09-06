@@ -7,7 +7,7 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.Objects;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 
 /**
@@ -54,7 +54,7 @@ public class TemplateExprAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        prepareWriteASTArray(res, exprs);
+        prepareASTArray(exprs, res);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class TemplateExprAST<C>
             throws IOException {
         out.writeByte(nodeType().ordinal());
 
-        writeASTArray(out, res, exprs);
+        writeExprArray(exprs, out, res);
     }
 
     @Override

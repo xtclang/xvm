@@ -8,10 +8,10 @@ import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.NotExprAST;
-import org.xvm.asm.ast.PrefixExprAST.Operator;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -215,17 +215,17 @@ public abstract class PrefixExpression
                 op = Operator.Compl;
                 break;
             case INC:
-                op = Operator.Inc;
+                op = Operator.PreInc;
                 break;
             case DEC:
-                op = Operator.Dec;
+                op = Operator.PreDec;
                 break;
 
             default:
                 throw new UnsupportedOperationException(operator.getValueText());
             }
 
-        return new UnaryOpExprAST<>(getType(), op, expr.getExprAST());
+        return new UnaryOpExprAST<>(expr.getExprAST(), op, getType());
         }
 
 

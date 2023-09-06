@@ -7,9 +7,9 @@ import java.io.IOException;
 
 import org.xvm.asm.Op;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.RegisterExpr;
+import static org.xvm.asm.ast.BinaryAST.NodeType.RegisterExpr;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -22,7 +22,7 @@ public class RegisterAST<C>
         extends ExprAST<C> {
 
     /**
-     * A value that we will is illegal to use as a register id.
+     * A value that is illegal to use as a register id.
      */
     private static final int UNASSIGNED_ID = Integer.MAX_VALUE;
 
@@ -33,23 +33,25 @@ public class RegisterAST<C>
 
     RegisterAST() {}
 
-    public RegisterAST(C type) {
+    RegisterAST(C type) {
         this(type, null);
     }
 
-    public RegisterAST(C type, C name) {
+    RegisterAST(C type, C name) {
         assert type != null;
         this.type  = type;
         this.name  = name;
     }
 
     /**
+     * Special constructor used to create "special" registers and representation of parameters.
+     *
      * @param regId  the register id; a "special" (internal, hard-coded) register id is allowed
      * @param type   the type of the register, or null if not applicable
      * @param name   the type of the register, or null if not applicable
      */
     public RegisterAST(int regId, C type, C name) {
-        assert regId > Op.CONSTANT_OFFSET;
+        assert regId > Op.CONSTANT_OFFSET && regId < 255; // arbitrary temporary limit
         this.regId = regId;
         this.type  = type;
         this.name  = name;
@@ -87,6 +89,12 @@ public class RegisterAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        // we don't have information here that would allow us to exclude type params
+        return !isRegIdSpecial() || getRegId() == Op.A_IGNORE || getRegId() == Op.A_IGNORE_ASYNC;
+    }
+
+    @Override
     public NodeType nodeType() {
         return RegisterExpr;
     }
@@ -105,21 +113,22 @@ public class RegisterAST<C>
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        // REVIEW at some point, this method should not be being called at all, i.e. this should assert
-        out.writeByte(nodeType().ordinal());
-        writeExpr(out, res);
+        throw new UnsupportedOperationException("Use 'writeExpr' instead");
     }
 
     @Override
-    public void writeExpr(DataOutput out, ConstantResolver<C> res)
+    protected void writeExpr(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         writePackedLong(out, regId < 0 ? regId : 32 + regId);
     }
 
-    // TODO dump
+    @Override
+    public String dump() {
+        return "(" + type + ")#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
+    }
 
     @Override
     public String toString() {
-        return "#" + regId;
+        return "#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
     }
 }

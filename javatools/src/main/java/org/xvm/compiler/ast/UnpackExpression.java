@@ -9,7 +9,6 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;

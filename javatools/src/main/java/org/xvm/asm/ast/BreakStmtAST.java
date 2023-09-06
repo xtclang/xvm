@@ -5,9 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
-import static org.xvm.asm.ast.LanguageAST.NodeType.BREAK_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.BreakStmt;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -18,7 +16,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * is not 0) terminates an enclosing statement that is "depth" parent levels up from this AST node.
  */
 public class BreakStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
     private int depth;
 
@@ -33,7 +31,7 @@ public class BreakStmtAST<C>
 
     @Override
     public NodeType nodeType() {
-        return BREAK_STMT;
+        return BreakStmt;
     }
 
     /**
@@ -58,7 +56,6 @@ public class BreakStmtAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
         writePackedLong(out, depth);
     }
 

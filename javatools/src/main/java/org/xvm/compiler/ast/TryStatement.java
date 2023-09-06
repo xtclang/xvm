@@ -14,7 +14,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.TryCatchStmtAST;
 
 import org.xvm.asm.ast.TryFinallyStmtAST;
@@ -112,11 +113,12 @@ public class TryStatement
         Register reg = m_regFinallyException;
         if (reg == null)
             {
-            String sLabel = ((LabeledStatement) getParent()).getName();
-            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(),
-                    Id.IDENTIFIER, sLabel + '.' + sName);
+            String sLabel   = ((LabeledStatement) getParent()).getName();
+            String sRegName = sLabel + '.' + sName;
+            Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(),
+                    Id.IDENTIFIER, sRegName);
 
-            m_regFinallyException = reg = ctx.createRegister(pool().typeException१());
+            m_regFinallyException = reg = ctx.createRegister(pool().typeException१(), sRegName);
             m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
             }
 
@@ -341,10 +343,10 @@ public class TryStatement
         ConstantPool pool       = pool();
         AstHolder    holder     = ctx.getHolder();
 
-        StmtAST<Constant>[] aAstResources = null;
-        StmtAST<Constant>[] aAstCatches   = null;
-        StmtAST<Constant>   astCatchAll   = null;
-        StmtAST<Constant>   astBlock;
+        ExprAST<Constant>[]   aAstResources = null;
+        BinaryAST<Constant>[] aAstCatches   = null; // TODO GG what is this? the "catch()" or the "{...}" body thereof? because we need BOTH
+        BinaryAST<Constant>   astCatchAll   = null;
+        BinaryAST<Constant>   astBlock;
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyClose = null;
@@ -356,12 +358,12 @@ public class TryStatement
 
             int c = resources.size();
             aFinallyClose = new FinallyStart[c];
-            aAstResources = new StmtAST[c];
+            aAstResources = new ExprAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 Statement stmt = resources.get(i);
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                aAstResources[i] = holder.getAst(stmt);
+                aAstResources[i] = (ExprAST<Constant>) holder.getAst(stmt);
 
                 FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
                 aFinallyClose[i] = opFinally;
@@ -388,7 +390,7 @@ public class TryStatement
             {
             int c = catches.size();
             aCatchStart = new CatchStart[c];
-            aAstCatches = new StmtAST[c];
+            aAstCatches = new BinaryAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 CatchStatement stmt = catches.get(i);
@@ -413,7 +415,7 @@ public class TryStatement
             code.add(new GuardEnd(labelCatchEnd));
 
             int c = catches.size();
-            aAstCatches = new StmtAST[c];
+            aAstCatches = new BinaryAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 CatchStatement stmtCatch = catches.get(i);

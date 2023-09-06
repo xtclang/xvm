@@ -11,7 +11,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ThrowExprAST;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -399,9 +399,9 @@ public class ThrowExpression
             ConstantPool  pool    = pool();
             ClassConstant constEx = computeExceptionClass();
 
-            astEx  = new ConstantExprAST<>(constEx.getType(), constEx);
+            astEx  = new ConstantExprAST<>(constEx);
             astMsg = message == null
-                    ? new ConstantExprAST<>(pool.typeString(), pool.ensureStringConstant(computeMessage()))
+                    ? new ConstantExprAST<>(pool.ensureStringConstant(computeMessage()))
                     : message.getExprAST();
             }
 

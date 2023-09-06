@@ -8,9 +8,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
-import static org.xvm.asm.ast.LanguageAST.NodeType.STMT_BLOCK;
+import static org.xvm.asm.ast.BinaryAST.NodeType.None;
+import static org.xvm.asm.ast.BinaryAST.NodeType.StmtBlock;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -19,50 +18,61 @@ import static org.xvm.util.Handy.indentLines;
  * Zero or more nested statements.
  */
 public class StmtBlockAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
-    private StmtAST<C>[] stmts;
+    private BinaryAST<C>[] stmts;
 
     StmtBlockAST() {}
 
-    public StmtBlockAST(StmtAST<C>[] stmts) {
+    public StmtBlockAST(BinaryAST<C>[] stmts) {
         assert stmts != null && Arrays.stream(stmts).allMatch(Objects::nonNull);
         this.stmts = stmts;
     }
 
     @Override
     public NodeType nodeType() {
-        return STMT_BLOCK;
+        return StmtBlock;
     }
 
-    public StmtAST<C>[] getStmts() {
+    public BinaryAST<C>[] getStmts() {
         return stmts; // note: caller must not modify returned array in any way
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        stmts = readStmtArray(in, res);
+        res.enter();
+        stmts = readASTArray(in, res);
+        res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        prepareWriteASTArray(res, stmts);
+        res.enter();
+        prepareASTArray(stmts, res);
+        res.exit();
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
-
-        writeASTArray(out, res, stmts);
+        if (stmts.length == 0) {
+            out.writeByte(None.ordinal());
+        } else {
+            out.writeByte(nodeType().ordinal());
+            writeASTArray(stmts, out, res);
+        }
     }
 
     @Override
     public String dump() {
+        if (stmts.length == 0) {
+            return "{}";
+        }
+
         StringBuilder buf = new StringBuilder();
         buf.append("{");
-        for (StmtAST child : stmts) {
+        for (BinaryAST child : stmts) {
             buf.append('\n')
                .append(indentLines(child.dump(), "  "));
         }
@@ -72,13 +82,10 @@ public class StmtBlockAST<C>
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("{");
-        for (StmtAST child : stmts) {
-            buf.append('\n')
-               .append(indentLines(child.toString(), "  "));
+        if (stmts.length == 0) {
+            return "{}";
         }
-        buf.append("\n}");
-        return buf.toString();
+
+        return "{ ... " + stmts.length + " statements ... }";
     }
 }

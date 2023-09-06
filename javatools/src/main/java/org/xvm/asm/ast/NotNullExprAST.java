@@ -1,36 +1,25 @@
 package org.xvm.asm.ast;
 
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.xvm.asm.ast.LanguageAST.ExprAST;
-
-
 /**
  * A short-circuiting expression for testing if a sub-expression is null.
  */
 public class NotNullExprAST<C>
-        extends ExprAST<C> {
-
-    private ExprAST<C> expr;
+        extends UnaryExprAST<C> {
 
     NotNullExprAST() {}
 
-    public NotNullExprAST(ExprAST<C> expr) {
-        assert expr != null;
-        this.expr = expr;
-    }
-
-    public ExprAST<C> getExpr() {
-        return expr;
+    /**
+     * Note: strictly speaking, we don't need the type, since it could be computed as
+     * "expr.getType(0).removeNullable()", but we don't have that operation on the resolver yet
+     */
+    public NotNullExprAST(ExprAST<C> expr, C type) {
+        super(expr, type);
     }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return expr.getType(i);
+    public boolean isAssignable() {
+        return getExpr().isAssignable();
     }
 
     @Override
@@ -39,31 +28,12 @@ public class NotNullExprAST<C>
     }
 
     @Override
-    public void read(DataInput in, ConstantResolver<C> res)
-            throws IOException {
-        expr = deserialize(in, res);
-    }
-
-    @Override
-    public void prepareWrite(ConstantResolver<C> res) {
-        expr.prepareWrite(res);
-    }
-
-    @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
-            throws IOException {
-        out.writeByte(nodeType().ordinal());
-
-        expr.write(out, res);
-    }
-
-    @Override
     public String dump() {
-        return expr.dump() + '?';
+        return getExpr().dump() + '?';
     }
 
     @Override
     public String toString() {
-        return expr.toString() + '?';
+        return getExpr().toString() + '?';
     }
 }

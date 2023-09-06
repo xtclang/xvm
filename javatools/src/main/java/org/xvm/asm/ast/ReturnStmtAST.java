@@ -8,9 +8,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
-import static org.xvm.asm.ast.LanguageAST.NodeType.RETURN_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.Return0Stmt;
+import static org.xvm.asm.ast.BinaryAST.NodeType.Return1Stmt;
+import static org.xvm.asm.ast.BinaryAST.NodeType.ReturnNStmt;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -19,22 +19,33 @@ import static org.xvm.util.Handy.indentLines;
  * Zero or more nested statements.
  */
 public class ReturnStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
+    private NodeType     nodeType;
     private ExprAST<C>[] exprs;
 
-    public ReturnStmtAST() {
-        this.exprs = NO_EXPRS;
+    ReturnStmtAST(NodeType nodeType) {
+        this.nodeType = nodeType;
     }
 
     public ReturnStmtAST(ExprAST<C>[] exprs) {
-        assert exprs == null || Arrays.stream(exprs).allMatch(Objects::nonNull);
-        this.exprs = exprs == null ? NO_EXPRS : exprs;
+        if (exprs == null) {
+            this.exprs    = NO_EXPRS;
+            this.nodeType = Return0Stmt;
+        } else {
+            assert Arrays.stream(exprs).allMatch(Objects::nonNull);
+            this.exprs    = exprs;
+            this.nodeType = switch (exprs.length) {
+                case 0  -> Return0Stmt;
+                case 1  -> Return1Stmt;
+                default -> ReturnNStmt;
+            };
+        }
     }
 
     @Override
     public NodeType nodeType() {
-        return RETURN_STMT;
+        return nodeType;
     }
 
     public ExprAST<C>[] getExprs() {
@@ -44,20 +55,45 @@ public class ReturnStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        exprs = readExprArray(in, res);
+        switch (nodeType) {
+        case Return0Stmt:
+            exprs = NO_EXPRS;
+            break;
+        case Return1Stmt:
+            ExprAST expr = readExprAST(in, res);
+            assert expr != null;
+            exprs = new ExprAST[] {expr};
+            break;
+        case ReturnNStmt:
+            exprs = readExprArray(in, res);
+            break;
+        default:
+            throw new IllegalStateException("nodeType=" + nodeType);
+        }
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        prepareWriteASTArray(res, exprs);
+        prepareASTArray(exprs, res);
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        out.writeByte(nodeType().ordinal());
+        out.writeByte(nodeType.ordinal());
+        switch (nodeType) {
+        case Return0Stmt:
+            break;
+        case Return1Stmt:
+            exprs[0].writeExpr(out, res);
+            break;
+        case ReturnNStmt:
+            writeExprArray(exprs, out, res);
+            break;
+        default:
+            throw new IllegalStateException("nodeType=" + nodeType);
 
-        writeASTArray(out, res, exprs);
+        }
     }
 
     @Override

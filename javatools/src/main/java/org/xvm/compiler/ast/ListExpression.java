@@ -14,7 +14,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ListExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
 
@@ -436,39 +436,43 @@ public class ListExpression
         }
 
     /**
-     * Helper method to generate an array of arguments and set the {@link #m_astList}.
+     * Helper method to generate an array of arguments.
      */
     private Argument[] collectArguments(Context ctx, Code code, ErrorListener errs)
         {
         List<Expression> listExprs = exprs;
         int              cArgs     = listExprs.size();
         Argument[]       aArgs     = new Argument[cArgs];
-        ExprAST[]        aAstArgs  = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i)
             {
-            Expression expr = listExprs.get(i);
-            Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
+            Argument arg = listExprs.get(i).generateArgument(ctx, code, true, false, errs);
             aArgs[i] = i == cArgs-1
                     ? arg
                     : ensurePointInTime(code, arg);
-            aAstArgs[i] = expr.getExprAST();
             }
-
-        m_astList = new ListExprAST(getType(), aAstArgs);
         return aArgs;
         }
 
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        if (m_astList == null)
+        if (isConstant())
             {
-            assert isConstant();
-            m_astList = new ConstantExprAST<>(getType(), toConstant());
+            return new ConstantExprAST<>(toConstant());
             }
-        return m_astList;
+
+        List<Expression>    listExprs = exprs;
+        int                 cArgs     = listExprs.size();
+        ExprAST<Constant>[] aAstArg   = new ExprAST[cArgs];
+
+        for (int i = 0; i < cArgs; ++i)
+            {
+            aAstArg[i] = listExprs.get(i).getExprAST();
+            }
+        return new ListExprAST(getType(), aAstArg);
         }
+
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -512,8 +516,6 @@ public class ListExpression
     protected List<Expression> exprs;
     protected long             lStartPos;
     protected long             lEndPos;
-
-    private transient ExprAST<Constant> m_astList;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ListExpression.class, "type", "exprs");
     }

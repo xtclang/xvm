@@ -133,7 +133,7 @@ public class LabeledStatement
         {
         public LabelVar()
             {
-            super(pool().ensureEcstasyTypeConstant("reflect.Label"), Op.A_LABEL);
+            super(pool().ensureEcstasyTypeConstant("reflect.Label"), null, Op.A_LABEL);
             }
 
         /**

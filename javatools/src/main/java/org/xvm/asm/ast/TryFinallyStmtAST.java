@@ -5,7 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.TRY_FINALLY_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.TryFinallyStmt;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -16,11 +16,11 @@ import static org.xvm.util.Handy.indentLines;
 public class TryFinallyStmtAST<C>
         extends TryCatchStmtAST<C> {
 
-    private StmtAST<C> catchAll;
+    private BinaryAST<C> catchAll;
 
     TryFinallyStmtAST() {}
 
-    public TryFinallyStmtAST(StmtAST<C>[] resources, StmtAST<C> body, StmtAST<C>[] catches, StmtAST<C> catchAll) {
+    public TryFinallyStmtAST(ExprAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches, BinaryAST<C> catchAll) {
         super(resources, body, catches);
 
         assert catchAll != null;
@@ -28,13 +28,13 @@ public class TryFinallyStmtAST<C>
         this.catchAll  = catchAll;
     }
 
-    public StmtAST<C> getCatchAll() {
+    public BinaryAST<C> getCatchAll() {
         return catchAll;
     }
 
     @Override
     public NodeType nodeType() {
-        return TRY_FINALLY_STMT;
+        return TryFinallyStmt;
     }
 
     @Override
@@ -42,7 +42,7 @@ public class TryFinallyStmtAST<C>
             throws IOException {
         super.read(in, res);
 
-        catchAll  = deserialize(in, res);
+        catchAll  = readAST(in, res);
     }
 
     @Override

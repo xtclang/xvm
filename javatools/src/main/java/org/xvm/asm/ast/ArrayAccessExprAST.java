@@ -5,7 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 
 /**
@@ -40,6 +40,11 @@ public class ArrayAccessExprAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        return true;
+    }
+
+    @Override
     public NodeType nodeType() {
         return NodeType.ArrayAccessExpr;
     }
@@ -47,8 +52,8 @@ public class ArrayAccessExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        array = deserialize(in, res);
-        index = deserialize(in, res);
+        array = readExprAST(in, res);
+        index = readExprAST(in, res);
     }
 
     @Override
@@ -62,8 +67,8 @@ public class ArrayAccessExprAST<C>
             throws IOException {
         out.writeByte(nodeType().ordinal());
 
-        array.write(out, res);
-        index.write(out, res);
+        array.writeExpr(out, res);
+        index.writeExpr(out, res);
     }
 
     @Override

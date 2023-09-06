@@ -20,8 +20,9 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ExprNotImplAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.NotImplAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -1175,7 +1176,9 @@ public abstract class Expression
         }
 
     /**
-     * Obtain an ExpressionNode that represents this AST node and can be used to serialize the AST.
+     * Obtain a {@link ExprAST binady expression expression} that represents this AST node and can
+     * be used to serialize the AST.
+     * <p/>
      * This method must not be called until after the expression has been validated.
      *
      * @return an "AST node" from the expression branch of the LanguageNode hierarchy of classes
@@ -1189,10 +1192,27 @@ public abstract class Expression
                                    + this.getClass().getSimpleName());
             }
 
-        return new ExprNotImplAST(this.getClass().getSimpleName(), getTypes());
+        return new NotImplAST(this.getClass().getSimpleName(), getTypes());
         }
 
     private static HashSet<Class> alreadyFailedToProvideExpressionNode = new HashSet<>();
+
+    /**
+     * Convert the specified argument to a {@link ExprAST binady expression expression}.
+     */
+    protected static ExprAST<Constant> toExprAst(Argument arg)
+        {
+        if (arg instanceof Register reg)
+            {
+            return reg.getRegisterAST();
+            }
+        if (arg instanceof Constant constant)
+            {
+            return new ConstantExprAST<>(constant);
+            }
+
+        throw new UnsupportedOperationException(arg.toString());
+        }
 
     /**
      * Query the expression to determine if it would be a good candidate for tracing.
@@ -1752,7 +1772,7 @@ public abstract class Expression
         Register reg;
         if (fUsedOnce)
             {
-            reg = new Register(type, Op.A_STACK);
+            reg = new Register(type, null, Op.A_STACK);
             }
         else
             {
@@ -2039,7 +2059,7 @@ public abstract class Expression
             log(errs, Severity.ERROR, Compiler.NO_THIS);
             }
 
-        return new Register(type, nReg);
+        return new Register(type, null, nReg);
         }
 
     /**
@@ -2055,7 +2075,7 @@ public abstract class Expression
      */
     protected Register generateBlackHole(TypeConstant type)
         {
-        return new Register(type == null ? pool().typeObject() : type, Op.A_IGNORE);
+        return new Register(type == null ? pool().typeObject() : type, null, Op.A_IGNORE);
         }
 
     /**
@@ -2601,7 +2621,7 @@ public abstract class Expression
 
                     if (fUsedOnce)
                         {
-                        Register reg = new Register(getType(), Op.A_STACK);
+                        Register reg = new Register(getType(), null, Op.A_STACK);
                         code.add(new L_Get(getProperty(), reg));
                         return reg;
                         }
@@ -2616,7 +2636,7 @@ public abstract class Expression
                     Register reg;
                     if (fUsedOnce)
                         {
-                        reg = new Register(getType(), Op.A_STACK);
+                        reg = new Register(getType(), null, Op.A_STACK);
                         }
                     else
                         {
@@ -2632,7 +2652,7 @@ public abstract class Expression
                     Register reg;
                     if (fUsedOnce)
                         {
-                        reg = new Register(getType(), Op.A_STACK);
+                        reg = new Register(getType(), null, Op.A_STACK);
                         }
                     else
                         {

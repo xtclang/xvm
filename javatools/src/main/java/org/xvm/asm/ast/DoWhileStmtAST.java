@@ -5,9 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
-import static org.xvm.asm.ast.LanguageAST.NodeType.DO_WHILE_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.DoWhileStmt;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -16,50 +14,57 @@ import static org.xvm.util.Handy.indentLines;
  * A "do..while" statement.
  */
 public class DoWhileStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
-    private StmtAST<C>      body;
-    private ConditionAST<C> cond;
+    private BinaryAST<C> body;
+    private ExprAST<C>   cond;
 
     DoWhileStmtAST() {}
 
-    public DoWhileStmtAST(StmtAST<C> body, ConditionAST<C> cond) {
-        assert body != null && cond != null;
+    public DoWhileStmtAST(BinaryAST<C> body, ExprAST<C> cond) {
         this.body = body;
         this.cond = cond;
     }
 
     @Override
     public NodeType nodeType() {
-        return DO_WHILE_STMT;
+        return DoWhileStmt;
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        body = deserialize(in, res);
-        cond = new ConditionAST<>(in, res);
+        res.enter();
+        body = readAST(in, res);
+        cond = readExprAST(in, res);
+        res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        body.prepareWrite(res);
-        cond.prepareWrite(res);
+        res.enter();
+        prepareAST(body, res);
+        prepareAST(cond, res);
+        res.exit();
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
-        body.write(out, res);
-        cond.write(out, res);
+        writeAST(body, out, res);
+        writeExprAST(cond, out, res);
     }
 
     @Override
     public String dump() {
-        return "do\n" + indentLines(body.dump(), "  ") +
-               "\nwhile\n" + indentLines(cond.dump(), "  ");
+        return new StringBuffer()
+            .append("do\n")
+            .append(body == null ? "  {}" : indentLines(body.dump(), "  "))
+            .append("\nwhile (")
+            .append(cond == null ? "" : cond.dump())
+            .append(")")
+            .toString();
     }
 
     @Override

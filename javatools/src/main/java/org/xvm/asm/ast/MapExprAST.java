@@ -8,12 +8,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.MAP_EXPR;
+import static org.xvm.asm.ast.BinaryAST.NodeType.MapExpr;
 
 
 /**
@@ -58,7 +58,7 @@ public class MapExprAST<C>
 
     @Override
     public NodeType nodeType() {
-        return MAP_EXPR;
+        return MapExpr;
     }
 
     @Override
@@ -72,8 +72,8 @@ public class MapExprAST<C>
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         type = res.register(type);
-        prepareWriteASTArray(res, keys);
-        prepareWriteASTArray(res, values);
+        prepareASTArray(keys, res);
+        prepareASTArray(values, res);
     }
 
     @Override
@@ -82,8 +82,8 @@ public class MapExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, res.indexOf(type));
-        writeASTArray(out, res, keys);
-        writeASTArray(out, res, values);
+        writeExprArray(keys, out, res);
+        writeExprArray(values, out, res);
     }
 
     @Override

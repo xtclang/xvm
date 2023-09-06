@@ -17,8 +17,8 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.AssertStmtAST;
 import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.LanguageAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -399,13 +399,13 @@ public class AssertStatement
                 astMessage = message.getExprAST();
                 }
 
-            holder.setAst(this, new AssertStmtAST<>(LanguageAST.NO_STMTS, astInterval, astMessage));
+            holder.setAst(this, new AssertStmtAST<>(null, astInterval, astMessage));
             return !alwaysEvaluated();
             }
 
-        boolean                 fCompletes   = fReachable;
-        Label                   labelMessage = new Label("CustomMessage");
-        LanguageAST<Constant>[] aAstCond     = new LanguageAST[cConds];
+        boolean             fCompletes   = fReachable;
+        Label               labelMessage = new Label("CustomMessage");
+        ExprAST<Constant>[] aAstCond     = new ExprAST[cConds];
         for (int i = 0; i < cConds; ++i)
             {
             AstNode cond = getCondition(i);
@@ -476,7 +476,7 @@ public class AssertStatement
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 argCond = stmtCond.getConditionRegister();
 
-                aAstCond[i] = ctx.getHolder().getAst(stmtCond);
+                aAstCond[i] = (ExprAST<Constant>) ctx.getHolder().getAst(stmtCond);
                 }
             else
                 {
@@ -490,14 +490,14 @@ public class AssertStatement
                             : new Jump(labelMessage));
                     fCompletes = false;
 
-                    aAstCond[i] = new ConstantExprAST<>(pool.typeBoolean(), pool.valFalse());
+                    aAstCond[i] = new ConstantExprAST<>(pool.valFalse());
                     continue;
                     }
 
                 // "assert True" is a no-op
                 if (exprCond.isConstantTrue())
                     {
-                    aAstCond[i] = new ConstantExprAST<>(pool.typeBoolean(), pool.valTrue());
+                    aAstCond[i] = new ConstantExprAST<>(pool.valTrue());
                     continue;
                     }
 
@@ -561,7 +561,7 @@ public class AssertStatement
             astMessage = message.getExprAST();
             }
 
-        holder.setAst(this, new AssertStmtAST<>(aAstCond, astInterval, astMessage));
+        holder.setAst(this, new AssertStmtAST<>(BinaryAST.makeCondition(aAstCond), astInterval, astMessage));
         return fCompletes;
         }
 

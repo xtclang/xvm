@@ -174,7 +174,7 @@ public class ConvertExpression
             }
         else
             {
-            Register regResult = new Register(getType(), Op.A_STACK);
+            Register regResult = new Register(getType(), null, Op.A_STACK);
             code.add(new Invoke_01(argIn, m_idConv, regResult));
             LVal.assign(regResult, code, errs);
             }
@@ -252,7 +252,7 @@ public class ConvertExpression
             }
         else
             {
-            Register regResult = new Register(getTypes()[iVal], Op.A_STACK);
+            Register regResult = new Register(getTypes()[iVal], null, Op.A_STACK);
             code.add(new Invoke_01(regTemp, m_idConv, regResult));
             LVal.assign(regResult, code, errs);
             }

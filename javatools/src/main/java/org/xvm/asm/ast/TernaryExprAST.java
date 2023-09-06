@@ -5,7 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 
 /**
@@ -45,6 +45,11 @@ public class TernaryExprAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        return exprThen.isAssignable() && exprElse.isAssignable();
+    }
+
+    @Override
     public NodeType nodeType() {
         return NodeType.TernaryExpr;
     }
@@ -52,9 +57,9 @@ public class TernaryExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond     = deserialize(in, res);
-        exprThen = deserialize(in, res);
-        exprElse = deserialize(in, res);
+        cond     = readExprAST(in, res);
+        exprThen = readExprAST(in, res);
+        exprElse = readExprAST(in, res);
     }
 
     @Override
@@ -68,10 +73,9 @@ public class TernaryExprAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
-        cond    .write(out, res);
-        exprThen.write(out, res);
-        exprElse.write(out, res);
+        cond    .writeExpr(out, res);
+        exprThen.writeExpr(out, res);
+        exprElse.writeExpr(out, res);
     }
 
     @Override

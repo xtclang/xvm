@@ -12,7 +12,7 @@ import org.xvm.asm.OpTest;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CondOpExprAST;
-import org.xvm.asm.ast.LanguageAST.ExprAST;
+import org.xvm.asm.ast.BinaryAST.ExprAST;
 
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;

@@ -58,7 +58,7 @@ public class DivRemExprAST<C>
             throws IOException {
         super.write(out, res);
 
-        writeConstArray(out, res, types);
+        writeConstArray(types, out, res);
     }
 
     @Override

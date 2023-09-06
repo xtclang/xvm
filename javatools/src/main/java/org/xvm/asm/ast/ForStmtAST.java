@@ -5,28 +5,25 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ast.LanguageAST.StmtAST;
-
 import org.xvm.util.Handy;
 
-import static org.xvm.asm.ast.LanguageAST.NodeType.FOR_STMT;
+import static org.xvm.asm.ast.BinaryAST.NodeType.ForStmt;
 
 
 /**
  * A "for(init;cond;update){...}" statement.
  */
 public class ForStmtAST<C>
-        extends StmtAST<C> {
+        extends BinaryAST<C> {
 
-    private StmtAST<C>[]    init;
-    private ConditionAST<C> cond;
-    private StmtAST<C>[]    update;
-    private StmtAST<C>      body;
+    private BinaryAST<C> init;
+    private ExprAST<C>   cond;
+    private BinaryAST<C> update;
+    private BinaryAST<C> body;
 
     ForStmtAST() {}
 
-    public ForStmtAST(StmtAST<C>[] init, ConditionAST<C> cond, StmtAST<C>[] update, StmtAST<C> body) {
-        assert init != null && cond != null && update != null && body != null;
+    public ForStmtAST(BinaryAST<C> init, ExprAST<C> cond, BinaryAST<C> update, BinaryAST<C> body) {
         this.init   = init;
         this.cond   = cond;
         this.update = update;
@@ -35,73 +32,81 @@ public class ForStmtAST<C>
 
     @Override
     public NodeType nodeType() {
-        return FOR_STMT;
+        return ForStmt;
     }
 
-    public StmtAST<C>[] getInit() {
+    public BinaryAST<C> getInit() {
         return init;
     }
 
-    public ConditionAST<C> getCond() {
+    public ExprAST<C> getCond() {
         return cond;
     }
 
-    public StmtAST<C>[] getUpdate() {
+    public BinaryAST<C> getUpdate() {
         return update;
+    }
+
+    public BinaryAST<C> getBody() {
+        return body;
     }
 
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        init   = readStmtArray(in, res);
-        cond   = new ConditionAST<>(in, res);
-        update = readStmtArray(in, res);
-        body   = deserialize(in, res);
+        res.enter();
+        init   = readAST(in, res);
+        cond   = readExprAST(in, res);
+        update = readAST(in, res);
+        res.enter();
+        body   = readAST(in, res);
+        res.exit();
+        res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        prepareWriteASTArray(res, init);
-        cond.prepareWrite(res);
-        prepareWriteASTArray(res, update);
-        body.prepareWrite(res);
+        res.enter();
+        prepareAST(init, res);
+        prepareAST(cond, res);
+        prepareAST(update, res);
+        res.enter();
+        prepareAST(body, res);
+        res.exit();
+        res.exit();
     }
 
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-
-        writeASTArray(out, res, init);
-        cond.write(out, res);
-        writeASTArray(out, res, update);
-        body.write(out, res);
+        writeAST(init, out, res);
+        writeExprAST(cond, out, res);
+        writeAST(update, out, res);
+        writeAST(body, out, res);
     }
 
     @Override
     public String dump() {
-        StringBuilder buf = new StringBuilder("for ");
-        if (init.length <= 1 && update.length <= 1) {
-            buf.append('(')
-               .append(init.length == 0 ? "" : init[0])
-               .append("; ")
-               .append(cond.dump())
-               .append("; ")
-               .append(update.length == 0 ? "" : init[0])
-               .append(')');
-        } else {
-            buf.append("\ninit");
-            for (StmtAST stmt : init) {
-                buf.append('\n').append(Handy.indentLines(stmt.dump(), "  "));
-            }
-            buf.append("\ncond");
-            buf.append('\n').append(Handy.indentLines(cond.dump(), "  "));
-            buf.append("\nupdate");
-            for (StmtAST stmt : update) {
-                buf.append('\n').append(Handy.indentLines(stmt.dump(), "  "));
-            }
+        StringBuilder buf = new StringBuilder("for (");
+        if (init != null) {
+            buf.append(init.dump());
         }
-        buf.append("\n{").append(Handy.indentLines(body.dump(), "  ")).append("\n}");
+        buf.append("; ");
+        if (cond != null) {
+            buf.append(cond.dump());
+        }
+        buf.append("; ");
+        if (update != null) {
+            buf.append(update.dump());
+        }
+        buf.append(") ");
+        if (body == null) {
+            buf.append("{}");
+        } else {
+            buf.append('\n')
+               .append(Handy.indentLines(body.dump(), "  "));
+        }
         return buf.toString();
     }
 
