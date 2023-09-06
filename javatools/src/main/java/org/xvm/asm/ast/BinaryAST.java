@@ -110,7 +110,11 @@ public abstract class BinaryAST<C> {
          */
         protected void readExpr(DataInput in, ConstantResolver<C> res)
                 throws IOException {
-            throw new UnsupportedOperationException();
+            if (nodeType().ordinal() <= NodeType.Escape.ordinal()) {
+                throw new UnsupportedOperationException("nodeType=" + nodeType());
+            }
+
+            read(in, res);
         }
 
         /**
@@ -118,8 +122,11 @@ public abstract class BinaryAST<C> {
          */
         protected void writeExpr(DataOutput out, ConstantResolver<C> res)
                 throws IOException {
-            // any subclass that has a short form must override this
-            writePackedLong(out, 31);
+            if (nodeType().ordinal() <= NodeType.Escape.ordinal()) {
+                throw new UnsupportedOperationException("nodeType=" + nodeType());
+            }
+
+            writePackedLong(out, NodeType.Escape.ordinal());
             write(out, res);
         }
     }
@@ -135,9 +142,9 @@ public abstract class BinaryAST<C> {
         RegAlloc,           // int x; (classified as an expression to simplify "l-value" design)
         NamedRegAlloc,      // int _; (classified as an expression to simplify "l-value" design)
         Assign,             // x=y;
-        BinOpAssign,        // x*=y; etc.
         CondAssign,         // (Boolean _, x) := y
         CondNotNullAssign,  // (Boolean _, x) ?= y
+        Expr06,
         Expr07,
         Expr08,
         Expr09,
@@ -169,6 +176,7 @@ public abstract class BinaryAST<C> {
         CallExpr,           // foo() (function) (foo is a register/property)
         BindMethodExpr,     // bind method's target
         BindFunctionExpr,   // bind function's arguments
+        BinOpAssign,        // x*=y; etc.
 
         AssignExpr,         // (x <- y)                                         // TODO
         SwitchExpr,                                                             // TODO

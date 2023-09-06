@@ -115,13 +115,24 @@ public class RegAllocAST<C>
     @Override
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        NodeType nodeType = nodeType();
-        out.writeByte(nodeType.ordinal());
+        out.writeByte(nodeType().ordinal());
+        writeBody(out, res);
+    }
+
+    @Override
+    public void writeExpr(DataOutput out, ConstantResolver<C> res)
+            throws IOException {
+        writePackedLong(out, nodeType().ordinal());
+        writeBody(out, res);
+    }
+
+    private void writeBody(DataOutput out, ConstantResolver<C> res)
+            throws IOException {
         // what is notable about the serialization format is that it does *not* include the register
         // id (number); register ids are required to be gap-less and ascending, so the id can be
         // calculated by the resolver when the AST is read back into its object form from binary
         writePackedLong(out, res.indexOf(reg.type));
-        if (nodeType == NamedRegAlloc) {
+        if (nodeType() == NamedRegAlloc) {
             writePackedLong(out, res.indexOf(reg.name));
         }
     }
