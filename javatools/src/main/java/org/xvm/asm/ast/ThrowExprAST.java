@@ -56,9 +56,9 @@ public class ThrowExprAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         type      = res.getConstant(readMagnitude(in));
-        throwable = readAST(in, res);
+        throwable = readExprAST(in, res);
         if (readMagnitude(in) > 0) {
-            message = readAST(in, res);
+            message = readExprAST(in, res);
         }
     }
 
@@ -77,12 +77,12 @@ public class ThrowExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, res.indexOf(type));
-        throwable.write(out, res);
+        throwable.writeExpr(out, res);
         if (message == null) {
             writePackedLong(out, 0);
         } else {
             writePackedLong(out, 1);
-            message.write(out, res);
+            message.writeExpr(out, res);
         }
     }
 

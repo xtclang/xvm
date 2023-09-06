@@ -92,8 +92,8 @@ public abstract class BiExprAST<C>
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
         op    = Operator.values()[readMagnitude(in)];
-        expr1 = readAST(in, res);
-        expr2 = readAST(in, res);
+        expr1 = readExprAST(in, res);
+        expr2 = readExprAST(in, res);
     }
 
     @Override
@@ -108,8 +108,8 @@ public abstract class BiExprAST<C>
         out.writeByte(nodeType().ordinal());
 
         writePackedLong(out, op.ordinal());
-        expr1.write(out, res);
-        expr2.write(out, res);
+        expr1.writeExpr(out, res);
+        expr2.writeExpr(out, res);
     }
 
     @Override

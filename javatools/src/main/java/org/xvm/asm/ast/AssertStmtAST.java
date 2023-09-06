@@ -16,7 +16,7 @@ import static org.xvm.util.Handy.writePackedLong;
 public class AssertStmtAST<C>
         extends BinaryAST<C>
     {
-    private ExprAST<C> cond;
+    private ExprAST<C> cond;     // could be null
     private ExprAST<C> interval; // could be null
     private ExprAST<C> message;  // could be null
 
@@ -51,14 +51,16 @@ public class AssertStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond = readExprAST(in, res);
-
         int flags = readMagnitude(in);
+
         if ((flags & 1) != 0) {
-            interval = readAST(in, res);
+            cond = readExprAST(in, res);
         }
         if ((flags & 2) != 0) {
-            message = readAST(in, res);
+            interval = readExprAST(in, res);
+        }
+        if ((flags & 4) != 0) {
+            message = readExprAST(in, res);
         }
     }
 
@@ -74,17 +76,19 @@ public class AssertStmtAST<C>
             throws IOException {
         out.writeByte(nodeType().ordinal());
 
-        writeExprAST(cond, out, res);
-
-        int flags = (interval == null ? 0 : 1)
-                  | (message  == null ? 0 : 2);
+        int flags = (cond     == null ? 0 : 1)
+                  | (interval == null ? 0 : 2)
+                  | (message  == null ? 0 : 4);
         writePackedLong(out, flags);
 
+        if (cond != null) {
+            cond.writeExpr(out, res);
+        }
         if (interval != null) {
-            interval.write(out, res);
+            interval.writeExpr(out, res);
         }
         if (message != null) {
-            message.write(out, res);
+            message.writeExpr(out, res);
         }
     }
 

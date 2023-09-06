@@ -21,9 +21,9 @@ public class Register
     /**
      * Construct an unknown Register of the specified type.
      *
-     * @param type       the TypeConstant specifying the Register type
-     * @param sName  the name given to the register, if any; otherwise null
-     * @param method     the enclosing method
+     * @param type    the TypeConstant specifying the Register type
+     * @param sName   the name given to the register, if any; otherwise null
+     * @param method  the enclosing method
      */
     public Register(TypeConstant type, String sName, MethodStructure method)
         {
@@ -46,10 +46,10 @@ public class Register
     /**
      * Construct a Register of the specified type.
      *
-     * @param type       the TypeConstant specifying the Register type
+     * @param type   the TypeConstant specifying the Register type
      * @param sName  the name given to the register, if any; otherwise null
-     * @param iArg       the argument index, which is either a pre-defined argument index, or a
-     *                   register ID
+     * @param iArg   the argument index, which is either a pre-defined argument index, or a
+     *               register ID
      */
     public Register(TypeConstant type, String sName, int iArg)
         {

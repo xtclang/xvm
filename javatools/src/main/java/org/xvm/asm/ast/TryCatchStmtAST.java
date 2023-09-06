@@ -73,7 +73,7 @@ public class TryCatchStmtAST<C>
             throws IOException {
         out.writeByte(nodeType().ordinal());
 
-        writeASTArray(resources, out, res);
+        writeExprArray(resources, out, res);
         body.write(out, res);
         writeASTArray(catches, out, res);
     }

@@ -57,9 +57,9 @@ public class TernaryExprAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        cond     = readAST(in, res);
-        exprThen = readAST(in, res);
-        exprElse = readAST(in, res);
+        cond     = readExprAST(in, res);
+        exprThen = readExprAST(in, res);
+        exprElse = readExprAST(in, res);
     }
 
     @Override
@@ -73,9 +73,9 @@ public class TernaryExprAST<C>
     public void write(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         out.writeByte(nodeType().ordinal());
-        cond    .write(out, res);
-        exprThen.write(out, res);
-        exprElse.write(out, res);
+        cond    .writeExpr(out, res);
+        exprThen.writeExpr(out, res);
+        exprElse.writeExpr(out, res);
     }
 
     @Override

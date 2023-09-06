@@ -27,6 +27,13 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
+import org.xvm.asm.ast.BinaryAST.ExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.OuterExprAST;
+import org.xvm.asm.ast.PropertyExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
+
 import org.xvm.asm.constants.*;
 
 import org.xvm.asm.op.*;
@@ -1012,17 +1019,12 @@ public class NameExpression
                     assert getMeaning() == Meaning.Class || getMeaning() == Meaning.Reserved;
 
                     Access access = getType().getAccess();
-
-                    if (argRaw instanceof ParentClassConstant constParent)
-                        {
-                        code.add(new MoveThis(constParent.getDepth(), argLVal, access));
-                        return;
-                        }
-
-                    TargetInfo targetInfo = (TargetInfo) argRaw;
-                    int        cSteps     = targetInfo.getStepsOut();
+                    int    cSteps = argRaw instanceof ParentClassConstant constParent
+                            ? constParent.getDepth()
+                            : ((TargetInfo) argRaw).getStepsOut();
 
                     code.add(new MoveThis(cSteps, argLVal, access));
+                    m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, getType());
                     return;
                     }
 
@@ -1040,6 +1042,24 @@ public class NameExpression
                     Register regTemp = code.createRegister(typeReferent);
                     code.add(new MoveThis(cSteps, regTemp, typeRef.getAccess()));
                     code.add(new MoveRef(regTemp, argLVal));
+
+                    ExprAST<Constant> astTemp = ctx.getThisRegisterAST();
+                    if (cSteps > 0)
+                        {
+                        astTemp = new OuterExprAST<>(astTemp, cSteps, typeReferent);
+                        }
+                    if (typeRef.getAccess() != typeReferent.getAccess())
+                        {
+                        Operator op = switch (typeRef.getAccess())
+                            {
+                            case PUBLIC    -> Operator.Public;
+                            case PROTECTED -> Operator.Protected;
+                            case PRIVATE   -> Operator.Private;
+                            default        -> throw new IllegalStateException();
+                            };
+                        astTemp = new UnaryOpExprAST<>(astTemp, op, getType());
+                        }
+                    m_astResult = new UnaryOpExprAST<>(astTemp, Operator.Ref, getType());
                     return;
                     }
 
@@ -1065,6 +1085,9 @@ public class NameExpression
                             SingletonConstant idSingleton =
                                 pool().ensureSingletonConstConstant(m_idSingletonParent);
                             code.add(new P_Get(idProp, idSingleton, argLVal));
+
+                            ExprAST<Constant> astSingleton = new ConstantExprAST<>(idSingleton);
+                            m_astResult = new PropertyExprAST<>(astSingleton, idProp);
                             break;
                             }
 
@@ -1075,11 +1098,17 @@ public class NameExpression
                             Register     regOuter = new Register(type, null, Op.A_STACK);
                             code.add(new MoveThis(cSteps, regOuter, type.getAccess()));
                             code.add(new P_Get(idProp, regOuter, argLVal));
+
+                            ExprAST<Constant> astOuter =
+                                new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, type);
+                            m_astResult = new PropertyExprAST<>(astOuter, idProp);
                             break;
                             }
 
                         case This:
                             code.add(new L_Get(idProp, argLVal));
+
+                            m_astResult = new PropertyExprAST<>(ctx.getThisRegisterAST(), idProp);
                             break;
 
                         case Left:
@@ -1087,6 +1116,8 @@ public class NameExpression
                             assert !idProp.getComponent().isStatic();
                             Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                             code.add(new P_Get(idProp, argLeft, argLVal));
+
+                            m_astResult = new PropertyExprAST<>(left.getExprAST(), idProp);
                             break;
                             }
                         }
@@ -1115,6 +1146,10 @@ public class NameExpression
                                 ? new P_Var(idProp, argTarget, argLVal)
                                 : new P_Ref(idProp, argTarget, argLVal));
                         }
+
+                    ExprAST<Constant> astTarget = new PropertyExprAST<>(m_astRefTarget, idProp);
+                    m_astResult = new UnaryOpExprAST<>(astTarget,
+                                    m_fAssignable ? Operator.Var : Operator.Ref, getType());
                     return;
                     }
 
@@ -1125,6 +1160,9 @@ public class NameExpression
                     code.add(m_fAssignable
                             ? new MoveVar(regRVal, argLVal)
                             : new MoveRef(regRVal, argLVal));
+
+                    m_astResult = new UnaryOpExprAST<>(regRVal.getRegisterAST(),
+                                    m_fAssignable ? Operator.Var : Operator.Ref, getType());
                     return;
                     }
 
@@ -1161,6 +1199,7 @@ public class NameExpression
                         code.add(new MBind(argTarget, idMethod, regFn));
                         bindTypeParameters(ctx, code, regFn, argLVal);
                         }
+                    // TODO m_astResult =
                     return;
                     }
 
@@ -1170,6 +1209,8 @@ public class NameExpression
                             ? createBjarneLambda(ctx.getThisClass(), idMethod)
                             : createBjarneLambda(ctx.getThisClass(), (PropertyConstant) argRaw);
                     code.add(new Move(idHandler, argLVal));
+
+                    m_astResult = new ConstantExprAST<>(idHandler);
                     return;
                     }
                 }
@@ -1202,7 +1243,10 @@ public class NameExpression
                             TypeConstant typeOuter = argRaw.getType();
                             Register     regOuter  = code.createRegister(typeOuter, fUsedOnce);
                             code.add(new MoveThis(1, regOuter, typeOuter.getAccess()));
-                            argRaw = regOuter;
+
+                            m_astResult = new OuterExprAST<>(nameLeft.getExprAST(), 1, typeOuter);
+                            assert m_mapTypeParams == null;
+                            return regOuter;
                             }
                         break;
 
@@ -1219,6 +1263,7 @@ public class NameExpression
                     bindTypeParameters(ctx, code, argRaw, regFn);
                     return regFn;
                     }
+                m_astResult = toExprAst(argRaw);
                 return argRaw;
 
             case OuterThis:
@@ -1247,6 +1292,8 @@ public class NameExpression
 
                 Register regOuter = code.createRegister(typeOuter, fUsedOnce);
                 code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
+
+                m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeOuter);
                 return regOuter;
                 }
 
@@ -1275,6 +1322,7 @@ public class NameExpression
 
                 Register regRef = code.createRegister(typeRef, fUsedOnce);
                 code.add(new MoveRef(regOuter, regRef));
+                // TODO m_astResult =
                 return regRef;
                 }
 
@@ -1300,6 +1348,9 @@ public class NameExpression
                             pool().ensureSingletonConstConstant(m_idSingletonParent);
 
                         code.add(new P_Get(idProp, idSingleton, regTemp));
+
+                        ExprAST<Constant> astSingleton = new ConstantExprAST<>(idSingleton);
+                        m_astResult = new PropertyExprAST<>(astSingleton, idProp);
                         break;
                         }
 
@@ -1316,13 +1367,17 @@ public class NameExpression
                             code.add(new Var_D(regTemp));
                             }
                         code.add(new P_Get(idProp, regOuter, regTemp));
+
+                        ExprAST<Constant> astOuter =
+                            new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeOuter);
+                        m_astResult = new PropertyExprAST<>(astOuter, idProp);
                         break;
                         }
 
                     case This:
                         if (idProp.getName().equals("outer"))
                             {
-                            code.add(new MoveThis(1, regTemp));
+                            code.add(new MoveThis(1, regTemp)); // TODO GG: wrong register type
                             }
                         else
                             {
@@ -1330,6 +1385,7 @@ public class NameExpression
                                 {
                                 regTemp = code.createRegister(idProp.getRefType(ctx.getThisType()));
                                 code.add(new Var_D(regTemp));
+                                // TODO GG: AST for dynamic register
                                 }
                             else
                                 {
@@ -1339,6 +1395,8 @@ public class NameExpression
                                     }
                                 }
                             code.add(new L_Get(idProp, regTemp));
+
+                            m_astResult = new PropertyExprAST<>(ctx.getThisRegisterAST(), idProp);
                             }
                         break;
 
@@ -1353,8 +1411,11 @@ public class NameExpression
                             {
                             regTemp = code.createRegister(idProp.getRefType(argLeft.getType()));
                             code.add(new Var_D(regTemp));
+                            // TODO GG: AST for dynamic register
                             }
                         code.add(new P_Get(idProp, argLeft, regTemp));
+
+                        m_astResult = new PropertyExprAST<>(left.getExprAST(), idProp);
                         break;
                         }
 
@@ -1393,6 +1454,9 @@ public class NameExpression
                             ? new P_Var(idProp, argTarget, regRef)
                             : new P_Ref(idProp, argTarget, regRef));
                     }
+                ExprAST<Constant> astTarget = new PropertyExprAST<>(m_astRefTarget, idProp);
+                m_astResult = new UnaryOpExprAST<>(astTarget,
+                                m_fAssignable ? Operator.Var : Operator.Ref, getType());
                 return regRef;
                 }
 
@@ -1403,6 +1467,9 @@ public class NameExpression
                 code.add(m_fAssignable
                         ? new MoveVar(regVal, regRef)
                         : new MoveRef(regVal, regRef));
+
+                m_astResult = new UnaryOpExprAST<>(regVal.getRegisterAST(),
+                                m_fAssignable ? Operator.Var : Operator.Ref, getType());
                 return regRef;
                 }
 
@@ -1461,13 +1528,16 @@ public class NameExpression
                     code.add(new MBind(argTarget, idMethod, regFn0));
                     bindTypeParameters(ctx, code, regFn0, regFn);
                     }
+                // TODO m_astResult =
                 return regFn;
                 }
 
             case BjarneLambda:
-                return argRaw instanceof MethodConstant idMethod
+                MethodConstant idHandler = argRaw instanceof MethodConstant idMethod
                         ? createBjarneLambda(ctx.getThisClass(), idMethod)
                         : createBjarneLambda(ctx.getThisClass(), (PropertyConstant) argRaw);
+                m_astResult = new ConstantExprAST<>(idHandler);
+                return idHandler;
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);
@@ -1688,22 +1758,29 @@ public class NameExpression
         switch (calculatePropertyAccess(true))
             {
             case SingletonParent:
+                m_astRefTarget = new ConstantExprAST<>(m_idSingletonParent);
                 return pool().ensureSingletonConstConstant(m_idSingletonParent);
 
             case Outer:
                 {
-                int cSteps = m_targetInfo.getStepsOut();
-                Register regOuter = new Register(m_targetInfo.getTargetType(), null, Op.A_STACK);
+                int          cSteps    = m_targetInfo.getStepsOut();
+                TypeConstant typeOuter = m_targetInfo.getTargetType().ensureAccess(Access.PRIVATE);
+                Register     regOuter  = new Register(typeOuter, null, Op.A_STACK);
                 code.add(new MoveThis(cSteps, regOuter, Access.PRIVATE));
+
+                m_astRefTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeOuter);
                 return regOuter;
                 }
 
             case This:
+                m_astRefTarget = ctx.getThisRegisterAST();
                 return ctx.getThisRegister();
 
             case Left:
                 assert !idProp.getComponent().isStatic();
-                return left.generateArgument(ctx, code, true, true, errs);
+                Argument arg = left.generateArgument(ctx, code, true, true, errs);
+                m_astRefTarget = left.getExprAST();
+                return arg;
 
             default:
                 throw new IllegalStateException();
@@ -1760,6 +1837,7 @@ public class NameExpression
             if (arg instanceof Register reg)
                 {
                 assert target == null;
+                m_astResult = reg.getRegisterAST();
                 return new Assignable(reg);
                 }
             if (arg instanceof PropertyConstant idProp)
@@ -1767,37 +1845,42 @@ public class NameExpression
                 Argument argTarget;
                 if (left == null)
                     {
+                    Register regTarget;
                     switch (m_propAccessPlan)
                         {
                         case SingletonParent:
                             {
                             IdentityConstant  idParent    = m_idSingletonParent;
                             SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
-                            Register regTarget = code.createRegister(idParent.getType());
+                            regTarget = code.createRegister(idParent.getType());
                             code.add(new Var_I(regTarget, idSingleton));
-                            argTarget = regTarget;
+                            m_astResult = regTarget.getRegAllocAST();
                             break;
                             }
 
                         case This:
-                            argTarget = new Register(ctx.getThisType(), null, Op.A_THIS);
+                            regTarget = ctx.getThisRegister();
+                            m_astResult = regTarget.getRegisterAST();
                             break;
 
                         case Outer:
                             {
-                            ClassStructure clz = ctx.getThisClass();
-                            for (int nDepth = target.getStepsOut(); --nDepth >= 0;)
+                            ClassStructure clz   = ctx.getThisClass();
+                            int           cSteps = target.getStepsOut();
+                            for (int i = cSteps; --i >= 0;)
                                 {
                                 clz = clz.getContainingClass();
                                 }
-                            argTarget = new Register(clz.getFormalType(), null, Op.A_STACK);
-                            code.add(new MoveThis(target.getStepsOut(), argTarget));
+                            regTarget = new Register(clz.getFormalType(), null, Op.A_STACK);
+                            code.add(new MoveThis(cSteps, regTarget));
+                            m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, getType());
                             break;
                             }
 
                         default:
                             throw new IllegalStateException();
                         }
+                    argTarget = regTarget;
                     }
                 else
                     {
@@ -1811,6 +1894,16 @@ public class NameExpression
             }
 
         return null;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return m_astResult == null
+                ? isConstant()
+                    ? new ConstantExprAST<>(toConstant())
+                    : super.getExprAST()
+                : m_astResult;
         }
 
 
@@ -3529,6 +3622,16 @@ public class NameExpression
      * Cached validation info: Can the name be used as an "L value"?
      */
     private transient boolean m_fAssignable;
+
+    /**
+     * A cached ExprAST node for the result of {@link #generateRefTarget}.
+     */
+    private transient ExprAST<Constant> m_astRefTarget;
+
+    /**
+     * A cached ExprAST node for this expression.
+     */
+    private transient ExprAST<Constant> m_astResult;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
     }

@@ -59,8 +59,7 @@ public class ConstantExprAST<C>
     }
 
     @Override
-    protected void readExpr(DataInput in, ConstantResolver<C> res)
-            throws IOException {
+    protected void readExpr(DataInput in, ConstantResolver<C> res) {
         // this should never be called; the "read" is done inline by the readExprAST() method
         throw new UnsupportedOperationException();
     }

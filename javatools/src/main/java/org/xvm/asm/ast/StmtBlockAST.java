@@ -84,8 +84,8 @@ public class StmtBlockAST<C>
     public String toString() {
         if (stmts.length == 0) {
             return "{}";
-        } else {
-            return "{ ... " + stmts.length + " statements ... }";
         }
+
+        return "{ ... " + stmts.length + " statements ... }";
     }
 }

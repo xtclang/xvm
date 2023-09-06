@@ -18,25 +18,25 @@ public class UnaryOpExprAST<C>
     private Operator op;
 
     public enum Operator {
-        Plus      ("+",        true),
-        Minus     ("-",        true),
-        Not       ("!",        true),
-        Compl     ("~",        true),
-        PreInc    ("++",       true),
-        PreDec    ("--",       true),
-        PostInc   ("++",       false),
-        PostDec   ("--",       false),
-        Ref       ("&",        true),
-        Var       ("&",        true),
-        Type      ("typeOf:",  true),
+        Plus      ("+"       , true),
+        Minus     ("-"       , true),
+        Not       ("!"       , true),
+        Compl     ("~"       , true),
+        PreInc    ("++"      , true),
+        PreDec    ("--"      , true),
+        PostInc   ("++"      , false),
+        PostDec   ("--"      , false),
+        Ref       ("&"       , true),
+        Var       ("&"       , true),
+        Type      ("typeOf:" , true),
         Private   ("private:", true),
         Protected ("private:", true),
-        Public    ("public:",  true),
-        Pack      (""       ,  true),
-        Unpack    (""       ,  false),
-        Convert   (""       ,  false),
-        ToInt     (""       ,  false),
-        Trace     (""       ,  false),
+        Public    ("public:" , true),
+        Pack      (""        , true),
+        Unpack    (""        , false),
+        Convert   (""        , false),
+        ToInt     (""        , false),
+        Trace     (""        , false),
         ;
 
         public final String  text;
@@ -71,7 +71,7 @@ public class UnaryOpExprAST<C>
             throws IOException {
         super.read(in, res);
 
-        op = UnaryOpExprAST.Operator.values()[readMagnitude(in)];
+        op = Operator.values()[readMagnitude(in)];
     }
 
     @Override
