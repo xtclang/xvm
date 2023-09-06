@@ -269,7 +269,7 @@ public class ForStatement
             String sLabel = ((LabeledStatement) getParent()).getName();
             Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
 
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64());
+            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sLabel + '.' + sName);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             if (fFirst)

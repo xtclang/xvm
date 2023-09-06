@@ -163,10 +163,11 @@ public class WhileStatement
             // this occurs only during validate()
             assert m_ctxLabelVars != null;
 
-            String sLabel = ((LabeledStatement) getParent()).getName();
-            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
+            String sLabel   = ((LabeledStatement) getParent()).getName();
+            String sRegName = sLabel + '.' + sName;
+            Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sRegName);
 
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64());
+            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sRegName);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             if (fFirst)

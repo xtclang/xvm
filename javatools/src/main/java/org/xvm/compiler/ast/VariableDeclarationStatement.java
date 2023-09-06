@@ -176,7 +176,7 @@ public class VariableDeclarationStatement
         // create the register
         TypeConstant typeVar = exprNew.ensureTypeConstant(ctx, errs).
                                     removeAutoNarrowing().normalizeParameters();
-        m_reg = ctx.createRegister(typeVar);
+        m_reg = ctx.createRegister(typeVar, getName());
         ctx.registerVar(name, m_reg, errs);
 
         if (exprNew instanceof AnnotatedTypeExpression exprAnnoType)

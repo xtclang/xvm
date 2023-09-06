@@ -737,7 +737,6 @@ public class MethodStructure
         {
         if (ast != m_ast)
             {
-            assert ast instanceof StmtBlockAST;
             m_ast   = ast;
             m_abAst = null;     // force a re-build of the binary form of the AST
             }
@@ -2508,8 +2507,7 @@ public class MethodStructure
          */
         public Register createRegister(TypeConstant type, String sName)
             {
-            StringConstant nameConst = sName == null ? null : f_method.getConstantPool().ensureStringConstant(sName);
-            return new Register(type, nameConst, getMethodStructure());
+            return new Register(type, sName, getMethodStructure());
             }
 
         /**
@@ -2534,10 +2532,9 @@ public class MethodStructure
          */
         public Register createRegister(TypeConstant type, String sName, boolean fUsedOnce)
             {
-            StringConstant nameConst = sName == null ? null : f_method.getConstantPool().ensureStringConstant(sName);
             return fUsedOnce
-                    ? new Register(type, nameConst, Op.A_STACK)
-                    : new Register(type, nameConst, getMethodStructure());
+                    ? new Register(type, sName, Op.A_STACK)
+                    : new Register(type, sName, getMethodStructure());
             }
 
         /**

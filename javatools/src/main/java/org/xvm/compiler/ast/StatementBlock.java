@@ -939,7 +939,7 @@ public class StatementBlock
 
                     TypeConstant type   = exprNew.getCaptureType(sName);
                     boolean      fFinal = exprNew.isCaptureFinal(sName);
-                    Register     reg    = createRegister(type);
+                    Register     reg    = createRegister(type, sName);
                     mapByName.put(sName, reg);
                     ensureCaptureVars().put(sName, reg);
 
@@ -1144,7 +1144,7 @@ public class StatementBlock
                                 {
                                 // we are responsible for capturing a variable for code inside an
                                 // anonymous inner class
-                                Register reg = createRegister(argCapture.getType());
+                                Register reg = createRegister(argCapture.getType(), name.getValueText());
                                 super.registerVar(name, reg, errs);
                                 ensureDefiniteAssignments().put(sName, ctx.getVarAssignment(sName));
                                 ensureCaptureContexts().put(sName, ctx);

@@ -1523,7 +1523,7 @@ public class LambdaExpression
                 if (sName != null && !sName.equals(Id.ANY.TEXT) &&
                             type != null && !type.containsUnresolved())
                     {
-                    Register     reg          = createRegister(type);
+                    Register     reg          = createRegister(type, sName);
                     TypeConstant typeNarrowed = ctxOuter.resolveFormalType(type);
                     if (typeNarrowed != type)
                         {

@@ -262,7 +262,7 @@ public class ForEachStatement
                 default              -> throw new IllegalStateException();
                 };
 
-            reg = ctx.createRegister(type);
+            reg = ctx.createRegister(type, null);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             switch (sName)

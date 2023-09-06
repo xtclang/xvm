@@ -22,10 +22,10 @@ public class Register
      * Construct an unknown Register of the specified type.
      *
      * @param type       the TypeConstant specifying the Register type
-     * @param constName  the name given to the register, if any; otherwise null
+     * @param sName  the name given to the register, if any; otherwise null
      * @param method     the enclosing method
      */
-    public Register(TypeConstant type, StringConstant constName, MethodStructure method)
+    public Register(TypeConstant type, String sName, MethodStructure method)
         {
         if (type == null)
             {
@@ -38,7 +38,7 @@ public class Register
 
         m_fRO        = false;
         m_type       = type;
-        m_constName  = constName;
+        m_sName      = sName;
         m_iArg       = UNKNOWN + (method == null ? 0 : method.getUnassignedRegisterIndex());
         f_nOrigIndex = m_iArg;
         }
@@ -47,11 +47,11 @@ public class Register
      * Construct a Register of the specified type.
      *
      * @param type       the TypeConstant specifying the Register type
-     * @param constName  the name given to the register, if any; otherwise null
+     * @param sName  the name given to the register, if any; otherwise null
      * @param iArg       the argument index, which is either a pre-defined argument index, or a
      *                   register ID
      */
-    public Register(TypeConstant type, StringConstant constName, int iArg)
+    public Register(TypeConstant type, String sName, int iArg)
         {
         if (type == null)
             {
@@ -74,7 +74,7 @@ public class Register
 
         m_fRO        = isPredefinedReadonly(iArg);
         m_type       = type;
-        m_constName  = constName;
+        m_sName      = sName;
         m_iArg       = iArg;
         f_nOrigIndex = iArg;
         }
@@ -457,7 +457,10 @@ public class Register
         {
         if (m_bastAlloc == null)
             {
-            m_bastAlloc = new RegAllocAST<>(m_type, m_constName);
+            StringConstant constName = m_sName == null
+                    ? null
+                    : m_type.getConstantPool().ensureStringConstant(m_sName);
+            m_bastAlloc = new RegAllocAST<>(m_type, constName);
             }
         return m_bastAlloc;
         }
@@ -910,7 +913,7 @@ public class Register
     /**
      * The optional name of the register.
      */
-    private StringConstant m_constName;
+    private String m_sName;
 
     /**
      * The type of the register itself (typically null).

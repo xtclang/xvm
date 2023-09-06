@@ -3241,8 +3241,7 @@ public class ClassStructure
                     }
                 else
                     {
-                    code.add(new Invoke_01(new Register(typeStruct,
-                            pool.ensureStringConstant("this"), Op.A_THIS), idInit, idField));
+                    code.add(new Invoke_01(new Register(typeStruct, "this", Op.A_THIS), idInit, idField));
                     }
 
                 // TODO: transient field initializer is not currently supported
@@ -3349,14 +3348,14 @@ public class ClassStructure
 
             if (fGet)
                 {
-                Register regReturn = new Register(typeProp, prop.getIdentityConstant().getNameConstant(), Op.A_STACK);
+                Register regReturn = new Register(typeProp, prop.getIdentityConstant().getName(), Op.A_STACK);
 
                 code.add(new P_Get(idDelegate, regTarget, regReturn));
                 code.add(new Return_1(regReturn));
                 }
             else // "set"
                 {
-                Register regArg = new Register(typeProp, prop.getIdentityConstant().getNameConstant(), 0);
+                Register regArg = new Register(typeProp, prop.getIdentityConstant().getName(), 0);
 
                 code.add(new P_Set(idDelegate, regTarget, regArg));
                 code.add(new Return_0());
@@ -3406,7 +3405,7 @@ public class ClassStructure
 
             for (int i = 0; i < cParams; i++)
                 {
-                aregParam[i] = new Register(aParams[i].getType(), aParams[i].getNameConstant(), i);
+                aregParam[i] = new Register(aParams[i].getType(), aParams[i].getName(), i);
                 }
 
             Register regProp;
@@ -3480,7 +3479,7 @@ public class ClassStructure
                         }
                     else
                         {
-                        regReturn = new Register(typeReturn, pool.ensureStringConstant("result"), Op.A_STACK);
+                        regReturn = new Register(typeReturn, "result", Op.A_STACK);
                         }
 
                     switch (cParams)
@@ -3693,10 +3692,10 @@ public class ClassStructure
                     //    {
                     //    return this.toString().appendTo(appender);
                     //    }
-                    Register regThis     = new Register(typeAppender, pool.ensureStringConstant("this"    ), Op.A_THIS);
-                    Register regAppender = new Register(typeAppender, pool.ensureStringConstant("appender"), 0);
-                    Register regStack    = new Register(typeAppender, pool.ensureStringConstant("tostring"), Op.A_STACK);
-                    Register regResult   = new Register(typeAppender, pool.ensureStringConstant("result"  ), Op.A_STACK);
+                    Register regThis     = new Register(typeAppender, "this"    , Op.A_THIS);
+                    Register regAppender = new Register(typeAppender, "appender", 0);
+                    Register regStack    = new Register(typeAppender, "tostring", Op.A_STACK);
+                    Register regResult   = new Register(typeAppender, "result"  , Op.A_STACK);
 
                     code.add(new Invoke_01(regThis, methToString.getIdentityConstant(), regStack));
                     code.add(new Invoke_11(regStack, methAppendTo.getIdentityConstant(), regAppender, regResult));

@@ -193,11 +193,11 @@ public class Context
             if (isConstructor())
                 {
                 TypeConstant typeStruct = pool.ensureAccessTypeConstant(typeThis, Access.STRUCT);
-                regThis = new Register(typeStruct, pool.ensureStringConstant("this"), Op.A_STRUCT);
+                regThis = new Register(typeStruct, "this", Op.A_STRUCT);
                 }
             else
                 {
-                regThis = new Register(typeThis, pool.ensureStringConstant("this"), Op.A_THIS);
+                regThis = new Register(typeThis, "this", Op.A_THIS);
                 }
 
             m_regThis = regThis;
@@ -1880,11 +1880,12 @@ public class Context
     /**
      * Produce a regular (not on stack) register.
      *
-     * @param type  the type of the register
+     * @param type   the type of the register
+     * @param sName  the name of the register, or null for an anonymous (e.g. temp) register
      */
-    public Register createRegister(TypeConstant type)
+    public Register createRegister(TypeConstant type, String sName)
         {
-        return new Register(type, null, getMethod());
+        return new Register(type, sName, getMethod());
         }
 
     @Override

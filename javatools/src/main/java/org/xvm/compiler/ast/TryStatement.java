@@ -113,11 +113,12 @@ public class TryStatement
         Register reg = m_regFinallyException;
         if (reg == null)
             {
-            String sLabel = ((LabeledStatement) getParent()).getName();
-            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(),
-                    Id.IDENTIFIER, sLabel + '.' + sName);
+            String sLabel   = ((LabeledStatement) getParent()).getName();
+            String sRegName = sLabel + '.' + sName;
+            Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(),
+                    Id.IDENTIFIER, sRegName);
 
-            m_regFinallyException = reg = ctx.createRegister(pool().typeException१());
+            m_regFinallyException = reg = ctx.createRegister(pool().typeException१(), sRegName);
             m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
             }
 

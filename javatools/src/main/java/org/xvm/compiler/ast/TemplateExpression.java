@@ -106,7 +106,7 @@ public class TemplateExpression
         final TypeConstant[] A_STRING = new TypeConstant[] {T_STRING};
 
         // declare a "$" variable (replacing one if it already exists)
-        m_reg$ = ctx.createRegister(pool().typeStringBuffer());
+        m_reg$ = ctx.createRegister(pool().typeStringBuffer(), "$");
         Token tok$ = new Token(getStartPosition(), getStartPosition(), Id.IDENTIFIER, "$");
         ctx.registerVar(tok$, m_reg$, errs);
         ctx.setVarAssignment("$", AssignedOnce);
