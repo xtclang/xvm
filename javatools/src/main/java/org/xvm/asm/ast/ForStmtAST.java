@@ -54,18 +54,26 @@ public class ForStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
+        res.enter();
         init   = readAST(in, res);
         cond   = readExprAST(in, res);
         update = readAST(in, res);
+        res.enter();
         body   = readAST(in, res);
+        res.exit();
+        res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
+        res.enter();
         prepareAST(init, res);
         prepareAST(cond, res);
         prepareAST(update, res);
+        res.enter();
         prepareAST(body, res);
+        res.exit();
+        res.exit();
     }
 
     @Override

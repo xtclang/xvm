@@ -48,7 +48,9 @@ public class StmtBlockAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
+        res.enter();
         prepareASTArray(stmts, res);
+        res.exit();
     }
 
     @Override

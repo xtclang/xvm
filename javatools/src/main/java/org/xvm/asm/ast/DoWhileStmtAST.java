@@ -34,14 +34,18 @@ public class DoWhileStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
+        res.enter();
         body = readAST(in, res);
         cond = readExprAST(in, res);
+        res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
+        res.enter();
         prepareAST(body, res);
         prepareAST(cond, res);
+        res.exit();
     }
 
     @Override

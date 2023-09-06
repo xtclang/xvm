@@ -42,14 +42,22 @@ public class WhileStmtAST<C>
     @Override
     public void read(DataInput in, ConstantResolver<C> res)
             throws IOException {
+        res.enter();
         cond = readExprAST(in, res);
+        res.enter();
         body = readAST(in, res);
+        res.exit();
+        res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
+        res.enter();
         prepareAST(cond, res);
+        res.enter();
         prepareAST(body, res);
+        res.exit();
+        res.exit();
     }
 
     @Override

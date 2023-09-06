@@ -28,8 +28,8 @@ public class AssignAST<C>
 
     public enum Operator {
         Asn           ("="   ),     // includes "<-" expression
-        CondAsn       (":="  ),     // if (lvalue := expr) {...}, hidden Boolean lvalue
-        CondNotNullAsn("?="  ),     // if (lvalue ?= expr) {...}, hidden Boolean lvalue
+        CondAsn       (":="  ),     // if (x := expr) {...}, for (x : expr), hidden Boolean lvalue
+        CondNotNullAsn("?="  ),     // if (x ?= expr) {...}, hidden Boolean lvalue
         AddAsn        ("+="  ),
         SubAsn        ("-="  ),
         MulAsn        ("*="  ),
