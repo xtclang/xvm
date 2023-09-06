@@ -10,28 +10,51 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An expressions that follow the pattern "operator expression".
+ * An expressions that follows the pattern "operator expression" or "expression operator" and may
+ * change the type of the underlying expression.
  */
 public class UnaryOpExprAST<C>
-        extends PrefixExprAST<C> {
+        extends UnaryExprAST<C> {
+    private Operator op;
 
-    private C type;
+    public enum Operator {
+        Plus      ("+",        true),
+        Minus     ("-",        true),
+        Not       ("!",        true),
+        Compl     ("~",        true),
+        PreInc    ("++",       true),
+        PreDec    ("--",       true),
+        PostInc   ("++",       false),
+        PostDec   ("--",       false),
+        Ref       ("&",        true),
+        Var       ("&",        true),
+        Type      ("typeOf:",  true),
+        Private   ("private:", true),
+        Protected ("private:", true),
+        Public    ("public:",  true),
+        Pack      (""       ,  true),
+        Unpack    (""       ,  false),
+        Convert   (""       ,  false),
+        ToInt     (""       ,  false),
+        Trace     (""       ,  false),
+        ;
+
+        public final String  text;
+        public final boolean pre;
+
+        Operator(String text, boolean pre) {
+            this.text = text;
+            this.pre  = pre;
+        }
+    }
 
     UnaryOpExprAST() {}
 
-    public UnaryOpExprAST(C type, Operator op, ExprAST<C> expr) {
-        super(op, expr);
+    public UnaryOpExprAST(ExprAST<C> expr, Operator op, C type) {
+        super(expr, type);
 
-        assert type != null;
-        assert op != null && op != Operator.Not;
-
-        this.type = type;
-    }
-
-    @Override
-    public C getType(int i) {
-        assert i == 0;
-        return type;
+        assert op != Operator.Not;
+        this.op = op;
     }
 
     @Override
@@ -44,14 +67,7 @@ public class UnaryOpExprAST<C>
             throws IOException {
         super.read(in, res);
 
-        type = res.getConstant(readMagnitude(in));
-    }
-
-    @Override
-    public void prepareWrite(ConstantResolver<C> res) {
-        super.prepareWrite(res);
-
-        type = res.register(type);
+        op = UnaryOpExprAST.Operator.values()[readMagnitude(in)];
     }
 
     @Override
@@ -59,11 +75,20 @@ public class UnaryOpExprAST<C>
             throws IOException {
         super.write(out, res);
 
-        writePackedLong(out, res.indexOf(type));
+        writePackedLong(out, op.ordinal());
     }
 
     @Override
     public String dump() {
-        return type + ": " + super.dump();
+        return op.pre
+            ? op.text + getExpr().dump()
+            : getExpr().dump() + op.text;
+    }
+
+    @Override
+    public String toString() {
+        return op.pre
+            ? op.text + getExpr()
+            : getExpr() + op.text;
     }
 }

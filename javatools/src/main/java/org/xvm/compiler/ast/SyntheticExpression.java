@@ -9,8 +9,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.ast.BinaryAST.ExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ConvertExprAST;
-import org.xvm.asm.ast.SyntheticExprAST;
-import org.xvm.asm.ast.SyntheticExprAST.Operation;
+import org.xvm.asm.ast.UnaryOpExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
 import org.xvm.compiler.Compiler.Stage;
 
@@ -114,32 +114,32 @@ public abstract class SyntheticExpression
 
         if (this instanceof ConvertExpression exprConv)
             {
-            return new ConvertExprAST<>(getType(), expr.getExprAST(), exprConv.getConversionMethod());
+            return new ConvertExprAST<>(expr.getExprAST(), getType(), exprConv.getConversionMethod());
             }
 
-        Operation op;
+        Operator op;
         if (this instanceof PackExpression)
             {
-            op = Operation.Pack;
+            op = Operator.Pack;
             }
         else if (this instanceof UnpackExpression)
             {
-            op = Operation.Unpack;
+            op = Operator.Unpack;
             }
         else if (this instanceof ToIntExpression)
             {
-            op = Operation.ToInt;
+            op = Operator.ToInt;
             }
         else if (this instanceof TraceExpression)
             {
-            op = Operation.Trace;
+            op = Operator.Trace;
             }
         else
             {
             throw new UnsupportedOperationException();
             }
 
-        return new SyntheticExprAST<>(op, getType(), expr.getExprAST());
+        return new UnaryOpExprAST<>(expr.getExprAST(), op, getType());
         }
 
 

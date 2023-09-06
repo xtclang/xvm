@@ -196,7 +196,6 @@ public abstract class BinaryAST<C> {
         ListExpr,
         TupleExpr,
         MapExpr,
-        SyntheticExpr,
         ConvertExpr,
         StmtExpr,
         OuterExpr,
@@ -249,7 +248,6 @@ public abstract class BinaryAST<C> {
                 case ListExpr           -> new ListExprAST<>();
                 case TupleExpr          -> new TupleExprAST<>();
                 case MapExpr            -> new MapExprAST<>();
-                case SyntheticExpr      -> new SyntheticExprAST<>();
                 case ConvertExpr        -> new ConvertExprAST<>();
                 case StmtExpr           -> new StmtExprAST<>();
                 case OuterExpr          -> new OuterExprAST<>();

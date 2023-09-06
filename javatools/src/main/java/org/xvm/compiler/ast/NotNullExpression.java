@@ -292,7 +292,7 @@ public class NotNullExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        return new NotNullExprAST<>(expr.getExprAST());
+        return new NotNullExprAST<>(expr.getExprAST(), getType());
         }
 
 

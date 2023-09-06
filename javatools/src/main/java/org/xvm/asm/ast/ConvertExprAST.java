@@ -13,14 +13,14 @@ import static org.xvm.util.Handy.writePackedLong;
  * The Convert expressions.
  */
 public class ConvertExprAST<C>
-        extends SyntheticExprAST<C> {
+        extends UnaryOpExprAST<C> {
 
     private C convMethod;
 
     ConvertExprAST() {}
 
-    public ConvertExprAST(C type, ExprAST<C> underlyingExpr, C convMethod) {
-        super(Operation.Convert, type, underlyingExpr);
+    public ConvertExprAST(ExprAST<C> expr, C type, C convMethod) {
+        super(expr, Operator.Convert, type);
 
         this.convMethod = convMethod;
     }

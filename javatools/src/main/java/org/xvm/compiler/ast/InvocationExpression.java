@@ -1707,7 +1707,7 @@ public class InvocationExpression
             Register regFn = new Register(typeFn, null, Op.A_STACK);
             code.add(new Invoke_01(argFn, m_idConvert, regFn));
             argFn = regFn;
-            astFn = new ConvertExprAST<>(typeFn, astFn, m_idConvert);
+            astFn = new ConvertExprAST<>(astFn, typeFn, m_idConvert);
             }
 
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
@@ -2026,7 +2026,7 @@ public class InvocationExpression
                     {
                     regTarget = code.createRegister(typeTarget, fTargetOnStack);
                     code.add(new MoveThis(cStepsOut, regTarget));
-                    m_astTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cStepsOut);
+                    m_astTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cStepsOut, typeTarget);
                     }
                 else
                     {
