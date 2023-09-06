@@ -168,7 +168,7 @@ public class CPool {
     }
 
     // Huge format.  IntCon sizes this large use the isize/bigint API and so
-    // don't call here.  In other cases, its an error.
+    // don't call here.  In other cases, it's an error.
     throw XEC.TODO();
   }
 
@@ -213,11 +213,6 @@ public class CPool {
     return Arrays.copyOfRange(_buf,x,x+=len);
   }
 
-  //
-  public int cur_pos() { return x; }
-  public void set_pos(int x) { this.x=x; }
-
-  
   // Skip an array of idxs
   public int skipAry() {
     int len = u31();      
