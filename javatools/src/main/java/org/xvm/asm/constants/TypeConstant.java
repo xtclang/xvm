@@ -1533,18 +1533,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * Return an argument for this type constant. For all concrete types, this simply returns a
-     * type of this type. The only TypeConstant that treats it differently is a formal type
-     * parameter, which would return a corresponding register
-     *
-     * @return the argument
-     */
-    public Argument getTypeArgument()
-        {
-        return getType();
-        }
-
-    /**
      * Check whether this type represents a "nest mate" of the specified class.
      *
      * @param idClass  the identity of the class

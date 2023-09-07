@@ -1575,20 +1575,6 @@ public class TerminalTypeConstant
                   this.getDefiningConstant().equals(getConstantPool().clzType());
         }
 
-    @Override
-    public Argument getTypeArgument()
-        {
-        Constant constant = getDefiningConstant();
-        if (constant.getFormat() == Format.TypeParameter)
-            {
-            TypeParameterConstant constTypeParam = (TypeParameterConstant) constant;
-
-            return new Register(getType(), null, constTypeParam.getRegister());
-            }
-
-        return super.getTypeArgument();
-        }
-
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
