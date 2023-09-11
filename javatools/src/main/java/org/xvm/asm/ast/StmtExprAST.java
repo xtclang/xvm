@@ -55,7 +55,7 @@ public class StmtExprAST<C>
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         stmt.prepareWrite(res);
-        res.registerAll(types);
+        prepareConstArray(types, res);
     }
 
     @Override

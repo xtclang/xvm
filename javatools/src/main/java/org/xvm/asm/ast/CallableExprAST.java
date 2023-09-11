@@ -60,7 +60,7 @@ public abstract class CallableExprAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        res.registerAll(retTypes);
+        prepareConstArray(retTypes, res);
         prepareASTArray(args, res);
     }
 

@@ -59,7 +59,7 @@ public class NotImplAST<C>
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-         res.registerAll(types);
+        prepareConstArray(types, res);
     }
 
     @Override

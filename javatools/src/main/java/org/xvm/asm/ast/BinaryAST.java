@@ -542,14 +542,5 @@ public abstract class BinaryAST<C> {
          * Used during deserialization: Notify the resolver that a register scope is being exited.
          */
         void exit();
-
-        /**
-         * Helper method to register an array of constants by changing the array content.
-         */
-        default void registerAll(Object[] constants) {
-            for (int i = 0, c = constants.length; i < c; i++) {
-                constants[i] = register((C) constants[i]);
-            }
-        }
     }
 }

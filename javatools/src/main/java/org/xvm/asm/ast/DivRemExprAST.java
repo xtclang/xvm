@@ -49,8 +49,7 @@ public class DivRemExprAST<C>
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         super.prepareWrite(res);
-
-        res.registerAll(types);
+        prepareConstArray(types, res);
     }
 
     @Override
