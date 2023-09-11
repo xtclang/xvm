@@ -23,6 +23,8 @@ import java.util.Set;
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
 
+import org.xvm.asm.ast.RegisterAST;
+
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -729,14 +731,18 @@ public class MethodStructure
         }
 
     /**
-     * @param ast  the root BinaryAST
+     * At compile time, store the AST constructed by the compiler.
+     *
+     * @param astRoot     the root BinaryAST
+     * @param aAstParams  the parameter registers
      */
-    public void setAst(BinaryAST<Constant> ast)
+    public void setAst(BinaryAST<Constant> astRoot, RegisterAST<Constant>[] aAstParams)
         {
-        if (ast != m_ast)
+        if (astRoot != m_ast)
             {
-            m_ast   = ast;
-            m_abAst = null;     // force a re-build of the binary form of the AST
+            m_ast        = astRoot;
+            m_aAstParams = aAstParams;
+            m_abAst      = null;        // force a re-build of the binary form of the AST
             }
         }
 
@@ -2169,6 +2175,7 @@ public class MethodStructure
 
             if (m_ast != null)
                 {
+                registry.init(m_aAstParams);
                 m_ast.prepareWrite(registry);
                 }
 
@@ -2401,21 +2408,21 @@ public class MethodStructure
                     aop[i].resolveCode(this, aconst);
                     }
                 }
-            try
-                {
-                // TODO REMOVE: TEMPORARY test of AST deserialization
-                method.getAst();
-                }
-            catch (Throwable e)
-                {
-                if (alreadyReported.add(e.getClass()))
-                    {
-                    System.err.println("AST error: " + e.getMessage());
-                    }
-                }
+//            try
+//                {
+//                // TODO REMOVE: TEMPORARY test of AST deserialization
+//                method.getAst();
+//                }
+//            catch (Throwable e)
+//                {
+//                if (alreadyReported.add(e.getClass()))
+//                    {
+//                    System.err.println("AST error: " + e.getMessage());
+//                    }
+//                }
             }
 
-        private static HashSet<Class> alreadyReported = new HashSet<>();
+//        private static HashSet<Class> alreadyReported = new HashSet<>();
 
         Code(MethodStructure method, Code wrappee)
             {
@@ -3500,6 +3507,11 @@ public class MethodStructure
      * The method's AST.
      */
     private transient BinaryAST<Constant> m_ast;
+
+    /**
+     * The method's parameters.
+     */
+    private transient RegisterAST<Constant>[] m_aAstParams;
 
     /**
      * The max number of registers used by the method. Calculated from the ops.

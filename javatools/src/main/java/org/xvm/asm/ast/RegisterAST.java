@@ -9,7 +9,6 @@ import org.xvm.asm.Op;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.RegisterExpr;
 
-import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -31,25 +30,21 @@ public class RegisterAST<C>
 
     RegisterAST() {}
 
-    RegisterAST(C type) {
-        this(type, null);
-    }
-
-    RegisterAST(C type, C name) {
+    public RegisterAST(C type, C name) {
         assert type != null;
         this.type  = type;
         this.name  = name;
     }
 
     /**
-     * Special constructor used to create "special" registers and representation of parameters.
+     * Special constructor used to create "special" registers.
      *
      * @param regId  the register id; a "special" (internal, hard-coded) register id is allowed
      * @param type   the type of the register, or null if not applicable
      * @param name   the type of the register, or null if not applicable
      */
     public RegisterAST(int regId, C type, C name) {
-        assert regId > Op.CONSTANT_OFFSET && regId < 255; // arbitrary temporary limit
+        assert regId > Op.CONSTANT_OFFSET && regId < 0;
         this.regId = regId;
         this.type  = type;
         this.name  = name;
@@ -117,6 +112,9 @@ public class RegisterAST<C>
     @Override
     protected void writeExpr(DataOutput out, ConstantResolver<C> res)
             throws IOException {
+//        if (regId == UNASSIGNED_ID) {
+//            System.err.println("Unassigned register at " + res); // TODO replace with an assert
+//        }
         writePackedLong(out, regId < 0 ? regId : 32 + regId);
     }
 

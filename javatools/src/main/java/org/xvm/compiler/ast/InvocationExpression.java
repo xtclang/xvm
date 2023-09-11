@@ -1086,7 +1086,7 @@ public class InvocationExpression
                             Argument[] aargTypeParam = new Argument[cTypeParams];
                             for (int i = 0; i < cTypeParams; i++)
                                 {
-                                aargTypeParam[i] = new Register(pool.typeType(), null, i);
+                                aargTypeParam[i] = ctx.getParameter(i);
                                 }
                             m_aargTypeParams = aargTypeParam;
                             }

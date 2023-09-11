@@ -44,6 +44,7 @@ public class AssignAST<C>
         AsnIfNotFalse (":="  ),     // x := y; (note: this is not used for a condition, e.g. if)
         AsnIfNotNull  ("?="  ),     // x ?= y; (note: this is not used for a condition, e.g. if)
         AsnIfWasNull  ("?:=" ),
+        Deref         ("->"  ),
         ;
 
         public final String text;

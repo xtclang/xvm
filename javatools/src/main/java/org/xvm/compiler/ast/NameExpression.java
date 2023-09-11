@@ -1816,7 +1816,7 @@ public class NameExpression
             else if (type.isTypeParameter())
                 {
                 int iReg = ((TypeParameterConstant) constFormal).getRegister();
-                aArgBind[i] = new Register(type, null, iReg);
+                aArgBind[i] = ctx.getParameter(iReg);
                 }
             else
                 {

@@ -257,9 +257,10 @@ public abstract class BinaryAST<C> {
         }
     }
 
-    public static BinaryAST[] NO_ASTS   = new BinaryAST[0];
-    public static ExprAST[]   NO_EXPRS  = new ExprAST[0];
-    public static Object[]    NO_CONSTS = new Object[0];
+    public static final BinaryAST[]   NO_ASTS   = new BinaryAST[0];
+    public static final ExprAST[]     NO_EXPRS  = new ExprAST[0];
+    public static final Object[]      NO_CONSTS = new Object[0];
+    public static final RegisterAST[] NO_REGS   = new RegisterAST[0];
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -510,6 +511,11 @@ public abstract class BinaryAST<C> {
          * @return the index in the constant pool of that constant
          */
         int indexOf(C constant);
+
+        /**
+         * @param params  the registers to use to accept the parameter arguments for the method
+         */
+        void init(RegisterAST<C>[] params);
 
         /**
          * Used during deserialization: Notify the resolver that a register scope is being entered.

@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Stack;
 
 import org.xvm.asm.Component.Format;
@@ -721,6 +722,19 @@ public abstract class Op
             {
             f_method = method;
             f_pool   = pool;
+
+            // create registers for the method parameters
+            int cParams = f_method.getParamCount();
+            if (cParams > 0)
+                {
+                RegisterAST<Constant>[] aReg = new RegisterAST[cParams];
+                for (int i = 0; i < cParams; i++)
+                    {
+                    Parameter param = f_method.getParam(i);
+                    aReg[i] = new RegisterAST<>(param.getType(), param.getNameConstant());
+                    }
+                init(aReg);
+                }
             }
 
         /**
@@ -808,6 +822,21 @@ public abstract class Op
             }
 
         @Override
+        public void init(RegisterAST<Constant>[] params)
+            {
+            assert params != null && Arrays.stream(params).allMatch(Objects::nonNull);
+            assert m_aregParams == BinaryAST.NO_REGS || m_aregParams.length == params.length;
+            assert m_stackScopes.empty();
+
+            m_aregParams = params;
+            m_listRegs.clear();
+            for (RegisterAST<Constant> reg : params)
+                {
+                register(reg);
+                }
+            }
+
+        @Override
         public void enter()
             {
             m_stackScopes.push(m_listRegs.size());
@@ -865,7 +894,6 @@ public abstract class Op
                 String       name = null;
 
                 TypeConstant typeThis = f_method.getContainingClass().getFormalType();
-                // REVIEW GG do we need "cSteps" on the resulting register?
                 switch (regId)
                     {
                     case Op.A_IGNORE:
@@ -1044,6 +1072,12 @@ public abstract class Op
                 }
             }
 
+        @Override
+        public String toString()
+            {
+            return "Resolver for " + f_method.getIdentityConstant().getPathString();
+            }
+
         /**
          * The method that this {@link ConstantRegistry} is resolving within the context of.
          */
@@ -1078,6 +1112,11 @@ public abstract class Op
          * registers that existed at the time the corresponding scope was entered.
          */
         private final Stack<Integer> m_stackScopes = new Stack<>();
+
+        /**
+         * The parameter registers.
+         */
+        private RegisterAST<Constant>[] m_aregParams = BinaryAST.NO_REGS;
 
         /**
          * The "special" registers, such as "this".

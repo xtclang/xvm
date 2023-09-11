@@ -69,12 +69,18 @@ public class WhileStmtAST<C>
 
     @Override
     public String dump() {
-        return new StringBuffer()
-            .append("\nwhile (")
-            .append(cond == null ? "" : cond.dump())
-            .append(")\n")
-            .append(body == null ? "  {}" : indentLines(body.dump(), "  "))
-            .toString();
+        StringBuilder buf = new StringBuilder();
+        buf.append("\nwhile (");
+        if (cond != null) {
+            buf.append(cond.dump());
+        }
+        buf.append(")\n");
+        if (body == null) {
+            buf.append("  {}");
+        } else {
+            buf.append(indentLines(body.dump(), "  "));
+        }
+        return buf.toString();
     }
 
     @Override

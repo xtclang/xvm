@@ -455,14 +455,15 @@ public class Register
      */
     public RegAllocAST<Constant> getRegAllocAST()
         {
-        if (m_bastAlloc == null)
+        RegAllocAST<Constant> astAlloc = m_astAlloc;
+        if (astAlloc == null)
             {
             StringConstant constName = m_sName == null
                     ? null
                     : m_type.getConstantPool().ensureStringConstant(m_sName);
-            m_bastAlloc = new RegAllocAST<>(m_type, constName);
+            m_astAlloc = astAlloc = new RegAllocAST<>(m_type, constName);
             }
-        return m_bastAlloc;
+        return astAlloc;
         }
 
     /**
@@ -470,6 +471,16 @@ public class Register
      */
     public ExprAST<Constant> getRegisterAST()
         {
+        if (isPredefined())
+            {
+            RegisterAST<Constant> regSpecial = m_astSpecial;
+            if (regSpecial == null)
+                {
+                regSpecial = m_astSpecial = new RegisterAST<>(m_iArg, getType(), null);
+                }
+            return regSpecial;
+            }
+
         return getRegAllocAST().getRegister();
         }
 
@@ -955,5 +966,10 @@ public class Register
     /**
      * The Binary AST register allocation that is required in order for this register to exist.
      */
-    private transient RegAllocAST<Constant> m_bastAlloc;
+    private transient RegAllocAST<Constant> m_astAlloc;
+
+    /**
+     * The Binary AST register for special registers.
+     */
+    private transient RegisterAST<Constant> m_astSpecial;
     }
