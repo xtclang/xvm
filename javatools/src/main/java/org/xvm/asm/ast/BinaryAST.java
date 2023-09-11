@@ -125,7 +125,6 @@ public abstract class BinaryAST<C> {
 
         AssignExpr,         // (x <- y)                                         // TODO
         SwitchExpr,                                                             // TODO
-        MultiCond,          // >1 ","-delimited conditions                      // TODO
         NotCond,            // if (!(String s ?= foo())){...}                   // TODO
         NotNullCond,        // if (String s ?= foo()){...}                      // TODO
         NotFalseCond,       // if (String s := bar()){...}                      // TODO
@@ -148,6 +147,7 @@ public abstract class BinaryAST<C> {
         ConstantExpr,
         ListExpr,
         TupleExpr,
+        MultiExpr,
         MapExpr,
         ConvertExpr,
         StmtExpr,
@@ -201,6 +201,7 @@ public abstract class BinaryAST<C> {
                 case ConstantExpr       -> new ConstantExprAST<>();
                 case ListExpr           -> new ListExprAST<>();
                 case TupleExpr          -> new TupleExprAST<>();
+                case MultiExpr          -> new MultiExprAST<>();
                 case MapExpr            -> new MapExprAST<>();
                 case ConvertExpr        -> new ConvertExprAST<>();
                 case StmtExpr           -> new StmtExprAST<>();
@@ -228,7 +229,7 @@ public abstract class BinaryAST<C> {
                 case WhileDoStmt        -> new WhileStmtAST<>();
                 case DoWhileStmt        -> new DoWhileStmtAST<>();
                 case ForStmt            -> new ForStmtAST<>();
-                case SwitchStmt         -> new SwitchAST<>(this);
+                // case SwitchStmt         -> new SwitchAST<>(this);
                 case ContinueStmt       -> new ContinueStmtAST<>();
                 case BreakStmt          -> new BreakStmtAST<>();
                 case Return0Stmt,
@@ -344,8 +345,7 @@ public abstract class BinaryAST<C> {
             return expr;
         }
 
-        // TODO return multi condition
-        return null;
+        return new MultiExprAST<>(exprs);
     }
 
     protected static <C, N extends ExprAST<C>> N readExprAST(DataInput in, ConstantResolver<C> res)

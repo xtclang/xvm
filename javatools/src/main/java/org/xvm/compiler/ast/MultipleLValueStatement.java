@@ -12,7 +12,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.TupleExprAST;
+import org.xvm.asm.ast.MultiExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -241,7 +241,7 @@ public class MultipleLValueStatement
                 code.add(labelGround);
                 }
             }
-        ctx.getHolder().setAst(this, new TupleExprAST<>(getLValueExpression().getType(), aAst));
+        ctx.getHolder().setAst(this, new MultiExprAST<>(aAst));
         return fCompletes;
         }
 
@@ -484,7 +484,7 @@ public class MultipleLValueStatement
                 {
                 aAstExpr[i] = listExprs.get(i).getExprAST();
                 }
-            return new TupleExprAST<>(getType(), aAstExpr);
+            return new MultiExprAST<>(aAstExpr);
             }
 
         @Override
