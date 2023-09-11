@@ -16,6 +16,8 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.RegAllocAST;
+import org.xvm.asm.ast.StmtBlockAST;
 import org.xvm.asm.ast.TryCatchStmtAST;
 
 import org.xvm.asm.ast.TryFinallyStmtAST;
@@ -385,15 +387,18 @@ public class TryStatement
             }
 
         // try..catch
-        CatchStart[] aCatchStart;
+        RegAllocAST<Constant>[] aAllocCatch = null;
         if (catches != null)
             {
-            int c = catches.size();
-            aCatchStart = new CatchStart[c];
-            for (int i = 0; i < c; ++i)
+            int          cCatches    = catches.size();
+            CatchStart[] aCatchStart = new CatchStart[cCatches];
+
+            aAllocCatch = new RegAllocAST[cCatches];
+            for (int i = 0; i < cCatches; ++i)
                 {
                 CatchStatement stmt = catches.get(i);
                 aCatchStart[i] = stmt.ensureCatchStart();
+                aAllocCatch[i] = stmt.getCatchRegister().getRegAllocAST();
                 }
 
             // single "try" for all of the catches
@@ -419,8 +424,9 @@ public class TryStatement
                 CatchStatement stmtCatch = catches.get(i);
                 stmtCatch.setCatchLabel(labelCatchEnd);
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
-                aAstCatches[i] = holder.getAst(stmtCatch);
-                assert aAstCatches[i] != null;
+
+                aAstCatches[i] = new StmtBlockAST<>(
+                    new BinaryAST[] {aAllocCatch[i], holder.getAst(stmtCatch)});
                 }
             }
 
