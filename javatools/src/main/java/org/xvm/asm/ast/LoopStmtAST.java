@@ -15,13 +15,16 @@ import static org.xvm.util.Handy.indentLines;
 public class LoopStmtAST<C>
         extends BinaryAST<C> {
 
+    private ExprAST<C>[] specialRegs; // RegAllocAST<C>[]
     private BinaryAST<C> body;
 
     LoopStmtAST() {}
 
-    public LoopStmtAST(BinaryAST<C> body) {
+    public LoopStmtAST(ExprAST<C>[] specialRegs, BinaryAST<C> body) {
         assert body != null;
-        this.body = body;
+
+        this.specialRegs = specialRegs == null  ? NO_ALLOCS : specialRegs;
+        this.body        = body;
     }
 
     @Override
@@ -37,13 +40,15 @@ public class LoopStmtAST<C>
     protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
-        body = readAST(in, res);
+        specialRegs = readExprArray(in, res);
+        body        = readAST(in, res);
         res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         res.enter();
+        prepareASTArray(specialRegs, res);
         prepareAST(body, res);
         res.exit();
     }
@@ -52,6 +57,7 @@ public class LoopStmtAST<C>
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         writeAST(body, out, res);
+        writeExprArray(specialRegs, out, res);
     }
 
     @Override

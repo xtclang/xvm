@@ -24,6 +24,8 @@ import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.DoWhileStmtAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.LoopStmtAST;
+import org.xvm.asm.ast.RegAllocAST;
+import org.xvm.asm.ast.StmtBlockAST;
 import org.xvm.asm.ast.WhileStmtAST;
 
 import org.xvm.asm.constants.StringConstant;
@@ -572,7 +574,19 @@ public class WhileStatement
             code.add(new Exit());
             code.add(getContinueLabel());
 
-            holder.setAst(this, holder.getAst(block));
+            BinaryAST<Constant> astBody = holder.getAst(block);
+            if (m_aAllocSpecial != null)
+                {
+                int                   cAllocs = m_aAllocSpecial.length;
+                BinaryAST<Constant>[] aAst    = new BinaryAST[cAllocs + 1];
+                System.arraycopy(m_aAllocSpecial, 0, aAst, 0, cAllocs);
+                aAst[cAllocs] = astBody;
+                holder.setAst(this, new StmtBlockAST<>(aAst));
+                }
+            else
+                {
+                holder.setAst(this, astBody);
+                }
 
             return fCompletes;
             }
@@ -621,7 +635,7 @@ public class WhileStatement
                 code.add(new Exit());
                 }
 
-            holder.setAst(this, new LoopStmtAST<>(holder.getAst(block)));
+            holder.setAst(this, new LoopStmtAST<>(m_aAllocSpecial, holder.getAst(block)));
             return false; // while(true) never completes naturally
             }
 
@@ -660,7 +674,7 @@ public class WhileStatement
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
             code.add(new Exit());
 
-            holder.setAst(this, new DoWhileStmtAST<>(holder.getAst(block), m_astCond));
+            holder.setAst(this, new DoWhileStmtAST<>(m_aAllocSpecial, holder.getAst(block), m_astCond));
             return fCompletes;
             }
 
@@ -689,6 +703,8 @@ public class WhileStatement
             code.add(new Enter());
             }
         Label labelInit = emitLabelVarCreation(code, regFirst, regCount);
+
+        List<RegAllocAST<Constant>> listAlloc = new ArrayList<>();
         if (fHasDecls)
             {
             for (AstNode cond : conds)
@@ -698,6 +714,8 @@ public class WhileStatement
                     for (VariableDeclarationStatement stmtDecl : stmtCond.takeDeclarations())
                         {
                         fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
+
+                        listAlloc.add((RegAllocAST<Constant>) holder.getAst(stmtDecl));
                         }
                     }
                 }
@@ -717,13 +735,15 @@ public class WhileStatement
             code.add(new Exit());
             }
 
-        holder.setAst(this, new WhileStmtAST<>(m_astCond, holder.getAst(block)));
+        holder.setAst(this, new WhileStmtAST<>(
+            m_aAllocSpecial, listAlloc.isEmpty() ? null : listAlloc.toArray(BinaryAST.NO_ALLOCS),
+            m_astCond, holder.getAst(block)));
         return fCompletes;
         }
 
     /**
      * Internal method: create the variables for the "first" and "count" label variables, but only
-     * if necessary.
+     * if necessary and set the {@link #m_aAllocSpecial}.
      *
      * @param code      the code to emit
      * @param regFirst  the (optional) register for the "first" variable
@@ -734,23 +754,38 @@ public class WhileStatement
      */
     private Label emitLabelVarCreation(Code code, Register regFirst, Register regCount)
         {
-        ConstantPool pool = pool();
+        ConstantPool            pool   = pool();
+        RegAllocAST<Constant>[] aAlloc = null;
 
         if (regFirst != null)
             {
             StringConstant name = pool.ensureStringConstant(
                     ((LabeledStatement) getParent()).getName() + ".first");
-            code.add(new Var_IN(m_regFirst, name, pool.valTrue()));
+            code.add(new Var_IN(regFirst, name, pool.valTrue()));
+
+            aAlloc = new RegAllocAST[regCount == null ? 1 : 2];
+            aAlloc[0] = new RegAllocAST<>(regFirst.getType(), name);
             }
 
         if (regCount != null)
             {
             StringConstant name = pool.ensureStringConstant(
                     ((LabeledStatement) getParent()).getName() + ".count");
-            code.add(new Var_IN(m_regCount, name, pool.val0()));
+            code.add(new Var_IN(regCount, name, pool.val0()));
+
+            RegAllocAST<Constant> astCount = new RegAllocAST<>(regCount.getType(), name);
+            if (aAlloc == null)
+                {
+                aAlloc = new RegAllocAST[] {astCount};
+                }
+            else
+                {
+                aAlloc[1] = astCount;
+                }
             }
 
-        return regFirst == null && regCount == null ? null : new Label("first_while_" + getLabelId());
+        m_aAllocSpecial = aAlloc;
+        return aAlloc == null ? null : new Label("first_while_" + getLabelId());
         }
 
     /**
@@ -904,6 +939,11 @@ public class WhileStatement
      * ExprAST produced by {@link #emitConditionTest}.
      */
     private transient ExprAST<Constant> m_astCond;
+
+    /**
+     * An array of RegAllocAST produced by {@link emitLabelVarCreation}.
+     */
+    private transient RegAllocAST<Constant>[] m_aAllocSpecial;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
     }

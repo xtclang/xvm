@@ -16,12 +16,14 @@ import static org.xvm.util.Handy.indentLines;
 public class DoWhileStmtAST<C>
         extends BinaryAST<C> {
 
+    private ExprAST<C>[] specialRegs;  // RegAllocAST<C>[]
     private BinaryAST<C> body;
     private ExprAST<C>   cond;
 
     DoWhileStmtAST() {}
 
-    public DoWhileStmtAST(BinaryAST<C> body, ExprAST<C> cond) {
+    public DoWhileStmtAST(ExprAST<C>[] specialRegs, BinaryAST<C> body, ExprAST<C> cond) {
+        this.specialRegs = specialRegs == null  ? NO_ALLOCS : specialRegs;
         this.body = body;
         this.cond = cond;
     }
@@ -35,14 +37,16 @@ public class DoWhileStmtAST<C>
     protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
-        body = readAST(in, res);
-        cond = readExprAST(in, res);
+        specialRegs = readExprArray(in, res);
+        body        = readAST(in, res);
+        cond        = readExprAST(in, res);
         res.exit();
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         res.enter();
+        prepareASTArray(specialRegs, res);
         prepareAST(body, res);
         prepareAST(cond, res);
         res.exit();
@@ -51,19 +55,26 @@ public class DoWhileStmtAST<C>
     @Override
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
+        writeExprArray(specialRegs, out, res);
         writeAST(body, out, res);
         writeExprAST(cond, out, res);
     }
 
     @Override
     public String dump() {
-        return new StringBuffer()
-            .append("do\n")
-            .append(body == null ? "  {}" : indentLines(body.dump(), "  "))
-            .append("\nwhile (")
-            .append(cond == null ? "" : cond.dump())
-            .append(")")
-            .toString();
+        StringBuilder buf = new StringBuilder();
+        buf.append("do\n");
+        if (body == null) {
+            buf.append("  {}");
+        } else {
+            buf.append(indentLines(body.dump(), "  "));
+        }
+        buf.append("\nwhile (");
+        if (cond == null) {
+            buf.append(cond.dump());
+        }
+        buf.append(")");
+        return buf.toString();
     }
 
     @Override

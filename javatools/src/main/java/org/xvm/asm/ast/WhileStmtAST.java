@@ -18,12 +18,17 @@ public class WhileStmtAST<C>
 
     private ExprAST<C>   cond;
     private BinaryAST<C> body;
+    private ExprAST<C>[] specialRegs;  // RegAllocAST<C>[]
+    private ExprAST<C>[] declaredRegs; // RegAllocAST<C>[]
 
     WhileStmtAST() {}
 
-    public WhileStmtAST(ExprAST<C> cond, BinaryAST<C> body) {
-        this.cond = cond;
-        this.body = body;
+    public WhileStmtAST(RegAllocAST<C>[] specialRegs, RegAllocAST<C>[] declaredRegs,
+                        ExprAST<C> cond, BinaryAST<C> body) {
+        this.specialRegs  = specialRegs == null  ? NO_ALLOCS : specialRegs;
+        this.declaredRegs = declaredRegs == null ? NO_ALLOCS : declaredRegs;
+        this.cond         = cond;
+        this.body         = body;
     }
 
     @Override
@@ -43,7 +48,9 @@ public class WhileStmtAST<C>
     protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
-        cond = readExprAST(in, res);
+        specialRegs  = readExprArray(in, res);
+        declaredRegs = readExprArray(in, res);
+        cond         = readExprAST(in, res);
         res.enter();
         body = readAST(in, res);
         res.exit();
@@ -53,6 +60,8 @@ public class WhileStmtAST<C>
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         res.enter();
+        prepareASTArray(specialRegs, res);
+        prepareASTArray(declaredRegs, res);
         prepareAST(cond, res);
         res.enter();
         prepareAST(body, res);
@@ -64,6 +73,8 @@ public class WhileStmtAST<C>
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         writeExprAST(cond, out, res);
+        writeExprArray(specialRegs, out, res);
+        writeExprArray(declaredRegs, out, res);
         writeAST(body, out, res);
     }
 
