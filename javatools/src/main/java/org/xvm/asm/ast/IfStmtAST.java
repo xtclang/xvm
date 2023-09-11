@@ -27,17 +27,15 @@ public class IfStmtAST<C>
     }
 
     public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt) {
-        assert cond != null && thenStmt != null;
-        this.cond     = cond;
-        this.thenStmt = thenStmt;
-        this.hasElse  = false;
+        this(cond, thenStmt, null);
     }
 
     public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt, BinaryAST<C> elseStmt) {
-        assert cond != null && thenStmt != null && elseStmt != null;
+        assert cond != null;
         this.cond     = cond;
-        this.thenStmt = thenStmt;
-        this.elseStmt = elseStmt;
+        this.thenStmt = unwrapStatement(thenStmt);
+        this.elseStmt = unwrapStatement(elseStmt);
+        this.hasElse  = elseStmt != null;
     }
 
     @Override

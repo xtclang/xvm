@@ -10,8 +10,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.AssignAST;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.IfStmtAST;
+import org.xvm.asm.ast.MultiExprAST;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -295,10 +302,7 @@ public class IfStatement
         Label labelElse = getElseLabel();
         Label labelExit = new Label();
 
-        boolean fScope         = false;
-        boolean fCompletesThen = fReachable;
-        boolean fCompletesElse = fReachable;
-        boolean fFirst         = true;
+        boolean fScope = false;
         for (AstNode cond : conds)
             {
             if (cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations())
@@ -309,6 +313,10 @@ public class IfStatement
                 }
             }
 
+        List<ExprAST<Constant>> listExprs    = new ArrayList<>();
+        boolean                 fFirst       = true;
+        boolean                 fReachesThen = fReachable;
+        boolean                 fReachesElse = fReachable;
         for (AstNode cond : conds)
             {
             boolean fCompletes;
@@ -323,6 +331,9 @@ public class IfStatement
                     {
                     code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
                     }
+
+                AssignAST<Constant> expr = (AssignAST<Constant>) ctx.getHolder().getAst(stmtCond);
+                listExprs.add(expr.makeCondition(stmtCond.getConditionRegister().getRegAllocAST()));
                 }
             else
                 {
@@ -337,39 +348,51 @@ public class IfStatement
                     {
                     // this condition is the last condition, because "false" caps the list of
                     // conditions, making the rest unreachable
-                    fCompletesThen = false;
+                    fReachesThen = false;
                     code.add(new Jump(labelElse));
+                    listExprs.add(exprCond.getExprAST());
                     break;
                     }
                 else
                     {
                     fCompletes = exprCond.isCompletable();
                     exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
+                    listExprs.add(exprCond.getExprAST());
                     }
                 }
 
-            fCompletesThen &= fCompletes;
+            fReachesThen &= fCompletes;
             if (fFirst)
                 {
-                fCompletesElse &= fCompletes;
+                fReachesElse &= fCompletes;
                 }
 
             fFirst = false;
             }
 
-        if (fCompletesThen)
+        ExprAST<Constant> bastCond = listExprs.size() == 1
+                ? listExprs.get(0)
+                : new MultiExprAST(listExprs.toArray(new ExprAST[0]));
+
+        BinaryAST<Constant> bastThen       = null;
+        boolean             fCompletesThen = fReachesThen;
+        if (fReachesThen)
             {
-            fCompletesThen = stmtThen.completes(ctx, fCompletesThen, code, errs);
+            fCompletesThen = stmtThen.completes(ctx, fReachesThen, code, errs);
+            bastThen       = ctx.getHolder().getAst(stmtThen);
             if (stmtElse != null)
                 {
                 code.add(new Jump(labelExit));
                 }
             }
 
+        BinaryAST<Constant> bastElse       = null;
+        boolean             fCompletesElse = fReachesElse;
         code.add(labelElse);
-        if (fCompletesElse && stmtElse != null)
+        if (fReachesElse && stmtElse != null)
             {
-            fCompletesElse = stmtElse.completes(ctx, fCompletesElse, code, errs);
+            fCompletesElse = stmtElse.completes(ctx, fReachesElse, code, errs);
+            bastElse       = ctx.getHolder().getAst(stmtElse);
             }
 
         code.add(labelExit);
@@ -377,6 +400,8 @@ public class IfStatement
             {
             code.add(new Exit());
             }
+
+        ctx.getHolder().setAst(this, new IfStmtAST<>(bastCond, bastThen, bastElse));
 
         return fCompletesThen | fCompletesElse;
         }

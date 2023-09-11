@@ -317,6 +317,13 @@ public abstract class BinaryAST<C> {
         }
     }
 
+    protected static <C> BinaryAST<C> unwrapStatement(BinaryAST<C> stmt) {
+        if (stmt instanceof StmtBlockAST<C> block && block.getStmts().length == 1) {
+            return block.getStmts()[0];
+        }
+        return stmt;
+    }
+
     protected static <C> C prepareConst(C constant, ConstantResolver<C> res) {
         return constant == null ? null : res.register(constant);
     }

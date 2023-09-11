@@ -100,6 +100,30 @@ public class AssignAST<C>
         return lhs.getType(i);
     }
 
+    public AssignAST<C> makeCondition(RegAllocAST<C> allocBoolean) {
+        Operator newOp;
+        if (op == Operator.AsnIfNotFalse) {
+            newOp = Operator.CondAsn;
+        } else if (op == Operator.AsnIfNotNull) {
+            newOp = Operator.CondNotNullAsn;
+        } else {
+            throw new IllegalStateException("unsupported op: " + op);
+        }
+
+        ExprAST<C>[] lvals;
+        if (lhs instanceof MultiExprAST<C> multi) {
+            int oldCount = multi.getCount();
+            int newCount = oldCount + 1;
+            lvals = new ExprAST[newCount];
+            System.arraycopy(multi.getExprs(), 0, lvals, 1, oldCount);
+        } else {
+            lvals = new ExprAST[2];
+            lvals[1] = lhs;
+        }
+        lvals[0] = allocBoolean;
+        return new AssignAST<>(new MultiExprAST<>(lvals), newOp, rhs);
+    }
+
     @Override
     public NodeType nodeType() {
         return op == Operator.Asn ? Assign : BinOpAssign;
