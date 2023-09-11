@@ -390,12 +390,10 @@ public class TryStatement
             {
             int c = catches.size();
             aCatchStart = new CatchStart[c];
-            aAstCatches = new BinaryAST[c];
             for (int i = 0; i < c; ++i)
                 {
                 CatchStatement stmt = catches.get(i);
                 aCatchStart[i] = stmt.ensureCatchStart();
-                aAstCatches[i] = holder.getAst(stmt);
                 }
 
             // single "try" for all of the catches
@@ -422,6 +420,7 @@ public class TryStatement
                 stmtCatch.setCatchLabel(labelCatchEnd);
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
                 aAstCatches[i] = holder.getAst(stmtCatch);
+                assert aAstCatches[i] != null;
                 }
             }
 
