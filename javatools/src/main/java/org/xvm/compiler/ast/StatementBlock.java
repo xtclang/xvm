@@ -522,7 +522,11 @@ public class StatementBlock
 
                 if (fReachable && !(stmt instanceof ComponentStatement))
                     {
-                    listAsts.add(holder.getAst(stmt));
+                    BinaryAST<Constant> bast = holder.getAst(stmt);
+                    if (bast != null)
+                        {
+                        listAsts.add(bast);
+                        }
                     }
 
                 if (fReachable && !fCompletable)

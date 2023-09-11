@@ -277,9 +277,7 @@ public abstract class Statement
         BinaryAST<Constant> getAst(Statement stmt)
             {
             assert stmt != null;
-            return stmt == this.stmt
-                    ? ast
-                    : new NotImplAST<>(stmt.getClass().getSimpleName());
+            return stmt == this.stmt ? ast : null;
             }
 
         void setAst(Statement stmt, BinaryAST<Constant> ast)

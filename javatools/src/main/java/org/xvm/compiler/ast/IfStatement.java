@@ -241,10 +241,15 @@ public class IfStatement
                 if (((Expression) cond).isConstantFalse())
                     {
                     // "if (false) {stmtThen}" is optimized out altogether.
+                    if (stmtElse == null)
+                        {
+                        return fReachable;
+                        }
+
                     // "if (false) {stmtThen} else {stmtElse}" is compiled as "{stmtElse}"
-                    return stmtElse == null
-                            ? fReachable
-                            : stmtElse.completes(ctx, fReachable, code, errs);
+                    boolean fCompletes = stmtElse.completes(ctx, fReachable, code, errs);
+                    ctx.getHolder().setAst(this, ctx.getHolder().getAst(stmtElse));
+                    return fCompletes;
                     }
 
                 assert ((Expression) cond).isConstantTrue();
@@ -260,7 +265,9 @@ public class IfStatement
         // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
         if (fAlwaysTrue)
             {
-            return stmtThen.completes(ctx, fReachable, code, errs);
+            boolean fCompletes = stmtThen.completes(ctx, fReachable, code, errs);
+            ctx.getHolder().setAst(this, ctx.getHolder().getAst(stmtThen));
+            return fCompletes;
             }
 
 
