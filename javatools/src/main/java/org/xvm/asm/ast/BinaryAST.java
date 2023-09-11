@@ -217,6 +217,7 @@ public abstract class BinaryAST<C> {
                 case NotExpr            -> new NotExprAST<>();
                 case NotNullExpr        -> new NotNullExprAST<>();
                 case TernaryExpr        -> new TernaryExprAST<>();
+                case SwitchExpr         -> new SwitchAST<>(this);
                 case TemplateExpr       -> new TemplateExprAST<>();
                 case ThrowExpr          -> new ThrowExprAST<>();
 
@@ -227,6 +228,7 @@ public abstract class BinaryAST<C> {
                 case WhileDoStmt        -> new WhileStmtAST<>();
                 case DoWhileStmt        -> new DoWhileStmtAST<>();
                 case ForStmt            -> new ForStmtAST<>();
+                case SwitchStmt         -> new SwitchAST<>(this);
                 case ContinueStmt       -> new ContinueStmtAST<>();
                 case BreakStmt          -> new BreakStmtAST<>();
                 case Return0Stmt,
@@ -310,6 +312,10 @@ public abstract class BinaryAST<C> {
         } else {
             node.write(out, res);
         }
+    }
+
+    protected static <C> C prepareConst(C constant, ConstantResolver<C> res) {
+        return constant == null ? null : res.register(constant);
     }
 
     public static <C> BinaryAST<C> makeStatement(BinaryAST<C>[] stmts) {
@@ -419,6 +425,14 @@ public abstract class BinaryAST<C> {
             values[i] = res.getConstant(readMagnitude(in));
         }
         return values;
+    }
+
+    // TODO CP make sure we actually use this
+    protected static <C> void prepareConstArray(Object[] values, ConstantResolver<C> res) {
+        int count = values == null ? 0 : values.length;
+        for (int i = 0; i < count; ++i) {
+            values[i] = res.register((C) values[i]);
+        }
     }
 
     protected static <C> void writeConstArray(Object[] values, DataOutput out, ConstantResolver<C> res)
