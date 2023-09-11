@@ -7,8 +7,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.TupleExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -210,7 +214,10 @@ public class MultipleLValueStatement
         {
         boolean fCompletes = fReachable;
 
-        List<AstNode> LVals = this.LVals;
+        List<AstNode>       LVals = this.LVals;
+        int                 cVals = LVals.size();
+        ExprAST<Constant>[] aAst  = new ExprAST[cVals];
+
         for (int i = 0, c = LVals.size(); i < c; ++i)
             {
             // REVIEW - how much of the short-circuitable LValue "a?[b]" should be handled here?
@@ -221,6 +228,11 @@ public class MultipleLValueStatement
             if (node instanceof Statement stmt)
                 {
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+                aAst[i] = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
+                }
+            else
+                {
+                aAst[i] = ((Expression) node).getExprAST();
                 }
 
             Label labelGround = peekShortCircuitLabel(i);
@@ -229,7 +241,7 @@ public class MultipleLValueStatement
                 code.add(labelGround);
                 }
             }
-
+        ctx.getHolder().setAst(this, new TupleExprAST<>(getLValueExpression().getType(), aAst));
         return fCompletes;
         }
 
@@ -459,6 +471,20 @@ public class MultipleLValueStatement
                 aLVals[i] = listExprs.get(i).generateAssignable(ctx, code, errs);
                 }
             return aLVals;
+            }
+
+        @Override
+        public ExprAST<Constant> getExprAST()
+            {
+            List<Expression>    listExprs = ensureExpressions();
+            int                 cExprs    = listExprs.size();
+            ExprAST<Constant>[] aAstExpr  = new ExprAST[cExprs];
+
+            for (int i = 0; i < cExprs; ++i)
+                {
+                aAstExpr[i] = listExprs.get(i).getExprAST();
+                }
+            return new TupleExprAST<>(getType(), aAstExpr);
             }
 
         @Override

@@ -18,7 +18,6 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssignAST;
 import org.xvm.asm.ast.AssignAST.Operator;
-import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -176,7 +175,7 @@ public class AssignmentStatement
                 AstNode node = LVals.get(i);
                 if (node instanceof VariableDeclarationStatement stmt)
                     {
-                    LVals.set(i, new NameExpression(this, stmt.getNameToken(), stmt.getRegister()));
+                    LVals.set(i, stmt.getLValueExpression());
                     if (listDecls != null)
                         {
                         listDecls.add(stmt);
@@ -782,9 +781,9 @@ public class AssignmentStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean             fCompletes = fReachable;
-        ConstantPool        pool       = pool();
-        BinaryAST<Constant> bast       = null;
+        boolean           fCompletes = fReachable;
+        ConstantPool      pool       = pool();
+        ExprAST<Constant> astAssign  = null;
 
         switch (getCategory())
             {
@@ -799,13 +798,15 @@ public class AssignmentStatement
                     {
                     assert lvalueExpr.isCompletable();
                     rvalue.generateCompactInit(ctx, code, stmtVar,  errs);
-                    bast = new AssignAST<>(stmtVar.getRegister().getRegAllocAST(), Operator.Asn, rvalue.getExprAST());
+                    astAssign = new AssignAST<>(stmtVar.getRegister().getRegAllocAST(), Operator.Asn, rvalue.getExprAST());
                     break;
                     }
 
+                ExprAST<Constant> astLVal = null;
                 if (lvalue instanceof Statement stmt)
                     {
                     fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+                    astLVal    = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
                     }
 
                 Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
@@ -815,18 +816,21 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     }
 
-                ExprAST<Constant> bastLVal = lvalue instanceof Statement stmt
-                        ? (ExprAST<Constant>) ctx.getHolder().getAst(stmt)
-                        : lvalueExpr.getExprAST();
-                bast = new AssignAST<>(bastLVal, Operator.Asn, rvalue.getExprAST());
+                if (astLVal == null)
+                    {
+                    astLVal = lvalueExpr.getExprAST();
+                    }
+                astAssign = new AssignAST<>(astLVal, Operator.Asn, rvalue.getExprAST());
                 break;
                 }
 
             case CondRight:
                 {
+                ExprAST<Constant> astLVal = null;
                 if (lvalue instanceof Statement stmt)
                     {
                     fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+                    astLVal    = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
                     }
 
                 Operator operAsn;
@@ -901,10 +905,11 @@ public class AssignmentStatement
 
                 if (fCompletes)
                     {
-                    ExprAST<Constant> bastLVal = lvalue instanceof Statement stmt
-                            ? (ExprAST<Constant>) ctx.getHolder().getAst(stmt)
-                            : lvalueExpr.getExprAST();
-                    bast = new AssignAST<>(bastLVal, operAsn, rvalue.getExprAST());
+                    if (astLVal == null)
+                        {
+                        astLVal = lvalueExpr.getExprAST();
+                        }
+                    astAssign = new AssignAST<>(astLVal, operAsn, rvalue.getExprAST());
                     }
                 break;
                 }
@@ -946,7 +951,7 @@ public class AssignmentStatement
 
                     if (fCompletes)
                         {
-                        bast = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
+                        astAssign = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
                         }
                     }
                 break;
@@ -977,7 +982,7 @@ public class AssignmentStatement
                             case BIT_XOR_ASN -> Operator.XorAsn;
                             default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
                             };
-                        bast = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
+                        astAssign = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
                         }
                     }
                 break;
@@ -987,9 +992,9 @@ public class AssignmentStatement
                 throw new IllegalStateException();
             }
 
-        if (bast != null)
+        if (astAssign != null)
             {
-            ctx.getHolder().setAst(this, bast);
+            ctx.getHolder().setAst(this, astAssign);
             }
 
         return fCompletes;
