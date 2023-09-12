@@ -1912,9 +1912,7 @@ public class InvocationExpression
                     throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
                 }
 
-            m_astInvoke = astFn == null
-                    ? super.getExprAST()
-                    : new CallExprAST<>(astFn, getTypes(), aAsts);
+            m_astInvoke = new CallExprAST<>(astFn, getTypes(), aAsts);
             return;
             }
 
@@ -1983,9 +1981,6 @@ public class InvocationExpression
                 }
             else
                 {
-                ExprAST<Constant> astTarget = argFn instanceof Register regFn
-                        ? regFn.getRegisterAST()
-                        : new ConstantExprAST<>((Constant) argFn);
                 if (lval.isLocalArgument())
                     {
                     code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
@@ -1996,7 +1991,7 @@ public class InvocationExpression
                     code.add(new FBind(argFn, aiArg, aArg, regFn));
                     lval.assign(regFn, code, errs);
                     }
-                m_astInvoke = new BindFunctionAST<>(astTarget, aiArg, aAst, getType());
+                m_astInvoke = new BindFunctionAST<>(astFn, aiArg, aAst, getType());
                 }
             }
         }
