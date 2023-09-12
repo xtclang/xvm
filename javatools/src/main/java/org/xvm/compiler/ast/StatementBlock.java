@@ -31,6 +31,8 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.ast.AssignAST;
 import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ReturnStmtAST;
 import org.xvm.asm.ast.StmtBlockAST;
 
@@ -504,7 +506,45 @@ public class StatementBlock
                         }
                     }
                 }
-            else if (!fSuppressScope)
+            else if (fMethod)
+                {
+                RootContext ctxRoot = (RootContext) ctx;
+                if (ctxRoot.isAnonInnerClass())
+                    {
+                    Map<String, Register> mapCapture = ctxRoot.m_mapCaptureVars;
+                    if (mapCapture != null)
+                        {
+                        assert !code.hasOps();
+                        NewExpression  exprNew = ctxRoot.getAnonymousInnerClassExpression();
+                        ClassStructure clzAnon = ctxRoot.getEnclosingClass();
+                        for (Map.Entry<String, Register> entry : mapCapture.entrySet())
+                            {
+                            String            sName   = entry.getKey();
+                            Register          reg     = entry.getValue();
+                            PropertyStructure prop    = (PropertyStructure) clzAnon.getChild(sName);
+                            PropertyConstant  id      = prop.getIdentityConstant();
+                            ExprAST<Constant> astProp = new ConstantExprAST<>(id);
+
+                            if (exprNew.isImplicitDeref(sName))
+                                {
+                                code.add(new Var_CN(reg, id.getNameConstant(), id));
+
+                                listAsts.add(new AssignAST<>(
+                                    reg.getRegAllocAST(), AssignAST.Operator.Deref, astProp));
+                                }
+                            else
+                                {
+                                code.add(new Var_IN(reg, id.getNameConstant(), id));
+
+                                listAsts.add(new AssignAST<>(
+                                    reg.getRegAllocAST(), AssignAST.Operator.Asn, astProp));
+                                }
+                            }
+                        }
+                    }
+                }
+
+            if (!fSuppressScope)
                 {
                 code.add(new Enter());
                 }
@@ -1584,25 +1624,6 @@ public class StatementBlock
                             }
                         }
                     m_mapCaptureContexts = null;
-                    }
-
-                if (m_mapCaptureVars != null)
-                    {
-                    // REVIEW arguably, it would have been cleaner to put this with the code in StatementBlock.emit()
-                    // emit the pre-amble that provides captured variables as local variables
-                    assert isAnonInnerClass();
-                    NewExpression  exprNew = getAnonymousInnerClassExpression();
-                    ClassStructure clzAnon = getEnclosingClass();
-                    for (Map.Entry<String, Register> entry : m_mapCaptureVars.entrySet())
-                        {
-                        String            sName = entry.getKey();
-                        Register          reg   = entry.getValue();
-                        PropertyStructure prop  = (PropertyStructure) clzAnon.getChild(sName);
-                        PropertyConstant  id    = prop.getIdentityConstant();
-                        code.add(exprNew.isImplicitDeref(sName)
-                                ? new Var_CN(reg, id.getNameConstant(), id)
-                                : new Var_IN(reg, id.getNameConstant(), id));
-                        }
                     }
                 }
 
