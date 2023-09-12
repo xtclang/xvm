@@ -823,6 +823,17 @@ public class NewExpression
             m_mapRegisters   = ctxAnon.ensureRegisterMap();
             m_fInstanceChild = ctxAnon.isInstanceChild();
             m_ctxCapture     = null;
+
+            // make sure the capture names don't collide
+            ClassStructure clzAnon = ctxAnon.getThisClass();
+            for (String sName : m_mapCapture.keySet())
+                {
+                if (clzAnon.getChild(sName) != null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
+                    return null;
+                    }
+                }
             }
 
         m_plan = plan;
