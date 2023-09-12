@@ -331,9 +331,7 @@ public class IfStatement
                     {
                     code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
                     }
-
-                AssignAST<Constant> expr = (AssignAST<Constant>) ctx.getHolder().getAst(stmtCond);
-                listExprs.add(expr.makeCondition(stmtCond.getConditionRegister().getRegAllocAST()));
+                listExprs.add((AssignAST<Constant>) ctx.getHolder().getAst(stmtCond));
                 }
             else
                 {

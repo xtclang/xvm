@@ -26,8 +26,6 @@ public class AssignAST<C>
 
     public enum Operator {
         Asn           ("="   ),     // includes "<-" expression
-        CondAsn       (":="  ),     // if (x := expr) {...}, for (x : expr), hidden Boolean lvalue
-        CondNotNullAsn("?="  ),     // if (x ?= expr) {...}, hidden Boolean lvalue
         AddAsn        ("+="  ),
         SubAsn        ("-="  ),
         MulAsn        ("*="  ),
@@ -39,10 +37,10 @@ public class AssignAST<C>
         AndAsn        ("&="  ),
         OrAsn         ("|="  ),
         XorAsn        ("^="  ),
+        AsnIfNotFalse (":="  ),     // x := y; (includes when used as a condition, e.g. if (x := y))
+        AsnIfNotNull  ("?="  ),     // x ?= y; (includes when used as a condition, e.g. if (x := y))
         AsnIfWasTrue  ("&&=" ),
         AsnIfWasFalse ("||=" ),
-        AsnIfNotFalse (":="  ),     // x := y; (note: this is not used for a condition, e.g. if)
-        AsnIfNotNull  ("?="  ),     // x ?= y; (note: this is not used for a condition, e.g. if)
         AsnIfWasNull  ("?:=" ),
         Deref         ("->"  ),
         ;
@@ -98,30 +96,6 @@ public class AssignAST<C>
     @Override
     public C getType(int i) {
         return lhs.getType(i);
-    }
-
-    public AssignAST<C> makeCondition(RegAllocAST<C> allocBoolean) {
-        Operator newOp;
-        if (op == Operator.AsnIfNotFalse) {
-            newOp = Operator.CondAsn;
-        } else if (op == Operator.AsnIfNotNull) {
-            newOp = Operator.CondNotNullAsn;
-        } else {
-            throw new IllegalStateException("unsupported op: " + op);
-        }
-
-        ExprAST<C>[] lvals;
-        if (lhs instanceof MultiExprAST<C> multi) {
-            int oldCount = multi.getCount();
-            int newCount = oldCount + 1;
-            lvals = new ExprAST[newCount];
-            System.arraycopy(multi.getExprs(), 0, lvals, 1, oldCount);
-        } else {
-            lvals = new ExprAST[2];
-            lvals[1] = lhs;
-        }
-        lvals[0] = allocBoolean;
-        return new AssignAST<>(new MultiExprAST<>(lvals), newOp, rhs);
     }
 
     @Override
