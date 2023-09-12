@@ -8,7 +8,7 @@
  *                    during test cleanup
  */
 const Result(Status status, Exception? exception = Null, Exception[]? suppressed = Null,
-        Duration duration = Duration.NONE) {
+        Duration duration = Duration.None) {
     /**
      * Create a copy of this `Result` with a specific duration.
      *

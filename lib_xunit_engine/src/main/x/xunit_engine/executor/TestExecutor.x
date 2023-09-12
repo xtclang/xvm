@@ -70,7 +70,7 @@ const TestExecutor {
         Boolean                started    = False;
         EngineExecutionContext context    = parentContext;
         Time                   start      = clock.now;
-        Duration               duration   = NONE;
+        Duration               duration   = None;
 
 		if (context := collector.execute(() -> lifecycle.prepare(parentContext, extensions, parentExtensions))) {
             if (skipResult := collector.execute(() -> lifecycle.shouldBeSkipped(context, extensions))) {

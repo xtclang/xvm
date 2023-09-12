@@ -228,7 +228,7 @@ class AssertingExecutionListener
                     .assertResult(result -> {
                         assert:test result.exception == Null;
                         assert:test result.status == Successful;
-                        assert:test result.duration != Duration.NONE;
+                        assert:test result.duration != Duration.None;
                     });
         }
 
@@ -247,7 +247,7 @@ class AssertingExecutionListener
                     .assertResult(result -> {
                         assert:test result.status == Failed;
                         assert:test result.exception.is(errorType);
-                        assert:test result.duration != Duration.NONE;
+                        assert:test result.duration != Duration.None;
                         });
         }
 
