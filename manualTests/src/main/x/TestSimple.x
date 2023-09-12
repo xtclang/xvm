@@ -2,6 +2,7 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
+        function void(String) writePointer = &addPointerReference("name", _);
     }
 
     Iterator<Int> test(Int next) { // the name collision used to assert the compiler
