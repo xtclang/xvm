@@ -28,7 +28,7 @@ public class SwitchAST<C>
         extends ExprAST<C> {
 
     private ExprAST<C>[]   exprs;
-    private transient int  colCount;
+    private int            colCount;
     private long           isaTest;
     private Object[][]     cases;
     private BinaryAST<C>[] bodies;
@@ -67,22 +67,44 @@ public class SwitchAST<C>
                      C[][]          cases,
                      BinaryAST<C>[] bodies,
                      C[]            resultTypes) {
-
-        // check the expressions that produce the values to match, and determine the "width" of each
-        // case, i.e. the number of values to match
+        // check the expressions that produce the values to match
         assert exprs != null && exprs.length > 0 && Arrays.stream(exprs).allMatch(Objects::nonNull);
+        assert isaTest == 0 || Long.numberOfTrailingZeros(Long.highestOneBit(isaTest)) <= colCount;
+
+        // calculate the "width" of the conditions, i.e. the max number of values to match
+        int checkColCount = 0;
         for (ExprAST expr : exprs) {
             int resultCount = expr.getCount();
             assert resultCount > 0;
-            colCount += resultCount;
+            checkColCount += resultCount;
         }
 
-        // check the
-        assert isaTest == 0 || Long.numberOfTrailingZeros(Long.highestOneBit(isaTest)) <= colCount;
-
         // check cases
-        assert cases != null && Arrays.stream(cases).allMatch(row -> row != null
-                && row.length == colCount && Arrays.stream(row).allMatch(Objects::nonNull));
+        assert cases != null;
+        int rowCount = cases.length;
+        int colCount = 0;
+        for (int row = 0; row < rowCount; ++row) {
+            Object[] values   = cases[row];
+            int      valCount = values.length;
+            if (row == 0) {
+                assert valCount > 0;
+                colCount = valCount;
+            } else {
+                assert colCount == valCount;
+            }
+
+            for (int col = 0; col < colCount; ++col) {
+                assert values[col] != null;
+            }
+        }
+
+        // if there were any rows, then use the column count from the rows (which must be identical
+        // over all rows); otherwise, just take the column count from the switch condition
+        if (rowCount == 0) {
+            colCount = checkColCount;
+        } else {
+            assert checkColCount >= colCount;
+        }
 
         // check bodies that are associated with some or all of the cases
         assert bodies != null && bodies.length <= cases.length;
@@ -98,12 +120,13 @@ public class SwitchAST<C>
             int resultCount = resultTypes.length;
             for (BinaryAST<C> body : bodies) {
                 assert body instanceof ExprAST<C>;
-                assert ((ExprAST<C>) body).getCount() >= resultCount;     // REVIEW GG ">=" or "=="?
+                assert ((ExprAST<C>) body).getCount() >= resultCount;
             }
         }
 
         this.exprs       = exprs;
         this.isaTest     = isaTest;
+        this.colCount    = colCount;
         this.cases       = cases;
         this.bodies      = bodies;
         this.resultTypes = resultTypes;
@@ -211,17 +234,19 @@ public class SwitchAST<C>
             throws IOException {
         res.enter();
         exprs = readExprArray(in, res);
-        isaTest = readPackedLong(in);       // currently only supports up to 64 values in each case
+        isaTest = readPackedLong(in);  // currently only supports up to 64 columns (values per case)
 
         int rowCount = readMagnitude(in);
+            colCount = readMagnitude(in);
 
-        // calculate column count
-        colCount = 0;
+        // check the column count provided by the expressions
+        int checkColCount = 0;
         for (ExprAST expr : exprs) {
             int resultCount = expr.getCount();
             assert resultCount > 0;
-            colCount += resultCount;
+            colCount += checkColCount;
         }
+        assert checkColCount >= colCount;
 
         // read the case "statements"
         cases = new Object[rowCount][colCount];
@@ -287,6 +312,7 @@ public class SwitchAST<C>
         // write the case "statements"
         int rowCount = cases.length;
         writePackedLong(out, rowCount);
+        writePackedLong(out, colCount);
         for (Object[] row : cases) {
             for (int col = 0; col < colCount; ++col) {
                 writePackedLong(out, res.indexOf((C) row[col]));
