@@ -285,10 +285,11 @@ public class TemplateExpression
     public ExprAST<Constant> getExprAST()
         {
         int                 cExprs = exprs.size();
-        ExprAST<Constant>[] aExpr  = new ExprAST[cExprs];
+        ExprAST<Constant>[] aExpr  = new ExprAST[1 + cExprs];
+        aExpr[0] = m_reg$.getRegAllocAST();
         for (int i = 0; i < cExprs; i++)
             {
-            aExpr[i] = exprs.get(i).getExprAST();
+            aExpr[i+1] = exprs.get(i).getExprAST();
             }
         return new TemplateExprAST<>(aExpr);
         }
