@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.HashSet;
+
 import org.xvm.asm.Op;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.RegisterExpr;
@@ -112,9 +114,8 @@ public class RegisterAST<C>
     @Override
     protected void writeExpr(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-//        if (regId == UNASSIGNED_ID) {
-//            System.err.println("Unassigned register at " + res); // TODO replace with an assert
-//        }
+        assert regId != UNASSIGNED_ID;
+
         writePackedLong(out, regId < 0 ? regId : 32 + regId);
     }
 
