@@ -31,6 +31,11 @@ public class MultiExprAST<C>
     }
 
     @Override
+    public int getCount() {
+        return exprs.length;
+    }
+
+    @Override
     public C getType(int i) {
         return exprs[i].getType(0);
     }
