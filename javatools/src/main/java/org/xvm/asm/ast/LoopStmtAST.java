@@ -56,8 +56,8 @@ public class LoopStmtAST<C>
     @Override
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        writeAST(body, out, res);
         writeExprArray(specialRegs, out, res);
+        writeAST(body, out, res);
     }
 
     @Override
