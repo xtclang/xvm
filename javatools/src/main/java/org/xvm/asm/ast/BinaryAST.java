@@ -156,6 +156,7 @@ public abstract class BinaryAST<C> {
         NarrowedExpr,
 
         StmtBlock,          // {...}, do{...}while(False); etc.
+        MultiStmt,
         IfThenStmt,         // if(cond){...}
         IfElseStmt,         // if(cond){...}else{...}
         SwitchStmt,         // switch(cond){...}
@@ -222,7 +223,8 @@ public abstract class BinaryAST<C> {
                 case TemplateExpr       -> new TemplateExprAST<>();
                 case ThrowExpr          -> new ThrowExprAST<>();
 
-                case StmtBlock          -> new StmtBlockAST<>();
+                case StmtBlock          -> new StmtBlockAST<>(true);
+                case MultiStmt          -> new StmtBlockAST<>(false);
                 case IfThenStmt         -> new IfStmtAST<>(false);
                 case IfElseStmt         -> new IfStmtAST<>(true);
                 case LoopStmt           -> new LoopStmtAST<>();
@@ -295,7 +297,7 @@ public abstract class BinaryAST<C> {
             throws IOException {
         N node = (N) (NodeType.valueOf(in.readUnsignedByte())).instantiate();
         if (node == null) {
-            node = (N) new StmtBlockAST<C>(NO_ASTS);
+            node = (N) new StmtBlockAST<C>(NO_ASTS, false);
         } else {
             node.readBody(in, res);
         }
@@ -328,11 +330,14 @@ public abstract class BinaryAST<C> {
         return constant == null ? null : res.register(constant);
     }
 
-    public static <C> BinaryAST<C> makeStatement(BinaryAST<C>[] stmts) {
+    /**
+     * Make a synthetic statement block for the specified statements without creating a new scope.
+     */
+    public static <C> BinaryAST<C> makeMultiStatement(BinaryAST<C>[] stmts) {
         return switch (stmts == null ? 0 : stmts.length) {
-            case 0  -> new StmtBlockAST<>(NO_ASTS);
+            case 0  -> new StmtBlockAST<>(NO_ASTS, false);
             case 1  -> stmts[0];
-            default -> new StmtBlockAST<>(stmts);
+            default -> new StmtBlockAST<>(stmts, false);
         };
     }
 

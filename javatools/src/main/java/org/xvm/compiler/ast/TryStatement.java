@@ -426,7 +426,7 @@ public class TryStatement
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
 
                 aAstCatches[i] = new StmtBlockAST<>(
-                    new BinaryAST[] {aAllocCatch[i], holder.getAst(stmtCatch)});
+                    new BinaryAST[] {aAllocCatch[i], holder.getAst(stmtCatch)}, true);
                 }
             }
 

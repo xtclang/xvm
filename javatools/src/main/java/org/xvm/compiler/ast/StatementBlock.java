@@ -370,7 +370,7 @@ public class StatementBlock
                 // a void method has an implicit "return;" at the end of it
                 code.add(new Return_0());
 
-                // add the return statement to the AST
+                // add the return statement to the BinaryAST
                 if (astRoot instanceof StmtBlockAST astBlock)
                     {
                     BinaryAST<Constant>[] oldStmts = astBlock.getStmts();
@@ -379,7 +379,7 @@ public class StatementBlock
                     BinaryAST<Constant>[] newStmts = new BinaryAST[newSize];
                     System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
                     newStmts[oldSize] = new ReturnStmtAST<>(null);
-                    astRoot = new StmtBlockAST(newStmts);
+                    astRoot = new StmtBlockAST(newStmts, true);
                     }
                 }
             else
@@ -590,7 +590,7 @@ public class StatementBlock
             asts = listAsts.toArray(BinaryAST.NO_ASTS);
             }
 
-        holder.setAst(this, new StmtBlockAST<>(asts));
+        holder.setAst(this, new StmtBlockAST<>(asts, hasScope()));
         return fCompletable;
         }
 

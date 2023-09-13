@@ -873,10 +873,7 @@ public abstract class Op
                 }
             else
                 {
-                if (reg.isRegIdAssigned())
-                    {
-                    assert regId == m_listRegs.size();
-                    }
+                assert !reg.isRegIdAssigned() || regId == m_listRegs.size();
 
                 regId = m_listRegs.size();
                 reg.setRegId(regId);
@@ -908,41 +905,43 @@ public abstract class Op
                         break;
 
                     case Op.A_THIS:
-                        assert !f_method.isConstructor() && !f_method.isValidator();
-                        assert !f_method.isStatic();
+                        assert !f_method.isConstructor() && !f_method.isValidator() &&
+                               !f_method.isStatic();
                         type = typeThis;
                         name = "this";
                         break;
 
                     case Op.A_TARGET:
-                        assert !f_method.isConstructor() && !f_method.isValidator();
-                        assert !f_method.isStatic();
+                        assert !f_method.isConstructor() && !f_method.isValidator() &&
+                               !f_method.isStatic();
                         type = typeThis;
                         name = "this:target";
                         break;
 
                     case Op.A_PUBLIC:
-                        assert !f_method.isConstructor() && !f_method.isValidator();
-                        assert !f_method.isStatic();
+                        assert !f_method.isConstructor() && !f_method.isValidator() &&
+                               !f_method.isStatic();
                         type = f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
                         name = "this:public";
                         break;
 
                     case Op.A_PROTECTED:
-                        assert !f_method.isConstructor() && !f_method.isValidator();
-                        assert !f_method.isStatic();
+                        assert !f_method.isConstructor() && !f_method.isValidator() &&
+                               !f_method.isStatic();
                         type = f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
                         name = "this:protected";
                         break;
 
                     case Op.A_PRIVATE:
-                        assert !f_method.isConstructor() && !f_method.isValidator();
-                        assert !f_method.isStatic();
+                        assert !f_method.isConstructor() && !f_method.isValidator() &&
+                               !f_method.isStatic();
                         type = f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
                         name = "this:private";
                         break;
 
                     case Op.A_STRUCT:
+                        assert f_method.isConstructor() || f_method.isValidator() ||
+                               !f_method.isStatic();
                         type = f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
                                 f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
                         name = "this:struct";
