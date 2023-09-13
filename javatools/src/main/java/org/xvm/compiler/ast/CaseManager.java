@@ -2,9 +2,11 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -13,6 +15,9 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.MultiExprAST;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -33,7 +38,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.Branch;
-import org.xvm.compiler.ast.Statement.AstHolder;
 
 import org.xvm.util.BitCube;
 import org.xvm.util.ListMap;
@@ -163,7 +167,7 @@ public class CaseManager<CookieType>
      */
     public boolean usesJmpInt()
         {
-        return !usesIfLadder() && getCaseLabels() != null && getCaseConstants() == null;
+        return m_fUseJumpInt;
         }
 
     /**
@@ -201,8 +205,7 @@ public class CaseManager<CookieType>
         }
 
     /**
-     * @return the array of constants associated with the labels, or null if either an if-ladder or
-     *         JMP_INT is used
+     * @return the array of constants associated with the labels
      */
     public Constant[] getCaseConstants()
         {
@@ -215,6 +218,22 @@ public class CaseManager<CookieType>
     public CookieType getCookie(Label label)
         {
         return m_mapLabels.get(label);
+        }
+
+    /**
+     * @return the binary AST for the condition portion of the switch
+     */
+    public ExprAST<Constant> getConditionBAST()
+        {
+        return m_bastCond;
+        }
+
+    /**
+     * @return a bitmask indicating which conditions are "is a" tests
+     */
+    public long getConditionIsA()
+        {
+        return m_afIsSwitch;
         }
 
 
@@ -867,7 +886,6 @@ public class CaseManager<CookieType>
             // use the JumpVal option instead of the JumpInt option)
             int     cVals       = m_listsetCase.size();
             int     cRange      = 0;
-            boolean fUseJumpInt = false;
             if (fValid && m_pintMin != null && getConditionCount() == 1)
                 {
                 PackedInteger pintRange = m_pintMax.sub(m_pintMin);
@@ -878,14 +896,14 @@ public class CaseManager<CookieType>
                     if (m_listsetCase.size() >= (pintRange.getLong() >>> 2))
                         {
                         cRange      = pintRange.getInt() + 1;
-                        fUseJumpInt = true;
+                        m_fUseJumpInt = true;
                         }
                     }
                 }
 
             Constant[] aConstCase = m_listsetCase.toArray(Constant.NO_CONSTS);
             Label[]    aLabelCase = m_listLabels.toArray(new Label[0]);
-            if (fUseJumpInt)
+            if (m_fUseJumpInt)
                 {
                 Label[] aLabels = new Label[cRange];
                 for (int i = 0; i < cVals; ++i)
@@ -951,8 +969,8 @@ public class CaseManager<CookieType>
             else
                 {
                 m_alabelCase = aLabelCase;
-                m_aconstCase = aConstCase;
                 }
+            m_aconstCase = aConstCase;
             }
 
         return fValid;
@@ -1390,23 +1408,28 @@ public class CaseManager<CookieType>
         {
         assert m_listCond != null && !m_listCond.isEmpty();
 
-        Argument[] aArgVal = new Argument[getConditionCount()];
-        int ofArgVal = 0;
+        Argument[]          aArgVal  = new Argument[getConditionCount()];
+        int                 ofArgVal = 0;
+        ExprAST<Constant>[] abast    = new ExprAST[m_listCond.size()];
+        int                 ibast    = 0;
         for (AstNode node : m_listCond)
             {
             Expression exprCond;
+            Expression exprBast = null;
             if (node instanceof AssignmentStatement stmt)
                 {
-                AstHolder holder = new AstHolder(); // TODO CP
                 if (!stmt.completes(ctx, true, code, errs))
                     {
                     m_fCondAborts = true;
                     }
                 exprCond = stmt.getLValue().getLValueExpression();
+                // review GG - was there some issue where getLValueExpression() was destructive? should this get moved up one line?
+                abast[ibast++] = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
                 }
             else
                 {
                 exprCond = (Expression) node;
+                exprBast = exprCond;
                 }
 
             if (usesJmpInt() && (!getJmpIntOffset().equals(PackedInteger.ZERO)
@@ -1424,8 +1447,16 @@ public class CaseManager<CookieType>
             int cArgsAdd = Math.min(aArgsAdd.length, aArgVal.length - ofArgVal);
             System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
             ofArgVal += cArgsAdd;
+
+            if (exprBast != null)
+                {
+                abast[ibast++] = exprBast.getExprAST();
+                }
             }
         assert ofArgVal == aArgVal.length;
+
+        assert ibast == abast.length && Arrays.stream(abast).allMatch(Objects::nonNull);
+        m_bastCond = abast.length == 1 ? abast[0] : new MultiExprAST<>(abast);
 
         return aArgVal;
         }
@@ -1573,6 +1604,11 @@ public class CaseManager<CookieType>
     private Constant[] m_aconstCond;
 
     /**
+     * The BAST expression for the condition.
+     */
+    private ExprAST<Constant> m_bastCond;
+
+    /**
      * The type of the condition.
      */
     private TypeConstant m_typeCase;
@@ -1629,8 +1665,7 @@ public class CaseManager<CookieType>
     private ListMap<Constant, Long> m_mapWild;
 
     /**
-     * After the validateEnd(), this holds all of the constant values for the cases, if JMP_VAL is
-     * used.
+     * After the validateEnd(), this holds all of the constant values for the cases.
      */
     private Constant[] m_aconstCase;
 
@@ -1639,6 +1674,11 @@ public class CaseManager<CookieType>
      * used.
      */
     private Label[] m_alabelCase;
+
+    /**
+     * Use the "jump offset" byte code optimization.
+     */
+    private boolean m_fUseJumpInt = false;
 
     /**
      * Used to calculate the range of cardinal case values to determine if JMP_INT can be used.

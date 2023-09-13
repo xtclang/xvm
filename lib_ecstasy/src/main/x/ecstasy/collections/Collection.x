@@ -1115,11 +1115,10 @@ interface Collection<Element>
             function String(Element)? render = Null) {
         pre?.appendTo(buf);
 
-        function Appender<Char>(Element) appendElement = switch () {
-            case render != Null              : (e -> render(e).appendTo(buf));
-            case Element.is(Type<Stringable>): (e -> e.appendTo(buf));
-            default: (e -> e.is(Stringable) ? e.appendTo(buf) : buf.addAll(e.toString()));
-        };
+        function Appender<Char>(Element) appendElement =
+                render != Null               ? (e -> render(e).appendTo(buf)) :
+                Element.is(Type<Stringable>) ? (e -> e.appendTo(buf))         :
+                                               (e -> e.is(Stringable) ? e.appendTo(buf) : buf.addAll(e.toString()));
 
         if (limit == Null || limit < 0) {
             limit = MaxValue;

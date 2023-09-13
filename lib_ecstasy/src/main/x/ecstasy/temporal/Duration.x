@@ -482,11 +482,9 @@ const Duration(Int128 picoseconds)
         // format: ...###:00:00.###...
         // format:        ##:00.###...
         // format:           ##.###...
-        Int length = switch () {
-            case picoseconds >= PicosPerHour  : hours  .estimateStringLength() + 6;
-            case picoseconds >= PicosPerMinute: minutes.estimateStringLength() + 3;
-            default                             : seconds.estimateStringLength();
-        };
+        Int length = picoseconds >= PicosPerHour   ? hours  .estimateStringLength() + 6 :
+                     picoseconds >= PicosPerMinute ? minutes.estimateStringLength() + 3 :
+                                                     seconds.estimateStringLength();
 
         Int picos = picosecondsPart;
         if (picos != 0) {

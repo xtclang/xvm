@@ -10,6 +10,10 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.SwitchAST;
+
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -365,6 +369,20 @@ public class SwitchExpression
         return false;
         }
 
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        if (m_bast == null)
+            {
+            m_bast = new SwitchAST<Constant>(m_casemgr.getConditionBAST(),
+                                             m_casemgr.getConditionIsA(),
+                                             m_casemgr.getCaseConstants(),
+                                             new BinaryAST[0], // TODO getBodiesBAST(),
+                                             getTypes());
+            }
+        return m_bast;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -421,6 +439,7 @@ public class SwitchExpression
     protected long          lEndPos;
 
     private transient CaseManager<Expression> m_casemgr;
+    private transient ExprAST<Constant>       m_bast;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }
