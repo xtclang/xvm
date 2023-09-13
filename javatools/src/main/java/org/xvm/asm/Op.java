@@ -943,8 +943,6 @@ public abstract class Op
                         break;
 
                     case Op.A_STRUCT:
-                        assert !f_method.isConstructor() && !f_method.isValidator();
-                        assert !f_method.isStatic();
                         type = f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
                                 f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
                         name = "this:struct";

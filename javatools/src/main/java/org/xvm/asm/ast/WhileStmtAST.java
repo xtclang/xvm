@@ -72,9 +72,9 @@ public class WhileStmtAST<C>
     @Override
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
-        writeExprAST(cond, out, res);
         writeExprArray(specialRegs, out, res);
         writeExprArray(declaredRegs, out, res);
+        writeExprAST(cond, out, res);
         writeAST(body, out, res);
     }
 
