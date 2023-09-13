@@ -30,7 +30,7 @@ public class ClassPart extends Part {
   public final LitCon _path;                 // File name compiling this file
   final Part.Format _f;         // Class, Interface, Mixin, Enum, Module, Package
 
-  ClassPart _super; // Super-class.  Note that "_par" field is the containing Package, not the superclass
+  public ClassPart _super; // Super-class.  Note that "_par" field is the containing Package, not the superclass
 
   ClassPart[] _mixes;             // List of incorporated mixins.
 

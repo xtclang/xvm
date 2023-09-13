@@ -186,10 +186,12 @@ public class XClzBuilder {
   }
 
   
-  int u8 () { return _pool.u8 (); }
-  int u31() { return _pool.u31(); }
+  int ast_op() { return _pool.ast_op(); } 
+  int u8 () { return _pool.u8(); }  // Packed read
+  int u31() { return _pool.u31(); } // Packed read
   long pack64() { return _pool.pack64(); }
   String utf8() { return _pool.utf8(); }
+  Const[] consts() { return _pool.consts(); }
 
   // --------------------------------------------------------------------------
 
@@ -200,7 +202,7 @@ public class XClzBuilder {
 
   Const methcon() { return methcon(pack64()); }
   // Magic constant for indexing into the constant pool.
-  private static final int CONSTANT_OFFSET = -16;
+  static final int CONSTANT_OFFSET = -16;
   // Read a method constant.  Advances the parse point.
   Const methcon(long idx) {
     // CONSTANT_OFFSET >= idx: uses a method constant
@@ -331,13 +333,16 @@ public class XClzBuilder {
     return rez;
   }
   private SB value_tcon( TCon tc, boolean nested ) {
+    // Integer constants
     if( tc instanceof IntCon ic ) {
       if( ic._big != null ) throw XEC.TODO();
       ASB.p(ic._x);
       return (int)ic._x == ic._x ? ASB : ASB.p('L');
     }
+    // String constants
     if( tc instanceof StringCon sc )
       return ASB.p('"').p(sc._str).p('"');
+    // Array constants
     if( tc instanceof AryCon ac ) {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
       if( !nested )
@@ -356,12 +361,18 @@ public class XClzBuilder {
       }
       return ASB;
     }
+    // Booleans
+    if( tc instanceof EnumCon econ ) {
+      ClassPart clz = (ClassPart)econ.part();
+      if( !clz._super._name.equals("Boolean") ) throw XEC.TODO();
+      return ASB.p(clz._name.equals("False") ? "false" : "true");
+    }
     throw XEC.TODO();
   }
 
   // Produce a java value from a TermTCon
   String jvalue_ttcon( TermTCon ttc ) {
-    ClassPart clz = (ClassPart)ttc.part();
+    ClassPart clz = ttc.clz();
     if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
       return "_container.console()";
     throw XEC.TODO();

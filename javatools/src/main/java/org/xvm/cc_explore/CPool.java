@@ -129,6 +129,7 @@ public class CPool {
   public int     u16() { return (u8()<<8) | u8(); } // Unsigned short read as an int
   public int     i32() { return (u8()<<24) | (u8()<<16) | (u8()<<8) | u8(); } // Signed 4-byte integer read
   public long    i64() { return (((long)i32())<<32) | ((long)(i32()) & 0xFFFFFFFFL); }
+  public int  ast_op() { return _buf[x] < 0 ? (int)pack64() : _buf[x++]; }
   public void undo() { x--; }
   static public boolean isDigit(char c) { return '0'<=c && c<='9'; }
   
