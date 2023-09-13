@@ -5,9 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.HashSet;
-
 import org.xvm.asm.Op;
+import org.xvm.asm.OpProperty;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.RegisterExpr;
 
@@ -47,6 +46,8 @@ public class RegisterAST<C>
      */
     public RegisterAST(int regId, C type, C name) {
         assert regId > Op.CONSTANT_OFFSET && regId < 0;
+        assert regId != Op.A_STACK;
+
         this.regId = regId;
         this.type  = type;
         this.name  = name;
@@ -115,17 +116,20 @@ public class RegisterAST<C>
     protected void writeExpr(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         assert regId != UNASSIGNED_ID;
+        assert regId != OpProperty.A_STACK;
 
         writePackedLong(out, regId < 0 ? regId : 32 + regId);
     }
 
     @Override
     public String dump() {
-        return "(" + type + ")#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
+        return (name == null ? "" : name.toString()) +
+            "(" + type + ")#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
     }
 
     @Override
     public String toString() {
-        return "#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
+        return (name == null ? "" : name.toString()) +
+            "#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
     }
 }

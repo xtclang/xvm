@@ -471,6 +471,8 @@ public class Register
      */
     public ExprAST<Constant> getRegisterAST()
         {
+        assert !isStack();
+
         if (isPredefined())
             {
             RegisterAST<Constant> regSpecial = m_astSpecial;
