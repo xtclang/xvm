@@ -692,17 +692,15 @@ interface Map<Key, Value>
             function String(Value)? valueRender = Null) {
         pre?.appendTo(buf);
 
-        function Appender<Char>(Key) appendKey = switch () {
-            case keyRender != Null        : (k -> keyRender(k).appendTo(buf));
-            case Key.is(Type<Stringable>) : (k -> k.appendTo(buf));
-            default: (k -> k.is(Stringable) ? k.appendTo(buf) : buf.addAll(k.toString()));
-        };
+        function Appender<Char>(Key) appendKey =
+            keyRender != Null        ? (k -> keyRender(k).appendTo(buf)) :
+            Key.is(Type<Stringable>) ? (k -> k.appendTo(buf))            :
+                                       (k -> k.is(Stringable) ? k.appendTo(buf) : buf.addAll(k.toString()));
 
-        function Appender<Char>(Value) appendValue = switch () {
-            case valueRender != Null        : (v -> valueRender(v).appendTo(buf));
-            case Value.is(Type<Stringable>) : (v -> v.appendTo(buf));
-            default: (v -> v.is(Stringable) ? v.appendTo(buf) : buf.addAll(v.toString()));
-        };
+        function Appender<Char>(Value) appendValue =
+            valueRender != Null        ? (v -> valueRender(v).appendTo(buf)) :
+            Value.is(Type<Stringable>) ? (v -> v.appendTo(buf))              :
+                                         (v -> v.is(Stringable) ? v.appendTo(buf) : buf.addAll(v.toString()));
 
         if (limit == Null || limit < 0) {
             limit = MaxValue;

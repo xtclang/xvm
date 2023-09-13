@@ -106,11 +106,8 @@ const String
      * @return the specified sub-string
      */
     String! substring(Int startAt) {
-        return switch () {
-            case startAt <= 0:   this;
-            case startAt < size: this[startAt ..< size];
-            default: "";
-        };
+        return startAt <= 0   ? this                   :
+               startAt < size ? this[startAt ..< size] : "";
     }
 
     /**

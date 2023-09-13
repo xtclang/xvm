@@ -15,7 +15,6 @@ module TestMisc {
         testSwitchStmt();
         testElseExpr();
         testSwitchExpr();
-        testSwitchExpr2();
         testSwitchExpr3();
         testSwitchExpr4();
         testSwitchNatural();
@@ -247,21 +246,6 @@ module TestMisc {
                 case 5..6: "between 5 and 6";
 
                 case 7: "sieben";
-
-                default: "other";
-            });
-        }
-    }
-
-    void testSwitchExpr2() {
-        console.print("\n** testSwitchExpr2()");
-
-        Int i = 0;
-        while (i++ < 10) {
-            console.print("result for " + i + "=" + switch () {
-                case i >= 2 && i <= 4: "between 2 and 4";
-
-                case i == 7: "sieben";
 
                 default: "other";
             });
