@@ -59,6 +59,13 @@ public class PropertyExprAST<C>
     }
 
     @Override
+    public void prepareWrite(ConstantResolver<C> res) {
+        super.prepareWrite(res);
+
+        property = res.register(property);
+        }
+
+    @Override
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
         super.writeBody(out, res);
