@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import static org.xvm.asm.ast.BinaryAST.NodeType.AnnoNamedRegAlloc;
+import static org.xvm.asm.ast.BinaryAST.NodeType.AnnoRegAlloc;
 import static org.xvm.asm.ast.BinaryAST.NodeType.NamedRegAlloc;
 import static org.xvm.asm.ast.BinaryAST.NodeType.RegAlloc;
 
@@ -19,6 +21,8 @@ import static org.xvm.util.Handy.writePackedLong;
 public class RegAllocAST<C>
         extends ExprAST<C> {
 
+    private final NodeType nodeType;
+
     /**
      * Registers are numbered sequentially from zero, and are scoped. The register ID is not stored
      * persistently (as it can be calculated). The responsibility for assigning the register number
@@ -26,11 +30,8 @@ public class RegAllocAST<C>
      */
     private transient RegisterAST<C> reg;
 
-    private static final RegisterAST NAMED   = new RegisterAST();
-    private static final RegisterAST UNNAMED = new RegisterAST();
-
-    RegAllocAST(boolean named) {
-        reg = named ? NAMED : UNNAMED;
+    RegAllocAST(NodeType nodeType) {
+        this.nodeType = nodeType;
     }
 
     /**
@@ -41,17 +42,33 @@ public class RegAllocAST<C>
      */
     public RegAllocAST(C type, C name) {
         assert type != null;
-        this.reg = new RegisterAST<>(type, name);
+        this.reg      = new RegisterAST<>(type, name);
+        this.nodeType = name == null ? RegAlloc : NamedRegAlloc;
+    }
+
+    /**
+     * Construct an annotated register.
+     *
+     * @param refType  the type of the reference to the register
+     * @param type     the type that the register can hold
+     * @param name     the name of the local variable that the register is being created for, or null
+     */
+    public RegAllocAST(C refType, C type, C name) {
+        assert refType != null && type != null;
+        this.reg      = new RegisterAST<>(refType, type, name);
+        this.nodeType = name == null ? AnnoRegAlloc : AnnoNamedRegAlloc;
     }
 
     public RegisterAST<C> getRegister() {
         return reg;
     }
 
+    public C getRefType() {
+        return reg.getRefType();
+    }
+
     public C getType() {
-        C type = reg.getType();
-        assert type != null;
-        return type;
+        return reg.getType();
     }
 
     public C getName() {
@@ -71,21 +88,25 @@ public class RegAllocAST<C>
 
     @Override
     public NodeType nodeType() {
-        return reg == NAMED || reg.getName() != null ? NamedRegAlloc : RegAlloc;
+        return nodeType;
     }
 
     @Override
     protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        assert reg == NAMED || reg == UNNAMED;
-
+        C refType = null;
+        if (nodeType == AnnoRegAlloc || nodeType == AnnoNamedRegAlloc) {
+            refType = res.getConstant(readPackedInt(in));
+        }
         C type = res.getConstant(readPackedInt(in));
         C name = null;
-        if (nodeType() == NamedRegAlloc) {
+        if (nodeType == NamedRegAlloc || nodeType == AnnoNamedRegAlloc) {
             name = res.getConstant(readPackedInt(in));
         }
 
-        reg = new RegisterAST<>(type, name);
+        reg = refType == null
+                ? new RegisterAST<>(type, name)
+                : new RegisterAST<>(refType, type, name);
         res.register(reg);
     }
 
@@ -93,8 +114,9 @@ public class RegAllocAST<C>
     public void prepareWrite(ConstantResolver<C> res) {
         // while the data is on the RegisterAST instance, it's technically "owned by" this; all
         // other use sites for the RegisterAST rely solely on the register's id
-        reg.type = res.register(reg.type);
-        reg.name = res.register(reg.name);
+        reg.refType = res.register(reg.refType);
+        reg.type    = res.register(reg.type);
+        reg.name    = res.register(reg.name);
         res.register(reg);
     }
 
@@ -104,15 +126,17 @@ public class RegAllocAST<C>
         // what is notable about the serialization format is that it does *not* include the register
         // id (number); register ids are required to be gap-less and ascending, so the id can be
         // calculated by the resolver when the AST is read back into its object form from binary
+        if (nodeType == AnnoRegAlloc || nodeType == AnnoNamedRegAlloc) {
+            writePackedLong(out, res.indexOf(reg.refType));
+        }
         writePackedLong(out, res.indexOf(reg.type));
-        if (nodeType() == NamedRegAlloc) {
+        if (nodeType == NamedRegAlloc || nodeType == AnnoNamedRegAlloc) {
             writePackedLong(out, res.indexOf(reg.name));
         }
     }
 
     @Override
     public String toString() {
-        return reg.toString() + ": "
-                + reg.type + " " + (reg.name == null ? "_" : reg.name.toString());
+        return reg.toString();
     }
 }

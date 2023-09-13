@@ -1470,7 +1470,7 @@ public class InvocationExpression
                                 else // (cDefaults == 1)
                                     {
                                     arg0 = Register.DEFAULT;
-                                    aAsts = new ExprAST[] {new RegisterAST(Op.A_DEFAULT, idMethod.getRawParams()[0], null)};
+                                    aAsts = new ExprAST[] {RegisterAST.defaultReg(idMethod.getRawParams()[0])};
                                     }
                                 }
                             else
@@ -1501,8 +1501,7 @@ public class InvocationExpression
                                     {
                                     int iArg = cTypeParams + cArgs + i;
                                     aArgs[iArg] = Register.DEFAULT;
-                                    aAsts[iArg] = new RegisterAST(Op.A_DEFAULT,
-                                            idMethod.getRawParams()[cArgs + i], null);
+                                    aAsts[iArg] = RegisterAST.defaultReg(idMethod.getRawParams()[cArgs + i]);
                                     }
                                 }
 
@@ -1750,7 +1749,7 @@ public class InvocationExpression
                     else // (cDefaults == 1)
                         {
                         arg0  = Register.DEFAULT;
-                        aAsts = new ExprAST[] {new RegisterAST(Op.A_DEFAULT, atypeParams[0], null)};
+                        aAsts = new ExprAST[] {RegisterAST.defaultReg(atypeParams[0])};
                         }
                     break;
 
@@ -1781,7 +1780,7 @@ public class InvocationExpression
                         {
                         int iArg = cTypeParams + cArgs + i;
                         aArgs[iArg] = Register.DEFAULT;
-                        aAsts[iArg] = new RegisterAST(Op.A_DEFAULT, atypeParams[i], null);
+                        aAsts[iArg] = RegisterAST.defaultReg(atypeParams[i]);
                         }
                     break;
                 }

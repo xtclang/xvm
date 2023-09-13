@@ -116,6 +116,9 @@ public abstract class BinaryAST<C> {
         Expr30,
         Escape,             // reserved #31; not an expression
 
+        AnnoRegAlloc,       // same as RegAlloc, but annotated
+        AnnoNamedRegAlloc,  // same as NamedRegAlloc, but annotated
+
         RegisterExpr,       // _ (unnamed register expr)
         InvokeExpr,         // foo() (method)   (foo is a const)
         CallExpr,           // foo() (function) (foo is a register/property)
@@ -187,8 +190,10 @@ public abstract class BinaryAST<C> {
         <C> BinaryAST<C> instantiate() {
             return switch (this) {
                 case None               -> null;
-                case RegAlloc           -> new RegAllocAST<>(false);
-                case NamedRegAlloc      -> new RegAllocAST<>(true);
+                case RegAlloc,
+                     NamedRegAlloc,
+                     AnnoRegAlloc,
+                     AnnoNamedRegAlloc  -> new RegAllocAST<>(this);
                 case Assign             -> new AssignAST<>(false);
                 case BinOpAssign        -> new AssignAST<>(true);
 
@@ -324,10 +329,6 @@ public abstract class BinaryAST<C> {
             return block.getStmts()[0];
         }
         return stmt;
-    }
-
-    protected static <C> C prepareConst(C constant, ConstantResolver<C> res) {
-        return constant == null ? null : res.register(constant);
     }
 
     /**

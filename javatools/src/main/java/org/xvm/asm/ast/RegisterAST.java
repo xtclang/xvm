@@ -14,7 +14,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An unnamed Register.
+ * A Register (could be unnamed).
  */
 public class RegisterAST<C>
         extends ExprAST<C> {
@@ -26,15 +26,21 @@ public class RegisterAST<C>
 
     private int regId = UNASSIGNED_ID;
 
-    transient C type;
+    transient C refType;  // the type of the reference to the register
+    transient C type;     // the type of the register
     transient C name;     // null for unnamed registers
-
-    RegisterAST() {}
 
     public RegisterAST(C type, C name) {
         assert type != null;
         this.type  = type;
         this.name  = name;
+    }
+
+    public RegisterAST(C refType, C type, C name) {
+        this(type, name);
+
+        assert refType != null;
+        this.refType = refType;
     }
 
     /**
@@ -63,6 +69,14 @@ public class RegisterAST<C>
 
     public boolean isRegIdAssigned() {
         return regId != UNASSIGNED_ID;
+    }
+
+    public boolean isAnnotated() {
+        return refType != null;
+    }
+
+    public C getRefType() {
+        return refType;
     }
 
     public void setRegId(int regId) {
@@ -121,15 +135,28 @@ public class RegisterAST<C>
         writePackedLong(out, regId < 0 ? regId : 32 + regId);
     }
 
-    @Override
-    public String dump() {
-        return (name == null ? "_" : name.toString()) +
-            "(" + type + ")#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
+    public static <C> RegisterAST<C> defaultReg(C type) {
+        return new RegisterAST<>(Op.A_DEFAULT, type, null);
     }
 
     @Override
     public String toString() {
-        return (name == null ? "_" : name.toString()) +
-            "#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
+        StringBuilder buf = new StringBuilder();
+        if (refType != null) {
+            buf.append(refType)
+               .append(' ');
+        }
+        buf.append(type.toString())
+            .append(' ');
+        if (name == null) {
+            buf.append('_');
+        } else {
+            buf.append(name);
+        }
+        if (regId != UNASSIGNED_ID) {
+            buf.append('#')
+               .append(regId);
+        }
+        return buf.toString();
     }
 }
