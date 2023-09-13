@@ -1385,7 +1385,6 @@ public class NameExpression
                                 {
                                 regTemp = code.createRegister(idProp.getRefType(ctx.getThisType()));
                                 code.add(new Var_D(regTemp));
-                                // TODO GG: AST for dynamic register
                                 }
                             else
                                 {
@@ -1411,7 +1410,6 @@ public class NameExpression
                             {
                             regTemp = code.createRegister(idProp.getRefType(argLeft.getType()));
                             code.add(new Var_D(regTemp));
-                            // TODO GG: AST for dynamic register
                             }
                         code.add(new P_Get(idProp, argLeft, regTemp));
 
