@@ -461,7 +461,9 @@ public class Register
             StringConstant constName = m_sName == null
                     ? null
                     : m_type.getConstantPool().ensureStringConstant(m_sName);
-            m_astAlloc = astAlloc = new RegAllocAST<>(m_type, constName);
+            m_astAlloc = astAlloc = m_typeReg == null
+                ? new RegAllocAST<>(m_type, constName)
+                : new RegAllocAST<>(m_typeReg, m_type, constName);
             }
         return astAlloc;
         }
