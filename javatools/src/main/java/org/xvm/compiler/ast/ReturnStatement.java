@@ -13,8 +13,11 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ReturnStmtAST;
+import org.xvm.asm.ast.UnaryOpExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -332,29 +335,32 @@ public class ReturnStatement
         AstNode container    = getCodeContainer();
         boolean fConditional = container.isReturnConditional();
 
-        if (container instanceof StatementExpression expr)
+        if (container instanceof StatementExpression exprStmt)
             {
             assert !fConditional;
 
             // emit() for a return inside a StatementExpression produces an assignment from the
             // expression
             // TODO m_fTupleReturn, m_fConditionalTernary, m_fFutureReturn
-            Assignable[] aLVals = expr.getAssignables();
-            int          cLVals = aLVals.length;
+            Assignable[]        aLVal  = exprStmt.getAssignables();
+            int                 cLVals = aLVal.length;
+            ExprAST<Constant>[] aAst   = new ExprAST[cLVals];
             for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i)
                 {
+                Expression expr = exprs.get(i);
                 if (i < cLVals)
                     {
-                    exprs.get(i).generateAssignment(ctx, code, aLVals[i], errs);
+                    expr.generateAssignment(ctx, code, aLVal[i], errs);
                     }
                 else
                     {
-                    exprs.get(i).generateVoid(ctx, code, errs);
+                    expr.generateVoid(ctx, code, errs);
                     }
+                aAst[i] = expr.getExprAST();
                 }
-            code.add(new Jump(expr.body.getEndLabel()));
+            code.add(new Jump(exprStmt.body.getEndLabel()));
 
-            // TODO holder <- AST
+            ctx.getHolder().setAst(this, new ReturnStmtAST<>(aAst));
 
             // "return" does not complete
             return false;
@@ -362,26 +368,31 @@ public class ReturnStatement
 
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
-        ConstantPool     pool      = pool();
-        TypeConstant[]   atypeRets = container.getReturnTypes();
-        int              cRets     = atypeRets == null ? 0 : atypeRets.length;
-        List<Expression> listExprs = this.exprs;
-        int              cExprs    = listExprs == null ? 0 : listExprs.size();
-        AstHolder        holder    = ctx.getHolder();
+        ConstantPool        pool      = pool();
+        TypeConstant[]      atypeRets = container.getReturnTypes();
+        int                 cRets     = atypeRets == null ? 0 : atypeRets.length;
+        List<Expression>    listExprs = this.exprs;
+        int                 cExprs    = listExprs == null ? 0 : listExprs.size();
+        BinaryAST<Constant> astResult;
 
         if (m_fTupleReturn)
             {
-            // the return statement has a single expression; the type that the expression has to
-            // generate is the "tuple of" all of the return types
-            // TODO cExprs != 1
-            Argument arg = listExprs.get(0).generateArgument(ctx, code, true, true, errs);
+            assert cExprs == 1;
+
+            // the return statement has a single expression returning a tuple; the caller expects
+            // multiple returns
+            Expression expr = listExprs.get(0);
+            Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
-            // TODO holder <- AST
+
+            astResult = new UnaryOpExprAST<>(expr.getExprAST(), Operator.Unpack, expr.getType());
             }
         else if (m_fConditionalTernary)
             {
-            ((TernaryExpression) listExprs.get(0)).generateConditionalReturn(ctx, code, errs);
-            // TODO holder <- AST
+            TernaryExpression expr = (TernaryExpression) listExprs.get(0);
+            expr.generateConditionalReturn(ctx, code, errs);
+
+            astResult = expr.getExprAST();
             }
         else
             {
@@ -391,7 +402,7 @@ public class ReturnStatement
                 {
                 case 0:
                     code.add(new Return_0());
-                    holder.setAst(this, new ReturnStmtAST<>(null));
+                    astResult = new ReturnStmtAST<>(null);
                     break;
 
                 case 1:
@@ -476,7 +487,7 @@ public class ReturnStatement
                                     }
                                 }
                         }
-                    holder.setAst(this, new ReturnStmtAST<>(new ExprAST[]{expr.getExprAST()}));
+                    astResult = new ReturnStmtAST<>(new ExprAST[]{expr.getExprAST()});
                     break;
                     }
 
@@ -510,11 +521,13 @@ public class ReturnStatement
                         code.add(labelFalse);
                         code.add(new Return_1(pool.valFalse()));
                         }
-                    holder.setAst(this, new ReturnStmtAST<>(aASTs));
+                    astResult = new ReturnStmtAST<>(aASTs);
                     break;
                     }
                 }
             }
+
+        ctx.getHolder().setAst(this, astResult);
 
         // return never completes
         return false;
