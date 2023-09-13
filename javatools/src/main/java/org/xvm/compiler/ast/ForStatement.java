@@ -680,7 +680,7 @@ public class ForStatement
             fBlockReachable = false;
 
             // degenerate case: we don't need to generate neither the "condition" nor "update" AST
-            holder.setAst(this, new StmtBlockAST<>(aAstInit));
+            holder.setAst(this, new StmtBlockAST<>(aAstInit, false));
             }
         else if (fAlwaysTrue)
             {
@@ -733,7 +733,7 @@ public class ForStatement
         List<Statement> listUpdate   = update;
         int             cUpdate      = listUpdate.size();
         Label[]         aUpdateLabel = m_alabelUpdateGround;
-        BinaryAST[]       aAstUpdate   = new BinaryAST[cUpdate];
+        BinaryAST[]     aAstUpdate   = new BinaryAST[cUpdate];
         for (int i = 0; i < cUpdate; ++i)
             {
             Statement stmt = listUpdate.get(i);
@@ -775,9 +775,9 @@ public class ForStatement
         if (!fAlwaysFalse)
             {
             holder.setAst(this,
-                    new ForStmtAST<>(BinaryAST.makeStatement(aAstInit),
+                    new ForStmtAST<>(BinaryAST.makeMultiStatement(aAstInit),
                                      BinaryAST.makeCondition(aCondAST),
-                                     BinaryAST.makeStatement(aAstUpdate),
+                                     BinaryAST.makeMultiStatement(aAstUpdate),
                                      astBody));
             }
         return !fAlwaysTrue && fCompletes;

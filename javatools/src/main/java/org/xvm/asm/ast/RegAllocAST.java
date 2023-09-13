@@ -33,12 +33,6 @@ public class RegAllocAST<C>
         reg = named ? NAMED : UNNAMED;
     }
 
-    // REVIEW
-    RegAllocAST(RegisterAST<C> reg) {
-        assert reg != null && !reg.isRegIdSpecial();
-        this.reg = reg;
-    }
-
     /**
      * Construct a register.
      *

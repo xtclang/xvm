@@ -581,7 +581,7 @@ public class WhileStatement
                 BinaryAST<Constant>[] aAst    = new BinaryAST[cAllocs + 1];
                 System.arraycopy(m_aAllocSpecial, 0, aAst, 0, cAllocs);
                 aAst[cAllocs] = astBody;
-                holder.setAst(this, new StmtBlockAST<>(aAst));
+                holder.setAst(this, new StmtBlockAST<>(aAst, true));
                 }
             else
                 {

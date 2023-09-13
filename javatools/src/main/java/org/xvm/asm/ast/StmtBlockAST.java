@@ -10,6 +10,7 @@ import java.util.Objects;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.None;
 import static org.xvm.asm.ast.BinaryAST.NodeType.StmtBlock;
+import static org.xvm.asm.ast.BinaryAST.NodeType.MultiStmt;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -22,16 +23,20 @@ public class StmtBlockAST<C>
 
     private BinaryAST<C>[] stmts;
 
-    StmtBlockAST() {}
+    private final boolean  hasScope;
 
-    public StmtBlockAST(BinaryAST<C>[] stmts) {
-        assert stmts != null && Arrays.stream(stmts).allMatch(Objects::nonNull);
-        this.stmts = stmts;
+    StmtBlockAST(boolean hasScope) {
+        this.hasScope = hasScope;
     }
 
-    @Override
-    public NodeType nodeType() {
-        return StmtBlock;
+    public StmtBlockAST(BinaryAST<C>[] stmts, Boolean hasScope) {
+        assert stmts != null && Arrays.stream(stmts).allMatch(Objects::nonNull);
+        this.stmts    = stmts;
+        this.hasScope = hasScope && stmts.length > 0;
+    }
+
+    public boolean hasScope() {
+        return hasScope;
     }
 
     public BinaryAST<C>[] getStmts() {
@@ -39,18 +44,31 @@ public class StmtBlockAST<C>
     }
 
     @Override
+    public NodeType nodeType() {
+        return hasScope ? StmtBlock : MultiStmt;
+    }
+
+    @Override
     protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
-        res.enter();
-        stmts = readASTArray(in, res);
-        res.exit();
+        if (hasScope) {
+            res.enter();
+            stmts = readASTArray(in, res);
+            res.exit();
+        } else {
+            stmts = readASTArray(in, res);
+        }
     }
 
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
-        res.enter();
-        prepareASTArray(stmts, res);
-        res.exit();
+        if (hasScope) {
+            res.enter();
+            prepareASTArray(stmts, res);
+            res.exit();
+        } else {
+            prepareASTArray(stmts, res);
+        }
     }
 
     @Override
@@ -90,7 +108,6 @@ public class StmtBlockAST<C>
         if (stmts.length == 0) {
             return "{}";
         }
-
         return "{ ... " + stmts.length + " statements ... }";
     }
 }

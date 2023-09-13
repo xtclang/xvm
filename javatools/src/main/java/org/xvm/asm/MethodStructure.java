@@ -715,16 +715,15 @@ public class MethodStructure
             assert aconstLocal != null;
 
             ConstantResolver<Constant> res = new ConstantRegistry(this, pool);
-            DataInput in = new DataInputStream(new ByteArrayInputStream(abAst));
-            try
+            DataInput                  in  = new DataInputStream(new ByteArrayInputStream(abAst));
+            try (var ignore = ConstantPool.withPool(pool))
                 {
-                m_ast = ast = BinaryAST.readAST(in, res);
+                return m_ast = BinaryAST.readAST(in, res);
                 }
             catch (IOException e)
                 {
                 throw new RuntimeException(e);
                 }
-            return ast;
             }
 
         return null;
