@@ -1842,7 +1842,8 @@ public class NameExpression
                 }
             if (arg instanceof PropertyConstant idProp)
                 {
-                Argument argTarget;
+                Argument          argTarget;
+                ExprAST<Constant> astTarget;
                 if (left == null)
                     {
                     Register regTarget;
@@ -1854,13 +1855,14 @@ public class NameExpression
                             SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
                             regTarget = code.createRegister(idParent.getType());
                             code.add(new Var_I(regTarget, idSingleton));
-                            m_astResult = regTarget.getRegAllocAST();
+
+                            astTarget = regTarget.getRegAllocAST();
                             break;
                             }
 
                         case This:
                             regTarget = ctx.getThisRegister();
-                            m_astResult = regTarget.getRegisterAST();
+                            astTarget = regTarget.getRegisterAST();
                             break;
 
                         case Outer:
@@ -1873,7 +1875,8 @@ public class NameExpression
                                 }
                             regTarget = new Register(clz.getFormalType(), null, Op.A_STACK);
                             code.add(new MoveThis(cSteps, regTarget));
-                            m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, getType());
+
+                            astTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, getType());
                             break;
                             }
 
@@ -1885,8 +1888,9 @@ public class NameExpression
                 else
                     {
                     argTarget = left.generateArgument(ctx, code, true, true, errs);
+                    astTarget = left.getExprAST();
                     }
-
+                m_astResult = new PropertyExprAST<>(astTarget, idProp);
                 return new Assignable(argTarget, idProp);
                 }
 

@@ -123,13 +123,13 @@ public class RegisterAST<C>
 
     @Override
     public String dump() {
-        return (name == null ? "" : name.toString()) +
+        return (name == null ? "_" : name.toString()) +
             "(" + type + ")#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
     }
 
     @Override
     public String toString() {
-        return (name == null ? "" : name.toString()) +
+        return (name == null ? "_" : name.toString()) +
             "#" + (regId == UNASSIGNED_ID ? "???" : String.valueOf(regId));
     }
 }
