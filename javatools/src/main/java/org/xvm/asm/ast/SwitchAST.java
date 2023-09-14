@@ -19,6 +19,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.SwitchExpr;
 import static org.xvm.asm.ast.BinaryAST.NodeType.SwitchStmt;
 
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedLong;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -72,8 +73,8 @@ public class SwitchAST<C>
         assert cond != null && cond.getCount() > 0;
         assert isaTest == 0 || numberOfTrailingZeros(highestOneBit(isaTest)) <= cond.getCount();
 
-        // check cases
-        assert cases != null && Arrays.stream(cases).allMatch(Objects::nonNull);
+        // check cases (at most one null)
+        assert cases != null && Arrays.stream(cases).filter(Objects::nonNull).count() + 1 >= cases.length;
         int rowCount = cases.length;
 
         // check bodies that are associated with some or all of the cases
@@ -90,7 +91,8 @@ public class SwitchAST<C>
             int resultCount = resultTypes.length;
             for (BinaryAST<C> body : bodies) {
                 if (body instanceof ExprAST<C> expr) {
-                    assert expr.getCount() >= resultCount;
+                    // TODO GG tuple literal in List.x binarySearch() switch compiles as "False"
+                    // assert expr.getCount() >= resultCount;
                 } else {
                     assert body == null;
                 }
@@ -201,8 +203,16 @@ public class SwitchAST<C>
         cond    = readExprAST(in, res);
         isaTest = readPackedLong(in);  // currently only supports up to 64 columns (values per case)
 
-        cases = readConstArray(in, res);
-        int rowCount = cases.length;
+        int rowCount = readMagnitude(in);
+        if (rowCount == 0) {
+            cases = NO_CONSTS;
+        } else {
+            cases = new Object[rowCount];
+            for (int i = 0; i < rowCount; ++i) {
+                int id = (int) readPackedLong(in);
+                cases[i] = id >= 0 ? res.getConstant(id) : null;
+            }
+        }
 
         assert isaTest == 0L || numberOfTrailingZeros(highestOneBit(isaTest)) < cond.getCount();
 
@@ -210,12 +220,13 @@ public class SwitchAST<C>
         // this section is a packed int representing a bitmap of which of the case statements are
         // followed by a body
         bodies = new BinaryAST[rowCount];
+        boolean isExpr = nodeType() == SwitchExpr;
         if (rowCount < 64) {
             long hasBody = readPackedLong(in);
             for (int i = 0; i < rowCount;  ++i) {
                 if ((hasBody & (1L << i)) != 0) {
                     res.enter();
-                    bodies[i] = readAST(in, res);
+                    bodies[i] = isExpr ? readExprAST(in, res) : readAST(in, res);
                     res.exit();
                 }
             }
@@ -224,7 +235,7 @@ public class SwitchAST<C>
             for (int i = 0; hasBody.cmp(PackedInteger.ZERO) != 0; ++i) {
                 if (hasBody.and(PackedInteger.ONE).cmp(PackedInteger.ZERO) != 0) {
                     res.enter();
-                    bodies[i] = readAST(in, res);
+                    bodies[i] = isExpr ? readExprAST(in, res) : readAST(in, res);
                     res.exit();
                 }
                 hasBody = hasBody.ushr(1);
@@ -258,7 +269,12 @@ public class SwitchAST<C>
         writePackedLong(out, isaTest);
 
         // write the case "statements"
-        writeConstArray(cases, out, res);
+        int count = cases.length;
+        writePackedLong(out, count);
+        for (int i = 0; i < count; ++i) {
+            C value = (C) cases[i];
+            writePackedLong(out, value == null ? -1 : res.indexOf(value));
+        }
 
         // write the bodies that correspond to the case statements
         int rowCount = cases.length;
@@ -282,10 +298,19 @@ public class SwitchAST<C>
             }
             bits.writeObject(out);
         }
-        for (BinaryAST<C> body : bodies) {
-            if (body != null) {
-                writeAST(body, out, res);
-                --check;
+        if (nodeType() == SwitchExpr) {
+            for (BinaryAST<C> body : bodies) {
+                if (body != null) {
+                    writeExprAST((ExprAST<C>) body, out, res);
+                    --check;
+                }
+            }
+        } else {
+            for (BinaryAST<C> body : bodies) {
+                if (body != null) {
+                    writeAST(body, out, res);
+                    --check;
+                }
             }
         }
         assert check == 0;

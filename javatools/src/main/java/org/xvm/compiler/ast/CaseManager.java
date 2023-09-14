@@ -213,6 +213,23 @@ public class CaseManager<CookieType>
         }
 
     /**
+     * @return the label assocated with the "defualt:" statement, or null
+     */
+    public Label getDefaultLabel()
+        {
+        return m_labelDefault;
+        }
+
+    /**
+     * @return True iff there is an explicit default label
+     */
+    public boolean hasDefaultCase()
+        {
+        return !(m_labelDefault == null || m_nodeSwitch instanceof SwitchStatement stmt
+                                        && stmt.getEndLabel() == m_labelDefault);
+        }
+
+    /**
      * @return the cookie for the specified label
      */
     public CookieType getCookie(Label label)
