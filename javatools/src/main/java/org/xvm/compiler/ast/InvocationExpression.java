@@ -1616,7 +1616,7 @@ public class InvocationExpression
                                     throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
                                 }
 
-                            m_astInvoke = new InvokeExprAST<>(idMethod, getTypes(), m_astTarget, aAsts);
+                            m_astInvoke = new InvokeExprAST<>(idMethod, getTypes(), m_astTarget, aAsts, fAsync);
                             return;
                             }
                         else // _NOT_ m_fCall
@@ -1796,7 +1796,7 @@ public class InvocationExpression
                     case 'T' -> throw new UnsupportedOperationException("TODO: Construct_T");
                     default  -> throw new IllegalStateException();
                     }
-                m_astInvoke = new CallExprAST<>(astFn, TypeConstant.NO_TYPES, aAsts);
+                m_astInvoke = new CallExprAST<>(astFn, TypeConstant.NO_TYPES, aAsts, fAsync);
                 return;
                 }
 
@@ -1911,7 +1911,7 @@ public class InvocationExpression
                     throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
                 }
 
-            m_astInvoke = new CallExprAST<>(astFn, getTypes(), aAsts);
+            m_astInvoke = new CallExprAST<>(astFn, getTypes(), aAsts, fAsync);
             return;
             }
 

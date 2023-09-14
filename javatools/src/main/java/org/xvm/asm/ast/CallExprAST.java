@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import static org.xvm.asm.ast.BinaryAST.NodeType.CallAsyncExpr;
 import static org.xvm.asm.ast.BinaryAST.NodeType.CallExpr;
 
 
@@ -14,29 +15,36 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.CallExpr;
 public class CallExprAST<C>
         extends CallableExprAST<C> {
 
-    private ExprAST<C> function;
+    private final NodeType nodeType;
+    private ExprAST<C>     function;
 
-    CallExprAST() {
+    CallExprAST(NodeType nodeType) {
+        this.nodeType = nodeType;
     }
 
     /**
      * Construct an InvokeExprAST.
      */
-    public CallExprAST(ExprAST<C> function, C[] retTypes, ExprAST<C>[] args) {
+    public CallExprAST(ExprAST<C> function, C[] retTypes, ExprAST<C>[] args, boolean async) {
         super(retTypes, args);
 
         assert function != null;
 
+        this.nodeType = async ? CallAsyncExpr : CallExpr;
         this.function = function;
-    }
-
-    @Override
-    public NodeType nodeType() {
-        return CallExpr;
     }
 
     public ExprAST<C> getFunction() {
         return function;
+    }
+
+    public boolean isAsync() {
+        return nodeType == CallAsyncExpr;
+    }
+
+    @Override
+    public NodeType nodeType() {
+        return nodeType;
     }
 
     @Override
@@ -64,11 +72,11 @@ public class CallExprAST<C>
 
     @Override
     public String dump() {
-        return function.dump() + "\n(" + super.dump() + ")\n";
+        return function.dump() + (isAsync() ? "^\n(" : "\n(") + super.dump() + ")\n";
     }
 
     @Override
     public String toString() {
-        return function.toString() + '(' + super.toString() + ')';
+        return function.toString() + (isAsync() ? "^(" : "(") + super.toString() + ')';
     }
 }

@@ -121,7 +121,9 @@ public abstract class BinaryAST<C> {
 
         RegisterExpr,       // _ (unnamed register expr)
         InvokeExpr,         // foo() (method)   (foo is a const)
+        InvokeAsyncExpr,    // foo^() (method)   (foo is a const)
         CallExpr,           // foo() (function) (foo is a register/property)
+        CallAsyncExpr,      // foo^() (function) (foo is a register/property)
         BindMethodExpr,     // bind method's target
         BindFunctionExpr,   // bind function's arguments
         BinOpAssign,        // x*=y; etc.
@@ -200,8 +202,10 @@ public abstract class BinaryAST<C> {
                 case Escape,
                      RegisterExpr       -> throw new IllegalStateException();
 
-                case InvokeExpr         -> new InvokeExprAST<>();
-                case CallExpr           -> new CallExprAST<>();
+                case InvokeExpr,
+                    InvokeAsyncExpr     -> new InvokeExprAST<>(this);
+                case CallExpr,
+                    CallAsyncExpr       -> new CallExprAST<>(this);
                 case BindMethodExpr     -> new BindMethodAST<>();
                 case BindFunctionExpr   -> new BindFunctionAST<>();
                 case ConstantExpr       -> new ConstantExprAST<>();
