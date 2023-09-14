@@ -38,8 +38,17 @@ public class TernaryExprAST<C>
     }
 
     @Override
+    public int getCount() {
+        // there are three scenarios when the counts may not be the same:
+        // - a Throw
+        // - a conditional False (which is not currently possible to check here)
+        // - a Ternary expression containing any of these three
+        return Math.max(exprThen.getCount(), exprElse.getCount());
+    }
+
+    @Override
     public C getType(int i) {
-        return exprThen.getType(i);
+        return i < exprThen.getCount() ? exprThen.getType(i) : exprElse.getType(i);
     }
 
     @Override

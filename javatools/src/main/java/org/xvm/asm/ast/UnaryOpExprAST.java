@@ -33,7 +33,6 @@ public class UnaryOpExprAST<C>
         Protected ("private:", true),
         Public    ("public:" , true),
         Pack      (""        , true),
-        Unpack    (""        , false),
         Convert   (""        , false),
         ToInt     (""        , false),
         Trace     (""        , false),

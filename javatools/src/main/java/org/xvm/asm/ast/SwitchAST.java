@@ -91,8 +91,14 @@ public class SwitchAST<C>
             int resultCount = resultTypes.length;
             for (BinaryAST<C> body : bodies) {
                 if (body instanceof ExprAST<C> expr) {
-                    // TODO GG tuple literal in List.x binarySearch() switch compiles as "False"
-                    // assert expr.getCount() >= resultCount;
+                    // there are three scenarios when the expression count could be less:
+                    // - a Throw or Assert expressions
+                    // - a conditional False (which is not currently possible to check here)
+                    // - a Ternary expression containing any of these three
+                    assert expr.getCount() >= resultCount
+                        || expr instanceof ThrowExprAST
+                        || (expr.getCount() == 1 && expr instanceof ConstantExprAST)
+                        || expr instanceof TernaryExprAST;
                 } else {
                     assert body == null;
                 }
@@ -305,6 +311,7 @@ public class SwitchAST<C>
                     --check;
                 }
             }
+            writeConstArray(resultTypes, out, res);
         } else {
             for (BinaryAST<C> body : bodies) {
                 if (body != null) {
@@ -314,10 +321,6 @@ public class SwitchAST<C>
             }
         }
         assert check == 0;
-
-        if (nodeType() == SwitchExpr) {
-            writeConstArray(resultTypes, out, res);
-        }
     }
 
     @Override

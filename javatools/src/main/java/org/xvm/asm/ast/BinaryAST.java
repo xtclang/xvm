@@ -145,6 +145,7 @@ public abstract class BinaryAST<C> {
         NotExpr,            // !x
         NotNullExpr,        // x?
         TernaryExpr,        // x ? y : z
+        UnpackExpr,
         TemplateExpr,
         ThrowExpr,
         AssertStmt,
@@ -228,6 +229,7 @@ public abstract class BinaryAST<C> {
                 case NotExpr            -> new NotExprAST<>();
                 case NotNullExpr        -> new NotNullExprAST<>();
                 case TernaryExpr        -> new TernaryExprAST<>();
+                case UnpackExpr         -> new UnpackExprAST<>();
                 case SwitchExpr         -> new SwitchAST<>(this);
                 case TemplateExpr       -> new TemplateExprAST<>();
                 case ThrowExpr          -> new ThrowExprAST<>();
