@@ -1,6 +1,5 @@
 package org.xvm.cc_explore.xclz;
 
-import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.cons.TCon;
 import org.xvm.cc_explore.util.SB;

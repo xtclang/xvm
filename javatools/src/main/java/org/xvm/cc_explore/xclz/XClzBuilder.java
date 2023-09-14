@@ -5,7 +5,6 @@ import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.*;
 
 import java.lang.Character;
-import java.util.BitSet;
 import java.util.HashMap;
 import javax.lang.model.SourceVersion;
 import java.lang.reflect.Constructor;
@@ -91,7 +90,7 @@ public class XClzBuilder {
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
         jmethod(meth);
-      } else if( part instanceof PackagePart pp ) {
+      } else if( part instanceof PackagePart ) {
         // Self module is OK
       } else {
         throw XEC.TODO();
@@ -142,38 +141,6 @@ public class XClzBuilder {
   }
 
   
-  // Generate a Java string code for this MethodPart
-  // Already wrapped in the `ret fcn_name(args) {` and `}`.
-  // Already _sb has the indent set.
-  private void jcode( MethodPart m ) {
-    _meth = m;
-    _pool = new CPool(m._code,1.2); // Setup the constant pool parser
-    assert _lexical_depth==0;       // No scopes added
-    assert _names.isEmpty();        // No names mapping yet
-
-    // Parse all opcodes into XOPs
-    int nops = u31();               // Number of opcodes (since varying size)
-    _xops = new XOp[nops];
-    for( _opn =0; _opn <nops; _opn++ ) {
-      Op op = Op.OPS[u8()];
-      _xops[_opn] = op._emit.apply(this);
-    }
-
-    // Pass#2 fixup
-    // Forward branches that exactly skip an EXIT, hit it
-    for( _opn =0; _opn <nops; _opn++ )
-      _xops[_opn].pass2(this);
-    
-    // Now pretty-print java code
-    _sb.ii();                   // Indent code
-    emit(0,nops);
-    _sb.di();                   // Un-indent code
-
-    _locals.clear(); _nlocals=0;// No locals mapping
-    _names.clear();             // No names mapping
-    assert _lexical_depth==0;   // All scopes back to outer
-  }
-
   // Funny recursive emit logic
   public void emit( int begin, int end ) {
     _opn = begin;
@@ -186,18 +153,23 @@ public class XClzBuilder {
   }
 
   
-  int ast_op() { return _pool.ast_op(); } 
   int u8 () { return _pool.u8(); }  // Packed read
   int u31() { return _pool.u31(); } // Packed read
   long pack64() { return _pool.pack64(); }
   String utf8() { return _pool.utf8(); }
   Const[] consts() { return _pool.consts(); }
 
+
   // --------------------------------------------------------------------------
 
   void define( String name ) {
     // Track active locals
     _locals.put(_nlocals++,name);
+  }
+    // Pop locals at end of scope
+  void pop_locals(int n) {
+    while( n < _nlocals )
+      _locals.remove(--_nlocals);
   }
 
   Const methcon() { return methcon(pack64()); }
@@ -367,6 +339,9 @@ public class XClzBuilder {
       if( !clz._super._name.equals("Boolean") ) throw XEC.TODO();
       return ASB.p(clz._name.equals("False") ? "false" : "true");
     }
+    // Literal constants
+    if( tc instanceof LitCon lit )
+      return ASB.p(lit._str);
     throw XEC.TODO();
   }
 
