@@ -19,6 +19,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
+
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -1169,6 +1172,14 @@ public class NamedTypeExpression
         return isDynamic()
                 ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
                 : getType().resolveAutoNarrowingBase();
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return isDynamic()
+                ? m_exprDynamic.getExprAST()
+                : new ConstantExprAST<>(getType().resolveAutoNarrowingBase());
         }
 
 
