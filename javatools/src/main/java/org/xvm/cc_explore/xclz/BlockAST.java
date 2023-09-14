@@ -7,4 +7,3 @@ class BlockAST extends AST {
   @Override void jpre ( SB sb ) {  sb.ip("{").ii().nl();  }
   @Override void jpost( SB sb ) {  sb.di().ip("}").nl();  }
 }
-

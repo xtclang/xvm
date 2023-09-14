@@ -19,13 +19,13 @@ class InvokeAST extends AST {
     _meth = meth._name;
     // Replace default args with their actual default values
     for( int i=0; i<_kids.length; i++ )
-      if( _kids[i] instanceof SpecialAST spc ) {
-        assert spc._reg == -4;  // Default
+      if( _kids[i] instanceof RegAST reg ) {
+        assert reg._reg == -4;  // Default
         // Swap in the default
         _kids[i] = new ConAST(X,meth._args[i]._def);
       }
   }
   @Override void jpre ( SB sb ) { sb.ip(_target).p(".").p(_meth).p("("); }
-  @Override void jmid ( SB sb ) { sb.p(", "); }
+  @Override void jmid ( SB sb, int i ) { sb.p(", "); }
   @Override void jpost( SB sb ) { sb.unchar(2).p(");").nl(); }
 }
