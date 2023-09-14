@@ -4,13 +4,11 @@ import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.util.SB;
 
 class ReturnAST extends AST {
-  ReturnAST( XClzBuilder X, int n ) { super(X, n); }
-  @Override void jpre ( SB sb ) {
-    sb.ip("return");
-    if( _kids!=null )
-      throw XEC.TODO();
-    sb.p(";").nl();
-  }  
-  @Override void jpost( SB sb ) { }
+  ReturnAST( XClzBuilder X, int n ) {
+    super(X, n, false);
+    for( int i=0; i<_kids.length; i++ )
+      _kids[i] = ast_term(X);
+  }
+  @Override void jpre ( SB sb ) { sb.ip("return "); }  
+  @Override void jpost ( SB sb ) { sb.p(";").nl(); }
 }
-
