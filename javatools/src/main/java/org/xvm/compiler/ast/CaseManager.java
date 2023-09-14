@@ -598,6 +598,10 @@ public class CaseManager<CookieType>
                     stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_DUPLICATE);
                     fValid = false;
                     }
+
+                // this wildcard case becomes the "default:", need to validate it before continuing
+                Expression exprNew = exprCase.validate(ctx, typeMatch, errs);
+                assert exprNew == exprCase;
                 continue;
                 }
 

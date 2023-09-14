@@ -344,8 +344,7 @@ public class SwitchExpression
                     for (Expression expr : exprs)
                         {
                         Constant constVal = expr.toConstant();
-                        if (constVal == null // TODO GG unvalidated expr (_,_) in compile of ecstasy lib
-                            || constVal instanceof MatchAnyConstant
+                        if (constVal instanceof MatchAnyConstant
                             || constVal instanceof ArrayConstant tup
                                 && tup.getFormat() == Format.Tuple
                                 && Arrays.stream(tup.getValue()).allMatch(c -> c instanceof MatchAnyConstant))
@@ -414,11 +413,11 @@ public class SwitchExpression
         {
         if (m_bastSwitch == null)
             {
-            m_bastSwitch = new SwitchAST<Constant>(m_casemgr.getConditionBAST(),
-                                                   m_casemgr.getConditionIsA(),
-                                                   m_aconstCases,
-                                                   m_abastBody,
-                                                   getTypes());
+            m_bastSwitch = new SwitchAST<>(m_casemgr.getConditionBAST(),
+                                           m_casemgr.getConditionIsA(),
+                                           m_aconstCases,
+                                           m_abastBody,
+                                           getTypes());
             }
         return m_bastSwitch;
         }
