@@ -88,6 +88,18 @@ public class AssignAST<C>
         this.rhs = rhs;
     }
 
+    public ExprAST<C> getLValue() {
+        return lhs;
+    }
+
+    public Operator getOperator() {
+        return op;
+    }
+
+    public ExprAST<C> getRValue() {
+        return rhs;
+    }
+
     @Override
     public int getCount() {
         return lhs.getCount();

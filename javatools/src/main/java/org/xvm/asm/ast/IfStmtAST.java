@@ -22,8 +22,12 @@ public class IfStmtAST<C>
     private boolean      hasElse;
     private BinaryAST<C> elseStmt;
 
-    IfStmtAST(boolean hasElse) {
-        this.hasElse = hasElse;
+    IfStmtAST(NodeType nodeType) {
+        this.hasElse = switch (nodeType) {
+            case IfThenStmt -> false;
+            case IfElseStmt -> true;
+            default -> throw new IllegalArgumentException("nodeType=" + nodeType);
+        };
     }
 
     public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt) {

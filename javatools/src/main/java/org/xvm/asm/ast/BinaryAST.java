@@ -193,20 +193,18 @@ public abstract class BinaryAST<C> {
         <C> BinaryAST<C> instantiate() {
             return switch (this) {
                 case None               -> null;
+                case Escape,
+                     RegisterExpr       -> throw new IllegalStateException();
                 case RegAlloc,
                      NamedRegAlloc,
                      AnnoRegAlloc,
                      AnnoNamedRegAlloc  -> new RegAllocAST<>(this);
                 case Assign             -> new AssignAST<>(false);
                 case BinOpAssign        -> new AssignAST<>(true);
-
-                case Escape,
-                     RegisterExpr       -> throw new IllegalStateException();
-
                 case InvokeExpr,
-                    InvokeAsyncExpr     -> new InvokeExprAST<>(this);
+                     InvokeAsyncExpr    -> new InvokeExprAST<>(this);
                 case CallExpr,
-                    CallAsyncExpr       -> new CallExprAST<>(this);
+                     CallAsyncExpr      -> new CallExprAST<>(this);
                 case BindMethodExpr     -> new BindMethodAST<>();
                 case BindFunctionExpr   -> new BindFunctionAST<>();
                 case ConstantExpr       -> new ConstantExprAST<>();
@@ -230,19 +228,23 @@ public abstract class BinaryAST<C> {
                 case NotNullExpr        -> new NotNullExprAST<>();
                 case TernaryExpr        -> new TernaryExprAST<>();
                 case UnpackExpr         -> new UnpackExprAST<>();
-                case SwitchExpr         -> new SwitchAST<>(this);
+                case SwitchStmt,
+                     SwitchExpr         -> new SwitchAST<>(this);
                 case TemplateExpr       -> new TemplateExprAST<>();
                 case ThrowExpr          -> new ThrowExprAST<>();
-
-                case StmtBlock          -> new StmtBlockAST<>(true);
-                case MultiStmt          -> new StmtBlockAST<>(false);
-                case IfThenStmt         -> new IfStmtAST<>(false);
-                case IfElseStmt         -> new IfStmtAST<>(true);
+                case StmtBlock,
+                     MultiStmt          -> new StmtBlockAST<>(this);
+                case IfThenStmt,
+                     IfElseStmt         -> new IfStmtAST<>(this);
                 case LoopStmt           -> new LoopStmtAST<>();
                 case WhileDoStmt        -> new WhileStmtAST<>();
                 case DoWhileStmt        -> new DoWhileStmtAST<>();
                 case ForStmt            -> new ForStmtAST<>();
-                // case SwitchStmt         -> new SwitchAST<>(this);
+                case ForIteratorStmt,
+                     ForRangeStmt,
+                     ForListStmt,
+                     ForMapStmt,
+                     ForIterableStmt    -> new ForEachStmtAST<>(this);
                 case ContinueStmt       -> new ContinueStmtAST<>();
                 case BreakStmt          -> new BreakStmtAST<>();
                 case Return0Stmt,
@@ -252,9 +254,7 @@ public abstract class BinaryAST<C> {
                 case TryCatchStmt       -> new TryCatchStmtAST<>();
                 case TryFinallyStmt     -> new TryFinallyStmtAST<>();
                 case AssertStmt         -> new AssertStmtAST<>();
-
                 case NotImplYet         -> new NotImplAST<>();
-
                 default -> throw new UnsupportedOperationException("nodeType: " + this);
             };
         }

@@ -25,8 +25,12 @@ public class StmtBlockAST<C>
 
     private final boolean  hasScope;
 
-    StmtBlockAST(boolean hasScope) {
-        this.hasScope = hasScope;
+    StmtBlockAST(NodeType nodeType) {
+        this.hasScope = switch (nodeType) {
+            case StmtBlock -> true;
+            case MultiStmt -> false;
+            default -> throw new IllegalArgumentException("nodeType=" + nodeType);
+        };
     }
 
     public StmtBlockAST(BinaryAST<C>[] stmts, Boolean hasScope) {
