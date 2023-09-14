@@ -11,6 +11,11 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.MultiExprAST;
+import org.xvm.asm.ast.UnpackExprAST;
+
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -128,6 +133,24 @@ public class UnpackExpression
             }
 
         return aRegs;
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        if (isConstant())
+            {
+            // the constant is already unpacked; we need to pass it on
+            Constant[]          aconst = toConstants();
+            int                 cVals  = aconst.length;
+            ExprAST<Constant>[] aAst = new ExprAST[cVals];
+            for (int i = 0; i < cVals; i++)
+                {
+                aAst[i] = new ConstantExprAST<>(aconst[i]);
+                }
+            return new MultiExprAST<>(aAst);
+            }
+        return new UnpackExprAST<>(expr.getExprAST(), getTypes());
         }
 
 

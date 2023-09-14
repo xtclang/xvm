@@ -16,8 +16,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ReturnStmtAST;
-import org.xvm.asm.ast.UnaryOpExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST.Operator;
+import org.xvm.asm.ast.UnpackExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -385,7 +384,8 @@ public class ReturnStatement
             Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
 
-            astResult = new UnaryOpExprAST<>(expr.getExprAST(), Operator.Unpack, expr.getType());
+            astResult = new UnpackExprAST<>(expr.getExprAST(),
+                            atypeRets == null ? TypeConstant.NO_TYPES : atypeRets);
             }
         else if (m_fConditionalTernary)
             {

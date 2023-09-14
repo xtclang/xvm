@@ -122,10 +122,6 @@ public abstract class SyntheticExpression
             {
             op = Operator.Pack;
             }
-        else if (this instanceof UnpackExpression)
-            {
-            op = Operator.Unpack;
-            }
         else if (this instanceof ToIntExpression)
             {
             op = Operator.ToInt;
