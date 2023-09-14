@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import static org.xvm.asm.ast.BinaryAST.NodeType.InvokeAsyncExpr;
 import static org.xvm.asm.ast.BinaryAST.NodeType.InvokeExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -17,27 +18,25 @@ import static org.xvm.util.Handy.writePackedLong;
 public class InvokeExprAST<C>
         extends CallableExprAST<C> {
 
-    private C          method;
-    private ExprAST<C> target;
+    private final NodeType nodeType;
+    private C              method;
+    private ExprAST<C>     target;
 
-    InvokeExprAST() {
+    InvokeExprAST(NodeType nodeType) {
+        this.nodeType = nodeType;
     }
 
     /**
      * Construct an InvokeExprAST.
      */
-    public InvokeExprAST(C method, C[] retTypes, ExprAST target, ExprAST<C>[] args) {
+    public InvokeExprAST(C method, C[] retTypes, ExprAST target, ExprAST<C>[] args, boolean async) {
         super(retTypes, args);
 
         assert method != null && target != null;
 
-        this.method = method;
-        this.target = target;
-    }
-
-    @Override
-    public NodeType nodeType() {
-        return InvokeExpr;
+        this.nodeType = async ? InvokeAsyncExpr : InvokeExpr;
+        this.method   = method;
+        this.target   = target;
     }
 
     public ExprAST<C> getTarget() {
@@ -46,6 +45,15 @@ public class InvokeExprAST<C>
 
     public C getMethod() {
         return method;
+    }
+
+    public boolean isAsync() {
+        return nodeType == InvokeAsyncExpr;
+    }
+
+    @Override
+    public NodeType nodeType() {
+        return nodeType;
     }
 
     @Override
@@ -76,11 +84,11 @@ public class InvokeExprAST<C>
 
     @Override
     public String dump() {
-        return target.dump() + '.' + method + "\n(" + super.dump() + ")\n";
+        return target.dump() + '.' + method + (isAsync() ? "^\n(" : "\n(") + super.dump() + ")\n";
     }
 
     @Override
     public String toString() {
-        return target.toString() + '.' + method + '(' + super.toString() + ')';
+        return target.toString() + '.' + method + (isAsync() ? "^(" : "(") + super.toString() + ')';
     }
 }
