@@ -27,6 +27,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
+import org.xvm.asm.ast.BindMethodAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.OuterExprAST;
@@ -1168,8 +1169,9 @@ public class NameExpression
 
                 case BindTarget:
                     {
-                    MethodConstant idMethod  = (MethodConstant) argRaw;
-                    Argument       argTarget;
+                    MethodConstant    idMethod  = (MethodConstant) argRaw;
+                    Argument          argTarget;
+                    ExprAST<Constant> astTarget;
                     if (left == null)
                         {
                         int cSteps = m_targetInfo == null ? 0 : m_targetInfo.getStepsOut();
@@ -1178,15 +1180,19 @@ public class NameExpression
                             TypeConstant typeTarget = m_targetInfo.getTargetType();
                             argTarget = new Register(typeTarget, null, Op.A_STACK);
                             code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
+
+                            astTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeTarget);
                             }
                         else
                             {
                             argTarget = ctx.getThisRegister();
+                            astTarget = ctx.getThisRegisterAST();
                             }
                         }
                     else
                         {
                         argTarget = left.generateArgument(ctx, code, true, true, errs);
+                        astTarget = left.getExprAST();
                         }
 
                     if (m_mapTypeParams == null)
@@ -1199,7 +1205,7 @@ public class NameExpression
                         code.add(new MBind(argTarget, idMethod, regFn));
                         bindTypeParameters(ctx, code, regFn, argLVal);
                         }
-                    // TODO m_astResult =
+                    m_astResult = new BindMethodAST<>(astTarget, idMethod, getType());
                     return;
                     }
 
@@ -1244,7 +1250,7 @@ public class NameExpression
                             Register     regOuter  = code.createRegister(typeOuter, fUsedOnce);
                             code.add(new MoveThis(1, regOuter, typeOuter.getAccess()));
 
-                            m_astResult = new OuterExprAST<>(nameLeft.getExprAST(), 1, typeOuter);
+                            m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), 1, typeOuter);
                             assert m_mapTypeParams == null;
                             return regOuter;
                             }
@@ -1261,6 +1267,7 @@ public class NameExpression
                     {
                     Register regFn = code.createRegister(argRaw.getType(), fUsedOnce);
                     bindTypeParameters(ctx, code, argRaw, regFn);
+                    // TODO m_astResult =
                     return regFn;
                     }
                 m_astResult = toExprAst(argRaw);
@@ -1333,7 +1340,9 @@ public class NameExpression
                     if (nameLeft.getMeaning() == Meaning.Label)
                         {
                         LabelVar labelVar = (LabelVar) nameLeft.m_arg;
-                        return labelVar.getPropRegister(ctx, getName());
+                        Register regLabel = labelVar.getPropRegister(ctx, getName());
+                        m_astResult = regLabel.getRegisterAST();
+                        return regLabel;
                         }
                     }
 
@@ -1378,6 +1387,8 @@ public class NameExpression
                         if (idProp.getName().equals("outer"))
                             {
                             code.add(new MoveThis(1, regTemp)); // TODO GG: wrong register type
+
+                            m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), 1, regTemp.getType());
                             }
                         else
                             {
@@ -1486,16 +1497,18 @@ public class NameExpression
                 FormalTypeChildConstant idChild = (FormalTypeChildConstant) argRaw;
 
                 Argument argTarget = left.generateArgument(ctx, code, true, true, errs);
-
-                Register regType = code.createRegister(idChild.getType(), fUsedOnce);
+                Register regType   = code.createRegister(idChild.getType(), fUsedOnce);
                 code.add(new P_Get(idChild, argTarget, regType));
+
+                m_astResult = new PropertyExprAST<>(left.getExprAST(), idChild);
                 return regType;
                 }
 
             case BindTarget:
                 {
-                MethodConstant idMethod = (MethodConstant) argRaw;
-                Argument       argTarget;
+                MethodConstant    idMethod = (MethodConstant) argRaw;
+                Argument          argTarget;
+                ExprAST<Constant> astTarget;
                 if (left == null)
                     {
                     int cSteps = m_targetInfo == null ? 0 : m_targetInfo.getStepsOut();
@@ -1504,15 +1517,19 @@ public class NameExpression
                         TypeConstant typeTarget = m_targetInfo.getTargetType();
                         argTarget = new Register(typeTarget, null, Op.A_STACK);
                         code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
+
+                        astTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeTarget);
                         }
                     else
                         {
                         argTarget = ctx.getThisRegister();
+                        astTarget = ctx.getThisRegisterAST();
                         }
                     }
                 else
                     {
                     argTarget = left.generateArgument(ctx, code, true, true, errs);
+                    astTarget = left.getExprAST();
                     }
 
                 Register regFn = code.createRegister(idMethod.getType(), fUsedOnce);
@@ -1526,7 +1543,7 @@ public class NameExpression
                     code.add(new MBind(argTarget, idMethod, regFn0));
                     bindTypeParameters(ctx, code, regFn0, regFn);
                     }
-                // TODO m_astResult =
+                m_astResult = new BindMethodAST<>(astTarget, idMethod, getType());
                 return regFn;
                 }
 
@@ -1901,11 +1918,25 @@ public class NameExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        return m_astResult == null
-                ? isConstant()
-                    ? new ConstantExprAST<>(toConstant())
-                    : super.getExprAST()
-                : m_astResult;
+        if (isConstant())
+            {
+            return new ConstantExprAST<>(toConstant());
+            }
+        if (m_astResult != null)
+            {
+            return m_astResult;
+            }
+
+        // there is a possibility that the caller never called generateArgument/Assignment, which
+        // would be the case if this is an LValue
+        Argument argRaw = m_arg;
+        if (argRaw instanceof PropertyConstant ||
+            argRaw instanceof Register reg && !reg.isStack())
+            {
+            return toExprAst(argRaw);
+            }
+
+        return super.getExprAST();
         }
 
 
