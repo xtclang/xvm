@@ -276,6 +276,7 @@ public abstract class BinaryAST<C> {
     public static final Object[]      NO_CONSTS = new Object[0];
     public static final RegisterAST[] NO_REGS   = new RegisterAST[0];
     public static final RegAllocAST[] NO_ALLOCS = new RegAllocAST[0];
+    public static final ExprAST       POISON    = new PoisonAST();
 
 
     // ----- internal ------------------------------------------------------------------------------
