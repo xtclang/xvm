@@ -23,7 +23,6 @@ public class XClzBuilder {
   final HashMap<String,String> _names; // Java namification
   final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
   int _nlocals;                 // Number of locals defined; popped when lexical scopes pop
-  XOp[] _xops;                  // Parsed/expanded xopcodes
   private final Ary<String> _fcons; // Final static constants per method
   
   public XClzBuilder( ModPart mod ) {
@@ -125,31 +124,23 @@ public class XClzBuilder {
       }
       _sb.unchar(2);
     }
-    // Function header
     _sb.p(" ) ");
+    // Body    
     jcode_ast(m);
     _sb.nl();
+
+    // Popped back to the original args
+    assert (m._args==null ? 0 : m._args.length) == _nlocals;
+    pop_locals(0);
   }
 
   private void jcode_ast( MethodPart m ) {
     // Build the AST from bytes
     _meth = m;
-    _pool = new CPool(m._ast,1.2); // Setup the constant pool parser
+    _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser
     AST ast = AST.parse(this);
     // Pretty print as Java
     ast.jcode(_sb);
-  }
-
-  
-  // Funny recursive emit logic
-  public void emit( int begin, int end ) {
-    _opn = begin;
-    while( _opn != end ) {
-      if( _xops[_opn]._loop )
-        _sb.ip("while( true ) {").ii().nl();
-      _xops[_opn].emit(this);
-      _opn++;
-    }
   }
 
   
@@ -172,7 +163,6 @@ public class XClzBuilder {
       _locals.remove(--_nlocals);
   }
 
-  Const methcon() { return methcon(pack64()); }
   // Magic constant for indexing into the constant pool.
   static final int CONSTANT_OFFSET = -16;
   // Read a method constant.  Advances the parse point.
@@ -184,8 +174,6 @@ public class XClzBuilder {
 
   Const methcon_ast() { return methcon_ast((int)pack64()); }
   Const methcon_ast(int idx) { return _meth._cons[idx]; }
-
-
   
   // Make up a valid name
   String jname( String jtype ) {
@@ -198,11 +186,6 @@ public class XClzBuilder {
     throw XEC.TODO();
   }
   
-  // Return a java-valid name
-  String jname_methcon( ) {
-    String name = ((StringCon)methcon())._str;
-    return _jname(name);
-  }
   // Return a java-valid name
   String jname_methcon_ast( ) {
     String name = ((StringCon)methcon_ast())._str;
@@ -243,11 +226,11 @@ public class XClzBuilder {
   }
   
   // Produce a java type from a method constant
-  String jtype_methcon() { return jtype_tcon( (TCon)methcon(), false ); }  
   String jtype_methcon_ast() { return jtype_tcon( (TCon)methcon_ast(), false ); }  
   // Produce a java type from a TermTCon
   static String jtype_tcon( TCon tc, boolean boxed ) {
-    if( tc instanceof TermTCon ttc ) {
+    switch( tc ) {
+    case TermTCon ttc:
       ClassPart clz = (ClassPart)ttc.part();
       if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
         return "XConsole";
@@ -255,7 +238,9 @@ public class XClzBuilder {
         return boxed ? "Long" : "long";
       if( clz._name.equals("Boolean") && clz._path._str.equals("ecstasy/Boolean.x") )
         return boxed ? "Boolean" : "boolean";
-    } else if( tc instanceof ParamTCon ptc ) {
+      throw XEC.TODO();
+
+    case ParamTCon ptc:
       String telem = jtype_tcon(ptc._parms[0],true);
       ClassPart clz = ((ClzCon)ptc._con).clz();
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
@@ -267,10 +252,12 @@ public class XClzBuilder {
       if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
         return "ArrayList<"+telem+">"; // Shortcut class
       throw XEC.TODO();
-    } else if( tc instanceof ImmutTCon itc ) {
+      
+    case ImmutTCon itc:
       return jtype_tcon(itc.icon(),boxed); // Ignore immutable for now
+    default:
+      throw XEC.TODO();
     }
-    throw XEC.TODO();
   }  
 
 
@@ -342,6 +329,13 @@ public class XClzBuilder {
     // Literal constants
     if( tc instanceof LitCon lit )
       return ASB.p(lit._str);
+    // Method constants
+    if( tc instanceof MethodCon mcon )  {
+      MethodPart meth = (MethodPart)mcon.part();
+      // TODO: Assumes the method is in the local Java namespace
+      String name = meth._name;
+      return ASB.p(name);
+    }
     throw XEC.TODO();
   }
 
