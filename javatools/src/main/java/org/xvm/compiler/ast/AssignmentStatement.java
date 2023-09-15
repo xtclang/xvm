@@ -18,7 +18,9 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssignAST;
 import org.xvm.asm.ast.AssignAST.Operator;
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.MultiExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -816,11 +818,11 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     }
 
-                if (astLVal == null)
+                if (fCompletes)
                     {
-                    astLVal = lvalueExpr.getExprAST();
+                    astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
+                    astAssign = new AssignAST<>(astLVal, Operator.Asn, rvalue.getExprAST());
                     }
-                astAssign = new AssignAST<>(astLVal, Operator.Asn, rvalue.getExprAST());
                 break;
                 }
 
@@ -905,10 +907,7 @@ public class AssignmentStatement
 
                 if (fCompletes)
                     {
-                    if (astLVal == null)
-                        {
-                        astLVal = lvalueExpr.getExprAST();
-                        }
+                    astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
                     astAssign = new AssignAST<>(astLVal, operAsn, rvalue.getExprAST());
                     }
                 break;
@@ -998,6 +997,48 @@ public class AssignmentStatement
             }
 
         return fCompletes;
+        }
+
+    /**
+     * Check if there were any deferred ExprAST nodes in astLVal and replace them to ones from the
+     * astLValExpr.
+     *
+     * @param astLVal      the ExprAST produced by the {@link lvalue}
+     * @param astLValExpr  the ExprAST produced by the {@link lvalueExpr}
+     *
+     * @return the combined ExprAST
+     */
+    private ExprAST<Constant> combineLValueAST(ExprAST<Constant> astLVal, ExprAST<Constant> astLValExpr)
+        {
+        if (astLVal == null)
+            {
+            return astLValExpr;
+            }
+
+        if (!(astLVal instanceof MultiExprAST astLValMulti))
+            {
+            return astLVal;
+            }
+
+        ExprAST<Constant>[] aAstLVal     = astLValMulti.getExprs();
+        ExprAST<Constant>[] aAstLValExpr = ((MultiExprAST) astLValExpr).getExprs();
+
+        boolean fReplaced = false;
+        for (int i = 0, c = aAstLVal.length; i < c; i++)
+            {
+            if (aAstLVal[i] == BinaryAST.POISON)
+                {
+                if (!fReplaced)
+                    {
+                    fReplaced = true;
+                    aAstLVal  = aAstLVal.clone();
+                    }
+                aAstLVal[i] = aAstLValExpr[i];
+                }
+            }
+        return fReplaced
+                ? new MultiExprAST<>(aAstLVal)
+                : astLVal;
         }
 
 

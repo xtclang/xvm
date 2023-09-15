@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.MultiExprAST;
 
@@ -224,11 +225,13 @@ public class MultipleLValueStatement
             if (node instanceof Statement stmt)
                 {
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                aAst[i] = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
+                aAst[i]    = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
                 }
             else
                 {
-                aAst[i] = ((Expression) node).getExprAST();
+                // the elements of the array that represent expressions will be computed later based
+                // on the MultipleLValueExpression (see AssignmentStatement#combineLValueAST)
+                aAst[i] = BinaryAST.POISON;
                 }
 
             Label labelGround = peekShortCircuitLabel(i);
