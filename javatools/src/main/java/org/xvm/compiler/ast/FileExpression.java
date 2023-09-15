@@ -15,6 +15,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -278,6 +279,13 @@ public class FileExpression
             }
 
         return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        assert isConstant();
+        return toExprAst(toConstant());
         }
 
 
