@@ -97,7 +97,7 @@ const TypeSystem {
         Parser                parser     = new Parser(source);
         Module                mackModule = this:module;
         ListMap<String, Type> implicits  = new ListMap();
-        NextImport: while (!parser.eof) {
+        while (!parser.eof) {
             ImportStatement stmt = parser.parseImportStatement();
             Module?         mod  = mackModule;
             Type            type = &mod.actualType;
@@ -312,7 +312,7 @@ const TypeSystem {
     @Override
     Int estimateStringLength() {
         Int size = "TypeSystem{ (primary)}".size + 2 * (moduleByQualifiedName.size - 1);
-        Modules: for (Module _module : modules) {
+        for (Module _module : modules) {
             size += _module.qualifiedName.size;
 
             if (String path := modulePaths.get(_module), path.size > 0) {
