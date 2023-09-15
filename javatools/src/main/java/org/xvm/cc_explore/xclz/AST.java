@@ -50,7 +50,7 @@ public abstract class AST {
     if( iop == NodeType.NamedRegAlloc.ordinal() ) return new DefRegAST(X,true ,false);
     if( iop == NodeType.     RegAlloc.ordinal() ) return new DefRegAST(X,false,false);
     if( iop > 0 ) throw XEC.TODO();
-    if( iop > XClzBuilder.CONSTANT_OFFSET ) new RegAST(X,iop); // "special" negative register
+    if( iop > XClzBuilder.CONSTANT_OFFSET ) return new RegAST(X,iop); // "special" negative register
     // Constants from the limited method constant pool
     return new ConAST(X, X.methcon(iop) );
   }
@@ -59,17 +59,20 @@ public abstract class AST {
     NodeType op = NodeType.valueOf(X.u8());
     return switch( op ) {
     case AnnoNamedRegAlloc -> new DefRegAST(X,true ,true );
-    case AnnoRegAlloc -> new  DefRegAST(X,false,true );
-    case Assign       -> new  AssignAST(X,true);
-    case CondOpExpr   -> new   BinOpAST(X);
-    case IfElseStmt   -> new      IfAST(X,3);
-    case IfThenStmt   -> new      IfAST(X,2);
-    case InvokeExpr   -> new  InvokeAST(X, X.consts());
-    case NotImplYet   -> new    TODOAST(X);
-    case Return0Stmt  -> new  ReturnAST(X,0);
-    case Return1Stmt  -> new  ReturnAST(X,1);
-    case StmtBlock    -> new   BlockAST(X);
-    case TernaryExpr  -> new TernaryAST(X);
+    case AnnoRegAlloc -> new   DefRegAST(X,false,true );
+    case Assign       -> new   AssignAST(X,true);
+    case CallExpr     -> new     CallAST(X, X.consts());
+    case CondOpExpr   -> new    BinOpAST(X,false);
+    case IfElseStmt   -> new       IfAST(X,3);
+    case IfThenStmt   -> new       IfAST(X,2);
+    case InvokeExpr   -> new   InvokeAST(X, X.consts());
+    case NotImplYet   -> new     TODOAST(X);
+    case RelOpExpr    -> new    BinOpAST(X,true );
+    case Return0Stmt  -> new   ReturnAST(X,0);
+    case Return1Stmt  -> new   ReturnAST(X,1);
+    case StmtBlock    -> new    BlockAST(X);
+    case TernaryExpr  -> new  TernaryAST(X);
+    case TemplateExpr -> new TemplateAST(X);
     
     case MapExpr      -> new     MapAST(X, X.methcon_ast());
     case StmtExpr     -> new    ExprAST(X);
