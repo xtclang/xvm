@@ -23,6 +23,10 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.NewExprAST;
+import org.xvm.asm.ast.OuterExprAST;
+
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
@@ -888,16 +892,18 @@ public class NewExpression
 
         if (LVal.isLocalArgument())
             {
-            List<Expression> listArgs = args;
-            int              cArgs    = listArgs.size();
-            Argument[]       aArgs    = new Argument[cArgs];
+            List<Expression>    listArgs = args;
+            int                 cArgs    = listArgs.size();
+            Argument[]          aArgs    = new Argument[cArgs];
+            ExprAST<Constant>[] aAstArgs = new ExprAST[cArgs];
             for (int i = 0; i < cArgs; ++i)
                 {
-                Argument arg = listArgs.get(i).generateArgument(ctx, code, false, true, errs);
+                Expression expr = listArgs.get(i);
+                Argument   arg  = expr.generateArgument(ctx, code, false, true, errs);
                 aArgs[i] = i == cArgs-1
                         ? arg
                         : ensurePointInTime(code, arg);
-
+                aAstArgs[i] = expr.getExprAST();
                 }
 
             if (anon != null)
@@ -905,12 +911,20 @@ public class NewExpression
                 aArgs = addCaptures(code, aArgs);
                 }
 
-            generateNew(ctx, code, aArgs, LVal.getLocalArgument(), errs);
+            generateNew(ctx, code, aArgs, LVal.getLocalArgument(), aAstArgs, errs);
             }
         else
             {
             super.generateAssignment(ctx, code, LVal, errs);
             }
+        }
+
+    @Override
+    public ExprAST<Constant> getExprAST()
+        {
+        return m_astNew == null
+                ? super.getExprAST()
+                : m_astNew;
         }
 
 
@@ -940,7 +954,7 @@ public class NewExpression
      * Generate the NEW_* op-code
      */
     private void generateNew(Context ctx, Code code, Argument[] aArgs, Argument argResult,
-                             ErrorListener errs)
+                             ExprAST<Constant>[] aAstArgs, ErrorListener errs)
         {
         assert m_constructor.getTypeParamCount() == 0;
 
@@ -982,7 +996,8 @@ public class NewExpression
                     }
                 }
 
-            Argument argOuter = null;
+            Argument          argOuter = null;
+            ExprAST<Constant> astOuter = null;
             if (m_plan == Plan.Child)
                 {
                 if (left == null)
@@ -990,16 +1005,22 @@ public class NewExpression
                     if (m_nParentSteps == 0)
                         {
                         argOuter = ctx.getThisRegister();
+                        astOuter = ctx.getThisRegisterAST();
                         }
                     else
                         {
-                        argOuter = new Register(typeTarget.getParentType(), null, Op.A_STACK);
-                        code.add(new MoveThis(m_nParentSteps, argOuter));
+                        TypeConstant typeParent = typeTarget.getParentType();
+                        int          cSteps     = m_nParentSteps;
+
+                        argOuter = new Register(typeParent, null, Op.A_STACK);
+                        code.add(new MoveThis(cSteps, argOuter));
+                        astOuter = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeParent);
                         }
                     }
                 else
                     {
                     argOuter = left.generateArgument(ctx, code, true, true, errs);
+                    astOuter = left.getExprAST();
                     }
                 }
 
@@ -1039,6 +1060,7 @@ public class NewExpression
                         code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
                         break;
                     }
+                m_astNew = new NewExprAST<>(typeTarget, idConstruct, aAstArgs, true);
                 }
             else if (isTypeRequired(typeTarget))
                 {
@@ -1069,6 +1091,7 @@ public class NewExpression
                             code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
                             break;
                         }
+                    m_astNew = new NewExprAST<>(typeTarget, idConstruct, aAstArgs, false);
                     }
                 else
                     {
@@ -1086,6 +1109,7 @@ public class NewExpression
                             code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
                             break;
                         }
+                    m_astNew = new NewExprAST<>(astOuter, typeTarget, idConstruct, aAstArgs);
                     }
                 }
             else
@@ -1106,6 +1130,7 @@ public class NewExpression
                             code.add(new New_N(idConstruct, aArgs, argResult));
                             break;
                         }
+                    m_astNew = new NewExprAST<>(typeTarget, idConstruct, aAstArgs, false);
                     }
                 else
                     {
@@ -1123,6 +1148,7 @@ public class NewExpression
                             code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
                             break;
                         }
+                    m_astNew = new NewExprAST<>(astOuter, typeTarget, idConstruct, aAstArgs);
                     }
                 }
             }
@@ -1824,6 +1850,10 @@ public class NewExpression
      * True if the newable type has non-constant annotation parameters.
      */
     private transient boolean m_fDynamicAnno;
+    /**
+     * Cached NewExprAST node.
+     */
+    private transient ExprAST<Constant> m_astNew;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
     }
