@@ -12,6 +12,5 @@ class TODOAST extends AST {
     _name = X.utf8();
     _cons = X.consts();
   }
-  @Override void jpre ( SB sb ) { sb.ip("// ").p(_name).nl(); }
-  @Override void jpost( SB sb ) { }
+  @Override void jpre ( SB sb ) { sb.p("/*").p(_name).p("*/"); }
 }
