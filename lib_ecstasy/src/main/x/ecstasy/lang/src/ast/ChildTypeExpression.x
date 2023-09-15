@@ -85,7 +85,7 @@ const ChildTypeExpression(TypeExpression          parent,
         parent.appendTo(buf);
         buf.add('.');
 
-        Loop: for (AnnotationExpression anno : annotations?) {
+        for (AnnotationExpression anno : annotations?) {
             anno.appendTo(buf);
             buf.add(' ');
         }

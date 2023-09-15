@@ -330,7 +330,7 @@ class Array<Element>
         // circuit this check, since we want to fail *before* we start freezing anything if the
         // array contains *any* non-freezable elements
         Boolean convert = False;
-        loop: for (Element element : this) {
+        for (Element element : this) {
             convert |= requiresFreeze(element);
         }
 
