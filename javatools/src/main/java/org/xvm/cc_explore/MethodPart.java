@@ -3,7 +3,6 @@ package org.xvm.cc_explore;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.TVLambda;
 import org.xvm.cc_explore.xclz.AST;
-import org.xvm.cc_explore.xclz.Op;
 
 public class MethodPart extends MMethodPart {
   // Linked list of siblings at the same DAG level with the same name
@@ -237,8 +236,6 @@ public class MethodPart extends MMethodPart {
   }
 
   public boolean is_empty_function() {
-    return _code.length == 2 && 
-      _code[0] == 3 && // Number of xops is 1
-      _code[1] == Op.RETURN_0.ordinal();
+    return _code.length==2 && _code[0]==3 && _code[1]==76;
   }
 }

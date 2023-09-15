@@ -27,10 +27,10 @@ public class CPool {
     _consts = new Const[len];
   }
   // Parse a code buffer
-  public CPool( byte[] buf, double ignore ) {
+  public CPool( byte[] buf, Const[] consts ) {
     _buf = buf;
     _magic = _major = _minor = 0;
-    _consts = null;
+    _consts = consts;
   }
   void parse( ) {
     int len = _consts.length;
