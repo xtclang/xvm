@@ -6,8 +6,9 @@ import org.xvm.cc_explore.util.SB;
 class ReturnAST extends AST {
   ReturnAST( XClzBuilder X, int n ) {
     super(X, n, false);
-    for( int i=0; i<_kids.length; i++ )
-      _kids[i] = ast_term(X);
+    if( _kids != null )
+      for( int i=0; i<_kids.length; i++ )
+        _kids[i] = ast_term(X);
   }
   @Override void jpre ( SB sb ) { sb.ip("return "); }  
   @Override void jpost ( SB sb ) { sb.p(";").nl(); }

@@ -14,5 +14,5 @@ class AssignAST extends AST {
     _kids[1] = ast_term(X);
   }
   @Override void jpre ( SB sb ) { }
-  @Override void jmid ( SB sb, int i ) { sb.p(' ').p(_op.text).p(' '); }
+  @Override void jmid ( SB sb, int i ) { if( i==0 ) sb.p(' ').p(_op.text).p(' '); }
 }
