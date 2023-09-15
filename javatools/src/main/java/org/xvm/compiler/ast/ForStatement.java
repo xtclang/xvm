@@ -737,7 +737,7 @@ public class ForStatement
         for (int i = 0; i < cUpdate; ++i)
             {
             Statement stmt = listUpdate.get(i);
-            fCompletes &= stmt.completes(ctx, fCompletes, code, errs) || !fAlwaysTrue;
+            fCompletes &= stmt.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
             if (!fAlwaysFalse)
                 {
