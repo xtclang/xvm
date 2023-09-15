@@ -15,4 +15,5 @@ class AssignAST extends AST {
   }
   @Override void jpre ( SB sb ) { }
   @Override void jmid ( SB sb, int i ) { if( i==0 ) sb.p(' ').p(_op.text).p(' '); }
+  @Override void jpost( SB sb ) { sb.p(";").nl(); }
 }

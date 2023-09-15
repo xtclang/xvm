@@ -20,6 +20,6 @@ class CallAST extends AST {
   @Override void jpost( SB sb ) {
     if( _kids.length > 1 )
       sb.unchar(2);
-    sb.p(");").nl();
+    sb.p(")");
   }
 }
