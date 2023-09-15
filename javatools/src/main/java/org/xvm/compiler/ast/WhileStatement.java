@@ -670,11 +670,13 @@ public class WhileStatement
             // the block's ability to complete (since the loop may execute zero times)
             block.completes(ctx, fCompletes, code, errs);
 
+            BinaryAST<Constant> astBlock = holder.getAst(block);
+
             code.add(getContinueLabel());
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
             code.add(new Exit());
 
-            holder.setAst(this, new DoWhileStmtAST<>(m_aAllocSpecial, holder.getAst(block), m_astCond));
+            holder.setAst(this, new DoWhileStmtAST<>(m_aAllocSpecial, astBlock, m_astCond));
             return fCompletes;
             }
 
@@ -727,6 +729,8 @@ public class WhileStatement
         // the block's ability to complete (since the loop may execute zero times)
         block.completes(ctx, fCompletes, code, errs);
 
+        BinaryAST<Constant> astBlock = holder.getAst(block);
+
         code.add(getContinueLabel());
         emitLabelVarUpdate(code, regFirst, regCount, labelInit);
         fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
@@ -737,7 +741,7 @@ public class WhileStatement
 
         holder.setAst(this, new WhileStmtAST<>(
             m_aAllocSpecial, listAlloc.isEmpty() ? null : listAlloc.toArray(BinaryAST.NO_ALLOCS),
-            m_astCond, holder.getAst(block)));
+            m_astCond, astBlock));
         return fCompletes;
         }
 
