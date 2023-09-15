@@ -177,7 +177,7 @@ public class LabeledStatement
         @Override
         public String toString()
             {
-            return getName() + ':';
+            return LabeledStatement.this.getName() + ':';
             }
         }
 

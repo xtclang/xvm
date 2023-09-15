@@ -217,7 +217,7 @@ public class Register
     public Register narrowType(TypeConstant typeNarrowed)
         {
         // even when the types are the same, the shadow carries "not-in-place" flag
-        return new ShadowRegister(typeNarrowed, f_nOrigIndex);
+        return new ShadowRegister(typeNarrowed, m_sName, f_nOrigIndex);
         }
 
     /**
@@ -225,7 +225,7 @@ public class Register
      */
     public Register restoreType()
         {
-        return new ShadowRegister(getOriginalType(), f_nOrigIndex);
+        return new ShadowRegister(getOriginalType(), m_sName, f_nOrigIndex);
         }
 
     /**
@@ -243,6 +243,14 @@ public class Register
     public TypeConstant getOriginalType()
         {
         return getType();
+        }
+
+    /**
+     * @return the register name, or null
+     */
+    public String getName()
+        {
+        return m_sName;
         }
 
     /**
@@ -674,12 +682,13 @@ public class Register
         /**
          * Create a ShadowRegister of the specified type.
          *
-         * @param typeNew  the overriding type
-         * @param iArg     the original index
+         * @param typeNew the overriding type
+         * @param sName   the name of the register being overridden (or null)
+         * @param iArg    the original index
          */
-        protected ShadowRegister(TypeConstant typeNew, int iArg)
+        protected ShadowRegister(TypeConstant typeNew, String sName, int iArg)
             {
-            super(typeNew, null, iArg);
+            super(typeNew, sName, iArg);
             }
 
         @Override
