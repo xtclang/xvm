@@ -83,64 +83,55 @@ public abstract class BinaryAST<C> {
      * Enumeration of instantiable BinaryAST node types.
      */
     public enum NodeType {
-        None,               // not the highest usage, but makes sense as a zero value
-        PropertyExpr,       // property access
-        InvokeExpr,         // foo() (method)   (foo is a const)
-        CondOpExpr,         // "<", ">=", etc.
-        Assign,             // x=y;
-        NamedRegAlloc,      // int x; (classified as an expression to simplify "l-value" design)
-        RelOpExpr,          // "&&", "||", "^", etc.
-        NarrowedExpr,
-        UnaryOpExpr,        // "+", "-", etc.
-        NewExpr,
-        ThrowExpr,
-        CallExpr,           // foo() (function) (foo is a register/property)
-        ArrayAccessExpr,    // x[i]
-        BinOpAssign,        // x*=y; etc.
-        TernaryExpr,        // x ? y : z
-        OuterExpr,
-        NotExpr,            // !x
-        MultiExpr,          // (expr1, expr2, ...)
-        BindFunctionExpr,   // bind function's arguments
-        DivRemExpr,         // x /% y
-        BindMethodExpr,     // bind method's target
-        NotNullExpr,        // x?
-        ConvertExpr,
-        TemplateExpr,
-        NewChildExpr,
-        TupleExpr,
-        CmpChainExpr,       // x < y <= z, etc.
-        UnpackExpr,
-        SwitchExpr,         // s = switch () {...}
-        NewVirtualExpr,
-        ListExpr,
-        Escape,             // reserved #31; not an expression
+        None,               // 00:
+        PropertyExpr,       // 01: property access
+        InvokeExpr,         // 02: foo() (method)   (foo is a const)
+        CondOpExpr,         // 03: "<", ">=", etc.
+        Assign,             // 04: x=y;
+        NamedRegAlloc,      // 05: int x; (classified as an expression to simplify "l-value" design)
+        RelOpExpr,          // 06: "&&", "||", "^", etc.
+        NarrowedExpr,       // 07:
+        UnaryOpExpr,        // 08: "+", "-", etc.
+        NewExpr,            // 09:
+        ThrowExpr,          // 0A:
+        CallExpr,           // 0B: foo() (function) (foo is a register/property)
+        ArrayAccessExpr,    // 0C: x[i]
+        BinOpAssign,        // 0D: x*=y; etc.
+        TernaryExpr,        // 0E: x ? y : z
+        OuterExpr,          // 0F:
+        NotExpr,            // 10: !x
+        MultiExpr,          // 11: (expr1, expr2, ...)
+        BindFunctionExpr,   // 12: bind function's arguments
+        DivRemExpr,         // 13: x /% y
+        BindMethodExpr,     // 14: bind method's target
+        NotNullExpr,        // 15: x?
+        ConvertExpr,        // 16:
+        TemplateExpr,       // 17:
+        NewChildExpr,       // 18:
+        TupleExpr,          // 19:
+        CmpChainExpr,       // 1A: x < y <= z, etc.
+        UnpackExpr,         // 1B:
+        SwitchExpr,         // 1C: s = switch () {...}
+        NewVirtualExpr,     // 1D:
+        ListExpr,           // 1E:
+        Escape,             // 1F: reserved #31: followed by NodeType ordinal as unsigned byte
         AnnoRegAlloc,       // same as RegAlloc, but annotated
-        CondAssign,         // (Boolean _, x) := y
-        CondNotNullAssign,  // (Boolean _, x) ?= y
-
         AnnoNamedRegAlloc,  // same as NamedRegAlloc, but annotated
         RegAlloc,           // int _; (classified as an expression to simplify "l-value" design)
-
         RegisterExpr,       // _ (unnamed register expr)
         InvokeAsyncExpr,    // foo^() (method)   (foo is a const)
         CallAsyncExpr,      // foo^() (function) (foo is a register/property)
-
-        AssignExpr,         // (x <- y)
-        NotCond,            // if (!(String s ?= foo())){...}
-        NotNullCond,        // if (String s ?= foo()){...}
-        NotFalseCond,       // if (String s := bar()){...}
-
-        MatrixAccessExpr,   // x[i, j]
         IsExpr,             // x.is(y)
-        AssertStmt,
-
-        ConstantExpr,
-        MapExpr,
-        StmtExpr,
-
+        ConstantExpr,       //
+        MapExpr,            //
+        StmtExpr,           //
+        NotCond,            // if (!(String s ?= foo())){...} TODO
+        NotNullCond,        // if (String s ?= foo()){...}    TODO
+        NotFalseCond,       // if (String s := bar()){...}    TODO
+        MatrixAccessExpr,   // x[i, j]                        TODO
+        AssertStmt,         //
         StmtBlock,          // {...}, do{...}while(False); etc.
-        MultiStmt,
+        MultiStmt,          //
         IfThenStmt,         // if(cond){...}
         IfElseStmt,         // if(cond){...}else{...}
         SwitchStmt,         // switch(cond){...}
@@ -161,8 +152,7 @@ public abstract class BinaryAST<C> {
         ReturnTStmt,        // return (expr, expr, ...);
         TryCatchStmt,       // using(res){...}, try(res){...} [catch(T e){...}]
         TryFinallyStmt,     // try{...} [catch(T e){...}] finally{...}
-
-        NotImplYet,         // "a node for some form has not yet been implemented" (TODO delete this when done)
+        NotImplYet,         // "a node for some form has not yet been implemented" TODO delete this
         ;
 
         /**
@@ -257,7 +247,7 @@ public abstract class BinaryAST<C> {
     public static final Object[]      NO_CONSTS = new Object[0];
     public static final RegisterAST[] NO_REGS   = new RegisterAST[0];
     public static final RegAllocAST[] NO_ALLOCS = new RegAllocAST[0];
-    public static final ExprAST       POISON    = new PoisonAST();
+    public static final ExprAST       POISON    = PoisonAST.INSTANCE;
 
 
     // ----- internal ------------------------------------------------------------------------------
