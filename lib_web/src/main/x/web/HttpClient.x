@@ -69,7 +69,6 @@ const HttpClient
              Byte[]   responseBytes) =
                 connector.sendRequest(method, uri.toString(), headerNames, headerValues, bytes);
 
-            retryCount++;
             if (autoRedirect && 300 <= statusCode < 400 && retryCount < retryLimit,
                     Int index := responseHeaderNames.indexOf("Location")) {
                 Uri redirect = new Uri(responseHeaderValues[index]);
