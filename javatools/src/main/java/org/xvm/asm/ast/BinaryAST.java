@@ -83,86 +83,61 @@ public abstract class BinaryAST<C> {
      * Enumeration of instantiable BinaryAST node types.
      */
     public enum NodeType {
-        None,
-        RegAlloc,           // int x; (classified as an expression to simplify "l-value" design)
-        NamedRegAlloc,      // int _; (classified as an expression to simplify "l-value" design)
+        None,               // not the highest usage, but makes sense as a zero value
+        PropertyExpr,       // property access
+        InvokeExpr,         // foo() (method)   (foo is a const)
+        CondOpExpr,         // "<", ">=", etc.
         Assign,             // x=y;
+        NamedRegAlloc,      // int x; (classified as an expression to simplify "l-value" design)
+        RelOpExpr,          // "&&", "||", "^", etc.
+        NarrowedExpr,
+        UnaryOpExpr,        // "+", "-", etc.
+        NewExpr,
+        ThrowExpr,
+        CallExpr,           // foo() (function) (foo is a register/property)
+        ArrayAccessExpr,    // x[i]
+        BinOpAssign,        // x*=y; etc.
+        TernaryExpr,        // x ? y : z
+        OuterExpr,
+        NotExpr,            // !x
+        MultiExpr,          // (expr1, expr2, ...)
+        BindFunctionExpr,   // bind function's arguments
+        DivRemExpr,         // x /% y
+        BindMethodExpr,     // bind method's target
+        NotNullExpr,        // x?
+        ConvertExpr,
+        TemplateExpr,
+        NewChildExpr,
+        TupleExpr,
+        CmpChainExpr,       // x < y <= z, etc.
+        UnpackExpr,
+        SwitchExpr,         // s = switch () {...}
+        NewVirtualExpr,
+        ListExpr,
+        Escape,             // reserved #31; not an expression
+        AnnoRegAlloc,       // same as RegAlloc, but annotated
         CondAssign,         // (Boolean _, x) := y
         CondNotNullAssign,  // (Boolean _, x) ?= y
-        Expr06,
-        Expr07,
-        Expr08,
-        Expr09,
-        Expr10,
-        Expr11,
-        Expr12,
-        Expr13,
-        Expr14,
-        Expr15,
-        Expr16,
-        Expr17,
-        Expr18,
-        Expr19,
-        Expr20,
-        Expr21,
-        Expr22,
-        Expr23,
-        Expr24,
-        Expr25,
-        Expr26,
-        Expr27,
-        Expr28,
-        Expr29,
-        Expr30,
-        Escape,             // reserved #31; not an expression
 
-        AnnoRegAlloc,       // same as RegAlloc, but annotated
         AnnoNamedRegAlloc,  // same as NamedRegAlloc, but annotated
+        RegAlloc,           // int _; (classified as an expression to simplify "l-value" design)
 
         RegisterExpr,       // _ (unnamed register expr)
-        InvokeExpr,         // foo() (method)   (foo is a const)
         InvokeAsyncExpr,    // foo^() (method)   (foo is a const)
-        CallExpr,           // foo() (function) (foo is a register/property)
         CallAsyncExpr,      // foo^() (function) (foo is a register/property)
-        BindMethodExpr,     // bind method's target
-        BindFunctionExpr,   // bind function's arguments
-        BinOpAssign,        // x*=y; etc.
 
-        AssignExpr,         // (x <- y)                                         // TODO
-        SwitchExpr,                                                             // TODO
-        NotCond,            // if (!(String s ?= foo())){...}                   // TODO
-        NotNullCond,        // if (String s ?= foo()){...}                      // TODO
-        NotFalseCond,       // if (String s := bar()){...}                      // TODO
+        AssignExpr,         // (x <- y)
+        NotCond,            // if (!(String s ?= foo())){...}
+        NotNullCond,        // if (String s ?= foo()){...}
+        NotFalseCond,       // if (String s := bar()){...}
 
-        ArrayAccessExpr,    // x[i]
         MatrixAccessExpr,   // x[i, j]
-        RelOpExpr,          // "&&", "||", "^", etc.
-        DivRemExpr,         // x /% y
         IsExpr,             // x.is(y)
-        CondOpExpr,         // "<", ">=", etc.
-        CmpChainExpr,       // x < y <= z, etc.
-        UnaryOpExpr,        // "+", "-", etc.
-        NotExpr,            // !x
-        NotNullExpr,        // x?
-        TernaryExpr,        // x ? y : z
-        UnpackExpr,
-        TemplateExpr,
-        ThrowExpr,
         AssertStmt,
 
         ConstantExpr,
-        ListExpr,
-        TupleExpr,
-        MultiExpr,
         MapExpr,
-        ConvertExpr,
         StmtExpr,
-        OuterExpr,
-        PropertyExpr,
-        NarrowedExpr,
-        NewExpr,
-        NewVirtualExpr,
-        NewChildExpr,
 
         StmtBlock,          // {...}, do{...}while(False); etc.
         MultiStmt,
