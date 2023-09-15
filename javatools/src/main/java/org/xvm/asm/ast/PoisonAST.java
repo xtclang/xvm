@@ -11,7 +11,9 @@ import java.io.IOException;
 public class PoisonAST<C>
         extends ExprAST<C> {
 
-    PoisonAST() {}
+    static final PoisonAST INSTANCE = new PoisonAST();
+
+    private PoisonAST() {}
 
     @Override
     public NodeType nodeType() {
