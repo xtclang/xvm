@@ -18,8 +18,6 @@ public class XClzBuilder {
   // Fields for emitting a Method Code
   public MethodPart _meth;      // Method whose code is being parsed
   private CPool _pool;          // Parser for code buffer
-  public int _lexical_depth;    // Lexical depth of Enter ops
-  public int _opn;              // Current opcode index
   final HashMap<String,String> _names; // Java namification
   final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
   int _nlocals;                 // Number of locals defined; popped when lexical scopes pop
@@ -97,8 +95,8 @@ public class XClzBuilder {
     }
 
     // Final static constants
-    for( int i=0; i<_fcons._len; i++ )
-      throw XEC.TODO();
+    for( String fcon : _fcons )
+      _sb.ip(fcon).nl();
     
     // End the class body
     _sb.di().p("}").nl();
@@ -175,17 +173,6 @@ public class XClzBuilder {
   Const methcon_ast() { return methcon_ast((int)pack64()); }
   Const methcon_ast(int idx) { return _meth._cons[idx]; }
   
-  // Make up a valid name
-  String jname( String jtype ) {
-    //if( jtype==null ) return _jname("expr");
-    assert jtype!=null;
-    if( "long".equals(jtype) ) return _jname("x");
-    if( "boolean".equals(jtype) ) return _jname("b");
-    if( jtype.startsWith( "XRange" )) return _jname("rng");
-    if( jtype.startsWith( "ArrayList" )) return _jname("ary");
-    throw XEC.TODO();
-  }
-  
   // Return a java-valid name
   String jname_methcon_ast( ) {
     String name = ((StringCon)methcon_ast())._str;
@@ -224,23 +211,29 @@ public class XClzBuilder {
     // Keep valid prefix and add "$"
     throw XEC.TODO();
   }
+
+
+
+  static final HashMap<String,String> XJMAP = new HashMap<>() {{
+      put("Console+ecstasy/io/Console.x","XConsole");
+      put("Int64+ecstasy/numbers/Int64.x","long");
+      put("Boolean+ecstasy/Boolean.x","boolean");
+      put("StringBuffer+ecstasy/text/StringBuffer.x","StringBuffer");
+    }};
   
   // Produce a java type from a method constant
-  String jtype_methcon_ast() { return jtype_tcon( (TCon)methcon_ast(), false ); }  
+  String jtype_methcon_ast() { return jtype_tcon( (TCon)methcon_ast(), false ); }
   // Produce a java type from a TermTCon
   static String jtype_tcon( TCon tc, boolean boxed ) {
-    switch( tc ) {
-    case TermTCon ttc:
+    if( tc instanceof TermTCon ttc ) {
       ClassPart clz = (ClassPart)ttc.part();
-      if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
-        return "XConsole";
-      if( clz._name.equals("Int64") && clz._path._str.equals("ecstasy/numbers/Int64.x") )
-        return boxed ? "Long" : "long";
-      if( clz._name.equals("Boolean") && clz._path._str.equals("ecstasy/Boolean.x") )
-        return boxed ? "Boolean" : "boolean";
+      String key = clz._name + "+" + clz._path._str;
+      String val = XJMAP.get(key);
+      if( val!=null )
+        return boxed ? val.substring(0,1).toUpperCase() + val.substring(1) : val;
       throw XEC.TODO();
-
-    case ParamTCon ptc:
+    }
+    if( tc instanceof ParamTCon ptc ) {
       String telem = jtype_tcon(ptc._parms[0],true);
       ClassPart clz = ((ClzCon)ptc._con).clz();
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
@@ -252,36 +245,13 @@ public class XClzBuilder {
       if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
         return "ArrayList<"+telem+">"; // Shortcut class
       throw XEC.TODO();
-      
-    case ImmutTCon itc:
-      return jtype_tcon(itc.icon(),boxed); // Ignore immutable for now
-    default:
-      throw XEC.TODO();
     }
+    if( tc instanceof ImmutTCon itc ) 
+      return jtype_tcon(itc.icon(),boxed); // Ignore immutable for now
+    
+    throw XEC.TODO();
   }  
 
-
-  // Read an R-value.  Advances the parse point.
-  String rvalue() {
-    long idx = pack64();
-    // CONSTANT_OFFSET >= idx: uses a method constant
-    if( idx <= CONSTANT_OFFSET ) return value_tcon((TCon)methcon(idx));
-    // Predefined arguments
-    if( idx == -4 ) return null; // Default
-    if( idx == -1 ) return "$expr";
-    String s = _locals.get(idx);
-    assert s != null;
-    return s;
-  }
-
-  // Read an L-value.  Advances the parse point.
-  String lvalue() {
-    long idx = pack64();
-    if( idx== -1 ) return "$expr";
-    return _locals.get(idx);
-  }
-
-  
   // Produce a java value from a TCon
   private static final SB ASB = new SB();
   public String value_tcon( TCon tc ) {
