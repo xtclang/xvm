@@ -160,6 +160,9 @@ public abstract class BinaryAST<C> {
         OuterExpr,
         PropertyExpr,
         NarrowedExpr,
+        NewExpr,
+        NewVirtualExpr,
+        NewChildExpr,
 
         StmtBlock,          // {...}, do{...}while(False); etc.
         MultiStmt,
@@ -217,6 +220,9 @@ public abstract class BinaryAST<C> {
                 case OuterExpr          -> new OuterExprAST<>();
                 case PropertyExpr       -> new PropertyExprAST<>();
                 case NarrowedExpr       -> new NarrowedExprAST<>();
+                case NewExpr,
+                     NewVirtualExpr,
+                     NewChildExpr       -> new NewExprAST<>(this);
                 case ArrayAccessExpr    -> new ArrayAccessExprAST<>();
                 case RelOpExpr          -> new RelOpExprAST<>();
                 case DivRemExpr         -> new DivRemExprAST<>();
