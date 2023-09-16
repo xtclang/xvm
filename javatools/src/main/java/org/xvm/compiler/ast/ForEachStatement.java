@@ -13,6 +13,7 @@ import java.util.Set;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -20,6 +21,9 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.BinaryAST.NodeType;
+import org.xvm.asm.ast.ForEachStmtAST;
+import org.xvm.asm.ast.RegAllocAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -230,6 +234,7 @@ public class ForEachStatement
     @Override
     public Register getLabelVar(Context ctx, String sName)
         {
+        assert isLabeled();
         assert hasLabelVar(sName);
 
         Register reg = switch (sName)
@@ -262,7 +267,7 @@ public class ForEachStatement
                 default              -> throw new IllegalStateException();
                 };
 
-            reg = ctx.createRegister(type, null);
+            reg = ctx.createRegister(type, getLabelName() + '.' + sName);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             switch (sName)
@@ -671,55 +676,90 @@ public class ForEachStatement
         // strip any declarations off of the LValues (we'll handle them separately)
         VariableDeclarationStatement[] aInitStmt = getCondition().takeDeclarations();
         int                            cInit     = aInitStmt.length;
-        BinaryAST[]                    aAstInit  = new BinaryAST[cInit];
-        for (int i = 0; i < cInit; i++)
-            {
-            VariableDeclarationStatement stmt = aInitStmt[i];
-            fCompletes  = stmt.completes(ctx, fCompletes, code, errs);
-            aAstInit[i] = holder.getAst(stmt);
-            }
+        List<RegAllocAST<Constant>>    listAlloc = new ArrayList<>();
 
         if (isLabeled())
             {
-            ConstantPool pool   = pool();
-            String       sLabel = getLabelName();
+            ConstantPool pool = pool();
             if (m_regFirst != null)
                 {
-                code.add(new Var_IN(m_regFirst, toConst(sLabel + ".first"), pool.valTrue()));
+                code.add(new Var_IN(m_regFirst, toConst(m_regFirst.getName()), pool.valTrue()));
+                listAlloc.add(m_regFirst.getRegAllocAST());
                 }
             if (m_regCount != null)
                 {
-                code.add(new Var_IN(m_regCount, toConst(sLabel + ".count"), pool.val0()));
+                code.add(new Var_IN(m_regCount, toConst(m_regCount.getName()), pool.val0()));
+                listAlloc.add(m_regCount.getRegAllocAST());
                 }
             if (m_regLast != null)
                 {
-                code.add(new Var_N(m_regLast, toConst(sLabel + ".last")));
+                code.add(new Var_N(m_regLast, toConst(m_regLast.getName())));           // TDDO GG should this init false?
+                listAlloc.add(m_regLast.getRegAllocAST());
                 }
             if (m_regEntry != null)
                 {
-                code.add(new Var_N(m_regEntry, toConst(sLabel + ".entry")));
+                code.add(new Var_N(m_regEntry, toConst(m_regEntry.getName())));
+                listAlloc.add(m_regEntry.getRegAllocAST());
                 }
             if (m_regKeyType != null)
                 {
-                code.add(new Var_N(m_regKeyType, toConst(sLabel + ".Key")));
+                code.add(new Var_N(m_regKeyType, toConst(m_regKeyType.getName())));     // TDDO GG not init'd?
+                listAlloc.add(m_regKeyType.getRegAllocAST());
                 }
             if (m_regValType != null)
                 {
-                code.add(new Var_N(m_regValType, toConst(sLabel + ".Value")));
+                code.add(new Var_N(m_regValType, toConst(m_regValType.getName())));     // TDDO GG not init'd?
+                listAlloc.add(m_regValType.getRegAllocAST());
                 }
             }
 
-        fCompletes = switch (m_plan)
+        for (int i = 0; i < cInit; i++)
             {
-            case ITERATOR -> emitIterator(ctx, fCompletes, code, holder, errs);
-            case RANGE    -> emitRange(ctx, fCompletes, code, holder, errs);
-            case LIST     -> emitList(ctx, fCompletes, code, holder, errs);
-            case MAP      -> emitMap(ctx, fCompletes, code, holder, errs);
-            case ITERABLE -> emitIterable(ctx, fCompletes, code, holder, errs);
-            };
+            VariableDeclarationStatement stmt = aInitStmt[i];
+            if (stmt.completes(ctx, fCompletes, code, errs))
+                {
+                listAlloc.add((RegAllocAST<Constant>) holder.getAst(stmt));
+                }
+            else
+                {
+                fCompletes = false;
+                }
+            }
+
+        NodeType nodeType;
+        switch (m_plan)
+            {
+            case ITERATOR:
+                fCompletes = emitIterator(ctx, fCompletes, code, holder, errs);
+                nodeType   = NodeType.ForIterableStmt;
+                break;
+            case RANGE:
+                fCompletes = emitRange(ctx, fCompletes, code, holder, errs);
+                nodeType   = NodeType.ForRangeStmt;
+                break;
+            case LIST:
+                fCompletes = emitList(ctx, fCompletes, code, holder, errs);
+                nodeType   = NodeType.ForListStmt;
+                break;
+            case MAP:
+                fCompletes = emitMap(ctx, fCompletes, code, holder, errs);
+                nodeType   = NodeType.ForMapStmt;
+                break;
+            case ITERABLE:
+                fCompletes = emitIterable(ctx, fCompletes, code, holder, errs);
+                nodeType   = NodeType.ForIterableStmt;
+                break;
+            default:
+                throw new IllegalStateException();
+            }
 
         code.add(new Exit());
 
+        if (fCompletes)
+            {
+            holder.setAst(this, new ForEachStmtAST<>(nodeType, listAlloc.toArray(BinaryAST.NO_ALLOCS),
+                    m_exprLValue.getExprAST(), m_exprRValue.getExprAST(), holder.getAst(block)));
+            }
         return fCompletes;
         }
 
