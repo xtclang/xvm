@@ -510,7 +510,9 @@ public class TryStatement
 
         holder.setAst(this, astCatchAll == null
                 ? new TryCatchStmtAST<>(aAstResources, astBlock, aAstCatches)
-                : new TryFinallyStmtAST<>(aAstResources, astBlock, aAstCatches, astCatchAll));
+                : new TryFinallyStmtAST<>(aAstResources, astBlock, aAstCatches,
+                        m_regFinallyException == null ? null : m_regFinallyException.getRegAllocAST(),
+                        astCatchAll));
         return fTryCompletes;
         }
 

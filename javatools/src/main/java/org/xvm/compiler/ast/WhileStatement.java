@@ -768,7 +768,7 @@ public class WhileStatement
             code.add(new Var_IN(regFirst, name, pool.valTrue()));
 
             aAlloc = new RegAllocAST[regCount == null ? 1 : 2];
-            aAlloc[0] = new RegAllocAST<>(regFirst.getType(), name);
+            aAlloc[0] = regFirst.getRegAllocAST();
             }
 
         if (regCount != null)
@@ -777,7 +777,7 @@ public class WhileStatement
                     ((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(regCount, name, pool.val0()));
 
-            RegAllocAST<Constant> astCount = new RegAllocAST<>(regCount.getType(), name);
+            RegAllocAST<Constant> astCount = regCount.getRegAllocAST();
             if (aAlloc == null)
                 {
                 aAlloc = new RegAllocAST[] {astCount};

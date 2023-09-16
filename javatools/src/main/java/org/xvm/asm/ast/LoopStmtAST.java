@@ -20,7 +20,7 @@ public class LoopStmtAST<C>
 
     LoopStmtAST() {}
 
-    public LoopStmtAST(ExprAST<C>[] specialRegs, BinaryAST<C> body) {
+    public LoopStmtAST(RegAllocAST<C>[] specialRegs, BinaryAST<C> body) {
         assert body != null;
 
         this.specialRegs = specialRegs == null  ? NO_ALLOCS : specialRegs;

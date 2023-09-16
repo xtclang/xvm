@@ -14,26 +14,29 @@ import org.xvm.util.Handy;
 public class ForEachStmtAST<C>
         extends BinaryAST<C> {
 
-    private NodeType     nodeType;
-    private ExprAST<C>   lval;
-    private ExprAST<C>   rval;
-    private BinaryAST<C> body;
+    private final NodeType nodeType;
+    private ExprAST<C>[]   specialRegs; // RegAllocAST<C>[]
+    private ExprAST<C>     lval;
+    private ExprAST<C>     rval;
+    private BinaryAST<C>   body;
 
     ForEachStmtAST(NodeType nodeType) {
         assert nodeTypeOk(nodeType);
         this.nodeType = nodeType;
     }
 
-    public ForEachStmtAST(NodeType     nodeType,
-                          ExprAST<C>   lval,
-                          ExprAST<C>   rval,
-                          BinaryAST<C> body) {
+    public ForEachStmtAST(NodeType         nodeType,
+                          RegAllocAST<C>[] specialRegs,
+                          ExprAST<C>       lval,
+                          ExprAST<C>       rval,
+                          BinaryAST<C>     body) {
         assert nodeTypeOk(nodeType) && lval != null && rval != null;
 
-        this.nodeType = nodeType;
-        this.lval     = lval;
-        this.rval     = rval;
-        this.body     = body;
+        this.nodeType    = nodeType;
+        this.specialRegs = specialRegs == null  ? NO_ALLOCS : specialRegs;
+        this.lval        = lval;
+        this.rval        = rval;
+        this.body        = body;
     }
 
     static private boolean nodeTypeOk(NodeType nodeType) {
@@ -68,10 +71,11 @@ public class ForEachStmtAST<C>
     protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
-        lval = readExprAST(in, res);
-        rval = readExprAST(in, res);
+        specialRegs = readExprArray(in, res);
+        lval        = readExprAST(in, res);
+        rval        = readExprAST(in, res);
         res.enter();
-        body   = readAST(in, res);
+        body = readAST(in, res);
         res.exit();
         res.exit();
     }
@@ -79,6 +83,7 @@ public class ForEachStmtAST<C>
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         res.enter();
+        prepareASTArray(specialRegs, res);
         prepareAST(lval, res);
         prepareAST(rval, res);
         res.enter();
@@ -90,6 +95,7 @@ public class ForEachStmtAST<C>
     @Override
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
+        writeExprArray(specialRegs, out, res);
         writeExprAST(lval, out, res);
         writeExprAST(rval, out, res);
         writeAST(body, out, res);
