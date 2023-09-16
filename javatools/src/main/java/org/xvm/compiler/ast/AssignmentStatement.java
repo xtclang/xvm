@@ -1008,7 +1008,8 @@ public class AssignmentStatement
      *
      * @return the combined ExprAST
      */
-    private ExprAST<Constant> combineLValueAST(ExprAST<Constant> astLVal, ExprAST<Constant> astLValExpr)
+    public static ExprAST<Constant> combineLValueAST(ExprAST<Constant> astLVal,
+                                                     ExprAST<Constant> astLValExpr)
         {
         if (astLVal == null)
             {

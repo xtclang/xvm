@@ -1195,7 +1195,11 @@ public abstract class Expression
         return new NotImplAST(this.getClass().getSimpleName(), getTypes());
         }
 
-    private static HashSet<Class> alreadyFailedToProvideExpressionNode = new HashSet<>();
+    public static HashSet<Class> alreadyFailedToProvideExpressionNode = new HashSet<>();
+    static
+        {
+        alreadyFailedToProvideExpressionNode.add(ImportStatement.class);
+        }
 
     /**
      * Convert the specified argument to a {@link ExprAST binady expression expression}.

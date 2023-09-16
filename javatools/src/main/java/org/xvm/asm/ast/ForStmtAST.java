@@ -16,6 +16,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.ForStmt;
 public class ForStmtAST<C>
         extends BinaryAST<C> {
 
+    private ExprAST<C>[] specialRegs; // RegAllocAST<C>[]
     private BinaryAST<C> init;
     private ExprAST<C>   cond;
     private BinaryAST<C> update;
@@ -23,11 +24,13 @@ public class ForStmtAST<C>
 
     ForStmtAST() {}
 
-    public ForStmtAST(BinaryAST<C> init, ExprAST<C> cond, BinaryAST<C> update, BinaryAST<C> body) {
-        this.init   = init;
-        this.cond   = cond;
-        this.update = update;
-        this.body   = body;
+    public ForStmtAST(RegAllocAST<C>[] specialRegs, BinaryAST<C> init, ExprAST<C> cond,
+                      BinaryAST<C> update, BinaryAST<C> body) {
+        this.specialRegs = specialRegs == null  ? NO_ALLOCS : specialRegs;
+        this.init        = init;
+        this.cond        = cond;
+        this.update      = update;
+        this.body        = body;
     }
 
     @Override
@@ -55,11 +58,12 @@ public class ForStmtAST<C>
     protected void readBody(DataInput in, ConstantResolver<C> res)
             throws IOException {
         res.enter();
-        init   = readAST(in, res);
-        cond   = readExprAST(in, res);
-        update = readAST(in, res);
+        specialRegs = readExprArray(in, res);
+        init        = readAST(in, res);
+        cond        = readExprAST(in, res);
+        update      = readAST(in, res);
         res.enter();
-        body   = readAST(in, res);
+        body = readAST(in, res);
         res.exit();
         res.exit();
     }
@@ -67,6 +71,7 @@ public class ForStmtAST<C>
     @Override
     public void prepareWrite(ConstantResolver<C> res) {
         res.enter();
+        prepareASTArray(specialRegs, res);
         prepareAST(init, res);
         prepareAST(cond, res);
         prepareAST(update, res);
@@ -79,6 +84,7 @@ public class ForStmtAST<C>
     @Override
     protected void writeBody(DataOutput out, ConstantResolver<C> res)
             throws IOException {
+        writeExprArray(specialRegs, out, res);
         writeAST(init, out, res);
         writeExprAST(cond, out, res);
         writeAST(update, out, res);

@@ -22,6 +22,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ForStmtAST;
+import org.xvm.asm.ast.RegAllocAST;
 import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.constants.StringConstant;
@@ -605,22 +606,36 @@ public class ForStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean   fCompletes = fReachable;
+        Register  regFirst   = m_regFirst;
+        Register  regCount   = m_regCount;
         AstHolder holder     = ctx.getHolder();
 
         code.add(new Enter());
 
-        Register regFirst = m_regFirst;
+        RegAllocAST<Constant>[] aAllocSpecial = null;
         if (regFirst != null)
             {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
             code.add(new Var_IN(m_regFirst, name, pool().valTrue()));
+
+            aAllocSpecial    = new RegAllocAST[regCount == null ? 1 : 2];
+            aAllocSpecial[0] = regFirst.getRegAllocAST();
             }
 
-        Register regCount = m_regCount;
         if (regCount != null)
             {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(m_regCount, name, pool().val0()));
+
+            RegAllocAST<Constant> astCount = regCount.getRegAllocAST();
+            if (aAllocSpecial == null)
+                {
+                aAllocSpecial = new RegAllocAST[] {astCount};
+                }
+            else
+                {
+                aAllocSpecial[1] = astCount;
+                }
             }
 
         List<Statement> listInit   = init;
@@ -775,7 +790,8 @@ public class ForStatement
         if (!fAlwaysFalse)
             {
             holder.setAst(this,
-                    new ForStmtAST<>(BinaryAST.makeMultiStatement(aAstInit),
+                    new ForStmtAST<>(aAllocSpecial,
+                                     BinaryAST.makeMultiStatement(aAstInit),
                                      BinaryAST.makeCondition(aCondAST),
                                      BinaryAST.makeMultiStatement(aAstUpdate),
                                      astBody));

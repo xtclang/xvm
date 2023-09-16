@@ -14,7 +14,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.NotImplAST;
 
 import org.xvm.asm.op.Label;
 
@@ -276,8 +275,24 @@ public abstract class Statement
         {
         BinaryAST<Constant> getAst(Statement stmt)
             {
+            if (stmt instanceof LabeledStatement stmtLbl)
+                {
+                return getAst(stmtLbl.stmt);
+                }
+
             assert stmt != null;
-            return stmt == this.stmt ? ast : null;
+            BinaryAST<Constant> ast = this.ast;
+            this.ast = null;
+            if (ast != null && stmt == this.stmt)
+                {
+                return ast;
+                }
+            if (Expression.alreadyFailedToProvideExpressionNode.add(stmt.getClass()))
+                {
+                System.err.println("TODO ast creation for Statement: "
+                                       + stmt.getClass().getSimpleName());
+                }
+            return null;
             }
 
         void setAst(Statement stmt, BinaryAST<Constant> ast)
@@ -287,7 +302,7 @@ public abstract class Statement
             this.ast  = ast;
             }
 
-        private Statement         stmt;
+        private Statement           stmt;
         private BinaryAST<Constant> ast;
         }
 

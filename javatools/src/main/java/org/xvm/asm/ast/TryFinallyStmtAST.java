@@ -8,6 +8,8 @@ import java.io.IOException;
 import static org.xvm.asm.ast.BinaryAST.NodeType.TryFinallyStmt;
 
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -16,17 +18,24 @@ import static org.xvm.util.Handy.indentLines;
 public class TryFinallyStmtAST<C>
         extends TryCatchStmtAST<C> {
 
-    private BinaryAST<C> catchAll;
+    private RegAllocAST<C> exception; // optional
+    private BinaryAST<C>   catchAll;
 
     TryFinallyStmtAST() {}
 
-    public TryFinallyStmtAST(ExprAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches, BinaryAST<C> catchAll) {
+    public TryFinallyStmtAST(ExprAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches,
+                             RegAllocAST<C> exception, BinaryAST<C> catchAll) {
         super(resources, body, catches);
 
         assert catchAll != null;
 
-        this.catchAll = catchAll;
+        this.exception = exception;
+        this.catchAll  = catchAll;
     }
+
+    public RegAllocAST<C> getException() {
+        return exception;
+        }
 
     public BinaryAST<C> getCatchAll() {
         return catchAll;
@@ -42,6 +51,9 @@ public class TryFinallyStmtAST<C>
             throws IOException {
         super.readBody(in, res);
 
+        if (readPackedInt(in) != 0) {
+            exception = readAST(in, res);
+        }
         catchAll = readAST(in, res);
     }
 
@@ -49,6 +61,9 @@ public class TryFinallyStmtAST<C>
     public void prepareWrite(ConstantResolver<C> res) {
         super.prepareWrite(res);
 
+        if (exception != null) {
+            exception.prepareWrite(res);
+        }
         catchAll.prepareWrite(res);
     }
 
@@ -57,6 +72,12 @@ public class TryFinallyStmtAST<C>
             throws IOException {
         super.writeBody(out, res);
 
+        if (exception == null) {
+            writePackedLong(out, 0);
+        } else {
+            writePackedLong(out, 0);
+            exception.write(out, res);
+        }
         catchAll.write(out, res);
     }
 
