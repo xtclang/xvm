@@ -1,4 +1,4 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.xrun;
 
 import org.xvm.cc_explore.ModPart;
 import org.xvm.cc_explore.XEC;

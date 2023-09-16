@@ -1,4 +1,4 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.xrun;
 
 public class NativeContainer extends Container {
 

@@ -1,4 +1,4 @@
-package org.xvm.cc_explore;
+package org.xvm.cc_explore.xrun;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;

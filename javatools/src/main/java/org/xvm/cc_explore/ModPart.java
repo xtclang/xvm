@@ -68,7 +68,7 @@ public class ModPart extends ClassPart {
   }
 
   // Find a method by name, or return null
-  MethodPart method(String s) {
+  public MethodPart method(String s) {
     Part p = child(s);
     if( p instanceof MMethodPart mm && s.equals(mm._name) ) {
       if( mm._name2kid.size()!=1 ) throw XEC.TODO(); // Disambiguate?
@@ -78,7 +78,7 @@ public class ModPart extends ClassPart {
   }
 
   // Return a Java Class for this XTC Module
-  XClz xclz() { return (_xbuild==null ? (_xbuild=new XClzBuilder(this)) : _xbuild)._xclz; }
+  public XClz xclz() { return (_xbuild==null ? (_xbuild=new XClzBuilder(this)) : _xbuild)._xclz; }
   
 
   // ----- ModuleType enumeration ----------------------------------------------------------------
