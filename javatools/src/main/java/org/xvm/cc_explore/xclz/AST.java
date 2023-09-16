@@ -47,16 +47,16 @@ public abstract class AST {
     int iop = (int)X.pack64();
     if( iop >= 32 ) return new RegAST(X,iop-32);  // Local variable register
     if( iop == NodeType.Escape.ordinal() ) return ast(X);
-    if( iop == NodeType.NamedRegAlloc.ordinal() ) return new DefRegAST(X,true ,false);
-    if( iop == NodeType.     RegAlloc.ordinal() ) return new DefRegAST(X,false,false);
-    if( iop > 0 ) throw XEC.TODO();
+    if( iop >= 0 ) return _ast(X,iop);
     if( iop > XClzBuilder.CONSTANT_OFFSET ) return new RegAST(X,iop); // "special" negative register
     // Constants from the limited method constant pool
     return new ConAST(X, X.methcon(iop) );
   }
   
-  static AST ast( XClzBuilder X ) {
-    NodeType op = NodeType.valueOf(X.u8());
+  static AST ast( XClzBuilder X ) { return _ast(X,X.u8()); }
+  
+  private static AST _ast( XClzBuilder X, int iop ) {
+    NodeType op = NodeType.valueOf(iop);
     return switch( op ) {
     case AnnoNamedRegAlloc -> new DefRegAST(X,true ,true );
     case AnnoRegAlloc -> new   DefRegAST(X,false,true );
@@ -66,13 +66,16 @@ public abstract class AST {
     case IfElseStmt   -> new       IfAST(X,3);
     case IfThenStmt   -> new       IfAST(X,2);
     case InvokeExpr   -> new   InvokeAST(X, X.consts());
+    case NamedRegAlloc-> new   DefRegAST(X,true ,false);
+    case NewExpr      -> new      NewAST(X, X.methcon_ast(), X.methcon_ast());
     case NotImplYet   -> new     TODOAST(X);
+    case RegAlloc     -> new   DefRegAST(X,true ,true );
     case RelOpExpr    -> new    BinOpAST(X,true );
     case Return0Stmt  -> new   ReturnAST(X,0);
     case Return1Stmt  -> new   ReturnAST(X,1);
     case StmtBlock    -> new    BlockAST(X);
-    case TernaryExpr  -> new  TernaryAST(X);
     case TemplateExpr -> new TemplateAST(X);
+    case TernaryExpr  -> new  TernaryAST(X);
     
     case MapExpr      -> new     MapAST(X, X.methcon_ast());
     case StmtExpr     -> new    ExprAST(X);
