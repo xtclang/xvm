@@ -3,7 +3,6 @@ package org.xvm.cc_explore.xclz;
 import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.AnnotTCon;
 import org.xvm.cc_explore.cons.TermTCon;
-import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.util.SB;
 
 class DefRegAST extends AST {
@@ -23,10 +22,10 @@ class DefRegAST extends AST {
     _type = X.jtype_methcon_ast();
     _name = named ? X.jname_methcon_ast() : null;
     if( named )
-      X.define(_name);
+      X.define(_name,_type);
   }
   @Override void jpre ( SB sb ) {
-    sb.ip(_type).p(" ").p(_name);
-    if( _init != null ) sb.p(" = ").p(_init).p(";").nl();    
+    sb.p(_type).p(" ").p(_name);
+    if( _init != null ) sb.p(" = ").p(_init);
   }
 }

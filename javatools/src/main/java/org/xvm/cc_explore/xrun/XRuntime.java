@@ -59,4 +59,8 @@ public abstract class XRuntime {
     _executorIO .shutdown();
     _executorXVM.shutdown();
   }
+
+  // $tmp expression wrapper, to allow side effects in the arguments and still
+  // have a java expression
+  public static boolean $t(long x) { return true; }
 }

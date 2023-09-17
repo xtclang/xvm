@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.asm.ast.AssignAST.Operator;
-import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.util.SB;
 
 class AssignAST extends AST {
@@ -13,7 +12,5 @@ class AssignAST extends AST {
     _op = asgn ? Operator.Asn : OPS[X.u31()];
     _kids[1] = ast_term(X);
   }
-  @Override void jpre ( SB sb ) { }
   @Override void jmid ( SB sb, int i ) { if( i==0 ) sb.p(' ').p(_op.text).p(' '); }
-  @Override void jpost( SB sb ) { sb.p(";").nl(); }
 }
