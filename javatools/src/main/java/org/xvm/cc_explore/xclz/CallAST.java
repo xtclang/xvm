@@ -1,9 +1,6 @@
 package org.xvm.cc_explore.xclz;
 
-import org.xvm.cc_explore.XEC;
-import org.xvm.cc_explore.MethodPart;
 import org.xvm.cc_explore.cons.Const;
-import org.xvm.cc_explore.cons.MethodCon;
 import org.xvm.cc_explore.util.SB;
 
 class CallAST extends AST {
@@ -15,7 +12,6 @@ class CallAST extends AST {
       _kids[i] = ast_term(X);
     _kids[0] = ast_term(X);
   }
-  @Override void jpre ( SB sb ) { }
   @Override void jmid ( SB sb, int i ) { sb.p( i==0 ? "(" : ", " ); }
   @Override void jpost( SB sb ) {
     if( _kids.length > 1 )
