@@ -39,7 +39,6 @@ public abstract class LongDelegate
             return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
             }
 
-        // TODO GG: range check is missing
         return frame.assignValue(iReturn,
                 makeElementHandle(++hDelegate.m_alValue[(int) lIndex]));
         }
@@ -54,7 +53,6 @@ public abstract class LongDelegate
             return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
             }
 
-        // TODO GG: range check is missing
         return frame.assignValue(iReturn,
                 makeElementHandle(hDelegate.m_alValue[(int) lIndex]++));
         }
@@ -69,7 +67,6 @@ public abstract class LongDelegate
             return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
             }
 
-        // TODO GG: range check is missing
         return frame.assignValue(iReturn,
                 makeElementHandle(--hDelegate.m_alValue[(int) lIndex]));
         }
@@ -84,7 +81,6 @@ public abstract class LongDelegate
             return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
             }
 
-        // TODO GG: range check is missing
         return frame.assignValue(iReturn,
                 makeElementHandle(hDelegate.m_alValue[(int) lIndex]--));
         }

@@ -377,7 +377,7 @@ mixin ByteArray<Element extends Byte>
     }
 
     @Override
-    Byte![] asByteArray() {                 // TODO GG why was "!" required here? interesting ...
+    Byte[] asByteArray() {
         static class ReifiableArray
                 extends Array<Byte> {
             construct(Byte[] bytes, Mutability mutability) {

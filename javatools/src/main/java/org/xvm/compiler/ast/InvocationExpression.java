@@ -2407,7 +2407,6 @@ public class InvocationExpression
             // must NOT have resolved the name to a method constant (that should be impossible)
             assert !(arg instanceof MethodConstant);
 
-            // TODO GG the same logic below for imports probably also need to be in NameExpression
             if (arg instanceof MultiMethodConstant idMM)
                 {
                 // an import name can specify a MultiMethodConstant;
