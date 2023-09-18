@@ -142,6 +142,14 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return isTypeResolved()
+                ? getResolvedType().isShared(poolOther)
+                : poolOther == getConstantPool();
+        }
+
+    @Override
     public boolean isComposedOfAny(Set<IdentityConstant> setIds)
         {
         if (isTypeResolved())
