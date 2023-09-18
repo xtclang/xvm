@@ -39,14 +39,19 @@ public class PropertyExprAST<C>
     }
 
     @Override
+    public NodeType nodeType() {
+        return NodeType.PropertyExpr;
+    }
+
+    @Override
     public C getType(int i) {
         assert i == 0;
         return type;
     }
 
     @Override
-    public NodeType nodeType() {
-        return NodeType.PropertyExpr;
+    public boolean isAssignable() {
+        return true;
     }
 
     @Override

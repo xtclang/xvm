@@ -47,7 +47,6 @@ public class TryCatchStmtAST<C>
         return catches;
     }
 
-
     @Override
     public NodeType nodeType() {
         return TryCatchStmt;

@@ -36,13 +36,13 @@ public class StmtExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        return (C) types[i];
+    public NodeType nodeType() {
+        return StmtExpr;
     }
 
     @Override
-    public NodeType nodeType() {
-        return StmtExpr;
+    public C getType(int i) {
+        return (C) types[i];
     }
 
     @Override

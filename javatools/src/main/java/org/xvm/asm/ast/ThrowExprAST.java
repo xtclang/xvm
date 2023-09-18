@@ -40,14 +40,14 @@ public class ThrowExprAST<C>
         }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return type;
+    public NodeType nodeType() {
+        return NodeType.ThrowExpr;
     }
 
     @Override
-    public NodeType nodeType() {
-        return NodeType.ThrowExpr;
+    public C getType(int i) {
+        assert i == 0;
+        return type;
     }
 
     @Override

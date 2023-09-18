@@ -39,14 +39,20 @@ public class ConstantExprAST<C>
     }
 
     @Override
+    public NodeType nodeType() {
+        return ConstantExpr;
+    }
+
+    @Override
     public C getType(int i) {
         assert i == 0;
         return type;
     }
 
     @Override
-    public NodeType nodeType() {
-        return ConstantExpr;
+    public boolean isAssignable() {
+        // this is a bit of a hack, but for now we don't have a better way
+        return value.getClass().getSimpleName().equals("MatchAnyConstant");
     }
 
     @Override

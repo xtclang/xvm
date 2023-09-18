@@ -95,14 +95,14 @@ public class NewExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return type;
+    public NodeType nodeType() {
+        return nodeType;
     }
 
     @Override
-    public NodeType nodeType() {
-        return nodeType;
+    public C getType(int i) {
+        assert i == 0;
+        return type;
     }
 
     @Override

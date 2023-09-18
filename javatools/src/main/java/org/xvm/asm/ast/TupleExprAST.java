@@ -17,6 +17,11 @@ public class TupleExprAST<C>
     }
 
     @Override
+    public NodeType nodeType() {
+        return TupleExpr;
+    }
+
+    @Override
     public boolean isAssignable() {
         // tuple is used to collect multiple assignable L-Value expressions into an assignable unit
         ExprAST<C>[] values = getValues();
@@ -30,10 +35,5 @@ public class TupleExprAST<C>
             }
         }
         return true;
-    }
-
-    @Override
-    public NodeType nodeType() {
-        return TupleExpr;
     }
 }

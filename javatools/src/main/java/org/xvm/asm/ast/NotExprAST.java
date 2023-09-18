@@ -20,14 +20,14 @@ public class NotExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return booleanType;
+    public NodeType nodeType() {
+        return NodeType.NotExpr;
     }
 
     @Override
-    public NodeType nodeType() {
-        return NodeType.NotExpr;
+    public C getType(int i) {
+        assert i == 0;
+        return booleanType;
     }
 
     @Override

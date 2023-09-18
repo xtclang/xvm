@@ -19,6 +19,11 @@ public class NarrowedExprAST<C>
     }
 
     @Override
+    public boolean isAssignable() {
+        return getExpr().isAssignable();
+    }
+
+    @Override
     public String dump() {
         return getExpr().dump() + ".as(" + getType(0) + ")";
     }
