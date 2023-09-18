@@ -51,14 +51,8 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
     void write(ElementOutput out, Serializable value) {
         Schema schema = out.schema;
 
-// TODO GG - run IO.x test to reproduce
-StructType structure;
-try {
-        assert structure := &value.revealAs(StructType);
-} catch (Exception e) {
-    assert:debug;
-    assert structure := &value.revealAs(StructType);
-}
+        assert StructType structure := &value.revealAs(StructType);
+
         using (FieldOutput fieldOutput = out.openObject()) {
             for (PropertyMapping<StructType> field : fields) {
                 field.Value fieldValue = field.property.get(structure);
