@@ -4,12 +4,10 @@ import java.util.Arrays;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class XAryInt64 {
-  /** @return active list contents, public for r/w.  Illegal to r/w past _len.  */
+public class XAryI64 {
   public long[] _es;
-  /** @return active list length, public for reading.  Illegal to write. */
   public int _len;
-  public XAryInt64() { _es = new long[1]; }
+  public XAryI64() { _es = new long[1]; }
 
 
   /** Add an element, doubling base array as needed */
@@ -24,7 +22,7 @@ public class XAryInt64 {
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
     if( this==o ) return true;
-    if( !(o instanceof XAryInt64 ary) ) return false;
+    if( !(o instanceof XAryI64 ary) ) return false;
     if( _len != ary._len ) return false;
     if( _es == ary._es ) return true;
     for( int i=0; i<_len; i++ )
@@ -33,9 +31,9 @@ public class XAryInt64 {
     return true;
   }
   @Override public int hashCode( ) {
-    int sum=_len;
+    long sum=_len;
     for( int i=0; i<_len; i++ )
       sum += _es[i];
-    return sum;
+    return (int)sum;
   }
 }
