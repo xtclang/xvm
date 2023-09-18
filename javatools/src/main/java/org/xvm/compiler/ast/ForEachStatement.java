@@ -22,6 +22,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.BinaryAST.NodeType;
+import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ForEachStmtAST;
 import org.xvm.asm.ast.RegAllocAST;
 
@@ -673,80 +674,72 @@ public class ForEachStatement
 
         code.add(new Enter());
 
-        // strip any declarations off of the LValues (we'll handle them separately)
-        VariableDeclarationStatement[] aInitStmt = getCondition().takeDeclarations();
-        int                            cInit     = aInitStmt.length;
-        List<RegAllocAST<Constant>>    listAlloc = new ArrayList<>();
-
+        List<RegAllocAST<Constant>> listSpecial = new ArrayList<>();
         if (isLabeled())
             {
             ConstantPool pool = pool();
             if (m_regFirst != null)
                 {
                 code.add(new Var_IN(m_regFirst, toConst(m_regFirst.getName()), pool.valTrue()));
-                listAlloc.add(m_regFirst.getRegAllocAST());
+                listSpecial.add(m_regFirst.getRegAllocAST());
                 }
             if (m_regCount != null)
                 {
                 code.add(new Var_IN(m_regCount, toConst(m_regCount.getName()), pool.val0()));
-                listAlloc.add(m_regCount.getRegAllocAST());
+                listSpecial.add(m_regCount.getRegAllocAST());
                 }
             if (m_regLast != null)
                 {
-                code.add(new Var_N(m_regLast, toConst(m_regLast.getName())));           // TDDO GG should this init false?
-                listAlloc.add(m_regLast.getRegAllocAST());
+                // no need to initialize; we always compute it
+                code.add(new Var_N(m_regLast, toConst(m_regLast.getName())));
+                listSpecial.add(m_regLast.getRegAllocAST());
                 }
             if (m_regEntry != null)
                 {
                 code.add(new Var_N(m_regEntry, toConst(m_regEntry.getName())));
-                listAlloc.add(m_regEntry.getRegAllocAST());
+                listSpecial.add(m_regEntry.getRegAllocAST());
                 }
             if (m_regKeyType != null)
                 {
-                code.add(new Var_N(m_regKeyType, toConst(m_regKeyType.getName())));     // TDDO GG not init'd?
-                listAlloc.add(m_regKeyType.getRegAllocAST());
+                code.add(new Var_N(m_regKeyType, toConst(m_regKeyType.getName()))); // TODO GG: code gen
+                listSpecial.add(m_regKeyType.getRegAllocAST());
                 }
             if (m_regValType != null)
                 {
-                code.add(new Var_N(m_regValType, toConst(m_regValType.getName())));     // TDDO GG not init'd?
-                listAlloc.add(m_regValType.getRegAllocAST());
+                code.add(new Var_N(m_regValType, toConst(m_regValType.getName()))); // TODO GG: code gen
+                listSpecial.add(m_regValType.getRegAllocAST());
                 }
             }
 
-        for (int i = 0; i < cInit; i++)
+        ExprAST<Constant> astLVal = m_exprLValue.getExprAST();
+        if (getCondition().getLValue() instanceof Statement stmt)
             {
-            VariableDeclarationStatement stmt = aInitStmt[i];
-            if (stmt.completes(ctx, fCompletes, code, errs))
-                {
-                listAlloc.add((RegAllocAST<Constant>) holder.getAst(stmt));
-                }
-            else
-                {
-                fCompletes = false;
-                }
+            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+            astLVal    = AssignmentStatement.combineLValueAST(
+                (ExprAST<Constant>) ctx.getHolder().getAst(stmt), astLVal);
             }
 
         NodeType nodeType;
         switch (m_plan)
             {
             case ITERATOR:
-                fCompletes = emitIterator(ctx, fCompletes, code, holder, errs);
+                fCompletes = emitIterator(ctx, fCompletes, code, errs);
                 nodeType   = NodeType.ForIterableStmt;
                 break;
             case RANGE:
-                fCompletes = emitRange(ctx, fCompletes, code, holder, errs);
+                fCompletes = emitRange(ctx, fCompletes, code, errs);
                 nodeType   = NodeType.ForRangeStmt;
                 break;
             case LIST:
-                fCompletes = emitList(ctx, fCompletes, code, holder, errs);
+                fCompletes = emitList(ctx, fCompletes, code, errs);
                 nodeType   = NodeType.ForListStmt;
                 break;
             case MAP:
-                fCompletes = emitMap(ctx, fCompletes, code, holder, errs);
+                fCompletes = emitMap(ctx, fCompletes, code, errs);
                 nodeType   = NodeType.ForMapStmt;
                 break;
             case ITERABLE:
-                fCompletes = emitIterable(ctx, fCompletes, code, holder, errs);
+                fCompletes = emitIterable(ctx, fCompletes, code, errs);
                 nodeType   = NodeType.ForIterableStmt;
                 break;
             default:
@@ -757,8 +750,8 @@ public class ForEachStatement
 
         if (fCompletes)
             {
-            holder.setAst(this, new ForEachStmtAST<>(nodeType, listAlloc.toArray(BinaryAST.NO_ALLOCS),
-                    m_exprLValue.getExprAST(), m_exprRValue.getExprAST(), holder.getAst(block)));
+            holder.setAst(this, new ForEachStmtAST<>(nodeType, listSpecial.toArray(BinaryAST.NO_ALLOCS),
+                    astLVal, m_exprRValue.getExprAST(), holder.getAst(block)));
             }
         return fCompletes;
         }
@@ -766,8 +759,7 @@ public class ForEachStatement
     /**
      * Handle code generation for the Iterator type.
      */
-    private boolean emitIterator(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                                 ErrorListener errs)
+    private boolean emitIterator(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool pool     = pool();
         TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), getElementType());
@@ -776,14 +768,14 @@ public class ForEachStatement
         code.add(new Var(regIter));
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regIter), errs);
 
-        return emitAnyIterator(ctx, fReachable, code, holder, regIter, errs);
+        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
         }
 
     /**
      * Helper that generates code using the passed Iterator register.
      */
-    private boolean emitAnyIterator(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                                    Register regIter, ErrorListener errs)
+    private boolean emitAnyIterator(Context ctx, boolean fReachable, Code code, Register regIter,
+                                    ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -869,8 +861,7 @@ public class ForEachStatement
     /**
      * Handle code generation for the Range (Interval) type.
      */
-    private boolean emitRange(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                              ErrorListener errs)
+    private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         // code simplification for intrinsic sequential types
         boolean      fConstant   = m_exprRValue.isConstant();
@@ -894,13 +885,13 @@ public class ForEachStatement
                 case "numbers.UInt64":
                 case "numbers.UInt128":
                 case "numbers.UIntN":
-                    return emitConstantRange(ctx, fReachable, code, holder, typeElement, errs);
+                    return emitConstantRange(ctx, fReachable, code, typeElement, errs);
                 }
 
             if (typeElement.isExplicitClassIdentity(false) &&
                 typeElement.getExplicitClassFormat() == Component.Format.ENUM)
                 {
-                return emitConstantRange(ctx, fReachable, code, holder, typeElement, errs);
+                return emitConstantRange(ctx, fReachable, code, typeElement, errs);
                 }
             }
 
@@ -911,14 +902,14 @@ public class ForEachStatement
             return false;
             }
 
-        return emitVariableRange(ctx, fReachable, code, holder, typeElement, errs);
+        return emitVariableRange(ctx, fReachable, code, typeElement, errs);
         }
 
     /**
      * Handle optimized code generation for the Interval type when the Range is a constant value.
      */
     private boolean emitConstantRange(Context ctx, boolean fReachable, Code code,
-                                      AstHolder holder, TypeConstant typeSeq, ErrorListener errs)
+                                      TypeConstant typeSeq, ErrorListener errs)
         {
         ConstantPool  pool  = pool();
         RangeConstant range = (RangeConstant) m_exprRValue.toConstant();
@@ -984,7 +975,7 @@ public class ForEachStatement
      * Handle optimized code generation for the Interval type when the Range is not a constant.
      */
     private boolean emitVariableRange(Context ctx, boolean fReachable, Code code,
-                                      AstHolder holder, TypeConstant typeSeq, ErrorListener errs)
+                                      TypeConstant typeSeq, ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -1088,8 +1079,7 @@ public class ForEachStatement
     /**
      * Handle code generation for the List type.
      */
-    private boolean emitList(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                             ErrorListener errs)
+    private boolean emitList(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool     pool     = pool();
         TypeConstant     typeElem = getElementType();
@@ -1226,8 +1216,7 @@ public class ForEachStatement
     /**
      * Handle code generation for the Map type.
      */
-    private boolean emitMap(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                            ErrorListener errs)
+    private boolean emitMap(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool pool      = pool();
         TypeConstant typeKey   = getKeyType();
@@ -1442,8 +1431,7 @@ public class ForEachStatement
     /**
      * Handle code generation for the Iterable type.
      */
-    private boolean emitIterable(Context ctx, boolean fReachable, Code code, AstHolder holder,
-                                 ErrorListener errs)
+    private boolean emitIterable(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool pool        = pool();
         TypeConstant typeElement = getElementType();
@@ -1463,7 +1451,7 @@ public class ForEachStatement
 
         code.add(new Invoke_01(argAble, idIterator, regIter));
 
-        return emitAnyIterator(ctx, fReachable, code, holder, regIter, errs);
+        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
         }
 
     /**
