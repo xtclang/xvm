@@ -60,7 +60,6 @@ public class XClzBuilder {
     _sb.p("package org.xvm.cc_explore.xclz;").nl().nl();
     _sb.p("import org.xvm.cc_explore.xrun.*;").nl();
     _sb.p("import static org.xvm.cc_explore.xrun.XRuntime.$t;").nl();
-    _sb.p("import java.util.ArrayList;").nl();
     _sb.nl();
     _sb.p("public class ").p(java_class_name).p(" extends XClz {").nl().ii();
 
@@ -239,15 +238,15 @@ public class XClzBuilder {
       String telem = jtype_tcon(ptc._parms[0],true);
       ClassPart clz = ((ClzCon)ptc._con).clz();
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
-        if( telem.equals("Long") )  return "XAryInt64"; // Java ArrayList specialized to int64
-        return "ArrayList<"+telem+">"; // Shortcut class
+        if( telem.equals("Long") )  return "XAryI64"; // Java ArrayList specialized to int64
+        return "XAry<"+telem+">"; // Shortcut class
       }
       if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ) {
         if( telem.equals("Long") ) return "XRange"; // Shortcut class
         else throw XEC.TODO();
       }
       if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
-        return "ArrayList<"+telem+">"; // Shortcut class
+        return "XAry<"+telem+">"; // Shortcut class
       throw XEC.TODO();
     }
     if( tc instanceof ImmutTCon itc ) 

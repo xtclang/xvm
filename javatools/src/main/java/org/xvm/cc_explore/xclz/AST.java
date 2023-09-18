@@ -6,28 +6,20 @@ import org.xvm.cc_explore.util.SB;
 
 public abstract class AST {
   final AST[] _kids;
-  final int _nlocals;           // Count of locals before parsing nested kids
   AST _par;
 
   // Parse kids in order, save/restore locals around kids
   AST( XClzBuilder X, int n ) { this(X,n,true); }
   AST( XClzBuilder X, int n, boolean kids ) {
-    _nlocals = X==null ? 0 : X._nlocals;
     if( n == 0 ) { _kids=null; return; }    
     _kids = new AST[n];
-    if( !kids ) return;
-    // Parse kids in order
-    for( int i=0; i<n; i++ )
-      _kids[i] = ast(X);
-    
-    // Pop locals at end of scope
-    X.pop_locals(_nlocals);
+    // Parse kids as expressions (not statements) in order
+    if( kids )
+      for( int i=0; i<n; i++ )
+        _kids[i] = ast_term(X);
   }
   // Simple all-fields constructor
-  AST( AST[] kids, int nlocals ) {
-    _kids = kids;
-    _nlocals = nlocals;
-  }
+  AST( AST[] kids ) { _kids = kids; }
 
   @Override public String toString() { return jcode(new SB() ).toString(); }
 
@@ -105,9 +97,11 @@ public abstract class AST {
     case AnnoNamedRegAlloc -> new DefRegAST(X,true ,true );
     case AnnoRegAlloc -> new   DefRegAST(X,false,true );
     case Assign       -> new   AssignAST(X,true);
+    case BindFunctionExpr -> new BindFuncAST(X,ast_term(X),X.u31());
     case CallExpr     -> new     CallAST(X, X.consts());
     case CondOpExpr   -> new    BinOpAST(X,false);
     case ForRangeStmt -> new ForRangeAST(X);
+    case ForListStmt  -> new ForRangeAST(X);
     case IfElseStmt   -> new       IfAST(X,3);
     case IfThenStmt   -> new       IfAST(X,2);
     case InvokeExpr   -> new   InvokeAST(X, X.consts());
@@ -119,6 +113,7 @@ public abstract class AST {
     case RelOpExpr    -> new    BinOpAST(X,true );
     case Return0Stmt  -> new   ReturnAST(X,0);
     case Return1Stmt  -> new   ReturnAST(X,1);
+    //case ReturnNStmt  -> new   ReturnAST(X,X.u31());
     case StmtBlock    -> new    BlockAST(X);
     case SwitchExpr   -> new   SwitchAST(X, ast_term(X), X.pack64(), X.consts());
     case TemplateExpr -> new TemplateAST(X);
