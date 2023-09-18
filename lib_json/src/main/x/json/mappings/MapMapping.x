@@ -28,7 +28,7 @@ const MapMapping<Key, Value, Serializable extends Map<Key, Value>>
                 val constructor := typeMap.defaultConstructor()) {
             map = constructor().as(Serializable);
         } else {
-            Type defaultType = ListMap;
+            Type defaultType = ListMap<Serializable.Key, Serializable.Value>;
             if (defaultType.isA(Serializable)) {
                 map = new ListMap<Key, Value>().as(Serializable);
             } else {
