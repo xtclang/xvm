@@ -38,6 +38,11 @@ public class TernaryExprAST<C>
     }
 
     @Override
+    public NodeType nodeType() {
+        return NodeType.TernaryExpr;
+    }
+
+    @Override
     public int getCount() {
         // there are three scenarios when the counts may not be the same:
         // - a Throw
@@ -54,11 +59,6 @@ public class TernaryExprAST<C>
     @Override
     public boolean isAssignable() {
         return exprThen.isAssignable() && exprElse.isAssignable();
-    }
-
-    @Override
-    public NodeType nodeType() {
-        return NodeType.TernaryExpr;
     }
 
     @Override

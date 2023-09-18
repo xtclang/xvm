@@ -24,6 +24,11 @@ public class DivRemExprAST<C>
     }
 
     @Override
+    public NodeType nodeType() {
+        return NodeType.DivRemExpr;
+    }
+
+    @Override
     public int getCount() {
         return 2;
     }
@@ -31,11 +36,6 @@ public class DivRemExprAST<C>
     @Override
     public C getType(int i) {
         return (C) types[i];
-    }
-
-    @Override
-    public NodeType nodeType() {
-        return NodeType.DivRemExpr;
     }
 
     @Override

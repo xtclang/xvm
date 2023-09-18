@@ -49,14 +49,14 @@ public class MapExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return type;
+    public NodeType nodeType() {
+        return MapExpr;
     }
 
     @Override
-    public NodeType nodeType() {
-        return MapExpr;
+    public C getType(int i) {
+        assert i == 0;
+        return type;
     }
 
     @Override

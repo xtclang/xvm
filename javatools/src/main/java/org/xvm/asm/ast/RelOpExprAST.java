@@ -27,14 +27,14 @@ public class RelOpExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return type;
+    public NodeType nodeType() {
+        return NodeType.RelOpExpr;
     }
 
     @Override
-    public NodeType nodeType() {
-        return NodeType.RelOpExpr;
+    public C getType(int i) {
+        assert i == 0;
+        return type;
     }
 
     @Override

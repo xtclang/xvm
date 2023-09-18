@@ -82,7 +82,7 @@ public class AssignAST<C>
      * @param rhs   right-hand-side expression to assign to
      */
     public AssignAST(ExprAST<C> lhs, Operator op, ExprAST<C> rhs) {
-        assert lhs != null /* TODO GG && lhs.isAssignable() */ && op != null && rhs != null;
+        assert lhs != null && lhs.isAssignable() && op != null && rhs != null;
         this.lhs = lhs;
         this.op  = op;
         this.rhs = rhs;
@@ -101,6 +101,11 @@ public class AssignAST<C>
     }
 
     @Override
+    public NodeType nodeType() {
+        return op == Operator.Asn ? Assign : BinOpAssign;
+    }
+
+    @Override
     public int getCount() {
         return lhs.getCount();
     }
@@ -108,11 +113,6 @@ public class AssignAST<C>
     @Override
     public C getType(int i) {
         return lhs.getType(i);
-    }
-
-    @Override
-    public NodeType nodeType() {
-        return op == Operator.Asn ? Assign : BinOpAssign;
     }
 
     @Override

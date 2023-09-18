@@ -41,14 +41,14 @@ public class ListExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return type;
+    public NodeType nodeType() {
+        return ListExpr;
     }
 
     @Override
-    public NodeType nodeType() {
-        return ListExpr;
+    public C getType(int i) {
+        assert i == 0;
+        return type;
     }
 
     @Override

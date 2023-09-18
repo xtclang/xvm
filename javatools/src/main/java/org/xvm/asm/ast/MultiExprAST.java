@@ -21,13 +21,18 @@ public class MultiExprAST<C>
 
     MultiExprAST() {}
 
-    public MultiExprAST(ExprAST<C>[] values) {
-        assert values != null && Arrays.stream(values).allMatch(Objects::nonNull);
-        this.exprs = values;
+    public MultiExprAST(ExprAST<C>[] exprs) {
+        assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);
+        this.exprs = exprs;
     }
 
     public ExprAST<C>[] getExprs() {
         return exprs; // note: caller must not modify returned array in any way
+    }
+
+    @Override
+    public NodeType nodeType() {
+        return MultiExpr;
     }
 
     @Override
@@ -41,8 +46,8 @@ public class MultiExprAST<C>
     }
 
     @Override
-    public NodeType nodeType() {
-        return MultiExpr;
+    public boolean isAssignable() {
+        return Arrays.stream(exprs).allMatch(ExprAST::isAssignable);
     }
 
     @Override

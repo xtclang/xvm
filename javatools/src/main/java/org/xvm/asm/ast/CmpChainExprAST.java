@@ -52,14 +52,14 @@ public class CmpChainExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        assert i == 0;
-        return booleanType;
+    public NodeType nodeType() {
+        return NodeType.CmpChainExpr;
     }
 
     @Override
-    public NodeType nodeType() {
-        return NodeType.CmpChainExpr;
+    public C getType(int i) {
+        assert i == 0;
+        return booleanType;
     }
 
     @Override

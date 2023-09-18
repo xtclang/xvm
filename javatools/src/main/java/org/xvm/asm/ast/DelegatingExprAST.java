@@ -26,10 +26,10 @@ public abstract class DelegatingExprAST<C>
     }
 
     @Override
-    public abstract C getType(int i);
+    public abstract NodeType nodeType();
 
     @Override
-    public abstract NodeType nodeType();
+    public abstract C getType(int i);
 
     @Override
     protected void readBody(DataInput in, ConstantResolver<C> res)
