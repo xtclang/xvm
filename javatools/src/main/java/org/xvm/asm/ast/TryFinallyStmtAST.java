@@ -52,7 +52,7 @@ public class TryFinallyStmtAST<C>
         super.readBody(in, res);
 
         if (readPackedInt(in) != 0) {
-            exception = readAST(in, res);
+            exception = readExprAST(in, res);
         }
         catchAll = readAST(in, res);
     }
@@ -61,10 +61,12 @@ public class TryFinallyStmtAST<C>
     public void prepareWrite(ConstantResolver<C> res) {
         super.prepareWrite(res);
 
+        res.enter();
         if (exception != null) {
             exception.prepareWrite(res);
         }
         catchAll.prepareWrite(res);
+        res.exit();
     }
 
     @Override
@@ -72,13 +74,15 @@ public class TryFinallyStmtAST<C>
             throws IOException {
         super.writeBody(out, res);
 
+        res.enter();
         if (exception == null) {
             writePackedLong(out, 0);
         } else {
-            writePackedLong(out, 0);
-            exception.write(out, res);
+            writePackedLong(out, 1);
+            exception.writeExpr(out, res);
         }
         catchAll.write(out, res);
+        res.exit();
     }
 
     @Override

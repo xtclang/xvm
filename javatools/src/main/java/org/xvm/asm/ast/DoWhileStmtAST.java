@@ -22,7 +22,7 @@ public class DoWhileStmtAST<C>
 
     DoWhileStmtAST() {}
 
-    public DoWhileStmtAST(ExprAST<C>[] specialRegs, BinaryAST<C> body, ExprAST<C> cond) {
+    public DoWhileStmtAST(RegAllocAST<C>[] specialRegs, BinaryAST<C> body, ExprAST<C> cond) {
         this.specialRegs = specialRegs == null  ? NO_ALLOCS : specialRegs;
         this.body = body;
         this.cond = cond;
