@@ -346,7 +346,7 @@ public class TryStatement
         AstHolder    holder     = ctx.getHolder();
 
         ExprAST<Constant>[]   aAstResources = null;
-        BinaryAST<Constant>[] aAstCatches   = null; // TODO GG what is this? the "catch()" or the "{...}" body thereof? because we need BOTH
+        BinaryAST<Constant>[] aAstCatches   = null; // "catch(T e) {...}" StmtBlocks
         BinaryAST<Constant>   astCatchAll   = null;
         BinaryAST<Constant>   astBlock;
 

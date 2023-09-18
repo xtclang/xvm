@@ -1386,9 +1386,9 @@ public class NameExpression
                     case This:
                         if (idProp.getName().equals("outer"))
                             {
-                            code.add(new MoveThis(1, regTemp)); // TODO GG: wrong register type
+                            code.add(new MoveThis(1, regTemp));
 
-                            m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), 1, regTemp.getType());
+                            m_astResult = new OuterExprAST<>(ctx.getThisRegisterAST(), 1, getType());
                             }
                         else
                             {
