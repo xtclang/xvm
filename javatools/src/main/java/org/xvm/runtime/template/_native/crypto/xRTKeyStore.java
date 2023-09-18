@@ -233,7 +233,6 @@ public class xRTKeyStore
                     }
                 catch (KeyStoreException e)
                     {
-                    // TODO GG: dedicated KeyStore exception
                     return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
                     }
                 }

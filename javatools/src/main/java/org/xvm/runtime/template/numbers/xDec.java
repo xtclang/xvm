@@ -15,7 +15,7 @@ import org.xvm.type.Decimal64;
 
 
 /**
- * Native Dec support. TODO GG/CP: currently the same as Dec64
+ * Native Dec support.
  */
 public class xDec
         extends BaseDecFP
