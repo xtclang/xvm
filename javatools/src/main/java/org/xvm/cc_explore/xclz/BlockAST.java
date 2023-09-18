@@ -6,8 +6,19 @@ import java.util.HashMap;
 
 class BlockAST extends AST {
   HashMap<String,Ary<String>> _tmps;
+  final int _nlocals;           // Number of locals pre-existing this Block
   
-  BlockAST( XClzBuilder X ) { super(X, X.u31()); }
+  BlockAST( XClzBuilder X ) {
+    super(X, X.u31(), false);
+    _nlocals = X._nlocals;
+    
+    // Parse kids in order as stmts not exprs
+    for( int i=0; i<_kids.length; i++ )
+      _kids[i] = ast(X);
+    
+    // Pop scope-locals at end of scope
+    X.pop_locals(_nlocals);
+  }
   
   String add_tmp(String type) {
     if( _tmps==null ) _tmps = new HashMap<>();

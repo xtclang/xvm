@@ -14,8 +14,8 @@ class NewAST extends AST {
     _type = XClzBuilder.jtype_tcon((TCon)typecon,false);
     _meth = (MethodPart)((MethodCon)methcon).part();
   }
-  NewAST( AST[] kids, int nlocals, String type ) {
-    super(kids,nlocals);
+  NewAST( AST[] kids, String type ) {
+    super(kids);
     _type = type;
     _meth = null;
   }

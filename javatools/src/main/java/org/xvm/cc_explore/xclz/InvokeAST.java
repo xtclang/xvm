@@ -10,10 +10,7 @@ class InvokeAST extends AST {
   final String _meth, _target, _type;
   final int _rnum;
   InvokeAST( XClzBuilder X, Const[] retTypes ) {
-    super(X, X.u31(), false);
-    if( _kids!=null )
-      for( int i=0; i<_kids.length; i++ )
-        _kids[i] = ast_term(X);
+    super(X, X.u31());
     // Calling target.method(args)
     MethodPart meth = (MethodPart)((MethodCon)X.methcon_ast()).part();
     _meth = meth._name;

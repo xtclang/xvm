@@ -19,7 +19,7 @@ class ForRangeAST extends AST {
   @Override SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
     // for( long x : new XRange(1,100) ) {
-    _kids[3].jcode(sb.p("for( "));
+    _kids[0].jcode(sb.p("for( "));
     _kids[1].jcode(sb.p(" : "  ));
     _kids[2].jcode(sb.p(" ) "  ));
     return sb;
