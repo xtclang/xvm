@@ -818,11 +818,8 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     }
 
-                if (fCompletes)
-                    {
-                    astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
-                    astAssign = new AssignAST<>(astLVal, Operator.Asn, rvalue.getExprAST());
-                    }
+                astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
+                astAssign = new AssignAST<>(astLVal, Operator.Asn, rvalue.getExprAST());
                 break;
                 }
 
@@ -905,11 +902,8 @@ public class AssignmentStatement
                     operAsn = Operator.AsnIfNotFalse;
                     }
 
-                if (fCompletes)
-                    {
-                    astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
-                    astAssign = new AssignAST<>(astLVal, operAsn, rvalue.getExprAST());
-                    }
+                astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
+                astAssign = new AssignAST<>(astLVal, operAsn, rvalue.getExprAST());
                 break;
                 }
 
@@ -948,10 +942,7 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     code.add(labelSkip);
 
-                    if (fCompletes)
-                        {
-                        astAssign = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
-                        }
+                    astAssign = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
                     }
                 break;
                 }
