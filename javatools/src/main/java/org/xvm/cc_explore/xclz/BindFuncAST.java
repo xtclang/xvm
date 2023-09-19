@@ -19,5 +19,7 @@ class BindFuncAST extends AST {
     _type = X.jtype_methcon_ast();
     
   }
-  @Override void jpre( SB sb ) { throw XEC.TODO(); }
+  @Override SB jcode( SB sb ) {
+    throw XEC.TODO();
+  }
 }
