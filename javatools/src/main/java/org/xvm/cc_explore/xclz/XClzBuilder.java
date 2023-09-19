@@ -247,6 +247,15 @@ public class XClzBuilder {
       }
       if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
         return "XAry<"+telem+">"; // Shortcut class
+      if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") ) {
+        if( ptc._parms.length==1 )  // Tuple of length 1 ?
+          return "XAry<"+telem+">"; // Shortcut class
+        throw XEC.TODO();
+      }
+      if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") )
+        // TODO: Gonna need more type info that this
+        return "XFunc";
+         
       throw XEC.TODO();
     }
     if( tc instanceof ImmutTCon itc ) 
