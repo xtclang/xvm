@@ -58,11 +58,12 @@ public class SwitchAST<C>
     /**
      * Construct a switch expression.
      *
-     * @param cond     the expression representing the switch condition
-     * @param isaTest  an array of booleans, with true indicating an ".is()" test
-     * @param cases    an array of cases, each of which is an array of constant values
-     * @param bodies   an array of bodies, corresponding to the cases
-     * @param resultTypes  an array of types returned from a switch expression; a switch statement
+     * @param cond         the expression representing the switch condition
+     * @param isaTest      an array of booleans, with true indicating an ".is()" test
+     * @param cases        an array of cases, each of which is an array of constant values
+     * @param bodies       an array of bodies, corresponding to the cases
+     * @param resultTypes  an array of types returned from a switch expression; null for a switch
+     *                     statement
      */
     public SwitchAST(ExprAST<C>     cond,
                      long           isaTest,

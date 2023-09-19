@@ -322,41 +322,16 @@ public class SwitchExpression
         int           cNodes     = aNodes.size();
         Label         labelCur   = null;
         Label         labelExit  = new Label("switch_end");
-        Constant[]    aconstRaw  = m_casemgr.getCaseConstants();
-        int           cCases     = aconstRaw.length + (m_casemgr.hasDefaultCase() ? 1 : 0);
-        Constant[]    aconstCase = new Constant[cCases];     // case values (null == default)
-        ExprAST[]     abastBody  = new ExprAST[cCases];      // case bodies (or nulls)
-        for (int i = 0, iRaw = -1, iCase = -1; i < cNodes; ++i)
+        int           cCases     = m_casemgr.getCaseCount();
+        Constant[]    aconstCase = new Constant[cCases]; // case values (null == default)
+        ExprAST[]     abastBody  = new ExprAST[cCases];  // case bodies (or nulls)
+        for (int i = 0, iCase = -1; i < cNodes; ++i)
             {
             AstNode node = aNodes.get(i);
             if (node instanceof CaseStatement stmtCase)
                 {
                 labelCur = stmtCase.getLabel();
-
-                List<Expression> exprs  = stmtCase.exprs;
-                if (exprs == null)
-                    {
-                    // this is the "default:" statement
-                    aconstCase[++iCase] = null;
-                    }
-                else
-                    {
-                    for (Expression expr : exprs)
-                        {
-                        Constant constVal = expr.toConstant();
-                        if (constVal instanceof MatchAnyConstant
-                            || constVal instanceof ArrayConstant tup
-                                && tup.getFormat() == Format.Tuple
-                                && Arrays.stream(tup.getValue()).allMatch(c -> c instanceof MatchAnyConstant))
-                            {
-                            aconstCase[++iCase] = null;
-                            }
-                        else
-                            {
-                            aconstCase[++iCase] = aconstRaw[++iRaw];
-                            }
-                        }
-                    }
+                iCase    = stmtCase.collectConstants(iCase, aconstCase);
                 }
             else
                 {
@@ -411,15 +386,8 @@ public class SwitchExpression
     @Override
     public ExprAST<Constant> getExprAST()
         {
-        if (m_bastSwitch == null)
-            {
-            m_bastSwitch = new SwitchAST<>(m_casemgr.getConditionBAST(),
-                                           m_casemgr.getConditionIsA(),
-                                           m_aconstCases,
-                                           m_abastBody,
-                                           getTypes());
-            }
-        return m_bastSwitch;
+        return new SwitchAST<>(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
+                m_aconstCases, m_abastBody, getTypes());
         }
 
 
@@ -478,7 +446,6 @@ public class SwitchExpression
     protected long          lEndPos;
 
     private transient CaseManager<Expression> m_casemgr;
-    private transient ExprAST<Constant>       m_bastSwitch;
     private transient Constant[]              m_aconstCases;
     private transient ExprAST<Constant>[]     m_abastBody;
 
