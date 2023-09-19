@@ -1329,7 +1329,10 @@ public class NameExpression
 
                 Register regRef = code.createRegister(typeRef, fUsedOnce);
                 code.add(new MoveRef(regOuter, regRef));
-                // TODO m_astResult =
+
+                m_astResult = new UnaryOpExprAST<>(
+                        new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeOuter),
+                        Operator.Ref, typeRef);
                 return regRef;
                 }
 
