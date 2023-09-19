@@ -18,7 +18,7 @@ class BinOpAST extends AST {
   @Override AST rewrite() {
     // Range is not a valid Java operator, so need to change everything here
     if( _op.text.equals(".." ) ) return new NewAST(_kids,_type+"II");
-    if( _op.text.equals("..>") ) return new NewAST(_kids,_type+"IE");
+    if( _op.text.equals("..<") ) return new NewAST(_kids,_type+"IE");
     return this;
   }
   @Override void jmid ( SB sb, int i ) { if( i==0 ) sb.p(_op.text); }
