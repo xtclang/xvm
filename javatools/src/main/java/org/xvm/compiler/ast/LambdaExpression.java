@@ -622,6 +622,18 @@ public class LambdaExpression
             else
                 {
                 int cReturns = atypeRets.length;
+
+                // lambda's return type is used to define the method structure and therefore cannot
+                // refer to a dynamic type; need to resolve those
+                for (int i = 0; i < cReturns; i++)
+                    {
+                    TypeConstant typeRet = atypeRets[i];
+                    if (typeRet.containsDynamicType(null))
+                        {
+                        // collector (above) returns a new array; no problem mutating it
+                        atypeRets[i] = typeRet.resolveConstraints();
+                        }
+                    }
                 if (cReqReturns != -1 && cReturns > cReqReturns)
                     {
                     // the lambda has more return values that the caller needs; adjust it
