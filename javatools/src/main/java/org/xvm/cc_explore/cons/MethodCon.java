@@ -58,7 +58,7 @@ public class MethodCon extends PartCon {
         else         { rez1++;  meth1=methx; }
       }
       if( rez1 >= 1 ) { assert rez1==1;  return (_part = meth1); }
-      if( rez0 >= 1 ) { assert rez0==1;  return (_part = meth1); }      
+      if( rez0 >= 1 ) { assert rez0==1;  return (_part = meth0); }
     }
     
     // Native methods?
