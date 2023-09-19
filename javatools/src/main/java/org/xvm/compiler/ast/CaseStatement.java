@@ -1,12 +1,18 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Arrays;
 import java.util.List;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.MatchAnyConstant;
 
 import org.xvm.asm.op.Label;
 
@@ -107,6 +113,42 @@ public class CaseStatement
         {
         // the case statement is a marker; it's just data, not an actual compilable AST node
         throw new IllegalStateException();
+        }
+
+    /**
+     * Collect the constants for the case expressions and place them into the specified array.
+     *
+     * @param iCase       the index at which to start copying the constants
+     * @param aconstCase  the array to constants to copy into
+     *
+     * @return the index past the last collected constant
+     */
+    protected int collectConstants(int iCase, Constant[] aconstCase)
+        {
+        if (exprs == null)
+            {
+            // this is the "default:" statement
+            aconstCase[++iCase] = null;
+            }
+        else
+            {
+            for (Expression expr : exprs)
+                {
+                Constant constVal = expr.toConstant();
+                if (constVal instanceof MatchAnyConstant
+                    || constVal instanceof ArrayConstant tup
+                        && tup.getFormat() == Format.Tuple
+                        && Arrays.stream(tup.getValue()).allMatch(c -> c instanceof MatchAnyConstant))
+                    {
+                    aconstCase[++iCase] = null;
+                    }
+                else
+                    {
+                    aconstCase[++iCase] = constVal;
+                    }
+                }
+            }
+        return iCase;
         }
 
 

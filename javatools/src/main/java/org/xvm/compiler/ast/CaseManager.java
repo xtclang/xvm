@@ -213,6 +213,14 @@ public class CaseManager<CookieType>
         }
 
     /**
+     * @return the number of case constants (including default)
+     */
+    public int getCaseCount()
+        {
+        return m_aconstCase.length + (hasDefaultCase() ? 1 : 0);
+        }
+
+    /**
      * @return the label assocated with the "defualt:" statement, or null
      */
     public Label getDefaultLabel()
