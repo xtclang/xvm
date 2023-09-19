@@ -1,18 +1,21 @@
 module TestSimple {
 
-    package json import json.xtclang.org;
-
     @Inject Console console;
 
-    import json.Schema;
-    import ecstasy.io.*;
+    void run( ) {
+        Map<Type, Mapping> mappings = Map:[Int=new Mapping<Int>("I"), String=new Mapping<String>("S")];
 
-    void run() {
-         String str = \|{"a":"0", "b":"1"}
-                       ;
-         Map<String, String> config =
-            Schema.DEFAULT.createObjectInput(new UTF8Reader(new ByteArrayInputStream(str.utf8()))).read();
+        Type<Tuple> type = Tuple<Int, String>;
+        assert Type[] types := type.DataType.parameterized();
 
-         console.print(config);
+        // this lambda used to assert the compiler
+        Mapping[] array = new Mapping[types.size] (i ->
+            {
+            Type valueType = types[i];
+            return new Mapping<valueType.DataType>("");
+            });
+        console.print(array);
     }
+
+    const Mapping<T>(String name);
 }
