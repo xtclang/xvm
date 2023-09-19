@@ -460,8 +460,15 @@ module TestIO
         testSer(schema, "map", map2);
         Map<String, Int>? map3 = map2;
         testSer(schema, "map", map3);
+
+        String jsonMap = \|{"a":1, "b":2}
+                          ;
+        Map<String, Int> map4 = schema.createObjectInput(new UTF8Reader(
+                                    new ByteArrayInputStream(jsonMap.utf8()))).read();
+        assert map4 == map2;
+
+        const Test<Key, Value>(Map<Key, Value> map);
         }
-    const Test<Key, Value>(Map<Key, Value> map);
 
     void testMetadata()
         {
