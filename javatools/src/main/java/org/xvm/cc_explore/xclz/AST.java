@@ -86,7 +86,7 @@ public abstract class AST {
     if( iop >= 0 ) return _ast(X,iop);
     if( iop > XClzBuilder.CONSTANT_OFFSET ) return new RegAST(X,iop); // "special" negative register
     // Constants from the limited method constant pool
-    return new ConAST(X, X.methcon(iop) );
+    return new ConAST( X.methcon(iop) );
   }
   
   static AST ast( XClzBuilder X ) { return _ast(X,X.u8()); }
@@ -94,33 +94,33 @@ public abstract class AST {
   private static AST _ast( XClzBuilder X, int iop ) {
     NodeType op = NodeType.valueOf(iop);
     return switch( op ) {
-    case AnnoNamedRegAlloc -> new DefRegAST(X,true ,true );
-    case AnnoRegAlloc -> new   DefRegAST(X,false,true );
-    case Assign       -> new   AssignAST(X,true);
-    case BindFunctionExpr -> new BindFuncAST(X,ast_term(X),X.u31());
-    case CallExpr     -> new     CallAST(X, X.consts());
-    case CondOpExpr   -> new    BinOpAST(X,false);
-    case ForRangeStmt -> new ForRangeAST(X);
-    case ForListStmt  -> new ForRangeAST(X);
-    case IfElseStmt   -> new       IfAST(X,3);
-    case IfThenStmt   -> new       IfAST(X,2);
-    case InvokeExpr   -> new   InvokeAST(X, X.consts());
-    case MultiExpr    -> new    MultiAST(X);
-    case NamedRegAlloc-> new   DefRegAST(X,true ,false);
+    case AnnoNamedRegAlloc -> DefRegAST.make(X,true ,true );
+    case AnnoRegAlloc ->   DefRegAST.make(X,false,true );
+    case Assign       ->   AssignAST.make(X,true);
+    case BindFunctionExpr -> BindFuncAST.make(X);
+    case CallExpr     ->     CallAST.make(X);
+    case CondOpExpr   ->    BinOpAST.make(X,false);
+    case ForRangeStmt -> ForRangeAST.make(X);
+    case ForListStmt  -> ForRangeAST.make(X);
+    case IfElseStmt   ->       IfAST.make(X,3);
+    case IfThenStmt   ->       IfAST.make(X,2);
+    case InvokeExpr   ->   InvokeAST.make(X);
+    case MultiExpr    ->    MultiAST.make(X);
+    case NamedRegAlloc->   DefRegAST.make(X,true ,false);
     case NewExpr      -> new      NewAST(X, X.methcon_ast(), X.methcon_ast());
     case NotImplYet   -> new     TODOAST(X);
-    case RegAlloc     -> new   DefRegAST(X,true ,true );
-    case RelOpExpr    -> new    BinOpAST(X,true );
+    case RegAlloc     ->   DefRegAST.make(X,true ,true );
+    case RelOpExpr    ->    BinOpAST.make(X,true );
     case Return0Stmt  -> new   ReturnAST(X,0);
     case Return1Stmt  -> new   ReturnAST(X,1);
-    //case ReturnNStmt  -> new   ReturnAST(X,X.u31());
     case StmtBlock    -> new    BlockAST(X);
     case SwitchExpr   -> new   SwitchAST(X, ast_term(X), X.pack64(), X.consts());
     case TemplateExpr -> new TemplateAST(X);
     case TernaryExpr  -> new  TernaryAST(X);
     
-    case MapExpr      -> new     MapAST(X, X.methcon_ast());
-    case StmtExpr     -> new    ExprAST(X);
+    //case ReturnNStmt  -> new   ReturnAST(X,X.u31());
+    //case MapExpr      -> new     MapAST(X, X.methcon_ast());
+    //case StmtExpr     -> new    ExprAST(X);
     
     default -> throw XEC.TODO();
     };
