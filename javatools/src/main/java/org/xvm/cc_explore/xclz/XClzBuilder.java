@@ -76,7 +76,7 @@ public class XClzBuilder {
       if( !construct.is_empty_function() ) {
         _sb.nl();
         _sb.ip("static {").nl();
-        jcode_ast(construct);
+        jcode(construct);
         _sb.ip("}").nl().nl();
       }
     }
@@ -106,14 +106,14 @@ public class XClzBuilder {
     _sb.ip("public ");
     // Return type
     if( m._rets==null ) _sb.p("void ");
-    else if( m._rets.length == 1 ) _sb.p(jtype_tcon(m._rets[0]._con,false)).p(' ');
+    else if( m._rets.length == 1 ) _sb.p(jtype(m._rets[0]._con,false)).p(' ');
     else throw XEC.TODO(); // Multi-returns will need much help
     // Argument list
     _sb.p(m._name).p("( ");
     if( m._args!=null ) {
       for( int i = 0; i < m._args.length; i++ ) {
         Parameter p = m._args[i];
-        _sb.p(jtype_tcon(p._con,false)).p(' ').p(p._name).p(", ");
+        _sb.p(jtype(p._con,false)).p(' ').p(p._name).p(", ");
         _locals.put(i,p._name);
         _nlocals++;
       }
@@ -121,7 +121,7 @@ public class XClzBuilder {
     }
     _sb.p(" ) ");
     // Body    
-    jcode_ast(m);
+    jcode(m);
     _sb.nl();
 
     // Popped back to the original args
@@ -129,7 +129,7 @@ public class XClzBuilder {
     pop_locals(0);
   }
 
-  private void jcode_ast( MethodPart m ) {
+  private void jcode( MethodPart m ) {
     // Build the AST from bytes
     _meth = m;
     _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser
@@ -145,8 +145,26 @@ public class XClzBuilder {
   int u31() { return _pool.u31(); } // Packed read
   long pack64() { return _pool.pack64(); }
   String utf8() { return _pool.utf8(); }
+  // Read an array of method constants
   Const[] consts() { return _pool.consts(); }
+  // Read a single method constant, advancing parse pointer
+  Const con() { return con(u31()); }
+  // Read a single method constant
   Const con(int i) { return _meth._cons[i]; }
+
+  // Read an array of AST kid terminals
+  AST[] kids() { return _kids(u31(),0); }
+  AST[] kids( int n ) { return _kids(n,0); }
+  // Read an array of AST kid terminals, with a given bias (skipped elements are null).
+  AST[] kids_bias( int b ) { return _kids(u31(),b); }
+  
+  private AST[] _kids( int n, int bias ) {
+    if( n+bias==0 ) return null;
+    AST[] kids = new AST[n+bias];
+    for( int i=0; i<n; i++ )
+      kids[i+bias] = AST.ast_term(this);
+    return kids;
+  }
 
 
   // --------------------------------------------------------------------------
@@ -160,24 +178,6 @@ public class XClzBuilder {
   void pop_locals(int n) {
     while( n < _nlocals )
       _locals.remove(--_nlocals);
-  }
-
-  // Magic constant for indexing into the constant pool.
-  static final int CONSTANT_OFFSET = -16;
-  // Read a method constant.  Advances the parse point.
-  Const methcon(long idx) {
-    // CONSTANT_OFFSET >= idx: uses a method constant
-    assert idx <= CONSTANT_OFFSET && ((int)idx)==idx;
-    return _meth._cons[CONSTANT_OFFSET - (int)idx];
-  }
-
-  Const methcon_ast() { return methcon_ast((int)pack64()); }
-  Const methcon_ast(int idx) { return _meth._cons[idx]; }
-  
-  // Return a java-valid name
-  String jname_methcon_ast( ) {
-    String xname = ((StringCon)methcon_ast())._str;
-    return jname(xname);
   }
 
   // After the basic mangle, dups are suffixed 1,2,3...
@@ -224,9 +224,9 @@ public class XClzBuilder {
     }};
   
   // Produce a java type from a method constant
-  String jtype_methcon_ast() { return jtype_tcon( (TCon)methcon_ast(), false ); }
+  String jtype_methcon() { return jtype( con(), false ); }
   // Produce a java type from a TermTCon
-  static String jtype_tcon( TCon tc, boolean boxed ) {
+  static String jtype( Const tc, boolean boxed ) {
     if( tc instanceof TermTCon ttc ) {
       ClassPart clz = (ClassPart)ttc.part();
       String key = clz._name + "+" + clz._path._str;
@@ -236,7 +236,7 @@ public class XClzBuilder {
       throw XEC.TODO();
     }
     if( tc instanceof ParamTCon ptc ) {
-      String telem = jtype_tcon(ptc._parms[0],true);
+      String telem = jtype(ptc._parms[0],true);
       ClassPart clz = ((ClzCon)ptc._con).clz();
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
         if( telem.equals("Long") )  return "XAryI64"; // Java ArrayList specialized to int64
@@ -260,7 +260,7 @@ public class XClzBuilder {
       throw XEC.TODO();
     }
     if( tc instanceof ImmutTCon itc ) 
-      return jtype_tcon(itc.icon(),boxed); // Ignore immutable for now
+      return jtype(itc.icon(),boxed); // Ignore immutable for now
     
     throw XEC.TODO();
   }  
@@ -289,7 +289,7 @@ public class XClzBuilder {
     // Array constants
     if( tc instanceof AryCon ac ) {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
-      String type = jtype_tcon(ac.type(),false);
+      String type = jtype(ac.type(),false);
       ASB.p("new ").p(type).p("()");
       if( ac.cons()!=null ) {
         ASB.p(" {{ ");

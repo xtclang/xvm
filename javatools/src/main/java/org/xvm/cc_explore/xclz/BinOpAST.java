@@ -14,14 +14,14 @@ class BinOpAST extends AST {
     kids[0] = ast_term(X);
     Operator op = OPS[X.u31()];
     kids[1] = ast_term(X);
-    Const type = has_type ? X.con(X.u31()) : null;
+    Const type = has_type ? X.con() : null;
     return new BinOpAST(kids,op,type);
   }
   
   private BinOpAST( AST[] kids, Operator op, Const type ) {
     super(kids);
     _op = op;
-    _type = type==null ? null : XClzBuilder.jtype_tcon((TCon)type,false);
+    _type = type==null ? null : XClzBuilder.jtype(type,false);
   }
   @Override String type() { return _type; }
   @Override AST rewrite() {

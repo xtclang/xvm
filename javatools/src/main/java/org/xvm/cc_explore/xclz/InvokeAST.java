@@ -11,19 +11,10 @@ class InvokeAST extends AST {
   final int _rnum;
 
   static InvokeAST make( XClzBuilder X ) {
-    // Read optional array of return types (not currently used)
-    int ncons = X.u31();
-    Const[] retTypes = ncons==0 ? null : new Const[ncons];
-    for( int i=0; i<ncons; i++ )
-      retTypes[i] = X.con(X.u31());
-    // Read call arguments
-    int nargs = X.u31();
-    AST[] kids = nargs==0 ? null : new AST[nargs];
-    for( int i=0; i<nargs; i++ )
-      kids[i] = ast_term(X);
-    
-    Const methcon = X.con(X.u31());
-    int rnum = X.u31() - 32;    // Register number for the LHS
+    Const[] retTypes = X.consts(); // Return types
+    AST[] kids = X.kids();         // Call arguments
+    Const methcon = X.con();       // Method constant
+    int rnum = X.u31() - 32;       // Register number for the LHS
     return new InvokeAST(X,kids,retTypes,methcon,rnum);
   }
   
@@ -48,12 +39,11 @@ class InvokeAST extends AST {
   }
   
   InvokeAST( String meth, String target, String type, int rnum, AST kid ) {
-    super(null,1,false);
+    super(new AST[]{kid});
     _meth = meth;
     _type = type;
     _rnum = rnum;
     _target=target;
-    _kids[0] = kid;
   }
   
   @Override AST rewrite() {

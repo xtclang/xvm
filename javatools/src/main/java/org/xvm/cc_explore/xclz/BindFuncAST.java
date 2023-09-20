@@ -20,15 +20,15 @@ class BindFuncAST extends AST {
       idxs[i] = X.u31();
       kids[i] = ast_term(X);
     }
-    kids[nargs] = target;
-    Const type = X.con(X.u31());
+    kids[nargs] = target;       // Target is last _kids
+    Const type = X.con();
     return new BindFuncAST( X, kids, idxs, type );
   }
     
   private BindFuncAST( XClzBuilder X, AST[] kids, int[] idxs, Const type ) {
     super(kids);
     _idxs = idxs;
-    _type = XClzBuilder.jtype_tcon((TCon)type,false);    
+    _type = XClzBuilder.jtype(type,false);    
   }
   @Override SB jcode( SB sb ) {
     throw XEC.TODO();

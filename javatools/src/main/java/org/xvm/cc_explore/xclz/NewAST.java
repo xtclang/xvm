@@ -9,10 +9,13 @@ import org.xvm.cc_explore.util.SB;
 class NewAST extends AST {
   final MethodPart _meth; // TODO: Constructor is Java is totally determined by argument types.  
   final String _type;
-  NewAST( XClzBuilder X, Const typecon, Const methcon ) {
-    super(X, X.u31());
-    _type = XClzBuilder.jtype_tcon((TCon)typecon,false);
-    _meth = (MethodPart)((MethodCon)methcon).part();
+  static NewAST make( XClzBuilder X ) {
+    return new NewAST(X.con(),X.con(),X.kids);
+  }
+  private NewAST( Const type, Const meth, AST[] kids ) {
+    super(kids);
+    _type = XClzBuilder.jtype(type,false);
+    _meth = (MethodPart)((MethodCon)meth).part();
   }
   NewAST( AST[] kids, String type ) {
     super(kids);
