@@ -7,17 +7,7 @@ import org.xvm.cc_explore.util.SB;
 public abstract class AST {
   final AST[] _kids;
   AST _par;
-
-  // Parse kids in order, save/restore locals around kids
-  AST( XClzBuilder X, int n ) { this(X,n,true); }
-  AST( XClzBuilder X, int n, boolean kids ) {
-    if( n == 0 ) { _kids=null; return; }    
-    _kids = new AST[n];
-    // Parse kids as expressions (not statements) in order
-    if( kids )
-      for( int i=0; i<n; i++ )
-        _kids[i] = ast_term(X);
-  }
+  
   // Simple all-fields constructor
   AST( AST[] kids ) { _kids = kids; }
 
@@ -79,14 +69,16 @@ public abstract class AST {
   
   public static AST parse( XClzBuilder X ) { return ast(X); }
 
+  // Magic constant for indexing into the constant pool.
+  static final int CONSTANT_OFFSET = -16;
   static AST ast_term( XClzBuilder X ) {
     int iop = (int)X.pack64();
-    if( iop >= 32 ) return new RegAST(X,iop-32);  // Local variable register
+    if( iop >= 32 ) return new RegAST(iop-32,X._locals.get(iop-32));  // Local variable register
     if( iop == NodeType.Escape.ordinal() ) return ast(X);
     if( iop >= 0 ) return _ast(X,iop);
-    if( iop > XClzBuilder.CONSTANT_OFFSET ) return new RegAST(X,iop); // "special" negative register
+    if( iop > CONSTANT_OFFSET ) return new RegAST(iop,null); // "special" negative register
     // Constants from the limited method constant pool
-    return new ConAST( X.methcon(iop) );
+    return new ConAST( X.con(CONSTANT_OFFSET-iop) );
   }
   
   static AST ast( XClzBuilder X ) { return _ast(X,X.u8()); }
@@ -107,18 +99,17 @@ public abstract class AST {
     case InvokeExpr   ->   InvokeAST.make(X);
     case MultiExpr    ->    MultiAST.make(X);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
-    case NewExpr      -> new      NewAST(X, X.methcon_ast(), X.methcon_ast());
-    case NotImplYet   -> new     TODOAST(X);
+    case NewExpr      ->      NewAST.make(X);
+    case NotImplYet   ->     TODOAST.make(X);
     case RegAlloc     ->   DefRegAST.make(X,true ,true );
     case RelOpExpr    ->    BinOpAST.make(X,true );
-    case Return0Stmt  -> new   ReturnAST(X,0);
-    case Return1Stmt  -> new   ReturnAST(X,1);
-    case StmtBlock    -> new    BlockAST(X);
-    case SwitchExpr   -> new   SwitchAST(X, ast_term(X), X.pack64(), X.consts());
-    case TemplateExpr -> new TemplateAST(X);
-    case TernaryExpr  -> new  TernaryAST(X);
+    case Return0Stmt  ->   ReturnAST.make(X,0);
+    case Return1Stmt  ->   ReturnAST.make(X,1);
+    case StmtBlock    ->    BlockAST.make(X);
+    case SwitchExpr   ->   SwitchAST.make(X);
+    case TemplateExpr -> TemplateAST.make(X);
+    case TernaryExpr  ->  TernaryAST.make(X);
     
-    //case ReturnNStmt  -> new   ReturnAST(X,X.u31());
     //case MapExpr      -> new     MapAST(X, X.methcon_ast());
     //case StmtExpr     -> new    ExprAST(X);
     

@@ -8,9 +8,9 @@ class DefRegAST extends AST {
   final String _type, _name, _init;
 
   static DefRegAST make( XClzBuilder X, boolean named, boolean initd ) {
-    Const init = initd ? X.con(X.u31()) : null;
-    Const type =         X.con(X.u31())       ;
-    Const name = named ? X.con(X.u31()) : null;
+    Const init = initd ? X.con() : null;
+    Const type =         X.con()       ;
+    Const name = named ? X.con() : null;
     return new DefRegAST(X,init,type,name);
   }
   private DefRegAST( XClzBuilder X, Const init, Const type, Const name ) {
@@ -25,7 +25,7 @@ class DefRegAST extends AST {
     } else {
       _init = null;
     }
-    _type = XClzBuilder.jtype_tcon((TCon)type,false);
+    _type = XClzBuilder.jtype(type,false);
     _name = name==null ? null : X.jname(((StringCon)name)._str);
     if( name!=null )
       X.define(_name,_type);

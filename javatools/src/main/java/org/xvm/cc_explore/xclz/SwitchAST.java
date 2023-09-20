@@ -26,29 +26,39 @@ class SwitchAST extends AST {
   String[] _tmps;
   // Result types
   Const[] _rezs;
-  
-  SwitchAST( XClzBuilder X, AST cond, long isa, Const[] cases ) {
-    super(X, cases.length+1, false);
-    _cases = cases;
-    _isa = isa;
+
+  static SwitchAST make( XClzBuilder X ) {
+    AST cond = ast_term(X);
+    long isa = X.pack64();
+    Const[] cases = X.consts();
     int clen = cases.length;
+    AST[] kids = new AST[clen+1];
     // Condition
-    _kids[0] = cond;
+    kids[0] = cond;
     if( !(cond instanceof MultiAST) )
       throw XEC.TODO();
     // Parse bodies; less than 64 uses isa bitvector
     if( clen < 64 ) {   // Use bitvector
       long body_mask = X.pack64();
       for( int i = 0; i < clen;  i++ )
-        _kids[i+1] = (body_mask & (1L << i)) == 0 ? null : ast_term(X);
+        kids[i+1] = (body_mask & (1L << i)) == 0 ? null : ast_term(X);
     } else {                    // Use another encoding
       throw XEC.TODO();
     }
     // Parse result types
-    _rezs = X.consts();
+    Const[] rezs = X.consts();
+    return new SwitchAST(kids,isa,cases,rezs);
+  }
+  
+  private SwitchAST( AST[] kids, long isa, Const[] cases, Const[] rezs ) {
+    super(kids);
+    _isa = isa;
+    _cases = cases;
+    _rezs = rezs;
 
     // Pre-cook the match parts.    
     // Each pattern match has the same count of arms
+    int clen = cases.length;
     int alen;
     if( cases[0] instanceof AryCon ary0 ) {
       assert ary0.type() instanceof ImmutTCon;
@@ -63,7 +73,6 @@ class SwitchAST extends AST {
     } else {
       throw XEC.TODO();
     }
-
   }
 
   // Pre-cook the temps

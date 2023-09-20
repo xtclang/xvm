@@ -5,7 +5,7 @@ import org.xvm.cc_explore.util.SB;
 
 class ExprAST extends AST {
   ExprAST( XClzBuilder X ) {
-    super(X, 1);
+    super(null);
     throw XEC.TODO();
   }
   @Override void jpre ( SB sb ) { throw XEC.TODO(); }
