@@ -6,7 +6,7 @@ import org.xvm.cc_explore.util.SB;
 
 class MapAST extends AST {
   MapAST( XClzBuilder X, Const type ) {
-    super(X, X.u31());
+    super(null);
     throw XEC.TODO();
   }
   @Override void jpre ( SB sb ) { throw XEC.TODO(); }
