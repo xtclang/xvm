@@ -146,6 +146,7 @@ public class XClzBuilder {
   long pack64() { return _pool.pack64(); }
   String utf8() { return _pool.utf8(); }
   Const[] consts() { return _pool.consts(); }
+  Const con(int i) { return _meth._cons[i]; }
 
 
   // --------------------------------------------------------------------------
@@ -175,13 +176,13 @@ public class XClzBuilder {
   
   // Return a java-valid name
   String jname_methcon_ast( ) {
-    String name = ((StringCon)methcon_ast())._str;
-    return _jname(name);
+    String xname = ((StringCon)methcon_ast())._str;
+    return jname(xname);
   }
 
   // After the basic mangle, dups are suffixed 1,2,3...
-  private String _jname( String name ) {
-    String s = _mangle(name);
+  String jname( String xname ) {
+    String s = _mangle(xname);
     boolean unique = true;
     int max = 0;
     for( String old : _locals.values() ) {
@@ -323,7 +324,7 @@ public class XClzBuilder {
   }
 
   // Produce a java value from a TermTCon
-  String jvalue_ttcon( TermTCon ttc ) {
+  static String jvalue_ttcon( TermTCon ttc ) {
     ClassPart clz = ttc.clz();
     if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
       return "_container.console()";

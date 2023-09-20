@@ -9,7 +9,7 @@ class SwitchAST extends AST {
   //  {
   //    int $tmp0, $tmp1; // Temps in enclosing block
   //    console.print(    // Intervening complex code
-  //      $t($tmp0 = x%3) && $t($tmp1 = x%5) && // Fill the temps, computing side effects once
+  //      $t($tmp0 = x%3) & $t($tmp1 = x%5) & // Fill the temps, computing side effects once
   //      $tmp0==3 && $tmp1==5 ? "FizzBuzz" :
   //      $tmp0==3 ? "Fizz" :
   //      $tmp1==5 ? "Buzz" :

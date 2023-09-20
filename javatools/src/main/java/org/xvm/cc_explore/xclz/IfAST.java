@@ -3,13 +3,16 @@ package org.xvm.cc_explore.xclz;
 import org.xvm.cc_explore.util.SB;
 
 class IfAST extends AST {
-  IfAST( XClzBuilder X, int n ) {
-    super(X, n, false);
-    _kids[0] = ast_term(X);
-    _kids[1] = ast(X);
+  static IfAST make( XClzBuilder X, int n ) {
+    AST[] kids = new AST[n];
+    kids[0] = ast_term(X);
+    kids[1] = ast(X);
     if( n==3 )
-      _kids[2] = ast(X);
-  }
+      kids[2] = ast(X);
+    return new IfAST(kids);
+  }  
+  private IfAST( AST[] kids ) { super(kids); }
+      
   @Override void jpre ( SB sb ) { sb.p("if( "); }
   @Override void jmid( SB sb, int i ) {
     if( i==0 ) {
