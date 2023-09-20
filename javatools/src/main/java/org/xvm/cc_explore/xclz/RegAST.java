@@ -8,14 +8,8 @@ import org.xvm.cc_explore.util.SB;
 class RegAST extends AST {
   final int _reg;
   final String _name;
-  RegAST( XClzBuilder X, int reg ) {
-    super(X, 0);
-    assert reg < 0 || reg < X._nlocals;
-    _reg = reg;
-    _name = reg < 0 ? null : X._locals.get(reg);
-  }
   RegAST( int reg, String name ) {
-    super((XClzBuilder)null, 0);
+    super(null);
     _reg = reg;
     _name = name;
   }
