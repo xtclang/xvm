@@ -1,6 +1,9 @@
 package org.xvm.cc_explore.xrun;
 
+import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.util.SB;
 import java.util.Arrays;
+import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
@@ -8,15 +11,39 @@ public class XAryI64 {
   public long[] _es;
   public int _len;
   public XAryI64() { _es = new long[1]; }
-
-
-  /** Add an element, doubling base array as needed */
-  public void add( long e ) {
-    if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));
-    _es[_len++] = e;
+  public XAryI64( long len, LongUnaryOperator fcn ) {
+    _len = (int)len;
+    if( _len != len ) throw XEC.TODO(); // Too Big
+    _es = new long[_len];
+    for( int i=0; i<_len; i++ )
+      _es[i] = fcn.applyAsLong(i);
   }
   
 
+  // Add an element, doubling base array as needed
+  public XAryI64 add( long e ) {
+    if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));
+    _es[_len++] = e;
+    return this;
+  }
+
+  // Fetch element
+  public long at(long idx) {
+    if( 0 <= idx && idx < _len )
+      return _es[(int)idx];
+    throw new ArrayIndexOutOfBoundsException(""+idx+" >= "+_len);
+  }
+
+  private static final SB SBX = new SB();
+  @Override public String toString() {
+    SBX.p('[');
+    for( int i=0; i<_len; i++ )
+      SBX.p(_es[i]).p(", ");
+    String str = SBX.unchar(2).p(']').toString();
+    SBX.clear();
+    return str;
+  }
+  
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a
   // HashMap) and the then the array changes, the hashCode() will change also.

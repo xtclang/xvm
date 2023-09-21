@@ -78,7 +78,7 @@ public class ModPart extends ClassPart {
   }
 
   // Return a Java Class for this XTC Module
-  public XClz xclz() { return (_xbuild==null ? (_xbuild=new XClzBuilder(this)) : _xbuild)._xclz; }
+  public XClz xclz() { return (_xbuild==null ? (_xbuild=new XClzBuilder(this)) : _xbuild).xclz(); }
   
 
   // ----- ModuleType enumeration ----------------------------------------------------------------
