@@ -5,6 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
+
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.AnnoNamedRegAlloc;
 import static org.xvm.asm.ast.BinaryAST.NodeType.AnnoRegAlloc;
 import static org.xvm.asm.ast.BinaryAST.NodeType.NamedRegAlloc;
@@ -18,8 +23,8 @@ import static org.xvm.util.Handy.writePackedLong;
  * Allocate a register, i.e. declare a local variable. This AST node is only an "expression" in the
  * sense that the variable (the register itself) can be used as an expression.
  */
-public class RegAllocAST<C>
-        extends ExprAST<C> {
+public class RegAllocAST
+        extends ExprAST {
 
     private final NodeType nodeType;
 
@@ -28,7 +33,7 @@ public class RegAllocAST<C>
      * persistently (as it can be calculated). The responsibility for assigning the register number
      * (either during compilation or after loading from disk) is not visible to this class.
      */
-    private transient RegisterAST<C> reg;
+    private transient RegisterAST reg;
 
     RegAllocAST(NodeType nodeType) {
         this.nodeType = nodeType;
@@ -40,9 +45,9 @@ public class RegAllocAST<C>
      * @param type  the type that the register can hold
      * @param name  the name of the local variable that the register is being created for, or null
      */
-    public RegAllocAST(C type, C name) {
+    public RegAllocAST(TypeConstant type, StringConstant name) {
         assert type != null;
-        this.reg      = new RegisterAST<>(type, name);
+        this.reg      = new RegisterAST(type, name);
         this.nodeType = name == null ? RegAlloc : NamedRegAlloc;
     }
 
@@ -53,32 +58,28 @@ public class RegAllocAST<C>
      * @param type     the type that the register can hold
      * @param name     the name of the local variable that the register is being created for, or null
      */
-    public RegAllocAST(C refType, C type, C name) {
+    public RegAllocAST(TypeConstant refType, TypeConstant type, StringConstant name) {
         assert refType != null && type != null;
-        this.reg      = new RegisterAST<>(refType, type, name);
+        this.reg      = new RegisterAST(refType, type, name);
         this.nodeType = name == null ? AnnoRegAlloc : AnnoNamedRegAlloc;
     }
 
-    public RegisterAST<C> getRegister() {
+    public RegisterAST getRegister() {
         return reg;
     }
 
-    public C getRefType() {
+    public Constant getRefType() {
         return reg.getRefType();
     }
 
-    public C getType() {
-        return reg.getType();
-    }
-
-    public C getName() {
+    public String getName() {
         return reg.getName();
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
-        return getType();
+        return reg.getType(0);
     }
 
     @Override
@@ -92,36 +93,36 @@ public class RegAllocAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
-        C refType = null;
+        TypeConstant refType = null;
         if (nodeType == AnnoRegAlloc || nodeType == AnnoNamedRegAlloc) {
-            refType = res.getConstant(readPackedInt(in));
+            refType = (TypeConstant) res.getConstant(readPackedInt(in));
         }
-        C type = res.getConstant(readPackedInt(in));
-        C name = null;
+        TypeConstant   type = (TypeConstant) res.getConstant(readPackedInt(in));
+        StringConstant name = null;
         if (nodeType == NamedRegAlloc || nodeType == AnnoNamedRegAlloc) {
-            name = res.getConstant(readPackedInt(in));
+            name = (StringConstant) res.getConstant(readPackedInt(in));
         }
 
         reg = refType == null
-                ? new RegisterAST<>(type, name)
-                : new RegisterAST<>(refType, type, name);
+                ? new RegisterAST(type, name)
+                : new RegisterAST(refType, type, name);
         res.register(reg);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         // while the data is on the RegisterAST instance, it's technically "owned by" this; all
         // other use sites for the RegisterAST rely solely on the register's id
-        reg.refType = res.register(reg.refType);
-        reg.type    = res.register(reg.type);
-        reg.name    = res.register(reg.name);
+        reg.refType =   (TypeConstant) res.register(reg.refType);
+        reg.type    =   (TypeConstant) res.register(reg.type);
+        reg.name    = (StringConstant) res.register(reg.name);
         res.register(reg);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         // what is notable about the serialization format is that it does *not* include the register
         // id (number); register ids are required to be gap-less and ascending, so the id can be
@@ -137,6 +138,17 @@ public class RegAllocAST<C>
 
     @Override
     public String toString() {
-        return reg.toString();
+        TypeConstant typeRef = reg.getRefType();
+        TypeConstant type    = reg.getType();
+
+        StringBuilder buf = new StringBuilder();
+        if (typeRef != null) {
+            buf.append(typeRef.getValueString())
+               .append(' ');
+        }
+        buf.append(type.getValueString())
+           .append(' ')
+           .append(reg);
+        return buf.toString();
     }
 }

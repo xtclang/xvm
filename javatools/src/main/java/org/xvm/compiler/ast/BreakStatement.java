@@ -60,7 +60,7 @@ public class BreakStatement
         {
         code.add(new Jump(getJumpLabel()));
 
-        ctx.getHolder().setAst(this, new BreakStmtAST<>(getTargetDepth()));
+        ctx.getHolder().setAst(this, new BreakStmtAST(getTargetDepth()));
         return false;
         }
     }

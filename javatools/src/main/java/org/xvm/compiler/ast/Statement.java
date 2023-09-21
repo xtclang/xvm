@@ -273,7 +273,7 @@ public abstract class Statement
      */
     static class AstHolder
         {
-        BinaryAST<Constant> getAst(Statement stmt)
+        BinaryAST getAst(Statement stmt)
             {
             if (stmt instanceof LabeledStatement stmtLbl)
                 {
@@ -281,7 +281,7 @@ public abstract class Statement
                 }
 
             assert stmt != null;
-            BinaryAST<Constant> ast = this.ast;
+            BinaryAST ast = this.ast;
             this.ast = null;
             if (ast != null && stmt == this.stmt)
                 {
@@ -295,15 +295,15 @@ public abstract class Statement
             return null;
             }
 
-        void setAst(Statement stmt, BinaryAST<Constant> ast)
+        void setAst(Statement stmt, BinaryAST ast)
             {
             assert stmt != null && ast != null;
             this.stmt = stmt;
             this.ast  = ast;
             }
 
-        private Statement           stmt;
-        private BinaryAST<Constant> ast;
+        private Statement stmt;
+        private BinaryAST ast;
         }
 
 

@@ -384,9 +384,9 @@ public class SwitchExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
-        return new SwitchAST<>(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
+        return new SwitchAST(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
                 m_aconstCases, m_abastBody, getTypes());
         }
 
@@ -447,7 +447,7 @@ public class SwitchExpression
 
     private transient CaseManager<Expression> m_casemgr;
     private transient Constant[]              m_aconstCases;
-    private transient ExprAST<Constant>[]     m_abastBody;
+    private transient ExprAST[]               m_abastBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }

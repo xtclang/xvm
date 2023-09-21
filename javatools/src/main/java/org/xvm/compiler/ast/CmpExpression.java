@@ -573,7 +573,7 @@ public class CmpExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         Operator op = switch (operator.getId())
             {
@@ -586,7 +586,7 @@ public class CmpExpression
             case COMP_ORD  -> Operator.CompOrd;
             default -> throw new UnsupportedOperationException(operator.getValueText());
             };
-        return new CondOpExprAST<>(expr1.getExprAST(), op, expr2.getExprAST());
+        return new CondOpExprAST(expr1.getExprAST(), op, expr2.getExprAST());
         }
 
 

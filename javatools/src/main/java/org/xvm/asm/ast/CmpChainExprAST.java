@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.asm.ast.BiExprAST.Operator;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -17,17 +19,17 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Comparison over a chain of expressions.
  */
-public class CmpChainExprAST<C>
-        extends ExprAST<C> {
+public class CmpChainExprAST
+        extends ExprAST {
 
-    private ExprAST<C>[] exprs;
-    private Operator[]   ops;
+    private ExprAST[]  exprs;
+    private Operator[] ops;
 
-    private transient C booleanType;
+    private transient TypeConstant booleanType;
 
     CmpChainExprAST() {}
 
-    public CmpChainExprAST(ExprAST<C>[] exprs, Operator[] ops) {
+    public CmpChainExprAST(ExprAST[] exprs, Operator[] ops) {
         assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);
         assert ops   != null && Arrays.stream(ops).allMatch(Objects::nonNull);
         assert ops.length == exprs.length - 1;
@@ -47,7 +49,7 @@ public class CmpChainExprAST<C>
         return ops;  // note: caller must not modify returned array in any way
     }
 
-    public ExprAST<C>[] getExprs() {
+    public ExprAST[] getExprs() {
         return exprs;  // note: caller must not modify returned array in any way
     }
 
@@ -57,17 +59,17 @@ public class CmpChainExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return booleanType;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         int count = readMagnitude(in);
 
-        ExprAST<C>[] exprs = new ExprAST[count];
+        ExprAST[] exprs = new ExprAST[count];
         for (int i = 0; i < count; ++i) {
             exprs[i] = readExprAST(in, res);
         }
@@ -81,12 +83,12 @@ public class CmpChainExprAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         prepareASTArray(exprs, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         int count = exprs.length;
         writePackedLong(out, count);
@@ -99,29 +101,14 @@ public class CmpChainExprAST<C>
     }
 
     @Override
-    public String dump() {
-        StringBuilder buf = new StringBuilder();
-        for (int i = 0, c = exprs.length; i < c; i++) {
-            buf.append(exprs[i].dump());
-            if (i < c-1) {
-                buf.append(' ')
-                   .append(ops[i].text)
-                   .append(' ');
-            }
-        }
-        return buf.toString();
-    }
-
-    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        for (int i = 0, c = exprs.length; i < c; i++) {
-            buf.append(exprs[i]);
-            if (i < c-1) {
-                buf.append(' ')
-                   .append(ops[i].text)
-                   .append(' ');
-            }
+        buf.append(exprs[0]);
+        for (int i = 1, c = exprs.length; i < c; i++) {
+            buf.append(' ')
+               .append(ops[i-1].text)
+               .append(' ')
+               .append(exprs[i]);
         }
         return buf.toString();
     }

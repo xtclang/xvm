@@ -136,21 +136,21 @@ public class UnpackExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         if (isConstant())
             {
             // the constant is already unpacked; we need to pass it on
-            Constant[]          aconst = toConstants();
-            int                 cVals  = aconst.length;
-            ExprAST<Constant>[] aAst = new ExprAST[cVals];
+            Constant[] aconst = toConstants();
+            int        cVals  = aconst.length;
+            ExprAST[]  aAst   = new ExprAST[cVals];
             for (int i = 0; i < cVals; i++)
                 {
-                aAst[i] = new ConstantExprAST<>(aconst[i]);
+                aAst[i] = new ConstantExprAST(aconst[i]);
                 }
-            return new MultiExprAST<>(aAst);
+            return new MultiExprAST(aAst);
             }
-        return new UnpackExprAST<>(expr.getExprAST(), getTypes());
+        return new UnpackExprAST(expr.getExprAST(), getTypes());
         }
 
 

@@ -524,11 +524,11 @@ public class CmpChainExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
-        int                 cExpr = expressions.size();
-        ExprAST<Constant>[] aAst  = new ExprAST[cExpr];
-        Operator[]          aOp   = new Operator[cExpr-1];
+        int        cExpr = expressions.size();
+        ExprAST[]  aAst  = new ExprAST[cExpr];
+        Operator[] aOp   = new Operator[cExpr-1];
 
         for (int i = 0; i < cExpr; i++)
             {
@@ -548,7 +548,7 @@ public class CmpChainExpression
                     };
                 }
             }
-        return new CmpChainExprAST<>(aAst, aOp);
+        return new CmpChainExprAST(aAst, aOp);
         }
 
 

@@ -1,11 +1,14 @@
 package org.xvm.asm.ast;
 
 
+import org.xvm.asm.constants.TypeConstant;
+
+
 /**
  * A short-circuiting expression for testing if a sub-expression is null.
  */
-public class NotNullExprAST<C>
-        extends UnaryExprAST<C> {
+public class NotNullExprAST
+        extends UnaryExprAST {
 
     NotNullExprAST() {}
 
@@ -13,7 +16,7 @@ public class NotNullExprAST<C>
      * Note: strictly speaking, we don't need the type, since it could be computed as
      * "expr.getType(0).removeNullable()", but we don't have that operation on the resolver yet
      */
-    public NotNullExprAST(ExprAST<C> expr, C type) {
+    public NotNullExprAST(ExprAST expr, TypeConstant type) {
         super(expr, type);
     }
 
@@ -25,11 +28,6 @@ public class NotNullExprAST<C>
     @Override
     public NodeType nodeType() {
         return NodeType.NotNullExpr;
-    }
-
-    @Override
-    public String dump() {
-        return getExpr().dump() + '?';
     }
 
     @Override

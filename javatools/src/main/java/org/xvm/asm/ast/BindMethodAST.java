@@ -5,6 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
+
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.BindMethodExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -14,12 +18,12 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Bind method's target.
  */
-public class BindMethodAST<C>
-        extends ExprAST<C>
+public class BindMethodAST
+        extends ExprAST
     {
-    private ExprAST<C> target;
-    private C          method;
-    private C          type;
+    private ExprAST      target;
+    private Constant     method;
+    private TypeConstant type;
 
     BindMethodAST() {
     }
@@ -29,7 +33,7 @@ public class BindMethodAST<C>
      *
      * @param type  the type of the resulting (bound) function
      */
-    public BindMethodAST(ExprAST<C> target, C method, C type) {
+    public BindMethodAST(ExprAST target, Constant method, TypeConstant type) {
         assert target != null && method != null && type != null;
 
         this.target = target;
@@ -43,45 +47,40 @@ public class BindMethodAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return type;
     }
 
-    public ExprAST<C> getTarget() {
+    public ExprAST getTarget() {
         return target;
     }
 
-    public C getMethod() {
+    public Constant getMethod() {
         return method;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         target = readExprAST(in, res);
         method = res.getConstant(readMagnitude(in));
-        type   = res.getConstant(readMagnitude(in));
+        type   = (TypeConstant) res.getConstant(readMagnitude(in));
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         target.prepareWrite(res);
         method = res.register(method);
-        type   = res.register(type);
+        type   = (TypeConstant) res.register(type);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         target.writeExpr(out, res);
         writePackedLong(out, res.indexOf(method));
         writePackedLong(out, res.indexOf(type));
-    }
-
-    @Override
-    public String dump() {
-        return target.dump() + '&' + method;
     }
 
     @Override

@@ -1366,7 +1366,7 @@ public class InvocationExpression
         boolean  fConstruct   = false;
         boolean  fLocalPropOk = cArgs == 0;
         Argument argFn;
-        ExprAST<Constant> astFn;
+        ExprAST  astFn;
 
         Argument[] aargTypeParams = m_aargTypeParams;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
@@ -1378,7 +1378,7 @@ public class InvocationExpression
             if (m_argMethod instanceof MethodConstant idMethod)
                 {
                 idMethod = rebaseMethodConstant(idMethod, m_method);
-                astFn    = new ConstantExprAST<>(idMethod);
+                astFn    = new ConstantExprAST(idMethod);
 
                 if (m_method.isFunction() || m_method.isConstructor())
                     {
@@ -1616,7 +1616,7 @@ public class InvocationExpression
                                     throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
                                 }
 
-                            m_astInvoke = new InvokeExprAST<>(idMethod, getTypes(), m_astTarget, aAsts, fAsync);
+                            m_astInvoke = new InvokeExprAST(idMethod, getTypes(), m_astTarget, aAsts, fAsync);
                             return;
                             }
                         else // _NOT_ m_fCall
@@ -1625,7 +1625,7 @@ public class InvocationExpression
                             // to the function handling
                             argFn = code.createRegister(idMethod.getSignature().asFunctionType());
                             code.add(new MBind(argTarget, idMethod, argFn));
-                            astFn = new BindMethodAST<>(m_astTarget, idMethod, argFn.getType());
+                            astFn = new BindMethodAST(m_astTarget, idMethod, argFn.getType());
                             }
                         }
                     else // _NOT_ m_fBindTarget
@@ -1655,7 +1655,7 @@ public class InvocationExpression
                             MethodConstant idMethod = (MethodConstant) prop.getInitialValue();
 
                             argFn = code.createRegister(idMethod.getSignature().asFunctionType());
-                            astFn = new ConstantExprAST<>(idProp);
+                            astFn = new ConstantExprAST(idProp);
 
                             code.add(new MBind(argTarget, idMethod, argFn));
                             }
@@ -1706,7 +1706,7 @@ public class InvocationExpression
             Register regFn = new Register(typeFn, null, Op.A_STACK);
             code.add(new Invoke_01(argFn, m_idConvert, regFn));
             argFn = regFn;
-            astFn = new ConvertExprAST<>(astFn, typeFn, m_idConvert);
+            astFn = new ConvertExprAST(astFn, typeFn, m_idConvert);
             }
 
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
@@ -1796,7 +1796,7 @@ public class InvocationExpression
                     case 'T' -> throw new UnsupportedOperationException("TODO: Construct_T");
                     default  -> throw new IllegalStateException();
                     }
-                m_astInvoke = new CallExprAST<>(astFn, TypeConstant.NO_TYPES, aAsts, fAsync);
+                m_astInvoke = new CallExprAST(astFn, TypeConstant.NO_TYPES, aAsts, fAsync);
                 return;
                 }
 
@@ -1911,14 +1911,14 @@ public class InvocationExpression
                     throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
                 }
 
-            m_astInvoke = new CallExprAST<>(astFn, getTypes(), aAsts, fAsync);
+            m_astInvoke = new CallExprAST(astFn, getTypes(), aAsts, fAsync);
             return;
             }
 
         // see if we need to bind (or partially bind) the function
-        int[]               aiArg = null;
-        Argument[]          aArg  = null;
-        ExprAST<Constant>[] aAst  = null;
+        int[]      aiArg = null;
+        Argument[] aArg  = null;
+        ExprAST[]  aAst  = null;
 
         // count the number of parameters to bind, which includes all type parameters and all
         // default values, so for a function:
@@ -1990,7 +1990,7 @@ public class InvocationExpression
                     code.add(new FBind(argFn, aiArg, aArg, regFn));
                     lval.assign(regFn, code, errs);
                     }
-                m_astInvoke = new BindFunctionAST<>(astFn, aiArg, aAst, getType());
+                m_astInvoke = new BindFunctionAST(astFn, aiArg, aAst, getType());
                 }
             }
         }
@@ -2020,7 +2020,7 @@ public class InvocationExpression
                     {
                     regTarget = code.createRegister(typeTarget, fTargetOnStack);
                     code.add(new MoveThis(cStepsOut, regTarget));
-                    m_astTarget = new OuterExprAST<>(ctx.getThisRegisterAST(), cStepsOut, typeTarget);
+                    m_astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cStepsOut, typeTarget);
                     }
                 else
                     {
@@ -2044,7 +2044,7 @@ public class InvocationExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         return m_astInvoke == null ? super.getExprAST() : m_astInvoke;
         }
@@ -3428,8 +3428,8 @@ public class InvocationExpression
     /**
      * Cached ExprAST nodes for the target and the invocation.
      */
-    private transient ExprAST<Constant> m_astTarget;
-    private transient ExprAST<Constant> m_astInvoke;
+    private transient ExprAST m_astTarget;
+    private transient ExprAST m_astInvoke;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
     }

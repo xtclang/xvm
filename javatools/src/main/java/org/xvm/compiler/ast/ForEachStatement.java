@@ -674,7 +674,7 @@ public class ForEachStatement
 
         code.add(new Enter());
 
-        List<RegAllocAST<Constant>> listSpecial = new ArrayList<>();
+        List<RegAllocAST> listSpecial = new ArrayList<>();
         if (isLabeled())
             {
             ConstantPool pool = pool();
@@ -711,12 +711,12 @@ public class ForEachStatement
                 }
             }
 
-        ExprAST<Constant> astLVal = m_exprLValue.getExprAST();
+        ExprAST astLVal = m_exprLValue.getExprAST();
         if (getCondition().getLValue() instanceof Statement stmt)
             {
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             astLVal    = AssignmentStatement.combineLValueAST(
-                (ExprAST<Constant>) ctx.getHolder().getAst(stmt), astLVal);
+                (ExprAST) ctx.getHolder().getAst(stmt), astLVal);
             }
 
         NodeType nodeType;
@@ -750,7 +750,7 @@ public class ForEachStatement
 
         if (fCompletes)
             {
-            holder.setAst(this, new ForEachStmtAST<>(nodeType, listSpecial.toArray(BinaryAST.NO_ALLOCS),
+            holder.setAst(this, new ForEachStmtAST(nodeType, listSpecial.toArray(BinaryAST.NO_ALLOCS),
                     astLVal, m_exprRValue.getExprAST(), holder.getAst(block)));
             }
         return fCompletes;

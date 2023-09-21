@@ -8,6 +8,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.Constant;
+
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.NewChildExpr;
 import static org.xvm.asm.ast.BinaryAST.NodeType.NewExpr;
 
@@ -19,15 +23,15 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A "new ..." expression.
  */
-public class NewExprAST<C>
-        extends ExprAST<C> {
+public class NewExprAST
+        extends ExprAST {
 
     private final NodeType nodeType;
 
-    private ExprAST<C>     parent; // can be null
-    private C              type;
-    private C              constr;
-    private ExprAST<C>[]   args;
+    private ExprAST      parent; // can be null
+    private TypeConstant type;
+    private Constant     constr;
+    private ExprAST[]    args;
 
     NewExprAST(NodeType nodeType) {
         this.nodeType = nodeType;
@@ -41,7 +45,7 @@ public class NewExprAST<C>
      * @param args     the arguments
      * @param virtual  specifies a virtual constructor
      */
-    public NewExprAST(C type, C constr, ExprAST<C>[] args, boolean virtual) {
+    public NewExprAST(TypeConstant type, Constant constr, ExprAST[] args, boolean virtual) {
         assert type != null && constr != null;
         assert args != null && Arrays.stream(args).allMatch(Objects::nonNull);
 
@@ -59,7 +63,7 @@ public class NewExprAST<C>
      * @param constr  the constructor
      * @param args    the arguments
      */
-    public NewExprAST(ExprAST<C> parent, C type, C constr, ExprAST<C>[] args) {
+    public NewExprAST(ExprAST parent, TypeConstant type, Constant constr, ExprAST[] args) {
         assert parent != null && type != null && constr != null;
         assert args != null && Arrays.stream(args).allMatch(Objects::nonNull);
 
@@ -70,15 +74,15 @@ public class NewExprAST<C>
         nodeType    = NewChildExpr;
     }
 
-    public C getType() {
+    public Constant getType() {
         return type;
     }
 
-    public C getConstructor() {
+    public Constant getConstructor() {
         return constr;
     }
 
-    public ExprAST<C>[] getArgs() {
+    public ExprAST[] getArgs() {
         return args;
     }
 
@@ -90,7 +94,7 @@ public class NewExprAST<C>
         return nodeType == NewChildExpr;
     }
 
-    public ExprAST<C> getParent() {
+    public ExprAST getParent() {
         return parent;
     }
 
@@ -100,34 +104,34 @@ public class NewExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return type;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         if (isChild()) {
             parent = readExprAST(in, res);
         }
-        type   = res.getConstant(readMagnitude(in));
+        type   = (TypeConstant) res.getConstant(readMagnitude(in));
         constr = res.getConstant(readMagnitude(in));
         args   = readExprArray(in, res);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         if (isChild()) {
             parent.prepareWrite(res);
         }
-        type   = res.register(type);
+        type   = (TypeConstant) res.register(type);
         constr = res.register(constr);
         prepareASTArray(args, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         if (isChild()) {
             parent.writeExpr(out, res);

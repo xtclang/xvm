@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -13,15 +15,15 @@ import static org.xvm.util.Handy.writePackedLong;
  * An "is" expression. It differs from {@link RelOpExprAST} that it may have two return types, where
  * the first one is always Boolean.
  */
-public class IsExprAST<C>
-        extends BiExprAST<C> {
+public class IsExprAST
+        extends BiExprAST {
 
-    private           C typeOfType; // could be null
-    private transient C booleanType;
+    private TypeConstant typeOfType;   // could be null (TODO CP remove)
+    private transient TypeConstant booleanType;  // TODO CP remove
 
     IsExprAST() {}
 
-    public IsExprAST(ExprAST<C> expr1, ExprAST<C> expr2, C typeOfType) {
+    public IsExprAST(ExprAST expr1, ExprAST expr2, TypeConstant typeOfType) {
         super(expr1, Operator.Is, expr2);
 
         this.typeOfType = typeOfType;
@@ -33,7 +35,7 @@ public class IsExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         switch (i) {
         case 0:
             return booleanType;
@@ -54,27 +56,27 @@ public class IsExprAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 
         if (readMagnitude(in) != 0) {
-            typeOfType = res.getConstant(readMagnitude(in));
+            typeOfType = (TypeConstant) res.getConstant(readMagnitude(in));
         }
         booleanType = res.typeForName("Boolean");
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
         if (typeOfType != null) {
-            typeOfType = res.register(typeOfType);
+            typeOfType = (TypeConstant) res.register(typeOfType);
         }
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         super.writeBody(out, res);
 
@@ -87,7 +89,7 @@ public class IsExprAST<C>
     }
 
     @Override
-    public String dump() {
-        return typeOfType + ": " + super.dump();
+    public String toString() {
+        return getExpr1() + ".is(" + getExpr2() + ')';
     }
 }

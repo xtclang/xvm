@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -12,12 +14,12 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A base class for expressions that follow the pattern "expression operator expression".
  */
-public abstract class BiExprAST<C>
-        extends ExprAST<C> {
+public abstract class BiExprAST
+        extends ExprAST {
 
-    private ExprAST<C> expr1;
-    private Operator   op;
-    private ExprAST<C> expr2;
+    private ExprAST  expr1;
+    private Operator op;
+    private ExprAST  expr2;
 
     public enum Operator {
         Else        (":"   ), // an "else" for nullability checks
@@ -61,14 +63,14 @@ public abstract class BiExprAST<C>
 
     BiExprAST() {}
 
-    protected BiExprAST(ExprAST<C> expr1, Operator op, ExprAST<C> expr2) {
+    protected BiExprAST(ExprAST expr1, Operator op, ExprAST expr2) {
         assert expr1 != null && op != null && expr2 != null;
         this.expr1 = expr1;
         this.op    = op;
         this.expr2 = expr2;
     }
 
-    public ExprAST<C> getExpr1() {
+    public ExprAST getExpr1() {
         return expr1;
     }
 
@@ -76,18 +78,18 @@ public abstract class BiExprAST<C>
         return op;
     }
 
-    public ExprAST<C> getExpr2() {
+    public ExprAST getExpr2() {
         return expr2;
     }
 
     @Override
-    public abstract C getType(int i);
+    public abstract TypeConstant getType(int i);
 
     @Override
     public abstract NodeType nodeType();
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         expr1 = readExprAST(in, res);
         op    = Operator.values()[readMagnitude(in)];
@@ -95,13 +97,13 @@ public abstract class BiExprAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         expr1.prepareWrite(res);
         expr2.prepareWrite(res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         expr1.writeExpr(out, res);
         writePackedLong(out, op.ordinal());
@@ -109,12 +111,9 @@ public abstract class BiExprAST<C>
     }
 
     @Override
-    public String dump() {
-        return expr1.dump() + " " + op.text + " " + expr2.dump();
-    }
-
-    @Override
     public String toString() {
-        return expr1 + " " + op.text + " " + expr2;
+        return op == Operator.As
+                ? expr1 + ".as(" + expr2 + ')'
+                : expr1 + " " + op.text + " " + expr2;
     }
 }

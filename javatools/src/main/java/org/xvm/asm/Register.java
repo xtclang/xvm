@@ -461,17 +461,17 @@ public class Register
     /**
      * @return a {@link RegAllocAST} that represents this register
      */
-    public RegAllocAST<Constant> getRegAllocAST()
+    public RegAllocAST getRegAllocAST()
         {
-        RegAllocAST<Constant> astAlloc = m_astAlloc;
+        RegAllocAST astAlloc = m_astAlloc;
         if (astAlloc == null)
             {
             StringConstant constName = m_sName == null
                     ? null
                     : m_type.getConstantPool().ensureStringConstant(m_sName);
             m_astAlloc = astAlloc = m_typeReg == null
-                ? new RegAllocAST<>(m_type, constName)
-                : new RegAllocAST<>(m_typeReg, m_type, constName);
+                    ? new RegAllocAST(m_type, constName)
+                    : new RegAllocAST(m_typeReg, m_type, constName);
             }
         return astAlloc;
         }
@@ -479,16 +479,16 @@ public class Register
     /**
      * @return a {@link RegisterAST} (or {@link NarrowedExprAST}) that represents this register
      */
-    public ExprAST<Constant> getRegisterAST()
+    public ExprAST getRegisterAST()
         {
         assert !isStack();
 
         if (isPredefined())
             {
-            RegisterAST<Constant> regSpecial = m_astSpecial;
+            RegisterAST regSpecial = m_astSpecial;
             if (regSpecial == null)
                 {
-                regSpecial = m_astSpecial = new RegisterAST<>(m_iArg, getType(), null);
+                regSpecial = m_astSpecial = new RegisterAST(m_iArg, getType(), null);
                 }
             return regSpecial;
             }
@@ -856,20 +856,20 @@ public class Register
             }
 
         @Override
-        public RegAllocAST<Constant> getRegAllocAST()
+        public RegAllocAST getRegAllocAST()
             {
             // shadow doens't have an "alloc" register
             throw new IllegalStateException();
             }
 
         @Override
-        public ExprAST<Constant> getRegisterAST()
+        public ExprAST getRegisterAST()
             {
-            NarrowedExprAST<Constant> astNarrowed = m_astNarrowed;
+            NarrowedExprAST astNarrowed = m_astNarrowed;
             if (astNarrowed == null)
                 {
-                astNarrowed = m_astNarrowed = new NarrowedExprAST<>(
-                    Register.this.getRegisterAST(), getType());
+                astNarrowed = m_astNarrowed = new NarrowedExprAST(
+                        Register.this.getRegisterAST(), getType());
                 }
             return astNarrowed;
             }
@@ -907,7 +907,7 @@ public class Register
         /**
          * Cached NarrowedExprAST.
          */
-        private NarrowedExprAST<Constant> m_astNarrowed;
+        private NarrowedExprAST m_astNarrowed;
         }
 
 
@@ -979,10 +979,10 @@ public class Register
     /**
      * The Binary AST register allocation that is required in order for this register to exist.
      */
-    private transient RegAllocAST<Constant> m_astAlloc;
+    private transient RegAllocAST m_astAlloc;
 
     /**
      * The Binary AST register for special registers.
      */
-    private transient RegisterAST<Constant> m_astSpecial;
+    private transient RegisterAST m_astSpecial;
     }

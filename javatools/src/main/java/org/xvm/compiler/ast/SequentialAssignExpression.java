@@ -156,7 +156,7 @@ public class SequentialAssignExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         Operator op = isPre()
                 ? isInc()
@@ -166,7 +166,7 @@ public class SequentialAssignExpression
                     ? Operator.PostInc
                     : Operator.PostDec;
 
-        return new UnaryOpExprAST<>(expr.getExprAST(), op, getType());
+        return new UnaryOpExprAST(expr.getExprAST(), op, getType());
         }
 
 

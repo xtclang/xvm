@@ -345,10 +345,10 @@ public class TryStatement
         ConstantPool pool       = pool();
         AstHolder    holder     = ctx.getHolder();
 
-        ExprAST<Constant>[]   aAstResources = null;
-        BinaryAST<Constant>[] aAstCatches   = null; // "catch(T e) {...}" StmtBlocks
-        BinaryAST<Constant>   astCatchAll   = null;
-        BinaryAST<Constant>   astBlock;
+        ExprAST[]   aAstResources = null;
+        BinaryAST[] aAstCatches   = null; // "catch(T e) {...}" StmtBlocks
+        BinaryAST   astCatchAll   = null;
+        BinaryAST   astBlock;
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyClose = null;
@@ -365,7 +365,7 @@ public class TryStatement
                 {
                 Statement stmt = resources.get(i);
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                aAstResources[i] = (ExprAST<Constant>) holder.getAst(stmt);
+                aAstResources[i] = (ExprAST) holder.getAst(stmt);
 
                 FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
                 aFinallyClose[i] = opFinally;
@@ -387,7 +387,7 @@ public class TryStatement
             }
 
         // try..catch
-        RegAllocAST<Constant>[] aAllocCatch = null;
+        RegAllocAST[] aAllocCatch = null;
         if (catches != null)
             {
             int          cCatches    = catches.size();
@@ -425,8 +425,8 @@ public class TryStatement
                 stmtCatch.setCatchLabel(labelCatchEnd);
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
 
-                aAstCatches[i] = new StmtBlockAST<>(
-                    new BinaryAST[] {aAllocCatch[i], holder.getAst(stmtCatch)}, true);
+                aAstCatches[i] = new StmtBlockAST(
+                        new BinaryAST[] {aAllocCatch[i], holder.getAst(stmtCatch)}, true);
                 }
             }
 
@@ -509,8 +509,8 @@ public class TryStatement
             }
 
         holder.setAst(this, astCatchAll == null
-                ? new TryCatchStmtAST<>(aAstResources, astBlock, aAstCatches)
-                : new TryFinallyStmtAST<>(aAstResources, astBlock, aAstCatches,
+                ? new TryCatchStmtAST(aAstResources, astBlock, aAstCatches)
+                : new TryFinallyStmtAST(aAstResources, astBlock, aAstCatches,
                         m_regFinallyException == null ? null : m_regFinallyException.getRegAllocAST(),
                         astCatchAll));
         return fTryCompletes;

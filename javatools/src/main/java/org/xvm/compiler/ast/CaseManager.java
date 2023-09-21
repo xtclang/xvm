@@ -248,7 +248,7 @@ public class CaseManager<CookieType>
     /**
      * @return the binary AST for the condition portion of the switch
      */
-    public ExprAST<Constant> getConditionBAST()
+    public ExprAST getConditionBAST()
         {
         return m_bastCond;
         }
@@ -1437,10 +1437,10 @@ public class CaseManager<CookieType>
         {
         assert m_listCond != null && !m_listCond.isEmpty();
 
-        Argument[]          aArgVal  = new Argument[getConditionCount()];
-        int                 ofArgVal = 0;
-        ExprAST<Constant>[] abast    = new ExprAST[m_listCond.size()];
-        int                 ibast    = 0;
+        Argument[] aArgVal  = new Argument[getConditionCount()];
+        int        ofArgVal = 0;
+        ExprAST[]  abast    = new ExprAST[m_listCond.size()];
+        int        ibast    = 0;
         for (AstNode node : m_listCond)
             {
             Expression exprCond;
@@ -1453,7 +1453,7 @@ public class CaseManager<CookieType>
                     }
                 exprCond = stmt.getLValue().getLValueExpression();
                 // review GG - was there some issue where getLValueExpression() was destructive? should this get moved up one line?
-                abast[ibast++] = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
+                abast[ibast++] = (ExprAST) ctx.getHolder().getAst(stmt);
                 }
             else
                 {
@@ -1485,7 +1485,7 @@ public class CaseManager<CookieType>
         assert ofArgVal == aArgVal.length;
 
         assert ibast == abast.length && Arrays.stream(abast).allMatch(Objects::nonNull);
-        m_bastCond = abast.length == 1 ? abast[0] : new MultiExprAST<>(abast);
+        m_bastCond = abast.length == 1 ? abast[0] : new MultiExprAST(abast);
 
         return aArgVal;
         }
@@ -1635,7 +1635,7 @@ public class CaseManager<CookieType>
     /**
      * The BAST expression for the condition.
      */
-    private ExprAST<Constant> m_bastCond;
+    private ExprAST m_bastCond;
 
     /**
      * The type of the condition.

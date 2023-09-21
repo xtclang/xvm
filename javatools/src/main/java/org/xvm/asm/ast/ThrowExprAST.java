@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -12,16 +14,16 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A "throw" expression.
  */
-public class ThrowExprAST<C>
-        extends ExprAST<C>
+public class ThrowExprAST
+        extends ExprAST
     {
-    private C          type;
-    private ExprAST<C> throwable;
-    private ExprAST<C> message; // could be null
+    private ExprAST throwable;
+    private ExprAST message; // could be null
+    private transient TypeConstant type;
 
     ThrowExprAST() {}
 
-    public ThrowExprAST(C type, ExprAST<C> throwable, ExprAST<C> message) {
+    public ThrowExprAST(TypeConstant type, ExprAST throwable, ExprAST message) {
         assert type != null && throwable != null;
 
         this.type      = type;
@@ -29,12 +31,12 @@ public class ThrowExprAST<C>
         this.message   = message;
     }
 
-    public ExprAST<C> getThrowable()
+    public ExprAST getThrowable()
         {
         return throwable;
         }
 
-    public ExprAST<C> getMessage()
+    public ExprAST getMessage()
         {
         return message;
         }
@@ -45,15 +47,15 @@ public class ThrowExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return type;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
-        type      = res.getConstant(readMagnitude(in));
+        type      = res.typeForName("Object"); // TODO "never" type
         throwable = readExprAST(in, res);
         if (readMagnitude(in) > 0) {
             message = readExprAST(in, res);
@@ -61,8 +63,7 @@ public class ThrowExprAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
-        type = res.register(type);
+    public void prepareWrite(ConstantResolver res) {
         throwable.prepareWrite(res);
         if (message != null) {
             message.prepareWrite(res);
@@ -70,9 +71,8 @@ public class ThrowExprAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
-        writePackedLong(out, res.indexOf(type));
         throwable.writeExpr(out, res);
         if (message == null) {
             writePackedLong(out, 0);
@@ -83,13 +83,8 @@ public class ThrowExprAST<C>
     }
 
     @Override
-    public String dump() {
-        return "throw (" + type + ") " + throwable.dump() +
-                (message == null ? "" : " (" + message.dump() + ')');
-    }
-
-    @Override
     public String toString() {
+        // TODO
         return "throw " + throwable + (message == null ? "" : " (" + message + ')');
     }
 }

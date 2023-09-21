@@ -8,25 +8,27 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.MultiExpr;
 
 
 /**
  * A expression that represents multiple expressions.
  */
-public class MultiExprAST<C>
-        extends ExprAST<C> {
+public class MultiExprAST
+        extends ExprAST {
 
-    private ExprAST<C>[] exprs;
+    private ExprAST[] exprs;
 
     MultiExprAST() {}
 
-    public MultiExprAST(ExprAST<C>[] exprs) {
+    public MultiExprAST(ExprAST[] exprs) {
         assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);
         this.exprs = exprs;
     }
 
-    public ExprAST<C>[] getExprs() {
+    public ExprAST[] getExprs() {
         return exprs; // note: caller must not modify returned array in any way
     }
 
@@ -41,7 +43,7 @@ public class MultiExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         return exprs[i].getType(0);
     }
 
@@ -51,31 +53,20 @@ public class MultiExprAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         exprs = readExprArray(in, res);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         prepareASTArray(exprs, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeExprArray(exprs, out, res);
-    }
-
-    @Override
-    public String dump() {
-        StringBuilder buf = new StringBuilder();
-        buf.append('(');
-        for (ExprAST value : exprs) {
-            buf.append(value.dump()).append(", ");
-        }
-        buf.append(')');
-        return buf.toString();
     }
 
     @Override

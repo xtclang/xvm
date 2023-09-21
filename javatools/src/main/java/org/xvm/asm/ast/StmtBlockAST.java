@@ -18,10 +18,10 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * Zero or more nested statements.
  */
-public class StmtBlockAST<C>
-        extends BinaryAST<C> {
+public class StmtBlockAST
+        extends BinaryAST {
 
-    private BinaryAST<C>[] stmts;
+    private BinaryAST[] stmts;
 
     private final boolean  hasScope;
 
@@ -33,7 +33,7 @@ public class StmtBlockAST<C>
         };
     }
 
-    public StmtBlockAST(BinaryAST<C>[] stmts, Boolean hasScope) {
+    public StmtBlockAST(BinaryAST[] stmts, Boolean hasScope) {
         assert stmts != null && Arrays.stream(stmts).allMatch(Objects::nonNull);
         this.stmts    = stmts;
         this.hasScope = hasScope && stmts.length > 0;
@@ -43,7 +43,7 @@ public class StmtBlockAST<C>
         return hasScope;
     }
 
-    public BinaryAST<C>[] getStmts() {
+    public BinaryAST[] getStmts() {
         return stmts; // note: caller must not modify returned array in any way
     }
 
@@ -53,7 +53,7 @@ public class StmtBlockAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         if (hasScope) {
             res.enter();
@@ -65,7 +65,7 @@ public class StmtBlockAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         if (hasScope) {
             res.enter();
             prepareASTArray(stmts, res);
@@ -76,7 +76,7 @@ public class StmtBlockAST<C>
     }
 
     @Override
-    public void write(DataOutput out, ConstantResolver<C> res)
+    public void write(DataOutput out, ConstantResolver res)
             throws IOException {
         if (stmts.length == 0) {
             out.writeByte(None.ordinal());
@@ -86,32 +86,21 @@ public class StmtBlockAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeASTArray(stmts, out, res);
     }
 
     @Override
-    public String dump() {
-        if (stmts.length == 0) {
-            return "{}";
-        }
-
-        StringBuilder buf = new StringBuilder();
-        buf.append("{");
-        for (BinaryAST child : stmts) {
-            buf.append('\n')
-               .append(indentLines(child.dump(), "  "));
-        }
-        buf.append("\n}");
-        return buf.toString();
-    }
-
-    @Override
     public String toString() {
-        if (stmts.length == 0) {
-            return "{}";
+        StringBuilder buf = new StringBuilder();
+        for (int i = 0, c = stmts.length; i < c; ++i) {
+            BinaryAST stmt = stmts[i];
+            if (i > 0) {
+                buf.append('\n');
+            }
+            buf.append(indentLines(stmt.toString(), "  "));
         }
-        return "{ ... " + stmts.length + " statements ... }";
+        return buf.toString();
     }
 }

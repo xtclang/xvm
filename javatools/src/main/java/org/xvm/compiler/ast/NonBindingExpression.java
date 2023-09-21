@@ -131,7 +131,7 @@ public class NonBindingExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         return RegisterAST.defaultReg(getType());
         }

@@ -8,32 +8,34 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.constants.TypeConstant;
+
 
 /**
  * A string literal expression containing expressions that will be evaluated and concatenated with
  * the literal portions to produce a resulting string.
  */
-public class TemplateExprAST<C>
-        extends ExprAST<C> {
+public class TemplateExprAST
+        extends ExprAST {
 
-    private ExprAST<C>[] exprs;
+    private ExprAST[] exprs;
 
-    private transient C typeString;
+    private transient TypeConstant typeString;
 
     TemplateExprAST() {}
 
-    public TemplateExprAST(ExprAST<C>[] exprs) {
+    public TemplateExprAST(ExprAST[] exprs) {
         assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);;
 
         this.exprs = exprs;
     }
 
-    public ExprAST<C>[] getExprs() {
+    public ExprAST[] getExprs() {
         return exprs;
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return typeString;
     }
@@ -44,7 +46,7 @@ public class TemplateExprAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         exprs = readExprArray(in, res);
 
@@ -52,36 +54,23 @@ public class TemplateExprAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         prepareASTArray(exprs, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeExprArray(exprs, out, res);
     }
 
     @Override
-    public String dump() {
-        StringBuilder buf = new StringBuilder();
-        for (int i = 0, c = exprs.length; i < c; i++) {
-            if (i > 0) {
-                buf.append(", ");
-            }
-            buf.append(exprs[i].dump());
-        }
-        return buf.toString();
-    }
-
-    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        for (int i = 0, c = exprs.length; i < c; i++) {
-            if (i > 0) {
-                buf.append(", ");
-            }
-            buf.append(exprs[i]);
+        buf.append(exprs[0]);
+        for (int i = 1, c = exprs.length; i < c; i++) {
+            buf.append(" + ")
+               .append(exprs[i]);
         }
         return buf.toString();
     }

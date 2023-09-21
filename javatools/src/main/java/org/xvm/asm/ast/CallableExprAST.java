@@ -8,17 +8,17 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static org.xvm.util.Handy.indentLines;
+import org.xvm.asm.constants.TypeConstant;
 
 
 /**
  * Base class for Invoke, Call and Construct nodes.
  */
-public abstract class CallableExprAST<C>
-        extends ExprAST<C> {
+public abstract class CallableExprAST
+        extends ExprAST {
 
-    private Object[]     retTypes;
-    private ExprAST<C>[] args;
+    private TypeConstant[] retTypes;
+    private ExprAST[]      args;
 
     CallableExprAST() {
     }
@@ -26,7 +26,7 @@ public abstract class CallableExprAST<C>
     /**
      * Construct an CallableExprAST.
      */
-    protected CallableExprAST(C[] retTypes, ExprAST<C>[] args) {
+    protected CallableExprAST(TypeConstant[] retTypes, ExprAST[] args) {
         assert retTypes != null && Arrays.stream(retTypes).allMatch(Objects::nonNull);
         assert args     == null || Arrays.stream(args).allMatch(Objects::nonNull);
 
@@ -40,52 +40,51 @@ public abstract class CallableExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        return (C) retTypes[i];
+    public TypeConstant getType(int i) {
+        return retTypes[i];
     }
 
     @Override
     public abstract NodeType nodeType();
 
-    public ExprAST<C>[] getArgs() {
+    public ExprAST[] getArgs() {
         return args; // note: caller must not modify returned array in any way
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
-        retTypes = readConstArray(in, res);
+        retTypes = readTypeArray(in, res);
         args     = readExprArray(in, res);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         prepareConstArray(retTypes, res);
         prepareASTArray(args, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeConstArray(retTypes, out, res);
         writeExprArray(args, out, res);
     }
 
     @Override
-    public String dump() {
-        StringBuilder buf = new StringBuilder();
-        for (ExprAST arg : args) {
-            buf.append('\n').append(indentLines(arg.dump(), "  "));
-        }
-        return buf.toString();
-    }
-
-    @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        for (ExprAST arg : args) {
-            buf.append('\n').append(indentLines(arg.toString(), "  "));
+        if (args == null || args.length == 0) {
+            return "()";
         }
-        return buf.toString();
+
+        StringBuilder buf = new StringBuilder();
+        buf.append('(');
+        for (ExprAST arg : args) {
+            buf.append(arg)
+               .append(", ");
+        }
+        return buf.delete(buf.length()-2, buf.length())
+                  .append(')')
+                  .toString();
     }
 }

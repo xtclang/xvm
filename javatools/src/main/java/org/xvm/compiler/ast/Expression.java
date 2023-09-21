@@ -1183,7 +1183,7 @@ public abstract class Expression
      *
      * @return an "AST node" from the expression branch of the BinaryAST hierarchy of classes
      */
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         assert isValidated();
         if (alreadyFailedToProvideExpressionNode.add(this.getClass()))
@@ -1204,7 +1204,7 @@ public abstract class Expression
     /**
      * Convert the specified argument to a {@link ExprAST binady expression expression}.
      */
-    protected static ExprAST<Constant> toExprAst(Argument arg)
+    protected static ExprAST toExprAst(Argument arg)
         {
         if (arg instanceof Register reg)
             {
@@ -1212,7 +1212,7 @@ public abstract class Expression
             }
         if (arg instanceof Constant constant)
             {
-            return new ConstantExprAST<>(constant);
+            return new ConstantExprAST(constant);
             }
 
         throw new UnsupportedOperationException(arg.toString());

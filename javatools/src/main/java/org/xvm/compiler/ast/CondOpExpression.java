@@ -261,10 +261,11 @@ public class CondOpExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
-        return new CondOpExprAST<>(expr1.getExprAST(), isAnd() ? Operator.CondAnd : Operator.CondOr,
-                                   expr2.getExprAST());
+        return new CondOpExprAST(expr1.getExprAST(),
+                                 isAnd() ? Operator.CondAnd : Operator.CondOr,
+                                 expr2.getExprAST());
         }
 
 

@@ -6,7 +6,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Op;
+import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
+
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.RegisterExpr;
 
@@ -16,8 +20,8 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A Register (could be unnamed).
  */
-public class RegisterAST<C>
-        extends ExprAST<C> {
+public class RegisterAST
+        extends ExprAST {
 
     /**
      * A value that is illegal to use as a register id.
@@ -26,19 +30,18 @@ public class RegisterAST<C>
 
     private int regId = UNASSIGNED_ID;
 
-    transient C refType;  // the type of the reference to the register
-    transient C type;     // the type of the register
-    transient C name;     // null for unnamed registers
+    transient TypeConstant   refType;  // the type of the reference to the register
+    transient TypeConstant   type;     // the type of the register
+    transient StringConstant name;     // null for unnamed registers
 
-    public RegisterAST(C type, C name) {
+    public RegisterAST(TypeConstant type, StringConstant name) {
         assert type != null;
         this.type  = type;
         this.name  = name;
     }
 
-    public RegisterAST(C refType, C type, C name) {
+    public RegisterAST(TypeConstant refType, TypeConstant type, StringConstant name) {
         this(type, name);
-
         assert refType != null;
         this.refType = refType;
     }
@@ -50,7 +53,7 @@ public class RegisterAST<C>
      * @param type   the type of the register, or null if not applicable
      * @param name   the type of the register, or null if not applicable
      */
-    public RegisterAST(int regId, C type, C name) {
+    public RegisterAST(int regId, TypeConstant type, StringConstant name) {
         assert regId > Op.CONSTANT_OFFSET && regId < 0;
         assert regId != Op.A_STACK;
 
@@ -75,7 +78,7 @@ public class RegisterAST<C>
         return refType != null;
     }
 
-    public C getRefType() {
+    public TypeConstant getRefType() {
         return refType;
     }
 
@@ -84,16 +87,20 @@ public class RegisterAST<C>
         this.regId = regId;
     }
 
-    public C getType() {
+    public TypeConstant getType() {
         return type;
     }
 
-    public C getName() {
+    public StringConstant getNameConstant() {
         return name;
     }
 
+    public String getName() {
+        return name.getValue();
+    }
+
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return type;
     }
@@ -110,24 +117,24 @@ public class RegisterAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         throw new IllegalStateException("Use 'readExpr' instead");
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         // this class does not "own" the type and name, and therefore does not register them
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         throw new IllegalStateException("Use 'writeExpr' instead");
     }
 
     @Override
-    protected void writeExpr(DataOutput out, ConstantResolver<C> res)
+    protected void writeExpr(DataOutput out, ConstantResolver res)
             throws IOException {
         assert regId != UNASSIGNED_ID;
         assert regId != OpProperty.A_STACK;
@@ -135,28 +142,18 @@ public class RegisterAST<C>
         writePackedLong(out, regId < 0 ? regId : 32 + regId);
     }
 
-    public static <C> RegisterAST<C> defaultReg(C type) {
-        return new RegisterAST<>(Op.A_DEFAULT, type, null);
+    public static  RegisterAST defaultReg(TypeConstant type) {
+        return new RegisterAST(Op.A_DEFAULT, type, null);
     }
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        if (refType != null) {
-            buf.append(refType)
-               .append(' ');
+        if (name != null) {
+            return name.getValue();
         }
-        buf.append(type.toString())
-            .append(' ');
-        if (name == null) {
-            buf.append('_');
-        } else {
-            buf.append(name);
-        }
-        if (regId != UNASSIGNED_ID) {
-            buf.append('#')
-               .append(regId);
-        }
-        return buf.toString();
+
+        return regId == UNASSIGNED_ID
+                ? "_"
+                : "_#" + regId;
     }
 }

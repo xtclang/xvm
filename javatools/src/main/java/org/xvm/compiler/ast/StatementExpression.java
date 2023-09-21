@@ -274,9 +274,9 @@ public class StatementExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
-        return new StmtExprAST<>(m_astBody, getTypes());
+        return new StmtExprAST(m_astBody, getTypes());
         }
 
 
@@ -346,10 +346,10 @@ public class StatementExpression
 
     protected StatementBlock body;
 
-    private transient TypeConstant[]      m_atypeRequired;
-    private transient TypeCollector       m_collector;
-    private transient Assignable[]        m_aLVal;
-    private transient BinaryAST<Constant> m_astBody;
+    private transient TypeConstant[] m_atypeRequired;
+    private transient TypeCollector  m_collector;
+    private transient Assignable[]   m_aLVal;
+    private transient BinaryAST      m_astBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
     }

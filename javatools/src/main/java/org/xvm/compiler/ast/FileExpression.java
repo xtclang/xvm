@@ -282,7 +282,7 @@ public class FileExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         assert isConstant();
         return toExprAst(toConstant());

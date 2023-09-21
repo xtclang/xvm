@@ -5,6 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
+
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -12,20 +16,20 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * The Convert expressions.
  */
-public class ConvertExprAST<C>
-        extends UnaryOpExprAST<C> {
+public class ConvertExprAST
+        extends UnaryOpExprAST {
 
-    private C convMethod;
+    private Constant convMethod;
 
     ConvertExprAST() {}
 
-    public ConvertExprAST(ExprAST<C> expr, C type, C convMethod) {
+    public ConvertExprAST(ExprAST expr, TypeConstant type, Constant convMethod) {
         super(expr, Operator.Convert, type);
 
         this.convMethod = convMethod;
     }
 
-    public C getConvMethod() {
+    public Constant getConvMethod() {
         return convMethod;
     }
 
@@ -35,7 +39,7 @@ public class ConvertExprAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 
@@ -43,14 +47,14 @@ public class ConvertExprAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
         convMethod = res.register(convMethod);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         super.writeBody(out, res);
 
@@ -58,12 +62,7 @@ public class ConvertExprAST<C>
     }
 
     @Override
-    public String dump() {
-        return super.dump() + "->" + convMethod;
-    }
-
-    @Override
     public String toString() {
-        return super.toString() + "->" + convMethod;
+        return '(' + super.toString() + ")." + convMethod + "()";
     }
 }

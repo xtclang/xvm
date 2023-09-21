@@ -842,7 +842,7 @@ public class LambdaExpression
             // if no binding is required (either MBIND or FBIND) then the resulting argument is the
             // identity of the lambda function itself
             MethodConstant idLambda = m_lambda.getIdentityConstant();
-            m_astLambda = new ConstantExprAST<>(idLambda);
+            m_astLambda = new ConstantExprAST(idLambda);
             return idLambda;
             }
 
@@ -870,7 +870,7 @@ public class LambdaExpression
 
         MethodConstant idLambda = m_lambda.getIdentityConstant();
 
-        m_astLambda = new ConstantExprAST<>(idLambda);
+        m_astLambda = new ConstantExprAST(idLambda);
         if (fBindTarget | fBindParams)
             {
             if (LVal.isLocalArgument())
@@ -884,20 +884,20 @@ public class LambdaExpression
                     code.add(new MBind(regThis, idLambda, regTemp));
                     code.add(new FBind(regTemp, anBind, aBindArgs, argResult));
 
-                    m_astLambda = new BindMethodAST<>(regThis.getRegisterAST(), idLambda, regTemp.getType());
-                    m_astLambda = new BindFunctionAST<>(m_astLambda, anBind, m_aAstBind, getType());
+                    m_astLambda = new BindMethodAST(regThis.getRegisterAST(), idLambda, regTemp.getType());
+                    m_astLambda = new BindFunctionAST(m_astLambda, anBind, m_aAstBind, getType());
                     }
                 else if (fBindTarget)
                     {
                     code.add(new MBind(ctx.getThisRegister(), idLambda, argResult));
 
-                    m_astLambda = new BindMethodAST<>(ctx.getThisRegisterAST(), idLambda, getType());
+                    m_astLambda = new BindMethodAST(ctx.getThisRegisterAST(), idLambda, getType());
                     }
                 else // if (fBindParams)
                     {
                     code.add(new FBind(idLambda, anBind, aBindArgs, argResult));
 
-                    m_astLambda = new BindFunctionAST<>(m_astLambda, anBind, m_aAstBind, getType());
+                    m_astLambda = new BindFunctionAST(m_astLambda, anBind, m_aAstBind, getType());
                     }
                 }
             else
@@ -934,11 +934,11 @@ public class LambdaExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         return m_astLambda == null
                 ? isConstant()
-                    ? new ConstantExprAST<>(toConstant())
+                    ? new ConstantExprAST(toConstant())
                     : super.getExprAST()
                 : m_astLambda;
         }
@@ -1084,10 +1084,10 @@ public class LambdaExpression
                 cCaptures = mapCapture.size();
                 }
 
-            int                 cBindArgs       = cTypeParams + cCaptures;
-            Argument[]          aBindArgs       = NO_RVALUES;
-            ExprAST<Constant>[] aAstBind        = null;
-            boolean[]           afImplicitDeref = null;
+            int        cBindArgs       = cTypeParams + cCaptures;
+            Argument[] aBindArgs       = NO_RVALUES;
+            ExprAST[]  aAstBind        = null;
+            boolean[]  afImplicitDeref = null;
 
             // MBIND is indicated by the method structure *NOT* being static
             lambda.setStatic(!ctxLambda.isLambdaMethod());
@@ -1131,15 +1131,15 @@ public class LambdaExpression
                             code.add(new MoveThis(cSteps, regTarget));
                             code.add(new P_Get(idGeneric, regTarget, regFormal));
 
-                            aAstBind[iParam] = new PropertyExprAST<>(
-                                new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, regTarget.getType()),
+                            aAstBind[iParam] = new PropertyExprAST(
+                                new OuterExprAST(ctx.getThisRegisterAST(), cSteps, regTarget.getType()),
                                 idGeneric);
                             }
                         else
                             {
                             code.add(new L_Get(idGeneric, regFormal));
 
-                            aAstBind[iParam] = new PropertyExprAST<>(ctx.getThisRegisterAST(), idGeneric);
+                            aAstBind[iParam] = new PropertyExprAST(ctx.getThisRegisterAST(), idGeneric);
                             }
                         }
                     else
@@ -1192,8 +1192,8 @@ public class LambdaExpression
                         regCapture = regVar;
                         fImplicitDeref = true;
 
-                        aAstBind[iParam] = new UnaryOpExprAST<>(
-                            regVal.getRegisterAST(), Operator.Var, typeCapture);
+                        aAstBind[iParam] = new UnaryOpExprAST(
+                                regVal.getRegisterAST(), Operator.Var, typeCapture);
                         }
                     else if (!regCapture.isEffectivelyFinal())
                         {
@@ -1208,8 +1208,8 @@ public class LambdaExpression
                         regCapture     = regVar;
                         fImplicitDeref = true;
 
-                        aAstBind[iParam] = new UnaryOpExprAST<>(
-                            regVal.getRegisterAST(), Operator.Ref, typeCapture);
+                        aAstBind[iParam] = new UnaryOpExprAST(
+                                regVal.getRegisterAST(), Operator.Ref, typeCapture);
                         }
                     else
                         {
@@ -1615,11 +1615,11 @@ public class LambdaExpression
     /**
      * The ExprAST node for the lambda.
      */
-    private transient ExprAST<Constant> m_astLambda;
+    private transient ExprAST m_astLambda;
     /**
      * An array of ExprAST bindings computed by {@link #calculateBindings}.
      */
-    private transient ExprAST<Constant>[] m_aAstBind;
+    private transient ExprAST[] m_aAstBind;
 
     private static final Field[] CHILD_FIELDS =
             fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");

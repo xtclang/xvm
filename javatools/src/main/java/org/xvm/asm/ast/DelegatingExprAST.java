@@ -5,23 +5,25 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 
 /**
  * A base class for expressions that delegate to an underlying expression.
  */
-public abstract class DelegatingExprAST<C>
-        extends ExprAST<C> {
+public abstract class DelegatingExprAST
+        extends ExprAST {
 
-    private ExprAST<C> expr;
+    private ExprAST expr;
 
     DelegatingExprAST() {}
 
-    protected DelegatingExprAST(ExprAST<C> expr) {
+    protected DelegatingExprAST(ExprAST expr) {
         assert expr != null;
         this.expr = expr;
     }
 
-    public ExprAST<C> getExpr() {
+    public ExprAST getExpr() {
         return expr;
     }
 
@@ -29,21 +31,21 @@ public abstract class DelegatingExprAST<C>
     public abstract NodeType nodeType();
 
     @Override
-    public abstract C getType(int i);
+    public abstract TypeConstant getType(int i);
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         expr = readExprAST(in, res);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         expr.prepareWrite(res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         expr.writeExpr(out, res);
     }

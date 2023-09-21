@@ -18,17 +18,17 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * Zero or more nested statements.
  */
-public class ReturnStmtAST<C>
-        extends BinaryAST<C> {
+public class ReturnStmtAST
+        extends BinaryAST {
 
     private final NodeType nodeType;
-    private ExprAST<C>[] exprs;
+    private ExprAST[] exprs;
 
     ReturnStmtAST(NodeType nodeType) {
         this.nodeType = nodeType;
     }
 
-    public ReturnStmtAST(ExprAST<C>[] exprs) {
+    public ReturnStmtAST(ExprAST[] exprs) {
         if (exprs == null) {
             this.exprs    = NO_EXPRS;
             this.nodeType = Return0Stmt;
@@ -48,12 +48,12 @@ public class ReturnStmtAST<C>
         return nodeType;
     }
 
-    public ExprAST<C>[] getExprs() {
+    public ExprAST[] getExprs() {
         return exprs; // note: caller must not modify returned array in any way
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         switch (nodeType) {
         case Return0Stmt:
@@ -73,12 +73,12 @@ public class ReturnStmtAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         prepareASTArray(exprs, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         switch (nodeType) {
         case Return0Stmt:
@@ -91,22 +91,16 @@ public class ReturnStmtAST<C>
             break;
         default:
             throw new IllegalStateException("nodeType=" + nodeType);
-
         }
-    }
-
-    @Override
-    public String dump() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(this);
-        for (ExprAST child : exprs) {
-            buf.append('\n').append(indentLines(child.dump(), "  "));
-        }
-        return buf.toString();
     }
 
     @Override
     public String toString() {
-        return nodeType().name() + ":" + exprs.length;
+        StringBuilder buf = new StringBuilder("return");
+        for (int i = 0, c = exprs.length; i < c; ++i) {
+            buf.append(i == 0 ? " " : ", ")
+               .append(exprs[i].toString());
+        }
+        return buf.append(";").toString();
     }
 }

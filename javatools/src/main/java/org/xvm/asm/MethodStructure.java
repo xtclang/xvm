@@ -697,10 +697,10 @@ public class MethodStructure
     /**
      * @return the root BinaryAST, or null if none
      */
-    public BinaryAST<Constant> getAst()
+    public BinaryAST getAst()
         {
         // check if the AST has been provided or has already been deserialized
-        BinaryAST<Constant> ast = m_ast;
+        BinaryAST ast = m_ast;
         if (ast != null)
             {
             return ast;
@@ -714,8 +714,8 @@ public class MethodStructure
             Constant[]   aconstLocal = m_aconstLocal;
             assert aconstLocal != null;
 
-            ConstantResolver<Constant> res = new ConstantRegistry(this, pool);
-            DataInput                  in  = new DataInputStream(new ByteArrayInputStream(abAst));
+            ConstantResolver res = new ConstantRegistry(this, pool);
+            DataInput        in  = new DataInputStream(new ByteArrayInputStream(abAst));
             try (var ignore = ConstantPool.withPool(pool))
                 {
                 return m_ast = BinaryAST.readAST(in, res);
@@ -735,7 +735,7 @@ public class MethodStructure
      * @param astRoot     the root BinaryAST
      * @param aAstParams  the parameter registers
      */
-    public void setAst(BinaryAST<Constant> astRoot, RegisterAST<Constant>[] aAstParams)
+    public void setAst(BinaryAST astRoot, RegisterAST[] aAstParams)
         {
         if (astRoot != m_ast)
             {
@@ -1147,8 +1147,8 @@ public class MethodStructure
                 }
             }
 
-        Code                  code = m_code;
-        BinaryAST<Constant> ast  = m_ast;
+        Code      code = m_code;
+        BinaryAST ast  = m_ast;
         if (code != null || ast != null)
             {
             m_abOps = null;
@@ -3505,12 +3505,12 @@ public class MethodStructure
     /**
      * The method's AST.
      */
-    private transient BinaryAST<Constant> m_ast;
+    private transient BinaryAST m_ast;
 
     /**
      * The method's parameters.
      */
-    private transient RegisterAST<Constant>[] m_aAstParams;
+    private transient RegisterAST[] m_aAstParams;
 
     /**
      * The max number of registers used by the method. Calculated from the ops.

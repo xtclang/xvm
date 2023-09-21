@@ -5,22 +5,22 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.util.Handy;
-
 import static org.xvm.asm.ast.BinaryAST.NodeType.IfElseStmt;
 import static org.xvm.asm.ast.BinaryAST.NodeType.IfThenStmt;
+
+import static org.xvm.util.Handy.indentLines;
 
 
 /**
  * Supports the "if..then" and "if..then..else" statements.
  */
-public class IfStmtAST<C>
-        extends BinaryAST<C> {
+public class IfStmtAST
+        extends BinaryAST {
 
-    private ExprAST<C>   cond;
-    private BinaryAST<C> thenStmt;
+    private ExprAST   cond;
+    private BinaryAST thenStmt;
     private boolean      hasElse;
-    private BinaryAST<C> elseStmt;
+    private BinaryAST elseStmt;
 
     IfStmtAST(NodeType nodeType) {
         this.hasElse = switch (nodeType) {
@@ -30,11 +30,11 @@ public class IfStmtAST<C>
         };
     }
 
-    public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt) {
+    public IfStmtAST(ExprAST cond, BinaryAST thenStmt) {
         this(cond, thenStmt, null);
     }
 
-    public IfStmtAST(ExprAST<C> cond, BinaryAST<C> thenStmt, BinaryAST<C> elseStmt) {
+    public IfStmtAST(ExprAST cond, BinaryAST thenStmt, BinaryAST elseStmt) {
         assert cond != null;
         this.cond     = cond;
         this.thenStmt = unwrapStatement(thenStmt);
@@ -47,20 +47,20 @@ public class IfStmtAST<C>
         return hasElse ? IfElseStmt : IfThenStmt;
     }
 
-    public ExprAST<C> getCond() {
+    public ExprAST getCond() {
         return cond;
     }
 
-    public BinaryAST<C> getThen() {
+    public BinaryAST getThen() {
         return thenStmt;
     }
 
-    public BinaryAST<C> getElse() {
+    public BinaryAST getElse() {
         return elseStmt;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         res.enter();
         cond = readExprAST(in, res);
@@ -76,7 +76,7 @@ public class IfStmtAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         res.enter();
         prepareAST(cond, res);
         res.enter();
@@ -91,7 +91,7 @@ public class IfStmtAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeExprAST(cond, out, res);
         writeAST(thenStmt, out, res);
@@ -101,13 +101,18 @@ public class IfStmtAST<C>
     }
 
     @Override
-    public String dump() {
+    public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append(this);
-        buf.append('\n').append(Handy.indentLines(cond.dump(), "  "));
-        buf.append("\nthen\n").append(Handy.indentLines(thenStmt.dump(), "  "));
+        buf.append("if (")
+           .append(cond)
+           .append(") {\n")
+           .append(indentLines(thenStmt.toString(), "  "))
+           .append("\n}");
+
         if (hasElse) {
-            buf.append("\nelse\n").append(Handy.indentLines(elseStmt.dump(), "  "));
+            buf.append(" else {\n")
+               .append(indentLines(elseStmt.toString(), "  "))
+               .append("\n}");
         }
         return buf.toString();
     }

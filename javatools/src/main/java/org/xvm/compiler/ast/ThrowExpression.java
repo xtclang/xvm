@@ -381,10 +381,10 @@ public class ThrowExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
-        ExprAST<Constant> astEx;
-        ExprAST<Constant> astMsg;
+        ExprAST astEx;
+        ExprAST astMsg;
         if (keyword.getId() == Token.Id.THROW)
             {
             assert message == null;
@@ -399,9 +399,9 @@ public class ThrowExpression
             ConstantPool  pool    = pool();
             ClassConstant constEx = computeExceptionClass();
 
-            astEx  = new ConstantExprAST<>(constEx);
+            astEx  = new ConstantExprAST(constEx);
             astMsg = message == null
-                    ? new ConstantExprAST<>(pool.ensureStringConstant(computeMessage()))
+                    ? new ConstantExprAST(pool.ensureStringConstant(computeMessage()))
                     : message.getExprAST();
             }
 
@@ -410,7 +410,7 @@ public class ThrowExpression
             {
             typeResult = pool().typeObject();
             }
-        return new ThrowExprAST<>(typeResult, astEx, astMsg);
+        return new ThrowExprAST(typeResult, astEx, astMsg);
         }
 
     private ClassConstant computeExceptionClass()

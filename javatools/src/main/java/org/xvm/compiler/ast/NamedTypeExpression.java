@@ -1175,11 +1175,11 @@ public class NamedTypeExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         return isDynamic()
                 ? m_exprDynamic.getExprAST()
-                : new ConstantExprAST<>(getType().resolveAutoNarrowingBase());
+                : new ConstantExprAST(getType().resolveAutoNarrowingBase());
         }
 
 

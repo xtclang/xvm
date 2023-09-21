@@ -10,6 +10,10 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import org.xvm.asm.Constant;
+
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.util.PackedInteger;
 
 import static java.lang.Long.highestOneBit;
@@ -27,17 +31,17 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Supports the "switch" statement and expression.
  */
-public class SwitchAST<C>
-        extends ExprAST<C> {
+public class SwitchAST
+        extends ExprAST {
 
-    private ExprAST<C>     cond;
+    private ExprAST        cond;
     private long           isaTest;
-    private Object[]       cases;
-    private BinaryAST<C>[] bodies;
-    private Object[]       resultTypes; // TODO make this transient (but we can't right now, because "C")
+    private Constant[]     cases;
+    private BinaryAST[]    bodies;
+    private TypeConstant[] resultTypes; // TODO
 
     SwitchAST(NodeType nodeType) {
-        resultTypes = nodeType == SwitchExpr ? NO_CONSTS : null;
+        resultTypes = nodeType == SwitchExpr ? NO_TYPES : null;
     }
 
     /**
@@ -48,10 +52,10 @@ public class SwitchAST<C>
      * @param cases    an array of cases, each of which is an array of constant values
      * @param bodies   an array of bodies, corresponding to the cases
      */
-    public SwitchAST(ExprAST<C>     cond,
+    public SwitchAST(ExprAST     cond,
                      long           isaTest,
-                     C[]            cases,
-                     BinaryAST<C>[] bodies) {
+                     Constant[]            cases,
+                     BinaryAST[] bodies) {
         this(cond, isaTest, cases, bodies, null);
     }
 
@@ -65,11 +69,11 @@ public class SwitchAST<C>
      * @param resultTypes  an array of types returned from a switch expression; null for a switch
      *                     statement
      */
-    public SwitchAST(ExprAST<C>     cond,
+    public SwitchAST(ExprAST        cond,
                      long           isaTest,
-                     C[]            cases,
-                     BinaryAST<C>[] bodies,
-                     C[]            resultTypes) {
+                     Constant[]     cases,
+                     BinaryAST[]    bodies,
+                     TypeConstant[] resultTypes) {
         // check the expressions that produce the values to match
         assert cond != null && cond.getCount() > 0;
         assert isaTest == 0 || numberOfTrailingZeros(highestOneBit(isaTest)) <= cond.getCount();
@@ -81,7 +85,7 @@ public class SwitchAST<C>
         // check bodies that are associated with some or all of the cases
         assert bodies != null && bodies.length <= cases.length;
         if (bodies.length < cases.length) {
-            BinaryAST<C>[] newBodies = new BinaryAST[cases.length];
+            BinaryAST[] newBodies = new BinaryAST[cases.length];
             System.arraycopy(bodies, 0, newBodies, 0, bodies.length);
             bodies = newBodies;
         }
@@ -90,8 +94,8 @@ public class SwitchAST<C>
         if (resultTypes != null) {
             assert resultTypes.length > 0 && Arrays.stream(resultTypes).allMatch(Objects::nonNull);
             int resultCount = resultTypes.length;
-            for (BinaryAST<C> body : bodies) {
-                if (body instanceof ExprAST<C> expr) {
+            for (BinaryAST body : bodies) {
+                if (body instanceof ExprAST expr) {
                     // there are three scenarios when the expression count could be less:
                     // - a Throw or Assert expressions
                     // - a conditional False (which is not currently possible to check here)
@@ -118,7 +122,7 @@ public class SwitchAST<C>
         return resultTypes == null ? SwitchStmt : SwitchExpr;
     }
 
-    public ExprAST<C> getCondition() {
+    public ExprAST getCondition() {
         return cond;
     }
 
@@ -134,20 +138,20 @@ public class SwitchAST<C>
     /**
      * @return an array of  "case" values
      */
-    public Object[] getCases() {
+    public Constant[] getCases() {
         return cases;
     }
 
     /**
      * @return an array of bodies (some of which may be null) that correspond to the cases
      */
-    public BinaryAST<C>[] getBodies() {
+    public BinaryAST[] getBodies() {
         return bodies;
     }
 
     /**
-     * @return an Iterator of {@Code (C | BinaryAST<C>)} in the order as they appeared in the
-     *         source code, where a {@Code C} indicates a "case" value, and a {@Code BinaryAST<C>}
+     * @return an Iterator of {@Code (Constant | BinaryAST)} in the order as they appeared in the
+     *         source code, where a {@Code Constant} indicates a "case" value, and a {@Code BinaryAST}
      *         indicates a body
      */
     Iterator contents() {
@@ -199,12 +203,12 @@ public class SwitchAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        return (C) resultTypes[i];
+    public TypeConstant getType(int i) {
+        return resultTypes[i];
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         res.enter();
         cond    = readExprAST(in, res);
@@ -214,7 +218,7 @@ public class SwitchAST<C>
         if (rowCount == 0) {
             cases = NO_CONSTS;
         } else {
-            cases = new Object[rowCount];
+            cases = new Constant[rowCount];
             for (int i = 0; i < rowCount; ++i) {
                 int id = (int) readPackedLong(in);
                 cases[i] = id >= 0 ? res.getConstant(id) : null;
@@ -251,16 +255,16 @@ public class SwitchAST<C>
         res.exit();
 
         if (nodeType() == SwitchExpr) {
-            resultTypes = readConstArray(in, res);
+            resultTypes = readTypeArray(in, res);
         }
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         res.enter();
         prepareAST(cond, res);
         prepareConstArray(cases, res);
-        for (BinaryAST<C> body : bodies) {
+        for (BinaryAST body : bodies) {
             res.enter();
             prepareAST(body, res);
             res.exit();
@@ -270,7 +274,7 @@ public class SwitchAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         cond.writeExpr(out, res);
         writePackedLong(out, isaTest);
@@ -279,7 +283,7 @@ public class SwitchAST<C>
         int count = cases.length;
         writePackedLong(out, count);
         for (int i = 0; i < count; ++i) {
-            C value = (C) cases[i];
+            Constant value = (Constant) cases[i];
             writePackedLong(out, value == null ? -1 : res.indexOf(value));
         }
 
@@ -306,15 +310,15 @@ public class SwitchAST<C>
             bits.writeObject(out);
         }
         if (nodeType() == SwitchExpr) {
-            for (BinaryAST<C> body : bodies) {
+            for (BinaryAST body : bodies) {
                 if (body != null) {
-                    writeExprAST((ExprAST<C>) body, out, res);
+                    writeExprAST((ExprAST) body, out, res);
                     --check;
                 }
             }
             writeConstArray(resultTypes, out, res);
         } else {
-            for (BinaryAST<C> body : bodies) {
+            for (BinaryAST body : bodies) {
                 if (body != null) {
                     writeAST(body, out, res);
                     --check;
@@ -325,17 +329,17 @@ public class SwitchAST<C>
     }
 
     @Override
-    public String dump() {
+    public String toString() {
         StringBuilder buf = new StringBuilder("switch (");
-        if (cond instanceof MultiExprAST<C> meast) {
-            ExprAST<C>[] exprs = meast.getExprs();
-            for (ExprAST<C> expr : exprs) {
-                buf.append(expr.dump());
+        if (cond instanceof MultiExprAST meast) {
+            ExprAST[] exprs = meast.getExprs();
+            for (ExprAST expr : exprs) {
+                buf.append(expr);
                 buf.append(", ");
             }
             buf.setLength(buf.length()-2);
         } else {
-            buf.append(cond.dump());
+            buf.append(cond);
         }
         buf.append(") {");
 
@@ -344,9 +348,16 @@ public class SwitchAST<C>
             buf.append(cases[row]);
             buf.append(":");
 
-            BinaryAST<C> body = bodies[row];
+            BinaryAST body = bodies[row];
             if (body != null) {
-                buf.append("\n").append(indentLines(body.dump(), "  "));
+                String text = body.toString();
+                if (text.indexOf('\n') < 0) {
+                    buf.append(' ')
+                       .append(text);
+                } else {
+                    buf.append('\n')
+                       .append(indentLines(text, "  "));
+                }
             }
         }
         buf.append("\n}");

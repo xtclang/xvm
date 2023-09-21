@@ -373,12 +373,12 @@ public class StatementBlock
                 // add the return statement to the BinaryAST
                 if (astRoot instanceof StmtBlockAST astBlock)
                     {
-                    BinaryAST<Constant>[] oldStmts = astBlock.getStmts();
-                    int                 oldSize  = oldStmts.length;
-                    int                 newSize  = oldSize + 1;
-                    BinaryAST<Constant>[] newStmts = new BinaryAST[newSize];
+                    BinaryAST[] oldStmts = astBlock.getStmts();
+                    int         oldSize  = oldStmts.length;
+                    int         newSize  = oldSize + 1;
+                    BinaryAST[] newStmts = new BinaryAST[newSize];
                     System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
-                    newStmts[oldSize] = new ReturnStmtAST<>(null);
+                    newStmts[oldSize] = new ReturnStmtAST(null);
                     astRoot = new StmtBlockAST(newStmts, true);
                     }
                 }
@@ -474,9 +474,9 @@ public class StatementBlock
         {
         boolean fCompletable = fReachable;
 
-        AstHolder             holder = ctx.getHolder();
-        List<Statement>       stmts  = this.stmts;
-        BinaryAST<Constant>[] asts   = BinaryAST.NO_ASTS;
+        AstHolder       holder = ctx.getHolder();
+        List<Statement> stmts  = this.stmts;
+        BinaryAST[]     asts   = BinaryAST.NO_ASTS;
         if (stmts != null && !stmts.isEmpty())
             {
             // there is an implicit scope for the top-most statement block of a method
@@ -485,7 +485,7 @@ public class StatementBlock
             boolean fLambda        = parent instanceof LambdaExpression;
             boolean fSuppressScope = fMethod | fLambda | m_fSuppressScope;
 
-            ArrayList<BinaryAST<Constant>> listAsts = new ArrayList<>(stmts.size());
+            ArrayList<BinaryAST> listAsts = new ArrayList<>(stmts.size());
             if (fLambda)
                 {
                 // go through all the parameters looking for any implicit de-reference params
@@ -500,7 +500,7 @@ public class StatementBlock
                         Register regVal = param.deref(regVar, method);
                         code.add(new Var_C(regVal, regVar));
 
-                        BinaryAST<Constant> astAssign = new AssignAST<>(regVal.getRegAllocAST(),
+                        BinaryAST astAssign = new AssignAST(regVal.getRegAllocAST(),
                             AssignAST.Operator.Deref, regVar.getRegisterAST());
                         listAsts.add(astAssign);
                         }
@@ -523,21 +523,21 @@ public class StatementBlock
                             Register          reg     = entry.getValue();
                             PropertyStructure prop    = (PropertyStructure) clzAnon.getChild(sName);
                             PropertyConstant  id      = prop.getIdentityConstant();
-                            ExprAST<Constant> astProp = new ConstantExprAST<>(id);
+                            ExprAST           astProp = new ConstantExprAST(id);
 
                             if (exprNew.isImplicitDeref(sName))
                                 {
                                 code.add(new Var_CN(reg, id.getNameConstant(), id));
 
-                                listAsts.add(new AssignAST<>(
-                                    reg.getRegAllocAST(), AssignAST.Operator.Deref, astProp));
+                                listAsts.add(new AssignAST(
+                                        reg.getRegAllocAST(), AssignAST.Operator.Deref, astProp));
                                 }
                             else
                                 {
                                 code.add(new Var_IN(reg, id.getNameConstant(), id));
 
-                                listAsts.add(new AssignAST<>(
-                                    reg.getRegAllocAST(), AssignAST.Operator.Asn, astProp));
+                                listAsts.add(new AssignAST(
+                                        reg.getRegAllocAST(), AssignAST.Operator.Asn, astProp));
                                 }
                             }
                         }
@@ -562,7 +562,7 @@ public class StatementBlock
 
                 if (fReachable && !(stmt instanceof ComponentStatement))
                     {
-                    BinaryAST<Constant> bast = holder.getAst(stmt);
+                    BinaryAST bast = holder.getAst(stmt);
                     if (bast != null)
                         {
                         listAsts.add(bast);
@@ -590,7 +590,7 @@ public class StatementBlock
             asts = listAsts.toArray(BinaryAST.NO_ASTS);
             }
 
-        holder.setAst(this, new StmtBlockAST<>(asts, hasScope()));
+        holder.setAst(this, new StmtBlockAST(asts, hasScope()));
         return fCompletable;
         }
 

@@ -574,14 +574,14 @@ public class WhileStatement
             code.add(new Exit());
             code.add(getContinueLabel());
 
-            BinaryAST<Constant> astBody = holder.getAst(block);
+            BinaryAST astBody = holder.getAst(block);
             if (m_aAllocSpecial != null)
                 {
-                int                   cAllocs = m_aAllocSpecial.length;
-                BinaryAST<Constant>[] aAst    = new BinaryAST[cAllocs + 1];
+                int         cAllocs = m_aAllocSpecial.length;
+                BinaryAST[] aAst    = new BinaryAST[cAllocs + 1];
                 System.arraycopy(m_aAllocSpecial, 0, aAst, 0, cAllocs);
                 aAst[cAllocs] = astBody;
-                holder.setAst(this, new StmtBlockAST<>(aAst, true));
+                holder.setAst(this, new StmtBlockAST(aAst, true));
                 }
             else
                 {
@@ -635,7 +635,7 @@ public class WhileStatement
                 code.add(new Exit());
                 }
 
-            holder.setAst(this, new LoopStmtAST<>(m_aAllocSpecial, holder.getAst(block)));
+            holder.setAst(this, new LoopStmtAST(m_aAllocSpecial, holder.getAst(block)));
             return false; // while(true) never completes naturally
             }
 
@@ -670,13 +670,13 @@ public class WhileStatement
             // the block's ability to complete (since the loop may execute zero times)
             block.completes(ctx, fCompletes, code, errs);
 
-            BinaryAST<Constant> astBlock = holder.getAst(block);
+            BinaryAST astBlock = holder.getAst(block);
 
             code.add(getContinueLabel());
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
             code.add(new Exit());
 
-            holder.setAst(this, new DoWhileStmtAST<>(m_aAllocSpecial, astBlock, m_astCond));
+            holder.setAst(this, new DoWhileStmtAST(m_aAllocSpecial, astBlock, m_astCond));
             return fCompletes;
             }
 
@@ -706,7 +706,7 @@ public class WhileStatement
             }
         Label labelInit = emitLabelVarCreation(code, regFirst, regCount);
 
-        List<RegAllocAST<Constant>> listAlloc = new ArrayList<>();
+        List<RegAllocAST> listAlloc = new ArrayList<>();
         if (fHasDecls)
             {
             for (AstNode cond : conds)
@@ -717,7 +717,7 @@ public class WhileStatement
                         {
                         fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
 
-                        listAlloc.add((RegAllocAST<Constant>) holder.getAst(stmtDecl));
+                        listAlloc.add((RegAllocAST) holder.getAst(stmtDecl));
                         }
                     }
                 }
@@ -729,7 +729,7 @@ public class WhileStatement
         // the block's ability to complete (since the loop may execute zero times)
         block.completes(ctx, fCompletes, code, errs);
 
-        BinaryAST<Constant> astBlock = holder.getAst(block);
+        BinaryAST astBlock = holder.getAst(block);
 
         code.add(getContinueLabel());
         emitLabelVarUpdate(code, regFirst, regCount, labelInit);
@@ -739,9 +739,9 @@ public class WhileStatement
             code.add(new Exit());
             }
 
-        holder.setAst(this, new WhileStmtAST<>(
-            m_aAllocSpecial, listAlloc.isEmpty() ? null : listAlloc.toArray(BinaryAST.NO_ALLOCS),
-            m_astCond, astBlock));
+        holder.setAst(this, new WhileStmtAST(
+                m_aAllocSpecial, listAlloc.isEmpty() ? null : listAlloc.toArray(BinaryAST.NO_ALLOCS),
+                m_astCond, astBlock));
         return fCompletes;
         }
 
@@ -758,8 +758,8 @@ public class WhileStatement
      */
     private Label emitLabelVarCreation(Code code, Register regFirst, Register regCount)
         {
-        ConstantPool            pool   = pool();
-        RegAllocAST<Constant>[] aAlloc = null;
+        ConstantPool  pool   = pool();
+        RegAllocAST[] aAlloc = null;
 
         if (regFirst != null)
             {
@@ -777,7 +777,7 @@ public class WhileStatement
                     ((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(regCount, name, pool.val0()));
 
-            RegAllocAST<Constant> astCount = regCount.getRegAllocAST();
+            RegAllocAST astCount = regCount.getRegAllocAST();
             if (aAlloc == null)
                 {
                 aAlloc = new RegAllocAST[] {astCount};
@@ -823,10 +823,10 @@ public class WhileStatement
      */
     private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean             fCompletes = fReachable;
-        AstHolder           holder     = ctx.getHolder();
-        int                 cConds     = getConditionCount();
-        ExprAST<Constant>[] aCondASTs  = new ExprAST[cConds];
+        boolean   fCompletes = fReachable;
+        AstHolder holder     = ctx.getHolder();
+        int       cConds     = getConditionCount();
+        ExprAST[] aCondASTs  = new ExprAST[cConds];
 
         for (int i = 0; i < cConds; ++i)
             {
@@ -848,7 +848,7 @@ public class WhileStatement
                         ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
                         : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
                     }
-                aCondASTs[i] = (ExprAST<Constant>) holder.getAst(stmtCond);
+                aCondASTs[i] = (ExprAST) holder.getAst(stmtCond);
                 }
             else
                 {
@@ -942,12 +942,12 @@ public class WhileStatement
     /**
      * ExprAST produced by {@link #emitConditionTest}.
      */
-    private transient ExprAST<Constant> m_astCond;
+    private transient ExprAST m_astCond;
 
     /**
-     * An array of RegAllocAST produced by {@link emitLabelVarCreation}.
+     * An array of RegAllocAST produced by {@link #emitLabelVarCreation}.
      */
-    private transient RegAllocAST<Constant>[] m_aAllocSpecial;
+    private transient RegAllocAST[] m_aAllocSpecial;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
     }

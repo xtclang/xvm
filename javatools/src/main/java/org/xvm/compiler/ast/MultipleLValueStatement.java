@@ -215,9 +215,9 @@ public class MultipleLValueStatement
         {
         boolean fCompletes = fReachable;
 
-        List<AstNode>       LVals = this.LVals;
-        int                 cVals = LVals.size();
-        ExprAST<Constant>[] aAst  = new ExprAST[cVals];
+        List<AstNode> LVals = this.LVals;
+        int           cVals = LVals.size();
+        ExprAST[]     aAst  = new ExprAST[cVals];
 
         for (int i = 0, c = LVals.size(); i < c; ++i)
             {
@@ -225,7 +225,7 @@ public class MultipleLValueStatement
             if (node instanceof Statement stmt)
                 {
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                aAst[i]    = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
+                aAst[i]    = (ExprAST) ctx.getHolder().getAst(stmt);
                 }
             else
                 {
@@ -240,7 +240,7 @@ public class MultipleLValueStatement
                 code.add(labelGround);
                 }
             }
-        ctx.getHolder().setAst(this, new MultiExprAST<>(aAst));
+        ctx.getHolder().setAst(this, new MultiExprAST(aAst));
         return fCompletes;
         }
 
@@ -473,17 +473,17 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public ExprAST<Constant> getExprAST()
+        public ExprAST getExprAST()
             {
-            List<Expression>    listExprs = ensureExpressions();
-            int                 cExprs    = listExprs.size();
-            ExprAST<Constant>[] aAstExpr  = new ExprAST[cExprs];
+            List<Expression> listExprs = ensureExpressions();
+            int              cExprs    = listExprs.size();
+            ExprAST[]        aAstExpr  = new ExprAST[cExprs];
 
             for (int i = 0; i < cExprs; ++i)
                 {
                 aAstExpr[i] = listExprs.get(i).getExprAST();
                 }
-            return new MultiExprAST<>(aAstExpr);
+            return new MultiExprAST(aAstExpr);
             }
 
         @Override
