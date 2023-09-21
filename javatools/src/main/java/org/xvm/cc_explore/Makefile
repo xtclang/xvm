@@ -61,7 +61,7 @@ test_classes := $(patsubst $(TST)/%java,$(CLZDIR)/test/%class,$(test_javas))
 classes = $(main_classes) $(test_classes)
 
 
-default:	classes tags
+default:	classes examples
 
 # Just the classes, no jarring step
 classes: $(classes)
@@ -90,27 +90,37 @@ test:	$(classes) $(test_classes)
 	$(JVM) --enable-preview org.xvm.cc_explore.XEC -L ../xdk/build/xdk/lib -L ../xdk/build/xdk/javatools/ ../doc/examples/FizzBuzz.xtc 123
 
 
-# Assuming a minor version change in XTC, install a new XTC on windows
-XTC = $(XVM_ROOT)/xdk/build/xdk/bin/xtc.exe
-
-install_xtc:	$(XTC)
-
-$(XTC):	$(XVM_ROOT)/xdk/build/xdk/bin/windows_launcher.exe
-	cp $(XVM_ROOT)/xdk/build/xdk/bin/windows_launcher.exe $(XTC)
-
+# XDK setup
+XDK_DIR = ../xdk/build/xdk
+XDK = $(XDK_DIR)/javatools/javatools.jar
+XTC = nice java -jar $(XDK) xtc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
 
 # Build examples, .xtc from .x
 # Assuming a minor version change in XTC, rebuild XTC examples
 EXM = $(XVM_ROOT)/doc/examples
 examples_x = $(wildcard $(EXM)/*.x)
 
-examples:	$(examples_x:x=xtc) $(XTC)
+examples:	$(examples_x:x=xtc) $(XDK)
 
 $(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x
 	@echo "compiling " $@ " because " $?
 	@$(XTC) $? -o $(EXM)
 
 
+# Manual tests use an explicit list
+MANUAL_DIR = $(XVM_ROOT)/manualTests/src/main/x
+MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x misc.x queues.x services.x reflect.x regex.x tuple.x
+
+manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x  ,$(MANUAL_TESTS))
+manuals_xtc = $(manuals_x:.x=.xtc)
+
+manuals:	$(manuals_xtc)
+
+$(manuals_xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
+	@echo "compiling " $@ " because " $?
+	@$(XTC) $? -o $(EXM)
+
+# TAGS
 tags:	../TAGS
 
 ../TAGS:	$(main_javas) $(test_javas)
