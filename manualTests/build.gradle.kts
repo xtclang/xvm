@@ -47,7 +47,6 @@ val compileAll = tasks.register<JavaExec>("compileAll") {
     classpath(javatoolsJar)
 
     val opts = listOf<String>(
-        "-verbose",
         "-o", "$buildDir",
         "-L", "${xdk.buildDir}/xdk/lib",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
@@ -85,8 +84,7 @@ val compileOne = tasks.register<JavaExec>("compileOne") {
 
     classpath(javatoolsJar)
 
-    args("-verbose", "-rebuild",
-         "-o", "$buildDir",
+    args("-o", "$buildDir",
          "-L", "${xdk.buildDir}/xdk/lib",
          "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
          "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
@@ -99,17 +97,21 @@ tasks.register<JavaExec>("runOne") {
     group       = "Test"
     description = "Run a \"testName\" test"
 
-    dependsOn(xdk.tasks["build"])
+    dependsOn(xdk.tasks["build"], compileOne)
 
     val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
 
     jvmArgs("-showversion", "-Xms1024m", "-Xmx1024m", "-ea")
 
-    classpath(
-        "${javatools.buildDir}/classes/java/main",
-        "${javatools.buildDir}/resources/main",
-        "${javatools.buildDir}/classes/java/test")
+    classpath(javatoolsJar)
 
-    args("src/main/x/$name.x")
-    mainClass.set("org.xvm.runtime.TestConnector")
+    val opts = listOf<String>(
+        "-verbose",
+        "-L", "${xdk.buildDir}/xdk/lib",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+        "-L", "$buildDir")
+
+    args(opts + "src/main/x/$name.x")
+    mainClass.set("org.xvm.tool.Runner")
 }
