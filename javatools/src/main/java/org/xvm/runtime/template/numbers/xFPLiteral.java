@@ -161,10 +161,6 @@ public class xFPLiteral
                         template.makeHandle(hLiteral.getValue().doubleValue()));
                 }
 
-            case "toDec":
-                return frame.assignValue(iReturn,
-                        xDec.INSTANCE.makeHandle(new Decimal64(hLiteral.getValue())));
-
             case "toDec32":
                 return frame.assignValue(iReturn,
                         xDec32.INSTANCE.makeHandle(new Decimal32(hLiteral.getValue())));

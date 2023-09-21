@@ -36,15 +36,23 @@ public class xDec32
     // ----- helpers -------------------------------------------------------------------------------
 
     @Override
-    protected Decimal fromDouble(double d)
+    protected Decimal32 fromDouble(double d)
         {
         try
             {
-            return new Decimal32(new BigDecimal(d, MathContext.DECIMAL32));
+            if (Double.isFinite(d))
+                {
+                return new Decimal32(new BigDecimal(d, MathContext.DECIMAL32));
+                }
+            return Double.isInfinite(d)
+                ? d < 0
+                    ? Decimal32.NEG_INFINITY
+                    : Decimal32.POS_INFINITY
+                : Decimal32.NaN;
             }
         catch (Decimal.RangeException e)
             {
-            return e.getDecimal();
+            return (Decimal32) e.getDecimal();
             }
         }
 

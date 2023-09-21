@@ -328,6 +328,23 @@
     Boolean[] toBooleanArray() = toBitArray().toBooleanArray();
 
 
+    // ----- Orderable -----------------------------------------------------------------------------
+
+    @Override
+    static <CompileType extends IntNumber> Ordered compare(CompileType value1, CompileType value2) {
+        return switch (value1.sign <=> value2.sign) {
+               case Lesser : Lesser;
+               case Equal  : value1.magnitude <=> value2.magnitude;
+               case Greater: Greater;
+               };
+    }
+
+    @Override
+    static <CompileType extends IntNumber> Boolean equals(CompileType value1, CompileType value2) {
+        return (value1 <=> value2) == Equal;
+    }
+
+
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override

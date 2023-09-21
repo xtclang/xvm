@@ -71,6 +71,19 @@
     UIntN toUIntN() = new UIntN(bits);
 
 
+    // ----- Orderable implementation --------------------------------------------------------------
+
+    @Override
+    static <CompileType extends UIntNumber> Ordered compare(CompileType value1, CompileType value2) {
+        return value1.bits <=> value1.bits;
+    }
+
+    @Override
+    static <CompileType extends Number> Boolean equals(CompileType value1, CompileType value2) {
+        return (value1 <=> value2) == Equal;
+    }
+
+
     // ----- Stringable implementation -------------------------------------------------------------
 
     @Override

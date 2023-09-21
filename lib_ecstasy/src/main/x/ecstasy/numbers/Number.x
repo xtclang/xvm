@@ -548,6 +548,63 @@
     }
 
 
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    @Override
+    static <CompileType extends Number> Ordered compare(CompileType value1, CompileType value2) {
+        Type<Number> type1 = &value1.actualType;
+        Type<Number> type2 = &value2.actualType;
+        if (type1 == type2) {
+            return value1.as(type1.DataType) <=> value2.as(type1.DataType);
+        }
+
+        enum Family {UInteger, Integer, Decimal, Binary}
+        private Family familyFor(Number n) {
+            return switch (n.is(_)) {
+                case UIntNumber:      UInteger;
+                case IntNumber:       Integer;
+                case DecimalFPNumber: Decimal;
+                case BinaryFPNumber:  Binary;
+                default: assert;
+            };
+        }
+
+        Family family1 = familyFor(value1);
+        Family family2 = familyFor(value2);
+        Family family  = Family.maxOf(family1, family2);
+
+        Int size1 = value1.bitLength;
+        Int size2 = value2.bitLength;
+        Int size  = Int.maxOf(size1, size2);
+
+        Type<Number> type = switch (family, size) {
+            case (UInteger, 8..32): UInt32;
+            case (UInteger,    64): UInt64;
+            case (UInteger,   128): UInt128;
+            case (UInteger,     _): UIntN;
+            case (Integer , 8..32): Int32;
+            case (Integer ,    64): Int64;
+            case (Integer ,   128): Int128;
+            case (Integer ,     _): IntN;
+            case (Decimal , 8..32): Dec32;
+            case (Decimal ,    64): Dec64;
+            case (Decimal ,   128): Dec128;
+            case (Decimal ,     _): DecN;
+            case (Binary  , 8..32): Float32;
+            case (Binary  ,    64): Float64;
+            case (Binary  ,   128): Float128;
+            case (Binary  ,     _): FloatN;
+            default: assert;
+        };
+        return converterTo(type.DataType)(value1) <=> converterTo(type.DataType)(value2);
+    }
+
+    @Override
+    static <CompileType extends Number> Boolean equals(CompileType value1, CompileType value2) {
+        return (value1 <=> value2) == Equal;
+    }
+
+
     // ----- Stringable support --------------------------------------------------------------------
 
     /**
