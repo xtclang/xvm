@@ -18,6 +18,7 @@ public abstract class Container {
     if( _mod==null ) return;    // Native Container has no mod
     // Here I need to build/cache/load a java class for the "_mod",
     XClz xclz = _mod.xclz();
+    xclz.run();
     throw XEC.TODO();
   }
 
