@@ -22,12 +22,10 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.NotImplAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -1186,19 +1184,8 @@ public abstract class Expression
     public ExprAST getExprAST()
         {
         assert isValidated();
-        if (alreadyFailedToProvideExpressionNode.add(this.getClass()))
-            {
-            System.err.println("TODO implement getExpressionNode() for Expression: "
-                                   + this.getClass().getSimpleName());
-            }
-
-        return new NotImplAST(this.getClass().getSimpleName(), getTypes());
-        }
-
-    public static HashSet<Class> alreadyFailedToProvideExpressionNode = new HashSet<>();
-    static
-        {
-        alreadyFailedToProvideExpressionNode.add(ImportStatement.class);
+        throw new UnsupportedOperationException(
+                "BAST for Expression: " + this.getClass().getSimpleName());
         }
 
     /**

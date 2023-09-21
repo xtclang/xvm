@@ -270,29 +270,33 @@ public abstract class Statement
 
     /**
      * Holder for BinaryAST objects as they percolate up the emit() call tree.
+     * TODO get rid of this concept and add a getAST as per Expression tree
      */
     static class AstHolder
         {
         BinaryAST getAst(Statement stmt)
             {
+            assert stmt != null;
+
             if (stmt instanceof LabeledStatement stmtLbl)
                 {
                 return getAst(stmtLbl.stmt);
                 }
 
-            assert stmt != null;
+            if (stmt instanceof ImportStatement || stmt instanceof ComponentStatement)
+                {
+                return null;
+                }
+
             BinaryAST ast = this.ast;
             this.ast = null;
             if (ast != null && stmt == this.stmt)
                 {
                 return ast;
                 }
-            if (Expression.alreadyFailedToProvideExpressionNode.add(stmt.getClass()))
-                {
-                System.err.println("TODO ast creation for Statement: "
-                                       + stmt.getClass().getSimpleName());
-                }
-            return null;
+
+            throw new UnsupportedOperationException(
+                    "BAST for Statement: " + stmt.getClass().getSimpleName());
             }
 
         void setAst(Statement stmt, BinaryAST ast)

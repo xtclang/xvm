@@ -154,7 +154,6 @@ public abstract class BinaryAST {
         ReturnTStmt,        // return (expr, expr, ...);
         TryCatchStmt,       // using(res){...}, try(res){...} [catch(T e){...}]
         TryFinallyStmt,     // try{...} [catch(T e){...}] finally{...}
-        NotImplYet,         // "a node for some form has not yet been implemented" TODO delete this
         ;
 
         /**
@@ -235,7 +234,6 @@ public abstract class BinaryAST {
                 case TryCatchStmt       -> new TryCatchStmtAST();
                 case TryFinallyStmt     -> new TryFinallyStmtAST();
                 case AssertStmt         -> new AssertStmtAST();
-                case NotImplYet         -> new NotImplAST();
                 default -> throw new UnsupportedOperationException("nodeType: " + this);
             };
         }
