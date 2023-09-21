@@ -103,7 +103,6 @@ public abstract class AST {
     case MultiExpr    ->    MultiAST.make(X);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
     case NewExpr      ->      NewAST.make(X);
-    case NotImplYet   ->     TODOAST.make(X);
     case RegAlloc     ->   DefRegAST.make(X,true ,true );
     case RelOpExpr    ->    BinOpAST.make(X,true );
     case Return0Stmt  ->   ReturnAST.make(X,0);
