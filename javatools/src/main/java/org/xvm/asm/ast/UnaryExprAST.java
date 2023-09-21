@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -12,14 +14,14 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An expressions that is based solely on the underlying expression, but may change its type.
  */
-public abstract class UnaryExprAST<C>
-        extends DelegatingExprAST<C>
+public abstract class UnaryExprAST
+        extends DelegatingExprAST
     {
-    private C type;
+    private TypeConstant type;
 
     UnaryExprAST() {}
 
-    public UnaryExprAST(ExprAST<C> expr, C type) {
+    public UnaryExprAST(ExprAST expr, TypeConstant type) {
         super(expr);
 
         assert type != null;
@@ -27,7 +29,7 @@ public abstract class UnaryExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return type;
     }
@@ -36,22 +38,22 @@ public abstract class UnaryExprAST<C>
     public abstract NodeType nodeType();
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 
-        type = res.getConstant(readMagnitude(in));
+        type = (TypeConstant) res.getConstant(readMagnitude(in));
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
-        type = res.register(type);
+        type = (TypeConstant) res.register(type);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         super.writeBody(out, res);
 

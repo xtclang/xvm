@@ -16,16 +16,16 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "try..catch" or "using" (with optional catches) statement.
  */
-public class TryCatchStmtAST<C>
-        extends BinaryAST<C> {
+public class TryCatchStmtAST
+        extends BinaryAST {
 
-    private ExprAST<C>[]   resources;
-    private BinaryAST<C>   body;
-    private BinaryAST<C>[] catches;
+    private ExprAST[]   resources;
+    private BinaryAST   body;
+    private BinaryAST[] catches;
 
     TryCatchStmtAST() {}
 
-    public TryCatchStmtAST(ExprAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches) {
+    public TryCatchStmtAST(ExprAST[] resources, BinaryAST body, BinaryAST[] catches) {
         assert resources == null || Arrays.stream(resources).allMatch(Objects::nonNull);
         assert body != null;
         assert catches == null || Arrays.stream(catches).allMatch(Objects::nonNull);
@@ -35,15 +35,15 @@ public class TryCatchStmtAST<C>
         this.catches   = catches == null   ? NO_ASTS : catches;
     }
 
-    public BinaryAST<C>[] getResources() {
+    public BinaryAST[] getResources() {
         return resources;
     }
 
-    public BinaryAST<C> getBody() {
+    public BinaryAST getBody() {
         return body;
     }
 
-    public BinaryAST<C>[] getCatches() {
+    public BinaryAST[] getCatches() {
         return catches;
     }
 
@@ -53,7 +53,7 @@ public class TryCatchStmtAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         resources = readExprArray(in, res);
         body      = readAST(in, res);
@@ -61,14 +61,14 @@ public class TryCatchStmtAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         prepareASTArray(resources, res);
         body.prepareWrite(res);
         prepareASTArray(catches, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeExprArray(resources, out, res);
         body.write(out, res);
@@ -76,29 +76,32 @@ public class TryCatchStmtAST<C>
     }
 
     @Override
-    public String dump() {
-        return "try\n" + indentLines(body.dump(), "  ") +
-               "\ncatch\n"  + indentLines(body.dump(), "  ");
-    }
-
-    @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("try");
+        StringBuilder buf = new StringBuilder();
+        buf.append("try");
+
         if (resources.length > 0) {
-            sb.append(" (");
-            for (BinaryAST<C> resource : resources) {
-                sb.append(resource)
-                  .append(", ");
-            sb.append(')');
+            buf.append(" (");
+            for (int i = 0, c = resources.length; i < c; ++i) {
+                if (i > 0) {
+                    buf.append(", ");
+                }
+                buf.append(resources[i]);
             }
+            buf.append(')');
         }
+
+        buf.append(" {\n")
+           .append(indentLines(body.toString(), "  "))
+           .append("\n}");
+
         if (catches.length > 0) {
             for (BinaryAST catch_ : catches) {
-                sb.append("\n")
-                  .append(indentLines(catch_.toString(), "  "));
+                buf.append(" catch (???) {\n")
+                   .append(indentLines(catch_.toString(), "  "))
+                   .append("\n}");
             }
         }
-        return sb.toString();
+        return buf.toString();
     }
 }

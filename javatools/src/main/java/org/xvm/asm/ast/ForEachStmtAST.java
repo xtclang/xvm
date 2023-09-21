@@ -11,14 +11,14 @@ import org.xvm.util.Handy;
 /**
  * A "for(lval : expr){...}" statement.
  */
-public class ForEachStmtAST<C>
-        extends BinaryAST<C> {
+public class ForEachStmtAST
+        extends BinaryAST {
 
     private final NodeType nodeType;
-    private ExprAST<C>[]   specialRegs; // RegAllocAST<C>[]
-    private ExprAST<C>     lval;
-    private ExprAST<C>     rval;
-    private BinaryAST<C>   body;
+    private ExprAST[]   specialRegs; // RegAllocAST[]
+    private ExprAST     lval;
+    private ExprAST     rval;
+    private BinaryAST   body;
 
     ForEachStmtAST(NodeType nodeType) {
         assert nodeTypeOk(nodeType);
@@ -26,10 +26,10 @@ public class ForEachStmtAST<C>
     }
 
     public ForEachStmtAST(NodeType         nodeType,
-                          RegAllocAST<C>[] specialRegs,
-                          ExprAST<C>       lval,
-                          ExprAST<C>       rval,
-                          BinaryAST<C>     body) {
+                          RegAllocAST[] specialRegs,
+                          ExprAST       lval,
+                          ExprAST       rval,
+                          BinaryAST     body) {
         assert nodeTypeOk(nodeType) && lval != null && rval != null;
 
         this.nodeType    = nodeType;
@@ -55,20 +55,20 @@ public class ForEachStmtAST<C>
         return nodeType;
     }
 
-    public ExprAST<C> getLValue() {
+    public ExprAST getLValue() {
         return lval;
     }
 
-    public ExprAST<C> getRValue() {
+    public ExprAST getRValue() {
         return rval;
     }
 
-    public BinaryAST<C> getBody() {
+    public BinaryAST getBody() {
         return body;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         res.enter();
         specialRegs = readExprArray(in, res);
@@ -81,7 +81,7 @@ public class ForEachStmtAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         res.enter();
         prepareASTArray(specialRegs, res);
         prepareAST(lval, res);
@@ -93,7 +93,7 @@ public class ForEachStmtAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeExprArray(specialRegs, out, res);
         writeExprAST(lval, out, res);
@@ -102,23 +102,19 @@ public class ForEachStmtAST<C>
     }
 
     @Override
-    public String dump() {
+    public String toString() {
         StringBuilder buf = new StringBuilder("for (");
-        buf.append(lval.dump());
+        buf.append(lval);
         buf.append(": ");
-        buf.append(rval.dump());
+        buf.append(rval);
         buf.append(") ");
         if (body == null) {
             buf.append("{}");
         } else {
-            buf.append('\n')
-               .append(Handy.indentLines(body.dump(), "  "));
+            buf.append("{\n")
+               .append(Handy.indentLines(body.toString(), "  "))
+               .append("\n}");
         }
         return buf.toString();
-    }
-
-    @Override
-    public String toString() {
-        return "for ( : ) {}";
     }
 }

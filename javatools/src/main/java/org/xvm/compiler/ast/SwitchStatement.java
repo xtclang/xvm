@@ -325,8 +325,8 @@ public class SwitchStatement
                     }
                 }
 
-            ctx.getHolder().setAst(this, new SwitchAST<>(mgr.getConditionBAST(), mgr.getConditionIsA(),
-                    aconstCase, abastBody, null));
+            ctx.getHolder().setAst(this, new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(),
+                    aconstCase, abastBody));
 
             // switch never completes normally
             return false;
@@ -363,8 +363,8 @@ public class SwitchStatement
             code.add(m_labelContinue);
             }
 
-        ctx.getHolder().setAst(this, new SwitchAST<>(mgr.getConditionBAST(), mgr.getConditionIsA(),
-                aconstCase, abastBody, null));
+        ctx.getHolder().setAst(this, new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(),
+                aconstCase, abastBody));
 
         return mgr.isCompletable();
         }
@@ -405,7 +405,7 @@ public class SwitchStatement
             code.add(new Enter());
             }
 
-        List<BinaryAST<Constant>> listAst = new ArrayList<>();
+        List<BinaryAST> listAst = new ArrayList<>();
         for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt)
             {
             Statement stmt = listStmts.get(iStmt);
@@ -434,7 +434,7 @@ public class SwitchStatement
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             if (!(stmt instanceof ComponentStatement))
                 {
-                BinaryAST<Constant> ast = ctx.getHolder().getAst(stmt);
+                BinaryAST ast = ctx.getHolder().getAst(stmt);
                 if (ast != null)
                     {
                     listAst.add(ast);

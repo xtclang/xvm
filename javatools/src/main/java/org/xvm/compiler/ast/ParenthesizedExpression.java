@@ -58,7 +58,7 @@ public class ParenthesizedExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         return expr.getExprAST();
         }

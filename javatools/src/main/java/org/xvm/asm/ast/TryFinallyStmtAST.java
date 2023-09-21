@@ -15,16 +15,16 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A "try..finally" statement (with optional catches).
  */
-public class TryFinallyStmtAST<C>
-        extends TryCatchStmtAST<C> {
+public class TryFinallyStmtAST
+        extends TryCatchStmtAST {
 
-    private RegAllocAST<C> exception; // optional
-    private BinaryAST<C>   catchAll;
+    private RegAllocAST exception; // optional
+    private BinaryAST   catchAll;
 
     TryFinallyStmtAST() {}
 
-    public TryFinallyStmtAST(ExprAST<C>[] resources, BinaryAST<C> body, BinaryAST<C>[] catches,
-                             RegAllocAST<C> exception, BinaryAST<C> catchAll) {
+    public TryFinallyStmtAST(ExprAST[] resources, BinaryAST body, BinaryAST[] catches,
+                             RegAllocAST exception, BinaryAST catchAll) {
         super(resources, body, catches);
 
         assert catchAll != null;
@@ -33,11 +33,11 @@ public class TryFinallyStmtAST<C>
         this.catchAll  = catchAll;
     }
 
-    public RegAllocAST<C> getException() {
+    public RegAllocAST getException() {
         return exception;
         }
 
-    public BinaryAST<C> getCatchAll() {
+    public BinaryAST getCatchAll() {
         return catchAll;
     }
 
@@ -47,18 +47,18 @@ public class TryFinallyStmtAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 
         if (readPackedInt(in) != 0) {
-            exception = readExprAST(in, res);
+            exception = (RegAllocAST) readExprAST(in, res);
         }
         catchAll = readAST(in, res);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
         res.enter();
@@ -70,7 +70,7 @@ public class TryFinallyStmtAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         super.writeBody(out, res);
 
@@ -86,13 +86,10 @@ public class TryFinallyStmtAST<C>
     }
 
     @Override
-    public String dump() {
-        return super.dump() +
-               "\nfinally\n"  + indentLines(catchAll.dump(), "  ");
-    }
-
-    @Override
     public String toString() {
-        return super.toString() + "\nfinally\n" + indentLines(catchAll.toString(), "  ");
+        return super.toString()
+            + " finally {\n"
+            + indentLines(catchAll.toString(), "  ")
+            + "\n}";
     }
 }

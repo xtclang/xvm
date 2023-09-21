@@ -5,6 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
+
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.Op.CONSTANT_OFFSET;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.ConstantExpr;
@@ -16,25 +21,20 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An expression that yields a constant value.
  */
-public class ConstantExprAST<C>
-        extends ExprAST<C> {
+public class ConstantExprAST
+        extends ExprAST {
 
-    private           C value;
-    private transient C type;
+    private Constant value;
 
     ConstantExprAST() {}
 
-    public ConstantExprAST(C value) {
+    public ConstantExprAST(Constant value) {
         assert value != null;
 
         this.value = value;
     }
 
-    public C getType() {
-        return type;
-    }
-
-    public C getValue() {
+    public Constant getValue() {
         return value;
     }
 
@@ -44,37 +44,35 @@ public class ConstantExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
-        return type;
+        return value.getType();
     }
 
     @Override
     public boolean isAssignable() {
-        // this is a bit of a hack, but for now we don't have a better way
-        return value.getClass().getSimpleName().equals("MatchAnyConstant");
+        return value.getFormat() == Format.Any;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         value = res.getConstant(readMagnitude(in));
-        type  = res.typeOf(value);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         value = res.register(value);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writePackedLong(out, res.indexOf(value));
     }
 
     @Override
-    protected void writeExpr(DataOutput out, ConstantResolver<C> res)
+    protected void writeExpr(DataOutput out, ConstantResolver res)
             throws IOException {
         // instead of writing out the node type followed by the constant, we encode the constant
         // explicitly in a special range that indicates that the expression is a constant expr
@@ -83,6 +81,6 @@ public class ConstantExprAST<C>
 
     @Override
     public String toString() {
-        return value.toString();
+        return value.getValueString();
     }
 }

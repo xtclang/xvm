@@ -15,8 +15,8 @@ import static org.xvm.util.Handy.writePackedLong;
  * A "continue" statement that either "falls through" in a switch/case block, or advances to the
  * start of the next iteration in a loop.
  */
-public class ContinueStmtAST<C>
-        extends BinaryAST<C> {
+public class ContinueStmtAST
+        extends BinaryAST {
 
     private int depth;
 
@@ -44,22 +44,24 @@ public class ContinueStmtAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         depth = readMagnitude(in);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {}
+    public void prepareWrite(ConstantResolver res) {}
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writePackedLong(out, depth);
     }
 
     @Override
     public String toString() {
-        return "continue" + (depth == 0 ? "" : " ^" + depth);
+        return depth <= 0
+            ? "continue;"
+            : "continue ^" + depth + ";";
     }
 }

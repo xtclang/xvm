@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.CallAsyncExpr;
 import static org.xvm.asm.ast.BinaryAST.NodeType.CallExpr;
 
@@ -12,11 +14,11 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.CallExpr;
 /**
  * Call expression for "not constant" function call.
  */
-public class CallExprAST<C>
-        extends CallableExprAST<C> {
+public class CallExprAST
+        extends CallableExprAST {
 
     private final NodeType nodeType;
-    private ExprAST<C>     function;
+    private ExprAST     function;
 
     CallExprAST(NodeType nodeType) {
         this.nodeType = nodeType;
@@ -25,7 +27,7 @@ public class CallExprAST<C>
     /**
      * Construct an InvokeExprAST.
      */
-    public CallExprAST(ExprAST<C> function, C[] retTypes, ExprAST<C>[] args, boolean async) {
+    public CallExprAST(ExprAST function, TypeConstant[] retTypes, ExprAST[] args, boolean async) {
         super(retTypes, args);
 
         assert function != null;
@@ -34,7 +36,7 @@ public class CallExprAST<C>
         this.function = function;
     }
 
-    public ExprAST<C> getFunction() {
+    public ExprAST getFunction() {
         return function;
     }
 
@@ -48,7 +50,7 @@ public class CallExprAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 
@@ -56,14 +58,14 @@ public class CallExprAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
         function.prepareWrite(res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         super.writeBody(out, res);
 
@@ -71,12 +73,7 @@ public class CallExprAST<C>
     }
 
     @Override
-    public String dump() {
-        return function.dump() + (isAsync() ? "^\n(" : "\n(") + super.dump() + ")\n";
-    }
-
-    @Override
     public String toString() {
-        return function.toString() + (isAsync() ? "^(" : "(") + super.toString() + ')';
+        return function.toString() + (isAsync() ? "^" : "") + super.toString();
     }
 }

@@ -13,32 +13,32 @@ import static org.xvm.util.Handy.writePackedLong;
  * An "assert" statement.
  * REVIEW encode presence of interval and message as part of node type?
  */
-public class AssertStmtAST<C>
-        extends BinaryAST<C>
+public class AssertStmtAST
+        extends BinaryAST
     {
-    private ExprAST<C> cond;     // could be null
-    private ExprAST<C> interval; // could be null
-    private ExprAST<C> message;  // could be null
+    private ExprAST cond;     // could be null
+    private ExprAST interval; // could be null
+    private ExprAST message;  // could be null
 
     AssertStmtAST() {}
 
-    public AssertStmtAST(ExprAST<C> cond, ExprAST<C> interval, ExprAST<C> message) {
+    public AssertStmtAST(ExprAST cond, ExprAST interval, ExprAST message) {
         this.cond     = cond;
         this.interval = interval;
         this.message  = message;
     }
 
-    public ExprAST<C> getCond()
+    public ExprAST getCond()
         {
         return cond;
         }
 
-    public ExprAST<C> getInterval()
+    public ExprAST getInterval()
         {
         return interval;
         }
 
-    public ExprAST<C> getMessage()
+    public ExprAST getMessage()
         {
         return message;
         }
@@ -49,7 +49,7 @@ public class AssertStmtAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         int flags = readMagnitude(in);
 
@@ -65,14 +65,14 @@ public class AssertStmtAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         prepareAST(cond, res);
         prepareAST(interval, res);
         prepareAST(message, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         int flags = (cond     == null ? 0 : 1)
                   | (interval == null ? 0 : 2)
@@ -92,18 +92,17 @@ public class AssertStmtAST<C>
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder("assert ");
+        StringBuilder buf = new StringBuilder();
+        buf.append("assert");
         if (cond != null) {
-            buf.append(cond.dump());
-        }
-        if (interval != null) {
-            buf.append("\n:rnd(")
-               .append(interval.dump())
-               .append(')');
+            buf.append(' ')
+               .append(cond);
         }
         if (message != null) {
-            buf.append("\nas ").append(message.dump());
+            buf.append(" as ")
+               .append(message);
         }
+        buf.append(';');
         return buf.toString();
     }
 }

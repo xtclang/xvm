@@ -348,7 +348,7 @@ public class AssertStatement
             code.add(new JumpNCond(pool.ensureNamedCondition(sCond), getEndLabel()));
             }
 
-        ExprAST<Constant> astInterval = null;
+        ExprAST astInterval = null;
         if (isNotAlways())
             {
             // TODO GG: create an IfStmtAST based on a ":once" or ":rnd" assert qualifier
@@ -381,7 +381,7 @@ public class AssertStatement
         int cConds = getConditionCount();
         if (cConds == 0)
             {
-            ExprAST<Constant> astMessage = null;
+            ExprAST astMessage = null;
             if (message == null || fDebug)
                 {
                 code.add(new Assert(pool.valFalse(), constNew));
@@ -399,13 +399,13 @@ public class AssertStatement
                 astMessage = message.getExprAST();
                 }
 
-            holder.setAst(this, new AssertStmtAST<>(null, astInterval, astMessage));
+            holder.setAst(this, new AssertStmtAST(null, astInterval, astMessage));
             return !alwaysEvaluated();
             }
 
-        boolean             fCompletes   = fReachable;
-        Label               labelMessage = new Label("CustomMessage");
-        ExprAST<Constant>[] aAstCond     = new ExprAST[cConds];
+        boolean   fCompletes   = fReachable;
+        Label     labelMessage = new Label("CustomMessage");
+        ExprAST[] aAstCond     = new ExprAST[cConds];
         for (int i = 0; i < cConds; ++i)
             {
             AstNode cond = getCondition(i);
@@ -476,7 +476,7 @@ public class AssertStatement
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 argCond = stmtCond.getConditionRegister();
 
-                aAstCond[i] = (ExprAST<Constant>) ctx.getHolder().getAst(stmtCond);
+                aAstCond[i] = (ExprAST) ctx.getHolder().getAst(stmtCond);
                 }
             else
                 {
@@ -490,14 +490,14 @@ public class AssertStatement
                             : new Jump(labelMessage));
                     fCompletes = false;
 
-                    aAstCond[i] = new ConstantExprAST<>(pool.valFalse());
+                    aAstCond[i] = new ConstantExprAST(pool.valFalse());
                     continue;
                     }
 
                 // "assert True" is a no-op
                 if (exprCond.isConstantTrue())
                     {
-                    aAstCond[i] = new ConstantExprAST<>(pool.valTrue());
+                    aAstCond[i] = new ConstantExprAST(pool.valTrue());
                     continue;
                     }
 
@@ -548,7 +548,7 @@ public class AssertStatement
                 }
             }
 
-        ExprAST<Constant> astMessage = null;
+        ExprAST astMessage = null;
         if (message != null && !fDebug)
             {
             // throw new {sThrow}(message, null)
@@ -561,7 +561,7 @@ public class AssertStatement
             astMessage = message.getExprAST();
             }
 
-        holder.setAst(this, new AssertStmtAST<>(BinaryAST.makeCondition(aAstCond), astInterval, astMessage));
+        holder.setAst(this, new AssertStmtAST(BinaryAST.makeCondition(aAstCond), astInterval, astMessage));
         return fCompletes;
         }
 

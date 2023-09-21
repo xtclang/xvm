@@ -313,10 +313,10 @@ public class IfStatement
                 }
             }
 
-        List<ExprAST<Constant>> listExprs    = new ArrayList<>();
-        boolean                 fFirst       = true;
-        boolean                 fReachesThen = fReachable;
-        boolean                 fReachesElse = fReachable;
+        List<ExprAST> listExprs    = new ArrayList<>();
+        boolean       fFirst       = true;
+        boolean       fReachesThen = fReachable;
+        boolean       fReachesElse = fReachable;
         for (AstNode cond : conds)
             {
             boolean fCompletes;
@@ -331,7 +331,7 @@ public class IfStatement
                     {
                     code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
                     }
-                listExprs.add((AssignAST<Constant>) ctx.getHolder().getAst(stmtCond));
+                listExprs.add((AssignAST) ctx.getHolder().getAst(stmtCond));
                 }
             else
                 {
@@ -368,12 +368,12 @@ public class IfStatement
             fFirst = false;
             }
 
-        ExprAST<Constant> bastCond = listExprs.size() == 1
+        ExprAST bastCond = listExprs.size() == 1
                 ? listExprs.get(0)
                 : new MultiExprAST(listExprs.toArray(new ExprAST[0]));
 
-        BinaryAST<Constant> bastThen       = null;
-        boolean             fCompletesThen = fReachesThen;
+        BinaryAST bastThen       = null;
+        boolean   fCompletesThen = fReachesThen;
         if (fReachesThen)
             {
             fCompletesThen = stmtThen.completes(ctx, fReachesThen, code, errs);
@@ -384,8 +384,8 @@ public class IfStatement
                 }
             }
 
-        BinaryAST<Constant> bastElse       = null;
-        boolean             fCompletesElse = fReachesElse;
+        BinaryAST bastElse       = null;
+        boolean   fCompletesElse = fReachesElse;
         code.add(labelElse);
         if (fReachesElse && stmtElse != null)
             {
@@ -399,7 +399,7 @@ public class IfStatement
             code.add(new Exit());
             }
 
-        ctx.getHolder().setAst(this, new IfStmtAST<>(bastCond, bastThen, bastElse));
+        ctx.getHolder().setAst(this, new IfStmtAST(bastCond, bastThen, bastElse));
 
         return fCompletesThen | fCompletesElse;
         }

@@ -66,7 +66,7 @@ public class ContinueStatement
         {
         code.add(new Jump(getJumpLabel()));
 
-        ctx.getHolder().setAst(this, new ContinueStmtAST<>(getTargetDepth()));
+        ctx.getHolder().setAst(this, new ContinueStmtAST(getTargetDepth()));
         return false;
         }
     }

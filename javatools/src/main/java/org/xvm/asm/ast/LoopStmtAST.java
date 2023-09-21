@@ -12,15 +12,15 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "while(True){...}" statement.
  */
-public class LoopStmtAST<C>
-        extends BinaryAST<C> {
+public class LoopStmtAST
+        extends BinaryAST {
 
-    private ExprAST<C>[] specialRegs; // RegAllocAST<C>[]
-    private BinaryAST<C> body;
+    private ExprAST[] specialRegs; // RegAllocAST[]
+    private BinaryAST body;
 
     LoopStmtAST() {}
 
-    public LoopStmtAST(RegAllocAST<C>[] specialRegs, BinaryAST<C> body) {
+    public LoopStmtAST(RegAllocAST[] specialRegs, BinaryAST body) {
         assert body != null;
 
         this.specialRegs = specialRegs == null  ? NO_ALLOCS : specialRegs;
@@ -32,12 +32,12 @@ public class LoopStmtAST<C>
         return LoopStmt;
     }
 
-    public BinaryAST<C> getBody() {
+    public BinaryAST getBody() {
         return body;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         res.enter();
         specialRegs = readExprArray(in, res);
@@ -46,7 +46,7 @@ public class LoopStmtAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         res.enter();
         prepareASTArray(specialRegs, res);
         prepareAST(body, res);
@@ -54,19 +54,16 @@ public class LoopStmtAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeExprArray(specialRegs, out, res);
         writeAST(body, out, res);
     }
 
     @Override
-    public String dump() {
-        return this + "\n" + indentLines(body.dump(), "  ");
-    }
-
-    @Override
     public String toString() {
-        return "while(True){}";
+        return "while (True) {"
+            + '\n' + indentLines(body.toString(), "  ")
+            + "\n}";
     }
 }

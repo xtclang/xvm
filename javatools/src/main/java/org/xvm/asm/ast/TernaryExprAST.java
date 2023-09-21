@@ -5,35 +5,37 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 
 /**
  * A base class for expressions that follow the pattern "expression operator expression".
  */
-public class TernaryExprAST<C>
-        extends ExprAST<C> {
+public class TernaryExprAST
+        extends ExprAST {
 
-    private ExprAST<C> cond;
-    private ExprAST<C> exprThen;
-    private ExprAST<C> exprElse;
+    private ExprAST cond;
+    private ExprAST exprThen;
+    private ExprAST exprElse;
 
     TernaryExprAST() {}
 
-    public TernaryExprAST(ExprAST<C> cond, ExprAST<C> exprThen, ExprAST<C> exprElse) {
+    public TernaryExprAST(ExprAST cond, ExprAST exprThen, ExprAST exprElse) {
         assert cond != null && exprThen != null && exprElse != null;
         this.cond     = cond;
         this.exprThen = exprThen;
         this.exprElse = exprElse;
     }
 
-    public ExprAST<C> getCond() {
+    public ExprAST getCond() {
         return cond;
     }
 
-    public ExprAST<C> getThen() {
+    public ExprAST getThen() {
         return exprThen;
     }
 
-    public ExprAST<C> getElse() {
+    public ExprAST getElse() {
         return exprElse;
     }
 
@@ -52,7 +54,7 @@ public class TernaryExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         return i < exprThen.getCount() ? exprThen.getType(i) : exprElse.getType(i);
     }
 
@@ -62,7 +64,7 @@ public class TernaryExprAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         cond     = readExprAST(in, res);
         exprThen = readExprAST(in, res);
@@ -70,23 +72,18 @@ public class TernaryExprAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         cond    .prepareWrite(res);
         exprThen.prepareWrite(res);
         exprElse.prepareWrite(res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         cond    .writeExpr(out, res);
         exprThen.writeExpr(out, res);
         exprElse.writeExpr(out, res);
-    }
-
-    @Override
-    public String dump() {
-        return cond.dump() + " ? " + exprThen.dump() + " : " + exprElse.dump();
     }
 
     @Override

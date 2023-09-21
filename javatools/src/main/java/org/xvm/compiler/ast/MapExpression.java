@@ -444,10 +444,10 @@ public class MapExpression
      */
     private Argument[] collectArguments(Context ctx, Code code, boolean fKeys, ErrorListener errs)
         {
-        List<Expression>    list  = fKeys ? keys : values;
-        int                 cArgs = list.size();
-        Argument[]          aArg  = new Argument[cArgs];
-        ExprAST<Constant>[] aAST  = new ExprAST[cArgs];
+        List<Expression> list  = fKeys ? keys : values;
+        int              cArgs = list.size();
+        Argument[]       aArg  = new Argument[cArgs];
+        ExprAST[]        aAST  = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i)
             {
@@ -471,14 +471,14 @@ public class MapExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         if (m_aKeyAST == null)
             {
             assert isConstant();
-            return new ConstantExprAST<>(toConstant());
+            return new ConstantExprAST(toConstant());
             }
-        return new MapExprAST<>(getType(), m_aKeyAST, m_aValueAST);
+        return new MapExprAST(getType(), m_aKeyAST, m_aValueAST);
         }
 
 
@@ -523,8 +523,8 @@ public class MapExpression
     protected List<Expression> values;
     protected long             lEndPos;
 
-    private transient ExprAST<Constant>[] m_aKeyAST;
-    private transient ExprAST<Constant>[] m_aValueAST;
+    private transient ExprAST[] m_aKeyAST;
+    private transient ExprAST[] m_aValueAST;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MapExpression.class, "type", "keys", "values");
     }

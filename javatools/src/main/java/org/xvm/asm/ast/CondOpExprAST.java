@@ -4,19 +4,21 @@ package org.xvm.asm.ast;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 
 /**
  * An expressions that follow the pattern "expression operator expression" and produces a "Boolean"
  * or "Ordered" result.
  */
-public class CondOpExprAST<C>
-        extends BiExprAST<C> {
+public class CondOpExprAST
+        extends BiExprAST {
 
-    private transient C type;
+    private transient TypeConstant type;
 
     CondOpExprAST() {}
 
-    public CondOpExprAST(ExprAST<C> expr1, Operator op, ExprAST<C> expr2) {
+    public CondOpExprAST(ExprAST expr1, Operator op, ExprAST expr2) {
         super(expr1, op, expr2);
 
         assert switch (op) {
@@ -33,13 +35,13 @@ public class CondOpExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return type;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 

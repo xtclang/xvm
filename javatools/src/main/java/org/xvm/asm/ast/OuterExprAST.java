@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -12,14 +14,14 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An outer expression refers to a structural "parent" of the underlying expression.
  */
-public class OuterExprAST<C>
-        extends UnaryExprAST<C> {
+public class OuterExprAST
+        extends UnaryExprAST {
 
     private int depth;
 
     OuterExprAST() {}
 
-    public OuterExprAST(ExprAST<C> expr, int depth, C type) {
+    public OuterExprAST(ExprAST expr, int depth, TypeConstant type) {
         super(expr, type);
 
         assert depth > 0;
@@ -36,7 +38,7 @@ public class OuterExprAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 
@@ -44,7 +46,7 @@ public class OuterExprAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         super.writeBody(out, res);
 
@@ -52,12 +54,12 @@ public class OuterExprAST<C>
     }
 
     @Override
-    public String dump() {
-        return getExpr().dump() + (depth == 1 ? ".outer" : ".outer(" + depth + ")");
-    }
-
-    @Override
     public String toString() {
-        return getExpr() + (depth == 1 ? ".outer" : ".outer(" + depth + ")");
+        StringBuilder buf = new StringBuilder();
+        buf.append(getExpr());
+        for (int i = 0; i < depth; ++i) {
+            buf.append(".outer");
+        }
+        return buf.toString();
     }
 }

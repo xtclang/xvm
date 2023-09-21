@@ -710,7 +710,7 @@ public abstract class Op
      * together all the constants used by the ops.
      */
     public static class ConstantRegistry
-            implements BinaryAST.ConstantResolver<Constant>
+            implements BinaryAST.ConstantResolver
         {
         /**
          * Construct a ConstantRegistry.
@@ -727,11 +727,11 @@ public abstract class Op
             int cParams = f_method.getParamCount();
             if (cParams > 0)
                 {
-                RegisterAST<Constant>[] aReg = new RegisterAST[cParams];
+                RegisterAST[] aReg = new RegisterAST[cParams];
                 for (int i = 0; i < cParams; i++)
                     {
                     Parameter param = f_method.getParam(i);
-                    aReg[i] = new RegisterAST<>(param.getType(), param.getNameConstant());
+                    aReg[i] = new RegisterAST(param.getType(), param.getNameConstant());
                     }
                 init(aReg);
                 }
@@ -789,7 +789,7 @@ public abstract class Op
             }
 
         @Override
-        public Constant typeForName(String name)
+        public TypeConstant typeForName(String name)
             {
             return f_pool.getImplicitlyImportedIdentity(name).getType();
             }
@@ -816,13 +816,7 @@ public abstract class Op
             }
 
         @Override
-        public Constant typeOf(Constant value)
-            {
-            return value.getType();
-            }
-
-        @Override
-        public void init(RegisterAST<Constant>[] params)
+        public void init(RegisterAST[] params)
             {
             assert params != null && Arrays.stream(params).allMatch(Objects::nonNull);
             assert m_aregParams == BinaryAST.NO_REGS || m_aregParams.length == params.length;
@@ -830,7 +824,7 @@ public abstract class Op
 
             m_aregParams = params;
             m_listRegs.clear();
-            for (RegisterAST<Constant> reg : params)
+            for (RegisterAST reg : params)
                 {
                 register(reg);
                 }
@@ -843,7 +837,7 @@ public abstract class Op
             }
 
         @Override
-        public void register(RegisterAST<Constant> reg)
+        public void register(RegisterAST reg)
             {
             assert reg != null;
             int regId = reg.getRegId();
@@ -882,9 +876,9 @@ public abstract class Op
             }
 
         @Override
-        public RegisterAST<Constant> getRegister(int regId)
+        public RegisterAST getRegister(int regId)
             {
-            RegisterAST<Constant> reg = regId >= 0 ? m_listRegs.get(regId) : m_aregSpecial[-1-regId];
+            RegisterAST reg = regId >= 0 ? m_listRegs.get(regId) : m_aregSpecial[-1-regId];
             if (reg == null)
                 {
                 TypeConstant type = null;
@@ -997,7 +991,7 @@ public abstract class Op
                     }
                 else
                     {
-                    reg = new RegisterAST<>(regId, type, name == null ? null : f_pool.ensureStringConstant(name));
+                    reg = new RegisterAST(regId, type, name == null ? null : f_pool.ensureStringConstant(name));
                     m_aregSpecial[-1-regId] = reg;
                     }
                 }
@@ -1102,7 +1096,7 @@ public abstract class Op
          * The working set of registers. This is a point-in-time data structure used during reading
          * the AST and during simulation (i.e. when registers ids are being calculated).
          */
-        private final ArrayList<RegisterAST<Constant>> m_listRegs = new ArrayList<>();
+        private final ArrayList<RegisterAST> m_listRegs = new ArrayList<>();
 
         /**
          * A Stack of scopes entered but not exited. Each value in the stack is the number of
@@ -1113,12 +1107,12 @@ public abstract class Op
         /**
          * The parameter registers.
          */
-        private RegisterAST<Constant>[] m_aregParams = BinaryAST.NO_REGS;
+        private RegisterAST[] m_aregParams = BinaryAST.NO_REGS;
 
         /**
          * The "special" registers, such as "this".
          */
-        private final RegisterAST<Constant>[] m_aregSpecial = new RegisterAST[-Op.CONSTANT_OFFSET];
+        private final RegisterAST[] m_aregSpecial = new RegisterAST[-Op.CONSTANT_OFFSET];
         }
 
 

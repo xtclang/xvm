@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.BindFunctionExpr;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -17,13 +19,13 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Bind function's arguments.
  */
-public class BindFunctionAST<C>
-        extends ExprAST<C>
+public class BindFunctionAST
+        extends ExprAST
     {
-    private ExprAST<C>   target;
+    private ExprAST      target;
     private int[]        indexes;
-    private ExprAST<C>[] args;
-    private C            type;
+    private ExprAST[]    args;
+    private TypeConstant type;
 
     BindFunctionAST() {
     }
@@ -33,7 +35,7 @@ public class BindFunctionAST<C>
      *
      * @param type  the type of the resulting (bound) function
      */
-    public BindFunctionAST(ExprAST<C> target, int[] indexes, ExprAST<C>[] args, C type) {
+    public BindFunctionAST(ExprAST target, int[] indexes, ExprAST[] args, TypeConstant type) {
         assert target != null && indexes != null && type != null;
         assert args != null && args.length == indexes.length &&
                 Arrays.stream(args).allMatch(Objects::nonNull);
@@ -50,12 +52,12 @@ public class BindFunctionAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         assert i == 0;
         return type;
     }
 
-    public ExprAST<C> getTarget() {
+    public ExprAST getTarget() {
         return target;
     }
 
@@ -63,12 +65,12 @@ public class BindFunctionAST<C>
         return indexes;
     }
 
-    public ExprAST<C>[] getArgs() {
+    public ExprAST[] getArgs() {
         return args;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         target = readExprAST(in, res);
 
@@ -84,18 +86,18 @@ public class BindFunctionAST<C>
                 args[i]    = readExprAST(in, res);
             }
         }
-        type = res.getConstant(readMagnitude(in));
+        type = (TypeConstant) res.getConstant(readMagnitude(in));
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         target.prepareWrite(res);
         prepareASTArray(args, res);
-        type = res.register(type);
+        type = (TypeConstant) res.register(type);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         target.writeExpr(out, res);
 
@@ -106,29 +108,6 @@ public class BindFunctionAST<C>
             args[i].writeExpr(out, res);
         }
         writePackedLong(out, res.indexOf(type));
-    }
-
-    @Override
-    public String dump() {
-        StringBuilder buf = new StringBuilder("&");
-        buf.append(target.dump())
-           .append("(");
-        if (indexes.length > 0) {
-            buf.append("\n");
-            for (int i = 0, argIx = 0, max = Arrays.stream(indexes).max().getAsInt(); argIx < max; i++) {
-                if (argIx != 0) {
-                    buf.append(",\n");
-                }
-                if (i == indexes[argIx]) {
-                    buf.append(args[i].dump());
-                    argIx++;
-                } else {
-                    buf.append("_");
-                }
-            }
-        }
-        buf.append(")");
-        return buf.toString();
     }
 
     @Override

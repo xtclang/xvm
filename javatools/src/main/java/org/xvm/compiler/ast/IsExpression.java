@@ -311,10 +311,10 @@ public class IsExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         TypeConstant[] atypeRet = getTypes();
-        return new IsExprAST<>(expr1.getExprAST(), expr2.getExprAST(),
+        return new IsExprAST(expr1.getExprAST(), expr2.getExprAST(),
                 atypeRet.length == 1 ? null : atypeRet[1]);
         }
 

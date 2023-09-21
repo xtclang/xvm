@@ -892,10 +892,10 @@ public class NewExpression
 
         if (LVal.isLocalArgument())
             {
-            List<Expression>    listArgs = args;
-            int                 cArgs    = listArgs.size();
-            Argument[]          aArgs    = new Argument[cArgs];
-            ExprAST<Constant>[] aAstArgs = new ExprAST[cArgs];
+            List<Expression> listArgs = args;
+            int              cArgs    = listArgs.size();
+            Argument[]       aArgs    = new Argument[cArgs];
+            ExprAST[]        aAstArgs = new ExprAST[cArgs];
             for (int i = 0; i < cArgs; ++i)
                 {
                 Expression expr = listArgs.get(i);
@@ -920,7 +920,7 @@ public class NewExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         return m_astNew == null
                 ? super.getExprAST()
@@ -954,7 +954,7 @@ public class NewExpression
      * Generate the NEW_* op-code
      */
     private void generateNew(Context ctx, Code code, Argument[] aArgs, Argument argResult,
-                             ExprAST<Constant>[] aAstArgs, ErrorListener errs)
+                             ExprAST[] aAstArgs, ErrorListener errs)
         {
         assert m_constructor.getTypeParamCount() == 0;
 
@@ -996,8 +996,8 @@ public class NewExpression
                     }
                 }
 
-            Argument          argOuter = null;
-            ExprAST<Constant> astOuter = null;
+            Argument argOuter = null;
+            ExprAST  astOuter = null;
             if (m_plan == Plan.Child)
                 {
                 if (left == null)
@@ -1014,7 +1014,7 @@ public class NewExpression
 
                         argOuter = new Register(typeParent, null, Op.A_STACK);
                         code.add(new MoveThis(cSteps, argOuter));
-                        astOuter = new OuterExprAST<>(ctx.getThisRegisterAST(), cSteps, typeParent);
+                        astOuter = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeParent);
                         }
                     }
                 else
@@ -1060,7 +1060,7 @@ public class NewExpression
                         code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
                         break;
                     }
-                m_astNew = new NewExprAST<>(typeTarget, idConstruct, aAstArgs, true);
+                m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs, true);
                 }
             else if (isTypeRequired(typeTarget))
                 {
@@ -1091,7 +1091,7 @@ public class NewExpression
                             code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
                             break;
                         }
-                    m_astNew = new NewExprAST<>(typeTarget, idConstruct, aAstArgs, false);
+                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs, false);
                     }
                 else
                     {
@@ -1109,7 +1109,7 @@ public class NewExpression
                             code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
                             break;
                         }
-                    m_astNew = new NewExprAST<>(astOuter, typeTarget, idConstruct, aAstArgs);
+                    m_astNew = new NewExprAST(astOuter, typeTarget, idConstruct, aAstArgs);
                     }
                 }
             else
@@ -1130,7 +1130,7 @@ public class NewExpression
                             code.add(new New_N(idConstruct, aArgs, argResult));
                             break;
                         }
-                    m_astNew = new NewExprAST<>(typeTarget, idConstruct, aAstArgs, false);
+                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs, false);
                     }
                 else
                     {
@@ -1148,7 +1148,7 @@ public class NewExpression
                             code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
                             break;
                         }
-                    m_astNew = new NewExprAST<>(astOuter, typeTarget, idConstruct, aAstArgs);
+                    m_astNew = new NewExprAST(astOuter, typeTarget, idConstruct, aAstArgs);
                     }
                 }
             }
@@ -1853,7 +1853,7 @@ public class NewExpression
     /**
      * Cached NewExprAST node.
      */
-    private transient ExprAST<Constant> m_astNew;
+    private transient ExprAST m_astNew;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
     }

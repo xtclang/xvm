@@ -122,19 +122,19 @@ public abstract class BiExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
-        ExprAST<Constant> ast1 = expr1.getExprAST();
-        ExprAST<Constant> ast2 = expr2.getExprAST();
+        ExprAST ast1 = expr1.getExprAST();
+        ExprAST ast2 = expr2.getExprAST();
 
         Operator op;
         switch (operator.getId())
             {
             case DIVREM:
-                return new DivRemExprAST<>(getTypes(), ast1, ast2);
+                return new DivRemExprAST(getTypes(), ast1, ast2);
 
             case COND_XOR:
-                return new CondOpExprAST<>(ast1, Operator.CondXor, ast2);
+                return new CondOpExprAST(ast1, Operator.CondXor, ast2);
 
             case COLON:
                 op = Operator.Else;
@@ -199,7 +199,7 @@ public abstract class BiExpression
             {
             typeResult = pool().typeObject();
             }
-        return new RelOpExprAST<>(ast1, op, ast2, typeResult);
+        return new RelOpExprAST(ast1, op, ast2, typeResult);
         }
 
 

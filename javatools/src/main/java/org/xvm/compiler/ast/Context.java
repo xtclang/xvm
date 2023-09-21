@@ -211,7 +211,7 @@ public class Context
     /**
      * @return the Register for "this"
      */
-    public ExprAST<Constant> getThisRegisterAST()
+    public ExprAST getThisRegisterAST()
         {
         return getThisRegister().getRegisterAST();
         }
@@ -1870,7 +1870,7 @@ public class Context
     /**
      * @return an array of RegisterAst<Constant> for the method parameters
      */
-    public RegisterAST<Constant>[] collectParameters()
+    public RegisterAST[] collectParameters()
         {
         // create registers for the method parameters
         MethodStructure method  = getMethod();
@@ -1880,15 +1880,15 @@ public class Context
             return BinaryAST.NO_REGS;
             }
 
-        RegisterAST<Constant>[] aReg = new RegisterAST[cParams];
+        RegisterAST[] aReg = new RegisterAST[cParams];
         for (int i = 0; i < cParams; i++)
             {
             Parameter param = method.getParam(i);
 
             Register reg = (Register) getVar(param.getName());
             aReg[i] = reg == null
-                    ? new RegisterAST<>(param.getType(), param.getNameConstant())
-                    : (RegisterAST<Constant>) reg.getOriginalRegister().getRegisterAST();
+                    ? new RegisterAST(param.getType(), param.getNameConstant())
+                    : (RegisterAST) reg.getOriginalRegister().getRegisterAST();
             }
         return aReg;
         }

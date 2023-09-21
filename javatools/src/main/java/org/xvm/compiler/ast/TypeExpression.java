@@ -263,10 +263,10 @@ public abstract class TypeExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         TypeConstant type = getType();
-        return new ConstantExprAST<>(type);
+        return new ConstantExprAST(type);
         }
 
     /**

@@ -4,17 +4,20 @@ package org.xvm.asm.ast;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.constants.TypeConstant;
+
+
 /**
  * Unpack the underlying tuple into a multi-return.
  */
-public class UnpackExprAST<C>
-        extends DelegatingExprAST<C> {
+public class UnpackExprAST
+        extends DelegatingExprAST {
 
-    private Object[] types;
+    private TypeConstant[] types;
 
     UnpackExprAST() {}
 
-    public UnpackExprAST(ExprAST<C> expr, C[] types) {
+    public UnpackExprAST(ExprAST expr, TypeConstant[] types) {
         super(expr);
 
         assert types != null && Arrays.stream(types).allMatch(Objects::nonNull);
@@ -32,17 +35,12 @@ public class UnpackExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        return (C) types[i];
-    }
-
-    @Override
-    public String dump() {
-        return "Unpack(" + getExpr().dump() + ')';
+    public TypeConstant getType(int i) {
+        return types[i];
     }
 
     @Override
     public String toString() {
-        return "Unpack(" + getExpr() + ')';
+        return "/*unpack*/ " + getExpr();
     }
 }

@@ -15,8 +15,8 @@ import static org.xvm.util.Handy.writePackedLong;
  * A "break" statement that either terminates a switch/case block, terminates a loop, or (if depth
  * is not 0) terminates an enclosing statement that is "depth" parent levels up from this AST node.
  */
-public class BreakStmtAST<C>
-        extends BinaryAST<C> {
+public class BreakStmtAST
+        extends BinaryAST {
 
     private int depth;
 
@@ -44,22 +44,24 @@ public class BreakStmtAST<C>
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         depth = readMagnitude(in);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {}
+    public void prepareWrite(ConstantResolver res) {}
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writePackedLong(out, depth);
     }
 
     @Override
     public String toString() {
-        return "break" + (depth == 0 ? "" : " ^" + depth);
+        return depth <= 0
+            ? "break;"
+            : "break ^" + depth + ";";
     }
 }

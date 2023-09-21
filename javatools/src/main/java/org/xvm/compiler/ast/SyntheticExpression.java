@@ -105,16 +105,16 @@ public abstract class SyntheticExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         if (isConstant())
             {
-            return new ConstantExprAST<>(toConstant());
+            return new ConstantExprAST(toConstant());
             }
 
         if (this instanceof ConvertExpression exprConv)
             {
-            return new ConvertExprAST<>(expr.getExprAST(), getType(), exprConv.getConversionMethod());
+            return new ConvertExprAST(expr.getExprAST(), getType(), exprConv.getConversionMethod());
             }
 
         Operator op;
@@ -135,7 +135,7 @@ public abstract class SyntheticExpression
             throw new UnsupportedOperationException();
             }
 
-        return new UnaryOpExprAST<>(expr.getExprAST(), op, getType());
+        return new UnaryOpExprAST(expr.getExprAST(), op, getType());
         }
 
 

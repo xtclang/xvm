@@ -5,11 +5,9 @@ import java.lang.reflect.Field;
 
 import java.util.Set;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.NotExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
@@ -197,17 +195,16 @@ public abstract class PrefixExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         Operator op;
         switch (operator.getId())
             {
             case NOT:
-                return new NotExprAST<>(expr.getExprAST());
-
-            case ADD:
-                op = Operator.Plus;
+                op = Operator.Not;
                 break;
+            case ADD:
+                return expr.getExprAST();
             case SUB:
                 op = Operator.Minus;
                 break;
@@ -225,7 +222,7 @@ public abstract class PrefixExpression
                 throw new UnsupportedOperationException(operator.getValueText());
             }
 
-        return new UnaryOpExprAST<>(expr.getExprAST(), op, getType());
+        return new UnaryOpExprAST(expr.getExprAST(), op, getType());
         }
 
 

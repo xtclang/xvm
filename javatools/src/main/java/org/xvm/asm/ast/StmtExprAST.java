@@ -8,22 +8,28 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.Constant;
+
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.StmtExpr;
+
+import static org.xvm.util.Handy.indentLines;
 
 
 
 /**
  * A statement expression.
  */
-public class StmtExprAST<C>
-        extends ExprAST<C> {
+public class StmtExprAST
+        extends ExprAST {
 
-    private BinaryAST<C> stmt;
-    private Object[]     types;
+    private BinaryAST      stmt;
+    private TypeConstant[] types;
 
     StmtExprAST() {}
 
-    public StmtExprAST(BinaryAST<C> stmt, Object[] types) {
+    public StmtExprAST(BinaryAST stmt, TypeConstant[] types) {
         assert stmt != null;
         assert types != null && Arrays.stream(types).allMatch(Objects::nonNull);
 
@@ -31,7 +37,7 @@ public class StmtExprAST<C>
         this.types = types;
     }
 
-    public BinaryAST<C> getStatement() {
+    public BinaryAST getStatement() {
         return stmt;
     }
 
@@ -41,37 +47,35 @@ public class StmtExprAST<C>
     }
 
     @Override
-    public C getType(int i) {
-        return (C) types[i];
+    public TypeConstant getType(int i) {
+        return types[i];
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         stmt  = readAST(in, res);
-        types = readConstArray(in, res);
+        types = readTypeArray(in, res);
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         stmt.prepareWrite(res);
         prepareConstArray(types, res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         stmt.write(out, res);
         writeConstArray(types, out, res);
     }
 
     @Override
-    public String dump() {
-        return stmt.dump();
-    }
-
-    @Override
     public String toString() {
-        return stmt.toString();
+        String text = stmt.toString();
+        return text.indexOf('\n') < 0
+                ? '{' + text + '}'
+                : "{\n" + indentLines(text, "  ") + "\n}";
     }
 }

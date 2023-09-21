@@ -547,22 +547,22 @@ public class TupleExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
         if (isConstant())
             {
-            return new ConstantExprAST<>(toConstant());
+            return new ConstantExprAST(toConstant());
             }
 
-        List<Expression>    listExprs = exprs;
-        int                 cArgs     = listExprs.size();
-        ExprAST<Constant>[] aAstArg   = new ExprAST[cArgs];
+        List<Expression> listExprs = exprs;
+        int              cArgs     = listExprs.size();
+        ExprAST[]        aAstArg   = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i)
             {
             aAstArg[i] = listExprs.get(i).getExprAST();
             }
-        return new TupleExprAST<>(getType(), aAstArg);
+        return new TupleExprAST(getType(), aAstArg);
         }
 
 

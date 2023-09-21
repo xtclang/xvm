@@ -341,9 +341,9 @@ public class ReturnStatement
             // emit() for a return inside a StatementExpression produces an assignment from the
             // expression
             // TODO m_fTupleReturn, m_fConditionalTernary, m_fFutureReturn
-            Assignable[]        aLVal  = exprStmt.getAssignables();
-            int                 cLVals = aLVal.length;
-            ExprAST<Constant>[] aAst   = new ExprAST[cLVals];
+            Assignable[] aLVal  = exprStmt.getAssignables();
+            int          cLVals = aLVal.length;
+            ExprAST[]    aAst   = new ExprAST[cLVals];
             for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i)
                 {
                 Expression expr = exprs.get(i);
@@ -359,7 +359,7 @@ public class ReturnStatement
                 }
             code.add(new Jump(exprStmt.body.getEndLabel()));
 
-            ctx.getHolder().setAst(this, new ReturnStmtAST<>(aAst));
+            ctx.getHolder().setAst(this, new ReturnStmtAST(aAst));
 
             // "return" does not complete
             return false;
@@ -367,12 +367,12 @@ public class ReturnStatement
 
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
-        ConstantPool        pool      = pool();
-        TypeConstant[]      atypeRets = container.getReturnTypes();
-        int                 cRets     = atypeRets == null ? 0 : atypeRets.length;
-        List<Expression>    listExprs = this.exprs;
-        int                 cExprs    = listExprs == null ? 0 : listExprs.size();
-        BinaryAST<Constant> astResult;
+        ConstantPool     pool      = pool();
+        TypeConstant[]   atypeRets = container.getReturnTypes();
+        int              cRets     = atypeRets == null ? 0 : atypeRets.length;
+        List<Expression> listExprs = this.exprs;
+        int              cExprs    = listExprs == null ? 0 : listExprs.size();
+        BinaryAST        astResult;
 
         if (m_fTupleReturn)
             {
@@ -384,7 +384,7 @@ public class ReturnStatement
             Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
 
-            astResult = new UnpackExprAST<>(expr.getExprAST(),
+            astResult = new UnpackExprAST(expr.getExprAST(),
                             atypeRets == null ? TypeConstant.NO_TYPES : atypeRets);
             }
         else if (m_fConditionalTernary)
@@ -402,7 +402,7 @@ public class ReturnStatement
                 {
                 case 0:
                     code.add(new Return_0());
-                    astResult = new ReturnStmtAST<>(null);
+                    astResult = new ReturnStmtAST(null);
                     break;
 
                 case 1:
@@ -487,7 +487,7 @@ public class ReturnStatement
                                     }
                                 }
                         }
-                    astResult = new ReturnStmtAST<>(new ExprAST[]{expr.getExprAST()});
+                    astResult = new ReturnStmtAST(new ExprAST[]{expr.getExprAST()});
                     break;
                     }
 
@@ -495,8 +495,8 @@ public class ReturnStatement
                     {
                     assert cRets == cExprs;
 
-                    Argument[]          aArgs = new Argument[cRets];
-                    ExprAST<Constant>[] aASTs = new ExprAST[cRets];
+                    Argument[] aArgs = new Argument[cRets];
+                    ExprAST[]  aASTs = new ExprAST[cRets];
                     for (int i = 0; i < cRets; ++i)
                         {
                         Expression expr = listExprs.get(i);
@@ -521,7 +521,7 @@ public class ReturnStatement
                         code.add(labelFalse);
                         code.add(new Return_1(pool.valFalse()));
                         }
-                    astResult = new ReturnStmtAST<>(aASTs);
+                    astResult = new ReturnStmtAST(aASTs);
                     break;
                     }
                 }

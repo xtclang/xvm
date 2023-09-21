@@ -268,9 +268,9 @@ public class LiteralExpression
         }
 
     @Override
-    public ExprAST<Constant> getExprAST()
+    public ExprAST getExprAST()
         {
-        return new ConstantExprAST<>(getLiteralConstant());
+        return new ConstantExprAST(getLiteralConstant());
         }
 
 

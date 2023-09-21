@@ -1,15 +1,18 @@
 package org.xvm.asm.ast;
 
 
+import org.xvm.asm.constants.TypeConstant;
+
+
 /**
  * The Narrowed expression refers to an underlying expression with a narrowed type.
  */
-public class NarrowedExprAST<C>
-        extends UnaryExprAST<C> {
+public class NarrowedExprAST
+        extends UnaryExprAST {
 
     NarrowedExprAST() {}
 
-    public NarrowedExprAST(ExprAST<C> expr, C type) {
+    public NarrowedExprAST(ExprAST expr, TypeConstant type) {
         super(expr, type);
     }
 
@@ -24,12 +27,7 @@ public class NarrowedExprAST<C>
     }
 
     @Override
-    public String dump() {
-        return getExpr().dump() + ".as(" + getType(0) + ")";
-    }
-
-    @Override
     public String toString() {
-        return getExpr() + ".as(" + getType(0) + ")";
+        return getExpr() + ".as(" + getType(0) + ')';
     }
 }

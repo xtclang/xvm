@@ -783,9 +783,9 @@ public class AssignmentStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean           fCompletes = fReachable;
-        ConstantPool      pool       = pool();
-        ExprAST<Constant> astAssign  = null;
+        boolean      fCompletes = fReachable;
+        ConstantPool pool       = pool();
+        ExprAST      astAssign  = null;
 
         switch (getCategory())
             {
@@ -800,15 +800,15 @@ public class AssignmentStatement
                     {
                     assert lvalueExpr.isCompletable();
                     rvalue.generateCompactInit(ctx, code, stmtVar,  errs);
-                    astAssign = new AssignAST<>(stmtVar.getRegister().getRegAllocAST(), Operator.Asn, rvalue.getExprAST());
+                    astAssign = new AssignAST(stmtVar.getRegister().getRegAllocAST(), Operator.Asn, rvalue.getExprAST());
                     break;
                     }
 
-                ExprAST<Constant> astLVal = null;
+                ExprAST astLVal = null;
                 if (lvalue instanceof Statement stmt)
                     {
                     fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                    astLVal    = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
+                    astLVal    = (ExprAST) ctx.getHolder().getAst(stmt);
                     }
 
                 Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
@@ -819,17 +819,17 @@ public class AssignmentStatement
                     }
 
                 astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
-                astAssign = new AssignAST<>(astLVal, Operator.Asn, rvalue.getExprAST());
+                astAssign = new AssignAST(astLVal, Operator.Asn, rvalue.getExprAST());
                 break;
                 }
 
             case CondRight:
                 {
-                ExprAST<Constant> astLVal = null;
+                ExprAST astLVal = null;
                 if (lvalue instanceof Statement stmt)
                     {
                     fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                    astLVal    = (ExprAST<Constant>) ctx.getHolder().getAst(stmt);
+                    astLVal    = (ExprAST) ctx.getHolder().getAst(stmt);
                     }
 
                 Operator operAsn;
@@ -903,7 +903,7 @@ public class AssignmentStatement
                     }
 
                 astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
-                astAssign = new AssignAST<>(astLVal, operAsn, rvalue.getExprAST());
+                astAssign = new AssignAST(astLVal, operAsn, rvalue.getExprAST());
                 break;
                 }
 
@@ -942,7 +942,7 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     code.add(labelSkip);
 
-                    astAssign = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
+                    astAssign = new AssignAST(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
                     }
                 break;
                 }
@@ -972,7 +972,7 @@ public class AssignmentStatement
                             case BIT_XOR_ASN -> Operator.XorAsn;
                             default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
                             };
-                        astAssign = new AssignAST<>(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
+                        astAssign = new AssignAST(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
                         }
                     }
                 break;
@@ -994,13 +994,13 @@ public class AssignmentStatement
      * Check if there were any deferred ExprAST nodes in astLVal and replace them to ones from the
      * astLValExpr.
      *
-     * @param astLVal      the ExprAST produced by the {@link lvalue}
-     * @param astLValExpr  the ExprAST produced by the {@link lvalueExpr}
+     * @param astLVal      the ExprAST produced by the {@link #lvalue}
+     * @param astLValExpr  the ExprAST produced by the {@link #lvalueExpr}
      *
      * @return the combined ExprAST
      */
-    public static ExprAST<Constant> combineLValueAST(ExprAST<Constant> astLVal,
-                                                     ExprAST<Constant> astLValExpr)
+    public static ExprAST combineLValueAST(ExprAST astLVal,
+                                           ExprAST astLValExpr)
         {
         if (astLVal == null)
             {
@@ -1012,8 +1012,8 @@ public class AssignmentStatement
             return astLVal;
             }
 
-        ExprAST<Constant>[] aAstLVal     = astLValMulti.getExprs();
-        ExprAST<Constant>[] aAstLValExpr = ((MultiExprAST) astLValExpr).getExprs();
+        ExprAST[] aAstLVal     = astLValMulti.getExprs();
+        ExprAST[] aAstLValExpr = ((MultiExprAST) astLValExpr).getExprs();
 
         boolean fReplaced = false;
         for (int i = 0, c = aAstLVal.length; i < c; i++)
@@ -1029,7 +1029,7 @@ public class AssignmentStatement
                 }
             }
         return fReplaced
-                ? new MultiExprAST<>(aAstLVal)
+                ? new MultiExprAST(aAstLVal)
                 : astLVal;
         }
 

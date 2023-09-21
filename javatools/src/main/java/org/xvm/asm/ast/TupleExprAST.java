@@ -1,18 +1,20 @@
 package org.xvm.asm.ast;
 
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.TupleExpr;
 
 
 /**
  * A Tuple expression that is not a constant is structurally identical to the List expression.
  */
-public class TupleExprAST<C>
-        extends ListExprAST<C> {
+public class TupleExprAST
+        extends ListExprAST {
 
     TupleExprAST() {}
 
-    public TupleExprAST(C type, ExprAST<C>[] values) {
+    public TupleExprAST(TypeConstant type, ExprAST[] values) {
         super(type, values);
     }
 
@@ -24,7 +26,7 @@ public class TupleExprAST<C>
     @Override
     public boolean isAssignable() {
         // tuple is used to collect multiple assignable L-Value expressions into an assignable unit
-        ExprAST<C>[] values = getValues();
+        ExprAST[] values = getValues();
         int count = values.length;
         if (count == 0) {
             return false;
@@ -35,5 +37,17 @@ public class TupleExprAST<C>
             }
         }
         return true;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append('(');
+        for (ExprAST value : getValues()) {
+            buf.append(value.toString()).append(", ");
+        }
+        buf.delete(buf.length()-2, buf.length())
+           .append(')');
+        return buf.toString();
     }
 }

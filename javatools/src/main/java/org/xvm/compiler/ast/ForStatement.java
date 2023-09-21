@@ -612,7 +612,7 @@ public class ForStatement
 
         code.add(new Enter());
 
-        RegAllocAST<Constant>[] aAllocSpecial = null;
+        RegAllocAST[] aAllocSpecial = null;
         if (regFirst != null)
             {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
@@ -627,7 +627,7 @@ public class ForStatement
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(m_regCount, name, pool().val0()));
 
-            RegAllocAST<Constant> astCount = regCount.getRegAllocAST();
+            RegAllocAST astCount = regCount.getRegAllocAST();
             if (aAllocSpecial == null)
                 {
                 aAllocSpecial = new RegAllocAST[] {astCount};
@@ -686,8 +686,8 @@ public class ForStatement
                 }
             }
 
-        boolean             fBlockReachable = fCompletes;
-        ExprAST<Constant>[] aCondAST        = null;
+        boolean   fBlockReachable = fCompletes;
+        ExprAST[] aCondAST        = null;
 
         if (fAlwaysFalse)
             {
@@ -695,7 +695,7 @@ public class ForStatement
             fBlockReachable = false;
 
             // degenerate case: we don't need to generate neither the "condition" nor "update" AST
-            holder.setAst(this, new StmtBlockAST<>(aAstInit, false));
+            holder.setAst(this, new StmtBlockAST(aAstInit, false));
             }
         else if (fAlwaysTrue)
             {
@@ -716,7 +716,7 @@ public class ForStatement
                             ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
                             : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
 
-                    aCondAST[i] = (ExprAST<Constant>) holder.getAst(stmtCond);
+                    aCondAST[i] = (ExprAST) holder.getAst(stmtCond);
                     }
                 else
                     {
@@ -738,7 +738,7 @@ public class ForStatement
 
         fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
-        BinaryAST<Constant> astBody = fAlwaysFalse ? null : holder.getAst(block);
+        BinaryAST astBody = fAlwaysFalse ? null : holder.getAst(block);
 
         if (hasContinueLabel())
             {
@@ -790,11 +790,11 @@ public class ForStatement
         if (!fAlwaysFalse)
             {
             holder.setAst(this,
-                    new ForStmtAST<>(aAllocSpecial,
-                                     BinaryAST.makeMultiStatement(aAstInit),
-                                     BinaryAST.makeCondition(aCondAST),
-                                     BinaryAST.makeMultiStatement(aAstUpdate),
-                                     astBody));
+                    new ForStmtAST(aAllocSpecial,
+                                   BinaryAST.makeMultiStatement(aAstInit),
+                                   BinaryAST.makeCondition(aCondAST),
+                                   BinaryAST.makeMultiStatement(aAstUpdate),
+                                   astBody));
             }
         return !fAlwaysTrue && fCompletes;
         }

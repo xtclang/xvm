@@ -4,14 +4,16 @@ package org.xvm.asm.ast;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * Class hierarchy root for all expressions.
  */
-public abstract class ExprAST<C>
-        extends BinaryAST<C> {
+public abstract class ExprAST
+        extends BinaryAST {
 
     /**
      * @return the number of values yielded by the expression
@@ -26,7 +28,7 @@ public abstract class ExprAST<C>
      *
      * @return the type constant of the i-th value yielded by the expression
      */
-    public abstract C getType(int i);
+    public abstract TypeConstant getType(int i);
 
     /**
      * @return true iff this expression can theoretically be used as an L-Value; this is
@@ -39,7 +41,7 @@ public abstract class ExprAST<C>
     /**
      * Write the "expression short form" formatted data.
      */
-    protected void writeExpr(DataOutput out, ConstantResolver<C> res)
+    protected void writeExpr(DataOutput out, ConstantResolver res)
             throws IOException {
         int id = nodeType().ordinal();
         if (id < NodeType.Escape.ordinal()) {

@@ -13,18 +13,18 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "while..do" statement.
  */
-public class WhileStmtAST<C>
-        extends BinaryAST<C> {
+public class WhileStmtAST
+        extends BinaryAST {
 
-    private ExprAST<C>   cond;
-    private BinaryAST<C> body;
-    private ExprAST<C>[] specialRegs;  // RegAllocAST<C>[]
-    private ExprAST<C>[] declaredRegs; // RegAllocAST<C>[]
+    private ExprAST   cond;
+    private BinaryAST body;
+    private ExprAST[] specialRegs;  // RegAllocAST[]
+    private ExprAST[] declaredRegs; // RegAllocAST[]
 
     WhileStmtAST() {}
 
-    public WhileStmtAST(RegAllocAST<C>[] specialRegs, RegAllocAST<C>[] declaredRegs,
-                        ExprAST<C> cond, BinaryAST<C> body) {
+    public WhileStmtAST(RegAllocAST[] specialRegs, RegAllocAST[] declaredRegs,
+                        ExprAST cond, BinaryAST body) {
         this.specialRegs  = specialRegs == null  ? NO_ALLOCS : specialRegs;
         this.declaredRegs = declaredRegs == null ? NO_ALLOCS : declaredRegs;
         this.cond         = cond;
@@ -36,16 +36,16 @@ public class WhileStmtAST<C>
         return WhileDoStmt;
     }
 
-    public ExprAST<C> getCond() {
+    public ExprAST getCond() {
         return cond;
     }
 
-    public BinaryAST<C> getBody() {
+    public BinaryAST getBody() {
         return body;
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         res.enter();
         specialRegs  = readExprArray(in, res);
@@ -58,7 +58,7 @@ public class WhileStmtAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         res.enter();
         prepareASTArray(specialRegs, res);
         prepareASTArray(declaredRegs, res);
@@ -70,7 +70,7 @@ public class WhileStmtAST<C>
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         writeExprArray(specialRegs, out, res);
         writeExprArray(declaredRegs, out, res);
@@ -79,23 +79,18 @@ public class WhileStmtAST<C>
     }
 
     @Override
-    public String dump() {
+    public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append("\nwhile (");
-        if (cond != null) {
-            buf.append(cond.dump());
-        }
-        buf.append(")\n");
+        buf.append("while (")
+           .append(cond)
+           .append(") ");
         if (body == null) {
-            buf.append("  {}");
+            buf.append("{}");
         } else {
-            buf.append(indentLines(body.dump(), "  "));
+            buf.append("{\n");
+            buf.append(indentLines(body.toString(), "  "));
+            buf.append("\n}");
         }
         return buf.toString();
-    }
-
-    @Override
-    public String toString() {
-        return "while (" + cond.toString() + ") {}";
     }
 }

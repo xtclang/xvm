@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.xvm.asm.ast.BinaryAST.NodeType.Assign;
 import static org.xvm.asm.ast.BinaryAST.NodeType.BinOpAssign;
 
@@ -17,12 +19,12 @@ import static org.xvm.util.Handy.writePackedLong;
  * This AST node is only an "expression" in the sense that the "left hand side" can itself be used
  * as an expression.
  */
-public class AssignAST<C>
-        extends ExprAST<C> {
+public class AssignAST
+        extends ExprAST {
 
-    ExprAST<C> lhs;
-    Operator   op;
-    ExprAST<C> rhs;
+    ExprAST  lhs;
+    Operator op;
+    ExprAST  rhs;
 
     public enum Operator {
         Asn           ("="   ),     // includes "<-" expression
@@ -81,14 +83,14 @@ public class AssignAST<C>
      * @param op    assignment operator
      * @param rhs   right-hand-side expression to assign to
      */
-    public AssignAST(ExprAST<C> lhs, Operator op, ExprAST<C> rhs) {
+    public AssignAST(ExprAST lhs, Operator op, ExprAST rhs) {
         assert lhs != null && lhs.isAssignable() && op != null && rhs != null;
         this.lhs = lhs;
         this.op  = op;
         this.rhs = rhs;
     }
 
-    public ExprAST<C> getLValue() {
+    public ExprAST getLValue() {
         return lhs;
     }
 
@@ -96,7 +98,7 @@ public class AssignAST<C>
         return op;
     }
 
-    public ExprAST<C> getRValue() {
+    public ExprAST getRValue() {
         return rhs;
     }
 
@@ -111,12 +113,12 @@ public class AssignAST<C>
     }
 
     @Override
-    public C getType(int i) {
+    public TypeConstant getType(int i) {
         return lhs.getType(i);
     }
 
     @Override
-    protected void readBody(DataInput in, ConstantResolver<C> res)
+    protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         lhs = readExprAST(in, res);
         if (nodeType() != Assign) {
@@ -126,13 +128,13 @@ public class AssignAST<C>
     }
 
     @Override
-    public void prepareWrite(ConstantResolver<C> res) {
+    public void prepareWrite(ConstantResolver res) {
         lhs.prepareWrite(res);
         rhs.prepareWrite(res);
     }
 
     @Override
-    protected void writeBody(DataOutput out, ConstantResolver<C> res)
+    protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
         lhs.writeExpr(out, res);
         if (nodeType() != Assign) {
@@ -143,6 +145,7 @@ public class AssignAST<C>
 
     @Override
     public String toString() {
+        // TODO special handling for Operator.Deref
         return lhs + " " + op.text + " " + rhs;
     }
 }
