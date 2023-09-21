@@ -1,5 +1,3 @@
-- GG: Tuple serialization doesn't work
-
 - GG: add support for runtime constants that cross the module line; may need to restore the removed
       delegation logic in ConverterExpression
 

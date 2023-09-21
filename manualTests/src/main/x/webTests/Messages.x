@@ -1,3 +1,3 @@
 module Messages {
-    const Greeting(String text);
+    typedef Tuple<String, Int> as Greeting;
 }
