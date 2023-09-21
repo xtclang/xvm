@@ -297,17 +297,19 @@ public abstract class xConstrainedInteger
             case "toInt32":
             case "toInt64":
             case "toInt128":
+            case "toIntN":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":
             case "toUInt64":
             case "toUInt128":
+            case "toUIntN":
             case "toFloat16":
             case "toFloat32":
             case "toFloat64":
-            case "toIntN":
-            case "toUIntN":
             case "toFloatN":
+            case "toDec32":
+            case "toDec64":
             case "toDecN":
             case "toChar":
                 {
@@ -362,6 +364,11 @@ public abstract class xConstrainedInteger
                     return templateTo.convertLong(frame, lValue, iReturn, f_fSigned);
                     }
 
+                if (template instanceof BaseDecFP templateTo)
+                    {
+                    return templateTo.convertLong(frame, lValue, iReturn);
+                    }
+
                 if (template instanceof xChar)
                     {
                     if (lValue < 0 || lValue > 0x10_FFFF)
@@ -393,17 +400,19 @@ public abstract class xConstrainedInteger
             case "toInt32":
             case "toInt64":
             case "toInt128":
+            case "toIntN":
             case "toUInt8":
             case "toUInt16":
             case "toUInt32":
             case "toUInt64":
             case "toUInt128":
+            case "toUIntN":
             case "toFloat16":
             case "toFloat32":
             case "toFloat64":
-            case "toIntN":
-            case "toUIntN":
             case "toFloatN":
+            case "toDec32":
+            case "toDec64":
             case "toDecN":
             case "toChar":
                 // default argument: checkBounds = False;

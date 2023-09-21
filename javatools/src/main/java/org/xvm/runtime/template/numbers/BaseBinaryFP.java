@@ -128,20 +128,35 @@ abstract public class BaseBinaryFP
                 return frame.assignValue(iReturn, makeHandle(Math.abs(d)));
 
             case "toInt64":
-                // TODO: overflow check
-                return Double.isInfinite(d)
-                    ? overflow(frame)
-                    : frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong((long) d));
+                {
+                boolean  fCheckBound = ahArg[0] == xBoolean.TRUE;
+                Rounding rounding    = Rounding.values()[ahArg[1] == ObjectHandle.DEFAULT
+                                            ? 0
+                                            : ((EnumHandle) ahArg[1]).getOrdinal()];
+                if (fCheckBound && !Double.isFinite(d))
+                    {
+                    return overflow(frame);
+                    }
+
+                long l = switch (rounding)
+                    {
+                    case TiesToEven     -> (long) d;
+                    case TiesToAway     -> d < 0 ? -Math.round(-d) : Math.round(d);
+                    case TowardPositive -> (long) Math.ceil(d);
+                    case TowardZero     -> (long) (d < 0 ? Math.ceil(d) : Math.floor(d));
+                    case TowardNegative -> (long) Math.floor(d);
+                    };
+                return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(l));
+                }
 
             case "toDec64":
-                return Double.isInfinite(d)
-                    ? overflow(frame)
-                    : frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(d));
+                return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(d));
+
+            case "toFloat32":
+                return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(d));
 
             case "toFloat64":
-                return Double.isInfinite(d)
-                    ? overflow(frame)
-                    : frame.assignValue(iReturn, makeHandle(d));
+                return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(d));
 
             case "toIntN":
             case "toUIntN":

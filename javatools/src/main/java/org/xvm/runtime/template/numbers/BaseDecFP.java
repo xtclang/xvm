@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.DecimalAutoConstant;
 import org.xvm.asm.constants.DecimalConstant;
@@ -400,6 +401,16 @@ abstract public class BaseDecFP
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Convert a long value into a handle for the type represented by this template.
+     *
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     */
+    public int convertLong(Frame frame, long lValue, int iReturn)
+        {
+        return frame.assignValue(iReturn, makeHandle((double) lValue));
+        }
 
     /**
      * @return a decimal value for the specified double
