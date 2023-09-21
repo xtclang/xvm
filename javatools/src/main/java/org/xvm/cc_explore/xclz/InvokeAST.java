@@ -49,7 +49,7 @@ class InvokeAST extends AST {
   @Override AST rewrite() {
     // Cannot invoke directly on java primitives
     if( _type.equals("long") && _meth.equals("toString") )
-      return new InvokeAST(_meth,"Long","Long",_rnum,new RegAST(_rnum,_target));
+      return new InvokeAST(_meth,"Long","Long",_rnum,new RegAST(_rnum,_target,"long"));
     return this;
   }
   @Override void jpre ( SB sb ) { sb.p(_target).p('.').p(_meth).p("("); }
