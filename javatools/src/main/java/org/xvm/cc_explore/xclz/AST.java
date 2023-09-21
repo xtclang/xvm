@@ -29,12 +29,14 @@ public abstract class AST {
     if( _kids!=null )
       for( int i=0; i<_kids.length; i++ ) {
         AST kid = _kids[i], old;
-        do {          
-          kid._par = this;
-          kid = (old=kid).rewrite();
-        } while( old!=kid );
-        _kids[i] = kid;
-        _kids[i].do_rewrite();
+        if( kid != null ) {
+          do {          
+            kid._par = this;
+            kid = (old=kid).rewrite();
+          } while( old!=kid );
+          _kids[i] = kid;
+          _kids[i].do_rewrite();
+        }
       }
     return this;
   }
@@ -73,10 +75,10 @@ public abstract class AST {
   static final int CONSTANT_OFFSET = -16;
   static AST ast_term( XClzBuilder X ) {
     int iop = (int)X.pack64();
-    if( iop >= 32 ) return new RegAST(iop-32,X._locals.get(iop-32));  // Local variable register
+    if( iop >= 32 ) return new RegAST(iop-32,X);  // Local variable register
     if( iop == NodeType.Escape.ordinal() ) return ast(X);
     if( iop >= 0 ) return _ast(X,iop);
-    if( iop > CONSTANT_OFFSET ) return new RegAST(iop,null); // "special" negative register
+    if( iop > CONSTANT_OFFSET ) return new RegAST(iop); // "special" negative register
     // Constants from the limited method constant pool
     return new ConAST( X.con(CONSTANT_OFFSET-iop) );
   }
@@ -86,14 +88,15 @@ public abstract class AST {
   private static AST _ast( XClzBuilder X, int iop ) {
     NodeType op = NodeType.valueOf(iop);
     return switch( op ) {
+    case ArrayAccessExpr -> BinOpAST.make(X,"[","]");
     case AnnoNamedRegAlloc -> DefRegAST.make(X,true ,true );
     case AnnoRegAlloc ->   DefRegAST.make(X,false,true );
     case Assign       ->   AssignAST.make(X,true);
     case BindFunctionExpr -> BindFuncAST.make(X);
     case CallExpr     ->     CallAST.make(X);
     case CondOpExpr   ->    BinOpAST.make(X,false);
-    case ForRangeStmt -> ForRangeAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
+    case ForRangeStmt -> ForRangeAST.make(X);
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
     case InvokeExpr   ->   InvokeAST.make(X);
