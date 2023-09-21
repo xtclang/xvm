@@ -82,7 +82,7 @@ module Hello
 
             @Get("hello")
             Greeting greeting() {
-                return new Greeting("Hi, there!");
+                return ("Hi", 1);
             }
 
             @HttpsRequired

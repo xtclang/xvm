@@ -116,6 +116,21 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 return False;
             }
 
+            if (type.is(Type<Tuple>)) {
+                assert Type[] types := type.DataType.parameterized();
+                try {
+                    Mapping[] mappings = new Mapping[types.size] (i ->
+                        {
+                        Type                        valueType = types[i];
+                        Mapping<valueType.DataType> mapping   = schema.findMapping(valueType) ?: assert;
+                        return mapping;
+                        });
+                    return True, new TupleMapping<type.DataType>(mappings).as(Mapping<SubType>);
+                } catch (Exception e) {
+                    return False;
+                }
+            }
+
             assert val clazz := type.fromClass();
 
             if (clazz.is(Enumeration)) {

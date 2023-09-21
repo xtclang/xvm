@@ -47,6 +47,7 @@ module TestIO
         testJSONPrint();
         testJSONBuild();
         testPoint();
+        testTuple();
         testMap();
         testMetadata();
         testPointers();
@@ -441,6 +442,19 @@ module TestIO
                     }
                 }
             }
+        }
+
+    void testTuple()
+        {
+        console.print("\n*** testTuple()");
+
+        Schema schema = Schema.DEFAULT;
+
+        Tuple<Int, String> tuple = (1, "a");
+        testSer(schema, "tuple", tuple);
+        testSer(schema, "tuple", new Test(tuple));
+
+        const Test(Tuple<Int, String> tuple);
         }
 
     void testMap()
