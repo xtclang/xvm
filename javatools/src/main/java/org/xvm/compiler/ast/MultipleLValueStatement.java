@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 

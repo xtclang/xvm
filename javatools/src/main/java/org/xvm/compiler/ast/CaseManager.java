@@ -221,7 +221,7 @@ public class CaseManager<CookieType>
         }
 
     /**
-     * @return the label assocated with the "defualt:" statement, or null
+     * @return the label associated with the "default:" statement, or null
      */
     public Label getDefaultLabel()
         {

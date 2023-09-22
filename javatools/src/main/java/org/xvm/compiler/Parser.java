@@ -551,7 +551,7 @@ public class Parser
                     case IMPORT:
                         {
                         keyword = current();
-                        Token modifier = null;
+                        Token modifier;
                         if (   (modifier = match(Id.EMBEDDED)) != null
                             || (modifier = match(Id.REQUIRED)) != null
                             || (modifier = match(Id.DESIRED)) != null
