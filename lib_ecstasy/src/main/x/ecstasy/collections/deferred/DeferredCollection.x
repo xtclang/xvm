@@ -289,7 +289,7 @@
         // this is the default implementation from Collection; if we super(), we would instead go
         // go via delegation to reified, and we are trying not to reify (at least not the first time
         // through)
-        Result result = initial;
+        @Volatile Result result = initial;
         forEach(e -> {
             result = accumulate(result, e);
         });

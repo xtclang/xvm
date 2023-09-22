@@ -324,7 +324,7 @@ const UriTemplate {
 
         @Override
         Appender<Char> expand(Appender<Char> buf, Lookup values) {
-            Boolean first = True;
+            @Volatile Boolean first = True;
             function void() checkComma = () -> {
                 // multiple defined variables are comma delimited (i.e. ignore undefined)
                 if (first) {

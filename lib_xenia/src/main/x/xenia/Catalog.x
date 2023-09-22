@@ -309,8 +309,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                 classInfos    += new ClassInfo(child.as(Class<WebService>), path);
 
                 // scan classes inside the WebService class
-                Collection<Type> childTypes   = child.PrivateType.childTypes.values;
-                Class[]          childClasses = new Class[];
+                Collection<Type>  childTypes   = child.PrivateType.childTypes.values;
+                @Volatile Class[] childClasses = new Class[];
                 childTypes.forEach(t -> {
                     if (Class c := t.fromClass()) {
                         childClasses += c;

@@ -321,16 +321,16 @@ module TestNumbers {
 
         Partition[] partitions = new Partition[10](i -> new Partition(i));
 
-        val finishSum = sum.finalAggregator.init();
-        Int remainSum = partitions.size;
-        val finishAvg = avg.finalAggregator.init();
-        Int remainAvg = partitions.size;
-        val finishMin = min.finalAggregator.init();
-        Int remainMin = partitions.size;
-        val finishMax = max.finalAggregator.init();
-        Int remainMax = partitions.size;
-        val finishMMx = mmx.finalAggregator.init();
-        Int remainMMx = partitions.size;
+        @Volatile val finishSum = sum.finalAggregator.init();
+        @Volatile Int remainSum = partitions.size;
+        @Volatile val finishAvg = avg.finalAggregator.init();
+        @Volatile Int remainAvg = partitions.size;
+        @Volatile val finishMin = min.finalAggregator.init();
+        @Volatile Int remainMin = partitions.size;
+        @Volatile val finishMax = max.finalAggregator.init();
+        @Volatile Int remainMax = partitions.size;
+        @Volatile val finishMMx = mmx.finalAggregator.init();
+        @Volatile Int remainMMx = partitions.size;
 
         Loop: for (Partition partition : partitions) {
             @Future sum.Partial pendingSum = partition.exec(sum);

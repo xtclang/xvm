@@ -13,7 +13,6 @@ import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
@@ -1180,9 +1179,16 @@ public class LambdaExpression
                         }
 
                     regCapture = regCapture.getOriginalRegister(); // remove any inferences
+
+                    boolean fAllowRefCapture = regCapture.isVar() &&
+                            regCapture.ensureRegType(true).isA(pool.clzVolatile().getType());
                     if (entry.getValue())
                         {
                         // it's a read/write capture; capture the Var
+                        if (!fAllowRefCapture)
+                            {
+                            log(errs, Severity.ERROR, Compiler.WRITEABLE_CAPTURE, sCapture);
+                            }
                         typeCapture = regCapture.isVar()
                                 ? regCapture.ensureRegType(true)
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
@@ -1195,7 +1201,7 @@ public class LambdaExpression
                         aAstBind[iParam] = new UnaryOpExprAST(
                                 regVal.getRegisterAST(), Operator.Var, typeCapture);
                         }
-                    else if (!regCapture.isEffectivelyFinal())
+                    else if (fAllowRefCapture && !regCapture.isEffectivelyFinal())
                         {
                         // it's a read-only capture, but since we were unable to prove that the
                         // register was effectively final, we need to capture the Ref

@@ -243,8 +243,8 @@ service RTChannel(RawChannel rawChannel)
             // buffers to carry the data-to-write, so that it can bulk up the writes as much as
             // it can
             @Future Int pendingResult;
-            Int remain = size;
-            Int total  = 0;
+            Int           remain = size;
+            @Volatile Int total  = 0;
             do {
                 Byte[]|Int result = rawChannel.allocate(internal=True);
                 if (result.is(Int)) {

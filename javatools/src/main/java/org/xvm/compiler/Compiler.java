@@ -1397,6 +1397,14 @@ public class Compiler
      */
     public static final String TRY_WITHOUT_CATCH                  = "COMPILER-196";
     /**
+     * Attempt to mutate the captured variable {0}. (If intended, add the "@Volatile" annotation.)
+     */
+    public static final String WRITEABLE_CAPTURE                  = "COMPILER-197";
+    /**
+     * Invalid annotation combination: {0} and {1} are incompatible.
+     */
+    public static final String INVALID_ANNOTATIONS_COMBO          = "COMPILER-198";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

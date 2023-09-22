@@ -60,7 +60,7 @@
  *       }
  */
 mixin AtomicVar<Referent>
-        into Var<Referent>
+        extends VolatileVar<Referent>
         incorporates conditional AtomicIntNumber<Referent extends IntNumber> {
     /**
      * Atomically replace the referent for this variable reference.

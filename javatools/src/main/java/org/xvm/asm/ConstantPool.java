@@ -24,20 +24,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.Stack;
 import java.util.Vector;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.Constant.Format;
 
-import org.xvm.asm.ast.RegisterAST;
-
 import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo.Progress;
-
-import org.xvm.asm.ast.BinaryAST.ConstantResolver;
 
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
@@ -2329,6 +2324,7 @@ public class ConstantPool
     public ClassConstant     clzTest()           {ClassConstant     c = m_clzTest;           if (c == null) {m_clzTest           = c = (ClassConstant) getImplicitlyImportedIdentity("Test"            );} return c;}
     public ClassConstant     clzTransient()      {ClassConstant     c = m_clzTransient;      if (c == null) {m_clzTransient      = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
     public ClassConstant     clzUnassigned()     {ClassConstant     c = m_clzUnassigned;     if (c == null) {m_clzUnassigned     = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
+    public ClassConstant     clzVolatile()       {ClassConstant     c = m_clzVolatile;       if (c == null) {m_clzVolatile       = c = (ClassConstant) getImplicitlyImportedIdentity("Volatile"        );} return c;}
     public TypeConstant      typeObject()        {TypeConstant      c = m_typeObject;        if (c == null) {m_typeObject        = c = ensureTerminalTypeConstant(clzObject()                          );} return c;}
     public TypeConstant      typeInner()         {TypeConstant      c = m_typeInner;         if (c == null) {m_typeInner         = c = ensureVirtualChildTypeConstant(typeOuter(), "Inner"             );} return c;}
     public TypeConstant      typeOuter()         {TypeConstant      c = m_typeOuter;         if (c == null) {m_typeOuter         = c = ensureTerminalTypeConstant(clzOuter()                           );} return c;}
@@ -3928,6 +3924,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzTest;
     private transient ClassConstant     m_clzTransient;
     private transient ClassConstant     m_clzUnassigned;
+    private transient ClassConstant     m_clzVolatile;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeInner;
     private transient TypeConstant      m_typeOuter;
@@ -4072,6 +4069,7 @@ public class ConstantPool
         m_clzTest           = null;
         m_clzTransient      = null;
         m_clzUnassigned     = null;
+        m_clzVolatile       = null;
         m_typeObject        = null;
         m_typeInner         = null;
         m_typeOuter         = null;

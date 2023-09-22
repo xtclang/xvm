@@ -59,15 +59,14 @@ module TestLambda {
     void testVarCapture() {
         console.print("\n** testVarCapture()");
 
-        Int i = 0;
+        @Volatile Int i = 0;
         while (i < 5) {
             function Int() f = () -> ++i;
             console.print("result=" + f());
-            // console.print("i=" + i + ", result=" + f() + ", i=" + i);
         }
 
         // test for the capture of an unassigned variable
-        Int j;
+        @Volatile Int j;
         function void() f2 = () -> {j = ++i;};
         f2();
         console.print("j=" + &j.get());
@@ -76,7 +75,7 @@ module TestLambda {
     void testComplexCapture() {
         console.print("\n** testComplexCapture()");
 
-        Int i = 0;
+        @Volatile Int i = 0;
         while (i < 5) {
             function Int() f1 = () -> i;
             console.print("result=" + f1());    // initially would appear to be "Int", but must be "Ref<Int>"

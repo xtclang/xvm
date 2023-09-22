@@ -30,7 +30,7 @@
  * provided.)
  */
 mixin LazyVar<Referent>(function Referent ()? calculate = Null)
-        into Var<Referent> {
+        extends VolatileVar<Referent> {
 
     private function Referent ()? calculate;
 

@@ -324,7 +324,7 @@ interface Map<Key, Value>
      */
     @Concurrent
     Map putAll(Map! that) {
-        Map result = this;
+        @Volatile Map result = this;
         that.entries.forEach(entry -> {
             result = result.put(entry.key, entry.value);
         });
@@ -426,7 +426,7 @@ interface Map<Key, Value>
     Map clear() {
         // this method should be overridden by any class that has a more efficient implementation
         // available
-        Map result = this;
+        @Volatile Map result = this;
         if (inPlace) {
             keys.clear();
         } else {

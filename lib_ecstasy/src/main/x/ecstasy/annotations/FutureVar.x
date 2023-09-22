@@ -46,7 +46,7 @@
  *   be modified once it is set.
  */
 mixin FutureVar<Referent>
-        into Var<Referent>
+        extends VolatileVar<Referent>
         implements Closeable {
     /**
      * Future completion status:
@@ -263,7 +263,7 @@ mixin FutureVar<Referent>
      *   exception.
      */
     FutureVar!<Referent> orAny(FutureVar!<Referent>[] others = []) {
-        FutureVar<Referent> result = this;
+        @Volatile FutureVar<Referent> result = this;
         others.iterator().forEach(other -> {result = result.or(other);});
         return result;
     }

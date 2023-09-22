@@ -557,7 +557,7 @@ class Parser
         ListMap<String, Doc> map = new ListMap();
         expect(ObjectEnter);
         if (!match(ObjectExit)) {
-            Set<String>? dups = Null;
+            @Volatile Set<String>? dups = Null;
             do {
                 String name = expect(StrVal).value.as(String);
                 Token  sep  = expect(Colon);

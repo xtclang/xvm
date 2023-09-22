@@ -447,7 +447,7 @@ module TestMaps {
         console.print($"\n** testConcurrentProcess({&map.actualClass.name})");
         map.put(0, 0);
 
-        Int count = 0;
+        @Volatile Int count = 0;
 
         // run a long running blocking processor in the background
         map.process^(0, e -> {

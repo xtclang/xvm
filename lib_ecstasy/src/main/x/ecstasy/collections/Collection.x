@@ -555,7 +555,7 @@ interface Collection<Element>
     @Concurrent
     <Result> Result reduce(Result                           initial,
                            function Result(Result, Element) accumulate) {
-        Result result = initial;
+        @Volatile Result result = initial;
         forEach(e -> {
             result = accumulate(result, e);
         });
@@ -884,7 +884,7 @@ interface Collection<Element>
     @Override
     @Concurrent
     Collection addAll(Iterator<Element> iter) {
-        Collection collection = this;
+        @Volatile Collection collection = this;
         iter.forEach(value -> {
             collection = collection.add(value);
         });
@@ -950,7 +950,7 @@ interface Collection<Element>
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
-        Collection result = this;
+        @Volatile Collection result = this;
         values.iterator().forEach(value -> {
             result = result.remove(value);
         });
@@ -997,7 +997,7 @@ interface Collection<Element>
      */
     @Concurrent
     (Collection, Int) removeAll(function Boolean (Element) shouldRemove) {
-        Element[]? values = Null;
+        @Volatile Element[]? values = Null;
         forEach(value -> {
             if (shouldRemove(value)) {
                 values = (values ?: new Element[]) + value;
