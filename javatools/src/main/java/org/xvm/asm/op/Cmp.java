@@ -62,4 +62,10 @@ public class Cmp
         {
         return type.callCompare(frame, hValue1, hValue2, m_nRetValue);
         }
+
+    @Override
+    protected TypeConstant getResultType(Frame frame)
+        {
+        return frame.poolContext().typeOrdered();
+        }
     }

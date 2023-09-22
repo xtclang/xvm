@@ -791,16 +791,18 @@ public class Frame
         if (nVar >= 0)
             {
             VarInfo info = getVarInfo(nVar);
-
-            if (info.isDynamicVar())
+            if (info != null)
                 {
-                RefHandle hDest = (RefHandle) f_ahVar[nVar];
-                return hDest.getVarSupport().setReferent(this, hDest, hValue);
-                }
+                if (info.isDynamicVar())
+                    {
+                    RefHandle hDest = (RefHandle) f_ahVar[nVar];
+                    return hDest.getVarSupport().setReferent(this, hDest, hValue);
+                    }
 
-            if (info.isFixedType())
-                {
-                checkType(hValue, info);
+                if (info.isFixedType())
+                    {
+                    checkType(hValue, info);
+                    }
                 }
 
             f_ahVar[nVar] = hValue;

@@ -26,7 +26,7 @@ public abstract class OpTest
      * Construct a unary IS_ op.
      *
      * @param arg        the value Argument
-     * @param argReturn  the location to store the Boolean result
+     * @param argReturn  the location to store the test result
      */
     protected OpTest(Argument arg, Argument argReturn)
         {
@@ -41,7 +41,7 @@ public abstract class OpTest
      *
      * @param arg1       the first value Argument
      * @param arg2       the second value Argument
-     * @param argReturn  the location to store the Boolean result
+     * @param argReturn  the location to store the test result
      */
     protected OpTest(Argument arg1, Argument arg2, Argument argReturn)
         {
@@ -123,7 +123,7 @@ public abstract class OpTest
         {
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceResolvedVar(m_nRetValue, frame.poolContext().typeBoolean());
+            frame.introduceResolvedVar(m_nRetValue, getResultType(frame));
             }
         return isBinaryOp() ? processBinaryOp(frame) : processUnaryOp(frame);
         }
@@ -194,6 +194,14 @@ public abstract class OpTest
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
         throw new UnsupportedOperationException();
+        }
+
+    /**
+     * @return the result type for this Op
+     */
+    protected TypeConstant getResultType(Frame frame)
+        {
+        return frame.poolContext().typeBoolean();
         }
 
     @Override
