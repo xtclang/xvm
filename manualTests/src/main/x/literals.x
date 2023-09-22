@@ -25,8 +25,8 @@ module TestLiterals
         {
         console.print("\n** testFactors()");
 
-        String s = "";
-        Int    n = 0;
+        @Volatile String s = "";
+        @Volatile Int    n = 0;
         val show = () ->
             {
             console.print($"{s} == {n}");

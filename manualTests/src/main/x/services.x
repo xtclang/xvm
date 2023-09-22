@@ -65,8 +65,8 @@ module TestServices {
             }
         } catch (TimedOut e) {}
 
-        Int responded = 0;
-        Int count     = 5;
+        @Volatile Int responded = 0;
+        Int           count     = 5;
         for (Int i : 0 ..< count) {
             console.print($"{tag()} calling service future-style: {i}");
             @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));

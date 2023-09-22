@@ -35,11 +35,6 @@
 
 - GG: consider allowing to debug an eval expression (debug eval)
 
-- lambda capture of a non-effectively final var as a Ref or Var needs to be explicitly allowed
-  by the code; for example: "@AllowCapture String name = ..."
-  Alternatively, we could have @CaptureByValue that would be equivalent of creating a synthetic
-  effectively final value to capture.
-
 - GG: consider changing Service.callLater() API to
     <Result> Future<Result> callLater(function Result doLater());
 

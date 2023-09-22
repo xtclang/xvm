@@ -24,7 +24,10 @@ import org.xvm.asm.op.Var;
 import org.xvm.asm.op.Var_DN;
 import org.xvm.asm.op.Var_N;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -176,8 +179,8 @@ public class VariableDeclarationStatement
         // create the register
         TypeConstant typeVar = exprNew.ensureTypeConstant(ctx, errs).
                                     removeAutoNarrowing().normalizeParameters();
-        m_reg = ctx.createRegister(typeVar, getName());
-        ctx.registerVar(name, m_reg, errs);
+        Register reg = m_reg = ctx.createRegister(typeVar, getName());
+        ctx.registerVar(name, reg, errs);
 
         if (exprNew instanceof AnnotatedTypeExpression exprAnnoType)
             {
@@ -190,7 +193,7 @@ public class VariableDeclarationStatement
                 if (exprAnnoType.isInjected())
                     {
                     ctx.markVarWrite(name, false, errs);
-                    m_reg.markEffectivelyFinal();
+                    reg.markEffectivelyFinal();
                     }
 
                 boolean      fVar        = exprAnnoType.isVar();
@@ -199,6 +202,9 @@ public class VariableDeclarationStatement
                 boolean      fInflate    = false;
                 TypeConstant typeReg     = pool.ensureParameterizedTypeConstant(
                         fVar ? pool.typeVar() : pool.typeRef(), typeVar);
+                int          ixFinal     = -1; // for error reporting only
+                int          ixVolatile  = -1;
+
                 for (int i = cRefAnnos - 1; i >= 0; --i)
                     {
                     AnnotationExpression exprAnno = listRefAnnos.get(i);
@@ -209,8 +215,8 @@ public class VariableDeclarationStatement
                     // don't inflate @Final or @Unassigned
                     if (clzAnno.equals(pool.clzFinal()))
                         {
-                        m_reg.markFinal();
-                        fInflate = true;
+                        reg.markFinal();
+                        ixFinal = i;
                         }
                     else if (clzAnno.equals(pool.clzUnassigned()))
                         {
@@ -230,15 +236,26 @@ public class VariableDeclarationStatement
                         }
                     typeReg = pool.ensureAnnotatedTypeConstant(typeReg, anno);
                     fConst &= exprAnno.isConstant();
+
+                    if (ixVolatile < 0 && typeReg.isA(pool.clzVolatile().getType()))
+                        {
+                        ixVolatile = i;
+                        }
                     }
 
                 if (fUnassigned)
                     {
-                    m_reg.markAllowUnassigned();
+                    reg.markAllowUnassigned();
                     }
                 if (fInflate)
                     {
-                    m_reg.specifyRegType(typeReg);
+                    reg.specifyRegType(typeReg);
+
+                    if (ixFinal >= 0 && ixVolatile >= 0)
+                        {
+                        log(errs, Severity.ERROR, Compiler.INVALID_ANNOTATIONS_COMBO,
+                            listRefAnnos.get(ixFinal), listRefAnnos.get(ixVolatile));
+                        }
                     }
                 m_fConstAnno = fConst;
                 }

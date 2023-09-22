@@ -60,6 +60,7 @@ import ecstasy.annotations.SoftVar          as Soft;
 import ecstasy.annotations.Synchronized;
 import ecstasy.annotations.Test;
 import ecstasy.annotations.Transient;
+import ecstasy.annotations.VolatileVar      as Volatile;
 import ecstasy.annotations.WatchVar         as Watch;
 import ecstasy.annotations.WeakVar          as Weak;
 

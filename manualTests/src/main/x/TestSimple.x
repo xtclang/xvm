@@ -2,14 +2,24 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        @Custom Int i = 0; // this used to blow up the run-time
-        while (i < 5) {
-            function Int() f = () -> ++i;
-            console.print("result=" + f());
-        }
-    }
+        function void ()[] prints = [];
 
-    mixin Custom<Referent>
-        into Var<Referent> {
+        {
+            Int i;
+            for (i = 0; i < 3; i++) {
+                prints += () -> console.print($"{i=}");
+            }
+        }
+
+        {
+            @Volatile Int i;
+            for (i = 0; i < 3; i++) {
+                prints += () -> console.print($"{i=}");
+            }
+        }
+
+        for (val print : prints) {
+			print();
+		}
     }
 }

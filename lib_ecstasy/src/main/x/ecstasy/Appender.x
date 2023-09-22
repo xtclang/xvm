@@ -39,7 +39,7 @@ interface Appender<Element> {
      */
     @Concurrent
     Appender addAll(Iterator<Element> iter) {
-        var result = this;
+        @Volatile Appender result = this;
         iter.forEach(e -> {result = result.add(e);});
         return result;
     }
