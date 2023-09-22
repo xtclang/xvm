@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.xvm.asm.Assignment;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 

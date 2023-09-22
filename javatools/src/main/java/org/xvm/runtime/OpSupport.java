@@ -84,7 +84,7 @@ public interface OpSupport
     int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
-     * Perform an "shl" operation.
+     * Perform a "shl" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
@@ -96,7 +96,7 @@ public interface OpSupport
     int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
-     * Perform an "shr" operation.
+     * Perform a "shr" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
@@ -144,7 +144,7 @@ public interface OpSupport
     int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
-     * Perform an "xor" operation.
+     * Perform a "xor" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle

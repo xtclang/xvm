@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.Constant;
-
 import org.xvm.asm.ast.ExprAST;
 
 

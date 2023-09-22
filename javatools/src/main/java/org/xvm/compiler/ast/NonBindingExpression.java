@@ -4,10 +4,8 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ExprAST;
@@ -92,7 +90,7 @@ public class NonBindingExpression
         TypeConstant   typeArg;
         if (exprOldType == null)
             {
-            // non binding expression without a specified type should fit anything
+            // non-binding expression without a specified type should fit anything
             typeArg = typeRequired;
             }
         else

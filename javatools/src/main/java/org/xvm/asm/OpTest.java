@@ -180,7 +180,7 @@ public abstract class OpTest
         }
 
     /**
-     * A completion of a unary op; must me overridden by all binary ops.
+     * A completion of a unary op; must be overridden by all binary ops.
      */
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
@@ -188,7 +188,7 @@ public abstract class OpTest
         }
 
     /**
-     * A completion of a binary op; must me overridden by all binary ops.
+     * A completion of a binary op; must be overridden by all binary ops.
      */
     protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)

@@ -3,11 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -15,8 +13,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.SwitchAST;
 
-import org.xvm.asm.constants.ArrayConstant;
-import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 

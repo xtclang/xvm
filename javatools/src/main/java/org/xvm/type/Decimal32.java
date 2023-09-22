@@ -354,7 +354,7 @@ public class Decimal32
         // unbias the exponent
         nExp -= 101;
 
-        // unpack the digits from most significant declet to least significan declet
+        // unpack the digits from most significant declet to least significant declet
         nSig = ((nSig * 1000 + decletToInt(nBits >>> 10))
                       * 1000 + decletToInt(nBits       ))
                       * (((nBits & SIGN_BIT) >> 31) | 1);       // apply sign
