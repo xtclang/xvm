@@ -49,7 +49,7 @@ public class XClzBuilder {
 
     // The Java class will extend XClz.
     // The Java class name will be the mangled module class-name.
-    String java_class_name = "J"+_mod._name;
+    String java_class_name = java_class_name(_mod);
     jclass_body(java_class_name);
     System.out.println(_sb);
     
@@ -187,6 +187,10 @@ public class XClzBuilder {
   void pop_locals(int n) {
     while( n < _nlocals )
       _locals.remove(--_nlocals);
+  }
+
+  static String java_class_name( ModPart mod ) {
+    return "J"+mod._name;
   }
 
   // After the basic mangle, dups are suffixed 1,2,3...
@@ -347,6 +351,18 @@ public class XClzBuilder {
       String name = meth._name;
       return ASB.p(name);
     }
+
+    // Singleton class constants
+    if( tc instanceof SingleCon con0 ) {
+      return ASB.p(java_class_name((ModPart)con0.part()));
+    }
+
+    // Property constant.  Just the base name, and depending on usage
+    // will be either console$get() or console$set(value).
+    if( tc instanceof PropCon prop ) {
+      return ASB.p(prop._name);
+    }
+    
     throw XEC.TODO();
   }
 
