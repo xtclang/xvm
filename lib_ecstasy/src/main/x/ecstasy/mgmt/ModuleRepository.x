@@ -5,7 +5,7 @@ import reflect.ModuleTemplate;
  */
 interface ModuleRepository {
     /**
-     * Set of domain names that are known by this repository.
+     * Set of fully qualified module names that are known by this repository.
      */
     @RO immutable Set<String> moduleNames;
 
