@@ -2,14 +2,14 @@ package org.xvm.cc_explore.xrun;
 
 public class NativeContainer extends Container {
 
-  final XConsole _console;
+  final Console _console;
   
   public NativeContainer( ) {
     super(null,null);
-    _console = new XConsole();
+    _console = new Console();
   }
 
-  @Override public XConsole console() { return _console; }
+  @Override public Console console() { return _console; }
   
   // Initialize default things into the container?
   void init() {

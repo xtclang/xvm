@@ -230,7 +230,7 @@ public class XClzBuilder {
   // A set of common XTC classes, and their Java replacements.
   // These are NOT parameterized.
   static final HashMap<String,String> XJMAP = new HashMap<>() {{
-      put("Console+ecstasy/io/Console.x","XConsole");
+      put("Console+ecstasy/io/Console.x","Console");
       put("Int64+ecstasy/numbers/Int64.x","long");
       put("Boolean+ecstasy/Boolean.x","boolean");
       put("StringBuffer+ecstasy/text/StringBuffer.x","StringBuffer");
@@ -252,18 +252,18 @@ public class XClzBuilder {
       String telem = jtype(ptc._parms[0],true);
       ClassPart clz = ((ClzCon)ptc._con).clz();
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
-        if( telem.equals("Long") )  return "XAryI64"; // Java ArrayList specialized to int64
-        return "XAry<"+telem+">"; // Shortcut class
+        if( telem.equals("Long") )  return "AryI64"; // Java ArrayList specialized to int64
+        return "Ary<"+telem+">"; // Shortcut class
       }
       if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ) {
-        if( telem.equals("Long") ) return "XRange"; // Shortcut class
+        if( telem.equals("Long") ) return "Range"; // Shortcut class
         else throw XEC.TODO();
       }
       if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
-        return "XAry<"+telem+">"; // Shortcut class
+        return "Ary<"+telem+">"; // Shortcut class
       if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") ) {
         if( ptc._parms.length==1 )  // Tuple of length 1 ?
-          return "XAry<"+telem+">"; // Shortcut class
+          return "Ary<"+telem+">"; // Shortcut class
         throw XEC.TODO();
       }
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") )
@@ -306,8 +306,8 @@ public class XClzBuilder {
       int lastx = type.length()-1;
       char ch = type.charAt(lastx);
       
-      if( ch!=']' ) { // e.g. XAryI64 or XAry<XAryI64>
-        // Generic XAry flavors.
+      if( ch!=']' ) { // e.g. AryI64 or Ary<AryI64>
+        // Generic Ary flavors.
         int genx = type.indexOf('<');
         String  genclz = ch=='>' ? type.substring(genx+1,lastx) : null;
         String baseclz = ch=='>' ? type.substring(0,genx) : type;        
