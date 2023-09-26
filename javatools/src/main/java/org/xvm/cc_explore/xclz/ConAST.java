@@ -17,5 +17,6 @@ class ConAST extends AST {
     _tcon = null;
     _con = con;
   }
+  @Override String type() { return _con; }
   @Override SB jcode( SB sb ) { return sb.p(_con); }
 }

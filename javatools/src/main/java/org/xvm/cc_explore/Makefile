@@ -86,14 +86,15 @@ JARBITS += -C $(CLZDIR)/main .    # The java class files
 
 JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
 
-test:	$(classes) $(test_classes)
-	$(JVM) --enable-preview org.xvm.cc_explore.XEC -L ../xdk/build/xdk/lib -L ../xdk/build/xdk/javatools/ ../doc/examples/FizzBuzz.xtc 123
-
-
 # XDK setup
 XDK_DIR = ../xdk/build/xdk
 XDK = $(XDK_DIR)/javatools/javatools.jar
 XTC = nice java -jar $(XDK) xtc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
+
+
+test:	$(classes) $(test_classes)
+	$(JVM) --enable-preview org.xvm.cc_explore.XEC -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools $(MANUAL_DIR)/TestTuples.xtc
+
 
 # Build examples, .xtc from .x
 # Assuming a minor version change in XTC, rebuild XTC examples
@@ -108,17 +109,16 @@ $(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x
 
 
 # Manual tests use an explicit list
-MANUAL_DIR = $(XVM_ROOT)/manualTests/src/main/x
+MANUAL_DIR = ../manualTests/src/main/x
 MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x misc.x queues.x services.x reflect.x regex.x tuple.x
 
 manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x  ,$(MANUAL_TESTS))
-manuals_xtc = $(manuals_x:.x=.xtc)
 
-manuals:	$(manuals_xtc)
+manuals:	$(manuals_x:x=xtc) $(XDK)
 
-$(manuals_xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
+$(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
 	@echo "compiling " $@ " because " $?
-	@$(XTC) $? -o $(EXM)
+	$(XTC) $? -o $(MANUAL_DIR)
 
 # TAGS
 tags:	../TAGS
