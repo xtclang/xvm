@@ -9,18 +9,18 @@ import java.util.*;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class XAry<E> implements Iterable<E> {
+public class Ary<E> implements Iterable<E> {
   public final Class<E> _eclz;
   public E[] _es;
   public int _len;
-  public XAry(Class<E> eclz) {
+  public Ary(Class<E> eclz) {
     _eclz = eclz;
     _es = (E[]) java.lang.reflect.Array.newInstance(_eclz,1);
     _len = 0;
   }
 
   /** Add an element, doubling base array as needed */
-  public XAry<E> add( E e ) {
+  public Ary<E> add( E e ) {
     if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));
     _es[_len++] = e;
     return this;
@@ -50,7 +50,7 @@ public class XAry<E> implements Iterable<E> {
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
     if( this==o ) return true;
-    return o instanceof XAry ary
+    return o instanceof Ary ary
       && _len != ary._len
       && Arrays.equals(_es,ary._es);
   }

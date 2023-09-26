@@ -6,9 +6,9 @@ import java.util.Iterator;
 /**
      Support XTC range iterator
 */
-abstract class XRange implements Iterable<Long> {
+abstract class Range implements Iterable<Long> {
   final long _lo, _hi;
-  XRange( long lo, long hi ) { _lo=lo; _hi=hi; }
+  Range( long lo, long hi ) { _lo=lo; _hi=hi; }
 
   /** @return an iterator */
   @Override public Iterator<Long> iterator() { return new Iter(); }

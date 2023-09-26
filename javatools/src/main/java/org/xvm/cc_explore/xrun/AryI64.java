@@ -7,11 +7,11 @@ import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class XAryI64 {
+public class AryI64 {
   public long[] _es;
   public int _len;
-  public XAryI64() { _es = new long[1]; }
-  public XAryI64( long len, LongUnaryOperator fcn ) {
+  public AryI64() { _es = new long[1]; }
+  public AryI64( long len, LongUnaryOperator fcn ) {
     _len = (int)len;
     if( _len != len ) throw XEC.TODO(); // Too Big
     _es = new long[_len];
@@ -21,7 +21,7 @@ public class XAryI64 {
   
 
   // Add an element, doubling base array as needed
-  public XAryI64 add( long e ) {
+  public AryI64 add( long e ) {
     if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));
     _es[_len++] = e;
     return this;
@@ -49,7 +49,7 @@ public class XAryI64 {
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
     if( this==o ) return true;
-    if( !(o instanceof XAryI64 ary) ) return false;
+    if( !(o instanceof AryI64 ary) ) return false;
     if( _len != ary._len ) return false;
     if( _es == ary._es ) return true;
     for( int i=0; i<_len; i++ )

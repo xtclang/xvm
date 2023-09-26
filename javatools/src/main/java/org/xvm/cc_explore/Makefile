@@ -89,11 +89,8 @@ JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
 # XDK setup
 XDK_DIR = ../xdk/build/xdk
 XDK = $(XDK_DIR)/javatools/javatools.jar
-XTC = nice java -jar $(XDK) xtc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
-
-
-test:	$(classes) $(test_classes)
-	$(JVM) --enable-preview org.xvm.cc_explore.XEC -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools $(MANUAL_DIR)/TestTuples.xtc
+XTC = nice java -jar $(XDK) xtc                      -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
+XEC = $(JVM) --enable-preview org.xvm.cc_explore.XEC -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
 
 
 # Build examples, .xtc from .x
@@ -107,18 +104,30 @@ $(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x
 	@echo "compiling " $@ " because " $?
 	@$(XTC) $? -o $(EXM)
 
+examples_run: $(classes) $(test_classes)
+	$(XEC) $(EXM)/HelloWorld.xtc
+	$(XEC) $(EXM)/FizzBuzz.xtc
+	$(XEC) $(EXM)/Permutations.xtc
+
 
 # Manual tests use an explicit list
 MANUAL_DIR = ../manualTests/src/main/x
 MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x misc.x queues.x services.x reflect.x regex.x tuple.x
 
-manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x  ,$(MANUAL_TESTS))
+manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
 manuals:	$(manuals_x:x=xtc) $(XDK)
 
 $(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
 	@echo "compiling " $@ " because " $?
-	$(XTC) $? -o $(MANUAL_DIR)
+	@$(XTC) $? -o $(MANUAL_DIR)
+
+
+TESTS = $(examples_x)
+
+
+test:	$(classes) $(test_classes)
+	$(XEC) $(MANUAL_DIR)/TestTuples.xtc
 
 # TAGS
 tags:	../TAGS

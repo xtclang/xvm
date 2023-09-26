@@ -10,7 +10,7 @@ import org.xvm.cc_explore.xclz.XClz;
 public abstract class Container {
   final Container _par;         // Parent container
   final ModPart _mod;           // Main module
-  public XConsole console() { return _par.console(); }
+  public Console console() { return _par.console(); }
   
   Container( Container par, ModPart mod ) {
     _par = par;
@@ -19,7 +19,7 @@ public abstract class Container {
     // Here I need to build/cache/load a java class for the "_mod",
     XClz xclz = _mod.xclz();
     xclz.run();
-    throw XEC.TODO();
+    System.exit(0);
   }
 
   // TODO:
