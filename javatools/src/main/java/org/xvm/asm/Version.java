@@ -413,7 +413,7 @@ public class Version
                     }
                 else if (nVerDif > 0)
                     {
-                    // this ia newer pre-release
+                    // this is a newer pre-release
                     return true;
                     }
                 }
