@@ -1,8 +1,7 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.xclz.XClz;
-import org.xvm.cc_explore.xclz.XClzBuilder;
+import org.xvm.cc_explore.xclz.*;
 
 import java.util.ArrayList;
 
@@ -78,7 +77,7 @@ public class ModPart extends ClassPart {
   }
 
   // Return a Java Class for this XTC Module
-  public XClz xclz() { return (_xbuild==null ? (_xbuild=new XClzBuilder(this)) : _xbuild).xclz(); }
+  public XRunClz xclz() { return (_xbuild==null ? (_xbuild=new XClzBuilder(this)) : _xbuild).xclz(); }
   
 
   // ----- ModuleType enumeration ----------------------------------------------------------------

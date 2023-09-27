@@ -31,7 +31,9 @@ class DefRegAST extends AST {
       X.define(_name,_type);
   }
   @Override void jpre( SB sb ) {
-    sb.p(_type).p(" ").p(_name);
+    //sb.p(_type);
+    sb.p("var");
+    sb.p(" ").p(_name);
     if( _init != null ) sb.p(" = ").p(_init);
   }
 }

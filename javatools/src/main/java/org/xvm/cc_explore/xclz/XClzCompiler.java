@@ -1,6 +1,5 @@
 package org.xvm.cc_explore.xclz;
 
-import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.XEC;
 
 import java.io.ByteArrayOutputStream;
@@ -15,13 +14,13 @@ import static javax.tools.JavaFileObject.Kind;
 public abstract class XClzCompiler {
 
   // Compile a whole class
-  static Class<XClz> compile( String clzname, SB sb ) throws Exception {
+  static Class<XRunClz> compile( String clzname, String source ) {
 
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     DiagnosticCollector<JavaFileObject> errs = new DiagnosticCollector<>();
     XFileManager xfile = new XFileManager(compiler.getStandardFileManager(null, null, null));
     ArrayList<JavaSrc> srcs = new ArrayList<>();
-    srcs.add(new JavaSrc(clzname, sb.toString()));
+    srcs.add(new JavaSrc(clzname, source));
 
     JavaCompiler.CompilationTask task = compiler.getTask(null, xfile, errs, null, null, srcs);
 
@@ -31,8 +30,12 @@ public abstract class XClzCompiler {
       errs.getDiagnostics().forEach( System.err::println );
       throw XEC.TODO();
     }
-    
-    return (Class<XClz>)xfile._loader.loadClass(clzname);
+
+    try {
+      return (Class<XRunClz>)xfile._loader.loadClass(clzname);
+    } catch( ClassNotFoundException cnfe ) {
+      throw new RuntimeException(cnfe);
+    }
   }
 
   private static class JavaSrc extends SimpleJavaFileObject {
@@ -55,11 +58,11 @@ public abstract class XClzCompiler {
   private static class XClzLoader extends ClassLoader {
     public final HashMap<String,JCodes> _map;
     XClzLoader( ClassLoader par, XFileManager xfm ) { super(par); _map = xfm._map; }
-    @Override protected Class<XClz> findClass(String clzname) throws ClassNotFoundException {
+    @Override protected Class<XRunClz> findClass(String clzname) throws ClassNotFoundException {
       JCodes codes = _map.get(clzname);
       if( codes==null )  throw new ClassNotFoundException();
       byte[] bytes = codes._bos.toByteArray();
-      return (Class<XClz>)defineClass(clzname, bytes, 0, bytes.length);
+      return (Class<XRunClz>)defineClass(clzname, bytes, 0, bytes.length);
     }
   }
   

@@ -2,7 +2,7 @@ package org.xvm.cc_explore.xrun;
 
 import org.xvm.cc_explore.ModPart;
 import org.xvm.cc_explore.XEC;
-import org.xvm.cc_explore.xclz.XClz;
+import org.xvm.cc_explore.xclz.XRunClz;
 
 /**
    A Container: a self-contained set of types
@@ -17,7 +17,7 @@ public abstract class Container {
     _mod = mod;
     if( _mod==null ) return;    // Native Container has no mod
     // Here I need to build/cache/load a java class for the "_mod",
-    XClz xclz = _mod.xclz();
+    XRunClz xclz = _mod.xclz();
     xclz.run();
     System.exit(0);
   }
