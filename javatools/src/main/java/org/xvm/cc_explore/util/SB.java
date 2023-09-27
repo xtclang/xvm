@@ -71,4 +71,16 @@ public final class SB {
   public SB clear() { _sb.setLength(0); return this; }
   public int len() { return _sb.length(); }
   @Override public String toString() { return _sb.toString(); }
+
+  // Escape an XTC string to be a compilable Java string
+  public SB escape( String s ) {
+    int len = s.length();
+    for( int i=0; i<len; i++ ) {
+      char c = s.charAt(i);
+      if( c=='\n' ) p("\\n");
+      else p(c);
+    }
+    return this;
+  }
+  
 }
