@@ -250,8 +250,20 @@ public class XClzBuilder {
       put("Boolean+ecstasy/Boolean.x","boolean");
       put("StringBuffer+ecstasy/text/StringBuffer.x","StringBuffer");
       put("String+ecstasy/text/String.x","String");
-      put("Char+ecstasy/text/Char.x","Character");
+      put("Char+ecstasy/text/Char.x","char");
     }};
+
+  // Convert a primtive to the Java object version.
+  static final HashMap<String,String> XBOX = new HashMap<>() {{
+      put("char","Character");
+      put("int","Integer");
+      put("long","Long");
+    }};
+  static String box(String s) {
+    String box = XBOX.get(s);
+    return box==null ? s : box;
+  }
+
   
   // Produce a java type from a TermTCon
   static String jtype( Const tc, boolean boxed ) {
@@ -260,11 +272,11 @@ public class XClzBuilder {
       String key = clz._name + "+" + clz._path._str;
       String val = XJMAP.get(key);
       if( val!=null )
-        return boxed ? val.substring(0,1).toUpperCase() + val.substring(1) : val;
+        return boxed ? box(val) : val;
       throw XEC.TODO();
     }
     if( tc instanceof ParamTCon ptc ) {
-      String telem = jtype(ptc._parms[0],true);
+      String telem = ptc._parms==null ? null : jtype(ptc._parms[0],true);
       ClassPart clz = ((ClzCon)ptc._con).clz();
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
         if( telem.equals("Long") )  return "AryI64"; // Java ArrayList specialized to int64
@@ -281,7 +293,9 @@ public class XClzBuilder {
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") )
         // TODO: Gonna need more type info that this
         return "XFunc";
-         
+      if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
+        return telem + ".class";
+          
       throw XEC.TODO();
     }
     if( tc instanceof ImmutTCon itc ) 
@@ -294,41 +308,48 @@ public class XClzBuilder {
   // be used many times.
   private static String tuple_class( TCon[] parms ) {
     assert ASB.len()==0;
-    String[] clzs = new String[parms.length];
-    ASB.p("Tuple");
-    for( int i=0; i<parms.length; i++ )
+    int N = parms==null ? 0 : parms.length;
+    String[] clzs = new String[N];
+    ASB.p("Tuple").p(N);
+    for( int i=0; i<N; i++ )
       ASB.p("$").p(clzs[i]=jtype(parms[i],false));
 
     // Lookup cached version
     String tclz = ASB.toString();
     ASB.clear();
+    if( N==0 ) return tclz;     // Tuple0 already exists in the base runtime
     if( !XCLASSES.containsKey(tclz) ) {
       /* Gotta build one.  Looks like:
-         class Tuple$long$String$Char {
+         class Tuple3$long$String$char extends Tuple3 {
            public final long _f0;
            public final String _f1;
-           public final Character _f2;
-           Tuple(long f0, String f1, Char f2) {
+           public final char _f2;
+           Tuple(long f0, String f1, char f2) {
              _f0=f0; _f1=f1; _f2=f2;
            }
+           public Object f0() { return _f0; }
+           public Object f1() { return _f1; }
+           public Object f2() { return _f2; }
          }
       */
-      ASB.p("class ").p(tclz).p(" extends XClz {").nl().ii();
-      for( int i=0; i<clzs.length; i++ )
+      // Tuple N class
+      ASB.p("class ").p(tclz).p(" extends Tuple"+N+" {").nl().ii();
+      // N field declares
+      for( int i=0; i<N; i++ )
         ASB.ip("public final ").p(clzs[i]).p(" _f").p(i).p(";").nl();
+      // Constructor, taking N arguments
       ASB.ip(tclz).p("( ");
-      for( int i=0; i<clzs.length; i++ )
+      for( int i=0; i<N; i++ )
         ASB.p(clzs[i]).p(" f").p(i).p(", ");
       ASB.unchar(2).p(") {").nl().ii().i();
-      for( int i=0; i<clzs.length; i++ )
+      // N arg to  field assigns
+      for( int i=0; i<N; i++ )
         ASB.p("_f").p(i).p("=").p("f").p(i).p("; ");
       ASB.nl().di().ip("}").nl();
-      ASB.ip("public String toString() {").nl().ii();
-      ASB.ip("return \"(\" + ");
-      for( int i=0; i<clzs.length; i++ )
-        ASB.p("_f").p(i).p(" + \", \" + ");
-      ASB.unchar(7).p("\")\";").nl();
-      ASB.di().ip("}").nl();
+      // Abstract accessors
+      for( int i=0; i<N; i++ )
+        ASB.ip("public Object f").p(i).p("() { return _f").p(i).p("; }").nl();
+      // Class end
       ASB.di().ip("}").nl();
       XCLASSES.put(tclz,ASB.toString());
       ASB.clear();
@@ -348,11 +369,10 @@ public class XClzBuilder {
     return rez;
   }
   private static SB value_tcon( SB asb, TCon tc ) {
-    // Integer constants
+    // Integer constants in XTC are Java Longs
     if( tc instanceof IntCon ic ) {
       if( ic._big != null ) throw XEC.TODO();
-      ASB.p(ic._x);
-      return (int)ic._x == ic._x ? ASB : ASB.p('L');
+      return ASB.p(ic._x).p('L');
     }
 
     // Character constant
@@ -377,12 +397,14 @@ public class XClzBuilder {
         String baseclz = ch=='>' ? type.substring(0,genx) : type;        
         ASB.p("new ").p(baseclz);
 
-        if( baseclz.contains("Tuple$") ) {
+        if( baseclz.contains("Tuple") ) {
           ASB.p("(");
-          if( ac.cons()!=null )
+          if( ac.cons()!=null ) {
             for( Const con : ac.cons() )
               value_tcon( ASB, (TCon)con ).p(", ");
-          ASB.unchar(2).p(")");
+            ASB.unchar(2);
+          }
+          ASB.p(")");
         } else {
           
           assert baseclz.startsWith("Ary");          
@@ -423,19 +445,21 @@ public class XClzBuilder {
     if( tc instanceof MethodCon mcon )  {
       MethodPart meth = (MethodPart)mcon.part();
       // TODO: Assumes the method is in the local Java namespace
-      String name = meth._name;
-      return ASB.p(name);
+      return ASB.p(meth._name);
     }
 
     // Singleton class constants
-    if( tc instanceof SingleCon con0 ) {
+    if( tc instanceof SingleCon con0 )
       return ASB.p(java_class_name((ModPart)con0.part()));
-    }
 
     // Property constant.  Just the base name, and depending on usage
     // will be either console$get() or console$set(value).
-    if( tc instanceof PropCon prop ) {
+    if( tc instanceof PropCon prop )
       return ASB.p(prop._name);
+
+    // A class Type as a value
+    if( tc instanceof ParamTCon ptc ) {
+      return ASB.p(jtype(ptc,false));
     }
     
     throw XEC.TODO();

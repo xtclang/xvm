@@ -45,6 +45,14 @@ class BinOpAST extends AST {
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return new NewAST(_kids,_type+"II",null);
     if( _op0.equals("..<") ) return new NewAST(_kids,_type+"IE",null);
+    // Generally Java needs to use equals for refs and == is only for prims
+    if( _op0.equals("==") ) {
+      String t0 = _kids[0].type();
+      String t1 = _kids[1].type();
+      if( XClzBuilder.box( t0 ).equals( t0 ) ||
+          XClzBuilder.box( t1 ).equals( t1 ) )
+        return new InvokeAST("equals",_kids[0],_kids[1]);
+    }
     return this;
   }
   @Override SB jcode( SB sb ) {

@@ -88,10 +88,11 @@ public abstract class AST {
   private static AST _ast( XClzBuilder X, int iop ) {
     NodeType op = NodeType.valueOf(iop);
     return switch( op ) {
-    case ArrayAccessExpr -> BinOpAST.make(X,"[","]");
     case AnnoNamedRegAlloc -> DefRegAST.make(X,true ,true );
     case AnnoRegAlloc ->   DefRegAST.make(X,false,true );
+    case ArrayAccessExpr -> BinOpAST.make(X,"[","]");
     case Assign       ->   AssignAST.make(X,true);
+    case AssertStmt   ->   AssertAST.make(X);
     case BindFunctionExpr -> BindFuncAST.make(X);
     case CallExpr     ->     CallAST.make(X);
     case CondOpExpr   ->    BinOpAST.make(X,false);
@@ -112,6 +113,7 @@ public abstract class AST {
     case SwitchExpr   ->   SwitchAST.make(X);
     case TemplateExpr -> TemplateAST.make(X);
     case TernaryExpr  ->  TernaryAST.make(X);
+    case UnaryOpExpr  ->    UniOpAST.make(X);
     
     //case MapExpr      -> new     MapAST(X, X.methcon_ast());
     //case StmtExpr     -> new    ExprAST(X);

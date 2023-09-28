@@ -24,18 +24,17 @@ class InvokeAST extends AST {
     _meth = meth._name;
     
     // Replace default args with their actual default values
-    if( _kids!=null )
-      for( int i=1; i<_kids.length; i++ ) {
-        if( _kids[i] instanceof RegAST reg ) {
-          assert reg._reg == -4;  // Default
-          // Swap in the default
-          _kids[i] = new ConAST(meth._args[i-1]._def);
-        }
+    for( int i=1; i<_kids.length; i++ ) {
+      if( _kids[i] instanceof RegAST reg ) {
+        assert reg._reg == -4;  // Default
+        // Swap in the default
+        _kids[i] = new ConAST(meth._args[i-1]._def);
       }
+    }
   }
   
-  private InvokeAST( String meth, AST target, AST ast ) {
-    super(new AST[]{target,ast});
+  InvokeAST( String meth, AST... kids ) {
+    super(kids);
     _meth = meth;
   }
   
@@ -50,7 +49,7 @@ class InvokeAST extends AST {
     else sb.p(", ");
   }
   @Override void jpost( SB sb ) {
-    if( _kids!=null ) sb.unchar(2);
+    if( _kids.length>1 ) sb.unchar(2);
     sb.p(")");
   }
 }
