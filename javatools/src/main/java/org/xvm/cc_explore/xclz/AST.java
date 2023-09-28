@@ -75,7 +75,8 @@ public abstract class AST {
   static final int CONSTANT_OFFSET = -16;
   static AST ast_term( XClzBuilder X ) {
     int iop = (int)X.pack64();
-    if( iop >= 32 ) return new RegAST(iop-32,X);  // Local variable register
+    if( iop >= 32 )
+      return new RegAST(iop-32,X);  // Local variable register
     if( iop == NodeType.Escape.ordinal() ) return ast(X);
     if( iop >= 0 ) return _ast(X,iop);
     if( iop > CONSTANT_OFFSET ) return new RegAST(iop); // "special" negative register
@@ -98,12 +99,15 @@ public abstract class AST {
     case CondOpExpr   ->    BinOpAST.make(X,false);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
+    case ForStmt      ->  ForStmtAST.make(X);
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
     case InvokeExpr   ->   InvokeAST.make(X);
     case MultiExpr    ->    MultiAST.make(X);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
+    case NarrowedExpr ->   NarrowAST.make(X);
     case NewExpr      ->      NewAST.make(X);
+    case PreIncExpr   ->    UniOpAST.make(X,"++",null);
     case PropertyExpr -> PropertyAST.make(X);
     case RegAlloc     ->   DefRegAST.make(X,true ,true );
     case RelOpExpr    ->    BinOpAST.make(X,true );
