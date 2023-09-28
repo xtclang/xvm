@@ -7,9 +7,9 @@ module Test1Tuple {
         Tuple<Int, String, Char> t1 = (1, "big", '?');
         console.print($"{t1} - {t1.mutability}");
 
-        //Tuple t1a = Tuple:().add(Int:1).add("big").add('?');
-        //assert t1a == t1;
-        //
+        Tuple t1a = Tuple:().add(Int:1).add("big").add('?');
+        assert t1a == t1;
+
         //Tuple<Int, String, Char> t2 = t1.ensureMutability(Fixed);
         //t2[1] = "small";
         //console.print($"{t2} - {t2.mutability}");
