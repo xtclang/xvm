@@ -19,9 +19,9 @@ public abstract class XClz {
   
   public enum Mutability {
     Constant,                   // Deeply immutable
-    Persistant,                 // Odd name, but shallow immutable
+    Persistent,                 // Odd name, but shallow immutable
     Fixed;                      // Tuples and arrays are fixed length, but mutable
-    static final Mutability[] VALUES = values();
+    public static final Mutability[] VALUES = values();
   }
 
 }

@@ -16,4 +16,12 @@ class AssertAST extends AST {
   @Override AST rewrite() {
     return new InvokeAST("xassert",_kids);
   }
+  @Override void jmid ( SB sb, int i ) {
+    if( i==0 ) sb.p(".xassert(");
+    else sb.p(", ");
+  }
+  @Override void jpost( SB sb ) {
+    if( _kids.length>1 ) sb.unchar(2);
+    sb.p(")");
+  }
 }

@@ -10,13 +10,13 @@ module Test1Tuple {
         Tuple t1a = Tuple:().add(Int:1).add("big").add('?');
         assert t1a == t1;
 
-        //Tuple<Int, String, Char> t2 = t1.ensureMutability(Fixed);
-        //t2[1] = "small";
-        //console.print($"{t2} - {t2.mutability}");
-        //
-        //Tuple<String, Char> t3 = t2[1..2];
-        //console.print($"{t3}  - {t3.mutability}");
-        //
+        Tuple<Int, String, Char> t2 = t1.ensureMutability(Fixed);
+        t2[1] = "small";
+        console.print($"{t2} - {t2.mutability}");
+
+        Tuple<String, Char> t3 = t2[1..2];
+        console.print($"{t3}  - {t3.mutability}");
+
         //Tuple t4 = t2.slice(1..2); // "small", ?
         //assert t4 == t3;
         //

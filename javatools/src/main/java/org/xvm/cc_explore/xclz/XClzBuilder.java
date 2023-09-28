@@ -321,9 +321,9 @@ public class XClzBuilder {
     if( !XCLASSES.containsKey(tclz) ) {
       /* Gotta build one.  Looks like:
          class Tuple3$long$String$char extends Tuple3 {
-           public final long _f0;
-           public final String _f1;
-           public final char _f2;
+           public long _f0;
+           public String _f1;
+           public char _f2;
            Tuple(long f0, String f1, char f2) {
              _f0=f0; _f1=f1; _f2=f2;
            }
@@ -336,7 +336,7 @@ public class XClzBuilder {
       ASB.p("class ").p(tclz).p(" extends Tuple"+N+" {").nl().ii();
       // N field declares
       for( int i=0; i<N; i++ )
-        ASB.ip("public final ").p(clzs[i]).p(" _f").p(i).p(";").nl();
+        ASB.ip("public ").p(clzs[i]).p(" _f").p(i).p(";").nl();
       // Constructor, taking N arguments
       ASB.ip(tclz).p("( ");
       for( int i=0; i<N; i++ )
@@ -349,6 +349,9 @@ public class XClzBuilder {
       // Abstract accessors
       for( int i=0; i<N; i++ )
         ASB.ip("public Object f").p(i).p("() { return _f").p(i).p("; }").nl();
+      // Abstract setters
+      for( int i=0; i<N; i++ )
+        ASB.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(box(clzs[i])).p(")e; }").nl();
       // Class end
       ASB.di().ip("}").nl();
       XCLASSES.put(tclz,ASB.toString());
@@ -429,12 +432,21 @@ public class XClzBuilder {
       }
       return ASB;
     }
-    
-    // Booleans
+
+    // Enums
     if( tc instanceof EnumCon econ ) {
       ClassPart clz = (ClassPart)econ.part();
-      if( !clz._super._name.equals("Boolean") ) throw XEC.TODO();
-      return ASB.p(clz._name.equals("False") ? "false" : "true");
+      // XTC Booleans rewrite as Java booleans
+      if( clz._super._name.equals("Boolean") ) 
+        return ASB.p(clz._name.equals("False") ? "false" : "true");
+      // Intercept Tuple enums
+      if( clz._super._name.equals("Mutability") ) {
+        if( clz._super._par._name.equals("Tuple") ) {
+          return ASB.p("Tuple.Mutability.").p(clz._name);          
+        } else
+          throw XEC.TODO();
+      }
+      throw XEC.TODO();
     }
     
     // Literal constants
