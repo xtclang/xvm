@@ -11,6 +11,8 @@ class RegAST extends AST {
   RegAST( int reg, String name, String type ) {
     super(null);
     _reg  = reg ;
+    if( name==null && reg== -4 /*A_DEFAULT*/ ) name = "default";
+    if( name==null && reg== -5 /*A_THIS*/    ) name = "this";
     _name = name;
     _type = type;
   }

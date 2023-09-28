@@ -9,8 +9,8 @@ import org.xvm.cc_explore.tvar.TVLambda;
 public class MapCon extends TCon {
   final Format _f;
   
-  private TCon _t;              // Type for whole map
-  private final Const[] _keys, _vals;
+  public TCon _t;              // Type for whole map
+  public final Const[] _keys, _vals;
 
   private Part _part;
   private Part[] _parts;
@@ -24,7 +24,7 @@ public class MapCon extends TCon {
     for( int i=0; i<len; i++ ) {  X.u31();  X.u31();  }
   }
   @Override public void resolve( CPool X ) {
-    TCon t = (TCon)X.xget();
+    _t = (TCon)X.xget();
     int len = X.u31();
     for( int i=0; i<len; i++ ) {
       _keys[i] = X.xget();

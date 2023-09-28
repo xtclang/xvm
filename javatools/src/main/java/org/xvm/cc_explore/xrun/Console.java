@@ -9,4 +9,10 @@ public class Console {
     if( !no_newline )
       System.out.println();
   }
+
+  public void print( int i, boolean no_newline ) {
+    System.out.print(i);
+    if( !no_newline )
+      System.out.println();
+  }
 }

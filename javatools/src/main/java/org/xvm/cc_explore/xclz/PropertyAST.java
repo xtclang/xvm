@@ -1,6 +1,5 @@
 package org.xvm.cc_explore.xclz;
 
-import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.TCon;
 import org.xvm.cc_explore.util.SB;
 
@@ -12,10 +11,10 @@ class PropertyAST extends AST {
     if( lhs instanceof ConAST con && 
         con._con.equals(XClzBuilder.java_class_name(X._mod)) )
       lhs = null;
-    return new PropertyAST(X,lhs,prop);
+    return new PropertyAST( lhs,prop);
   }
   
-  private PropertyAST( XClzBuilder X, AST lhs, String prop ) {
+  private PropertyAST( AST lhs, String prop ) {
     super(new AST[]{lhs});
     _prop=prop;
   }
