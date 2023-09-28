@@ -25,9 +25,9 @@ class InvokeAST extends AST {
     
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
-      if( _kids[i] instanceof RegAST reg ) {
-        assert reg._reg == -4;  // Default
-        // Swap in the default
+      if( _kids[i] instanceof RegAST reg &&
+          reg._reg == -4/*Op.A_DEFAULT*/ ) {    // Default reg
+        // Swap in the default from method defaults
         _kids[i] = new ConAST(meth._args[i-1]._def);
       }
     }
@@ -42,6 +42,8 @@ class InvokeAST extends AST {
     // Cannot invoke directly on java primitives
     if( _meth.equals("toString") && _kids[0].type().equals("long") )
       return new InvokeAST(_meth,new ConAST("Long"),_kids[0]);
+    if( _meth.equals("toInt") && _kids[0] instanceof ConAST con )
+      return new InvokeAST("valueOf",new ConAST("Long"),_kids[0]);
     return this;
   }
   @Override void jmid ( SB sb, int i ) {
