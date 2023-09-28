@@ -8,21 +8,33 @@ import java.util.HashMap;
 
 class UniOpAST extends AST {
   static final Operator[] OPS = Operator.values();
-  final String _op0;
+  final String _pre, _post;
   final String _type;
 
   static UniOpAST make( XClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
-    Operator op = OPS[X.u31()];
-    return new UniOpAST(kids,op.text,type);
+    Operator op = OPS[X.u31()]; // Post op by default
+    return new UniOpAST(kids,null,op.text,type);
   }
   
-  private UniOpAST( AST[] kids, String op0, Const type ) {
+  static UniOpAST make( XClzBuilder X, String pre, String post ) {
+    AST[] kids = X.kids(1);     // One expr
+    Const type = X.con();
+    return new UniOpAST(kids,pre,post,type);
+  }
+  
+  private UniOpAST( AST[] kids, String pre, String post, Const type ) {
     super(kids);
-    _op0 = op0;
+    _pre = pre;
+    _post = post;
     _type = type==null ? null : XClzBuilder.jtype(type,false);
   }
   @Override String type() { return _type; }
-  @Override SB jcode( SB sb ) { return _kids[0].jcode(sb).p(_op0); }
+  @Override SB jcode( SB sb ) {
+    if( _pre !=null ) sb.p(_pre );
+    _kids[0].jcode(sb);
+    if( _post!=null ) sb.p(_post);
+    return sb;
+  }
 }
