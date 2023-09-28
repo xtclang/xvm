@@ -14,5 +14,13 @@ class AssignAST extends AST {
     return new AssignAST(kids, op);
   }
   private AssignAST( AST[] kids, Operator op ) { super(kids); _op=op; }
+  @Override AST rewrite() {
+    // Assign of a non-primitive array
+    if( _kids[0] instanceof BinOpAST bin &&
+        // Replace with "ary.set(idx,val)"
+        bin._op0.equals(".at(") )
+      return new InvokeAST("set",new AST[]{bin._kids[0],bin._kids[1],_kids[1]});
+    return this;
+  }
   @Override void jmid( SB sb, int i ) { if( i==0 ) sb.p(' ').p(_op.text).p(' '); }
 }
