@@ -157,13 +157,10 @@ public class CPool {
     // Large format: 1-8 trailing bytes
     if( (b&0xFF) != 0b11111100 ) { 
       int c = ((b&0xFC)>>>2)+2-1;  // Count of bytes; minus one for the self byte
-      if( c==1 ) return u8();
       if( c>8 ) throw new IllegalArgumentException("# trailing bytes="+c);
-      long x = 0;
-      for( int i=0; i<c; i++ )
-        x = (x<<8) | u8();
-      if( c==2 ) return (short)x; // Sign extend as-if 2 bytes
-      if( c<=4 ) return (int)x;   // Sign extend as-if 4 bytes
+      long x = i8();            // First byte signed
+      for( int i=1; i<c; i++ )
+        x = (x<<8) | u8();      // Remaining bytes unsigned
       return x;
     }
 

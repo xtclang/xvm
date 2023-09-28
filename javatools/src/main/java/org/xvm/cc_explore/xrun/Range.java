@@ -7,7 +7,7 @@ import java.util.Iterator;
      Support XTC range iterator
 */
 abstract class Range implements Iterable<Long> {
-  final long _lo, _hi;
+  final long _lo, _hi;          // Inclusive lo, exclusive hi
   Range( long lo, long hi ) { _lo=lo; _hi=hi; }
 
   /** @return an iterator */

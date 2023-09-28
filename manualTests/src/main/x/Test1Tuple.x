@@ -17,10 +17,10 @@ module Test1Tuple {
         Tuple<String, Char> t3 = t2[1..2];
         console.print($"{t3}  - {t3.mutability}");
 
-        //Tuple t4 = t2.slice(1..2); // "small", ?
-        //assert t4 == t3;
-        //
-        //Tuple t5 = Tuple:(1.toInt()).addAll(t4); // 1, "small", ?
-        //assert t5 == t2;
+        Tuple t4 = t2.slice(1..2); // "small", ?
+        assert t4 == t3;
+
+        Tuple t5 = Tuple:(1.toInt()).addAll(t4); // 1, "small", ?
+        assert t5 == t2;
     }
 }

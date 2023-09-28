@@ -5,30 +5,23 @@ import org.xvm.cc_explore.cons.TCon;
 import org.xvm.cc_explore.util.SB;
 
 class PropertyAST extends AST {
-  public final String _lhs, _prop;
+  public final String _prop;
   static PropertyAST make( XClzBuilder X ) {
-    AST prop = ast_term(X);
-    String lhs;
-    if( prop instanceof ConAST cprop ) lhs = cprop._con;
-    else if( prop instanceof RegAST reg ) lhs = reg._name;
-    else throw XEC.TODO();
-    
-    String con = XClzBuilder.value_tcon((TCon)X.con());
-    return new PropertyAST(X,lhs,con);
+    AST lhs = ast_term(X);    
+    String prop = XClzBuilder.value_tcon((TCon)X.con());
+    if( lhs instanceof ConAST con && 
+        con._con.equals(XClzBuilder.java_class_name(X._mod)) )
+      lhs = null;
+    return new PropertyAST(X,lhs,prop);
   }
   
-  private PropertyAST( XClzBuilder X, String lhs, String prop ) {
-    super(null);
-    // If already in the correct class, skip the leading class
-    if( XClzBuilder.java_class_name( X._mod ).equals(lhs) )
-      lhs = null;
-    _lhs=lhs;
+  private PropertyAST( XClzBuilder X, AST lhs, String prop ) {
+    super(new AST[]{lhs});
     _prop=prop;
   }
   
-  @Override void jpre ( SB sb ) {
-    if( _lhs != null )
-      sb.p(_lhs).p('.');
+  @Override void jpost( SB sb ) {
+    if( _kids[0]!=null ) sb.p('.');
     sb.p(_prop).p("$get()");
   }
 }
