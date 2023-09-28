@@ -15,11 +15,9 @@ class BlockAST extends AST {
     AST[] kids = new AST[X.u31()];
     for( int i=0; i<kids.length; i++ )
       kids[i] = ast(X);    
-    BlockAST blk = new BlockAST(kids);
-    
     // Pop scope-locals at end of scope
     X.pop_locals(nlocals);    
-    return blk;
+    return new BlockAST(kids);
   }
   
   private BlockAST( AST[] kids ) { super(kids); }
