@@ -33,7 +33,11 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             for (PropertyMapping<StructType> field : fields) {
                 field.Value value;
                 if (fieldInput.isNull(field.name)) {
-                    value = field.defaultValue;
+                    if (!(value := field.hasDefault())) {
+                        assert Type type := StructType.modifying(); // remove "struct" access
+                        throw new IllegalJSON($|Missing value for the "{field.name}" field at "{type}"
+                                             );
+                    }
                 } else {
                     using (ElementInput elementInput = fieldInput.openField(field.name)) {
                         Mapping<field.Value> mapping = field.mapping;
@@ -173,5 +177,19 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             Mapping<Value>              mapping,
             Property<StructType, Value> property,
             Boolean                     subclassable = True,
-            Value?                      defaultValue = Null);
+            Value?                      defaultValue = Null) {
+
+        conditional Value hasDefault() {
+            if (defaultValue != Null) {
+                return True, defaultValue;
+            }
+            if (Value.is(Type<Nullable>)) {
+                return True, Null.as(Value);
+            }
+            if (Class<Value> clz := Value.fromClass(), Value value := clz.defaultValue()) {
+                return True, value;
+            }
+            return False;
+        }
+    }
 }
