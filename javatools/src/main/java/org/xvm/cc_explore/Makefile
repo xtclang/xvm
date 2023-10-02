@@ -112,7 +112,7 @@ examples_run: $(classes) $(test_classes)
 
 # Manual tests use an explicit list
 MANUAL_DIR = ../manualTests/src/main/x
-MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x misc.x queues.x services.x reflect.x regex.x tuple.x Test1Tuple.x
+MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x queues.x services.x reflect.x regex.x tuple.x TestMisc.x
 
 manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
@@ -127,7 +127,7 @@ TESTS = $(examples_x)
 
 
 test:	$(classes) $(test_classes)
-	$(XEC) $(MANUAL_DIR)/Test1Tuple.xtc
+	$(XEC) $(MANUAL_DIR)/TestMisc.xtc
 
 # TAGS
 tags:	../TAGS
