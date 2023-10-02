@@ -28,7 +28,32 @@ val tests = listOf<String>(
     "src/main/x/services.x",
     "src/main/x/reflect.x",
     "src/main/x/regex.x",
+    "src/main/x/runner.x",
     "src/main/x/tuple.x")
+
+val testModules = listOf<String>(
+    "TestAnnotations",
+    "TestArray",
+    "TestCollections",
+    "TestDefAsn",
+    "TestTry",
+    "TestGenerics",
+    "TestInnerOuter",
+    "TestFiles",
+    "TestIO",
+    "TestLambda",
+    "TestLiterals",
+    "TestLoops",
+    "TestNesting",
+    "TestNumbers",
+    "TestProps",
+    "TestMaps",
+    "TestMisc",
+    "TestQueues",
+    "TestServices",
+    "TestReflection",
+    "TestRegularExpressions",
+    "TestTuples")
 
 tasks.register("clean") {
     group       = "Build"
@@ -75,6 +100,27 @@ tasks.register<JavaExec>("runAll") {
     mainClass.set("org.xvm.runtime.TestConnector")
 }
 
+tasks.register<JavaExec>("runAllParallel") {
+    group       = "Test"
+    description = "Run all tests"
+
+    dependsOn(xdk.tasks["build"], compileAll)
+
+    jvmArgs("-Xms2048m", "-Xmx2048m", "-ea")
+
+    classpath(javatoolsJar)
+
+    val opts = listOf<String>(
+        "-L", "${xdk.buildDir}/xdk/lib",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+        "-L", "$buildDir",
+        "Runner")
+
+    args(opts + testModules)
+    mainClass.set("org.xvm.tool.Runner")
+}
+
 val compileOne = tasks.register<JavaExec>("compileOne") {
     description = "Compile a \"testName\" test"
 
@@ -101,7 +147,7 @@ tasks.register<JavaExec>("runOne") {
 
     val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
 
-    jvmArgs("-showversion", "-Xms1024m", "-Xmx1024m", "-ea")
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
 
