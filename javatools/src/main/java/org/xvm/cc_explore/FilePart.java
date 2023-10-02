@@ -2,7 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.ModCon;
 import org.xvm.cc_explore.cons.Const;
-import org.xvm.cc_explore.tvar.TVar;
 import org.xvm.cc_explore.tvar.TVLeaf;
 
 /**
@@ -75,7 +74,6 @@ public class FilePart extends Part {
   }
 
   @Override void link_innards( XEC.ModRepo repo ) { }
-  @Override TVar _setype( ) { return new TVLeaf(); }
 
   // Can we handle this version?
   static boolean isFileVersionSupported(int major, int minor) {

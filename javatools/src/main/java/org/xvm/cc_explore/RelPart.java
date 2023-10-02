@@ -1,6 +1,5 @@
 package org.xvm.cc_explore;
 
-import org.xvm.cc_explore.tvar.TVar;
 import org.xvm.cc_explore.tvar.TVStruct;
   
 /**
@@ -26,13 +25,6 @@ public class RelPart extends ClassPart {
     return _op.search(c1,c2);
   }
 
-  @Override TVStruct _setype() {
-    TVStruct t1 = (TVStruct)_p1.setype();
-    TVStruct t2 = (TVStruct)_p2.setype();
-    return _op.op(t1,t2);
-  }
-
-  
   public static enum Op {
     // For a Union type, the result is one of the Union members - and the
     // allowed set of fields we can use is limited to what is common across

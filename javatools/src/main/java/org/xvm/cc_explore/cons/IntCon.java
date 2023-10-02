@@ -70,5 +70,4 @@ public class IntCon extends TCon {
   private IllegalArgumentException bad(int c) {
     return new IllegalArgumentException("value exceeds " + c + " bytes: " + (_big==null ? ""+_x : _big.toString()));
   }
-  @Override TVBase _setype() { return new TVBase(this); }
 }

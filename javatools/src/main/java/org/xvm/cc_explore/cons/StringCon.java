@@ -12,5 +12,4 @@ public class StringCon extends TCon {
   public final String _str;
   public StringCon( CPool X ) { _str = X.utf8(); }
   @Override public SB str(SB sb) { return sb.p(_str); }
-  @Override TVBase _setype() { return new TVBase(this); }
 }

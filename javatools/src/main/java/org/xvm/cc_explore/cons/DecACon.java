@@ -10,5 +10,4 @@ public class DecACon extends TCon {
   private DecCon _dec;
   public DecACon( CPool X ) { X.u31(); }
   @Override public void resolve( CPool X ) { _dec = (DecCon)X.xget(); }
-  @Override TVBase _setype() { return new TVBase(this); }
 }

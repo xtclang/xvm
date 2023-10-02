@@ -34,5 +34,4 @@ public class AryCon extends TCon {
         c.link(repo);
     return (_clz = (ClassPart)_t.link(repo));
   }
-  @Override TVBase _setype() { return new TVBase(this); }
 }

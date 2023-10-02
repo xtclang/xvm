@@ -44,16 +44,9 @@ public class ParamTCon extends TCon implements ClzCon {
     assert _part!=null && ptc._part!=null;
     return _part == ptc._part ? 1 : -1;
   }
-  @Override TVar _setype() {
-    if( _parms!=null )
-      for( int i=0; i<_parms.length; i++ )
-       _types[i] = _parms[i].setype();
-    return _con.setype();
-  }
 
   // Is a generic TermTCon?
   @Override public TermTCon is_generic() {
     return _parms.length==1 && _parms[0] instanceof TermTCon ttc ? ttc : null;
   }
-
 }

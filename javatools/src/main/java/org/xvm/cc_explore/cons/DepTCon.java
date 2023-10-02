@@ -17,6 +17,5 @@ public abstract class DepTCon extends TCon implements ClzCon {
   }
   @Override public ClassPart clz() { return (ClassPart)_part; }
   @Override public void resolve( CPool X ) { _par = (TCon)X.xget(); }
-  @Override TVar _setype() {  return _part.setype(); }
   abstract public Part link(XEC.ModRepo repo);
 }

@@ -9,10 +9,4 @@ import org.xvm.cc_explore.tvar.TVLeaf;
  */
 public class RecurTCon extends TermTCon {
   public RecurTCon( CPool X ) { super(X); }
-  @Override TVar _setype() {
-    setype_stop_cycles( new TVLeaf() );
-    TVar tv = ((PartCon)_id).setype();
-    tvar().unify(tv);
-    return tv;
-  }
 }

@@ -12,7 +12,6 @@ import java.math.MathContext;
 public abstract class DecCon extends TCon {
   private final BigDecimal _dec;
   public DecCon( CPool X, BigDecimal dec ) { _dec = dec; }
-  @Override TVBase _setype( ) { return new TVBase(this); }
   
 
   /**

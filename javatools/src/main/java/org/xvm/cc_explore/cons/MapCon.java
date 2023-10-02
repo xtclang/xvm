@@ -31,7 +31,6 @@ public class MapCon extends TCon {
       _vals[i] = X.xget();
     }
   }
-  @Override TVLambda _setype() {  return new TVLambda(1,1); }
   
   @Override public Part link(XEC.ModRepo repo) {
     if( _parts!=null ) return null; // Already linked

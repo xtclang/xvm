@@ -1,21 +1,13 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.TVar;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.util.NonBlockingHashMap;
 
 /**
    DAG structure containment of the existing components/structures.
    Handles e.g. the Class hierarchy, Modules, Methods, and Packages.
-   These things are represented as structures in memory.
-   
-   Everything has a TVar type.  FileParts have the empty type.
-   Classes are a TVStruct with fields (which include methods).
-   Classes are nominal, and isa tests can start/stop on the name.
-   Interfaces classes which require structural testing; the name is just for fun.
-   Methods are TVLambda, and the Parameters are normal TVars.
-   
+   These things are represented as structures in memory.   
  */
 abstract public class Part {
   public final Part _par;       // Parent in the parent chain; null ends.  Last is FilePart.
@@ -138,67 +130,6 @@ abstract public class Part {
     return _name2kid==null ? null : _name2kid.get(s);
   }
 
-
-  // ----- Types -----------------------------------------------------------
-  // This problem in many ways appear to mirror AA types, including resolvable
-  // fields.  It's not the full type inference, but there's definitely a "isa"
-  // question being asked during linking - which corresponds to AA's "which is
-  // the (exactly one) match for this type, from this set of choices".
-  //
-  // Things in the type grammer
-  // - Classes.  Names matter.  Can be subtyped.  Uses TVStruct.
-  // - Interfaces.  Name is ignored, and structural matching only; again TVStruct.
-  // - Methods, using TVLambda.
-  // - Generified parts: aka HM type variables.
-  // - I'll probably get a lot of unspecified type vars, aka Leafs.
-  // - - So using the UF algo like normal HM to roll up.
-  //
-  //   Short description from Appender.x XTC file:
-
-  //   interface Iterator<Element> {
-  //     next: { -> Element }; // Abstract
-  //     take: { -> Element }; // Concrete
-  //     ... more concrete fields...
-  //   }
-  //   
-  //   interface Iterable<Element> {
-  //     size:Int;
-  //     iterator: { -> Iterator<Element> }; // Abstract
-  //     toArray: { Mut -> Element[] } // Concrete, returns Element array
-  //   }
-  //
-  //   
-  //   interface Appender<Element> {
-  //     add:{ Element -> Appender };
-  //     addAll:{ Iterable<Element> -> Appender };
-  //     addAll:{ Iterator<Element> -> Appender };
-  //     ensureCapacity:{ Int -> Appender };
-  //   }
-  // Self type
-  private TVar _tvar;
-  public final boolean has_tvar() { return _tvar!=null; }
-
-  // Access the self-type
-  public final TVar tvar() {
-    return _tvar.unified() ? (_tvar = _tvar.find()) : _tvar;
-  }
-  // Set the self-type exactly once
-  public final TVar setype( ) {
-    if( _tvar!=null ) return tvar();
-    _tvar = _setype();
-    
-    // Recursively kids
-    if( _name2kid != null )
-      for( String s : _name2kid.keySet() )
-        _name2kid.get(s).setype();
-    
-    return _tvar;
-  }
-  final void setype_stop_cycles( TVar tv ) {_tvar = tv;}
-  // Sub Parts use this return the initial tvar; and can be assured that they
-  // are called only once, and they do not need to assign to tvar.
-  abstract TVar _setype();
-  
   // ----- Enums -----------------------------------------------------------
   /**
    * The Format enumeration defines the multiple different binary formats used

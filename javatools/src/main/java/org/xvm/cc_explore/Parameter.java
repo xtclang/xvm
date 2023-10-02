@@ -1,7 +1,6 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.TVar;
 
 public class Parameter {
   private boolean _linked;
@@ -42,9 +41,4 @@ public class Parameter {
     if( _def != null ) _def.link(repo);
   }
 
-  TVar setype() { return _con.setype(); }
-  public TVar tvar() { return _con.tvar(); }
-  public TVar generic_tvar() {
-    return ((ParamTCon)_con)._types[0];
-  }
 }

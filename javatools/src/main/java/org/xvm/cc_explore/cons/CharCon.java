@@ -9,5 +9,4 @@ import org.xvm.cc_explore.tvar.TVBase;
 public class CharCon extends TCon {
   public final int _ch;
   public CharCon( CPool X ) { _ch = X.utf8Char(); }
-  @Override TVBase _setype() { return new TVBase(this); }
 }

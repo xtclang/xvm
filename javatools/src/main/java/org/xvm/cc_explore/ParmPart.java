@@ -1,7 +1,6 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.TVar;
 
 /**
    Package part
@@ -23,5 +22,4 @@ public class ParmPart extends Part {
     
     throw XEC.TODO();
   }  
-  @Override TVar _setype( ) { return _id.setype(); }
 }

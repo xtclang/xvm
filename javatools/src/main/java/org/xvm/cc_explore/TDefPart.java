@@ -1,7 +1,6 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.TVar;
 
 /**
    Type Definition part
@@ -16,5 +15,4 @@ public class TDefPart extends Part {
   
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) { _type.link(repo); }
-  @Override TVar _setype( ) { return _type.setype(); }
 }
