@@ -95,8 +95,11 @@ public abstract class AST {
     case AssertStmt   ->   AssertAST.make(X);
     case Assign       ->   AssignAST.make(X,true);
     case BindFunctionExpr -> BindFuncAST.make(X);
+    case BinOpAssign  ->   AssignAST.make(X,false);
+    case BitNotExpr   ->    UniOpAST.make(X,"~",null);
     case CallExpr     ->     CallAST.make(X);
     case CondOpExpr   ->    BinOpAST.make(X,false);
+    case ConvertExpr  ->    UniOpAST.make(X,true);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
@@ -107,7 +110,12 @@ public abstract class AST {
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
     case NarrowedExpr ->   NarrowAST.make(X);
     case NewExpr      ->      NewAST.make(X);
+    case NegExpr      ->    UniOpAST.make(X,"-",null);
+    case NotExpr      ->    UniOpAST.make(X,"!",null);
     case PreIncExpr   ->    UniOpAST.make(X,"++",null);
+    case PreDecExpr   ->    UniOpAST.make(X,"--",null);
+    case PostIncExpr  ->    UniOpAST.make(X,null,"++");
+    case PostDecExpr  ->    UniOpAST.make(X,null,"--");
     case PropertyExpr -> PropertyAST.make(X);
     case RegAlloc     ->   DefRegAST.make(X,true ,true );
     case RelOpExpr    ->    BinOpAST.make(X,true );
@@ -118,7 +126,7 @@ public abstract class AST {
     case TemplateExpr -> TemplateAST.make(X);
     case TernaryExpr  ->  TernaryAST.make(X);
     case TupleExpr    ->     ListAST.make(X,true);
-    case UnaryOpExpr  ->    UniOpAST.make(X);
+    case UnaryOpExpr  ->    UniOpAST.make(X,false);
     
     //case MapExpr      -> new     MapAST(X, X.methcon_ast());
     //case StmtExpr     -> new    ExprAST(X);
