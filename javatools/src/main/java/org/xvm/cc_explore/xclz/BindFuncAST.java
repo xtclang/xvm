@@ -35,7 +35,7 @@ class BindFuncAST extends AST {
     if( _kids[nargs] instanceof ConAST con && con._con.equals("->") ) {
       MethodPart lam = (MethodPart)((MethodCon)con._tcon).part();
       // A builder for the lambda method
-      XClzBuilder X2 = new XClzBuilder(null);
+      XClzBuilder X2 = new XClzBuilder(new SB());
       // All the args from the current scope visible in the lambda body, as hidden extra arguments
       for( int i=0; i<nargs; i++ ) {
         RegAST reg = (RegAST)_kids[i];

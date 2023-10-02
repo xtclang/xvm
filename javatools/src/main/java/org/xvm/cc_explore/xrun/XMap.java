@@ -18,6 +18,16 @@ public abstract class XMap<K,V> extends XClz implements Cloneable {
 
   public void put( K key, V val ) { _map.put(key,val); }
 
+  @Override 
+  public final String toString() { return _map.toString(); }
+
+  // Java default equals.
+  // TODO: This needs to use XTC equals
+  @Override public boolean equals( Object o ) {
+    if( o==this ) return true;
+    if( !(o instanceof XMap that) ) return false;
+    return _map.equals(that._map);
+  }
   
   // Return a tuple class for this set of types.  The class is cached, and can
   // be used many times.
@@ -30,29 +40,8 @@ public abstract class XMap<K,V> extends XClz implements Cloneable {
 
     // Lookup cached version
     if( !cache.containsKey(tclz) ) {
-      /* Gotta build one.  Looks like:
-      */
       // XMap N class
       sb.p("class ").p(tclz).p(" extends XMap<").p(zkey).p(",").p(zval).p("> {").nl().ii();
-      //// N field declares
-      //for( int i=0; i<N; i++ )
-      //  sb.ip("public ").p(clzs[i]).p(" _f").p(i).p(";").nl();
-      //// Constructor, taking N arguments
-      //sb.ip(tclz).p("( ");
-      //for( int i=0; i<N; i++ )
-      //  sb.p(clzs[i]).p(" f").p(i).p(", ");
-      //sb.unchar(2).p(") {").nl().ii().i();
-      //// N arg to  field assigns
-      //for( int i=0; i<N; i++ )
-      //  sb.p("_f").p(i).p("=").p("f").p(i).p("; ");
-      //sb.nl().di().ip("}").nl();
-      //// Abstract accessors
-      //for( int i=0; i<N; i++ )
-      //  sb.ip("public Object f").p(i).p("() { return _f").p(i).p("; }").nl();
-      //// Abstract setters
-      //for( int i=0; i<N; i++ )
-      //  sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(XClzBuilder.box(clzs[i])).p(")e; }").nl();
-      // Class end
       sb.di().ip("}").nl();
       cache.put(tclz,sb.toString());
     }
