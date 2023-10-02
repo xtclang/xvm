@@ -296,7 +296,7 @@ module TestReflection {
         console.print("calling async");
         @Future Tuple resultA = calc.invoke(Tuple:(Duration.ofMillis(20)));
         &resultA.whenComplete((t, e) -> {
-            console.print($"complete {t?[0] : assert}");
+            assert t != Null && t[0].as(Int) == 20;
         });
         console.print($"assigned={&resultA.assigned}, result={resultA[0]}, assigned={&resultA.assigned}");
 
@@ -536,14 +536,14 @@ module TestReflection {
 
     void testTypes() {
         console.print("\n** testTypes");
- {
+    {
         Type t1 = Map;
         Type t2 = Int;
         Type t3 = t1.parameterize([t2]);
         console.print($"{t1} < {t2} > = {t3}");
         assert t3 == Map<Int>;
-        }
- {
+    }
+    {
         Type t1 = Map;
         Type t2 = String;
         Type t3 = Int;
@@ -551,28 +551,28 @@ module TestReflection {
         console.print($"{t1} < {t2}, {t3} > = {t4}");
         assert t4 == Map<String, Int>;
         }
- {
+    {
         Type t1 = Map;
         Type t2 = Hashable;
         Type t3 = t1 + t2;
         console.print($"{t1} + {t2} = {t3}");
         assert t3 == Map + Hashable;
-        }
- {
+    }
+    {
         Type t1 = Map;
         Type t2 = Set;
         Type t3 = t1 | t2;
         console.print($"{t1} | {t2} = {t3}");
         assert t3 == Map | Set;
-        }
- {
+    }
+    {
         Type t1 = HashMap;
         Type t2 = Map;
         Type t3 = t1 - t2;
         console.print($"{t1} - {t2} = {t3}");
         assert t3 == HashMap - Map;
-        }
- {
+    }
+    {
         val container = new Container<String,Int,Char>();
         val containee = container.new Containee<Char,String,Map<Int, String>>();
         console.print($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.actualType}");

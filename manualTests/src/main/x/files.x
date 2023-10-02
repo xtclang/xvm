@@ -125,6 +125,7 @@ module TestFiles {
         // on Mac OS the WatchService implementation simply polls every 10 seconds;
         // increase the "wait" value to see the events
         Int wait = 1;
+        @Future Tuple done;
         timer.schedule(Duration.ofSeconds(wait), () -> {
             console.print($|[{this:service}]: deleting {file.name}\
                              | after {timer.elapsed.seconds} sec
@@ -139,7 +140,11 @@ module TestFiles {
 
                 console.print($"[{this:service}]: tmpDir={tmpDir}");
                 cancel();
+                done = Tuple:();
             });
         });
+
+        // this will force the caller to wait
+        return done;
     }
 }
