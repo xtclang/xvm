@@ -72,17 +72,39 @@ class BinOpAST extends AST {
             !    _op1.equals(")") &&
             !bin._op1.equals(")") &&
             prec( _op0, bin._op0 );
+    if( "String".equals(_type) ) { sb.p(" "); wrap=true; }
     if( wrap ) sb.p("(");
     ast.jcode(sb);
     if( wrap ) sb.p(")");
     return sb;
   }
 
+  // Java precedence table
   private static final HashMap<String,Integer> PRECS = new HashMap<>(){{
-      put("[",2);
-      put("%",3);
-      put("+",5);
-      put("-",5);
+      put("[" , 2);
+      
+      put("*" , 3);
+      put("/" , 3);
+      put("%" , 3);
+      
+      put("+" , 4);
+      put("-" , 4);
+
+      put("<<", 5);
+      put(">>", 5);
+      put(">>>", 5);
+
+      put("<" , 6);
+      put(">" , 6);
+      put("<=", 6);
+      put(">=", 6);
+      
+      put("==", 7);
+      put("!=", 7);
+      
+      put("&" , 8);
+      put("^" , 9);
+      put("|" ,10);
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);
