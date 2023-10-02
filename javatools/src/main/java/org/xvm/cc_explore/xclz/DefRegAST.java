@@ -21,7 +21,7 @@ class DefRegAST extends AST {
       // TODO: Handle other kinds of typed args
       TermTCon ttc = anno.con().is_generic();
       if( ttc==null ) throw XEC.TODO();
-      _init = XClzBuilder.jvalue_ttcon(ttc);
+      _init = XClzBuilder.value_tcon(ttc);
     } else {
       _init = null;
     }
