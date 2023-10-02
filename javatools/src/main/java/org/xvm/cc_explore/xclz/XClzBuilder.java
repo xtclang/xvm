@@ -256,16 +256,17 @@ public class XClzBuilder {
   // A set of common XTC classes, and their Java replacements.
   // These are NOT parameterized.
   static final HashMap<String,String> XJMAP = new HashMap<>() {{
+      put("Boolean+ecstasy/Boolean.x","boolean");
+      put("Char+ecstasy/text/Char.x","char");
       put("Console+ecstasy/io/Console.x","Console");
       put("Int64+ecstasy/numbers/Int64.x","long");
       put("IntLiteral+ecstasy/numbers/IntLiteral.x","long");
-      put("Boolean+ecstasy/Boolean.x","boolean");
-      put("StringBuffer+ecstasy/text/StringBuffer.x","StringBuffer");
+      put("Object+ecstasy/Object.x","Object");
       put("String+ecstasy/text/String.x","String");
-      put("Char+ecstasy/text/Char.x","char");
+      put("StringBuffer+ecstasy/text/StringBuffer.x","StringBuffer");
     }};
 
-  // Convert a primtive to the Java object version.
+  // Convert a Java primitive to the Java object version.
   static final HashMap<String,String> XBOX = new HashMap<>() {{
       put("char","Character");
       put("int","Integer");
@@ -297,8 +298,11 @@ public class XClzBuilder {
         return telem.equals("Long")
           ? "AryI64"            // Java ArrayList specialized to int64
           : "Ary<"+telem+">";   // Shortcut class
-      
-      if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ) {
+
+      // All the long-based ranges, intervals and interators are just Ranges now.
+      if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ||
+          clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ||
+          clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
         if( telem.equals("Long") ) return "Range"; // Shortcut class
         else throw XEC.TODO();
       }
