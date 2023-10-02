@@ -28,9 +28,11 @@ public class XClzBuilder {
   // A collection of extra class source strings
   private static final HashMap<String,String> XCLASSES = new HashMap<>();
 
-  public XClzBuilder( ModPart mod ) {
+  public XClzBuilder( ModPart mod ) { this(mod,new SB()); }
+  public XClzBuilder( SB sb ) { this(null,sb); }
+  private XClzBuilder( ModPart mod, SB sb ) {
     _mod = mod;
-    _sb = new SB();
+    _sb = sb;
     _names = new HashMap<>();
     _locals = new NonBlockingHashMapLong<>();
     _ltypes = new NonBlockingHashMapLong<>();
@@ -103,15 +105,11 @@ public class XClzBuilder {
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
         _sb.nl();
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
-        jmethod(meth);
+        jmethod(meth,meth._name);
       } else if( part instanceof PackagePart ) {
         // Self module is OK
       } else if( part instanceof PropPart pp ) {
-        // Insert a <clinit> junk for this thing
-        String jtype = jtype(pp._con,false);
-        _sb.ip("private final ").p(jtype).p(" ").p(pp._name).p(" = ").p(jvalue_ttcon((TermTCon)pp._con)).p(";").nl();
-        _sb.ip(jtype).p(" ").p(pp._name).p("$get() { return ").p(pp._name).p("; }").nl();
-        
+        XProp.make_class(_sb,pp); // <clinit> for a static global property
       } else {
         throw XEC.TODO();
       }
@@ -127,7 +125,7 @@ public class XClzBuilder {
   
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
-  private void jmethod( MethodPart m ) {
+  public void jmethod( MethodPart m, String mname ) {
     assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
     _sb.ip("public ");
     // Return type
@@ -135,7 +133,7 @@ public class XClzBuilder {
     else if( m._rets.length == 1 ) _sb.p(jtype(m._rets[0]._con,false)).p(' ');
     else throw XEC.TODO(); // Multi-returns will need much help
     // Argument list
-    _sb.p(m._name).p("( ");
+    _sb.p(mname).p("( ");
     if( m._args!=null ) {
       for( int i = 0; i < m._args.length; i++ ) {
         Parameter p = m._args[i];
@@ -153,9 +151,21 @@ public class XClzBuilder {
     // Popped back to the original args
     assert (m._args==null ? 0 : m._args.length) == _nlocals;
     pop_locals(0);
+
+    if( m._name2kid != null )
+      for( Part part : m._name2kid.values() ) {
+        if( part instanceof PropPart pp )
+          XProp.make_class(_sb,pp);
+        else if( part instanceof MMethodPart mmp ) {
+          // Lambda expressions have been inlined
+          if( mmp._name.equals("->") ) ;
+          else throw XEC.TODO();
+        } 
+        else throw XEC.TODO();
+      }
   }
 
-  AST ast( MethodPart m ) {
+  public AST ast( MethodPart m ) {
     // Build the AST from bytes
     _meth = m;
     _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser
@@ -354,7 +364,7 @@ public class XClzBuilder {
     // Property constant.  Just the base name, and depending on usage
     // will be either console$get() or console$set(value).
     if( tc instanceof PropCon prop )
-      return ASB.p(prop._name);
+      return ASB.p(prop._name).p("$get()");
 
     // A class Type as a value
     if( tc instanceof ParamTCon ptc )
@@ -441,15 +451,16 @@ public class XClzBuilder {
       ASB.p("}} ");
       return ASB;
     }
-    
+
+    // Special TermTCon
+    if( tc instanceof TermTCon ttc ) {
+      ClassPart clz = ttc.clz();
+      if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
+        return ASB.p("_container.console()");
+      throw XEC.TODO();      
+    }
+  
     throw XEC.TODO();
   }
 
-  // Produce a java value from a TermTCon
-  static String jvalue_ttcon( TermTCon ttc ) {
-    ClassPart clz = ttc.clz();
-    if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
-      return "_container.console()";
-    throw XEC.TODO();
-  }  
 }

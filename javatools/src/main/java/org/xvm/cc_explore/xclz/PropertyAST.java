@@ -21,6 +21,6 @@ class PropertyAST extends AST {
   
   @Override void jpost( SB sb ) {
     if( _kids[0]!=null ) sb.p('.');
-    sb.p(_prop).p("$get()");
+    sb.p(_prop);
   }
 }

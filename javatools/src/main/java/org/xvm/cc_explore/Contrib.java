@@ -16,7 +16,7 @@ public class Contrib {
   private boolean _linked;
   private final PropCon _prop;
   private final SingleCon _inject;
-  private final Annot _annot;
+  public final Annot _annot;
   private final HashMap<String, TCon> _parms;
   // Post link values
   final HashMap<String, ClassPart> _clzs;
