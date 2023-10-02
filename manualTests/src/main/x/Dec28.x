@@ -1,4 +1,4 @@
-module Test {
+module TestDec28 {
     @Inject Console console;
 
     void run() {
@@ -92,7 +92,7 @@ const Dec28(Bit[] bits) {
                         } else {
                             ++lzc;
                         }
-                    } else if (sig > 0) // ignore leading zeros {
+                    } else if (sig > 0) { // ignore leading zeros
                         ++ldc;
                     }
                     break;

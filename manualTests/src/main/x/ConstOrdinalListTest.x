@@ -7,7 +7,7 @@ module ConstOrdinalListTest {
 
     @Inject Console console;
 
-    void run(String[] args=[])
+    void run(String[] args=[]) {
 //    void run(String[] args=["dump", "[30159670, 30159670, 182002775, 182002775, 182002775]"])
 //    void run(String[] args=["dump", "[30159670, 30159670, 182002775, 182002775, 182002775, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733]"])
 //    void run(String[] args=["dump", "[30159670, 30159670, 182002775, 182002775, 182002775, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 298647733, 30159670, 30159670]"]) {
@@ -17,7 +17,7 @@ module ConstOrdinalListTest {
 
                 Int max = 1+rnd.int(1+rnd.int(Int32.MaxValue));
                 Int dft = rnd.int(max);
-                test(i, max, dft, rnd);
+                test(i.toInt(), max, dft, rnd);
             }
         } else {
             // for test reproducers:
@@ -38,7 +38,7 @@ module ConstOrdinalListTest {
 
             Int[] list = s.trim() == ""
                     ? []
-                    : s.split(',').map(s -> new Int(s.trim()), new Int[]).as(Int[]);
+                    : s.split(',').map(s -> new Int(s.trim())).as(Int[]);
 
             assert:debug;
             validate(list, 0, dump);
@@ -100,7 +100,7 @@ module ConstOrdinalListTest {
 
         assert list.empty == col.empty;
         assert list.size == col.size;
-        assert List<Int>.equals(list, col);
+        assert list.as(List<Int>) == col.as(List<Int>);
 
         for (Int i : 0 ..< list.size) {
             assert list[i] == col[i];
