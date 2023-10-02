@@ -2,7 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.tvar.TVLeaf;
-import org.xvm.cc_explore.tvar.TVar;
 
 import java.util.HashSet;
 
@@ -28,7 +27,6 @@ public class MMethodPart extends Part {
 
   @Override void link_innards( XEC.ModRepo repo ) {}
   // I could construct a tuple of each underlying method
-  @Override TVar _setype( ) { return new TVLeaf(); }
 
   public MethodPart addNative() {
     assert NATIVES.contains(_name);

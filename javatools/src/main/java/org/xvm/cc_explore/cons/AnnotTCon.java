@@ -29,8 +29,4 @@ public class AnnotTCon extends TCon implements ClzCon {
   }
   public TCon con() { return _con; } // Getter no setter
   @Override public ClassPart clz() { return _clz; }
-  @Override TVar _setype() {
-    _an.setype( );
-    return _con.setype();
-  }
 }

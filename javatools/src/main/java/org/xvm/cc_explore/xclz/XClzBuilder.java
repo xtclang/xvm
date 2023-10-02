@@ -258,6 +258,7 @@ public class XClzBuilder {
   static final HashMap<String,String> XJMAP = new HashMap<>() {{
       put("Console+ecstasy/io/Console.x","Console");
       put("Int64+ecstasy/numbers/Int64.x","long");
+      put("IntLiteral+ecstasy/numbers/IntLiteral.x","long");
       put("Boolean+ecstasy/Boolean.x","boolean");
       put("StringBuffer+ecstasy/text/StringBuffer.x","StringBuffer");
       put("String+ecstasy/text/String.x","String");

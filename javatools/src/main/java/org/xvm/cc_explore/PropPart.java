@@ -1,7 +1,6 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.TVar;
 
 /**
    Property part
@@ -53,9 +52,4 @@ public class PropPart extends Part {
         c.link(repo);
   }
   
-  @Override TVar _setype( ) {
-    if( _init instanceof TCon tc ) tc.setype();
-    return _con.setype();
-  }
-
 }
