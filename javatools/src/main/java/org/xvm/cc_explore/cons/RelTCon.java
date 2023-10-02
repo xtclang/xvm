@@ -33,13 +33,5 @@ public abstract class RelTCon extends TCon implements ClzCon {
     return Math.min(_con1.eq(rt._con1), _con2.eq(rt._con2));
   }
 
-  // Note that the _tvar type set here is used to stop repeated setype calls
-  // but isn't really any sensible TVar.
-  @Override TVar _setype() {
-    _con1.setype();
-    _con2.setype();
-    return _part.setype();
-  }
-
   abstract RelPart.Op op();
 }

@@ -38,8 +38,6 @@ public class XEC {
     for( String lib : libs ) repo.load(lib);
     // Link the repo
     repo.link();
-    // Type the repo
-    repo.setype();
     // Link the method constants
     repo.cons();
     
@@ -129,11 +127,6 @@ public class XEC {
       VISIT.clear();
       for( ModPart mod : values() )
         mod.cons(this);
-    }
-    // Set the TVar types.
-    void setype() {
-      for( ModPart mod : values() )
-        mod.setype();
     }
   }
 

@@ -20,5 +20,4 @@ public class AccessTCon extends TCon {
   @Override public Part link( XEC.ModRepo repo ) {
     return _clz==null ? ( _clz=(ClassPart)_con.link(repo) ) : _clz;
   }
-  @Override TVar _setype() { return _con.setype(); }
 }

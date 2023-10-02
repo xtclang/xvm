@@ -9,25 +9,6 @@ import org.xvm.cc_explore.tvar.TVar;
  */
 public abstract class TCon extends Const {
 
-  private TVar _tvar;
-  public final boolean has_tvar() { return _tvar!=null; }
-  // Normal access, already set (never null)
-  public final TVar tvar() { return _tvar.unified() ? (_tvar=_tvar.find()) : _tvar; }
-  // Set the TVar; can be null or not
-  public final TVar setype( ) {
-    if( _tvar!=null ) return tvar();
-    TVar tv = _setype();
-    assert !tv.unified();
-    return (_tvar=tv);
-  }
-
-  // Sub TCons use this return the initial tvar; and can be assured that they
-  // are called only once, and they do not need to assign to tvar.
-  TVar _setype( ) { throw XEC.TODO(); }
-
-  // Only used to break cyclic tvar construction
-  void setype_stop_cycles(TVar tv) { _tvar = tv; }
-
   // Used in signature matching.  Not called "equals" because I don't want to
   // (yet) sign up for the whole equals contract.
   public final int eq( TCon tc ) {
