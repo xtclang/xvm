@@ -22,7 +22,6 @@ public class Contrib {
   final HashMap<String, ClassPart> _clzs;
   
   public final TCon _tContrib;
-  private TVar _tvar;
   
   protected Contrib( CPool X ) {
     _comp = Part.Composition.valueOf(X.u8());
@@ -88,10 +87,6 @@ public class Contrib {
       }
   }
 
-  public TVar tvar() { assert _tvar!=null; return _tvar; }
-  public final TVar setype( ) { return _tvar==null ? (_tvar = _tContrib.setype()) : tvar(); }
-  
-  
   @Override public String toString() { return str(new SB()).toString(); }
   public SB str(SB sb) {
     sb.p(_comp.toString());

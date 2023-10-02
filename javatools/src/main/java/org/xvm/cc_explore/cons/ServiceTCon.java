@@ -15,5 +15,4 @@ public class ServiceTCon extends TCon implements ClzCon {
   @Override public Part link( XEC.ModRepo repo ) {
     return _part==null ? (_part=_con.link(repo)) : _part;
   }
-  @Override TVar _setype() { return _con.setype(); }
 }
