@@ -20,7 +20,9 @@ class ForStmtAST extends AST {
     return new ForStmtAST(kids);
   }
   private ForStmtAST( AST[] kids ) { super(kids); }
-  
+
+  @Override boolean is_loopswitch() { return true; }
+
   @Override SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
     // for( init; cond; update ) body
