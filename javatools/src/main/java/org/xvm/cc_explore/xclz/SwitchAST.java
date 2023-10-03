@@ -5,8 +5,6 @@ import org.xvm.cc_explore.xrun.Range;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
 
-import java.util.Arrays;
-
 // Print as a switch expression.
 class SwitchAST extends AST {
   //  {
@@ -56,20 +54,21 @@ class SwitchAST extends AST {
     if( cond instanceof MultiAST ) {
       // this is a multi-arm pattern match
     } else if( "long".equals(cond.type()) ) {
-      // This is single-ints
+      // This is single-ints, confirm all case arms are ints (or ranges)
       for( Const c : cases )
-        if( invalid_range(c) )
+        if( !valid_range( c ) )
           throw XEC.TODO();
     } else {
-      throw XEC.TODO();
+      // This is a series of singleton matches, e.g. Strings or Enums
+      if( valid_range( cases[0] ) ) throw XEC.TODO();
     }
     
     // Parse result types
     Const[] rezs = expr ? X.consts() : null;
     return new SwitchAST(kids,expr,isa,cases,rezs);
   }
-  private static boolean invalid_range( Const c ) {
-    return c!=null && !(c instanceof IntCon || c instanceof RangeCon rcon && rcon._lo instanceof IntCon);
+  private static boolean valid_range( Const c ) {
+    return c == null || c instanceof IntCon || (c instanceof RangeCon rcon && rcon._lo instanceof IntCon);
   }
   
   private SwitchAST( AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs ) {
@@ -82,19 +81,18 @@ class SwitchAST extends AST {
     // Pre-cook the match parts.    
     // Each pattern match has the same count of arms
     int clen = cases.length;
-    assert cases[clen-1]==null; // The default case
     int alen;
     if( cases[0] instanceof AryCon ary0 ) {
       assert ary0.type() instanceof ImmutTCon;
       alen = ary0.cons().length;
       _arms = new String[clen][alen];
       for( int i=0; i<clen-1; i++ ) {
-        AryCon ary = (AryCon)cases[i];
+        Const[] cons = ((AryCon)cases[i]).cons();
         for( int j=0; j<alen; j++ )
-          _arms[i][j] = ary.cons()[j] instanceof TCon tc0 ? XClzBuilder.value_tcon(tc0) : null;
-      }      
-    } else if( !invalid_range(cases[0]) ) {
-      
+          _arms[i][j] = cons[j] !=null ? XClzBuilder.value_tcon(cons[j]) : null;
+      }
+
+    } else if( valid_range( cases[0] ) ) {      
       // Here each arm has 1 part, an exact integer check, or a constant range check
       _arms = new String[clen][1];
       for( int i=0, j=0; i<clen-1; i++, j++ ) {
@@ -109,8 +107,19 @@ class SwitchAST extends AST {
           _arms[i][0] = ""+((IntCon)_cases[j])._x;
         }
       }
-    } else {      
-      throw XEC.TODO();
+      
+    } else {
+      // This is a series of singleton matches, e.g. Strings or Enums.
+      _arms = new String[clen][1];
+      for( int i=0; i<clen; i++ )
+        // This might be an exact check, or might have a default.
+        if( _cases[i] != null ) {
+          String arm = XClzBuilder.value_tcon(_cases[i]);
+          // Enum arms must be the unqualified enum name.
+          int idx = arm.lastIndexOf(".");
+          if( idx >=0 ) arm = arm.substring(idx + 1);
+          _arms[i][0] = arm;
+        }
     }
   }
 
@@ -128,6 +137,7 @@ class SwitchAST extends AST {
   }
   
   @Override SB jcode( SB sb ) {
+    String case_sep = _expr ? " -> " : ": ";
     if( sb.was_nl() ) sb.i();
     if( _kids[0] instanceof MultiAST cond ) {
       for( int i=0; i<_tmps.length; i++ ) {
@@ -141,9 +151,15 @@ class SwitchAST extends AST {
       for( int i=0; i<_arms.length-1; i++ ) {
         sb.i();
         // for each arm
-        for( int j=0; j<_tmps.length; j++ )
-          if( _arms[i][j] != null )
-            sb.p(_tmps[j]).p("==").p(_arms[i][j]).p(" && ");
+        for( int j=0; j<_tmps.length; j++ ) {
+          String arm = _arms[i][j];
+          if( arm != null ) {   // Null arms are MatchAny and do not encode a test
+            // Arms with an allocation "new Range()" call "in"
+            if( arm.charAt(arm.length()-1)==')' )  sb.p(arm).p(".in(").p(_tmps[j]).p(")");
+            else                                   sb.p(_tmps[j]).p("==").p(arm);
+            sb.p(" && ");
+          }
+        }
         sb.unchar(3).p("? ");
         _kids[i+1].jcode(sb);
         sb.p(" :").nl();
@@ -151,27 +167,45 @@ class SwitchAST extends AST {
       sb.i();                     // The default case
       _kids[_arms.length].jcode(sb);
       sb.di();                 // And the expression continues on the next line
-    } else {
-
+      
+    } else if( valid_range(_cases[0]) ) {
       // Single integer test case
       sb.p("switch( (int)");
       _kids[0].jcode(sb);
       sb.p(" ) {").nl().ii();
       // for each case label
-      for( int i=0; i<_arms.length-1; ) {
-        sb.ip("case ");
-        do sb.p( _arms[i][0] ).p( ", " );
-        while( _kids[++i] == null );
-        sb.unchar(2).p(_expr ? " -> " : ": ");
+      for( int i=0; i<_arms.length; ) {
+        if( i < _arms.length-1 ) {
+          sb.ip("case ");
+          do sb.p( _arms[i][0] ).p( ", " );
+          while( _kids[++i] == null );
+        } else {
+          sb.ip("default, ");
+          i++;
+        }
+        sb.unchar(2).p(case_sep);
         _kids[i].jcode(sb);
         if( !(_kids[i] instanceof BlockAST) ) sb.p(";");
         sb.nl();
       }
-      sb.ip("default").p(_expr ? " -> " : ": ");
-      _kids[_arms.length].jcode(sb);
-      if( !(_kids[_arms.length] instanceof BlockAST) ) sb.p(";");
-      sb.nl().di().ip("}");
+      sb.di().ip("}");
+      
+    } else {
+      // This is a series of singleton matches, e.g. Strings or Enums
+      sb.p("switch( ");
+      _kids[0].jcode(sb);
+      sb.p(" ) {").nl().ii();
+      
+      for( int i=0; i<_arms.length; i++ ) {
+        if( _arms[i][0]==null ) sb.p("default"); else sb.ip("case ").p(_arms[i][0]);
+        sb.p(case_sep);
+        _kids[i+1].jcode(sb);
+        if( !(_kids[i+1] instanceof BlockAST) ) sb.p(";");
+        sb.nl();
+      }
+      sb.di().ip("}");
     }
+    
     return sb;
   }
 }
