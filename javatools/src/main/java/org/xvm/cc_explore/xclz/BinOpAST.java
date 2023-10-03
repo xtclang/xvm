@@ -16,7 +16,9 @@ class BinOpAST extends AST {
     kids[0] = ast_term(X);
     Operator op = OPS[X.u31()];
     kids[1] = ast_term(X);
-    Const type = has_type ? X.con() : null;
+    String type = has_type
+      ? XClzBuilder.jtype(X.con(),false) // Type from the AST file
+      : (op==Operator.CompOrd ? "Ordered" : "boolean" ); // Must be one of the ordering operators
     return new BinOpAST(kids,op.text,"",type);
   }
   
@@ -24,21 +26,14 @@ class BinOpAST extends AST {
     AST[] kids = new AST[2];
     kids[0] = ast_term(X);
     kids[1] = ast_term(X);
-    String t0 = kids[0].type();
-    // Array lookup on a non-array.
-    if( op0.equals("[") && t0.charAt(t0.length()-1)!=']' ) {
-      // Swap ary[idx] to ary.at(idx);
-      op0 = ".at(";
-      op1 = ")";
-    }
     return new BinOpAST(kids,op0,op1,null);
   }
   
-  private BinOpAST( AST[] kids, String op0, String op1, Const type ) {
+  private BinOpAST( AST[] kids, String op0, String op1, String type ) {
     super(kids);
     _op0 = op0;
     _op1 = op1;
-    _type = type==null ? null : XClzBuilder.jtype(type,false);
+    _type = type;
   }
   @Override String type() { return _type; }
   @Override AST rewrite() {
@@ -50,6 +45,8 @@ class BinOpAST extends AST {
       if( needs_equals(_kids[0]) || needs_equals(_kids[1]) )
         return new InvokeAST("equals",_kids[0],_kids[1]);
     }
+    if( _op0.equals("<=>") )
+      return new InvokeAST("spaceship",new ConAST("XClz"),_kids[0],_kids[1]);
     return this;
   }
 
@@ -73,7 +70,7 @@ class BinOpAST extends AST {
             !bin._op1.equals(")") &&
             prec( _op0, bin._op0 );
     if( "String".equals(_type) && _kids[1]==ast &&
-        (ast instanceof BinOpAST || ast instanceof TernaryAST) ) {
+        (ast instanceof BinOpAST || ast instanceof TernaryAST || (ast instanceof SwitchAST sast && sast._kids[0] instanceof MultiAST ) ) ) {
       sb.p(" "); wrap=true;
     }
     if( wrap ) sb.p("(");

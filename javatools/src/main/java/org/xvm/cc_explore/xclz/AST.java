@@ -101,7 +101,7 @@ public abstract class AST {
     return switch( op ) {
     case AnnoNamedRegAlloc -> DefRegAST.make(X,true ,true );
     case AnnoRegAlloc ->   DefRegAST.make(X,false,true );
-    case ArrayAccessExpr -> BinOpAST.make(X,"[","]");
+    case ArrayAccessExpr -> BinOpAST.make(X,".at(",")");
     case AssertStmt   ->   AssertAST.make(X);
     case Assign       ->   AssignAST.make(X,true);
     case BinOpAssign  ->   AssignAST.make(X,false);

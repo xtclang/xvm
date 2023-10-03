@@ -335,6 +335,8 @@ public class XClzBuilder {
   private static final SB ASB = new SB();
   static public String value_tcon( Const tc ) {
     assert ASB.len()==0;
+    // Caller is a switch, will encode special
+    if( tc instanceof MatchAnyCon ) return null;
     _value_tcon(tc);
     String rez = ASB.toString();
     ASB.clear();
@@ -388,7 +390,8 @@ public class XClzBuilder {
         } else
           throw XEC.TODO();
       }
-      throw XEC.TODO();
+      // Use the enum name directly
+      return ASB.p(clz._super._name).p(".").p(clz._name);
     }
 
     // Singleton class constants (that are not enums)
@@ -423,7 +426,7 @@ public class XClzBuilder {
           ASB.p("(");
           if( ac.cons()!=null ) {
             for( Const con : ac.cons() )
-              _value_tcon( (TCon)con ).p(", ");
+              _value_tcon( con ).p(", ");
             ASB.unchar(2);
           }
           ASB.p(")");
@@ -437,7 +440,7 @@ public class XClzBuilder {
           if( ac.cons()!=null )
             for( Const con : ac.cons() ) {
               ASB.p(".add(");
-              _value_tcon( (TCon)con ).p(")");
+              _value_tcon( con ).p(")");
             }
         }
 
@@ -447,7 +450,7 @@ public class XClzBuilder {
         if( ac.cons()!=null ) {
           ASB.p("{ ");
           for( Const con : ac.cons() )
-            _value_tcon( (TCon)con ).p(", ");
+            _value_tcon( con ).p(", ");
           ASB.p("}");
         }
       }
@@ -460,8 +463,8 @@ public class XClzBuilder {
       ASB.p("new ").p(type).p("() {{ ");
       for( int i=0; i<mc._keys.length; i++ ) {
         ASB.p("put(");
-        _value_tcon( (TCon)mc._keys[i] ).p(",");
-        _value_tcon( (TCon)mc._vals[i] ).p("); ");
+        _value_tcon( mc._keys[i] ).p(",");
+        _value_tcon( mc._vals[i] ).p("); ");
       }
       ASB.p("}} ");
       return ASB;

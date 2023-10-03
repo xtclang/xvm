@@ -63,4 +63,5 @@ public abstract class XRuntime {
   // $tmp expression wrapper, to allow side effects in the arguments and still
   // have a java expression
   public static boolean $t(long x) { return true; }
+  public static boolean $t(Object x) { return true; }
 }

@@ -24,6 +24,7 @@ abstract public class Range implements Iterable<Long> {
   public long span() { return _hi-_lo; }
   public static long lo(RangeCon rcon) { return rcon.lo() + (rcon._xlo ? 1 : 0); }
   public static long hi(RangeCon rcon) { return rcon.hi() + (rcon._xhi ? 0 : 1); }
+  public boolean in( long x ) { return _lo <= x && x < _hi; }
   
   /** @return an iterator */
   @Override public Iterator<Long> iterator() { return new Iter(); }
