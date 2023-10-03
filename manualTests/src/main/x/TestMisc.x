@@ -15,8 +15,8 @@ module TestMisc {
         testSwitchStmt();
         //testElseExpr();
         testSwitchExpr();
-        //testSwitchExpr3();
-        //testSwitchExpr4();
+        testSwitchExpr3();
+        testSwitchExpr4();
         //testSwitchNatural();
         //testStmtExpr();
         //testAssignOps();
@@ -231,36 +231,36 @@ module TestMisc {
         }
     }
 
-    //void testSwitchExpr3() {
-    //    console.print("\n** testSwitchExpr3()");
-    //
-    //    Int i = 0;
-    //    while (++i < 6) {
-    //        console.print("result for (" + i + "<=>3)=" + switch (i <=> 3) {
-    //            case Lesser:  "less";
-    //            case Equal:   "same";
-    //            case Greater: "more";
-    //        });
-    //    }
-    //}
-    //
-    //void testSwitchExpr4() {
-    //    console.print("\n** testSwitchExpr4()");
-    //
-    //    Int i = 0;
-    //    while (++i < 8) {
-    //        console.print("result for (" + i + "<=>3)=" + switch (i <=> 3, i) {
-    //            case (Lesser, 2):       "less #2";
-    //            case (Lesser, _):       "less";
-    //            case (Equal, 3):        "same #3";
-    //            case (Equal, 4):        "same #4";
-    //            case (Equal, _):        "same";
-    //            case (Greater, 4):      "more #4";
-    //            case (Greater, 2..6):   "more #2..6";
-    //            default:                "default";
-    //        });
-    //    }
-    //}
+    void testSwitchExpr3() {
+        console.print("\n** testSwitchExpr3()");
+    
+        Int i = 0;
+        while (++i < 6) {
+            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3) {
+                case Lesser:  "less";
+                case Equal:   "same";
+                case Greater: "more";
+            });
+        }
+    }
+    
+    void testSwitchExpr4() {
+        console.print("\n** testSwitchExpr4()");
+    
+        Int i = 0;
+        while (++i < 8) {
+            console.print("result for (" + i + "<=>3)=" + switch (i <=> 3, i) {
+                case (Lesser, 2):       "less #2";
+                case (Lesser, _):       "less";
+                case (Equal, 3):        "same #3";
+                case (Equal, 4):        "same #4";
+                case (Equal, _):        "same";
+                case (Greater, 4):      "more #4";
+                case (Greater, 2..6):   "more #2..6";
+                default:                "default";
+            });
+        }
+    }
 
     //void testSwitchNatural() {
     //    console.print("\n** testSwitchNatural()");
