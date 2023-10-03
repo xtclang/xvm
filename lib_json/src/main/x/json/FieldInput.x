@@ -297,7 +297,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
 
             if (Null.is(Serializable)) {
-                return Null.as(Serializable);
+                return Null;
             }
 
             throw new IllegalJSON($|Value required at "{pointer}" of type "{Serializable}"\
@@ -330,7 +330,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
 
             if (Null.is(Serializable)) {
-                return Null.as(Serializable);
+                return Null;
             }
 
             throw new IllegalJSON($|Value required at "{pointer}" of type "{Serializable}"\

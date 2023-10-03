@@ -13,6 +13,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.IsExprAST;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
@@ -158,12 +159,28 @@ public class IsExpression
                 {
                 aconstVal = new Constant[] {pool.valOf(typeTarget.isA(typeTest))};
                 }
-            else if (exprTarget instanceof NameExpression exprName)
+            else
                 {
-                typeInferred = computeInferredType(pool, typeTarget, typeTest);
+                if (exprTarget instanceof NameExpression exprName)
+                    {
+                    typeInferred = computeInferredType(pool, typeTarget, typeTest);
 
-                exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
-                exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
+                    exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
+                    exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
+                    }
+
+                if (exprTest instanceof NamedTypeExpression exprNameType
+                        && !exprNameType.isDynamic() && typeTest.isFormalType())
+                    {
+                    // if the test is a formal type, we can draw an inference from the target's type;
+                    // consider this snippet (Value is a generic type):
+                    //      if (Null.is(Value)) { ... }
+                    // since Value type is assignable from Null, we can use that knowledge on the
+                    // WhenTrue branch (widening the formal type to a union with the target's type)
+                    FormalConstant constTest = (FormalConstant) typeTest.getDefiningConstant();
+                    ctx.replaceGenericType(constTest, Branch.WhenTrue,
+                            typeTest.union(pool, typeTarget).getType());
+                    }
                 }
 
             if (!fSingle)
