@@ -1,23 +1,29 @@
 package org.xvm.cc_explore.xrun;
 
+import org.xvm.cc_explore.cons.RangeCon;
+
 import java.lang.Iterable;
 import java.util.Iterator;
 
 /**
      Support XTC range iterator
 */
-abstract class Range implements Iterable<Long> {
+abstract public class Range implements Iterable<Long> {
   final long _lo, _hi;          // Inclusive lo, exclusive hi
-  final boolean _lx, _hx;       // Declared inclusive/exclusive
+  final boolean _lx, _hx;       // True if exclusive
   Range( long lo, long hi, boolean lx, boolean hx ) { _lo=lo; _hi=hi; _lx=lx; _hx=hx; }
 
   @Override
   public final String toString() {
     return
-      (_lx ? "["+_lo : "("+(_lo-1)) +
+      (_lx ? "("+(_lo-1) : "["+_lo ) +
       ".." +
-      (!_hx ? ""+_hi+")" : ""+(_hi-1)+"]");
+      (!_hx ? ""+(_hi-1)+"]" : ""+_hi+")" );
   }
+
+  public long span() { return _hi-_lo; }
+  public static long lo(RangeCon rcon) { return rcon.lo() + (rcon._xlo ? 1 : 0); }
+  public static long hi(RangeCon rcon) { return rcon.hi() + (rcon._xhi ? 0 : 1); }
   
   /** @return an iterator */
   @Override public Iterator<Long> iterator() { return new Iter(); }

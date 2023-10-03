@@ -11,10 +11,10 @@ module TestMisc {
         testTernary();
         //testSpaceship();
         //testElvis();
-        //testLoop();
-        //testSwitchStmt();
+        testLoop();
+        testSwitchStmt();
         //testElseExpr();
-        //testSwitchExpr();
+        testSwitchExpr();
         //testSwitchExpr3();
         //testSwitchExpr4();
         //testSwitchNatural();
@@ -178,58 +178,58 @@ module TestMisc {
     //    console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
     //}
 
-    //void testLoop() {
-    //    console.print("\n** testLoop()");
-    //
-    //    Int i = 10;
-    //    while (i > 0) {
-    //        console.print(i--);
-    //    }
-    //    console.print("We Have Lift-Off!!!");
-    //}
+    void testLoop() {
+        console.print("\n** testLoop()");
+    
+        Int i = 10;
+        while (i > 0) {
+            console.print(i--);
+        }
+        console.print("We Have Lift-Off!!!");
+    }
 
-    //void testSwitchStmt(Int value=4) {
-    //    console.print("\n** testSwitchStmt()");
-    //
-    //    switch (value) {
-    //    case 2, 3:
-    //        console.print("2 or 3");
-    //        break;
-    //
-    //    case 4..5:
-    //        console.print("4");
-    //        if (value == 4) {
-    //            continue;
-    //        }
-    //        break;
-    //
-    //    case 7:
-    //        console.print("7");
-    //        break;
-    //
-    //    default:
-    //        console.print("other");
-    //        break;
-    //    }
-    //}
+    void testSwitchStmt(Int value=4) {
+        console.print("\n** testSwitchStmt()");
+    
+        switch (value) {
+        case 2, 3:
+            console.print("2 or 3");
+            break;
+    
+        case 4..5:
+            console.print("4");
+            if (value == 4) {
+                continue;
+            }
+            break;
+    
+        case 7:
+            console.print("7");
+            break;
+    
+        default:
+            console.print("other");
+            break;
+        }
+    }
 
-    //void testSwitchExpr() {
-    //    console.print("\n** testSwitchExpr()");
-    //
-    //    Int i = 0;
-    //    while (i++ < 10) {
-    //        console.print("result for " + i + "=" + switch (i) {
-    //            // default: "other";
-    //            case 2, 3:
-    //            case 4:    "between 2 and 4";
-    //            case 5..6: "between 5 and 6";
-    //
-    //            case 7: "sieben";
-    //
-    //            default: "other";
-    //        });
-    //    }
-    //}
+    void testSwitchExpr() {
+        console.print("\n** testSwitchExpr()");
+    
+        Int i = 0;
+        while (i++ < 10) {
+            console.print("result for " + i + "=" + switch (i) {
+                // default: "other";
+                case 2, 3:
+                case 4:    "between 2 and 4";
+                case 5..6: "between 5 and 6";
+    
+                case 7: "sieben";
+    
+                default: "other";
+            });
+        }
+    }
 
     //void testSwitchExpr3() {
     //    console.print("\n** testSwitchExpr3()");
