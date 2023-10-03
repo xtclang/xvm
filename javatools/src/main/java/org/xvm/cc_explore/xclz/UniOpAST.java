@@ -48,9 +48,9 @@ class UniOpAST extends AST {
   
   @Override String type() { return _type; }
   @Override SB jcode( SB sb ) {
-    if( _pre !=null ) sb.p(_pre );
+    if( _pre !=null ) sb.p(" ").p(_pre );
     _kids[0].jcode(sb);
-    if( _post!=null ) sb.p(_post);
+    if( _post!=null ) sb.p(_post).p(" ");
     return sb;
   }
 }

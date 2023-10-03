@@ -15,7 +15,9 @@ class ForRangeAST extends AST {
     return new ForRangeAST(kids);
   }
   private ForRangeAST( AST[] kids ) { super(kids); }
-  
+
+  @Override boolean is_loopswitch() { return true; }
+
   @Override SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
     // for( long x : new XRange(1,100) ) {

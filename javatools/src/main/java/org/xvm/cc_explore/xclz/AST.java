@@ -14,12 +14,22 @@ public abstract class AST {
   @Override public String toString() { return jcode(new SB() ).toString(); }
 
   // Use the _par parent to find nearest enclosing Block for tmps
-  BlockAST enclosing() {
+  BlockAST enclosing_block() {
     AST ast = this;
-    while( !(ast instanceof BlockAST blk) ) ast = ast._par;
+    while( !(ast instanceof BlockAST blk) )
+      ast = ast._par;
     return blk;
   }
-  
+
+  // Use the _par parent to find the Nth enclosing switch or loop.
+  AST enclosing_loop(int i) {
+    AST ast = this;
+    while( !ast.is_loopswitch() )
+      ast = ast._par;
+    return i==0 ? ast : enclosing_loop(i-1);
+  }
+  boolean is_loopswitch() { return false; }
+
   // String java Type of this expression
   String type() { throw XEC.TODO(); }
   
@@ -94,11 +104,13 @@ public abstract class AST {
     case ArrayAccessExpr -> BinOpAST.make(X,"[","]");
     case AssertStmt   ->   AssertAST.make(X);
     case Assign       ->   AssignAST.make(X,true);
-    case BindFunctionExpr -> BindFuncAST.make(X);
     case BinOpAssign  ->   AssignAST.make(X,false);
+    case BindFunctionExpr -> BindFuncAST.make(X);
     case BitNotExpr   ->    UniOpAST.make(X,"~",null);
+    case BreakStmt    ->    BreakAST.make(X);
     case CallExpr     ->     CallAST.make(X);
     case CondOpExpr   ->    BinOpAST.make(X,false);
+    case ContinueStmt -> ContinueAST.make(X);
     case ConvertExpr  ->    UniOpAST.make(X,true);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
@@ -106,30 +118,30 @@ public abstract class AST {
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
     case InvokeExpr   ->   InvokeAST.make(X);
-    case MultiExpr    ->    MultiAST.make(X);
+    case MultiExpr    ->    MultiAST.make(X,true);
+    case MultiStmt    ->    MultiAST.make(X,false);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
     case NarrowedExpr ->   NarrowAST.make(X);
-    case NewExpr      ->      NewAST.make(X);
     case NegExpr      ->    UniOpAST.make(X,"-",null);
+    case NewExpr      ->      NewAST.make(X);
     case NotExpr      ->    UniOpAST.make(X,"!",null);
-    case PreIncExpr   ->    UniOpAST.make(X,"++",null);
-    case PreDecExpr   ->    UniOpAST.make(X,"--",null);
-    case PostIncExpr  ->    UniOpAST.make(X,null,"++");
     case PostDecExpr  ->    UniOpAST.make(X,null,"--");
+    case PostIncExpr  ->    UniOpAST.make(X,null,"++");
+    case PreDecExpr   ->    UniOpAST.make(X,"--",null);
+    case PreIncExpr   ->    UniOpAST.make(X,"++",null);
     case PropertyExpr -> PropertyAST.make(X);
     case RegAlloc     ->   DefRegAST.make(X,true ,true );
     case RelOpExpr    ->    BinOpAST.make(X,true );
     case Return0Stmt  ->   ReturnAST.make(X,0);
     case Return1Stmt  ->   ReturnAST.make(X,1);
     case StmtBlock    ->    BlockAST.make(X);
-    case SwitchExpr   ->   SwitchAST.make(X);
+    case SwitchExpr   ->   SwitchAST.make(X,true);
+    case SwitchStmt   ->   SwitchAST.make(X,false);
     case TemplateExpr -> TemplateAST.make(X);
     case TernaryExpr  ->  TernaryAST.make(X);
     case TupleExpr    ->     ListAST.make(X,true);
     case UnaryOpExpr  ->    UniOpAST.make(X,false);
-    
-    //case MapExpr      -> new     MapAST(X, X.methcon_ast());
-    //case StmtExpr     -> new    ExprAST(X);
+    case WhileDoStmt  ->    WhileAST.make(X);
     
     default -> throw XEC.TODO();
     };

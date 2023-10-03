@@ -22,7 +22,13 @@ public abstract class XClzCompiler {
     ArrayList<JavaSrc> srcs = new ArrayList<>();
     srcs.add(new JavaSrc(clzname, source));
 
-    JavaCompiler.CompilationTask task = compiler.getTask(null, xfile, errs, null, null, srcs);
+    ArrayList<String> options = new ArrayList<String>(){{
+        add("-source");
+        add("17");
+        add("--enable-preview");
+      }};
+    
+    JavaCompiler.CompilationTask task = compiler.getTask(null, xfile, errs, options, null, srcs);
 
     boolean result = task.call();
 

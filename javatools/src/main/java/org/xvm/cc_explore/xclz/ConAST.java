@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.cons.Const;
+import org.xvm.cc_explore.cons.StringCon;
 import org.xvm.cc_explore.cons.TCon;
 import org.xvm.cc_explore.util.SB;
 
@@ -17,6 +18,9 @@ class ConAST extends AST {
     _tcon = null;
     _con = con;
   }
-  @Override String type() { return _con; }
+  @Override String type() {
+    if( _tcon instanceof StringCon ) return "String";
+    return _con;
+  }
   @Override SB jcode( SB sb ) { return sb.p(_con); }
 }

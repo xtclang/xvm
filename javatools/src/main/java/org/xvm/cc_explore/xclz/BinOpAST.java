@@ -72,7 +72,10 @@ class BinOpAST extends AST {
             !    _op1.equals(")") &&
             !bin._op1.equals(")") &&
             prec( _op0, bin._op0 );
-    if( "String".equals(_type) ) { sb.p(" "); wrap=true; }
+    if( "String".equals(_type) && _kids[1]==ast &&
+        (ast instanceof BinOpAST || ast instanceof TernaryAST) ) {
+      sb.p(" "); wrap=true;
+    }
     if( wrap ) sb.p("(");
     ast.jcode(sb);
     if( wrap ) sb.p(")");

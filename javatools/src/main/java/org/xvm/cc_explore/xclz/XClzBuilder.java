@@ -333,14 +333,14 @@ public class XClzBuilder {
 
   // Produce a java value from a TCon
   private static final SB ASB = new SB();
-  static public String value_tcon( TCon tc ) {
+  static public String value_tcon( Const tc ) {
     assert ASB.len()==0;
     _value_tcon(tc);
     String rez = ASB.toString();
     ASB.clear();
     return rez;
   }
-  private static SB _value_tcon( TCon tc ) {
+  private static SB _value_tcon( Const tc ) {
     // Integer constants in XTC are Java Longs
     if( tc instanceof IntCon ic ) {
       if( ic._big != null ) throw XEC.TODO();
@@ -394,6 +394,16 @@ public class XClzBuilder {
     // Singleton class constants (that are not enums)
     if( tc instanceof SingleCon con0 )
       return ASB.p(java_class_name((ModPart)con0.part()));
+
+    if( tc instanceof RangeCon rcon ) {
+      String ext = rcon._xlo
+        ? (rcon._xhi ? "EE" : "EI")
+        : (rcon._xhi ? "IE" : "II");
+      ASB.p("new Range").p(ext).p("(");
+      _value_tcon(rcon._lo).p(",");
+      _value_tcon(rcon._hi).p(")");
+      return ASB;
+    }
     
     // Array constants
     if( tc instanceof AryCon ac ) {
