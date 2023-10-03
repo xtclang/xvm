@@ -6,6 +6,7 @@ import java.util.HashMap;
 
 class BlockAST extends AST {
   HashMap<String,Ary<String>> _tmps;
+  private int _uid;
   
   static BlockAST make( XClzBuilder X ) {
     // Count of locals
@@ -23,10 +24,11 @@ class BlockAST extends AST {
   private BlockAST( AST[] kids ) { super(kids); }
   
   String add_tmp(String type) {
+    assert type != null;
     if( _tmps==null ) _tmps = new HashMap<>();
     Ary<String> tmps = _tmps.get(type);
     if( tmps==null ) _tmps.put(type,tmps=new Ary<String>(new String[1],0));
-    return tmps.push("$tmp"+tmps._len);
+    return tmps.push("$tmp"+_uid++);
   }
   
   @Override void jpre( SB sb ) {

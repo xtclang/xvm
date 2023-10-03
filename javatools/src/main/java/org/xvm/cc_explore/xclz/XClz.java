@@ -24,4 +24,18 @@ public abstract class XClz {
     public static final Mutability[] VALUES = values();
   }
 
+  
+  public enum Ordered {
+    Lesser,
+    Equal, 
+    Greater;
+    public static final Ordered[] VALUES = values();
+  }
+
+  public static Ordered spaceship(long x, long y) {
+    if( x < y ) return Ordered.Lesser;
+    if( x== y ) return Ordered.Equal;
+    return Ordered.Greater;
+  }
+
 }
