@@ -12,7 +12,6 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;

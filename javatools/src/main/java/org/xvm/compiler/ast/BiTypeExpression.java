@@ -129,23 +129,7 @@ public class BiTypeExpression
             type2 = exprNew;
             }
 
-        if (fValid)
-            {
-            if (type1.isConstant() && type2.isConstant())
-                {
-                return super.validate(ctx, typeRequired, errs);
-                }
-
-            // this can happen when we attempt to convert expressions to type expressions
-            log(errs, Severity.ERROR, Compiler.INVALID_OPERATION,
-                    type1.getType().removeImmutable().removeAccess().getValueString(),
-                    type2.getType().removeImmutable().removeAccess().getValueString(),
-                    typeRequired == null
-                        ? type1.ensureTypeConstant().getValueString()
-                        : typeRequired.getValueString());
-            }
-
-        return  null;
+        return fValid ? super.validate(ctx, typeRequired, errs) : null;
         }
 
 

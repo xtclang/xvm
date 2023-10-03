@@ -2,24 +2,13 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        function void ()[] prints = [];
+        Test t = new Test<String?>();
+        console.print($"{t.test()=}");
+    }
 
-        {
-            Int i;
-            for (i = 0; i < 3; i++) {
-                prints += () -> console.print($"{i=}");
-            }
+    class Test<Value> {
+        Boolean test() {
+            return Null.is(Value); // this used to yield `False`
         }
-
-        {
-            @Volatile Int i;
-            for (i = 0; i < 3; i++) {
-                prints += () -> console.print($"{i=}");
-            }
-        }
-
-        for (val print : prints) {
-			print();
-		}
     }
 }

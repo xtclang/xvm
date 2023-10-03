@@ -183,7 +183,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             if (defaultValue != Null) {
                 return True, defaultValue;
             }
-            if (Value.is(Type<Nullable>)) {
+            if (Null.is(Value)) {
                 return True, Null.as(Value);
             }
             if (Class<Value> clz := Value.fromClass(), Value value := clz.defaultValue()) {

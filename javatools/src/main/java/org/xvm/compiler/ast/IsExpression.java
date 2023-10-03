@@ -274,9 +274,25 @@ public class IsExpression
         Argument   argCond   = aLVal[0].getLocalArgument();
         Argument   argTarget = expr1.generateArgument(ctx, code, true, cLVals == 1, errs);
         Expression exprTest  = expr2;
-        Argument   argType   = exprTest.isConstant()
-                ? exprTest.getType().getParamType(0).resolveAutoNarrowingBase()
-                : exprTest.generateArgument(ctx, code, false, true, errs);
+        Argument   argType;
+
+        // there is an asymmetry between processing of the static and dynamic exprTest type:
+        // - if the test type is static (e.g. "x.is(String)"), the type of exprTest is a
+        //     TypeConstant that "isTypeOfType" and we need to extract that underlying type;
+        // - in the test type is dynamic (e.g. "Null.is(Serializable))", the argument produced
+        //   by the exprTest would be a TypeHandle and the runtime should take care of the rest
+        if (exprTest.isConstant())
+            {
+            argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
+            }
+        else
+            {
+            argType = exprTest.generateArgument(ctx, code, false, true, errs);
+            if (argType instanceof TypeConstant type)
+                {
+                argType = type.getParamType(0);
+                }
+            }
 
         code.add(new IsType(argTarget, argType, argCond));
         if (cLVals > 1)
@@ -284,7 +300,6 @@ public class IsExpression
             if (argCond.isStack())
                 {
                 // since we need both to check it and return the value, it cannot be on stack
-                // TODO: consider using a new "Dupe" op or make "Move(STACK, STACK)" work like PUSH
                 Assignable varDupe = createTempVar(code, pool().typeBoolean(), false);
                 Register   regDupe = varDupe.getRegister();
                 code.add(new Move(argCond, regDupe)); // pop stack into argTest

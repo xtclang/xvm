@@ -811,7 +811,8 @@ public class NamedTypeExpression
             }
 
         TypeConstant typeType = type.getType();
-        return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
+        return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit,
+                type.isFormalType() ? null : typeType, errs);
         }
 
     /**
