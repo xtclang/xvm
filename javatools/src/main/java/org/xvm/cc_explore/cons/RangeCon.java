@@ -7,8 +7,8 @@ import org.xvm.cc_explore.*;
  */
 public class RangeCon extends Const {
   private final Format _f;
-  private final boolean _xlo, _xhi; // Exclude lo, hi
-  private Const _lo, _hi;
+  public final boolean _xlo, _xhi; // Exclude lo, hi
+  public Const _lo, _hi;
   private Part _plo;            // Optional; some IntCons have no part
   public RangeCon( CPool X, Const.Format f ) {
     _f = f;
@@ -23,6 +23,8 @@ public class RangeCon extends Const {
     X.u31();
     X.u31();
   }
+  public long lo() { return ((IntCon)_lo)._x; }
+  public long hi() { return ((IntCon)_hi)._x; }
   @Override public void resolve( CPool X ) {
     if( _f == Format.Range ) X.u8();
     _lo = X.xget();

@@ -126,7 +126,7 @@ $(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
 TESTS = $(examples_x)
 
 
-test:	$(classes) $(test_classes)
+test:	$(classes) $(test_classes) $(MANUAL_DIR)/TestMisc.xtc
 	$(XEC) $(MANUAL_DIR)/TestMisc.xtc
 
 # TAGS
