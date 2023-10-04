@@ -596,7 +596,8 @@ public abstract class ObjectHandle
                     return true;
                     }
                 // the structure could not be made mutable
-                return m_fMutable = true;
+                m_fMutable = true;
+                return false;
                 }
             return true;
             }

@@ -20,6 +20,7 @@ import org.xvm.runtime.Utils.UnaryAction;
 import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.xException;
 
 
 /**
@@ -126,6 +127,11 @@ public class xVar
 
     protected int setReferentImpl(Frame frame, RefHandle hRef, boolean fNative, ObjectHandle hValue)
         {
+        if (!hRef.isMutable())
+            {
+            return frame.raiseException(xException.readOnly(frame, "Immutable Var"));
+            }
+
         switch (hRef.m_iVar)
             {
             case RefHandle.REF_REFERENT:

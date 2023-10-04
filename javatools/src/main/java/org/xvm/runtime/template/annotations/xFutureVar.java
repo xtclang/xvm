@@ -117,7 +117,7 @@ public class xFutureVar
         switch (sPropName)
             {
             case "assigned":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned(frame)));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned()));
 
             case "failure":
                 return frame.assignValue(iReturn, hThis.getException());
@@ -125,7 +125,7 @@ public class xFutureVar
             case "completion":
                 {
                 EnumHandle hValue =
-                    hThis.isAssigned(frame) ?
+                    hThis.isAssigned() ?
                         hThis.getFuture().isCompletedExceptionally() ?
                             COMPLETION.getEnumByName("Error")  :
                             COMPLETION.getEnumByName("Result") :
@@ -843,7 +843,7 @@ public class xFutureVar
             }
 
         @Override
-        public boolean isAssigned(Frame frame)
+        public boolean isAssigned()
             {
             return getFuture().isDone();
             }
@@ -930,7 +930,7 @@ public class xFutureVar
         public int waitAndAssign(Frame frame, int iReturn)
             {
             // if the future is not assigned yet, the service is responsible for timing out
-            return isAssigned(frame)
+            return isAssigned()
                     ? assign(frame, iReturn)
                     : frame.call(frame.createWaitFrame(this, iReturn));
             }
@@ -1026,7 +1026,7 @@ public class xFutureVar
 
                 if (hValue instanceof FutureHandle hFuture)
                     {
-                    assert hFuture.isAssigned(frame);
+                    assert hFuture.isAssigned();
 
                     try
                         {

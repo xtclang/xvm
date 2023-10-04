@@ -53,7 +53,7 @@ public class xLazyVar
         switch (sPropName)
             {
             case "assigned":
-                if (!hThis.isAssigned(frame) && hThis.isPropertyOnImmutable())
+                if (!hThis.isAssigned() && hThis.isPropertyOnImmutable())
                     {
                     hThis.registerAssign(frame.f_fiber);
                     }
@@ -105,7 +105,7 @@ public class xLazyVar
         synchronized (hLazy)
             {
             boolean fAllowDupe = hLazy.unregisterAssign(frame.f_fiber);
-            if (hLazy.isAssigned(frame))
+            if (hLazy.isAssigned())
                 {
                 return fAllowDupe
                     ? Op.R_NEXT

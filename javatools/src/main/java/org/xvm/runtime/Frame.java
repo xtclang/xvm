@@ -1802,7 +1802,7 @@ public class Frame
         {
         RefHandle hRef = (RefHandle) f_ahVar[nVar];
 
-        return hRef.isAssigned(this) ? hRef : null;
+        return hRef.isAssigned() ? hRef : null;
         }
 
     /**
@@ -2857,7 +2857,7 @@ public class Frame
 
                     FutureHandle hFuture = (FutureHandle) frame.f_ahVar[0];
 
-                    return hFuture.isAssigned(frame)
+                    return hFuture.isAssigned()
                             ? frame.returnValue(hFuture, true)
                             : R_REPEAT;
                     }
@@ -2868,7 +2868,7 @@ public class Frame
                 for (int i = 0; i < cValues; i++)
                     {
                     FutureHandle hFuture = (FutureHandle) frame.f_ahVar[i];
-                    if (hFuture.isAssigned(frame))
+                    if (hFuture.isAssigned())
                         {
                         ahFuture[i] = hFuture;
                         }

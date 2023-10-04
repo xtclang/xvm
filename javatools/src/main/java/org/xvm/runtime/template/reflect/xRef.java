@@ -154,7 +154,7 @@ public class xRef
                 return getPropertyAnnotations(frame, hRef, iReturn);
 
             case "assigned":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned(frame)));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
 
             case "identity":
                 return actOnReferent(frame, hRef,
@@ -248,7 +248,7 @@ public class xRef
                 }
 
             case "peek":
-                return hRef.isAssigned(frame)
+                return hRef.isAssigned()
                     ? actOnReferent(frame, hRef,
                         h -> frame.assignValues(aiReturn, xBoolean.TRUE, h))
                     : frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -358,7 +358,7 @@ public class xRef
         // Reference equality is used to determine if two references are referring to the same referent
         // _identity_. Specifically, two references are equal iff they reference the same runtime
         // object, or the two objects that they reference are both immutable and structurally identical.
-        return hRef1.isAssigned(frame) && hRef2.isAssigned(frame)
+        return hRef1.isAssigned() && hRef2.isAssigned()
                 ? new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame)
                 : frame.assignValue(iReturn, xBoolean.FALSE);
         }
@@ -788,15 +788,17 @@ public class xRef
          * Create a RefHandle for a given property.
          *
          * @param clazz    the class of the Ref (e.g. FutureRef<String>)
+         * @param frame    the current frame
          * @param hTarget  the target object
          * @param idProp   the property id
          */
-        public RefHandle(TypeComposition clazz, ObjectHandle hTarget, PropertyConstant idProp)
+        public RefHandle(TypeComposition clazz, Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
             {
             super(clazz);
 
             assert hTarget != null;
 
+            m_frame     = frame;
             m_hReferent = hTarget;
             m_idProp    = idProp;
             m_sName     = idProp.getNestedIdentity().toString();
@@ -808,7 +810,7 @@ public class xRef
          * Create a RefHandle for a frame register.
          *
          * @param clazz  the class of the Ref
-         * @param frame  the frame
+         * @param frame  the current frame
          * @param iVar   the register index
          */
         public RefHandle(TypeComposition clazz, Frame frame, int iVar)
@@ -835,6 +837,65 @@ public class xRef
                 m_iVar      = REF_REF;
                 m_hReferent = refCurrent;
                 }
+            }
+
+        @Override
+        public boolean makeImmutable()
+            {
+            boolean fDone = true;
+            switch (m_iVar)
+                {
+                case REF_REFERENT:
+                    {
+                    ObjectHandle hReferent = getField(null, REFERENT);
+                    if (hReferent != null)
+                        {
+                        fDone = hReferent.makeImmutable();
+                        }
+                    break;
+                    }
+
+                case REF_REF:
+                    fDone = m_hReferent.makeImmutable();
+                    break;
+
+                case REF_PROPERTY:
+                    {
+                    GenericHandle    hTarget = (GenericHandle) m_hReferent;
+                    PropertyConstant idProp  = m_idProp;
+                    if (idProp.isFormalType())
+                        {
+                        // generic types are always immutable
+                        break;
+                        }
+                    ObjectHandle hValue = hTarget.getField(m_frame, idProp);
+                    if (hValue != null)
+                        {
+                        fDone = hValue.makeImmutable();
+                        }
+                    break;
+                    }
+                case REF_ARRAY:
+                    fDone = m_hReferent.makeImmutable();
+                    break;
+
+                default:
+                    {
+                    ObjectHandle hReferent = m_frame.f_ahVar[m_iVar];
+                    if (hReferent != null)
+                        {
+                        fDone = hReferent.makeImmutable();
+                        }
+                    break;
+                    }
+                }
+
+            if (fDone)
+                {
+                // we cannot call super(), since it will freeze the holder (outer)
+                m_fMutable = false;
+                }
+            return fDone;
             }
 
         /**
@@ -916,7 +977,7 @@ public class xRef
             return (VarSupport) getOpSupport();
             }
 
-        public boolean isAssigned(Frame frame)
+        public boolean isAssigned()
             {
             switch (m_iVar)
                 {
@@ -924,7 +985,7 @@ public class xRef
                     return getReferent() != null;
 
                 case REF_REF:
-                    return ((RefHandle) m_hReferent).isAssigned(frame);
+                    return ((RefHandle) m_hReferent).isAssigned();
 
                 case REF_PROPERTY:
                     {
@@ -935,14 +996,14 @@ public class xRef
                         // generic types are always "assigned"
                         return true;
                         }
-                    ObjectHandle hValue = hTarget.getField(frame, idProp);
+                    ObjectHandle hValue = hTarget.getField(m_frame, idProp);
                     if (hValue == null)
                         {
                         return false;
                         }
                     if (hTarget.isInflated(idProp))
                         {
-                        return ((RefHandle) hValue).isAssigned(frame);
+                        return ((RefHandle) hValue).isAssigned();
                         }
                     return true;
                     }
@@ -978,7 +1039,7 @@ public class xRef
             String s = super.toString();
             return switch (m_iVar)
                 {
-                case REF_REFERENT -> s + (isAssigned(null) ? getReferent() : "<unassigned>");
+                case REF_REFERENT -> s + (isAssigned() ? getReferent() : "<unassigned>");
                 case REF_REF      -> s + "--> " + m_hReferent;
                 case REF_PROPERTY -> s + "-> " + m_hReferent.getComposition() + "#" + m_sName;
                 case REF_ARRAY    -> m_hReferent + "[" + ((IndexedRefHandle) this).f_lIndex + "]";

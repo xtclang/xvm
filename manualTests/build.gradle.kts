@@ -28,7 +28,6 @@ val tests = listOf<String>(
     "src/main/x/services.x",
     "src/main/x/reflect.x",
     "src/main/x/regex.x",
-    "src/main/x/runner.x",
     "src/main/x/tuple.x")
 
 val testModules = listOf<String>(
@@ -77,7 +76,7 @@ val compileAll = tasks.register<JavaExec>("compileAll") {
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc")
 
-    args(opts + tests)
+    args(opts + tests + "src/main/x/runner.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 

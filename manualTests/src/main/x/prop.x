@@ -1,6 +1,5 @@
 module TestProps {
     @Inject Console console;
-    @Inject Clock   clock;
     @Inject Timer   timer;
 
     void run() {
@@ -10,6 +9,7 @@ module TestProps {
         testModuleProperty();
         testDelegation();
         testAccess();
+        testImmutableVar();
     }
 
     class Standard(Int x);
@@ -58,7 +58,7 @@ module TestProps {
             // compiles as a private static property, which should be initialized just once
             // (before the method is called the very first time)
 
-            console.print($" - in showMethodProperty(), ++x={++x}, y={y}");
+            console.print($" - in showMethodProperty(), {++x=}, {y=}");
         }
     }
 
@@ -71,13 +71,11 @@ module TestProps {
 
     void testLazyProperty() {
         console.print("\n** testLazyProperty()");
-
-        console.print("lazy=" + lazy);
+        console.print($"{lazy=}");
     }
 
     static void testModuleProperty() {
-        TestProps.console.print("\n** testModuleProperty()");
-        TestProps.console.print("now=" + this:module.clock.now);
+        this:module.console.print("\n** testModuleProperty()");
     }
 
     @Lazy Int lazy.calc() {
@@ -95,15 +93,17 @@ module TestProps {
                 delegates Stringable-Object(name) {}
 
         NamedNumber nn = new NamedNumber("answer", 42);
-        console.print($"nn.estimateStringLength()={nn.estimateStringLength()}");
-        console.print($"nn.toString()={nn.toString()}");
+        console.print($"{nn.estimateStringLength()=}");
+        console.print($"{nn.toString()=}");
 
         NamedNumber2 nn2 = new NamedNumber2("answer", 42);
-        console.print($"nn2.estimateStringLength()={nn2.estimateStringLength()}");
-        console.print($"nn2.toString()={nn2.toString()}");
+        console.print($"{nn2.estimateStringLength()=}");
+        console.print($"{nn2.toString()=}");
     }
 
     void testAccess() {
+        console.print("\n** testAccess()");
+
         Derived d = new Derived();
         d.report();
 
@@ -138,7 +138,7 @@ module TestProps {
             }
 
             void report() {
-                console.print($"Base   : p1={p1},    p2()={p2()}, p3()={p3()}");
+                console.print($"Base   : {p1=},    {p2()=}, {p3()=}");
             }
         }
 
@@ -169,7 +169,85 @@ module TestProps {
             void report() {
                 super();
 
-                console.print($"Derived: p1()={p1()}, p2={p2},  p3()={p3()}");
+                console.print($"Derived: {p1()=}, {p2=},  {p3()=}");
+            }
+        }
+    }
+
+    void testImmutableVar() {
+        console.print("\n** testImmutableVar()");
+
+        Test t = new Test();
+        t.testProps();
+        t.testVars();
+
+        class Test {
+            String[] assignedProp = new String[];
+
+            @Unassigned
+            String[] unassignedProp;
+
+            @Lazy String[] calculatedProp.calc() {
+                return [""];
+            }
+
+            @Lazy String[] uncalculatedProp.calc() {
+                return [""];
+            }
+
+            void testProps() {
+                Var<String[]> varA = &assignedProp;
+
+                varA.makeImmutable();
+                validateImmutable(varA);
+                validateImmutable(assignedProp);
+
+                Var<String[]> varU = &unassignedProp;
+                varU.makeImmutable();
+                validateImmutable(varU);
+
+                String[] strings = calculatedProp;
+                Var<String[]> varC = &calculatedProp;
+                varC.makeImmutable();
+                validateImmutable(varC);
+                validateImmutable(strings);
+
+                Var<String[]> varUC = &uncalculatedProp;
+                varUC.makeImmutable();
+                validateImmutable(varUC);
+                try {
+                    strings = uncalculatedProp; // too late; cannot be calculated anymore
+                    assert;
+                } catch (ReadOnly ignore) {}
+
+            }
+
+            void testVars() {
+                String[] assignedVar = new String[];
+                Var<String[]> varA = &assignedVar;
+
+                varA.makeImmutable();
+                validateImmutable(varA);
+                validateImmutable(assignedVar);
+
+                String[] unassignedVar;
+                Var<String[]> varU = &unassignedVar;
+                varU.makeImmutable();
+                validateImmutable(varU);
+            }
+
+            void validateImmutable(Var<String[]> var) {
+                assert var.is(immutable);
+                assert !var.assigned || var.isImmutable;
+                try {
+                    var.set([""]);
+                    assert;
+                } catch (ReadOnly ignore) {}
+            }
+
+            void validateImmutable(String[] referent) {
+                assert referent.is(immutable);
+                assert referent.mutability == Constant;
             }
         }
     }

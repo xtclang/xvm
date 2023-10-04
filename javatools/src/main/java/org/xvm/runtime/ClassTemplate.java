@@ -1594,7 +1594,7 @@ public abstract class ClassTemplate
             }
 
         TypeComposition clzRef = clzThis.ensurePropertyComposition(infoProp);
-        RefHandle       hRef   = new RefHandle(clzRef, hThis, idProp);
+        RefHandle       hRef   = new RefHandle(clzRef, frame, hThis, idProp);
 
         return frame.assignValue(iReturn, hRef);
         }

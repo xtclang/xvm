@@ -190,7 +190,7 @@ public class xAtomicVar
             }
 
         @Override
-        public boolean isAssigned(Frame frame)
+        public boolean isAssigned()
             {
             return f_atomic.get() != null;
             }
