@@ -8,8 +8,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.SignatureConstant;
-
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
@@ -187,6 +185,4 @@ public class xLazyVar
             return fAllow;
             }
         }
-
-    private static SignatureConstant SIG_FREEZE;
     }

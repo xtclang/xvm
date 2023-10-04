@@ -856,6 +856,7 @@ public class xRef
                     }
 
                 case REF_REF:
+                case REF_ARRAY:
                     fDone = m_hReferent.makeImmutable();
                     break;
 
@@ -875,9 +876,6 @@ public class xRef
                         }
                     break;
                     }
-                case REF_ARRAY:
-                    fDone = m_hReferent.makeImmutable();
-                    break;
 
                 default:
                     {
