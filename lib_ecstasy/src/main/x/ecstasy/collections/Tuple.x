@@ -23,10 +23,14 @@
  *
  * Due to the complexity of the non-uniform element type, Tuple is not intended to be implemented by
  * the developer; rather, it is a data type provided by the runtime, and whose type safety is
- * explicitly supported by both the compiler and the runtime. The implementation provided by the
- * runtime uses either the [Fixed](Mutability.Fixed) or [Constant](Mutability.Constant) mutability
- * by default, depending on the types of the elements; if the elements are all immutable or
- * services, then the tuple mutability will be `Constant`; otherwise, it will be `Fixed`.
+ * explicitly supported by both the compiler and the runtime.
+ *
+ * All mutating operations on a tuple will result in the creation of a new tuple with the requested
+ * changes incorporated; the original Tuple is left unchanged. This style of mutation is called a
+ * _persistent data structure_, and is analogous to the [Array] support for the
+ * [Persistent](Array.Mutability.Persistent) mutability option. The tuple may or may not be
+ * `immutable`; to ensure that a tuple is immutable, use the [freeze] method.
+ *
  * The run-time also provides an implementation of the `Freezable` interface. Additionally, for a
  * tuple that contains only `immutable`, `service`, and `AutoFreezable` elements, the Tuple will
  * automatically incorporate `AutoFreezable(inPlace=False)`.
@@ -50,17 +54,6 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     @Op("[]") Object getElement(Int index);
 
     /**
-     * Modify the value in the specified element in the tuple.
-     *
-     * If the compile-time type of this tuple is known, and if the index is a compile-time constant
-     * value, then the compile-time type of the parameter is known and checked by the compiler;
-     * otherwise, a type mismatch will raise a runtime type assertion.
-     *
-     * @throws ReadOnly  if the [mutability] of the tuple is not [Fixed](Mutability.Fixed)
-     */
-    @Op("[]=") void setElement(Int index, Object newValue);
-
-    /**
      * Obtain the Ref for the specified element.
      *
      * If the compile-time type of this tuple is known, and if the index is a compile-time constant
@@ -74,10 +67,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
 
     /**
      * Creates and returns a new tuple that is the concatenation of the specified value to this
-     * tuple. The mutability of the returned tuple is the same as the mutability of this tuple,
-     * except when the original mutability is [Constant](Mutability.Constant) and the element to
-     * add is not immutable, in which case the resulting Tuple will have
-     * [Persistent](Mutability.Persistent) mutability.
+     * tuple.
      *
      * If the compile-time types of both _this_ tuple and the value are known, then the
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
@@ -90,11 +80,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     <Element> Tuple!<> add(Element value);
 
     /**
-     * Creates and returns a new tuple that is the concatenation of that tuple to this tuple. The
-     * mutability of the returned tuple is the same as the mutability of this tuple, except when
-     * the original mutability is [Constant](Mutability.Constant) and at least one of the elements
-     * to add is not immutable, in which case the resulting Tuple will have
-     * [Persistent](Mutability.Persistent) mutability.
+     * Creates and returns a new tuple that is the concatenation of that tuple to this tuple.
      *
      * If the compile-time types of both _this_ tuple and _that_ tuple are known, then the
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
@@ -120,10 +106,6 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     /**
      * Obtain a portion of the tuple as a tuple, with the portion specified as a [Range].
      *
-     * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
-     * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
-     * tuple.
-     *
      * If the compile-time type of this tuple is known, and if the interval is a compile-time
      * constant value, then the compile-time type of the returned tuple is known; otherwise, an
      * explicit cast to a compile-time type is required to regain the compile-time type.
@@ -133,10 +115,6 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     /**
      * Creates and returns a new tuple that is a copy of this tuple, except with the specified
      * element removed.
-     *
-     * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
-     * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
-     * tuple.
      *
      * If the compile-time type of this tuple is known, and if the index is a compile-time constant
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
@@ -148,70 +126,16 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * Create and return a new tuple that is a copy of this tuple, except with the specified
      * elements removed.
      *
-     * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
-     * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
-     * tuple.
-     *
      * If the compile-time type of this tuple is known, and if the interval is a compile-time
      * constant value, then the compile-time type of the returned tuple is known; otherwise, an
      * explicit cast to a compile-time type is required to regain the compile-time type.
      */
     Tuple!<> removeAll(Interval<Int> interval);
 
-
-    // ----- variable mutability -------------------------------------------------------------------
-
     /**
-     * The levels of mutability of an Tuple. The forms of mutability for a tuple are _similar_ to
-     * those of an [array](Array.Mutability), but there are subtle differences, such as how a
-     * `Fixed` tuple supports element addition and removal by creating a new `Tuple` instance.
-     */
-    enum Mutability {
-        /*
-         * A _Constant_ `Tuple` is also a persistent data structure, but additionally it must be
-         * immutable, and all of its contents must be immutable.
-         */
-        Constant,
-        /*
-         * A _Persistent_ `Tuple` handles mutation requests by creating a new `Tuple` with the
-         * requested changes incorporated.
-         */
-        Persistent,
-        /*
-         * A _Fixed-Size_ `Tuple` allows mutations "in place" via replacement of its elements, but
-         * mutations that would add or remove elements and thus alter its type or its size will
-         * create a new `Tuple` with the requested changes incorporated.
-         */
-        Fixed
-    }
-
-    /**
-     * The Mutability of the Tuple.
-     */
-    @RO Mutability mutability;
-
-    /**
-     * Obtain the same contents of this Tuple, but in a Tuple with the specified mutability. If the
-     * mutability of this Tuple is already the desired mutability, or if [Mutability.Persistent]
-     * is requested and the mutability is already [Mutability.Constant], then this Tuple is
-     * returned. Otherwise, if `inPlace` is `True` and mutability is decreasing from `Fixed` to
-     * `Persistent`, then the [mutability] of this Tuple is modified and this Tuple is returned. If
-     * the requested mutability is `Constant`, then the Tuple is requested to [freeze]. Otherwise,
-     * a new Tuple of the desired mutability is created with the same values as this Tuple.
+     * Return an `immutable` tuple of the same element types and values as are present in this tuple.
      *
-     * @param mutability  the requested [Mutability] of the resulting Tuple
-     *
-     * @return a Tuple with the requested mutability
-     */
-    Tuple ensureMutability(Mutability mutability, Boolean inPlace = False);
-
-    /**
-     * Return an `immutable const` tuple of the same element types and values as are present in this
-     * tuple. All mutating calls to a `const` tuple will result in the creation of a new tuple with
-     * the requested changes incorporated.
-     *
-     * @throws Exception if any of the values in the tuple are neither immutable nor
-     *         {@link Freezable}
+     * @throws Exception if any of the values in the tuple are not [Shareable]
      */
     @Override
     immutable Tuple freeze(Boolean inPlace = False);

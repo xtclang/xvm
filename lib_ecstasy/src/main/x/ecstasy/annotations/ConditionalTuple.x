@@ -11,12 +11,6 @@ mixin ConditionalTuple
     }
 
     @Override
-    @Op("[]=") void setElement(Int index, Object newValue) {
-        assert this[0];
-        super(index, newValue);
-    }
-
-    @Override
     @Op("+") <Element> Tuple!<> add(Element value) {
         assert this[0];
         return super(value);
@@ -50,11 +44,5 @@ mixin ConditionalTuple
     Tuple!<> removeAll(Interval<Int> interval) {
         assert this[0];
         return super(interval);
-    }
-
-    @Override
-    ConditionalTuple ensureMutability(Mutability mutability, Boolean inPlace = False) {
-        assert this[0];
-        return super(mutability, inPlace);
     }
 }
