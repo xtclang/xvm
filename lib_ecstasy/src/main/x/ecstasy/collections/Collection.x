@@ -1141,6 +1141,20 @@ interface Collection<Element>
         return buf;
     }
 
+    @Override
+    String toString(
+            String                    sep    = ", ",
+            String?                   pre    = "[",
+            String?                   post   = "]",
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null) {
+
+        StringBuffer buf = new StringBuffer(
+            estimateStringLength(sep, pre, post, limit, trunc, render));
+        return appendTo(buf, sep, pre, post, limit, trunc, render).toString();
+    }
+
 
     // ----- equality ------------------------------------------------------------------------------
 

@@ -28,9 +28,7 @@ package text {
 
         @Override
         String toString() {
-            StringBuffer buf = new StringBuffer(
-                messages.estimateStringLength(sep="\n", pre="", post=""));
-            return messages.appendTo(buf, sep="\n", pre="", post="").toString();
+            return messages.toString(sep="\n", pre="", post="");
         }
     }
 }
