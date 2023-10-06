@@ -74,5 +74,5 @@ const JsonFormat(Printer printer = Printer.DEFAULT)
         }
     }
 
-    static JsonFormat DEFAULT = new JsonFormat();
+    static JsonFormat Default = new JsonFormat();
 }

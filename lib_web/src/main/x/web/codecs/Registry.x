@@ -87,7 +87,7 @@ service Registry {
      */
     static Map<MediaType, Codec> DefaultCodecs =
         [
-        Json       = new FormatCodec<Doc>(Utf8Codec, JsonFormat.DEFAULT),
+        Json       = new FormatCodec<Doc>(Utf8Codec, JsonFormat.Default),
         JsonLD     = Utf8Codec,
         JsonPatch  = Utf8Codec,
         CSS        = Utf8Codec,
@@ -112,7 +112,8 @@ service Registry {
         new BasicFormat<TimeOfDay>(),
         new BasicFormat<Duration>(),
 
-        JsonFormat.DEFAULT,
+        JsonFormat.Default,
+        BooleanFormat,
 
         new BasicFormat<IntLiteral>(),
         new BasicFormat<FPLiteral>(),
