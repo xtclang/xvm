@@ -22,6 +22,7 @@ import java.nio.charset.Charset;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 
 
 /**
@@ -798,6 +799,29 @@ public class Handy
         {
         return appendString(new StringBuilder(s.length() + 2).append('\"'), s).append(
                 '\"').toString();
+        }
+
+    /**
+     * @param cMillis  date/time in millis
+     *
+     * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format
+     */
+    public static String dateString(long cMillis)
+        {
+        Date date = new Date(cMillis);
+        return new StringBuilder(19)
+            .append(String.valueOf(11900 + date.getYear()).substring(1, 5)) // only ok for 0-9999
+            .append('-')
+            .append(String.valueOf(101 + date.getMonth()).substring(1))
+            .append('-')
+            .append(String.valueOf(100 + date.getDate()).substring(1))
+            .append(' ')
+            .append(String.valueOf(100 + date.getHours()).substring(1))
+            .append(':')
+            .append(String.valueOf(100 + date.getMinutes()).substring(1))
+            .append(':')
+            .append(String.valueOf(100 + date.getSeconds()).substring(1))
+            .toString();
         }
 
 
