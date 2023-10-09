@@ -34,8 +34,9 @@ class DefRegAST extends AST {
   @Override String type() { return _type; }
   
   @Override void jpre( SB sb ) {
-    //sb.p(_type);
-    sb.p("var");
+    String type = type();
+    if( type==null ) type="var";
+    sb.p(type);
     sb.p(" ").p(_name);
     if( _init != null ) sb.p(" = ").p(_init);
   }

@@ -3,14 +3,12 @@ package org.xvm.cc_explore.xclz;
 import org.xvm.cc_explore.xrun.*;
 
 // Some kind of base class for a Java class that implements an XTC Module
-public abstract class XClz<X extends XClz<X>> {
+public abstract class XClz {
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }
 
   // Trace
-  public final X TRACE() {
-    return (X)this;
-  }
+  public <X extends XClz> X TRACE() { return (X)this; }
 
   // Assert is always-on runtime test
   public static void xassert( boolean cond ) {
