@@ -13,6 +13,8 @@ import java.util.HashMap;
 
  */
 public class XEC {
+  public static final String ROOT = "org.xvm.cc_explore";
+  public static final String XCLZ = ROOT+".xclz";
   
   // Main Launcher.
   // Usage: (-L path)* [-M main] file.xtc args  

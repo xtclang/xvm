@@ -21,16 +21,32 @@ class AssignAST extends AST {
         // Replace with "ary.set(idx,val)"
         bin._op0.equals(".at(") )
       return new InvokeAST("set",bin._kids[0],bin._kids[1],_kids[1]);
-    // Conditional assign
-    if( _op == Operator.AsnIfNotFalse ) {
-      // var i,  :=,  iter.TRACE().next()
-      // Tuple2<boolean,long> cond = iter.TRACE().next()
-      // var i;
-      // if( cond._f0 ) i = cond._f1;
-      // xassert(cond._f0);
-      throw XEC.TODO();
-    }
+    // Conditional assign; the conditional is passed through XRuntime.$COND and
+    // the def happens at the same time.  Hoist the java def to the enclosing block.
+    if( _op == Operator.AsnIfNotFalse )
+      enclosing_block().add_tmp(_kids[0].type(),((DefRegAST)_kids[0])._name);
     return this;
   }
-  @Override void jmid( SB sb, int i ) { if( i==0 ) sb.p(' ').p(_op.text).p(' '); }
+  @Override SB jcode( SB sb ) {
+    if( _op == Operator.AsnIfNotFalse ) {
+      // Expression result is the boolean conditional value,
+      // and also the var is defined.
+      // $t(var = init) & XRuntime.GET$COND()
+      sb.p("$t(");
+      sb.p(((DefRegAST)_kids[0])._name);
+      sb.p(" = ");
+      _kids[1].jcode(sb);
+      sb.p(") & XRuntime.GET$COND()");
+    } else {
+      _kids[0].jcode(sb);
+      sb.p(" ").p(_op.text).p(" ");
+      _kids[1].jcode(sb);
+    }
+    return sb;
+  }
+  private void do_asgn(SB sb) {
+    _kids[0].jcode(sb);
+    sb.p(" ").p(_op.text).p(" ");
+    _kids[1].jcode(sb);
+  }
 }

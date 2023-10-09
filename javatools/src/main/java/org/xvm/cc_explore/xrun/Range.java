@@ -27,10 +27,11 @@ abstract public class Range implements Iterable<Long> {
   public boolean in( long x ) { return _lo <= x && x < _hi; }
   
   /** @return an iterator */
-  @Override public Iterator<Long> iterator() { return new Iter(); }
-  private class Iter implements Iterator<Long> {
-    long _i=_lo;
-    @Override public boolean hasNext() { return _i<_hi; }
+  @Override public Iterator<Long> iterator() { return new Iter(_lo,_hi); }
+  private static class Iter implements Iterator<Long> {
+    long _i,_max;
+    Iter(long lo, long hi) { _i=lo; _max=hi; }
+    @Override public boolean hasNext() { return _i<_max; }
     @Override public Long next() { return _i++; }
   }
   

@@ -24,11 +24,14 @@ class BlockAST extends AST {
   private BlockAST( AST[] kids ) { super(kids); }
   
   String add_tmp(String type) {
+    return add_tmp(type,"$tmp"+_uid++);
+  }
+  String add_tmp(String type, String name) {
     assert type != null;
     if( _tmps==null ) _tmps = new HashMap<>();
     Ary<String> tmps = _tmps.get(type);
     if( tmps==null ) _tmps.put(type,tmps=new Ary<String>(new String[1],0));
-    return tmps.push("$tmp"+_uid++);
+    return tmps.push(name);
   }
   
   @Override void jpre( SB sb ) {

@@ -10,6 +10,9 @@ class ContinueAST extends AST {
   @Override SB jcode ( SB sb ) {
     if( _d > 0 ) throw XEC.TODO();
     AST enclosing = enclosing_loop(_d);
-    return sb.ip(enclosing instanceof SwitchAST ? "break" : "continue");
+    if( enclosing instanceof SwitchAST )
+      throw XEC.TODO(); // Requires fall-thru semantics from the middle complex
+                        // expressions which amounts to a GOTO.
+    return sb.ip("continue");
   }
 }

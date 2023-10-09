@@ -1,13 +1,16 @@
 package org.xvm.cc_explore.xrun;
 
 import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.xclz.XClz;
 import org.xvm.cc_explore.util.SB;
+import java.lang.Iterable;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class AryI64 {
+public class AryI64 extends XClz implements Iterable<Long> {
   public long[] _es;
   public int _len;
   public AryI64() { _es = new long[1]; }
@@ -63,4 +66,16 @@ public class AryI64 {
       sum += _es[i];
     return (int)sum;
   }
+
+     
+  /** @return an iterator */
+  @Override public Iter iterator() { return new Iter(); }
+  public class Iter extends XClz<Iter> implements Iterator<Long> {
+    int _i;
+    @Override public boolean hasNext() { return _i<_len; }
+    @Override public Long next() {
+      return (Long)XRuntime.SET$COND(hasNext(), _es[_i++]);
+    }
+  }
+
 }

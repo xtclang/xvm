@@ -2,9 +2,9 @@ package org.xvm.cc_explore.xrun;
 
 import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.TCon;
-import org.xvm.cc_explore.xclz.XClzBuilder;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.xclz.XClz;
+import org.xvm.cc_explore.xclz.XClzBuilder;
 
 import static org.xvm.cc_explore.xclz.XClz.Mutability.*;
 
