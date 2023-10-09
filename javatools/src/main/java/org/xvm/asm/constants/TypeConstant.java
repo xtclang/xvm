@@ -4357,7 +4357,7 @@ public abstract class TypeConstant
                     methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                     }
 
-                if (idDelegate != null)
+                if (idDelegate != null && !methodResult.isCapped())
                     {
                     // ensure that the delegating body "belongs" to this layer in the chain
                     MethodBody     head     = methodResult.getHead();
