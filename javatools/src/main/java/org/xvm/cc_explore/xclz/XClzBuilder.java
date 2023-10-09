@@ -321,11 +321,15 @@ public class XClzBuilder {
 
       // All the long-based ranges, intervals and interators are just Ranges now.
       if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ||
-          clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ||
-          clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
+          clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
         if( telem.equals("Long") ) return "Range"; // Shortcut class
         else throw XEC.TODO();
       }
+      if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
+        if( telem.equals("Long") ) return "XIter64"; // Shortcut class
+        else throw XEC.TODO();
+      }
+    
       if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
         return "Ary<"+telem+">"; // Shortcut class
       
@@ -347,6 +351,15 @@ public class XClzBuilder {
     }
     if( tc instanceof ImmutTCon itc ) 
       return jtype(itc.icon(),boxed); // Ignore immutable for now
+
+    // Generalized union types gonna wait awhile.
+    // Right now, allow null unions only
+    if( tc instanceof UnionTCon utc ) {
+      if( ((ClzCon)utc._con1).clz()._name.equals("Nullable") )
+        return jtype(utc._con2,true);
+      throw XEC.TODO();
+    }
+
     
     throw XEC.TODO();
   }  
@@ -400,18 +413,22 @@ public class XClzBuilder {
     // Enums
     if( tc instanceof EnumCon econ ) {
       ClassPart clz = (ClassPart)econ.part();
+      String sup_clz = clz._super._name;
+      // Just use Java null
+      if( sup_clz.equals("Nullable") )
+        return ASB.p("null");
       // XTC Booleans rewrite as Java booleans
-      if( clz._super._name.equals("Boolean") ) 
+      if( sup_clz.equals("Boolean") ) 
         return ASB.p(clz._name.equals("False") ? "false" : "true");
       // Intercept Tuple enums
-      if( clz._super._name.equals("Mutability") ) {
+      if( sup_clz.equals("Mutability") ) {
         if( clz._super._par._name.equals("Tuple") ) {
           return ASB.p("Tuple.Mutability.").p(clz._name);          
         } else
           throw XEC.TODO();
       }
       // Use the enum name directly
-      return ASB.p(clz._super._name).p(".").p(clz._name);
+      return ASB.p(sup_clz).p(".").p(clz._name);
     }
 
     // Singleton class constants (that are not enums)

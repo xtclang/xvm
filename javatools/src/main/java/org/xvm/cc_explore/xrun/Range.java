@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.xrun;
 
 import org.xvm.cc_explore.cons.RangeCon;
+import org.xvm.cc_explore.xclz.XClz;
 
 import java.lang.Iterable;
 import java.util.Iterator;
@@ -8,7 +9,7 @@ import java.util.Iterator;
 /**
      Support XTC range iterator
 */
-abstract public class Range implements Iterable<Long> {
+abstract public class Range extends XClz implements Iterable<Long> {
   final long _lo, _hi;          // Inclusive lo, exclusive hi
   final boolean _lx, _hx;       // True if exclusive
   final boolean _invert;        // Inverted range
@@ -42,18 +43,5 @@ abstract public class Range implements Iterable<Long> {
   public boolean in( long x ) { return _lo <= x && x < _hi; }
   
   /** @return an iterator */
-  @Override public Iterator<Long> iterator() { return _invert ? new IterDown(_lo,_hi) : new IterUp(_lo,_hi); }
-  private class IterUp implements Iterator<Long> {
-    long _i;
-    IterUp(long lo, long hi ) { _i=lo; }
-    @Override public boolean hasNext() { return _i!=_hi; }
-    @Override public Long next() { return _i++; }
-  }
-  private class IterDown implements Iterator<Long> {
-    long _i;
-    IterDown(long lo, long hi ) { _i=hi; }
-    @Override public boolean hasNext() { return _i!=_lo; }
-    @Override public Long next() { return --_i; }
-  }
-  
+  @Override public XIter64 iterator() { return _invert ? new XIter64(_hi,_lo) : new XIter64(_lo,_hi); }
 }
