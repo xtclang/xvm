@@ -69,13 +69,6 @@ public class AryI64 extends XClz implements Iterable<Long> {
 
      
   /** @return an iterator */
-  @Override public Iter iterator() { return new Iter(); }
-  public class Iter extends XClz<Iter> implements Iterator<Long> {
-    int _i;
-    @Override public boolean hasNext() { return _i<_len; }
-    @Override public Long next() {
-      return (Long)XRuntime.SET$COND(hasNext(), _es[_i++]);
-    }
-  }
+  @Override public XIter64 iterator() { return new XIter64(0,_len); }
 
 }

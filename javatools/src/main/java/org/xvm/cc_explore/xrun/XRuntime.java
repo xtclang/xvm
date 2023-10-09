@@ -93,5 +93,10 @@ public abstract class XRuntime {
     $COND=cond;
     return o;
   }
+  public static long SET$COND(boolean cond, long x) {
+    COND_SET=true;
+    $COND=cond;
+    return x;
+  }
 
 }

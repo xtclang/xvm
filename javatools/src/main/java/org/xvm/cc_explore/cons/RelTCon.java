@@ -7,7 +7,7 @@ import org.xvm.cc_explore.tvar.TVar;
   Exploring XEC Constants
  */
 public abstract class RelTCon extends TCon implements ClzCon {
-  TCon  _con1,  _con2;
+  public TCon  _con1,  _con2;
   RelPart _part;
   public RelTCon( CPool X ) {
     X.u31();

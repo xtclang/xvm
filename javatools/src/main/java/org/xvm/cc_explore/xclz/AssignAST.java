@@ -44,9 +44,4 @@ class AssignAST extends AST {
     }
     return sb;
   }
-  private void do_asgn(SB sb) {
-    _kids[0].jcode(sb);
-    sb.p(" ").p(_op.text).p(" ");
-    _kids[1].jcode(sb);
-  }
 }
