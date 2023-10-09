@@ -9,10 +9,17 @@ class ContinueAST extends AST {
   private ContinueAST( int d ) { super(null); _d = d; }
   @Override SB jcode ( SB sb ) {
     if( _d > 0 ) throw XEC.TODO();
+
     AST enclosing = enclosing_loop(_d);
-    if( enclosing instanceof SwitchAST )
-      throw XEC.TODO(); // Requires fall-thru semantics from the middle complex
-                        // expressions which amounts to a GOTO.
+    if( enclosing instanceof SwitchAST ) {
+      if( _par instanceof BlockAST blk &&
+          blk._par==enclosing &&
+          blk._kids[blk._kids.length-1]==this )
+        return sb.ip("// Fall-through");
+      // Requires fall-thru semantics from the middle complex expressions which
+      // amounts to a GOTO.
+      throw XEC.TODO();
+    }
     return sb.ip("continue");
   }
 }

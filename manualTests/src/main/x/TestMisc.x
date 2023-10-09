@@ -12,7 +12,7 @@ module TestMisc {
         testSpaceship();
         //testElvis();
         testLoop();
-        //testSwitchStmt();
+        testSwitchStmt();
         //testElseExpr();
         testSwitchExpr();
         testSwitchExpr3();
@@ -188,34 +188,30 @@ module TestMisc {
         console.print("We Have Lift-Off!!!");
     }
 
-    // PROBLEM:
-    // "continue" is a "fallthrough" which requires a not-nested GOTO,
-    // or expression re-org to allow fallthrough
+    void testSwitchStmt(Int value=4) {
+        console.print("\n** testSwitchStmt()");
     
-    //void testSwitchStmt(Int value=4) {
-    //    console.print("\n** testSwitchStmt()");
-    //
-    //    switch (value) {
-    //    case 2, 3:
-    //        console.print("2 or 3");
-    //        break;
-    //
-    //    case 4..5:
-    //        console.print("4");
-    //        if (value == 4) {
-    //            continue;
-    //        }
-    //        break;
-    //
-    //    case 7:
-    //        console.print("7");
-    //        break;
-    //
-    //    default:
-    //        console.print("other");
-    //        break;
-    //    }
-    //}
+        switch (value) {
+        case 2, 3:
+            console.print("2 or 3");
+            break;
+    
+        case 4..5:
+            console.print("4");
+            if (value != 4) {
+                break;
+            }
+            continue;           // TODO: Handle continue in the middle not at the end
+    
+        case 7:
+            console.print("7");
+            break;
+    
+        default:
+            console.print("other");
+            break;
+        }
+    }
 
     void testSwitchExpr() {
         console.print("\n** testSwitchExpr()");
