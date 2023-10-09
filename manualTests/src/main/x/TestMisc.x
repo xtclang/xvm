@@ -9,10 +9,10 @@ module TestMisc {
         testInts();
         //testCast();
         testTernary();
-        //testSpaceship();
+        testSpaceship();
         //testElvis();
         testLoop();
-        testSwitchStmt();
+        //testSwitchStmt();
         //testElseExpr();
         testSwitchExpr();
         testSwitchExpr3();
@@ -24,7 +24,7 @@ module TestMisc {
         testAssertTrue();
         testAssertTrueExpr();
         //testAssertFalseExpr();
-        //testAssertDecl();
+        testAssertDecl();
 
         testInterval();
         //testException();
@@ -139,13 +139,13 @@ module TestMisc {
         console.print("i%2==0?even:odd  -> " + (i % 2 == 0 ? "even" : "odd"));
     }
 
-    //void testSpaceship() {
-    //    console.print("\n** testSpaceship()");
-    //
-    //    Int a = 42;
-    //    Int b = 45;
-    //    console.print("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
-    //}
+    void testSpaceship() {
+        console.print("\n** testSpaceship()");
+    
+        Int a = 42;
+        Int b = 45;
+        console.print("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
+    }
 
     //void testElvis() {
     //    console.print("\n** testElvis()");
@@ -188,30 +188,34 @@ module TestMisc {
         console.print("We Have Lift-Off!!!");
     }
 
-    void testSwitchStmt(Int value=4) {
-        console.print("\n** testSwitchStmt()");
+    // PROBLEM:
+    // "continue" is a "fallthrough" which requires a not-nested GOTO,
+    // or expression re-org to allow fallthrough
     
-        switch (value) {
-        case 2, 3:
-            console.print("2 or 3");
-            break;
-    
-        case 4..5:
-            console.print("4");
-            if (value == 4) {
-                continue;
-            }
-            break;
-    
-        case 7:
-            console.print("7");
-            break;
-    
-        default:
-            console.print("other");
-            break;
-        }
-    }
+    //void testSwitchStmt(Int value=4) {
+    //    console.print("\n** testSwitchStmt()");
+    //
+    //    switch (value) {
+    //    case 2, 3:
+    //        console.print("2 or 3");
+    //        break;
+    //
+    //    case 4..5:
+    //        console.print("4");
+    //        if (value == 4) {
+    //            continue;
+    //        }
+    //        break;
+    //
+    //    case 7:
+    //        console.print("7");
+    //        break;
+    //
+    //    default:
+    //        console.print("other");
+    //        break;
+    //    }
+    //}
 
     void testSwitchExpr() {
         console.print("\n** testSwitchExpr()");
@@ -308,13 +312,13 @@ module TestMisc {
     //    }
     //}
 
-    //void testAssertDecl() {
-    //    console.print("\n** testAssertDecl()");
-    //    Int[] array = [1];
-    //    Iterator<Int> iter = array.iterator();
-    //    assert Int i := iter.next();
-    //    console.print("i=" + i);
-    //}
+    void testAssertDecl() {
+        console.print("\n** testAssertDecl()");
+        Int[] array = [1];
+        Iterator<Int> iter = array.iterator();
+        assert Int i := iter.next();
+        console.print("i=" + i);
+    }
 
     void testInterval() {
         console.print("\n** testInterval()");

@@ -9,7 +9,7 @@ class PropertyAST extends AST {
     AST lhs = ast_term(X);    
     String prop = XClzBuilder.value_tcon((TCon)X.con());
     if( lhs instanceof ConAST con && 
-        con._con.equals(XClzBuilder.java_class_name(X._mod)) )
+        con._con.equals(XClzBuilder.java_class_name(X._mod._name)) )
       lhs = null;
     return new PropertyAST( lhs,prop);
   }
