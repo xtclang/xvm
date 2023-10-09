@@ -60,8 +60,38 @@ public abstract class XRuntime {
     _executorXVM.shutdown();
   }
 
-  // $tmp expression wrapper, to allow side effects in the arguments and still
+  // $t expression wrapper, to allow side effects in the arguments and still
   // have a java expression
   public static boolean $t(long x) { return true; }
   public static boolean $t(Object x) { return true; }
+
+  // XTC conditionals require a pair of a boolean and something else.  Mostly
+  // conditionals appear to be temporary - passed from a function and
+  // immediately consumed.  So I am implementing them as an unpacked pair.
+  // When returned from a function, the boolean part is stored here and
+  // unpacked by the caller immediately.
+
+  // This code:
+  //     condition Person callee() { return (true,person); }
+  //     void caller() {
+  //       if( person=callee() ) do stuff...
+  //     }
+  // Becomes:
+  //     Person callee() { return SET$COND(true,person); }
+  //     void caller() {
+  //       if( $t(person=callee()) & GET$COND() ) do stuff...
+  //     }
+  
+  private static boolean $COND, COND_SET;
+  public static boolean GET$COND() {
+    assert COND_SET;
+    COND_SET=false;
+    return $COND;
+  }
+  public static Object SET$COND(boolean cond, Object o) {
+    COND_SET=true;
+    $COND=cond;
+    return o;
+  }
+
 }
