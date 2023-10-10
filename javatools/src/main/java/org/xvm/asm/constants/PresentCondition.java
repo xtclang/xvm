@@ -126,7 +126,7 @@ public class PresentCondition
                         }
                     }
 
-                // we already checked if they are equal, and they weren't so they had better have
+                // we already checked if they are equal, and they weren't, so they had better have
                 // different length paths
                 assert cThis != cThat;
 

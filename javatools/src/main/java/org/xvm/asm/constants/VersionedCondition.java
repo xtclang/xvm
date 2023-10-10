@@ -23,9 +23,9 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * Evaluates if the module is of a specified version. The VersionedCondition applies to (tests for)
- * the version of the current module only; in other words, the VersionConsant is used to
+ * the version of the current module only; in other words, the VersionConstant is used to
  * conditionally include or exclude VMStructures within <b>this</b> module based on the version of
- * <b>this</b> module. This allows multiple versions of a module to be colocated within a single
+ * <b>this</b> module. This allows multiple versions of a module to be collocated within a single
  * FileStructure, for example.
  * <p/>
  * To evaluate if another module (or component thereof) is of a specified version, a {@link

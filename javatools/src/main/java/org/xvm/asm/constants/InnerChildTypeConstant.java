@@ -46,7 +46,7 @@ public class InnerChildTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a constant whose value is a inner child type.
+     * Construct a constant whose value is an inner child type.
      *
      * @param pool        the ConstantPool that will contain this Constant
      * @param typeParent  the parent's type

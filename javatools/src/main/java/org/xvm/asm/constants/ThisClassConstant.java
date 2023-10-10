@@ -182,7 +182,7 @@ public class ThisClassConstant
     private int m_iClass;
 
     /**
-     * The declaration-level class that the this:class refers to (from which auto-narrowing occurs).
+     * The declaration-level class that this:class refers to (from which auto-narrowing occurs).
      */
     private IdentityConstant m_constClass;
     }

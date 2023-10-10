@@ -279,7 +279,7 @@ public class TypeCollector
         {
         assert !isMulti();
 
-        // single type is never an @Conditional
+        // single type is never conditional
         m_FConditional = false;
 
         List<TypeConstant> listTypes = getSingle();
