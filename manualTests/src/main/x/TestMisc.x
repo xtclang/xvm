@@ -13,7 +13,7 @@ module TestMisc {
         //testElvis();
         testLoop();
         testSwitchStmt();
-        //testElseExpr();
+        testElseExpr();
         testSwitchExpr();
         testSwitchExpr3();
         testSwitchExpr4();
@@ -165,18 +165,18 @@ module TestMisc {
     //    console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
     //}
 
-    //void testElseExpr() {
-    //    console.print("\n** testElseExpr()");
-    //
-    //    IntLiteral? a = Null;
-    //    Int b = 7;
-    //    console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
-    //
-    //    if (b==7) {
-    //        a = 4;
-    //    }
-    //    console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
-    //}
+    void testElseExpr() {
+        console.print("\n** testElseExpr()");
+    
+        IntLiteral? a = Null;
+        Int b = 7;
+        console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
+    
+        if (b==7) {
+            a = 4;
+        }
+        console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
+    }
 
     void testLoop() {
         console.print("\n** testLoop()");
