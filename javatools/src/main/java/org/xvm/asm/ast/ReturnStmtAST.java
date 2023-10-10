@@ -12,8 +12,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.Return0Stmt;
 import static org.xvm.asm.ast.BinaryAST.NodeType.Return1Stmt;
 import static org.xvm.asm.ast.BinaryAST.NodeType.ReturnNStmt;
 
-import static org.xvm.util.Handy.indentLines;
-
 
 /**
  * Zero or more nested statements.
@@ -28,19 +26,17 @@ public class ReturnStmtAST
         this.nodeType = nodeType;
     }
 
+    public ReturnStmtAST(ExprAST expr) {
+        this(new ExprAST[] {expr});
+    }
     public ReturnStmtAST(ExprAST[] exprs) {
-        if (exprs == null) {
-            this.exprs    = NO_EXPRS;
-            this.nodeType = Return0Stmt;
-        } else {
-            assert Arrays.stream(exprs).allMatch(Objects::nonNull);
-            this.exprs    = exprs;
-            this.nodeType = switch (exprs.length) {
-                case 0  -> Return0Stmt;
-                case 1  -> Return1Stmt;
-                default -> ReturnNStmt;
-            };
-        }
+        assert Arrays.stream(exprs).allMatch(Objects::nonNull);
+        this.exprs    = exprs;
+        this.nodeType = switch (exprs.length) {
+            case 0  -> Return0Stmt;
+            case 1  -> Return1Stmt;
+            default -> ReturnNStmt;
+        };
     }
 
     @Override

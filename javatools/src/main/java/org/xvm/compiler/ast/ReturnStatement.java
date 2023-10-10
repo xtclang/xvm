@@ -14,8 +14,11 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.IfStmtAST;
 import org.xvm.asm.ast.ReturnStmtAST;
+import org.xvm.asm.ast.TernaryExprAST;
 import org.xvm.asm.ast.UnpackExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -384,15 +387,35 @@ public class ReturnStatement
             Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
 
-            astResult = new UnpackExprAST(expr.getExprAST(),
-                            atypeRets == null ? TypeConstant.NO_TYPES : atypeRets);
+            astResult = new ReturnStmtAST(new ExprAST[]{
+                            new UnpackExprAST(expr.getExprAST(),
+                                atypeRets == null ? TypeConstant.NO_TYPES : atypeRets)});
             }
         else if (m_fConditionalTernary)
             {
-            TernaryExpression expr = (TernaryExpression) listExprs.get(0);
-            expr.generateConditionalReturn(ctx, code, errs);
+            TernaryExpression exprTernary = (TernaryExpression) listExprs.get(0);
+            exprTernary.generateConditionalReturn(ctx, code, errs);
 
-            astResult = expr.getExprAST();
+            TernaryExprAST astTernary = (TernaryExprAST) exprTernary.getExprAST();
+
+            astResult = switch (exprTernary.getPlan())
+                {
+                case Symmetrical ->
+                    new ReturnStmtAST(astTernary);
+
+                case ThenIsFalse ->
+                    // we need to unroll the ternary expression into an "if-then-else" sequence
+                    new IfStmtAST(
+                        astTernary.getCond(),
+                        new ReturnStmtAST(new ConstantExprAST(pool.valFalse())),
+                        new ReturnStmtAST(astTernary.getElse()));
+
+                case ElseIsFalse ->
+                    new IfStmtAST(
+                        astTernary.getCond(),
+                        new ReturnStmtAST(astTernary.getThen()),
+                        new ReturnStmtAST(new ConstantExprAST(pool.valFalse())));
+                };
             }
         else
             {
@@ -402,7 +425,7 @@ public class ReturnStatement
                 {
                 case 0:
                     code.add(new Return_0());
-                    astResult = new ReturnStmtAST(null);
+                    astResult = new ReturnStmtAST(ExprAST.NO_EXPRS);
                     break;
 
                 case 1:

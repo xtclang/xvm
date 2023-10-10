@@ -378,7 +378,7 @@ public class StatementBlock
                     int         newSize  = oldSize + 1;
                     BinaryAST[] newStmts = new BinaryAST[newSize];
                     System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
-                    newStmts[oldSize] = new ReturnStmtAST(null);
+                    newStmts[oldSize] = new ReturnStmtAST(ExprAST.NO_EXPRS);
                     astRoot = new StmtBlockAST(newStmts, true);
                     }
                 }

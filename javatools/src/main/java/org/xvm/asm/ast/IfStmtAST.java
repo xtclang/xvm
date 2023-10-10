@@ -19,7 +19,7 @@ public class IfStmtAST
 
     private ExprAST   cond;
     private BinaryAST thenStmt;
-    private boolean      hasElse;
+    private boolean   hasElse;
     private BinaryAST elseStmt;
 
     IfStmtAST(NodeType nodeType) {
@@ -28,10 +28,6 @@ public class IfStmtAST
             case IfElseStmt -> true;
             default -> throw new IllegalArgumentException("nodeType=" + nodeType);
         };
-    }
-
-    public IfStmtAST(ExprAST cond, BinaryAST thenStmt) {
-        this(cond, thenStmt, null);
     }
 
     public IfStmtAST(ExprAST cond, BinaryAST thenStmt, BinaryAST elseStmt) {

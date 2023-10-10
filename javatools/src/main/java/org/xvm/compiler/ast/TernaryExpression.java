@@ -523,6 +523,14 @@ public class TernaryExpression
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
+     * @return the compilation plan
+     */
+    public Plan getPlan()
+        {
+        return m_plan;
+        }
+
+    /**
      * Compute the usage plan, prioritizing a direct fit over a conversion fit.
      *
      * @param fitThen  a fit for "then" using "else" implicit type
@@ -749,7 +757,7 @@ public class TernaryExpression
 
     private transient boolean m_fConditional;
 
-    private enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
+    public enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
     private transient Plan m_plan = Plan.Symmetrical;
 
     private enum Usage {Required, Any, Then, Else, Union}
