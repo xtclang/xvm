@@ -10,7 +10,7 @@ module TestMisc {
         //testCast();
         testTernary();
         testSpaceship();
-        //testElvis();
+        testElvis();
         testLoop();
         testSwitchStmt();
         testElseExpr();
@@ -147,23 +147,23 @@ module TestMisc {
         console.print("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
     }
 
-    //void testElvis() {
-    //    console.print("\n** testElvis()");
-    //
-    //    Int a = 42;
-    //    Int b = 45;
-    //    // this is an error: console.print("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
-    //
-    //    Int? c = a;
-    //    console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
-    //
-    //    static Int? trustMeItMightNotBeNull() {
-    //        return Null;
-    //    }
-    //
-    //    c = trustMeItMightNotBeNull();
-    //    console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
-    //}
+    void testElvis() {
+        console.print("\n** testElvis()");
+    
+        Int a = 42;
+        Int b = 45;
+        // this is an error: console.print("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
+    
+        Int? c = a;
+        console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
+    
+        static Int? trustMeItMightNotBeNull() {
+            return Null;
+        }
+    
+        c = trustMeItMightNotBeNull();
+        console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
+    }
 
     void testElseExpr() {
         console.print("\n** testElseExpr()");
