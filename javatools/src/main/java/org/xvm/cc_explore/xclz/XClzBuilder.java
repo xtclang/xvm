@@ -179,7 +179,12 @@ public class XClzBuilder {
         else if( part instanceof MMethodPart mmp ) {
           // Lambda expressions have been inlined
           if( mmp._name.equals("->") ) ;
-          else throw XEC.TODO();
+          else {
+            // Recursively dump name
+            MethodPart meth = (MethodPart)mmp.child(mmp._name);
+            String name = mname+"$"+mmp._name;
+            jmethod(meth,name);
+          }
         } 
         else throw XEC.TODO();
       }
@@ -398,7 +403,10 @@ public class XClzBuilder {
     if( tc instanceof MethodCon mcon )  {
       MethodPart meth = (MethodPart)mcon.part();
       // TODO: Assumes the method is in the local Java namespace
-      return ASB.p(meth._name);
+      String name = meth._name;
+      if( meth._par._par instanceof MethodPart pmeth )
+        name = pmeth._name+"$"+meth._name;
+      return ASB.p(name);
     }
 
     // Property constant.  Just the base name, and depending on usage
