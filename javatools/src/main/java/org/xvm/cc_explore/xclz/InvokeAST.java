@@ -45,7 +45,7 @@ class InvokeAST extends AST {
     if( _meth.equals("toInt") && _kids[0] instanceof ConAST con )
       return new InvokeAST("valueOf",new ConAST("Long"),_kids[0]);
     if( _meth.equals("toInt64") ) { // Cast to a Long
-      if( "long".equals(_kids[0].type()) )
+      if( "long".equals(_kids[0].type()) || "Long".equals(_kids[0].type()))
         return _kids[0];
       // Actually needs a cast
       throw XEC.TODO();

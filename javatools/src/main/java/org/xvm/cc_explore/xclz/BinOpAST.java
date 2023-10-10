@@ -36,6 +36,7 @@ class BinOpAST extends AST {
     _type = type;
   }
   @Override String type() { return _type; }
+
   @Override AST rewrite() {
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return new NewAST(_kids,_type+"II",null);
@@ -47,9 +48,36 @@ class BinOpAST extends AST {
     }
     if( _op0.equals("<=>") )
       return new InvokeAST("spaceship",new ConAST("XClz"),_kids[0],_kids[1]);
+
+    // This is a ternary null-check or elvis operator.  _kids[0] has, deep
+    // within it, the matching predicate test.  I need to restructure this tree:
+    //   (:  (invokes...(?(pred), args) ) alt)
+    // into this tree:
+    //   (?: (tmp=pred) (invokes...(tmp, args)) alt)
+    if( _op0.equals(":") ) {
+      AST elvis = _kids[0], pred=null;
+      while( elvis instanceof InvokeAST && !is_elvis(pred=elvis._kids[0]) )
+        elvis = pred;
+      if( !(elvis instanceof InvokeAST) )
+        // Elvis use not recognized
+        throw XEC.TODO();       // TODO: Elvis for loads & stores      
+      String type = pred._kids[0].type();
+      String tmp = enclosing_block().add_tmp(type);
+      elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
+      // Assign the tmp to predicate
+      AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred._kids[0]);
+      // Zero/null if primitive (if boxing changes type)
+      AST zero = new ConAST(XClzBuilder.box(type).equals(type) ? "null" : "0");
+      // Null check it
+      AST nchk = new BinOpAST(new AST[]{asgn, zero}, "!=","","boolean");
+      String x = nchk.toString();
+      // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
+      return new TernaryAST( nchk, _kids[0], _kids[1]);
+    }
     return this;
   }
-
+  private static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern._pre.equals("ELVIS"); }
+  
   // Boxed types (Long vs long) needs equals.
   private static boolean needs_equals(AST k) {
     String t = k.type();        // Constants dont give a proper type
@@ -69,6 +97,7 @@ class BinOpAST extends AST {
             !    _op1.equals(")") &&
             !bin._op1.equals(")") &&
             prec( _op0, bin._op0 );
+    if( ast instanceof AssignAST ) wrap=true;
     if( "String".equals(_type) && _kids[1]==ast &&
         (ast instanceof BinOpAST || ast instanceof TernaryAST || (ast instanceof SwitchAST sast && sast._kids[0] instanceof MultiAST ) ) ) {
       sb.p(" "); wrap=true;
@@ -105,6 +134,8 @@ class BinOpAST extends AST {
       put("&" , 8);
       put("^" , 9);
       put("|" ,10);
+
+      put("ELSE",11);
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);

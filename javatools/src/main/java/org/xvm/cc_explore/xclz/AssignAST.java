@@ -12,9 +12,10 @@ class AssignAST extends AST {
     kids[0] = ast_term(X);
     Operator op = asgn ? Operator.Asn : OPS[X.u31()];
     kids[1] = ast_term(X);
-    return new AssignAST(kids, op);
+    return new AssignAST(op, kids);
   }
-  private AssignAST( AST[] kids, Operator op ) { super(kids); _op=op; }
+  AssignAST( AST... kids ) { this(Operator.Asn,kids); }
+  private AssignAST( Operator op, AST... kids ) { super(kids); _op=op; }
   @Override AST rewrite() {
     // Assign of a non-primitive array
     if( _kids[0] instanceof BinOpAST bin &&
@@ -25,6 +26,10 @@ class AssignAST extends AST {
     // the def happens at the same time.  Hoist the java def to the enclosing block.
     if( _op == Operator.AsnIfNotFalse )
       enclosing_block().add_tmp(_kids[0].type(),((DefRegAST)_kids[0])._name);
+    // Stupidly in Java: "Long x = 4;" fails
+    if( _kids[0].type().equals("Long") && _kids[1] instanceof ConAST con &&
+        !con._con.equals("null") && !con._con.endsWith("L") )
+      _kids[1] = new ConAST(con._con+"L");
     return this;
   }
   @Override SB jcode( SB sb ) {
