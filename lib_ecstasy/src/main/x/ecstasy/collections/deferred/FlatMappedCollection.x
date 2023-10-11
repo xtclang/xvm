@@ -261,14 +261,14 @@ class FlatMappedCollection<Element, FromElement>
     protected void evaluateInto(Appender<Element> accumulator) {
         if (DeferredCollection<FromElement> nextDeferred := original.is(DeferredCollection<FromElement>),
                 function void(FromElement, Appender<Element>) flatten ?= flatten) {
-            class ApplyFlatten(Appender<Element> accumulator, function void(FromElement, Appender<Element>) flatten)
-                    implements Appender<FromElement> {
-                @Override Appender<FromElement> add(FromElement v) {
+            static class ApplyFlatten<To, From>(Appender<To> accumulator, function void(From, Appender<To>) flatten)
+                    implements Appender<From> {
+                @Override Appender<From> add(From v) {
                     flatten(v, accumulator);
                     return this;
                 }
             }
-            nextDeferred.evaluateInto(new ApplyFlatten(accumulator, flatten));
+            nextDeferred.evaluateInto(new ApplyFlatten<Element, FromElement>(accumulator, flatten));
         } else {
             super(accumulator);
         }

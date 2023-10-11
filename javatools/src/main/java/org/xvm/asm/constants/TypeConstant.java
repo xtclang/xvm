@@ -4704,7 +4704,7 @@ public abstract class TypeConstant
         {
         boolean fComplete = true;
 
-        if (isVirtualChild())
+        if (isVirtualChild() || isInnerChildClass() || isAnonymousClass())
             {
             // virtual child has access to the parent's type parameters
             TypeInfo infoParent = getParentType().ensureTypeInfoInternal(errs);

@@ -46,14 +46,14 @@ class MappedCollection<Element, FromElement>
     protected void evaluateInto(Appender<Element> accumulator) {
         if (DeferredCollection<FromElement> nextDeferred := original.is(DeferredCollection<FromElement>),
                 function Element(FromElement) transform ?= transform) {
-            class ApplyTransform(Appender<Element> accumulator, function Element(FromElement) transform)
-                    implements Appender<FromElement> {
-                @Override Appender<FromElement> add(FromElement v) {
+            static class ApplyTransform<To, From>(Appender<To> accumulator, function To(From) transform)
+                    implements Appender<From> {
+                @Override Appender<From> add(From v) {
                     accumulator.add(transform(v));
                     return this;
                 }
             }
-            nextDeferred.evaluateInto(new ApplyTransform(accumulator, transform));
+            nextDeferred.evaluateInto(new ApplyTransform<Element, FromElement>(accumulator, transform));
         } else {
             super(accumulator);
         }
