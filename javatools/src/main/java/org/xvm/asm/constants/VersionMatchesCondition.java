@@ -188,15 +188,7 @@ public class VersionMatchesCondition
     @Override
     public String getValueString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("versionMatches(")
-          .append(m_constStruct)
-          .append(", ")
-          .append(m_constVer.getValueString())
-          .append(')');
-
-        return sb.toString();
+        return "versionMatches(" + m_constStruct + ", " + m_constVer.getValueString() + ')';
         }
 
 

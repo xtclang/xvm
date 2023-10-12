@@ -580,7 +580,7 @@ public class LiteralConstant
      *
      * @param format  Int8 or UInt8
      *
-     * @return a Int8 or UInt8 ByteConstant
+     * @return an Int8 or UInt8 ByteConstant
      *
      * @throws ArithmeticException  on overflow
      */

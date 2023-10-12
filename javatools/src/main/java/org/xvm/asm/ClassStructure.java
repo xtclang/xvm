@@ -3694,7 +3694,7 @@ public class ClassStructure
                     //    }
                     Register regThis     = new Register(typeAppender, "this"    , Op.A_THIS);
                     Register regAppender = new Register(typeAppender, "appender", 0);
-                    Register regStack    = new Register(typeAppender, "tostring", Op.A_STACK);
+                    Register regStack    = new Register(typeAppender, "toString", Op.A_STACK);
                     Register regResult   = new Register(typeAppender, "result"  , Op.A_STACK);
 
                     code.add(new Invoke_01(regThis, methToString.getIdentityConstant(), regStack));

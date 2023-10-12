@@ -5,8 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.regex.Pattern;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -51,35 +49,29 @@ public class RegExConstant
         super(pool);
 
         assert regex != null;
-        m_regex  = regex;
-        m_nFlags = nFlags;
+        f_regex  = regex;
+        f_nFlags = nFlags;
         }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * Get the value of the regular expression.
-     *
-     * @return the constant's char string value as a {@code String}
+     * @return the value of the regular expression
      */
     public String getValue()
         {
-        return m_regex;
+        return f_regex;
         }
 
     /**
-     * Get the compiled regular expression {@link Pattern}.
-     *
-     * @return the compiled regular expression {@link Pattern}
+     * @return the flags to create the regular expression pattern
      */
-    public Pattern ensurePattern()
+    public int getFlags()
         {
-        if (m_pattern == null)
-            {
-            m_pattern = Pattern.compile(m_regex, m_nFlags);
-            }
-        return m_pattern;
+        return f_nFlags;
         }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -98,7 +90,7 @@ public class RegExConstant
     @Override
     public Object getLocator()
         {
-        return m_regex;
+        return f_regex;
         }
 
     @Override
@@ -108,10 +100,10 @@ public class RegExConstant
             {
             return -1;
             }
-        int n = this.m_regex.compareTo(((RegExConstant) that).m_regex);
+        int n = this.f_regex.compareTo(((RegExConstant) that).f_regex);
         if (n == 0)
             {
-            n = Integer.compare(m_nFlags, ((RegExConstant) that).m_nFlags);
+            n = Integer.compare(f_nFlags, ((RegExConstant) that).f_nFlags);
             }
         return n;
         }
@@ -119,13 +111,9 @@ public class RegExConstant
     @Override
     public String getValueString()
         {
-        return quotedString(m_regex);
+        return quotedString(f_regex);
         }
 
-    public int getFlags()
-        {
-        return m_nFlags;
-        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -134,23 +122,24 @@ public class RegExConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writeUtf8String(out, m_regex);
-        out.writeInt(m_nFlags);
+        writeUtf8String(out, f_regex);
+        out.writeInt(f_nFlags);
         }
 
     @Override
     public String getDescription()
         {
-        return "regEx=" + getValueString() + " flags=" + m_nFlags;
+        return "regEx=" + getValueString() + "; flags=" + f_nFlags;
         }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_regex,
-               Hash.of(m_nFlags));
+        return Hash.of(f_regex,
+               Hash.of(f_nFlags));
         }
 
     // ----- fields --------------------------------------------------------------------------------
@@ -158,15 +147,10 @@ public class RegExConstant
     /**
      * The constant regular expression.
      */
-    private final String m_regex;
+    private final String f_regex;
 
     /**
      * The flags used to create the reg-ex pattern.
      */
-    private final int m_nFlags;
-
-    /**
-     * The compiled regular expression {@link Pattern}.
-     */
-    private Pattern m_pattern;
+    private final int f_nFlags;
     }

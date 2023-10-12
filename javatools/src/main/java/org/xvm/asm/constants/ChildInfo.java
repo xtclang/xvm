@@ -166,14 +166,7 @@ public class ChildInfo
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("ChildInfo: ")
-          .append(getAccess())
-          .append(' ')
-          .append(getName());
-
-        return sb.toString();
+        return "ChildInfo: " + getAccess() + ' ' + getName();
         }
 
 

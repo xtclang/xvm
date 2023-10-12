@@ -7104,14 +7104,6 @@ public abstract class TypeConstant
         return ensureTypeInfo().getMethodBySignature(sig);
         }
 
-    /**
-     * @return true iff objects of this type could be proxied across the service boundary
-     */
-    public boolean isProxyable()
-        {
-        return isImmutable() || isConstant() || isInterfaceType() || isService();
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
