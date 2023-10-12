@@ -28,7 +28,7 @@ package text {
 
         @Override
         String toString() {
-            return messages.toString(sep="\n", pre="", post="");
+            return messages.toString(sep="\n", pre="", post="\n");
         }
     }
 }
