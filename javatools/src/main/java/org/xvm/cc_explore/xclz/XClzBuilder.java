@@ -151,7 +151,13 @@ public class XClzBuilder {
     // Return type
     if( m._rets==null ) _sb.p("void ");
     else if( m._rets.length == 1 ) _sb.p(jtype(m._rets[0]._con,false)).p(' ');
-    else throw XEC.TODO(); // Multi-returns will need much help
+    else if( m.is_cond_ret() ) {
+      // Conditional return!  Passes the extra return in XRuntime$COND.
+      // The m._rets[0] is the boolean
+      _sb.p(jtype(m._rets[1]._con,false)).p(' ');
+    } else {
+      throw XEC.TODO(); // Multi-returns will need much help
+    }
     // Argument list
     _sb.p(mname).p("( ");
     if( m._args!=null ) {
@@ -307,6 +313,8 @@ public class XClzBuilder {
   public static String jtype( Const tc, boolean boxed ) {
     if( tc instanceof TermTCon ttc ) {
       ClassPart clz = (ClassPart)ttc.part();
+      if( clz._path==null && clz._name.equals("Null") )
+        return "null";
       String key = clz._name + "+" + clz._path._str;
       String val = XJMAP.get(key);
       if( val!=null )
@@ -403,8 +411,9 @@ public class XClzBuilder {
     if( tc instanceof MethodCon mcon )  {
       MethodPart meth = (MethodPart)mcon.part();
       // TODO: Assumes the method is in the local Java namespace
+      // Lambda names "->" are inlined as Java lambdas
       String name = meth._name;
-      if( meth._par._par instanceof MethodPart pmeth )
+      if( !name.equals("->") && meth._par._par instanceof MethodPart pmeth )
         name = pmeth._name+"$"+meth._name;
       return ASB.p(name);
     }
