@@ -19,17 +19,17 @@ class BinOpAST extends AST {
     String type = has_type
       ? XClzBuilder.jtype(X.con(),false) // Type from the AST file
       : (op==Operator.CompOrd ? "Ordered" : "boolean" ); // Must be one of the ordering operators
-    return new BinOpAST(kids,op.text,"",type);
+    return new BinOpAST(op.text,"",type,kids);
   }
   
   static BinOpAST make( XClzBuilder X, String op0, String op1 ) {
     AST[] kids = new AST[2];
     kids[0] = ast_term(X);
     kids[1] = ast_term(X);
-    return new BinOpAST(kids,op0,op1,null);
+    return new BinOpAST(op0,op1,null,kids);
   }
   
-  private BinOpAST( AST[] kids, String op0, String op1, String type ) {
+  BinOpAST( String op0, String op1, String type, AST... kids ) {
     super(kids);
     _op0 = op0;
     _op1 = op1;
@@ -42,7 +42,7 @@ class BinOpAST extends AST {
     if( _op0.equals(".." ) ) return new NewAST(_kids,_type+"II",null);
     if( _op0.equals("..<") ) return new NewAST(_kids,_type+"IE",null);
     // Generally Java needs to use equals for refs and == is only for prims
-    if( _op0.equals("==") ) {
+    if( _op0.equals("==") && !(_kids[0] instanceof ConAST con && "null".equals(con._con)) ) {
       if( needs_equals(_kids[0]) || needs_equals(_kids[1]) )
         return new InvokeAST("equals",_kids[0],_kids[1]);
     }
@@ -56,7 +56,7 @@ class BinOpAST extends AST {
     //   (?: ((tmp=pred)!=null) (invokes...(  tmp  , args)) alt)
     if( _op0.equals(":") ) {
       AST elvis = _kids[0], pred=null;
-      while( elvis instanceof InvokeAST && !is_elvis(pred=elvis._kids[0]) )
+      while( elvis instanceof InvokeAST && !UniOpAST.is_elvis(pred=elvis._kids[0]) )
         elvis = pred;
       if( !(elvis instanceof InvokeAST) )
         // Elvis use not recognized
@@ -74,7 +74,6 @@ class BinOpAST extends AST {
     
     return this;
   }
-  private static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern._pre.equals("ELVIS"); }
 
   private AST do_elvis( AST pred0, AST elvis ) {
     String type = pred0.type();
@@ -85,14 +84,14 @@ class BinOpAST extends AST {
     // Zero/null if primitive (if boxing changes type)
     AST zero = new ConAST(XClzBuilder.box(type).equals(type) ? "null" : "0");
     // Null check it
-    AST nchk = new BinOpAST(new AST[]{asgn, zero}, "!=","","boolean");
+    AST nchk = new BinOpAST("!=","","boolean",asgn, zero );
     // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
     return new TernaryAST( nchk, _kids[0], _kids[1]);
   }
   
   
   // Boxed types (Long vs long) needs equals.
-  private static boolean needs_equals(AST k) {
+  static boolean needs_equals(AST k) {
     String t = k.type();        // Constants dont give a proper type
     return !(k instanceof ConAST) && XClzBuilder.box(t).equals(t);
   }
@@ -148,13 +147,16 @@ class BinOpAST extends AST {
       put("^" , 9);
       put("|" ,10);
 
-      put("?:",11);
+      put("&&" ,11);
+      put("||" ,12);
+      
+      put("?:",13);
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);
     Integer ii1 = PRECS.get(ex);
-    if( ii0==null ) System.err.println("Missing \""+op+"\" from BinOpAST");
-    if( ii1==null ) System.err.println("Missing \""+ex+"\" from BinOpAST");
+    if( ii0==null ) { System.err.println("Missing \""+op+"\" from BinOpAST"); return true; }
+    if( ii1==null ) { System.err.println("Missing \""+ex+"\" from BinOpAST"); return true; }
     return ii0 < ii1;
   }
 }

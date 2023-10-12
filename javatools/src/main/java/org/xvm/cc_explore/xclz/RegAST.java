@@ -17,7 +17,10 @@ class RegAST extends AST {
     _type = type;
   }
   RegAST( int reg, XClzBuilder X ) {
-    this(reg,X._locals.get(reg),X._ltypes.get(reg));
+    super(null);
+    _reg  = reg ;
+    _name = X._locals.get(reg);
+    _type = X._ltypes.get(reg);
   }
   RegAST( int reg ) { this(reg,null,null); }
   @Override String type() { return _type; }

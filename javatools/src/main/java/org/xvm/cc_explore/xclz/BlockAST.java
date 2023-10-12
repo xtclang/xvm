@@ -2,6 +2,7 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.util.Ary;
+import java.util.Arrays;
 import java.util.HashMap;
 
 class BlockAST extends AST {
@@ -21,7 +22,7 @@ class BlockAST extends AST {
     return new BlockAST(kids);
   }
   
-  private BlockAST( AST[] kids ) { super(kids); }
+  BlockAST( AST... kids ) { super(kids); }
   
   String add_tmp(String type) {
     return add_tmp(type,"$tmp"+_uid++);
@@ -33,7 +34,7 @@ class BlockAST extends AST {
     if( tmps==null ) _tmps.put(type,tmps=new Ary<String>(new String[1],0));
     return tmps.push(name);
   }
-  
+
   @Override void jpre( SB sb ) {
     sb.p("{").ii().nl();
     // Print tmps used by enclosing expressions
