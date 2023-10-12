@@ -57,7 +57,7 @@ class InvokeAST extends AST {
     else sb.p(", ");
   }
   @Override void jpost( SB sb ) {
-    if( _kids.length>1 ) sb.unchar(2);
+    if( _kids.length>1 && _kids[1]!=null ) sb.unchar(2);
     sb.p(")");
   }
 }

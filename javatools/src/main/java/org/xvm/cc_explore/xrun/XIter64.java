@@ -24,5 +24,4 @@ public class XIter64 extends XClz implements Iterator<Long> {
 
   @Override public boolean hasNext() { return _i!=_end; }
   @Override public Long next() { return XRuntime.SET$COND(hasNext(), _dn ? --_i : _i++); }
-  @Override public XIter64 TRACE() { return this; }
 }

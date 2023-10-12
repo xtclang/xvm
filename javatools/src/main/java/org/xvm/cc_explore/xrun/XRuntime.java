@@ -88,7 +88,7 @@ public abstract class XRuntime {
     COND_SET=false;
     return $COND;
   }
-  public static Object SET$COND(boolean cond, Object o) {
+  public static <X> X SET$COND(boolean cond, X o) {
     COND_SET=true;
     $COND=cond;
     return o;

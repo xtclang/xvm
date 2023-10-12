@@ -36,6 +36,9 @@ class UniOpAST extends AST {
     _type = type==null ? null : XClzBuilder.jtype(type,false);
     _conv = conv;
   }
+  boolean is_elvis() { return "ELVIS".equals(_pre); }
+  static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern.is_elvis(); }
+  
   @Override AST rewrite() {
     if( _conv!=null ) {
       MethodPart meth = (MethodPart)((MethodCon)_conv).part();
@@ -43,6 +46,9 @@ class UniOpAST extends AST {
       //return new InvokeAST(
       throw XEC.TODO();
     }
+    if( ".TRACE()".equals(_post ) )
+      return new InvokeAST("TRACE",new ConAST("XClz"),_kids[0]);
+      
     return this;
   }
   

@@ -28,7 +28,7 @@ module TestMisc {
 
         testInterval();
         //testException();
-        //testConditional();
+        testConditional();
         //testBind();
         //testConstants();
         testImport();
@@ -338,50 +338,50 @@ module TestMisc {
     //    console.print("e=" + e);
     //}
 
-    //void testConditional() {
-    //    console.print("\n** testConditional()");
-    //    if (String s := checkPositive(17)) {
-    //        console.print($"should be positive: {s}");
-    //    }
-    //
-    //    if (String s := checkPositive(-17)) {
-    //        console.print($"should be negative: {s} (but this cannot happen)");
-    //        assert;
-    //    }
-    //
-    //    String s = "negative";
-    //    s := checkPositive(-99);
-    //    console.print($"-99 => {s}");
-    //    s := checkPositive(99);
-    //    console.print($"99 => {s}");
-    //
-    //    String? s2 = s;
-    //    if (String s3 ?= s2) {
-    //        console.print($"value is not Null: {s3}");
-    //    } else {
-    //        console.print($"value is Null: {s2}");
-    //        assert;
-    //    }
-    //
-    //    static String? foolCompiler(String s) {
-    //        return s;
-    //    }
-    //
-    //    s2 = foolCompiler(s2); // reintroduce possibility that s2 is Null
-    //
-    //    s ?= s2;
-    //    console.print($"s={s}");
-    //
-    //    // this will assert (unless s2 is Null)
-    //    // assert s2?.size>=0, False;
-    //
-    //    // this will not assert
-    //    assert s2?.size>=0, True;
-    //}
-    //
-    //private conditional String checkPositive(Int i) {
-    //    return i < 0 ? False : (True, "positive");
-    //}
+    void testConditional() {
+        console.print("\n** testConditional()");
+        if (String s := checkPositive(17)) {
+            console.print($"should be positive: {s}");
+        }
+
+        if (String s := checkPositive(-17)) {
+            console.print($"should be negative: {s} (but this cannot happen)");
+            assert;
+        }
+
+        String s = "negative";
+        s := checkPositive(-99);
+        console.print($"-99 => {s}");
+        s := checkPositive(99);
+        console.print($"99 => {s}");
+
+        String? s2 = s;
+        if (String s3 ?= s2) {
+            console.print($"value is not Null: {s3}");
+        } else {
+            console.print($"value is Null: {s2}");
+            assert;
+        }
+
+        static String? foolCompiler(String s) {
+            return s;
+        }
+
+        s2 = foolCompiler(s2); // reintroduce possibility that s2 is Null
+
+        s ?= s2;
+        console.print($"s={s}");
+
+        // this will assert (unless s2 is Null)
+        // assert s2?.size>=0, False;
+
+        // this will not assert
+        assert s2?.size>=0, True;
+    }
+
+    private conditional String checkPositive(Int i) {
+        return i < 0 ? False : (True, "positive");
+    }
 
     //void testAssignOps() {
     //    console.print("\n** testAssignOps()");

@@ -26,10 +26,11 @@ class DefRegAST extends AST {
       _init = null;
     }
     _type = XClzBuilder.jtype(type,false);
-    _name = name==null ? null : X.jname(((StringCon)name)._str);
-    if( name!=null )
+    _name = name==null ? null : ((StringCon)name)._str;
+    if( name!=null && !_name.equals("$") )
       X.define(_name,_type);
   }
+  DefRegAST( String type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
   
   @Override String type() { return _type; }
   
