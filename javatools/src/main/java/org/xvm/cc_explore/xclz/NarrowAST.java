@@ -4,10 +4,11 @@ import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.ClassPart;
 import java.util.HashMap;
 
 class NarrowAST extends AST {
-  final AccessTCon _access;
+  final String _type;
 
   static NarrowAST make( XClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
@@ -17,9 +18,15 @@ class NarrowAST extends AST {
   
   private NarrowAST( AST[] kids, Const type ) {
     super(kids);
-    if( type instanceof AccessTCon access ) {
-      _access = access;
-    } else
-      throw XEC.TODO();
+    _type = type instanceof AccessTCon access
+      ? "Object"
+      : XClzBuilder.jtype((TCon)type,false);
+  }
+
+  @Override String type() { return _type; }
+  
+  @Override AST rewrite() {
+    //if( _tcon==null ) return new ConAST("null");
+    return this;
   }
 }

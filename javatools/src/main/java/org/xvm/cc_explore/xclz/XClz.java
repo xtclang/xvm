@@ -8,12 +8,15 @@ public abstract class XClz {
   public Mutability mutability$get() { return Mutability.Constant; }
 
   // Trace
-  public <X extends XClz> X TRACE() { return (X)this; }
+  public static <X extends XClz> X TRACE(X x) { return x; }
+  public static long TRACE(long x) { return x; }
+  public static int  TRACE(int  x) { return x; }
 
   // Assert is always-on runtime test
   public static void xassert( boolean cond ) {
     if( !cond ) throw new AssertionError();
   }
+  public static void xassert( ) { xassert(false); }
   
   public enum Mutability {
     Constant,                   // Deeply immutable

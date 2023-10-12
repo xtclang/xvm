@@ -1,6 +1,7 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
+import org.xvm.cc_explore.XEC;
 
 class IfAST extends AST {
   static IfAST make( XClzBuilder X, int n ) {
@@ -12,27 +13,54 @@ class IfAST extends AST {
     return new IfAST(kids);
   }  
   private IfAST( AST[] kids ) { super(kids); }
-      
-  @Override void jpre ( SB sb ) { sb.p("if( "); }
-  @Override void jmid( SB sb, int i ) {
-    if( i==0 ) {
-      sb.p(" ) ");
-      //   if( pred )
-      //     S1; // Split line down
-      // VS
-      //   if( pred ) S1;
-      // If a Block, no need:
-      //   if( pred ) { // Block will split line
-      //     S1;
-      //   }
-      if( !(_kids[1] instanceof BlockAST) ) sb.ii().nl();
-    } else if( i==1 ) {
-      // If not a block, split again 
-      if( !(_kids[1] instanceof BlockAST) ) sb.di();
-      if( _kids.length==3 ) {
-        sb.ip(" else ");
-        if( !(_kids[1] instanceof BlockAST) ) sb.nl();
-      }
+
+  BlockAST true_blk() {
+    BlockAST blk;
+    if( _kids[1] instanceof BlockAST blk0 ) {
+      AST[] kids = new AST[blk0._kids.length+1];
+      System.arraycopy(blk0._kids,0,kids,1,blk0._kids.length);
+      blk = new BlockAST(kids);
+    } else {
+      blk = new BlockAST(null,_kids[1]);
     }
+    return (BlockAST)(_kids[1] = blk);
+  }
+
+
+  @Override SB jcode( SB sb ) {
+    _kids[0].jcode(sb.ip("if( ")).p(") ");
+    if( _kids[1] instanceof BlockAST ) {
+      // if( pred ) {
+      //   BLOCK;
+      // }<<<---- Cursor here
+      _kids[1].jcode(sb);
+      if( _kids.length==2 ) return sb;
+      // if( pred ) {
+      //   BLOCK;
+      // } <<<---- Cursor here
+      sb.p(" ");
+    } else {
+      // if( pred )
+      //   STMT<<<---- Cursor here
+      sb.ii().nl();
+      _kids[1].jcode(sb);
+      sb.di();
+      if( _kids.length==2 ) return sb;
+      // if( pred )
+      //   STMT;
+      // <<<---- Cursor here
+      sb.p(";").nl().i();
+    }
+    
+    sb.p("else ");
+    
+    if( _kids[2] instanceof BlockAST ) {
+      _kids[2].jcode(sb);
+    } else {
+      sb.ii().nl();
+      _kids[2].jcode(sb);
+      sb.di();
+    }
+    return sb;
   }
 }

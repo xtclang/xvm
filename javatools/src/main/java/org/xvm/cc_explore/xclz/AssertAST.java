@@ -21,7 +21,7 @@ class AssertAST extends AST {
     else sb.p(", ");
   }
   @Override void jpost( SB sb ) {
-    if( _kids.length>1 ) sb.unchar(2);
+    if( _kids[0]!=null ) sb.unchar(2);
     sb.p(")");
   }
 }

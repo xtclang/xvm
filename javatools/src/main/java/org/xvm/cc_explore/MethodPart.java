@@ -221,4 +221,26 @@ public class MethodPart extends MMethodPart {
   public boolean is_empty_function() {
     return _code.length==2 && _code[0]==3 && _code[1]==76;
   }
+
+  // Methods returning a conditional have to consume the conditional imm-
+  // ediately or it's lost.  The returned value will be optionally assigned.
+  //
+  // 's' already defined
+  // XTC   s := cond_ret();
+  // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
+  // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
+  // Java  $t(tmp = cond_ret()) && GET$COND() && $t(s=tmp)
+  //
+  // XTC   if( String s := cond_ret(), Int n :=... ) { ..s...}
+  // BAST  (If (Multi (Op$AsgnIfNotFalse (DefReg s) (Invoke cond_ret))...) ...true... ...false...)
+  // BAST  (If (&&    (Op$AsgnIfNotFalse (Reg stmp) (Invoke cond_ret))...) (Block (DefReg s stmp) ...true...) ...false...)
+  // Java  if( (stmp = cond_ret()) && GET$COND() && (ntmp = cond_ret() && GET$COND() ) { String s=stmp; long n=ntmp; ...s... }
+  //
+  // XTC   assert Int n := S1(), ...n...
+  // BAST  (Assert (XClz) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
+  // BAST  (Assert (XClz) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
+  // Java  long n0, n1;  assert $t(n0=S1()) && GET$COND() && ...n0...
+  
+  
+  public boolean is_cond_ret() { return (_nFlags & 0x2000) != 0; }
 }

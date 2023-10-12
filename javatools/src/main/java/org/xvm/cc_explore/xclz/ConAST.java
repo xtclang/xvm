@@ -1,8 +1,7 @@
 package org.xvm.cc_explore.xclz;
 
-import org.xvm.cc_explore.cons.Const;
-import org.xvm.cc_explore.cons.StringCon;
-import org.xvm.cc_explore.cons.TCon;
+import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
 
 class ConAST extends AST {
@@ -20,6 +19,8 @@ class ConAST extends AST {
   }
   @Override String type() {
     if( _tcon instanceof StringCon ) return "String";
+    if( _tcon instanceof EnumCon econ )
+      return econ.part()._par._name;
     return _con;
   }
   @Override SB jcode( SB sb ) { return sb.p(_con); }
