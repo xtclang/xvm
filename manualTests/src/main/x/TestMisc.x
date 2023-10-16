@@ -18,7 +18,7 @@ module TestMisc {
         testSwitchExpr3();
         testSwitchExpr4();
         //testSwitchNatural();
-        //testStmtExpr();
+        testStmtExpr();
         //testAssignOps();
 
         testAssertTrue();
@@ -282,10 +282,10 @@ module TestMisc {
     //    }
     //}
 
-    //void testStmtExpr() {
-    //    console.print("\n** testStmtExpr()");
-    //    console.print("5+3=" + {return Int:5 + 3;});
-    //}
+    void testStmtExpr() {
+        console.print("\n** testStmtExpr()");
+        console.print("5+3=" + {return Int:5 + 3;});
+    }
 
     void testAssertTrue() {
         console.print("\n** testAssertTrue()");
