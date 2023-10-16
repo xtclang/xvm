@@ -136,6 +136,7 @@ public abstract class AST {
     case Return0Stmt  ->   ReturnAST.make(X,0);
     case Return1Stmt  ->   ReturnAST.make(X,1);
     case StmtBlock    ->    BlockAST.make(X);
+    case StmtExpr     ->     ExprAST.make(X);
     case SwitchExpr   ->   SwitchAST.make(X,true);
     case SwitchStmt   ->   SwitchAST.make(X,false);
     case TemplateExpr -> TemplateAST.make(X);
