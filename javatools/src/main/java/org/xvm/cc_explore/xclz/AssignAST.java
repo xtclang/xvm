@@ -7,7 +7,7 @@ import org.xvm.cc_explore.util.SB;
 class AssignAST extends AST {
   static final Operator[] OPS = Operator.values();
   final Operator _op;
-  String _cond_asgn;
+  String _cond_asgn, _name;
   static AssignAST make( XClzBuilder X, boolean asgn ) {
     AST[] kids = new AST[2];
     kids[0] = ast_term(X);
@@ -16,7 +16,7 @@ class AssignAST extends AST {
     return new AssignAST(op, kids);
   }
   AssignAST( AST... kids ) { this(Operator.Asn,kids); }
-  private AssignAST( Operator op, AST... kids ) { super(kids); _op=op; }
+  private AssignAST( Operator op, AST... kids ) { super(kids); _op=op; _name = kids[0].name(); }
   @Override AST rewrite() {
     // Assign of a non-primitive array
     if( _kids[0] instanceof BinOpAST bin &&
@@ -28,6 +28,7 @@ class AssignAST extends AST {
         !con._con.equals("null") && !con._con.endsWith("L") )
       _kids[1] = new ConAST(con._con+"L");
 
+    // var := (true,val)  or  var ?= not_null;
     if( _op == Operator.AsnIfNotFalse || _op == Operator.AsnIfNotNull) {
       String type = _kids[0].type();
       BlockAST blk = enclosing_block();
@@ -46,14 +47,14 @@ class AssignAST extends AST {
           _kids[0] = new RegAST(0,tmp,type);
           BlockAST iftblk = iff.true_blk();
           assert iftblk._kids[0]==null;
-          iftblk._kids[0] = new DefRegAST(type,def._name,tmp);
+          iftblk._kids[0] = new DefRegAST(type,_name,tmp);
         } else {
           // XTC   assert Int n := S1(), ...n...
           // BAST  (Assert (XClz) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
           // BAST  (Invoke (XClz) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
           // BAST  (Invoke (XClz) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
           // Java  long n0, n1;  xassert( $t(n0=S1()) && GET$COND() && ...n0...)
-          String tmp = blk.add_tmp(type,def._name);
+          String tmp = blk.add_tmp(type,_name);
           _kids[0] = new RegAST(0,tmp,type);
         }
       } else {
@@ -63,7 +64,7 @@ class AssignAST extends AST {
         // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
         // Java  if( $t(tmp = cond_ret()) && GET$COND() ) s=tmp;
         String tmp = blk.add_tmp(type);
-        _cond_asgn = ((RegAST)_kids[0])._name;
+        _cond_asgn = _name;
         _kids[0] = new RegAST(0,tmp,type);
       }
     }
@@ -71,7 +72,9 @@ class AssignAST extends AST {
   }
   
   @Override SB jcode( SB sb ) {
-    if( _op == Operator.AsnIfNotFalse || _op == Operator.AsnIfNotNull ) {
+    switch( _op ) {
+    case AsnIfNotFalse, AsnIfNotNull: {
+      // var := (true,val)  or  var ?= not_null;
       if( _cond_asgn!=null ) sb.ip("if( ");
       // Expression result is the boolean conditional value,
       // and the var was previously defined.
@@ -84,12 +87,24 @@ class AssignAST extends AST {
       // $t(tmp = expr()) && XRuntime.GET$COND() && $t(var = tmp)
       if( _cond_asgn != null )
         sb.p(") ").p(_cond_asgn).p(" = ").p(name);
-        
-    } else {
+      break;
+    }
+      
+    case AsnIfWasFalse: return asnIf(sb,"!",""      ); // if(!var      ) var = e0;      
+    case AsnIfWasTrue : return asnIf(sb,"" ,""      ); // if( var      ) var = e0;      
+    case AsnIfWasNull : return asnIf(sb,"" ,"==null"); // if( var==null) var = e0;
+      
+    default:
       _kids[0].jcode(sb);
       sb.p(" ").p(_op.text).p(" ");
       _kids[1].jcode(sb);
+      break;
     }
     return sb;
+  }
+
+  private SB asnIf(SB sb, String pre, String post) {
+    sb.ip("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
+    return _kids[1].jcode(sb);
   }
 }

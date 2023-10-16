@@ -32,6 +32,9 @@ public abstract class AST {
 
   // String java Type of this expression
   String type() { throw XEC.TODO(); }
+
+  // Name, if it makes sense
+  String name() { throw XEC.TODO(); }
   
   // Walk, and allow AST to rewrite themselves in-place.
   // Set the _par parent.

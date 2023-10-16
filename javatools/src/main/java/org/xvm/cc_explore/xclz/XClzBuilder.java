@@ -148,6 +148,7 @@ public class XClzBuilder {
   public void jmethod( MethodPart m, String mname ) {
     assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
     _sb.ip("public ");
+    if( (m._nFlags & Part.STATIC_BIT)!=0 ) _sb.p("static ");
     // Return type
     if( m._rets==null ) _sb.p("void ");
     else if( m._rets.length == 1 ) _sb.p(jtype(m._rets[0]._con,false)).p(' ');
@@ -188,7 +189,8 @@ public class XClzBuilder {
           else {
             // Recursively dump name
             MethodPart meth = (MethodPart)mmp.child(mmp._name);
-            String name = mname+"$"+mmp._name;
+            String name = (meth._nFlags & Part.STATIC_BIT)!=0 ? mname+"$" : "";
+            name += mmp._name;
             jmethod(meth,name);
           }
         } 
@@ -313,8 +315,12 @@ public class XClzBuilder {
   public static String jtype( Const tc, boolean boxed ) {
     if( tc instanceof TermTCon ttc ) {
       ClassPart clz = (ClassPart)ttc.part();
-      if( clz._path==null && clz._name.equals("Null") )
-        return "null";
+      if( clz._path==null ) {
+        if( clz._name.equals("Null" ) ) return "null" ;
+        if( clz._name.equals("True" ) ) return "true" ;
+        if( clz._name.equals("False") ) return "false";
+        throw XEC.TODO();        
+      }
       String key = clz._name + "+" + clz._path._str;
       String val = XJMAP.get(key);
       if( val!=null )

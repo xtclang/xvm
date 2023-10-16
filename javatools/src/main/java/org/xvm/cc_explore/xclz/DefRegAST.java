@@ -33,6 +33,7 @@ class DefRegAST extends AST {
   DefRegAST( String type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
   
   @Override String type() { return _type; }
+  @Override String name() { return _name; }
   
   @Override void jpre( SB sb ) {
     String type = type();

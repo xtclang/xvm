@@ -24,4 +24,5 @@ class NarrowAST extends AST {
   }
 
   @Override String type() { return _type; }  
+  @Override String name() { return _kids[0].name(); }
 }

@@ -24,5 +24,6 @@ class RegAST extends AST {
   }
   RegAST( int reg ) { this(reg,null,null); }
   @Override String type() { return _type; }
+  @Override String name() { return _name; }
   @Override void jpre ( SB sb ) { sb.p(_name); }
 }
