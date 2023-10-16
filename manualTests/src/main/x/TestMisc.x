@@ -19,7 +19,7 @@ module TestMisc {
         testSwitchExpr4();
         //testSwitchNatural();
         testStmtExpr();
-        //testAssignOps();
+        testAssignOps();
 
         testAssertTrue();
         testAssertTrueExpr();
@@ -383,43 +383,43 @@ module TestMisc {
         return i < 0 ? False : (True, "positive");
     }
 
-    //void testAssignOps() {
-    //    console.print("\n** testAssignOps()");
-    //
-    //    Int? n = Null;
-    //    n ?:= 4;
-    //    console.print("n=" + n + " (should be 4)");
-    //
-    //    private Int? pretendNullable(Int n) { return n; }
-    //    n = pretendNullable(n);
-    //
-    //    n ?:= 7;
-    //    console.print("n=" + n + " (should be 4)");
-    //
-    //    Boolean f1 = False;
-    //    f1 &&= True;
-    //    console.print("f1=" + f1 + " (should be False)");
-    //
-    //    Boolean f2 = False;
-    //    f2 ||= True;
-    //    console.print("f2=" + f2 + " (should be True)");
-    //
-    //    Boolean f3 = True;
-    //    f3 &&= False;
-    //    console.print("f3=" + f3 + " (should be False)");
-    //
-    //    Boolean f4 = True;
-    //    f4 ||= False;
-    //    console.print("f4=" + f4 + " (should be True)");
-    //
-    //    Boolean f5 = True;
-    //    f5 &&= True;
-    //    console.print("f5=" + f5 + " (should be True)");
-    //
-    //    Boolean f6 = False;
-    //    f6 ||= False;
-    //    console.print("f6=" + f6 + " (should be False)");
-    //}
+    void testAssignOps() {
+        console.print("\n** testAssignOps()");
+    
+        Int? n = Null;
+        n ?:= 4;
+        console.print("n=" + n + " (should be 4)");
+    
+        private Int? pretendNullable(Int n) { return n; }
+        n = pretendNullable(n);
+    
+        n ?:= 7;
+        console.print("n=" + n + " (should be 4)");
+    
+        Boolean f1 = False;
+        f1 &&= True;
+        console.print("f1=" + f1 + " (should be False)");
+    
+        Boolean f2 = False;
+        f2 ||= True;
+        console.print("f2=" + f2 + " (should be True)");
+    
+        Boolean f3 = True;
+        f3 &&= False;
+        console.print("f3=" + f3 + " (should be False)");
+    
+        Boolean f4 = True;
+        f4 ||= False;
+        console.print("f4=" + f4 + " (should be True)");
+    
+        Boolean f5 = True;
+        f5 &&= True;
+        console.print("f5=" + f5 + " (should be True)");
+    
+        Boolean f6 = False;
+        f6 ||= False;
+        console.print("f6=" + f6 + " (should be False)");
+    }
 
     //void testBind() {
     //    console.print("\n** testBind()");
