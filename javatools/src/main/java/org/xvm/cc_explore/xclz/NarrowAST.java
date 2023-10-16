@@ -23,10 +23,5 @@ class NarrowAST extends AST {
       : XClzBuilder.jtype((TCon)type,false);
   }
 
-  @Override String type() { return _type; }
-  
-  @Override AST rewrite() {
-    //if( _tcon==null ) return new ConAST("null");
-    return this;
-  }
+  @Override String type() { return _type; }  
 }
