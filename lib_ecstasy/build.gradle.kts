@@ -1,46 +1,55 @@
 /*
  * Build file for the Ecstasy core library of the XDK.
  *
- * This project does NOT build the ecstasy.xtc file. (The :xdk project builds it.)
- *
- * This project can update the Unicode data files, if a Unicode release has occurred and provided
- * a new `ucd.all.flat.zip`; that is the only time that the Unicode data files have to be updated.
+ * This project builds the ecstasy.xtc anb mack.xtc core library files.
  */
 
-project.ext.set("implicit.x", "${projectDir}/src/main/resources/implicit.x")
+plugins {
+    id("org.xvm.build.version")
+    alias(libs.plugins.xtc)}
 
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-    // the Ecstasy module project does not build anything itself, so there is nothing to clean
+val xtcTurtle by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("mackDir"))
+    }
 }
 
-tasks.register<Copy>("importUnicodeFiles") {
-    group       = "Build"
+dependencies {
+    @Suppress("UnstableApiUsage")
+    xtcTurtle(libs.javatools.turtle) // TODO: Don't matter if we are a project or an artifact, which is great.
+    xtcJavaTools(libs.javatools)
+    implementation(libs.javatools.unicode)
+}
+
+xtcCompile {
+    renameOutput.put("mack.xtc", "javatools_turtle.xtc")
+}
+
+sourceSets.main {
+    xtc {
+        srcDir(xtcTurtle)
+    }
+}
+
+/**
+ * This task can update the Unicode data files, if a Unicode release has occurred and provided
+ * a new `ucd.all.flat.zip`; that is the only time that the Unicode data files have to be updated.
+ *
+ * This task is used to force rebuild and input unicode files into our build. This is not part of the
+ * common build, but there is no reason to not make it that, now that we have caching parallel
+ * Gradle/Maven build infrastructure.  TODO: make this a build task.
+ */
+val importUnicodeFiles by tasks.registering {
+    group = LifecycleBasePlugin.BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
-    from(file("${project(":javatools_unicode").buildDir}/resources/"))
-    include("Char*.txt", "Char*.dat")
-    into(file("src/main/resources/text/"))
-    doLast {
-        println("Finished task: importUnicodeFiles")
+    dependsOn(gradle.includedBuild("javatools_unicode").task(":run"))
+    val unicodeResources = "${gradle.includedBuild("javatools_unicode").projectDir}/build/resources/unicode"
+    copy {
+        from(file(unicodeResources))
+        include("Char*.txt", "Char*.dat")
+        into(project.layout.projectDirectory.dir("src/main/resources/ecstasy/text"))
     }
-}
-
-tasks.register("rebuildUnicodeFiles") {
-    group       = "Build"
-    description = "Force the rebuild of the `./src/main/resources/text` data files by running the :javatools_unicode project and copying the results."
-    val make = project(":javatools_unicode").tasks["run"]
-    val copy = tasks["importUnicodeFiles"]
-    dependsOn(make)
-    dependsOn(copy)
-    copy.mustRunAfter(make)
-    doLast {
-        println("Finished task: rebuildUnicodeFiles")
-    }
-}
-
-tasks.register("build") {
-    group       = "Build"
-    description = "Build this project"
-    // the Ecstasy module project does not build anything itself
 }

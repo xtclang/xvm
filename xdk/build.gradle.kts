@@ -1,602 +1,422 @@
-/*
- * Build files for the XDK.
+import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
+import XdkBuildLogic.Companion.findLocalXdkInstallation
+import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
+import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
+import org.gradle.api.attributes.Category.LIBRARY
+import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
+import org.gradle.api.logging.LogLevel.INFO
+import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import org.xtclang.plugin.tasks.XtcCompileTask
+import java.io.ByteArrayOutputStream
+
+/**
+ * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
+ * and producing one outgoing artifact with provided layout for the XDK being shipped.
  */
 
-import java.nio.file.Paths
-
-val javatools     = project(":javatools")
-val launcher      = project(":javatools_launcher")
-val turtle        = project(":javatools_turtle")
-val bridge        = project(":javatools_bridge")
-val ecstasy       = project(":lib_ecstasy")
-val aggregate     = project(":lib_aggregate")
-val collections   = project(":lib_collections")
-val crypto        = project(":lib_crypto")
-val net           = project(":lib_net")
-val json          = project(":lib_json")
-val oodb          = project(":lib_oodb")
-val jsondb        = project(":lib_jsondb")
-val web           = project(":lib_web")
-val webauth       = project(":lib_webauth")
-val xenia         = project(":lib_xenia")
-
-val ecstasyMain     = "${ecstasy.projectDir}/src/main"
-val turtleMain      = "${turtle.projectDir}/src/main"
-val bridgeMain      = "${bridge.projectDir}/src/main"
-val javatoolsJar    = "${javatools.buildDir}/libs/javatools.jar"
-val launcherMain    = "${launcher.projectDir}/src/main"
-val aggregateMain   = "${aggregate.projectDir}/src/main"
-val collectionsMain = "${collections.projectDir}/src/main"
-val cryptoMain      = "${crypto.projectDir}/src/main"
-val netMain         = "${net.projectDir}/src/main"
-val jsonMain        = "${json.projectDir}/src/main"
-val oodbMain        = "${oodb.projectDir}/src/main"
-val jsondbMain      = "${jsondb.projectDir}/src/main"
-val webMain         = "${web.projectDir}/src/main"
-val webauthMain     = "${webauth.projectDir}/src/main"
-val xeniaMain       = "${xenia.projectDir}/src/main"
-
-val xdkDir          = "$buildDir/xdk"
-val binDir          = "$xdkDir/bin"
-val libDir          = "$xdkDir/lib"
-val coreLib         = "$libDir/ecstasy.xtc"
-val javaDir         = "$xdkDir/javatools"
-val turtleLib       = "$javaDir/javatools_turtle.xtc"
-val bridgeLib       = "$javaDir/javatools_bridge.xtc"
-
-val distDir         = "$buildDir/dist"
-
-val xdkVersion      = rootProject.version
-var distName        = xdkVersion
-val isCI            = System.getenv("CI")
-val buildNum        = System.getenv("BUILD_NUMBER")
-if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
-    distName = "${distName}ci${buildNum}"
-
-    val output = java.io.ByteArrayOutputStream()
-    project.exec {
-        commandLine("git", "rev-parse", "HEAD")
-        standardOutput = output
-        setIgnoreExitValue(true)
-    }
-    val changeId = output.toString().trim()
-    if (changeId.length > 0) {
-        distName = "${distName}+${changeId}"
-    }
-}
-println("*** XDK distName=${distName}")
-
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-    delete("$buildDir")
+plugins {
+    alias(libs.plugins.xdk.build.publish)
+    alias(libs.plugins.xtc)
+    alias(libs.plugins.tasktree)
+    alias(libs.plugins.versions)
+    distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
 }
 
-val copyOutline = tasks.register<Copy>("copyOutline") {
-    from("$projectDir/src/main/resources") {
-        include("xdk/**")
+val xtcLauncherBinaries by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+/**
+ * Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
+ */
+val xdkProvider by configurations.registering {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+    // TODO these are added twice to the archive configuration. We probably don't want that.
+    outgoing.artifact(tasks.distZip) {
+        extension = "zip"
     }
-    into("$buildDir")
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE))
+    }
+}
+
+val xtcUnicodeConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    // TODO: Can likely remove these.
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
+    }
+}
+
+dependencies {
+    xdkJavaTools(libs.javatools)
+    xtcModule(libs.xdk.ecstasy)
+    xtcModule(libs.xdk.aggregate)
+    xtcModule(libs.xdk.collections)
+    xtcModule(libs.xdk.crypto)
+    xtcModule(libs.xdk.json)
+    xtcModule(libs.xdk.jsondb)
+    xtcModule(libs.xdk.net)
+    xtcModule(libs.xdk.oodb)
+    xtcModule(libs.xdk.web)
+    xtcModule(libs.xdk.webauth)
+    xtcModule(libs.xdk.xenia)
+    xtcModule(libs.javatools.bridge)
+    @Suppress("UnstableApiUsage")
+    xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
+}
+
+private val semanticVersion: SemanticVersion by extra
+logger.lifecycle("$prefix *** Building XDK; semantic version: '$semanticVersion' ***")
+
+private val xdkDist = xdkBuild.distro()
+
+/**
+ * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
+ * will get stamped with the Gradle project version, as defined in VERSION in the repo root).
+ */
+subprojects {
+    tasks.withType<XtcCompileTask>().configureEach {
+        logger.info("Versioning subproject $name as ${semanticVersion.artifactVersion} from semanticVersion $semanticVersion")
+        version = semanticVersion.artifactVersion
+    }
+}
+
+publishing {
+    // TODO: Use the Nexus publication plugin and
+    //    ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+    //    (incorporate that in aggregate publish task in xvm/build.gradle.kts)
+    publications {
+        val xdkArchive by registering(MavenPublication::class) {
+            with(project) {
+                groupId = group.toString()
+                artifactId = project.name
+                version = version.toString()
+            }
+            pom {
+                name = "xdk"
+                description = "XTC Language Software Development Kit (XDK) Distribution Archive"
+                url = "https://xtclang.org"
+            }
+            logger.info("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
+            artifact(tasks.distZip) {
+                extension = "zip"
+            }
+        }
+    }
+}
+
+// TODO: Add Nexus snapshot and release repositories here:
+
+/**
+ * Run once, to create templates in GRADLE_USER_HOME/init.d/ for an XTC Org user with
+ * just read:package access (in a safe token). This is a workaround for GitHub requiring
+ * authentication for package access, even for public packages in public repos. People
+ * have asked about this feature for almost five years now.
+ *
+ * However, as soon as we have changed artifact groups for our publications to "org.xtclang"
+ * instead of "org.xvm", we can prove domain ownership of the former with gradlePluginPortal()
+ * and mavenCentral(), and provide packages that are *really* public. In the meantime, in order
+ * to get everyone up and running as quickly as possible, this task is the bootstrap mechanism
+ * to work with the GitHub Package Repo, but not having to add various tokens and credentials.
+ *
+ * Security review completed satisfactorily.
+ */
+val installInitScripts by tasks.registering(Copy::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Write the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
+    from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
+        eachFile {
+            // TODO: decide if "must be online" trumps "install once", as to which script template
+            //   should be default. We copy all the files to GRADLE_USER_HOME/init.d, though, but we do
+            //   not rename the non-default version.
+            if (!name.contains("minimal")) {
+                name = name.removeSuffix(".template")
+            }
+        }
+    }
+    into(userInitScriptDirectory)
     doLast {
-        println("Finished task: copyOutline")
+        printAllTaskInputs()
+        printAllTaskOutputs()
     }
 }
 
-val copyJavatools = tasks.register<Copy>("copyJavatools") {
-    from(javatoolsJar)
-    into("$javaDir/")
-
-    dependsOn(javatools.tasks["build"])
-    dependsOn(copyOutline)
-    doLast {
-        println("Finished task: copyJavatools")
+val publishPluginToLocalDist by tasks.registering {
+    group = BUILD_GROUP
+    // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
+    if (xdkDist.shouldPublishPluginToLocalDist()) {
+        dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
+        outputs.dir(buildRepoDirectory)
+        doLast {
+            logger.info("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
+        }
     }
 }
 
-val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
-    group          = "Build"
-    description    = "Build ecstasy.xtc and javatools_turtle.xtc modules"
-
-    dependsOn(javatools.tasks["build"])
-    dependsOn(copyJavatools)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "$ecstasyMain/x/ecstasy.x",
-         "$turtleMain/x/mack.x")
-    mainClass.set("org.xvm.tool.Compiler")
-
-    doLast {
-        file("$libDir/mack.xtc").
-           renameTo(file("$turtleLib"))
-        println("Finished task: compileEcstasy")
-    }
-}
-
-val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
-    group            = "Build"
-    description      = "Build aggregate.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileCollections)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "$aggregateMain/x/aggregate.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileCollections = tasks.register<JavaExec>("compileCollections") {
-    group              = "Build"
-    description        = "Build collections.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileEcstasy)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "$collectionsMain/x/collections.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
-    group         = "Build"
-    description   = "Build crypto.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileEcstasy)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "$cryptoMain/x/crypto.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileNet  = tasks.register<JavaExec>("compileNet") {
-    group       = "Build"
-    description = "Build net.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileCrypto)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "-L", "$libDir",
-         "$netMain/x/net.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileJson = tasks.register<JavaExec>("compileJson") {
-    group       = "Build"
-    description = "Build json.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileEcstasy)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "$jsonMain/x/json.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileOODB = tasks.register<JavaExec>("compileOODB") {
-    group       = "Build"
-    description = "Build oodb.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileEcstasy)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "$oodbMain/x/oodb.x")
-   mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
-    group         = "Build"
-    description   = "Build jsondb.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileJson, compileOODB)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "-L", "$libDir",
-         "$jsondbMain/x/jsondb.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileWeb  = tasks.register<JavaExec>("compileWeb") {
-    group       = "Execution"
-    description = "Build web.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileNet, compileJson)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "-L", "$libDir",
-         "$webMain/x/web.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileWebauth = tasks.register<JavaExec>("compileWebauth") {
-    group          = "Execution"
-    description    = "Build webauth.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileOODB, compileWeb)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "-L", "$libDir",
-         "$webauthMain/x/webauth.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileXenia = tasks.register<JavaExec>("compileXenia") {
-    group        = "Execution"
-    description  = "Build xenia.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileWeb, compileWebauth)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "-L", "$libDir",
-         "$xeniaMain/x/xenia.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileBridge = tasks.register<JavaExec>("compileBridge") {
-    group         = "Execution"
-    description   = "Build javatools_bridge.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileCollections, compileOODB, compileNet, compileWeb, compileXenia)
-
-    classpath(javatoolsJar)
-    args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
-         "-L", "$coreLib",
-         "-L", "$turtleLib",
-         "-L", "$libDir",
-         "$bridgeMain/x/_native.x")
-    mainClass.set("org.xvm.tool.Compiler")
-
-    doLast {
-        file("$libDir/_native.xtc").
-        renameTo(file("$bridgeLib"))
-        println("Finished task: compileBridge")
-    }
-}
-
-val build = tasks.register("build") {
-    group       = "Build"
-    description = "Build the XDK"
-
-    // we assume that the launcher project has been built
-    val launcher         = project(":javatools_launcher")
-    val linux_launcher   = "${launcher.buildDir}/exe/linux_launcher"
-    val macos_launcher   = "${launcher.buildDir}/exe/macos_launcher"
-    val windows_launcher = "${launcher.buildDir}/exe/windows_launcher.exe"
-
-    // compile Ecstasy
-    val coreSrc = fileTree(ecstasyMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val coreDest = file("$coreLib").lastModified()
-
-    val turtleSrc = fileTree(turtleMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val turtleDest = file("$turtleLib").lastModified()
-
-    if (coreSrc > coreDest || turtleSrc > turtleDest) {
-        dependsOn(compileEcstasy)
-    } else {
-        dependsOn(copyJavatools)
-    }
-
-    // compile aggregate.xtclang.org
-    val aggregateSrc = fileTree(aggregateMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val aggregateDest = file("$libDir/aggregate.xtc").lastModified()
-
-    if (aggregateSrc > aggregateDest) {
-        dependsOn(compileAggregate)
-        }
-
-    // compile collections.xtclang.org
-    val collectionsSrc = fileTree(collectionsMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val collectionsDest = file("$libDir/collections.xtc").lastModified()
-
-    if (collectionsSrc > collectionsDest) {
-        dependsOn(compileCollections)
-        }
-
-    // compile crypto.xtclang.org
-    val cryptoSrc = fileTree(cryptoMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val cryptoDest = file("$libDir/crypto.xtc").lastModified()
-
-    if (cryptoSrc > cryptoDest) {
-        dependsOn(compileCrypto)
-        }
-
-    // compile net.xtclang.org
-    val netSrc = fileTree(netMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val netDest = file("$libDir/net.xtc").lastModified()
-
-    if (netSrc > netDest) {
-        dependsOn(compileNet)
-        }
-
-    // compile json.xtclang.org
-    val jsonSrc = fileTree(jsonMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val jsonDest = file("$libDir/json.xtc").lastModified()
-
-    if (jsonSrc > jsonDest) {
-        dependsOn(compileJson)
-        }
-
-    // compile oodb.xtclang.org
-    val oodbSrc = fileTree(oodbMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val oodbDest = file("$libDir/oodb.xtc").lastModified()
-
-    if (oodbSrc > oodbDest) {
-        dependsOn(compileOODB)
-        }
-
-    // compile jsondb.xtclang.org
-    val jsondbSrc = fileTree(jsondbMain).getFiles().stream().
-    mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val jsondbDest = file("$libDir/jsondb.xtc").lastModified()
-
-    if (jsondbSrc > jsondbDest) {
-        dependsOn(compileJsonDB)
-    }
-
-    // compile web.xtclang.org
-    val webSrc = fileTree(webMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val webDest = file("$libDir/web.xtc").lastModified()
-
-    if (webSrc > webDest) {
-        dependsOn(compileWeb)
-        }
-
-    // compile webauth.xtclang.org
-    val webauthSrc = fileTree(webauthMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val webauthDest = file("$libDir/webauth.xtc").lastModified()
-
-    if (webauthSrc > webauthDest) {
-        dependsOn(compileWebauth)
-        }
-
-    // compile xenia.xtclang.org
-    val xeniaSrc = fileTree(xeniaMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val xeniaDest = file("$libDir/xenia.xtc").lastModified()
-
-    if (xeniaSrc > xeniaDest) {
-        dependsOn(compileXenia)
-        }
-
-    // compile _native.xtclang.org
-    val bridgeSrc = fileTree(bridgeMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val bridgeDest = file(bridgeLib).lastModified()
-
-    if (bridgeSrc > bridgeDest) {
-        dependsOn(compileBridge, compileNet, compileCrypto)
-        }
-
-    doLast {
-        copy {
-            from(linux_launcher, macos_launcher, windows_launcher)
-            into(binDir)
-        }
-        println("Finished task: build")
-    }
-}
-
-// TODO wiki
-
-val prepareDirs = tasks.register("prepareDirs") {
-    mustRunAfter("clean")
-
-    doLast {
-        mkdir("$distDir")
-    }
-}
-
-tasks.register("dist-local") {
-    group       = "Distribution"
-    description = "Copy the xdk to the local homebrew cellar"
-
-    dependsOn(build)
-
-    doLast {
-        // getting the homebrew xdl location using "readlink -f `which xec`" command
-        val output = java.io.ByteArrayOutputStream()
-
-        project.exec {
-            commandLine("which", "xec")
-            standardOutput = output
-            setIgnoreExitValue(true)
-        }
-
-        val xecLink = output.toString().trim()
-        if (xecLink.length > 0) {
-            val xecFile    = Paths.get(xecLink).toRealPath()
-            val libexecDir = file("$xecFile/../..")
-            var updated    = false;
-
-            val srcBin = fileTree("$binDir").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstBin = fileTree("$libexecDir/bin").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcBin > dstBin) {
-                copy {
-                    from("$binDir/")
-                    into("$libexecDir/bin")
+/**
+ * Set up the distribution layout. This is executed during the config phase, which means that we can't
+ * resolve outputs to other tasks to their explicit destination files yet, unless they have run.
+ * However, we _can_ use a from spec that refers to a task, which then becomes a dependency.
+ */
+distributions {
+    main {
+        distributionBaseName = xdkDist.distributionName
+        assert(distributionBaseName.get() == "xdk") // TODO: Should really rename the distribution to "xdk" explicitly per convention.
+        contents {
+            // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
+            val resources = tasks.processResources.get().outputs.files.asFileTree
+
+            /*
+             * 1) copy build plugin repository publication of the XTC plugin to install/xdk/repo
+             * 2) copy xdk resources/main/xdk to install/xdk/libexec
+             * 3) copy javatools_launcher/bin/\* to install/xdk/libexec/bin/
+             * 4) copy XDK modules to install/xdk/libexec/lib
+             * 5) copy javatools.jar, turtle and bridge to install/xdk/libexec/javatools
+             */
+            from(resources) {
+                eachFile {
+                    path = path.replace("xdk", "libexec")
+                    path = path.replace("libexec-", "xdk-") // TODO: Hacky.
+                    includeEmptyDirs = false
                 }
-                updated = true;
             }
-
-            val srcLib = fileTree("$libDir/").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstLib = fileTree("$libexecDir/lib").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcLib > dstLib) {
-                copy {
-                    from("$libDir/")
-                    into("$libexecDir/lib")
+            from(xtcLauncherBinaries) {
+                into("libexec/bin")
+            }
+            from(configurations.xtcModule) {
+                into("libexec/lib")
+                // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
+                exclude("**/javatools*")
+            }
+            from(configurations.xtcModule) {
+                into("libexec/javatools")
+                // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
+                include("**/javatools*")
+            }
+            from(configurations.xdkJavaTools) {
+                rename {
+                    assert(it.endsWith(".jar"))
+                    it.replace(Regex("-.*.jar"), ".jar")
                 }
-                updated = true;
+                into("libexec/javatools") // should just be one file with corrected dependencies, assert?
             }
-
-            val srcJts = fileTree("$javaDir/").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstJts = fileTree("$libexecDir/javatools").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcJts > dstJts) {
-                copy {
-                    from("$javaDir/")
-                    into("$libexecDir/javatools")
+            if (xdkDist.shouldPublishPluginToLocalDist()) {
+                val published = publishPluginToLocalDist.get().outputs.files
+                from(published) {
+                    into("repo")
                 }
-                updated = true;
             }
-
-            if (updated) {
-                println("Updated local homebrew directory $libexecDir")
-            }
-        }
-        else {
-            println("Missing local homebrew installation; run \"brew install xdk\" command first")
+            from(tasks.xtcVersionFile)
         }
     }
 }
 
-val distTGZ = tasks.register<Tar>("distTGZ") {
-    group       = "Distribution"
-    description = "Create the XDK .tar.gz file"
+val clean by tasks.existing {
+    doFirst {
+        logger.warn("$prefix Task '$name' is often unnecessary. Are you sure you don't just need to call './gradlew build' again?")
+    }
+    doLast {
+        subprojects.forEach {
+            // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
+            val subProjectBuildDir = it.layout.buildDirectory.get().asFile
+            delete(it.layout.buildDirectory)
+            logger.info("$prefix Task '$name' cleaned subproject ${it.name} build directory (buildDir: '$subProjectBuildDir')")
+        }
+        delete(compositeRootBuildDirectory)
+        logger.info("$prefix Task '$name' cleaned composite build common build directory: ${compositeRootBuildDirectory.get()}")
+    }
+}
 
-    dependsOn(build)
-    dependsOn(prepareDirs)
-
-    archiveFileName.set("xdk-${distName}.tar.gz")
-    destinationDirectory.set(file("$distDir/"))
+val distTar by tasks.existing(Tar::class) {
     compression = Compression.GZIP
-    from("$buildDir/") {
-        include("xdk/**")
-    }
+    archiveExtension = "tar.gz"
 }
 
-val distZIP = tasks.register<Zip>("distZIP") {
-    group       = "Distribution"
-    description = "Create the XDK .zip file"
+val distZip by tasks.existing(Zip::class)
 
-    dependsOn(build)
-    dependsOn(prepareDirs)
-
-    archiveFileName.set("xdk-${distName}.zip")
-    destinationDirectory.set(file("$distDir/"))
-    from("$buildDir/") {
-        include("xdk/**")
+val assembleDist by tasks.existing {
+    if (xdkDist.shouldCreateWindowsDistribution()) {
+        logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
+        dependsOn(distExe)
     }
-}
-
-val distEXE = tasks.register("distEXE") {
-    group = "Distribution"
-    description = "Create the XDK .exe file (Windows installer)"
-
-    dependsOn(build)
-    dependsOn(prepareDirs)
-
+    doFirst {
+        logger.lifecycle("$prefix $name; Assembling distribution...")
+    }
     doLast {
-        val output = java.io.ByteArrayOutputStream()
-        project.exec {
-            commandLine("which", "makensis")
-            standardOutput = output
-            setIgnoreExitValue(true)
+        logger.lifecycle("$prefix $name: Assembled distribution.")
+        printTaskInputs(INFO)
+        printTaskOutputs(INFO)
+    }
+}
+
+val distExe by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Use an NSIS compatible plugin to create the Windows .exe installer."
+
+    onlyIf {
+        xdkDist.shouldCreateWindowsDistribution()
+    }
+
+    // TODO: Why do we need this dependency? Likely just remove it.
+    dependsOn(installDist)
+
+    val nsi = file("src/main/nsi/xdkinstall.nsi")
+    val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
+    onlyIf {
+        makensis != null
+    }
+
+    val inputDir = layout.buildDirectory.dir("install/xdk")
+    val outputFile = layout.buildDirectory.file("distributions/xdk-$version.exe")
+    inputs.dir(inputDir)
+    outputs.file(outputFile)
+
+    // TODO check if we have NSIS with an EnVar plugin on the build system, and always run this later.
+
+    // notes:
+    // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
+    // - requires the "makensis" command to be in the path
+    // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
+    // - requires the x.ico file to be in the same directory as the nsi file
+    doLast {
+        if (makensis == null) {
+            throw buildException("Cannot find '${XdkDistribution.MAKENSIS}' in PATH.")
         }
-        if (output.toString().trim().length > 0) {
-            // notes:
-            // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
-            // - requires the "makensis" command to be in the path
-            // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
+        if (!nsi.exists()) {
+            throw buildException("Cannot find 'nsi' file: ${nsi.absolutePath}")
+        }
+        logger.lifecycle("$prefix Writing Windows installer: ${outputFile.get()}")
+        val stdout = ByteArrayOutputStream()
+        exec {
+            environment(
+                "NSIS_SRC" to inputDir.get(),
+                "NSIS_ICO" to xdkIconFile,
+                "NSIS_OUT" to outputFile.get(),
+                "NSIS_VER" to xdkDist.distributionVersion
+            )
+            commandLine(makensis.toFile().absolutePath, nsi.absolutePath, "-NOCD")
+            standardOutput = stdout
+        }
+        makensis.toFile().setExecutable(true)
+        logger.lifecycle("$prefix Finished building distribution: '$name'")
+        stdout.toString().lines().forEach { logger.info("$prefix     $it") }
+    }
+}
 
-            val src  = file("src/main/nsi/xdkinstall.nsi")
-            val dest = "${distDir}/xdk-${distName}.exe"
-            val ico  = "${launcherMain}/c/x.ico"
+val test by tasks.existing {
+    val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
+    logger.lifecycle("$prefix Sanity check runtimes after build: $sanityCheckRuntime.")
+    if (sanityCheckRuntime) {
+        dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
+    }
+}
 
-            project.exec {
-                environment("NSIS_SRC", "${xdkDir}")
-                environment("NSIS_ICO", "${ico}")
-                environment("NSIS_VER", "${distName}")
-                environment("NSIS_OUT", "${dest}")
-                commandLine("makensis", "${src}", "-NOCD")
+/**
+ * Take the output of assembleDist and put it in an installation directory.
+ */
+val installDist by tasks.existing {
+    doLast {
+        logger.lifecycle("$prefix '$name' Installed distribution to '${project.layout.buildDirectory.get()}/install/' directory.")
+        logger.info("$prefix Installation files:")
+        printTaskOutputs(INFO)
+    }
+}
+
+/**
+ * Find a locally installed XDK distribution on the build machine.
+ */
+val findLocalDist by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Find and add any local XDK installation from the PATH."
+    val localDistDir = findLocalXdkInstallation() // done during config
+    if (localDistDir == null) {
+        logger.info("$prefix '$name' No local XTC installation found.")
+    } else {
+        outputs.dir(localDistDir)
+    }
+    doLast {
+        logger.lifecycle("$prefix Detected existing local XTC installation at: '$localDistDir'")
+        XdkBuildLogic.listDirWithTimestamps(localDistDir!!).lines().forEach {
+            logger.lifecycle("$prefix   $it")
+        }
+    }
+}
+
+/**
+ * Backup any XDK distribution installed on the build machine. Will be run as a precaution
+ * before "installLocalDist".
+ */
+val backupLocalDist by tasks.registering(Copy::class) {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Backs up a local installation to build dir before starting to overwrite."
+    val localDist = xdkBuild.resolveLocalXdkInstallation()
+    val dest = xdkDist.getLocalDistBackupDir(localDist.name)
+    from(localDist).into(dest)
+    doLast {
+        logger.lifecycle("$prefix Backed up local installation at $localDist to ${dest.get()}")
+    }
+}
+
+val purgeLocalDist by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Remove any existing local XDK distribution."
+    dependsOn(backupLocalDist)
+    mustRunAfter(backupLocalDist)
+    doLast {
+        val localDistDir = findLocalXdkInstallation()
+        val allowOverwrite = getXdkPropertyBoolean("org.xtclang.build.allowOverwriteLocalDist", true)
+        if (localDistDir != null) {
+            if (!allowOverwrite) {
+                logger.lifecycle("$prefix '$name' will purge and replace existing local installation at: '$localDistDir'.")
+                delete(localDistDir)
+                mkdir(localDistDir)
+            } else {
+                logger.lifecycle("$prefix '$name' will overwrite existing local installation at '$localDistDir'.")
             }
         }
-        else {
-            println("*** Failure building \"distEXE\": Missing \"makensis\" command")
-        }
     }
 }
 
-tasks.register("dist") {
-    group = "Distribution"
-    description = "Create the various XDK distributions"
+/**
+ * Overwrite or install a local distribution of the XDK.
+ *
+ * TODO: This should be the only task that triggers the buildRepo plugin. Can we do that without
+ *   knowing if this should be run or not, avoiding configuration of the extra publication if
+ *   task is not set to run?
+ *
+ * TODO: It is unfortunate that we don't copy the entire XDK distribution over the existing
+ *   install, because it creates confusion about dependencies. Ideally, the entire local istall
+ *   should be overwritten with a complete self-contained new distribution, but this is not the
+ *   case in "master", and we first implement it exactly like that, semantically, to make sure
+ *   nothing breaks in existing use cases. All in all, it's rather horrible to go in and replace
+ *   parts of an existing home brew (or other package manager) based installation, and should
+ *   really never be allowed, as it leads to bit skew.
+ */
+val installLocalDist by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Creates an XDK installation, and overwrites any local installation with it."
 
-    dependsOn(prepareDirs)
-    dependsOn(distTGZ)
-    dependsOn(distZIP)
-    dependsOn(distEXE)
+    dependsOn(purgeLocalDist, installDist)
+    mustRunAfter(purgeLocalDist)
+
+    doLast {
+        val localDistDir = xdkBuild.resolveLocalXdkInstallation() // throws exception if file not found.
+        val localDistVersion = localDistDir.name
+        logger.lifecycle("$prefix '$name' Overwriting local installation: $localDistVersion (path: '${localDistDir.absolutePath}')...")
+        copy {
+            from(project.layout.buildDirectory.dir("install/xdk"))
+            into(localDistDir)
+        }
+        logger.lifecycle("$prefix '$name' Finished.")
+        XdkBuildLogic.listDirWithTimestamps(localDistDir).lines().forEach {
+            logger.lifecycle("$prefix   $it")
+        }
+    }
 }

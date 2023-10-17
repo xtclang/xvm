@@ -1,154 +1,114 @@
 /*
- * Test utilities.
+ * Test utilities.  This is a standalone XTC project, which should only depend on the XDK.
+ * If we want to use it to debug the XDK, that is also fine, as it will do dependency
+ * substitution on the XDK and XTC Plugin (and Javatools and other dependencies) correctly,
+ * through included builds, anyway.
+ *
+ * We can use the xtcRun method, that is configured in the closure below,
+ * or we can use the xtcRunAll method to resolve amd run everything runnable in the source set.
  */
 
-val xdk          = project(":xdk");
-val javatools    = project(":javatools")
-val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
-
-val tests = listOf<String>(
-    "src/main/x/annos.x",
-    "src/main/x/array.x",
-    "src/main/x/collections.x",
-    "src/main/x/defasn.x",
-    "src/main/x/exceptions.x",
-    "src/main/x/generics.x",
-    "src/main/x/innerOuter.x",
-    "src/main/x/files.x",
-    "src/main/x/IO.x",
-    "src/main/x/lambda.x",
-    "src/main/x/literals.x",
-    "src/main/x/loop.x",
-    "src/main/x/nesting.x",
-    "src/main/x/numbers.x",
-    "src/main/x/prop.x",
-    "src/main/x/maps.x",
-    "src/main/x/misc.x",
-    "src/main/x/queues.x",
-    "src/main/x/services.x",
-    "src/main/x/reflect.x",
-    "src/main/x/regex.x",
-    "src/main/x/tuple.x")
-
-val testModules = listOf<String>(
-    "TestAnnotations",
-    "TestArray",
-    "TestCollections",
-    "TestDefAsn",
-    "TestTry",
-    "TestGenerics",
-    "TestInnerOuter",
-    "TestFiles",
-    "TestIO",
-    "TestLambda",
-    "TestLiterals",
-    "TestLoops",
-    "TestNesting",
-    "TestNumbers",
-    "TestProps",
-    "TestMaps",
-    "TestMisc",
-    "TestQueues",
-    "TestServices",
-    "TestReflection",
-    "TestRegularExpressions",
-    "TestTuples")
-
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-    delete("$buildDir")
+plugins {
+    alias(libs.plugins.xdk.build.version)
+    alias(libs.plugins.xtc)
+    alias(libs.plugins.tasktree)
 }
 
-val compileAll = tasks.register<JavaExec>("compileAll") {
-    group       = "Build"
-    description = "Compile all tests"
-
-    dependsOn(xdk.tasks["build"])
-
-    classpath(javatoolsJar)
-
-    val opts = listOf<String>(
-        "-o", "$buildDir",
-        "-L", "${xdk.buildDir}/xdk/lib",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc")
-
-    args(opts + tests + "src/main/x/runner.x")
-    mainClass.set("org.xvm.tool.Compiler")
+dependencies {
+    xdk(libs.xdk)
 }
 
-tasks.register<JavaExec>("runAll") {
-    group       = "Test"
-    description = "Run all tests"
-
-    dependsOn(xdk.tasks["build"])
-
-    // the first two paths contain classes that are present in the javatoolsJar,
-    // but gradle's classpath() doesn't allow combining a jar with a regular path
-    classpath(
-        "${javatools.buildDir}/classes/java/main",
-        "${javatools.buildDir}/resources/main",
-        "${javatools.buildDir}/classes/java/test")
-
-    args(tests)
-    mainClass.set("org.xvm.runtime.TestConnector")
+// TODO: Add source set for negative tests.
+sourceSets {
+    main {
+        xtc {
+            include(
+                "**/annos.x",
+                "**/array.x",
+                "**/collections.x",
+                "**/defasn.x",
+                "**/exceptions.x",
+                "**/FizzBuzz.x",
+                "**/generics.x",
+                "**/innerOuter.x",
+                "**/files.x",
+                "**/IO.x",
+                "**/lambda.x",
+                "**/literals.x",
+                "**/loop.x",
+                "**/nesting.x",
+                "**/numbers.x",
+                "**/prop.x",
+                "**/maps.x",
+                "**/misc.x",
+                "**/queues.x",
+                "**/services.x",
+                "**/reflect.x",
+                "**/regex.x",
+                "**/tuple.x"
+            )
+        }
+    }
 }
 
-tasks.register<JavaExec>("runAllParallel") {
-    group       = "Test"
-    description = "Run all tests"
+xtcRun {
+    /*
+     * Run the XTC command in its built-in verbose mode.
+     */
+    verbose = true
 
-    dependsOn(xdk.tasks["build"], compileAll)
+    /*
+     * Change this to false to run module from the build thread to enable more seamless debugging. Not recommended for production.
+     */
+    fork = true
 
-    classpath(javatoolsJar)
+    /*
+     * Use an XTC native launcher (requires a local XDK installation on the test machine.)
+     */
+    useNativeLauncher = false
 
-    val opts = listOf<String>(
-        "-L", "${xdk.buildDir}/xdk/lib",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "$buildDir",
-        "Runner")
+    /*
+     * Do or do not swallow and redirect execution output to the logging framework. If true (default),
+     * any output to stdout or stderr will simply be sent to the console, i.e. the default behavior for
+     * an XTC run.
+     */
+    logOutputs = false
 
-    args(opts + testModules)
-    mainClass.set("org.xvm.tool.Runner")
-}
+    /*
+     * By default, a Gradle task swallows stdin, but it's possible to override standard input and
+     * output for any XTC launcher task.
+     *
+     * To redirect any I/O stream, for example if you want to input data to the XTC debugger or
+     * to the console, such as credentials/interactive prompts, the error, output and input streams
+     * can be redirected to a custom source. Note that with logOutputs = true, there might be
+     * surprising behavior, but it's not wrong per-se. It's probably just something that's good to
+     * avoid.
+     */
+    // stdin = System.`in`
 
-val compileOne = tasks.register<JavaExec>("compileOne") {
-    description = "Compile a \"testName\" test"
+    /*
+     * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
+     */
+    jvmArgs("-showversion")
 
-    dependsOn(xdk.tasks["build"])
+    /*
+     * Execute TestFizzBuzz with the Hello World arguments.
+     *
+     * Note that the second arg is passed as a provider, which means that it will not be evaluated
+     * anywhere in the Gradle build/run lifecycle until it is actually needed, which is just before
+     * the Runner executes. This is the preferred way of passing arguments to things in a Gradle build,
+     * and we will incrementally add support for any argument being either a direct value or a
+     * provider. Typically, everything in Gradle has build DSL methods on the form "method(Object... args)",
+     * which is rather ugly, but that is the standard way of allowing different types of arguments to be
+     * passed. This is because some may be lazy and some may not. There are likely more examples.
+     */
+    module {
+        moduleName = "TestFizzBuzz" // Will add other ways to resolve modules too.
 
-    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+        moduleArgs("Hello, ", "World!")
+        // Just as with all standardized Gradle argument APIs, we can use an argument provider too, of course:
+        // moduleArgs(provider { listOfNotNull(helloArg, worldArg) })
 
-    classpath(javatoolsJar)
-
-    args("-o", "$buildDir",
-         "-L", "${xdk.buildDir}/xdk/lib",
-         "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-         "-L", "$buildDir",
-         "src/main/x/$name.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-tasks.register<JavaExec>("runOne") {
-    group       = "Test"
-    description = "Run a \"testName\" test"
-
-    dependsOn(xdk.tasks["build"], compileOne)
-
-    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
-
-    classpath(javatoolsJar)
-
-    val opts = listOf<String>(
-        "-verbose",
-        "-L", "${xdk.buildDir}/xdk/lib",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "$buildDir")
-
-    args(opts + "src/main/x/$name.x")
-    mainClass.set("org.xvm.tool.Runner")
+        // methodName = "run" // Leave this commented out to keep "run" as the default method to call in the module.
+    }
 }
