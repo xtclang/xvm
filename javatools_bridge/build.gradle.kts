@@ -1,18 +1,24 @@
 /*
  * Build file for the JavaTools "bridge" (aka "_native") module that is used to connect the Java
  * runtime to the Ecstasy type system.
- *
- * This project does NOT build the javatools_bridge.xtc file. (The :xdk project builds it.)
  */
 
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-    // this project does not build anything itself, so there is nothing to clean
+plugins {
+    id("org.xvm.build.version")
+    alias(libs.plugins.xtc)}
+
+dependencies {
+    xtcJavaTools(libs.javatools)
+    xtcModule(libs.xdk.ecstasy)
+    xtcModule(libs.xdk.aggregate)
+    xtcModule(libs.xdk.collections)
+    xtcModule(libs.xdk.crypto)
+    xtcModule(libs.xdk.json)
+    xtcModule(libs.xdk.net)
+    xtcModule(libs.xdk.web)
 }
 
-tasks.register("build") {
-    group       = "Build"
-    description = "Build this project"
-    // this project does not build anything itself
+xtcCompile {
+    // TODO: outputFilename = "_native.xtc" has a bug. Figure out why.
+    renameOutput.put("_native.xtc", "javatools_bridge.xtc")
 }
