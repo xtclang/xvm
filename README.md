@@ -308,7 +308,7 @@ document.
 If you would like to contribute to the Ecstasy Project, it might be an idea to use the
 very latest version by invoking
 
-    gradlew dist-local
+    gradlew installLocalDist
 
 This copies the build from the xvm directory into the brew cellar.
 
