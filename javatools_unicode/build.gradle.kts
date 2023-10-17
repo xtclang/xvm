@@ -6,24 +6,49 @@
  * data) using the values in the *.txt files that are outputted by running this.
  */
 
+import de.undercouch.gradle.tasks.download.Download
+import org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP
+
 plugins {
-    application
+    id("org.xvm.build.java")
+    alias(libs.plugins.download)
 }
 
 dependencies {
-    implementation("com.sun.activation:javax.activation:1.2.0")
-    implementation("jakarta.xml.bind:jakarta.xml.bind-api:2.3.2")
-    implementation("org.glassfish.jaxb:jaxb-runtime:2.3.2")
-    implementation("org.xtclang.xvm:javatools_utils:")
+    implementation(libs.bundles.unicode)
+    implementation(libs.javatools.utils)
 }
 
-// TODO: All Java configuration will move to build-logic in the Gradle language support branch,
-//   but we leave this here for the moment.
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+internal val ucdZip = "http://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
+
+/**
+ * Download the ucd zip file from the unicode site, if it does not exist.
+ */
+val download = tasks.register<Download>("downloadUcdFlatZip") {
+    overwrite(false)
+    src(ucdZip)
+    dest(project.mkdir(project.layout.buildDirectory.dir("ucd")))
 }
 
-application {
-    mainClass.set("org.xvm.tool.BuildUnicodeTables")
+/**
+ * Build the javatools-unicode jar
+ */
+val jar : TaskProvider<Jar> = tasks.named<Jar>("jar")
+
+val run by tasks.registering {
+    group = APPLICATION_GROUP
+    description = "Run the BuildUnicodeTables tool, after downloading the latest available data. This rebuilds our Unicode tables."
+    dependsOn(tasks.assemble, download)
+    outputs.dir(project.layout.buildDirectory.dir("resources/main/unicode"))
+    doLast {
+        val unicodeJar = jar.get().archiveFile
+        val localUcdZip = download.get().outputs.files.singleFile
+        logger.lifecycle("Downloaded unicode file: ${localUcdZip.absolutePath}")
+        javaexec {
+            classpath(configurations.runtimeClasspath, unicodeJar)
+            args(localUcdZip.absolutePath)
+            mainClass.set("org.xvm.tool.BuildUnicodeTables")
+        }
+    }
 }
+
