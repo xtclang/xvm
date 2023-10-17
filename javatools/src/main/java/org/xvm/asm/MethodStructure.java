@@ -737,7 +737,7 @@ public class MethodStructure
      */
     public void setAst(BinaryAST astRoot, RegisterAST[] aAstParams)
         {
-        if (astRoot != m_ast)
+        if (astRoot != m_ast || aAstParams != m_aAstParams)
             {
             m_ast        = astRoot;
             m_aAstParams = aAstParams;
@@ -1165,6 +1165,7 @@ public class MethodStructure
                 }
             if (ast != null)
                 {
+                registry.init(m_aAstParams);
                 ast.prepareWrite(registry);
                 }
 

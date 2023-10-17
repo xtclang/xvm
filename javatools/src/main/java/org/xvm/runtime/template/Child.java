@@ -12,7 +12,7 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xService.ServiceHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.AsyncHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
@@ -107,7 +107,7 @@ public class Child
 
     private FunctionHandle makeAsyncHandle(ObjectHandle hChild, CallChain chain)
         {
-        return new xRTFunction.AsyncHandle(hChild.getComposition().getContainer(), chain)
+        return new AsyncHandle(hChild.getComposition().getContainer(), chain)
             {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)

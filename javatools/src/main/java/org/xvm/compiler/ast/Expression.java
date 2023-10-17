@@ -804,7 +804,7 @@ public abstract class Expression
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (atypeActual == null)
             {
-            assert !fit.isFit() && aconstVal == null && errs.hasSeriousErrors();
+            assert !fit.isFit() && aconstVal == null && (errs.hasSeriousErrors() || errs.isSilent());
             m_fit = TypeFit.NoFit;
             return null;
             }

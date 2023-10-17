@@ -138,6 +138,9 @@ public class EvalCompiler
             lambda.configureLambda(aparamParams, 0, aparamRets);
             lambda.getIdentityConstant().setSignature(
                     pool.ensureSignatureConstant("->", atypeParams, atypeRets));
+
+            // the lambda signature may have changed; re-generate the "bast" parameters
+            lambda.setAst(lambda.getAst(), astMethod.f_ctx.collectParameters());
             lambda.forceAssembly(pool);
 
             m_aiArg = astMethod.getArguments();
