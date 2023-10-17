@@ -2,7 +2,6 @@
 *.com
 *.class
 *.dll
-*.exe
 *.o
 *.so
 *.dSYM
@@ -58,6 +57,8 @@ prj/
 .idea/
 .gradle/
 !gradle-wrapper.jar
+!javatools_launcher/src/main/resources/javatools/javatools.jar
+!javatools_launcher/src/main/resources/exe/*
 
 # File-based project format IDEA (legacy)
 *.iml

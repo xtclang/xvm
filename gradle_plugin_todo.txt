@@ -1,0 +1,210 @@
+
+1) Port the example/webapp to XTC Gradle / node Gradle, to show how well this works. Depend only on
+
+In a settings file
+--
+dependencyResolutionManagement {
+  repositories {
+    mavenCentral()
+    maven {
+      url = uri("https://maven.pkg.github.com/xtclang/xvm")
+      credentials {
+         username = "lagergren"
+         password = <get a property that is your git secret>
+      }
+   }
+}
+
+
+In a build file:
+--
+plugins {
+  id("org.xvm.xtc-plugin")
+
+dependencies {
+  xdk("org.xvm:xdk").version("0.4.6")
+}
+
+
+2) Dynamically load the javatools.jar from the correct environment, so that we can avoid forking and massively speed up the build.
+
+3) ..
+
+
+
+taskTree for xvm publish:
+------------------------------------------------------------
+Project ':xdk'
+------------------------------------------------------------
+
+:publish
+\--- :publishXdkArchivePublicationToGitHubRepository
+     +--- :distZip
+     |    +--- :processResources
+     |    +--- :javatools-bridge:compileXtc
+     |    |    +--- :javatools-bridge:extractXdk
+     |    |    +--- :javatools-bridge:jar
+     |    |    |    +--- :javatools-bridge:classes
+     |    |    |    |    +--- :javatools-bridge:compileJava
+     |    |    |    |    \--- :javatools-bridge:processResources
+     |    |    |    \--- :javatools-bridge:compileJava *
+     |    |    +--- :lib-aggregate:compileXtc
+     |    |    |    +--- :lib-aggregate:extractXdk
+     |    |    |    +--- :lib-aggregate:jar
+     |    |    |    |    +--- :lib-aggregate:classes
+     |    |    |    |    |    +--- :lib-aggregate:compileJava
+     |    |    |    |    |    \--- :lib-aggregate:processResources
+     |    |    |    |    \--- :lib-aggregate:compileJava *
+     |    |    |    +--- :lib-ecstasy:compileXtc
+     |    |    |    |    +--- :javatools-turtle:processResources
+     |    |    |    |    +--- :lib-ecstasy:extractXdk
+     |    |    |    |    +--- :lib-ecstasy:jar
+     |    |    |    |    |    +--- :lib-ecstasy:classes
+     |    |    |    |    |    |    +--- :lib-ecstasy:compileJava
+     |    |    |    |    |    |    |    \--- :jar (included build 'javatools-unicode')
+     |    |    |    |    |    |    \--- :lib-ecstasy:processResources
+     |    |    |    |    |    \--- :lib-ecstasy:compileJava *
+     |    |    |    |    \--- :jar (included build 'javatools')
+     |    |    |    \--- :jar (included build 'javatools') *
+     |    |    +--- :lib-collections:compileXtc
+     |    |    |    +--- :lib-collections:extractXdk
+     |    |    |    +--- :lib-collections:jar
+     |    |    |    |    +--- :lib-collections:classes
+     |    |    |    |    |    +--- :lib-collections:compileJava
+     |    |    |    |    |    \--- :lib-collections:processResources
+     |    |    |    |    \--- :lib-collections:compileJava *
+     |    |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    |    \--- :jar (included build 'javatools') *
+     |    |    +--- :lib-crypto:compileXtc
+     |    |    |    +--- :lib-crypto:extractXdk
+     |    |    |    +--- :lib-crypto:jar
+     |    |    |    |    +--- :lib-crypto:classes
+     |    |    |    |    |    +--- :lib-crypto:compileJava
+     |    |    |    |    |    \--- :lib-crypto:processResources
+     |    |    |    |    \--- :lib-crypto:compileJava *
+     |    |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    |    \--- :jar (included build 'javatools') *
+     |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    +--- :lib-json:compileXtc
+     |    |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    |    +--- :lib-json:extractXdk
+     |    |    |    +--- :lib-json:jar
+     |    |    |    |    +--- :lib-json:classes
+     |    |    |    |    |    +--- :lib-json:compileJava
+     |    |    |    |    |    \--- :lib-json:processResources
+     |    |    |    |    \--- :lib-json:compileJava *
+     |    |    |    \--- :jar (included build 'javatools') *
+     |    |    +--- :lib-net:compileXtc
+     |    |    |    +--- :lib-crypto:compileXtc *
+     |    |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    |    +--- :lib-net:extractXdk
+     |    |    |    +--- :lib-net:jar
+     |    |    |    |    +--- :lib-net:classes
+     |    |    |    |    |    +--- :lib-net:compileJava
+     |    |    |    |    |    \--- :lib-net:processResources
+     |    |    |    |    \--- :lib-net:compileJava *
+     |    |    |    \--- :jar (included build 'javatools') *
+     |    |    +--- :lib-web:compileXtc
+     |    |    |    +--- :lib-aggregate:compileXtc *
+     |    |    |    +--- :lib-collections:compileXtc *
+     |    |    |    +--- :lib-crypto:compileXtc *
+     |    |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    |    +--- :lib-json:compileXtc *
+     |    |    |    +--- :lib-net:compileXtc *
+     |    |    |    +--- :lib-web:extractXdk
+     |    |    |    +--- :lib-web:jar
+     |    |    |    |    +--- :lib-web:classes
+     |    |    |    |    |    +--- :lib-web:compileJava
+     |    |    |    |    |    \--- :lib-web:processResources
+     |    |    |    |    \--- :lib-web:compileJava *
+     |    |    |    \--- :jar (included build 'javatools') *
+     |    |    \--- :jar (included build 'javatools') *
+     |    +--- :javatools-launcher:processResources
+     |    +--- :lib-aggregate:compileXtc *
+     |    +--- :lib-collections:compileXtc *
+     |    +--- :lib-crypto:compileXtc *
+     |    +--- :lib-ecstasy:compileXtc *
+     |    +--- :lib-json:compileXtc *
+     |    +--- :lib-jsondb:compileXtc
+     |    |    +--- :lib-aggregate:compileXtc *
+     |    |    +--- :lib-collections:compileXtc *
+     |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    +--- :lib-json:compileXtc *
+     |    |    +--- :lib-jsondb:extractXdk
+     |    |    +--- :lib-jsondb:jar
+     |    |    |    +--- :lib-jsondb:classes
+     |    |    |    |    +--- :lib-jsondb:compileJava
+     |    |    |    |    \--- :lib-jsondb:processResources
+     |    |    |    \--- :lib-jsondb:compileJava *
+     |    |    +--- :lib-oodb:compileXtc
+     |    |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    |    +--- :lib-oodb:extractXdk
+     |    |    |    +--- :lib-oodb:jar
+     |    |    |    |    +--- :lib-oodb:classes
+     |    |    |    |    |    +--- :lib-oodb:compileJava
+     |    |    |    |    |    \--- :lib-oodb:processResources
+     |    |    |    |    \--- :lib-oodb:compileJava *
+     |    |    |    \--- :jar (included build 'javatools') *
+     |    |    \--- :jar (included build 'javatools') *
+     |    +--- :lib-net:compileXtc *
+     |    +--- :lib-oodb:compileXtc *
+     |    +--- :lib-web:compileXtc *
+     |    +--- :lib-webauth:compileXtc
+     |    |    +--- :lib-aggregate:compileXtc *
+     |    |    +--- :lib-collections:compileXtc *
+     |    |    +--- :lib-crypto:compileXtc *
+     |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    +--- :lib-json:compileXtc *
+     |    |    +--- :lib-net:compileXtc *
+     |    |    +--- :lib-oodb:compileXtc *
+     |    |    +--- :lib-web:compileXtc *
+     |    |    +--- :lib-webauth:extractXdk
+     |    |    +--- :lib-webauth:jar
+     |    |    |    +--- :lib-webauth:classes
+     |    |    |    |    +--- :lib-webauth:compileJava
+     |    |    |    |    \--- :lib-webauth:processResources
+     |    |    |    \--- :lib-webauth:compileJava *
+     |    |    \--- :jar (included build 'javatools') *
+     |    +--- :lib-xenia:compileXtc
+     |    |    +--- :lib-aggregate:compileXtc *
+     |    |    +--- :lib-collections:compileXtc *
+     |    |    +--- :lib-crypto:compileXtc *
+     |    |    +--- :lib-ecstasy:compileXtc *
+     |    |    +--- :lib-json:compileXtc *
+     |    |    +--- :lib-net:compileXtc *
+     |    |    +--- :lib-web:compileXtc *
+     |    |    +--- :lib-xenia:extractXdk
+     |    |    +--- :lib-xenia:jar
+     |    |    |    +--- :lib-xenia:classes
+     |    |    |    |    +--- :lib-xenia:compileJava
+     |    |    |    |    \--- :lib-xenia:processResources
+     |    |    |    \--- :lib-xenia:compileJava *
+     |    |    \--- :jar (included build 'javatools') *
+     |    \--- :jar (included build 'javatools') *
+     \--- :generatePomFileForXdkArchivePublication
+
+
+
+Tasktree for :plugin
+
+Project ':plugin'
+------------------------------------------------------------
+
+:publish
++--- :publishPluginMavenPublicationToGitHubRepository
+|    +--- :generateMetadataFileForPluginMavenPublication
+|    |    \--- :jar
+|    |         +--- :classes
+|    |         |    +--- :compileJava
+|    |         |    \--- :processResources
+|    |         |         \--- :pluginDescriptors
+|    |         \--- :compileJava *
+|    +--- :generatePomFileForPluginMavenPublication
+|    \--- :jar *
++--- :publishXtcPluginPluginMarkerMavenPublicationToGitHubRepository
+|    \--- :generatePomFileForXtcPluginPluginMarkerMavenPublication
+\--- :publishXtcPluginPublicationToGitHubRepository
+     +--- :generateMetadataFileForXtcPluginPublication
+     |    \--- :jar *
+     +--- :generatePomFileForXtcPluginPublication
+     \--- :jar *
