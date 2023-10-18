@@ -32,7 +32,7 @@ class AssignAST extends AST {
     if( _op == Operator.AsnIfNotFalse || _op == Operator.AsnIfNotNull) {
       String type = _kids[0].type();
       BlockAST blk = enclosing_block();
-      if( _kids[0] instanceof DefRegAST def ) {
+      if( _kids[0] instanceof DefRegAST ) {
         // Use the _par parent to find nearest enclosing If or Assert for a conditional assignment
         AST top = _par;
         while( !(top instanceof IfAST) && !(top instanceof InvokeAST call && call._meth.equals("xassert")) )

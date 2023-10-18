@@ -292,6 +292,9 @@ public class XClzBuilder {
       put("Boolean+ecstasy/Boolean.x","boolean");
       put("Char+ecstasy/text/Char.x","char");
       put("Console+ecstasy/io/Console.x","Console");
+      put("Exception+ecstasy/Exception.x","Exception");
+      put("IllegalArgument+ecstasy.x","IllegalArgumentException");
+      put("IllegalState+ecstasy.x","IllegalStateX");
       put("Int64+ecstasy/numbers/Int64.x","long");
       put("IntLiteral+ecstasy/numbers/IntLiteral.x","long");
       put("Object+ecstasy/Object.x","Object");

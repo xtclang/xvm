@@ -144,6 +144,7 @@ public abstract class AST {
     case SwitchStmt   ->   SwitchAST.make(X,false);
     case TemplateExpr -> TemplateAST.make(X);
     case TernaryExpr  ->  TernaryAST.make(X);
+    case TryCatchStmt -> TryCatchAST.make(X);
     case TupleExpr    ->     ListAST.make(X,true);
     case UnaryOpExpr  ->    UniOpAST.make(X,false);
     case WhileDoStmt  ->    WhileAST.make(X);
