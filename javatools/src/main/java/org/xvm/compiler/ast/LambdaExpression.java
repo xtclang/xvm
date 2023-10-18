@@ -1143,8 +1143,8 @@ public class LambdaExpression
                         }
                     else
                         {
-                        // the source is a register (type parameter); resolve to its constraint
-                        regFormal = (Register) argFormal;
+                        // the source is a register (type parameter); drop any inferences
+                        regFormal = ((Register) argFormal).getOriginalRegister();
 
                         // make sure that every lambda's parameter of this formal type is redefined
                         // to point to the corresponding lambda's type parameter
