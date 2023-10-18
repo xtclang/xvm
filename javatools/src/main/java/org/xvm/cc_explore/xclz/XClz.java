@@ -14,7 +14,7 @@ public abstract class XClz {
 
   // Assert is always-on runtime test
   public static void xassert( boolean cond ) {
-    if( !cond ) throw new AssertionError();
+    if( !cond ) throw new IllegalStateX();
   }
   public static void xassert( ) { xassert(false); }
   
