@@ -73,12 +73,12 @@ public class xNibbleArray
 
             case "asByteArray":
                 {
-                ArrayHandle hArray = (ArrayHandle) hTarget;
-                long        cBits  = hArray.m_hDelegate.m_cSize;
-                if (cBits % 8 != 0)
+                ArrayHandle hArray   = (ArrayHandle) hTarget;
+                long        cNibbles = hArray.m_hDelegate.m_cSize;
+                if (cNibbles % 2 != 0)
                     {
                     return frame.raiseException(xException.outOfBounds(
-                            frame, "Invalid array size: " + cBits));
+                            frame, "Invalid array size: " + cNibbles));
                     }
 
                 Mutability     mutability = hArray.m_mutability;
