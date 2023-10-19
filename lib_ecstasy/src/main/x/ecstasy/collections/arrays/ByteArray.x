@@ -924,4 +924,15 @@ mixin ByteArray<Element extends Byte>
                 ? asNibbleArray().appendTo(buf, sep, pre, post)
                 : super(buf, sep, pre, post, limit, trunc, render);
     }
+
+    @Override
+    String toString(
+            String                    sep    = "",
+            String?                   pre    = "0x",
+            String?                   post   = Null,
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null) {
+        return super(sep, pre, post, limit, trunc, render);
+    }
 }
