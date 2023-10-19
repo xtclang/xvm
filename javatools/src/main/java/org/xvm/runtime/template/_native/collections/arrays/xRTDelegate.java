@@ -247,7 +247,7 @@ public class xRTDelegate
             case "getElement":
                 return extractArrayValue(frame, hTarget, ((JavaLong) hArg).getValue(), iReturn);
 
-            case "reify": // Array reify(Mutability? mutability = Null)
+            case "reify": // ArrayDelegate reify(Mutability? mutability = Null)
                 {
                 DelegateHandle hDelegate  = (DelegateHandle) hTarget;
                 Mutability     mutability = hArg == ObjectHandle.DEFAULT || hArg == xNullable.NULL

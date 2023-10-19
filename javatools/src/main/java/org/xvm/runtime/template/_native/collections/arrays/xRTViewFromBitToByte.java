@@ -85,7 +85,7 @@ public class xRTViewFromBitToByte
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof BitView tView)
+        if (tSource instanceof ByteView tView)
             {
             byte[] abBits = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
