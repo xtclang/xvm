@@ -34,7 +34,6 @@ public class UnaryOpExprAST
         Protected ("private:", true , NodeType.UnaryOpExpr),
         Public    ("public:" , true , NodeType.UnaryOpExpr),
         Pack      (""        , true , NodeType.UnaryOpExpr),
-        Convert   (".TO()"   , false, NodeType.UnaryOpExpr),
         ToInt     (".TOINT()", false, NodeType.UnaryOpExpr),
         Trace     (".TRACE()", false, NodeType.UnaryOpExpr),
         ;
@@ -74,6 +73,14 @@ public class UnaryOpExprAST
 
     public Operator getOp() {
         return op;
+    }
+
+    @Override
+    public boolean isConditional() {
+        // "Trace" is a "pass-through" operation; infer the answer from the underlying expression
+        return op == Operator.Trace
+                ? getExpr().isConditional()
+                : super.isConditional();
     }
 
     @Override

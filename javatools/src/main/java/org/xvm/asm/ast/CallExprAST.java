@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.CallAsyncExpr;
@@ -18,7 +21,7 @@ public class CallExprAST
         extends CallableExprAST {
 
     private final NodeType nodeType;
-    private ExprAST     function;
+    private ExprAST        function;
 
     CallExprAST(NodeType nodeType) {
         this.nodeType = nodeType;
@@ -42,6 +45,16 @@ public class CallExprAST
 
     public boolean isAsync() {
         return nodeType == CallAsyncExpr;
+    }
+
+    @Override
+    public boolean isConditional() {
+        if (function instanceof ConstantExprAST constExpr) {
+            MethodConstant  methodConst  = (MethodConstant) constExpr.getValue();
+            MethodStructure methodStruct = (MethodStructure) methodConst.getComponent();
+            return methodStruct.isConditionalReturn();
+        }
+        return false;
     }
 
     @Override

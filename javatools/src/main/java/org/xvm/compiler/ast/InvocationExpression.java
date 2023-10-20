@@ -1697,15 +1697,17 @@ public class InvocationExpression
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
         // it to the desired function if necessary
-        TypeConstant typeFn = argFn.getType().resolveTypedefs();
-        if (m_idConvert != null)
+        TypeConstant   typeFn = argFn.getType().resolveTypedefs();
+        MethodConstant idConv = m_idConvert;
+        if (idConv != null)
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
-            typeFn = m_idConvert.getRawReturns()[0];
+            typeFn = idConv.getRawReturns()[0];
             Register regFn = new Register(typeFn, null, Op.A_STACK);
-            code.add(new Invoke_01(argFn, m_idConvert, regFn));
+            code.add(new Invoke_01(argFn, idConv, regFn));
             argFn = regFn;
-            astFn = new ConvertExprAST(astFn, typeFn, m_idConvert);
+            astFn = new ConvertExprAST(astFn,
+                        new TypeConstant[]{typeFn}, new MethodConstant[]{idConv});
             }
 
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);

@@ -205,7 +205,8 @@ public class CmpChainExpression
                     MethodConstant method = aConvMethod[i];
                     if (method != null)
                         {
-                        listExprs.set(i, new ConvertExpression(listExprs.get(i), 0, method, errs));
+                        listExprs.set(i, new ConvertExpression(listExprs.get(i),
+                                                new MethodConstant[]{method}, errs));
                         }
                     }
                 }

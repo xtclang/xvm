@@ -5,8 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.InvokeAsyncExpr;
@@ -23,7 +24,7 @@ public class InvokeExprAST
         extends CallableExprAST {
 
     private final NodeType nodeType;
-    private Constant       method;
+    private MethodConstant method;
     private ExprAST        target;
 
     InvokeExprAST(NodeType nodeType) {
@@ -33,7 +34,8 @@ public class InvokeExprAST
     /**
      * Construct an InvokeExprAST.
      */
-    public InvokeExprAST(Constant method, TypeConstant[] retTypes, ExprAST target, ExprAST[] args, boolean async) {
+    public InvokeExprAST(MethodConstant method, TypeConstant[] retTypes, ExprAST target,
+                         ExprAST[] args, boolean async) {
         super(retTypes, args);
 
         assert method != null && target != null;
@@ -47,12 +49,18 @@ public class InvokeExprAST
         return target;
     }
 
-    public Constant getMethod() {
+    public MethodConstant getMethod() {
         return method;
     }
 
     public boolean isAsync() {
         return nodeType == InvokeAsyncExpr;
+    }
+
+    @Override
+    public boolean isConditional() {
+        MethodStructure struct = (MethodStructure) method.getComponent();
+        return struct.isConditionalReturn();
     }
 
     @Override
@@ -65,7 +73,7 @@ public class InvokeExprAST
             throws IOException {
         super.readBody(in, res);
 
-        method = res.getConstant(readMagnitude(in));
+        method = (MethodConstant) res.getConstant(readMagnitude(in));
         target = readExprAST(in, res);
     }
 
@@ -73,7 +81,7 @@ public class InvokeExprAST
     public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
-        method = res.register(method);
+        method = (MethodConstant) res.register(method);
         target.prepareWrite(res);
     }
 
@@ -88,6 +96,7 @@ public class InvokeExprAST
 
     @Override
     public String toString() {
-        return target.toString() + '.' + method + (isAsync() ? "^" : "") + super.toString();
+        return target.toString() + '.' + method.getName() +
+                (isAsync() ? "^" : "") + super.toString();
     }
 }

@@ -5,32 +5,43 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * The Convert expressions.
  */
 public class ConvertExprAST
-        extends UnaryOpExprAST {
+        extends DelegatingExprAST {
 
-    private Constant convMethod;
+    private TypeConstant[] types;
+    private Constant[]     convMethods; // nulls are allowed
 
     ConvertExprAST() {}
 
-    public ConvertExprAST(ExprAST expr, TypeConstant type, Constant convMethod) {
-        super(expr, Operator.Convert, type);
+    public ConvertExprAST(ExprAST expr, TypeConstant[] types, MethodConstant[] convMethods) {
+        super(expr);
 
-        this.convMethod = convMethod;
+        assert types != null && Arrays.stream(types).allMatch(Objects::nonNull);
+        assert convMethods != null && convMethods.length <= types.length;
+
+        this.types       = types;
+        this.convMethods = convMethods;
     }
 
-    public Constant getConvMethod() {
-        return convMethod;
+    public Constant[] getConvMethods() {
+        return convMethods;
+    }
+
+    @Override
+    public boolean isConditional() {
+        return getExpr().isConditional();
     }
 
     @Override
@@ -39,18 +50,25 @@ public class ConvertExprAST
     }
 
     @Override
+    public TypeConstant getType(int i) {
+        return types[i];
+    }
+
+    @Override
     protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
         super.readBody(in, res);
 
-        convMethod = res.getConstant(readMagnitude(in));
+        types       = readTypeArray(in, res);
+        convMethods = readSparseConstArray(in, res, types.length);
     }
 
     @Override
     public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
-        convMethod = res.register(convMethod);
+        prepareConstArray(types, res);
+        prepareConstArray(convMethods, res);
     }
 
     @Override
@@ -58,11 +76,40 @@ public class ConvertExprAST
             throws IOException {
         super.writeBody(out, res);
 
-        writePackedLong(out, res.indexOf(convMethod));
+        writeConstArray(types, out, res);
+        writeSparseConstArray(convMethods, out, res);
     }
 
     @Override
     public String toString() {
-        return '(' + super.toString() + ")." + convMethod + "()";
+        if (convMethods.length == 1) {
+            MethodConstant convMethod = (MethodConstant) convMethods[0];
+            return getExpr().toString() + "." + convMethod.getName() + "()";
+        } else {
+            StringBuilder buff = new StringBuilder("(");
+            String        expr = getExpr().toString();
+            boolean       cond = isConditional();
+            for (int i = 0, c = convMethods.length; i < c; i++) {
+                MethodConstant convMethod = (MethodConstant) convMethods[i];
+
+                if (i > (cond ? 1 : 0)) {
+                    buff.append(", ");
+                }
+                if (convMethod == null) {
+                    if (cond && i == 0) {
+                        buff.append("conditional ");
+                    } else {
+                        buff.append(expr)
+                            .append("[").append(i).append("]");
+                    }
+                } else {
+                    buff.append(expr)
+                        .append("[").append(i).append("].")
+                        .append(convMethod.getName())
+                        .append('<').append(types[i].getValueString()).append(">()");
+                    }
+            }
+            return buff.append(')').toString();
+        }
     }
 }

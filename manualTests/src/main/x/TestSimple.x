@@ -2,12 +2,18 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Int      n     = 0x123456789ABCDEF0;
-        Nibble[] nibs  = n.toNibbleArray();
-        console.print($"{nibs=}");
-        Byte[]   bytes = nibs.toByteArray();  // used to produce a wrong array (size=2)
-        console.print($"{bytes=}");
-        Int[]    ints  = bytes.toInt64Array();
-        console.print($"{ints=}");
+
+        Char ch = '1';
+        assert Int n := ch.asciiDigit(), n == 1;
+
+        console.print($"{n=}");
+
+        if ((Int i, Int j) := foo()) {
+            console.print($"{i=} {j=}");
+        }
+    }
+
+    conditional (UInt8, Int8) foo() {
+        return True, 1, -1;
     }
 }

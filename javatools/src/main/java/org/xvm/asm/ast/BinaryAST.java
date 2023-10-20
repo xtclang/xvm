@@ -15,6 +15,7 @@ import static org.xvm.asm.Op.CONSTANT_OFFSET;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.readPackedLong;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -445,7 +446,10 @@ public abstract class BinaryAST {
     protected static void prepareConstArray(Constant[] values, ConstantResolver res) {
         int count = values == null ? 0 : values.length;
         for (int i = 0; i < count; ++i) {
-            values[i] = res.register(values[i]);
+            Constant value = values[i];
+            if (value != null) {
+                values[i] = res.register(value);
+            }
         }
     }
 
@@ -455,6 +459,41 @@ public abstract class BinaryAST {
         writePackedLong(out, count);
         for (int i = 0; i < count; ++i) {
             writePackedLong(out, res.indexOf(values[i]));
+        }
+    }
+
+    protected static Constant[] readSparseConstArray(DataInput in, ConstantResolver res, int count)
+            throws IOException {
+        assert count != 0;
+
+        long       mask   = readPackedLong(in);
+        Constant[] values = new Constant[count];
+        for (int i = 0; i < count; ++i) {
+            if ((mask & 1L << i) != 0) {
+                values[i] = res.getConstant(readMagnitude(in));
+            }
+        }
+        return values;
+    }
+
+    protected static void writeSparseConstArray(Constant[] values, DataOutput out, ConstantResolver res)
+            throws IOException {
+        assert values.length < 64;
+
+        long mask  = 0L;
+        int  count = values.length;
+        for (int i = 0; i < count; i++) {
+            if (values[i] != null) {
+                mask |= 1L << i;
+            }
+        }
+
+        writePackedLong(out, mask);
+        for (int i = 0; i < count; ++i) {
+            Constant value = values[i];
+            if (value != null) {
+                writePackedLong(out, res.indexOf(value));
+            }
         }
     }
 

@@ -111,11 +111,6 @@ public abstract class SyntheticExpression
             return new ConstantExprAST(toConstant());
             }
 
-        if (this instanceof ConvertExpression exprConv)
-            {
-            return new ConvertExprAST(expr.getExprAST(), getType(), exprConv.getConversionMethod());
-            }
-
         Operator op;
         if (this instanceof PackExpression)
             {

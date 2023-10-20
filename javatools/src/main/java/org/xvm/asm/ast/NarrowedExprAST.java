@@ -28,6 +28,6 @@ public class NarrowedExprAST
 
     @Override
     public String toString() {
-        return getExpr() + ".as(" + getType(0) + ')';
+        return getExpr() + ".as(" + getType(0).getValueString() + ')';
     }
 }

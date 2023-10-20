@@ -31,6 +31,15 @@ public abstract class ExprAST
     public abstract TypeConstant getType(int i);
 
     /**
+     * @return true iff this expression represents a conditional return, in which case the
+     *         <code>getCount()</code> must return the value greater than 1 and
+     *         <code>getType(0)</code> must yield the <code>Boolean</code> type
+     */
+    public boolean isConditional() {
+        return false;
+    }
+
+    /**
      * @return true iff this expression can theoretically be used as an L-Value; this is
      *     primarily intended to be used by assertions
      */

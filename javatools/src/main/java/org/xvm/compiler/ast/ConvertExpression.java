@@ -9,6 +9,10 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ConvertExprAST;
+import org.xvm.asm.ast.ExprAST;
+
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -19,8 +23,8 @@ import org.xvm.asm.op.Var;
 
 
 /**
- * A type conversion expression. This converts a value from the sub-expression into a value of a
- * different type.
+ * A type conversion expression. This converts values from the sub-expression into values of
+ * different types.
  */
 public class ConvertExpression
         extends SyntheticExpression
@@ -31,30 +35,36 @@ public class ConvertExpression
      * Construct a ConvertExpression that will convert a result from the passed expression to a
      * different type using the provided method.
      *
-     * @param expr    the expression that yields the raw results
-     * @param iVal    the index of the raw result that needs conversion
-     * @param idConv  the method of conversion
-     * @param errs    the ErrorListener to log errors to
+     * @param expr     the expression that yields the raw results
+     * @param iVal     the index of the raw result that needs conversion
+     * @param aidConv  the conversion methods (some can have nulls, indicating no-conversion)
+     * @param errs     the ErrorListener to log errors to
      */
-    public ConvertExpression(Expression expr, int iVal, MethodConstant idConv, ErrorListener errs)
+    public ConvertExpression(Expression expr, MethodConstant[] aidConv, ErrorListener errs)
         {
         super(expr);
 
-        assert iVal >= 0 && iVal < expr.getValueCount();
-        assert idConv != null;
-        assert idConv.getRawParams().length == 0
-            || (idConv.getComponent() instanceof MethodStructure method)
-                && method.getParamCount()-method.getDefaultParamCount() == 0;
-        assert idConv.getRawReturns().length > 0;
-        assert !idConv.getComponent().isStatic();
+        assert aidConv != null && aidConv.length >= 1;
+        for (MethodConstant idConv : aidConv)
+            {
+            if (idConv != null)
+                {
+                assert idConv.getRawParams().length == 0
+                    || idConv.getComponent() instanceof MethodStructure method
+                        && method.getRequiredParamCount() == 0;
+                assert idConv.getRawReturns().length > 0;
+                assert !idConv.getComponent().isStatic();
+                }
+            }
 
-        m_iVal   = iVal;
-        m_idConv = idConv;
+        m_aidConv = aidConv;
 
-        TypeConstant type = idConv.getRawReturns()[0];
         if (expr.isSingle())
             {
-            Constant val = null;
+            assert aidConv[0] != null;
+
+            TypeConstant type = aidConv[0].getRawReturns()[0];
+            Constant     val  = null;
             if (expr.isConstant())
                 {
                 // determine if compile-time conversion is supported
@@ -65,43 +75,40 @@ public class ConvertExpression
             }
         else
             {
-            TypeConstant[] aTypes = expr.getTypes().clone();
-            aTypes[iVal] = type;
-
-            Constant[] aVals = null;
-            if (expr.isConstant())
+            Constant[]     aVal  = null;
+            TypeConstant[] aType = expr.getTypes().clone();
+            for (int i = 0, c = aidConv.length; i < c; i++)
                 {
-                Constant[] aOldVals = expr.toConstants();
-                Constant   constNew = convertConstant(aOldVals[iVal], type);
-                if (constNew != null)
+                MethodConstant idConv = aidConv[i];
+                if (idConv != null)
                     {
-                    aVals = aOldVals.clone();
-                    aVals[iVal] = constNew;
+                    aType[i] = idConv.getRawReturns()[0];
                     }
                 }
 
-            finishValidations(null, null, aTypes, expr.getTypeFit().addConversion(), aVals, errs);
+            if (expr.isConstant())
+                {
+                aVal = expr.toConstants().clone();
+                for (int i = 0, c = aType.length; i < c; i++)
+                    {
+                    MethodConstant idConv = aidConv[i];
+                    if (idConv != null)
+                        {
+                        Constant constNew = convertConstant(aVal[i], aType[i]);
+                        if (constNew == null)
+                            {
+                            // there is no compile-time conversion available; continue with run-time
+                            // conversion
+                            // TODO GG: remove the soft assert below
+                            System.err.println("No conversion found for " + aVal[i]);
+                            }
+                        aVal[i] = constNew;
+                        }
+                    }
+                }
+
+            finishValidations(null, null, aType, expr.getTypeFit().addConversion(), aVal, errs);
             }
-        }
-
-
-    // ----- accessors -----------------------------------------------------------------------------
-
-    /**
-     * @return the index of the expression value within a multi-value expression, or 0 within a
-     *         single-value expression
-     */
-    public int getValueIndex()
-        {
-        return m_iVal;
-        }
-
-    /**
-     * @return the method id that specifies the conversion method
-     */
-    public MethodConstant getConversionMethod()
-        {
-        return m_idConv;
         }
 
 
@@ -146,36 +153,32 @@ public class ConvertExpression
     @Override
     public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        expr.generateVoid(ctx, code, errs);
+        getUnderlyingExpression().generateVoid(ctx, code, errs);
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (m_iVal != 0)
+        Expression     expr   = getUnderlyingExpression();
+        MethodConstant idConv = m_aidConv[0];
+        if (idConv == null)
             {
-            getUnderlyingExpression().generateAssignment(ctx, code, LVal, errs);
-            return;
-            }
-
-        if (isConstant())
-            {
-            super.generateAssignment(ctx, code, LVal, errs);
+            expr.generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
         // get the value to be converted
-        Argument argIn = getUnderlyingExpression().generateArgument(ctx, code, true, true, errs);
+        Argument argIn = expr.generateArgument(ctx, code, true, true, errs);
 
         // determine the destination of the conversion
         if (LVal.isLocalArgument())
             {
-            code.add(new Invoke_01(argIn, m_idConv, LVal.getLocalArgument()));
+            code.add(new Invoke_01(argIn, idConv, LVal.getLocalArgument()));
             }
         else
             {
             Register regResult = new Register(getType(), null, Op.A_STACK);
-            code.add(new Invoke_01(argIn, m_idConv, regResult));
+            code.add(new Invoke_01(argIn, idConv, regResult));
             LVal.assign(regResult, code, errs);
             }
         }
@@ -190,30 +193,15 @@ public class ConvertExpression
             return;
             }
 
-        if (m_iVal >= cVals)
-            {
-            getUnderlyingExpression().generateAssignments(ctx, code, aLVal, errs);
-            return;
-            }
-
-        if (isConstant())
-            {
-            super.generateAssignments(ctx, code, aLVal, errs);
-            return;
-            }
-
-        // replace the LVal to convert into with a temp, and ask the underlying expression to fill
+        // replace the LVals to convert into with a temp, and ask the underlying expression to fill
         // in the resulting set of LVals, and then convert that one value
-        int          iVal      = m_iVal;
-        Assignable[] aLValTemp = aLVal.clone();
-
-        Register regTemp = code.createRegister(getUnderlyingExpression().getTypes()[iVal]);
-        code.add(new Var(regTemp));
-
-        aLValTemp[iVal] = new Assignable(regTemp);
+        MethodConstant[] aidConv   = m_aidConv;
+        int              cConvs    = aidConv.length;
+        Expression       expr      = getUnderlyingExpression();
+        Assignable[]     aLValTemp = aLVal.clone();
 
         // create a temporary to hold the Boolean result for a conditional call, if necessary
-        boolean  fCond   = isConditionalResult() && iVal > 0;
+        boolean  fCond   = isConditionalResult();
         Register regCond = null;
         Label    lblSkip = new Label("skip_conv");
         if (fCond)
@@ -231,8 +219,19 @@ public class ConvertExpression
                 }
             }
 
-        // generate the pre-converted value
-        getUnderlyingExpression().generateAssignments(ctx, code, aLValTemp, errs);
+        for (int i = 0; i < cConvs; i++)
+            {
+            MethodConstant idConv = aidConv[i];
+            if (idConv != null)
+                {
+                Register regTemp = code.createRegister(expr.getTypes()[i]);
+                code.add(new Var(regTemp));
+                aLValTemp[i] = new Assignable(regTemp);
+                }
+            }
+
+        // generate the pre-converted values
+        expr.generateAssignments(ctx, code, aLValTemp, errs);
 
         // skip the conversion if the conditional result was False
         if (fCond)
@@ -244,17 +243,24 @@ public class ConvertExpression
             code.add(new JumpFalse(regCond, lblSkip));
             }
 
-        // determine the destination of the conversion
-        Assignable LVal = aLVal[iVal];
-        if (LVal.isLocalArgument())
+        for (int i = 0; i < cConvs; i++)
             {
-            code.add(new Invoke_01(regTemp, m_idConv, LVal.getLocalArgument()));
-            }
-        else
-            {
-            Register regResult = new Register(getTypes()[iVal], null, Op.A_STACK);
-            code.add(new Invoke_01(regTemp, m_idConv, regResult));
-            LVal.assign(regResult, code, errs);
+            MethodConstant idConv = aidConv[i];
+            if (idConv != null)
+                {
+                Register   regTemp = aLValTemp[i].getRegister();
+                Assignable LVal    = aLVal[i];
+                if (LVal.isLocalArgument())
+                    {
+                    code.add(new Invoke_01(regTemp, idConv, LVal.getLocalArgument()));
+                    }
+                else
+                    {
+                    Register regResult = new Register(getTypes()[i], null, Op.A_STACK);
+                    code.add(new Invoke_01(regTemp, idConv, regResult));
+                    LVal.assign(regResult, code, errs);
+                    }
+                }
             }
 
         if (fCond)
@@ -264,9 +270,11 @@ public class ConvertExpression
         }
 
     @Override
-    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
+    public ExprAST getExprAST()
         {
-        return expr.generateAssignables(ctx, code, errs);
+        return isConstant()
+                ? new ConstantExprAST(toConstant())
+                : new ConvertExprAST(expr.getExprAST(), getTypes(), m_aidConv);
         }
 
 
@@ -275,22 +283,66 @@ public class ConvertExpression
     @Override
     public String toString()
         {
-        return getUnderlyingExpression().toString() + '.' + m_idConv.getName() +
-            (isValidated()
-                    ? '<' + getType().getValueString() + ">()"
-                    : "<?>()");
+        Expression       expr    = getUnderlyingExpression();
+        MethodConstant[] aidConv = m_aidConv;
+        if (expr.isSingle())
+            {
+            return expr.toString() + '.' + aidConv[0].getName() +
+                    (isValidated()
+                        ? '<' + getType().getValueString() + ">()"
+                        : "<?>()");
+            }
+        else
+            {
+            StringBuilder sb    = new StringBuilder("(");
+            boolean       fCond = isConditionalResult();
+            for (int i = 0, c = aidConv.length; i < c; i++)
+                {
+                MethodConstant idConv = aidConv[i];
+                if (i > (fCond ? 1 : 0))
+                    {
+                    sb.append(", ");
+                    }
+
+                if (idConv == null)
+                    {
+                    if (i == 0 && fCond)
+                        {
+                        sb.append("conditional ");
+                        }
+                    else
+                        {
+                        sb.append(expr)
+                          .append("[").append(i).append("]");
+                        }
+                    }
+                else
+                    {
+                    sb.append(expr)
+                      .append("[").append(i).append("].")
+                      .append(idConv.getName());
+
+                    if (isValidated())
+                        {
+                        sb.append('<')
+                          .append(getTypes()[i].getValueString())
+                          .append(">()");
+                        }
+                    else
+                        {
+                        sb.append("<?>()");
+                        }
+                    }
+                }
+            return sb.append(')').toString();
+            }
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The expression value index.
+     * The conversion methods.
      */
-    private final int m_iVal;
-
-    /**
-     * The conversion method.
-     */
-    private final MethodConstant m_idConv;
+    private final MethodConstant[] m_aidConv;
     }

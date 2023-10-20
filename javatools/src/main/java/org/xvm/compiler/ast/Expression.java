@@ -637,7 +637,7 @@ public abstract class Expression
         // if we found an @Auto conversion, then create an expression that does the conversion work
         return idConv == null
                 ? this
-                : new ConvertExpression(this, 0, idConv, errs);
+                : new ConvertExpression(this, new MethodConstant[]{idConv}, errs);
         }
 
     /**
@@ -879,9 +879,9 @@ public abstract class Expression
                         Constant constConv = convertConstant(constVal, typeRequired, errs);
                         if (constConv == null)
                             {
-                            // there is no compile-time conversion available;
-                            // continue with run-time conversion
-                            // TODO: for now it's most likely our omission; remove the soft assert below
+                            // there is no compile-time conversion available; continue with run-time
+                            // conversion
+                            // TODO GG: remove the soft assert below
                             System.err.println("No conversion found for " + constVal);
                             }
                         else
@@ -934,22 +934,9 @@ public abstract class Expression
 
         // apply any conversions that we found previously to be necessary to deliver the required
         // data types
-        Expression exprResult = this;
-        if (aIdConv != null)
-            {
-            for (int i = 0; i < cActual; ++i)
-                {
-                MethodConstant idConv = aIdConv[i];
-                if (idConv != null)
-                    {
-                    // TODO if (i>0 && isConditionalResult()) --> this is where we would ask the
-                    //      parent to handle the conversion if the parent is already handling the
-                    //      conditionality (e.g. IfStatement)
-                    exprResult = new ConvertExpression(exprResult, i, idConv, errs);
-                    }
-                }
-            }
-        return exprResult;
+        return aIdConv == null
+                ? this
+                : new ConvertExpression(this, aIdConv, errs);
         }
 
     /**
