@@ -643,15 +643,11 @@ public class Frame
     // create a new "current" scope
     public int enterScope(int nNextVar)
         {
-        // make sure the previous scope doesn't intrude into the next one
-        int nPrevScopeNextVar = f_anNextVar[m_iScope];
-        if (nPrevScopeNextVar > nNextVar)
-            {
-            f_anNextVar[m_iScope] = nNextVar;
-            }
+        // adjust the previous scope accordingly
+        f_anNextVar[m_iScope] = nNextVar;
 
+        // set up the new scope at that same spot
         int iScope = ++m_iScope;
-
         f_anNextVar[iScope] = nNextVar;
 
         return iScope;

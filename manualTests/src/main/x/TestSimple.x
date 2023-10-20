@@ -2,18 +2,29 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
+        test();
+    }
 
-        Char ch = '1';
-        assert Int n := ch.asciiDigit(), n == 1;
+    void test() {
+        for (Int index : [0, 1]) {
+            Int info;
+            if (info := get(), info == 0 && index == 0) {
+                break;
+            }
 
-        console.print($"{n=}");
-
-        if ((Int i, Int j) := foo()) {
-            console.print($"{i=} {j=}");
+            try {
+                info = TODO
+            } catch (Exception e) {
+                @Inject Console console;
+                 // this used to blow at run-time caused by the incorrect computation of the
+                 // exception handle placed by the Catch op-code
+                console.print($"Failure at {index}; {e.text}");
+                continue;
+            }
         }
     }
 
-    conditional (UInt8, Int8) foo() {
-        return True, 1, -1;
+    conditional Int get() {
+        return False;
     }
 }
