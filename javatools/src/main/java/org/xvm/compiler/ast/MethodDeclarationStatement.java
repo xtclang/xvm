@@ -421,10 +421,14 @@ public class MethodDeclarationStatement
                     }
 
                 org.xvm.asm.Parameter[] aParams = buildParameters(pool, errs);
-                Access                  access  = container instanceof MethodStructure
-                                                    ? Access.PRIVATE
-                                                    : getDefaultAccess();
+                if (aParams == null)
+                    {
+                    return;
+                    }
 
+                Access  access = container instanceof MethodStructure
+                                        ? Access.PRIVATE
+                                        : getDefaultAccess();
                 boolean fUsesSuper = !fFunction && !fFinally && !fValidator
                                         && access != Access.PRIVATE && usesSuper();
                 MethodStructure method;
@@ -589,6 +593,10 @@ public class MethodDeclarationStatement
                         }
 
                     org.xvm.asm.Parameter[] aParams = buildParameters(pool, errs);
+                    if (aParams == null)
+                        {
+                        return;
+                        }
 
                     // the parameters were already matched; no need to re-check
                     Annotation[] annos = new Annotation[]
@@ -1086,21 +1094,32 @@ public class MethodDeclarationStatement
         return aAnnotations;
         }
 
+    /**
+     * @return an array of parameters or null if an error has been reported
+     */
     protected org.xvm.asm.Parameter[] buildParameters(ConstantPool pool, ErrorListener errs)
         {
         // build array of parameters
         int cTypes  = typeParams == null ? 0 : typeParams.size();
         int cParams = cTypes + params.size();
-        org.xvm.asm.Parameter[] aParams = new org.xvm.asm.Parameter[cParams];
+
+        Set<String>             setNames = cParams < 2 ? null : new HashSet<>();
+        org.xvm.asm.Parameter[] aParams  = new org.xvm.asm.Parameter[cParams];
         for (int i = 0; i < cTypes; ++i)
             {
             Parameter      param     = typeParams.get(i);
+            String         sName     = param.getName();
             TypeExpression exprType  = param.getType();
             TypeConstant   typeParam = pool.ensureClassTypeConstant(pool.clzType(), null,
                     exprType == null
                             ? pool.typeObject()
                             : exprType.ensureTypeConstant());
-            aParams[i] = new org.xvm.asm.Parameter(pool, typeParam, param.getName(), null, false, i, true);
+            if (setNames != null && !setNames.add(sName))
+                {
+                log(errs, Severity.ERROR, Compiler.VAR_DEFINED, sName);
+                return null;
+                }
+            aParams[i] = new org.xvm.asm.Parameter(pool, typeParam, sName, null, false, i, true);
             }
 
         boolean fDefaultRequired = false;
@@ -1111,6 +1130,11 @@ public class MethodDeclarationStatement
             TypeExpression exprType = param.getType();
             TypeConstant   typeArg  = exprType.ensureTypeConstant();
 
+            if (setNames != null && !setNames.add(sName))
+                {
+                log(errs, Severity.ERROR, Compiler.VAR_DEFINED, sName);
+                return null;
+                }
             aParams[i] = new org.xvm.asm.Parameter(pool, typeArg, sName, null, false, i, false);
 
             if (param.value == null)
