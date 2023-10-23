@@ -7,15 +7,12 @@ import ecstasy.text.Log;
 
 /**
  * The ModuleGenerator for a hosted web module.
- *
- * The code here is a simplified version of `ModuleGenerator` class from `oodb` library, which
- * explains an apparent overkill of its API design.
  */
-class ModuleGenerator(String moduleName) {
+class ModuleGenerator(ModuleTemplate webModule) {
     /**
-     * The underlying (hosted) module name.
+     * The underlying WebModule template.
      */
-    protected String moduleName;
+    protected ModuleTemplate webModule;
 
     /**
      * Generic templates.
@@ -35,9 +32,7 @@ class ModuleGenerator(String moduleName) {
     conditional ModuleTemplate ensureWebModule(
             ModuleRepository repository, Directory buildDir, Log errors) {
 
-        ModuleTemplate webModule = repository.getResolvedModule(moduleName); // TODO: pass it in, instead of re-loading
-
-        String appName   = moduleName;
+        String appName   = webModule.qualifiedName;
         String qualifier = "";
         if (Int dot := appName.indexOf('.')) {
             qualifier = appName[dot ..< appName.size];
@@ -53,7 +48,9 @@ class ModuleGenerator(String moduleName) {
                 Time? dbStamp    = webModule.parent.created;
                 Time? hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp) {
-                    errors.add($"Info: Host module '{hostName}' for '{moduleName}' is up to date");
+                    errors.add($|Info: Host module "{hostName}" for "{webModule.qualifiedName}" \
+                                |is up to date
+                              );
                     return True, repository.getResolvedModule(hostName);
                 }
             } catch (Exception ignore) {}
@@ -63,7 +60,8 @@ class ModuleGenerator(String moduleName) {
 
         if (createModule(sourceFile, appName, qualifier, errors) &&
             compileModule(repository, sourceFile, buildDir, errors)) {
-            errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
+            errors.add($|Info: Created a host module "{hostName}" for "{webModule.qualifiedName}"
+                      );
             return True, repository.getResolvedModule(hostName);
         }
         return False;
