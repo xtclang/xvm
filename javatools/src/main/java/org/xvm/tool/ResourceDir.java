@@ -55,6 +55,11 @@ public class ResourceDir
      */
     public static ResourceDir forSource(File sourceFile)
         {
+        if (sourceFile == null)
+            {
+            return NoResources;
+            }
+
         ModuleInfo info   = new ModuleInfo(sourceFile);
         File       prjDir = info.getProjectDir();
         File       srcDir = info.getSourceDir();

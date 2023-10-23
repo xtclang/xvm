@@ -744,7 +744,7 @@ public class ModuleInfo
                                         (subdir = new File(dir, "source")).isDirectory())
                                         {
                                         dir = subdir;
-                                        break;
+                                        continue;
                                         }
                                     ++i;
                                     // fall through
@@ -753,7 +753,7 @@ public class ModuleInfo
                                     if ((subdir = new File(dir, "main")).isDirectory())
                                         {
                                         dir = subdir;
-                                        break;
+                                        continue;
                                         }
                                     ++i;
                                     // fall through
@@ -762,7 +762,7 @@ public class ModuleInfo
                                         (subdir = new File(dir, "ecstasy")).isDirectory())
                                         {
                                         dir = subdir;
-                                        break;
+                                        continue;
                                         }
                                     ++i;
                                     // fall through
@@ -934,7 +934,7 @@ public class ModuleInfo
         {
         return dir == null || !dir.isDirectory()
                 ? NO_FILES
-                : dir.listFiles(f -> !f.isDirectory() && getExtension(f.getName()).equalsIgnoreCase("x"));
+                : dir.listFiles(f -> !f.isDirectory() && "x".equalsIgnoreCase(getExtension(f.getName())));
         }
 
 

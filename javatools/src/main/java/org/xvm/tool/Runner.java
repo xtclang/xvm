@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.api.Connector;
 
@@ -22,7 +23,10 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.Handy;
+import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
+
+import static org.xvm.util.Handy.quotedString;
 
 
 /**
@@ -82,10 +86,12 @@ public class Runner
         boolean         fCompile  = false;
         if (!binExists)
             {
-            module = repo.loadModule(info.getQualifiedModuleName());
+            String qualName = info.getQualifiedModuleName();
+            module = repo.loadModule(qualName);
             if (module == null)
                 {
-                if (info.getSourceFile() != null)
+                File fileSrc = info.getSourceFile();
+                if (fileSrc != null && fileSrc.exists())
                     {
                     log(Severity.INFO, "The compiled module " + info.getQualifiedModuleName()
                             + " is missing; attempting to compile it from " + info.getSourceFile() + " ....");
@@ -93,7 +99,44 @@ public class Runner
                     }
                 else
                     {
-                    log(Severity.ERROR, "Unable to find module: " + fileSpec);
+                    Set<String> possibles = null;
+                    if (qualName.indexOf('.') < 0)
+                        {
+                        // the qualified name wasn't qualified; that may have been user input error;
+                        // find all of the names that they may have meant to type
+                        for (String name : repo.getModuleNames())
+                            {
+                            int ofDot = name.indexOf('.');
+                            if (ofDot > 0 && name.substring(0, ofDot).equals(qualName))
+                                {
+                                if (possibles == null)
+                                    {
+                                    possibles = new ListSet<>();
+                                    }
+                                possibles.add(name);
+                                }
+                            }
+                        }
+                    if (possibles == null)
+                        {
+                        log(Severity.ERROR, "Unable to find module: " + fileSpec);
+                        }
+                    else if (possibles.size() == 1)
+                        {
+                        log(Severity.ERROR, "Unable to find module for " + fileSpec
+                                + "; did you mean " + quotedString(possibles.iterator().next()) + '?');
+                        }
+                    else
+                        {
+                        StringBuilder buf = new StringBuilder();
+                        for (String name : possibles)
+                            {
+                            buf.append(", ")
+                               .append(quotedString(name));
+                            }
+                        log(Severity.ERROR, "Unable to find module for " + fileSpec
+                                + "; did you mean one of: " + buf.substring(2) + '?');
+                        }
                     }
                 }
             }
