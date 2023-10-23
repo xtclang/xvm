@@ -4,8 +4,6 @@ package org.xvm.asm.constants;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.math.BigDecimal;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -62,9 +60,7 @@ public class DecimalAutoConstant
      */
     public DecimalAutoConstant add(DecimalAutoConstant that)
         {
-        BigDecimal bigdecSum = this.getValue().toBigDecimal().add(that.getValue().toBigDecimal());
-        Decimal decSum = Decimal.valueOf(bigdecSum);
-        return getConstantPool().ensureDecAConstant(decSum);
+        return getConstantPool().ensureDecAConstant(this.getValue().add(that.getValue()));
         }
 
 

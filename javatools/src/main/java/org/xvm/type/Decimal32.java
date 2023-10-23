@@ -78,7 +78,6 @@ public class Decimal32
             }
 
         m_nBits = toIntBits(dec);
-        m_dec   = dec;
         }
 
 

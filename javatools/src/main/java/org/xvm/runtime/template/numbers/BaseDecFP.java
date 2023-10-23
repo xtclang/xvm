@@ -158,19 +158,22 @@ abstract public class BaseDecFP
 
             case "toInt64":
                 {
-                ObjectHandle hTrunc = ahArg[0];            // TODO CP find all "hTrunc" and "fTruncate" and flip them to "check bounds"
+                ObjectHandle hTrunc = ahArg[0]; // TODO CP find all "hTrunc" and "fTruncate" and flip them to "check bounds"
                 ObjectHandle hRound = ahArg[1];
 
-                int iMode = hRound == ObjectHandle.DEFAULT
-                    ? 3
-                    : ((EnumHandle) hRound).getOrdinal();
-                dec = dec.round(Rounding.values()[iMode].getMode());
-
-                BigInteger n  = dec.toBigDecimal().unscaledValue();
-                int        cb = (n.bitLength() + 7) / 8;
-                if (cb <= 8)
+                if (dec.isFinite())
                     {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(n.longValue()));
+                    int iMode = hRound == ObjectHandle.DEFAULT
+                        ? 3
+                        : ((EnumHandle) hRound).getOrdinal();
+                    dec = dec.round(Rounding.values()[iMode].getMode());
+
+                    BigInteger n  = dec.toBigDecimal().unscaledValue();
+                    int        cb = (n.bitLength() + 7) / 8;
+                    if (cb <= 8)
+                        {
+                        return frame.assignValue(iReturn, xInt64.makeHandle(n.longValue()));
+                        }
                     }
 
                 return frame.raiseException(xException.outOfBounds(frame,

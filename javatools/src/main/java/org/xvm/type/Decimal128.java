@@ -97,8 +97,7 @@ public class Decimal128
             throw new IllegalArgumentException("value required");
             }
 
-        m_dec = dec;                  // this isn't perfect, but we'll trust the cached value
-        convertBigDecToLongs();
+        convertBigDecToLongs(dec.round(MathContext.DECIMAL128));
         }
 
 
@@ -354,10 +353,9 @@ public class Decimal128
      *
      * @throws ArithmeticException if the value is out of range
      */
-    private void convertBigDecToLongs()
+    private void convertBigDecToLongs(BigDecimal dec)
         {
         // get the sign
-        BigDecimal dec = m_dec.round(MathContext.DECIMAL128);
         boolean    fNeg;
         switch (dec.signum())
             {

@@ -85,7 +85,6 @@ public class Decimal64
             }
 
         m_nBits = toLongBits(dec);
-        m_dec   = dec;
         }
 
 
