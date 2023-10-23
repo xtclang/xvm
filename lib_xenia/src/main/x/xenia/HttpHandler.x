@@ -103,11 +103,11 @@ service HttpHandler
         Tuple result = dispatchers[index].dispatch^(httpServer, context, tls, uriString, methodName);
         &result.whenComplete((response, e) -> {
             if (e != Null) {
-                httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
-
-                // temporary
+                // TODO GG: remove
                 @Inject Console console;
-                console.print(e);
+                console.print($"HttpHandler: unhandled exception for {uriString.quoted()}: {e}");
+
+                httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
             }
             busy[index] = False;
         });

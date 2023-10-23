@@ -330,8 +330,9 @@ service Dispatcher {
                 bundlePool.releaseBundle(bundle?);
 
                 if (r == Null) {
+                    // TODO GG: remove
                     @Inject Console console;
-                    console.print("Unhandled exception: " + e);
+                    console.print($"Dispatcher: unhandled exception for {uriString.quoted()}: {e}");
 
                     httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
                 } else {
