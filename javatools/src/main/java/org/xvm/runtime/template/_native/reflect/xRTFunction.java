@@ -1271,120 +1271,6 @@ public class xRTFunction
         }
 
     /**
-     * An asynchronous delegating function handle.
-     */
-    public static class AsyncDelegatingHandle
-            extends DelegatingHandle
-        {
-        private final ServiceHandle f_hService;
-
-        /**
-         * Create an asynchronous delegating handle.
-         */
-        protected AsyncDelegatingHandle(ServiceHandle hService, FunctionHandle hDelegate)
-            {
-            super(hService.f_context.f_container, hDelegate.getType(), hDelegate);
-
-            f_hService = hService;
-            }
-
-        // ----- FunctionHandle interface ----------------------------------------------------------
-
-        @Override
-        public boolean isAsync()
-            {
-            return true;
-            }
-
-        @Override
-        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
-            {
-            ServiceHandle  hService  = f_hService;
-            ServiceContext ctxTarget = hService.f_context;
-
-            if (frame.f_context == ctxTarget)
-                {
-                return super.call1Impl(frame, null, ahVar, iReturn);
-                }
-
-            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getParamTypes(), ahVar))
-                {
-                case Op.R_NEXT:
-                    return ctxTarget.sendInvoke1Request(frame, this, hService, ahVar, false, iReturn);
-
-                case Op.R_CALL:
-                    frame.m_frameNext.addContinuation(frameCaller ->
-                        ctxTarget.sendInvoke1Request(frameCaller, this, hService, ahVar, false, iReturn));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        @Override
-        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
-            {
-            ServiceHandle  hService  = f_hService;
-            ServiceContext ctxTarget = hService.f_context;
-
-            if (frame.f_context == ctxTarget)
-                {
-                return super.callTImpl(frame, null, ahVar, iReturn);
-                }
-
-            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getParamTypes(), ahVar))
-                {
-                case Op.R_NEXT:
-                    return ctxTarget.sendInvoke1Request(frame, this, hService, ahVar, true, iReturn);
-
-                case Op.R_CALL:
-                    frame.m_frameNext.addContinuation(frameCaller ->
-                        ctxTarget.sendInvoke1Request(frameCaller, this, hService, ahVar, true, iReturn));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        @Override
-        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
-            {
-            ServiceHandle  hService  = f_hService;
-            ServiceContext ctxTarget = hService.f_context;
-
-            if (frame.f_context == ctxTarget)
-                {
-                return super.callNImpl(frame, null, ahVar, aiReturn);
-                }
-
-            switch (frame.f_context.validatePassThrough(frame, ctxTarget, getParamTypes(), ahVar))
-                {
-                case Op.R_NEXT:
-                    return ctxTarget.sendInvokeNRequest(frame, this, hService, ahVar, aiReturn);
-
-                case Op.R_CALL:
-                    frame.m_frameNext.addContinuation(frameCaller ->
-                        ctxTarget.sendInvokeNRequest(frameCaller, this, hService, ahVar, aiReturn));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-        }
-
-    /**
      * A function proxy handle.
      */
     public static class FunctionProxyHandle
@@ -1520,10 +1406,10 @@ public class xRTFunction
      *
      * @return the corresponding delegating function handle
      */
-    public static AsyncDelegatingHandle makeAsyncDelegatingHandle(
+    public static FunctionHandle makeAsyncDelegatingHandle(
             ServiceHandle hService, FunctionHandle hDelegate)
         {
-        return new AsyncDelegatingHandle(hService, hDelegate);
+        return new FunctionProxyHandle(hDelegate, hService.f_context);
         }
 
     /**
