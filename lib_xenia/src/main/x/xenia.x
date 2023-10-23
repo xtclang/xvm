@@ -95,14 +95,19 @@ module xenia.xtclang.org {
                                   UInt16 httpPort, UInt16 httpsPort,
                                   KeyStore keystore) {
         @Inject HttpServer server;
+        try {
+            server.configure(hostName, bindAddr, httpPort, httpsPort, keystore);
 
-        server.configure(hostName, bindAddr, httpPort, httpsPort, keystore);
+            HttpHandler handler = new HttpHandler(server, webApp);
 
-        HttpHandler handler = new HttpHandler(server, webApp);
+            server.start(handler);
 
-        server.start(handler);
-
-        return () -> handler.shutdown();
+            return () -> handler.shutdown();
+            }
+        catch (Exception e) {
+            server.close(e);
+            throw e;
+        }
     }
 
 
