@@ -98,7 +98,8 @@ service DirRepository
                 info = new ModuleInfo(file);
             } catch (Exception e) {
                 @Inject Console console;
-                console.print($"Failure to load a module from {file}; {e.text}");
+                console.print($|DirRepository: Failed to load a module from "{file}": {e.message}
+                             );
                 continue;
             }
             newModules.put(info.template.qualifiedName, info);
