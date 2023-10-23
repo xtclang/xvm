@@ -10,7 +10,6 @@ import java.util.Set;
 
 /**
  * A simple ModuleRepository for a single file with a single module.
- * TODO add support for more than one module in the file (i.e. if any other modules are embedded)
  */
 public class FileRepository
         implements ModuleRepository
@@ -39,8 +38,6 @@ public class FileRepository
                 file = new File(file.getParentFile(), sName + ".xtc");
                 }
             }
-
-        assert (fReadOnly && file.canRead()) || (!fReadOnly && file.canWrite());
 
         this.file = file;
         this.fRO = fReadOnly;

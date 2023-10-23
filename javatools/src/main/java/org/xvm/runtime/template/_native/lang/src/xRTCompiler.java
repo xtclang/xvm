@@ -49,6 +49,7 @@ import org.xvm.runtime.template._native.fs.xOSFileNode.NodeHandle;
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 
 import org.xvm.tool.Compiler;
+import org.xvm.tool.ModuleInfo;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -426,22 +427,22 @@ public class xRTCompiler
                 }
             else
                 {
-                List<File> listTargets = selectTargets(options().getInputLocations());
+                File[]           resourceDirs = options().getResourceLocation();
+                File             fileOutput   = options().getOutputLocation();
+                List<ModuleInfo> listTargets  = selectTargets(options().getInputLocations(), resourceDirs, fileOutput);
+                boolean          fRebuild     = options().isForcedRebuild();
                 checkErrors();
-
-                File    fileOutput = resolveOptionalLocation(options().getOutputLocation());
-                boolean fRebuild   = options().isForcedRebuild();
 
                 Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
                 int             cSystemModules = 0;
-                for (File fileModule : listTargets)
+                for (ModuleInfo moduleInfo : listTargets)
                     {
-                    Node node = loadSourceTree(fileModule, Stage.Linked);
+                    Node node = loadSourceTree(moduleInfo.getSourceFile(), Stage.Linked);
 
                     // short-circuit the compilation of any up-to-date modules
                     if (fRebuild || !moduleUpToDate(node, fileOutput))
                         {
-                        mapTargets.put(fileModule, node);
+                        mapTargets.put(moduleInfo.getSourceFile(), node);
                         if (isSystemModule(node))
                             {
                             ++cSystemModules;

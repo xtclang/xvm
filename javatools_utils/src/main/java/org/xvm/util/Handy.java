@@ -34,7 +34,7 @@ public class Handy
 
     /**
      * Take the passed nibble (the low order 4 bits of the int) and return the corresponding hexit
-     * (hexadecimal digit) in the range of '0' - 'F'.
+     * (hexadecimal digit) in the range of '0' - 'f'.
      *
      * @param n  the nibble value
      *
@@ -42,10 +42,10 @@ public class Handy
      */
     public static char nibbleToChar(int n)
         {
-        n = n & 0xF;
+        n = n & 0xf;
         return (n <= 9)
                 ? (char) ('0' + n)
-                : (char) ('A' - 0xA + n);
+                : (char) ('a' - 0xa + n);
         }
 
     /**
@@ -549,7 +549,7 @@ public class Handy
     public static int hexitValue(char ch)
         {
         assert isHexit(ch);
-        return ch <= '9' ? ch - '0' : (ch | 0x20) - ('a' - 0xA);
+        return ch <= '9' ? ch - '0' : (ch | 0x20) - ('a' - 0xa);
         }
 
     /**

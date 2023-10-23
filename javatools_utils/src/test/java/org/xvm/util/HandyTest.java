@@ -65,12 +65,12 @@ public class HandyTest
         assertEquals(nibbleToChar(0x07), '7');
         assertEquals(nibbleToChar(0x08), '8');
         assertEquals(nibbleToChar(0x09), '9');
-        assertEquals(nibbleToChar(0x0A), 'A');
-        assertEquals(nibbleToChar(0x0B), 'B');
-        assertEquals(nibbleToChar(0x0C), 'C');
-        assertEquals(nibbleToChar(0x0D), 'D');
-        assertEquals(nibbleToChar(0x0E), 'E');
-        assertEquals(nibbleToChar(0x0F), 'F');
+        assertEquals(nibbleToChar(0x0A), 'a');
+        assertEquals(nibbleToChar(0x0B), 'b');
+        assertEquals(nibbleToChar(0x0C), 'c');
+        assertEquals(nibbleToChar(0x0D), 'd');
+        assertEquals(nibbleToChar(0x0E), 'e');
+        assertEquals(nibbleToChar(0x0F), 'f');
         assertEquals(nibbleToChar(0x10), '0');
         assertEquals(nibbleToChar(0x21), '1');
         assertEquals(nibbleToChar(0x32), '2');
@@ -81,12 +81,12 @@ public class HandyTest
         assertEquals(nibbleToChar(0x87), '7');
         assertEquals(nibbleToChar(0x98), '8');
         assertEquals(nibbleToChar(0xA9), '9');
-        assertEquals(nibbleToChar(0xBA), 'A');
-        assertEquals(nibbleToChar(0xCB), 'B');
-        assertEquals(nibbleToChar(0xDC), 'C');
-        assertEquals(nibbleToChar(0xED), 'D');
-        assertEquals(nibbleToChar(0xFE), 'E');
-        assertEquals(nibbleToChar(0xFF), 'F');
+        assertEquals(nibbleToChar(0xBA), 'a');
+        assertEquals(nibbleToChar(0xCB), 'b');
+        assertEquals(nibbleToChar(0xDC), 'c');
+        assertEquals(nibbleToChar(0xED), 'd');
+        assertEquals(nibbleToChar(0xFE), 'e');
+        assertEquals(nibbleToChar(0xFF), 'f');
         }
 
     @Test
@@ -104,7 +104,7 @@ public class HandyTest
         {
         assertEquals(byteToHexString(0), "0x00");
         assertEquals(byteToHexString(0x12345678), "0x78");
-        assertEquals(byteToHexString(0xFF), "0xFF");
+        assertEquals(byteToHexString(0xFF), "0xff");
         }
 
     @Test
@@ -113,7 +113,7 @@ public class HandyTest
         StringBuilder sb = new StringBuilder();
         assertEquals(sb, appendByteArrayAsHex(sb,
                 new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}));
-        assertEquals(sb.toString(), "01FF785A");
+        assertEquals(sb.toString(), "01ff785a");
         }
 
     @Test
@@ -121,15 +121,15 @@ public class HandyTest
         {
         StringBuilder sb = new StringBuilder();
         assertEquals(sb, appendByteArrayAsHex(sb, new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2));
-        assertEquals(sb.toString(), "FF78");
+        assertEquals(sb.toString(), "ff78");
         }
 
     @Test
     public void testByteArrayToHexString()
         {
         assertEquals(byteArrayToHexString(new byte[] {}), "0x");
-        assertEquals(byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}), "0x01FF785A");
-        assertEquals(byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2), "0xFF78");
+        assertEquals(byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}), "0x01ff785a");
+        assertEquals(byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2), "0xff78");
         }
 
     @Test
@@ -195,7 +195,7 @@ public class HandyTest
         {
         assertEquals(intToHexString(0), "0x00000000");
         assertEquals(intToHexString(0x12345678), "0x12345678");
-        assertEquals(intToHexString(-1), "0xFFFFFFFF");
+        assertEquals(intToHexString(-1), "0xffffffff");
         }
 
     @Test
@@ -225,7 +225,7 @@ public class HandyTest
         StringBuilder sb = new StringBuilder();
 
         assertEquals(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L));
-        assertEquals(sb.toString(), "123456789ABCDEF0");
+        assertEquals(sb.toString(), "123456789abcdef0");
         }
 
     @Test
@@ -234,15 +234,15 @@ public class HandyTest
         StringBuilder sb = new StringBuilder();
 
         assertEquals(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L, 9));
-        assertEquals(sb.toString(), "89ABCDEF0");
+        assertEquals(sb.toString(), "89abcdef0");
         }
 
     @Test
     public void testLongToHexString()
         {
         assertEquals("0x0000000000000000", longToHexString(0));
-        assertEquals("0x123456789ABCDEF0", longToHexString(0x123456789ABCDEF0L));
-        assertEquals("0xFFFFFFFFFFFFFFFF", longToHexString(-1));
+        assertEquals("0x123456789abcdef0", longToHexString(0x123456789ABCDEF0L));
+        assertEquals("0xffffffffffffffff", longToHexString(-1));
         }
 
     @Test
@@ -250,7 +250,7 @@ public class HandyTest
         {
         char[] ach = new char[2];
         assertEquals(2, renderByteToHex(0x1F, ach, 0));
-        assertEquals("1F", new String(ach));
+        assertEquals("1f", new String(ach));
         }
 
     @Test
@@ -258,12 +258,12 @@ public class HandyTest
         {
         char[] ach = new char[4];
         assertEquals(4, renderIntToHex(0x1F2EABCD, ach, 0, 4));
-        assertEquals("ABCD", new String(ach));
+        assertEquals("abcd", new String(ach));
 
         ach = new char[10];
         Arrays.fill(ach, ' ');
         assertEquals(9, renderIntToHex(0x1F2EABCD, ach, 1, 8));
-        assertEquals(" 1F2EABCD ", new String(ach));
+        assertEquals(" 1f2eabcd ", new String(ach));
         }
 
     @Test
@@ -271,12 +271,12 @@ public class HandyTest
         {
         char[] ach = new char[4];
         assertEquals(4, renderLongToHex(0x1F2EABCDL, ach, 0, 4));
-        assertEquals("ABCD", new String(ach));
+        assertEquals("abcd", new String(ach));
 
         ach = new char[18];
         Arrays.fill(ach, ' ');
         assertEquals(17, renderLongToHex(0x1CEDCAFE1F2EABCDL, ach, 1, 16));
-        assertEquals(" 1CEDCAFE1F2EABCD ", new String(ach));
+        assertEquals(" 1cedcafe1f2eabcd ", new String(ach));
         }
 
     @Test

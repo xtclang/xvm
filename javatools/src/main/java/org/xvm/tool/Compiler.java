@@ -4,6 +4,7 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -30,42 +31,52 @@ import org.xvm.util.Severity;
  * <p/>Find the root of the module containing the code in the current directory, and compile it, placing
  * the result in the default location:
  *
- * <p/>{@code  xtc}
+ * <p/>{@code  xcc}
  *
  * <p/>Compile the specified module, placing the result in the default location:
  *
- * <p/>{@code  xtc ./path/to/module_name.x}
+ * <p/>{@code  xcc ./path/to/module_name.x}
  *
  * <p/>Compile the module that the specified file belongs to:
  *
- * <p/>{@code  xtc MyClass.x}
+ * <p/>{@code  xcc MyClass.x}
+ *
+ * <p/>Alternatively, either of the following would work:
+ *
+ * <p/>{@code  xcc MyClass.xtc}
+ * <p/>{@code  xcc MyClass}
  *
  * <p/>The location for the resulting {@code .xtc} file follows the following rules:
  * <ul>
  * <li>If the "-o" option is specified, then the corresponding location is used for the output;</li>
- * <li>If the module is in a single file format, such as "MyModule.x", then the output is in the
- *     same-named file with the ".xtc" extension, such as "MyModule.xtc".</li>
- * <li>If the module is in a directory format, then the resulting ".xtc" file is placed in the
- *     <i>parent</i> directory of the directory containing the module. For example, if the module
- *     file is located at "app/main/src/App.x", and the module name is "App", then the resulting
- *     ".xtc" file is written to "app/main/App.xtc".</li>
+ * <li>If the module source file is named "MyModule.x", then the output is in the same-named file
+ *     with the ".xtc" extension, such as "MyModule.xtc".</li>
+ * <li>If the module is in a project directory format, then the resulting ".xtc" file is placed in
+ *     the build or target directory of the project. For example, if the module file is located at
+ *     "app/src/main/x/app.x", and there is a directory "app/build", then the resulting ".xtc" file
+ *     is written to "app/build/app.xtc".</li>
  * </ul>
  *
- * <p/>The location of the resulting {@code .xtc} file can be specified by using the {@code -o} option;
- * for example:
+ * <p/>The location of additional resource files and/or directories can be specified by using the
+ * {@code -r} option; for example:
  *
- * <p/>{@code  xtc -o ~/modules/}
+ * <p/>{@code  xcc -r ~/dev/prj/otherApp/build/}
+ *
+ * <p/>The location of the resulting {@code .xtc} file can be specified by using the {@code -o}
+ * option; for example:
+ *
+ * <p/>{@code  xcc -o ~/modules/}
  *
  * <p/>The version of the resulting module can be specified by using the {@code -version} option;
  * for example:
  *
- * <p/>{@code  xtc -version 0.4-alpha}
+ * <p/>{@code  xcc -version 0.4-alpha}
  *
  * <p/>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
  * it is possible to provide a search path for modules that will be used by the compiler. The search
  * path can contain directories and/or ".xtc" files:
  *
- * <p/>{@code  xtc -L ~/modules/:../build/:Utils.xtc}
+ * <p/>{@code  xcc -L ~/modules/:../build/:Utils.xtc}
  *
  * <p/>Other command line options:
  * <ul>
@@ -107,36 +118,101 @@ public class Compiler
         {
         // source tree setup
         log(Severity.INFO, "Selecting compilation targets");
-        List<File> listTargets = selectTargets(options().getInputLocations());
-        int        cTargets    = listTargets.size();
+        File[]       resourceDirs = options().getResourceLocation();
+        File         outputLoc    = options().getOutputLocation();
+        ModuleInfo[] aTarget      = selectTargets(options().getInputLocations(), resourceDirs,
+                                                  outputLoc).toArray(new ModuleInfo[0]);
+        prevModules = aTarget;
 
+        int cTargets = aTarget.length;
         if (cTargets == 0)
             {
             displayHelp();
             return;
             }
 
+        if (outputLoc != null)
+            {
+            outputLoc = resolveFile(outputLoc);
+            if (!outputLoc.exists())
+                {
+                if (isExplicitCompiledFile(outputLoc.getName()))
+                    {
+                    File outputDir = outputLoc.getParentFile();
+                    if (outputDir.exists())
+                        {
+                        // it needs to be a directory
+                        if (!outputDir.isDirectory())
+                            {
+                            log(Severity.ERROR, "The output file is " + outputLoc
+                                    + " but the parent directory cannot be created because"
+                                    + " a file already exists with the same name");
+                            }
+                        }
+                    }
+                }
+            }
+
+        Map<String, ModuleInfo> infoByName = new ListMap<>(cTargets);
         for (int i = 0; i < cTargets; ++i)
             {
-            log(Severity.INFO, "  [" + i + "]=" + listTargets.get(i));
+            ModuleInfo info    = aTarget[i];
+            String     sModule = info.getQualifiedModuleName();
+            File       srcFile = info.getSourceFile();
+            File       binFile = info.getBinaryFile();
+
+            log(srcFile == null ? Severity.ERROR : Severity.INFO,
+                    "  [" + i + "]=" + srcFile == null ? "<unknown>" : srcFile.getPath());
+
+            if (i == 1 && outputLoc != null && !outputLoc.isDirectory()
+                    && isExplicitCompiledFile(outputLoc.getName()))
+                {
+                log(Severity.ERROR, "Multiple modules are being compiled, but only one output"
+                        + " module file name (" + outputLoc + ") was specified;"
+                        + " specify a target directory instead");
+                }
+
+            if (sModule == null)
+                {
+                log(Severity.ERROR, "Could not determine the module name for " + info.getFileSpec());
+                }
+            else
+                {
+                infoByName.put(sModule, info);
+                }
+
+            if (binFile == null)
+                {
+                log(Severity.ERROR, "Could not determine the target location for " + info.getFileSpec()
+                        + "; the module project may be missing a \"build\" or \"target\" directory");
+                }
+            else
+                {
+                File binDir = binFile.getParentFile();
+                if (!binDir.isDirectory() && binDir.exists())
+                    {
+                    log(Severity.ERROR, "The output file " + binFile
+                            + " cannot be written because its parent directory cannot be created"
+                            + " because a file already exists with the same name");
+                    }
+                }
             }
         checkErrors();
 
-        File    fileOutput = resolveOptionalLocation(options().getOutputLocation());
-        boolean fRebuild   = options().isForcedRebuild();
-        log(Severity.INFO, "Output-path=" + fileOutput + ", force-rebuild=" + fRebuild);
+        boolean fRebuild = options().isForcedRebuild();
+        log(Severity.INFO, "Output-path=" + outputLoc + ", force-rebuild=" + fRebuild);
 
         Map<File, Node> mapTargets     = new ListMap<>(cTargets);
         int             cSystemModules = 0;
-        for (File fileModule : listTargets)
+        for (ModuleInfo moduleInfo : aTarget)
             {
-            log(Severity.INFO, "Loading and parsing sources for module: " + fileModule);
-            Node node = loadSourceTree(fileModule, Stage.Linked);
+            log(Severity.INFO, "Loading and parsing sources for module: " + moduleInfo);
+            Node node = loadSourceTree(moduleInfo.getSourceFile(), Stage.Linked);
 
             // short-circuit the compilation of any up-to-date modules
-            if (fRebuild || !moduleUpToDate(node, fileOutput))
+            if (fRebuild || !moduleUpToDate(node, moduleInfo.getBinaryFile()))  // TODO CP use ModuleInfo instead
                 {
-                mapTargets.put(fileModule, node);
+                mapTargets.put(moduleInfo.getSourceFile(), node);
                 if (isSystemModule(node))
                     {
                     ++cSystemModules;
@@ -163,9 +239,11 @@ public class Compiler
             log(Severity.INFO, "Pre-loading and linking system libraries");
             prelinkSystemLibraries(repoLib);
             }
+        prevLibs = repoLib;
         checkErrors();
 
-        ModuleRepository repoOutput = configureResultRepo(fileOutput);
+        ModuleRepository repoOutput = new ModuleInfoRepository(infoByName, false);
+        prevOutput = repoOutput;
         checkErrors();
 
         // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
@@ -519,7 +597,25 @@ public class Compiler
 
             Usage:
 
-                xtc <options> <filename>.x ...""";
+                xcc <options> <filename>.x ...""";
+        }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public ModuleInfo[] getModuleInfos()
+        {
+        return prevModules;
+        }
+
+    public ModuleRepository getLibraryRepo()
+        {
+        return prevLibs;
+        }
+
+    public ModuleRepository getOutputRepo()
+        {
+        return prevOutput;
         }
 
 
@@ -555,6 +651,7 @@ public class Compiler
             addOption("nowarn",  Form.Name,   false, "Suppress all warnings");
             addOption("L",       Form.Repo,   true , "Module path; a \"" + File.pathSeparator
                                                  + "\"-delimited list of file and/or directory names");
+            addOption("r",       Form.File,   true,  "Files and/or directories to read resources from");
             addOption("o",       Form.File,   false, "File or directory to write output to");
             addOption("qualify", Form.Name,   false, "Use full module name for the output file name");
             addOption("version", Form.String, false, "Use full module name for the output file name");
@@ -583,6 +680,18 @@ public class Compiler
             return list == null
                     ? Collections.EMPTY_LIST
                     : list;
+            }
+
+        /**
+         * @return the location to use (a file, directory, or collection thereof) to load resources
+         *         from, or null if none specified
+         */
+        public File[] getResourceLocation()
+            {
+            ArrayList list = (ArrayList) values().get("r");
+            return list == null || list.size() == 0
+                    ? ModuleInfo.NO_FILES
+                    : (File[]) list.toArray(new File[0]);
             }
 
         /**
@@ -690,4 +799,8 @@ public class Compiler
     // ----- fields --------------------------------------------------------------------------------
 
     protected Strictness strictLevel = Strictness.Normal;
+
+    protected ModuleInfo[]     prevModules;
+    protected ModuleRepository prevLibs;
+    protected ModuleRepository prevOutput;
     }

@@ -11,10 +11,12 @@ import java.nio.file.Paths;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -1115,7 +1117,7 @@ public abstract class Launcher
          */
         boolean isVerbose()
             {
-            return  specified("v") || specified("verbose");
+            return specified("v") || specified("verbose");
             }
 
         /**
@@ -1235,7 +1237,7 @@ public abstract class Launcher
      */
     protected ModuleRepository configureResultRepo(File fileDest)
         {
-        fileDest = resolveOptionalLocation(fileDest);
+        fileDest = resolveFile(fileDest);
         return fileDest.isDirectory()
                 ? new DirRepository (fileDest, false)
                 : new FileRepository(fileDest, false);
@@ -1435,13 +1437,30 @@ public abstract class Launcher
      *
      * @param file  a file, or directory, or null
      *
-     * @return a file or directory
+     * @return a resolved file or directory
      */
-    protected File resolveOptionalLocation(File file)
+    protected static File resolveFile(File file)
         {
-        return file == null
-                ? new File(".").getAbsoluteFile()
-                : file;
+        if (file != null)
+            {
+            try
+                {
+                return file.getCanonicalFile();
+                }
+            catch (IOException e)
+                {
+                return file.getAbsoluteFile();
+                }
+            }
+
+        try
+            {
+            return new File(".").getAbsoluteFile().getCanonicalFile();
+            }
+        catch (IOException e)
+            {
+            return new File(".").getAbsoluteFile();
+            }
         }
 
     /**
@@ -1517,7 +1536,7 @@ public abstract class Launcher
             {
             // just in case the file is relative to some working
             // directory, resolve its location
-            file = file.getAbsoluteFile();
+            file = resolveFile(file);
 
             if (isModule(file))
                 {
@@ -1529,7 +1548,7 @@ public abstract class Launcher
 
         // we're going to have to walk up the directory tree, so
         // the entire path needs to be resolved
-        file = file.getAbsoluteFile();
+        file = resolveFile(file);
 
         while (file != null && file.isDirectory())
             {
@@ -1570,17 +1589,10 @@ public abstract class Launcher
      */
     public String getModuleName(File file)
         {
-        if (m_mapModuleNames == null)
+        String sName = m_mapModuleNames.get(file);
+        if (sName != null)
             {
-            m_mapModuleNames = new HashMap<>();
-            }
-        else
-            {
-            String sName = m_mapModuleNames.get(file);
-            if (sName != null)
-                {
-                return sName;
-                }
+            return sName;
             }
 
         assert file.isFile() && file.canRead();
@@ -1590,7 +1602,7 @@ public abstract class Launcher
             {
             Source source = new Source(file, 0);
             Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
-            String sName  =  parser.parseModuleNameIgnoreEverythingElse();
+            sName = parser.parseModuleNameIgnoreEverythingElse();
             m_mapModuleNames.put(file, sName);
             return sName;
             }
@@ -1607,41 +1619,137 @@ public abstract class Launcher
         }
 
     /**
-     * Determine if the specified module name is an explicit Ecstasy source or compiled module file
+     * Check if the specified source or binary file contains a module and if so, return the module's
      * name.
      *
-     * @param sModule  a module name or file name
+     * @param file  the file (source or binary) to examine
      *
-     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
+     * @return the module's name if the file declares a module; null otherwise
      */
-    protected boolean explicitModuleFile(String sModule)
+    public static String extractModuleName(File file)
         {
-        return sModule.endsWith(".x") || sModule.endsWith(".xtc");
+        if (file.exists() && file.canRead())
+            {
+            String name = file.getName();
+            if (isExplicitSourceFile(name))
+                {
+                try
+                    {
+                    Source source = new Source(file, 0);
+                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
+                    return parser.parseModuleNameIgnoreEverythingElse();
+                    }
+                catch (CompilerException | IOException e) {}
+                }
+            else if (isExplicitCompiledFile(name))
+                {
+                try
+                    {
+                    return new FileStructure(file).getModuleName();
+                    }
+                catch (IOException e) {}
+                }
+            }
+
+        return null;
         }
 
     /**
-     * If the passed file name ends with a ".x" or a ".xtc" extension, return the name without the
-     * extension.
+     * Determine if the specified module name is an explicit Ecstasy source or compiled module file
+     * name.
      *
-     * @param sFile  the file name, possibly with a ".x" or ".xtc" extension
+     * @param sFile  a module name or file name
      *
-     * @return the same file name, but without a ".x" or ".xtc" extension (if it had one)
+     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    protected String stripExtension(String sFile)
+    public static boolean isExplicitEcstasyFile(String sFile)
         {
-        if (sFile.endsWith(".x"))
+        String sExt = getExtension(sFile);
+        return sExt != null && (sExt.equalsIgnoreCase("x") || sExt.equalsIgnoreCase("xtc"));
+        }
+
+    /**
+     * Determine if the specified module name is an explicit Ecstasy source file name.
+     *
+     * @param sFile  a module name or file name
+     *
+     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
+     */
+    public static boolean isExplicitSourceFile(String sFile)
+        {
+        String sExt = getExtension(sFile);
+        return sExt != null && sExt.equalsIgnoreCase("x");
+        }
+
+    /**
+     * Determine if the specified module name is an explicit Ecstasy compiled module file name.
+     *
+     * @param sFile  a module name or file name
+     *
+     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
+     */
+    public static boolean isExplicitCompiledFile(String sFile)
+        {
+        String sExt = getExtension(sFile);
+        return sExt != null && sExt.equalsIgnoreCase("xtc");
+        }
+
+    /**
+     * @param dir  a directory
+     *
+     * @return true iff the directory appears to be a project directory
+     */
+    public static boolean isProjectDir(File dir)
+        {
+        return dir != null && dir.isDirectory() &&
+            (new File(dir, "src").exists() && !new File(dir, "src.x").exists() ||
+             new File(dir, "source").exists() && !new File(dir, "source.x").exists());
+        }
+
+    /** TODO MOVE TO HANDY, add helper that takes File argument
+     * If the passed file name has a "dot extension" such as ".x" or ".xtc" extension, then return
+     * the extension, such as "x" or "xtc"
+     *
+     * @param sFile  the file name
+     *
+     * @return the extension, if the file has an extension; otherwise null
+     */
+    public static String getExtension(String sFile)
+        {
+        int ofDot = sFile.lastIndexOf('.');
+        if (ofDot <= 0)
             {
-            return sFile.substring(0, sFile.length()-2);
+            return null;
             }
-        if (sFile.endsWith(".xtc"))
+
+        String sExt = sFile.substring(ofDot + 1);
+        return sExt.indexOf('/') >= 0 || sExt.indexOf(File.pathSeparatorChar) >= 0 ? null : sExt;
+        }
+
+    /** TODO MOVE TO HANDY, add helper that takes File argument
+     * If the passed file name ends with an extension (such as ".x" or a ".xtc"), then return the
+     * file name without the extension.
+     *
+     * @param sFile  the file name, possibly with an extension such as ".x" or ".xtc"
+     *
+     * @return the same file name, but without an extension (if it previously had an extension)
+     */
+    public static String removeExtension(String sFile)
+        {
+        int ofDot = sFile.lastIndexOf('.');
+        if (ofDot <= 0)
             {
-            return sFile.substring(0, sFile.length()-4);
+            return sFile;
             }
-        return sFile;
+
+        return sFile.lastIndexOf('/') < ofDot && sFile.indexOf(File.pathSeparatorChar) < ofDot
+                ? sFile.substring(0, ofDot)
+                : sFile;
         }
 
     /**
      * Given a possible module file, try to find the corresponding module source file.
+     * TODO CP get rid of this (or switch it to use ModuleInfo)
      *
      * @param fileModule  the module file (either source or compiled)
      *
@@ -1649,8 +1757,8 @@ public abstract class Launcher
      */
     protected File sourceFile(File fileModule)
         {
-        String sModule = stripExtension(fileModule.getName());
-        File   fileDir = fileModule.getAbsoluteFile().getParentFile();
+        String sModule = removeExtension(fileModule.getName());
+        File   fileDir = resolveFile(fileModule).getParentFile();
         File   fileSrc = new File(fileDir, sModule + ".x");
         if (fileSrc.exists())
             {
@@ -1690,6 +1798,7 @@ public abstract class Launcher
 
     /**
      * Given a possible module file, try to find the actual compiled module binary file.
+     * TODO CP get rid of this (or switch it to use ModuleInfo)
      *
      * @param fileModule  the module file (either source or compiled)
      *
@@ -1697,8 +1806,8 @@ public abstract class Launcher
      */
     protected File binaryFile(File fileModule)
         {
-        String sModule = stripExtension(fileModule.getName());
-        File   fileDir = fileModule.getAbsoluteFile().getParentFile();
+        String sModule = removeExtension(fileModule.getName());
+        File   fileDir = resolveFile(fileModule).getParentFile();
         File   fileBin = new File(fileDir, sModule + ".xtc");
         if (fileBin.exists())
             {
@@ -1714,9 +1823,15 @@ public abstract class Launcher
 
         // check if we're in the "src" or "source" directory, and try to navigate to the build or
         // dist directory using well known conventions
-        String sDir = fileDir.getName();
+        // TODO verify Compiler command respects these same rules by default (e.g. when no "-o")
+        List<String> listSubs = new LinkedList<>();
+        String       sDir     = fileDir.getName();
         while (sDir.equals("src") || sDir.equals("source") || sDir.equals("main") || sDir.equals("x"))
             {
+            if (!sDir.equals("src") && !sDir.equals("source"))
+                {
+                listSubs.add(0, sDir);
+                }
             fileDir = fileDir.getParentFile();
             if (fileDir == null)
                 {
@@ -1725,13 +1840,15 @@ public abstract class Launcher
             sDir = fileDir.getName();
             }
 
+        // TODO look for both build and dist and use the latest
+        File     fileLatest   = null;
         String[] asSearchPath = parseDelimitedString("dist,build", ',');
         for (String sPath : asSearchPath)
             {
             File fileSearchDir = navigateTo(fileDir, sPath);
             if (fileSearchDir != null && fileSearchDir.isDirectory())
                 {
-                fileBin = findModuleBinary(fileSearchDir, sModule);
+                fileBin = findModuleBinary(fileSearchDir, sModule, listSubs);
                 if (checkFile(fileBin, null))
                     {
                     return fileBin;
@@ -1742,7 +1859,7 @@ public abstract class Launcher
         return null;
         }
 
-    /**
+    /** TODO move to handy
      * Given a starting directory and a sequence of '/'-delimited directory names, obtain the file
      * or directory indicated.
      *
@@ -1751,8 +1868,9 @@ public abstract class Launcher
      *
      * @return the indicated file or directory, or null if it could not be navigated to
      */
-    protected File navigateTo(File file, String sPath)
+    protected static File navigateTo(File file, String sPath)
         {
+        // TODO if File.pathSeparatorChar != '/' do a replace?
         for (String sPart : parseDelimitedString(sPath, '/'))
             {
             if (!file.isDirectory())
@@ -1763,7 +1881,7 @@ public abstract class Launcher
             file = switch (sPart)
                 {
                 case "."  -> file;
-                case ".." -> file.getAbsoluteFile().getParentFile();
+                case ".." -> resolveFile(file).getParentFile();
                 default   -> new File(file, sPart);
                 };
 
@@ -1837,6 +1955,21 @@ public abstract class Launcher
      */
     protected File findModuleBinary(File fileDir, String sModule)
         {
+        return findModuleBinary(fileDir, sModule, null);
+        }
+
+    /**
+     * Given a directory that may contain the module file for the specified module name, search for
+     * that module file.
+     *
+     * @param fileDir   a directory that may contain a module file
+     * @param sModule   the module name (either the short name or the qualified name)
+     * @param listSubs  a list of potential sub-directory names to search
+     *
+     * @return the file that appears to contain the compiled module, or null
+     */
+    protected File findModuleBinary(File fileDir, String sModule, List<String> listSubs)
+        {
         if (fileDir == null || !fileDir.exists() || !fileDir.isDirectory())
             {
             return null;
@@ -1851,7 +1984,7 @@ public abstract class Launcher
             {
             if (fileBin.isFile() && fileBin.canRead() && fileBin.getName().endsWith(".xtc"))
                 {
-                String sCurrent = stripExtension(fileBin.getName());
+                String sCurrent = removeExtension(fileBin.getName());
                 if (sCurrent.equals(sModule) || sCurrent.equals(sSimple))
                     {
                     return fileBin;
@@ -1911,41 +2044,44 @@ public abstract class Launcher
     /**
      * Select modules to target for source code processing.
      *
-     * @param listSources  a list of source locations
+     * @param listSources    a list of source locations
+     * @param resourceSpecs  an optional array of resource locations
+     * @param outputSpec     an optional location for storing the compilation result
      *
      * @return a list of "module files", each representing a module's source code
      */
-    protected List<File> selectTargets(List<File> listSources)
+    protected List<ModuleInfo> selectTargets(List<File> listSources, File[] resourceSpecs, File outputSpec)
         {
-        List<File> listResult = new ArrayList<>();
+        ListMap<File, ModuleInfo> mapResults = new ListMap<>();
 
         Set<File> setDups = null;
         for (File file : listSources)
             {
-            File moduleFile = findModule(file);
-            if (moduleFile == null)
+            ModuleInfo info    = new ModuleInfo(file, resourceSpecs, outputSpec);
+            File       srcFile = info.getSourceFile();
+            if (srcFile == null)
                 {
                 log(Severity.ERROR, "Unable to find module source for file: " + file);
                 }
-            else if (listResult.contains(moduleFile))
+            else if (mapResults.containsKey(srcFile))
                 {
                 if (setDups == null)
                     {
                     setDups = new HashSet<>();
                     }
-                if (!setDups.contains(moduleFile))
+                if (!setDups.contains(srcFile))
                     {
-                    log(Severity.WARNING, "Module source for file was specified multiple times: " + file);
-                    setDups.add(moduleFile);
+                    log(Severity.WARNING, "Module source was specified multiple times: " + srcFile);
+                    setDups.add(srcFile);
                     }
                 }
             else
                 {
-                listResult.add(moduleFile);
+                mapResults.put(srcFile, info);
                 }
             }
 
-        return listResult;
+        return new ArrayList<>(mapResults.values());
         }
 
     /**
@@ -1958,7 +2094,7 @@ public abstract class Launcher
      */
     protected boolean moduleUpToDate(Node nodeSourceTree, File fileModuleLocation)
         {
-        String sModule   = nodeSourceTree.name();
+        String sModule    = nodeSourceTree.name();
         File   fileModule = fileModuleLocation.isDirectory()
                 ? new File(fileModuleLocation, sModule + ".xtc")
                 : fileModuleLocation;
@@ -3014,7 +3150,7 @@ public abstract class Launcher
      *                              e.g. "{@code -L ~/lib:./lib:./}" or "{@code -L~/lib:./}"
      * </li><li><tt>AsIs</tt>     - an AsIs valued option is a String that is not modified, useful
      *                              when being passed on to a further "argv-aware" program
-     *                              e.g. "{@code xec MyApp.xtc -o=7 -X="hi"} -> {@code -o=7 -X="hi"}
+     *                              e.g. "{@code xec MyApp.xtc -o=7 -X="q"} -> {@code -o=7 -X="q"}"
      * </li></ul>
      */
     protected enum Form
@@ -3114,7 +3250,7 @@ public abstract class Launcher
     /**
      * The command-line arguments.
      */
-    private final String[] m_asArgs;
+    protected final String[] m_asArgs;
 
     /**
      * The parsed options.
@@ -3134,5 +3270,5 @@ public abstract class Launcher
     /**
      * Cache of module names extracted from corresponding ".x" source files.
      */
-    private Map<File, String> m_mapModuleNames;
+    private Map<File, String> m_mapModuleNames = Collections.synchronizedMap(new HashMap<>());
     }

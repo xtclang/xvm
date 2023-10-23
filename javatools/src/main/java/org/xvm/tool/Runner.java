@@ -69,45 +69,57 @@ public class Runner
                     + " (" + Constants.VERSION_MAJOR_CUR + "." + Constants.VERSION_MINOR_CUR + ")");
             }
 
-        File fileModule = options().getTarget();
-        if (fileModule == null)
+        final File fileSpec = options().getTarget();
+        if (fileSpec == null)
             {
             return;
             }
 
-        File            fileDir    = fileModule.getAbsoluteFile().getParentFile();
-        String          sModule    = fileModule.getName();
-        boolean         fExtension = explicitModuleFile(sModule);
-        ModuleStructure module     = null;
-        if (!fExtension)
+        ModuleInfo      info      = new ModuleInfo(fileSpec);
+        File            fileBin   = info.getBinaryFile();
+        boolean         binExists = fileBin != null && fileBin.exists();
+        ModuleStructure module    = null;
+        boolean         fCompile  = false;
+        if (!binExists)
             {
-            module = repo.loadModule(sModule);
+            module = repo.loadModule(info.getQualifiedModuleName());
+            if (module == null)
+                {
+                if (info.getSourceFile() != null)
+                    {
+                    log(Severity.INFO, "The compiled module " + info.getQualifiedModuleName()
+                            + " is missing; attempting to compile it from " + info.getSourceFile() + " ....");
+                    fCompile = true;
+                    }
+                else
+                    {
+                    log(Severity.ERROR, "Unable to find module: " + fileSpec);
+                    }
+                }
             }
-
-        // check if the source file name was specified
-        if (module == null && sModule.endsWith(".x"))
+        else if (!info.isUpToDate())
             {
-            File fileSrc = sourceFile(fileModule);
-            if (checkFile(fileSrc, null))
+            log(Severity.INFO, "The compiled module " + info.getQualifiedModuleName()
+                    + " is out-of-date; recompiling ....");
+            if (!info.getBinaryFile().delete())
                 {
-                // determine the name of the compiled module
-                String sName = getModuleName(fileSrc);
-                sModule = sName == null
-                        ? sModule + "tc"        // best guess: change ".x" to ".xtc"
-                        : sName + ".xtc";
+                log(Severity.ERROR, "Failed to delete the out-of-date module: " + info.getBinaryFile());
                 }
-            else
-                {
-                // best guess: the name of the compiled file ends with ".xtc" instead of ".x"
-                sModule += "tc";
-                }
-            fileModule = new File(fileDir, sModule);
+            fCompile = true;
+            }
+        checkErrors();
+
+        if (fCompile)
+            {
+            new Compiler(m_asArgs).run();
+            info      = new ModuleInfo(fileSpec);
+            fileBin   = info.getBinaryFile();
+            binExists = fileBin != null && fileBin.exists();
             }
 
         // check if the compiled module file name was specified
-        if (module == null && sModule.endsWith(".xtc"))
+        if (module == null && binExists)
             {
-            File fileBin = binaryFile(fileModule);
             if (checkFile(fileBin, null))
                 {
                 try
@@ -120,55 +132,7 @@ public class Runner
                     }
                 catch (IOException e)
                     {
-                    log(Severity.FATAL, "I/O exception (" + e + ") reading module file: " + fileModule);
-                    abort(true);
-                    }
-                }
-            }
-
-        // check the repository for a module of that name
-        if (module == null && fExtension)
-            {
-            module = repo.loadModule(stripExtension(sModule));
-            }
-
-        // assume it's a file that is missing its extension
-        if (module == null && !fExtension)
-            {
-            // basically, repeat the above steps for file searches; start with the source file
-            sModule   += ".x";
-            fileModule = new File(fileDir, sModule);
-            File fileSrc = sourceFile(fileModule);
-            if (checkFile(fileSrc, null))
-                {
-                // determine the name of the compiled module
-                String sName = getModuleName(fileSrc);
-                sModule = sName == null
-                    ? sModule + "tc"        // best guess: change ".x" to ".xtc"
-                    : sName + ".xtc";
-                }
-            else
-                {
-                // best guess: the name of the compiled file ends with ".xtc" instead of ".x"
-                sModule += "tc";
-                }
-            fileModule = new File(fileDir, sModule);
-
-            // then look for the compiled file
-            File fileBin = binaryFile(fileModule);
-            if (checkFile(fileBin, null))
-                {
-                try
-                    {
-                    try (FileInputStream in = new FileInputStream(fileBin))
-                        {
-                        FileStructure struct = new FileStructure(in);
-                        module = struct.getModule();
-                        }
-                    }
-                catch (IOException e)
-                    {
-                    log(Severity.FATAL, "I/O exception (" + e + ") reading module file: " + fileModule);
+                    log(Severity.FATAL, "I/O exception (" + e + ") reading module file: " + fileBin);
                     abort(true);
                     }
                 }
@@ -182,16 +146,11 @@ public class Runner
                 }
             catch (IOException e)
                 {
-                log(Severity.FATAL, "I/O exception (" + e + ") storing module file: " + fileModule);
+                log(Severity.FATAL, "I/O exception (" + e + ") storing module file: " + fileSpec);
                 abort(true);
                 }
+            checkErrors();
             }
-
-        if (module == null)
-            {
-            log(Severity.ERROR, "Unable to load module: " + fileModule);
-            }
-        checkErrors();
 
         try
             {
@@ -233,12 +192,16 @@ public class Runner
         return """
             Ecstasy runner:
 
-            Executes a compiled Ecstasy module.
+                Executes an Ecstasy module, compiling it first if necessary.
 
             Usage:
 
                 xec <options> <modulename>
-            or:
+                
+            Also supports any of:
+            
+                xec <options> <filename>
+                xec <options> <filename>.x
                 xec <options> <filename>.xtc
             """;
         }

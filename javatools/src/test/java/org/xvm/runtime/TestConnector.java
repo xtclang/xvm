@@ -1,25 +1,22 @@
 package org.xvm.runtime;
 
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.api.Connector;
 
-import org.xvm.asm.DirRepository;
-import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.compiler.BuildRepository;
-
 import org.xvm.tool.Compiler;
 import org.xvm.tool.Disassembler;
+import org.xvm.tool.ModuleInfo;
 
 import org.xvm.util.Handy;
+
 
 /**
  * The connector test.
@@ -63,68 +60,21 @@ public class TestConnector
         Compiler compiler = new Compiler(listCompileArgs.toArray(Handy.NO_ARGS));
         compiler.run();
 
-        List<File> listSrcFile   = compiler.options().getInputLocations();
-        String[]   asFileNames   = new String[cModules];
-        String[]   asModuleNames = new String[cModules];
-        for (int i = 0; i < cModules; i++)
-            {
-            File   fileOrig   = listSrcFile.get(i);
-            File   fileModule = compiler.findModule(fileOrig);
-            if (fileModule == null)
-                {
-                System.err.println("Failed to find module for " + fileOrig);
-                return;
-                }
-            String sName = compiler.getModuleName(fileModule);
-            int    ofDot = sName.indexOf('.');
+        ModuleInfo[]     targets   = compiler.getModuleInfos();
+        ModuleRepository repoLibs  = compiler.getLibraryRepo();
+        ModuleRepository repoBuild = compiler.getOutputRepo();
+        assert targets.length == cModules;
 
-            asFileNames[i]   = ofDot < 0 ? sName : sName.substring(0, ofDot);
-            asModuleNames[i] = sName;
-            }
-
-        List<File> listSysPaths = compiler.options().getModulePath();
-        int        cLibs        = listSysPaths.size();
-
-        ModuleRepository[] aRepo = new ModuleRepository[1 + cLibs + cModules];
-        aRepo[0] = new BuildRepository();
-
-        for (int i = 0; i < cLibs; ++i)
-            {
-            File file = listSysPaths.get(i);
-            aRepo[1 + i] = file.isDirectory()
-                ? new DirRepository(file, true)
-                : new FileRepository(file, true);
-            }
-
-        File dirBuild = new File("./build");
-        assert dirBuild.exists() && dirBuild.isDirectory();
-
-        for (int i = 0; i < cModules; ++i)
-            {
-            File file = new File(dirBuild, asFileNames[i] + ".xtc");
-
-            try
-                {
-                aRepo[1 + cLibs + i] = file.isDirectory()
-                    ? new DirRepository(file, true)
-                    : new FileRepository(file, true);
-                }
-            catch (RuntimeException | Error e)
-                {
-                System.err.println("Failed to load " + file);
-                return;
-                }
-            }
-
-        ModuleRepository repository = new LinkedRepository(true, aRepo);
+        ModuleRepository repository = new LinkedRepository(true, repoBuild, repoLibs);
         Connector        connector  = new Connector(repository);
 
-        for (String sModule : asModuleNames)
+        for (ModuleInfo info : targets)
             {
-            System.out.println("\n++++++ Loading module: " + sModule + " +++++++\n");
+            String name = info.getQualifiedModuleName();
+            System.out.println("\n++++++ Loading module: " + name + " +++++++\n");
 
             // +++ that is the actual use +++
-            connector.loadModule(sModule);
+            connector.loadModule(name);
 
             if (System.getProperties().containsKey("DEBUG"))
                 {

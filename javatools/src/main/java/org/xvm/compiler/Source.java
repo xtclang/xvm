@@ -44,7 +44,7 @@ public class Source
      *
      * @param sScript  the XTC source code, as a String
      */
-    public Source(String sScript, int cDepth)
+    public Source(String sScript, int cDepth)  // TODO not depth but ResourceDir
         {
         this(sScript.toCharArray());
         m_cDirDepth = cDepth;
@@ -59,7 +59,7 @@ public class Source
      *
      * @throws IOException
      */
-    public Source(File file, int cDepth)
+    public Source(File file, int cDepth)  // TODO not depth but ResourceDir
             throws IOException
         {
         this(readFileChars(file));
