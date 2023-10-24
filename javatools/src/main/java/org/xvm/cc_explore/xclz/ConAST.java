@@ -7,21 +7,14 @@ import org.xvm.cc_explore.util.SB;
 class ConAST extends AST {
   final TCon _tcon;
   final String _con;
-  ConAST( Const con ) {
+  ConAST( Const con ) { this((TCon)con, XClzBuilder.value_tcon(con), XClzBuilder.jtype(con,false)); }
+  ConAST( String con ) { this(null,con,con); }
+  ConAST( TCon tcon, String con, String type ) {
     super(null);
-    _tcon = (TCon)con;
-    _con = XClzBuilder.value_tcon(_tcon);
+    _tcon = tcon;
+    _con  = con ;
+    _type = type;
   }
-  ConAST( String con ) {
-    super(null);
-    _tcon = null;
-    _con = con;
-  }
-  @Override String type() {
-    if( _tcon instanceof StringCon ) return "String";
-    if( _tcon instanceof EnumCon econ )
-      return econ.part()._par._name;
-    return _con;
-  }
+  @Override String _type() { return _type; }
   @Override SB jcode( SB sb ) { return sb.p(_con); }
 }

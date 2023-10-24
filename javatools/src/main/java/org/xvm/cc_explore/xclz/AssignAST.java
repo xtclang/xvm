@@ -17,20 +17,25 @@ class AssignAST extends AST {
   }
   AssignAST( AST... kids ) { this(Operator.Asn,kids); }
   private AssignAST( Operator op, AST... kids ) { super(kids); _op=op; _name = kids[0].name(); }
+
+
+  @Override String _type() { return _kids[0]._type; }
+  @Override boolean _cond() { return _op==Operator.AsnIfNotFalse; }
+  
   @Override AST rewrite() {
     // Assign of a non-primitive array
     if( _kids[0] instanceof BinOpAST bin &&
         // Replace with "ary.set(idx,val)"
         bin._op0.equals(".at(") )
-      return new InvokeAST("set",bin._kids[0],bin._kids[1],_kids[1]);
+      return new InvokeAST("set",(String)null,bin._kids[0],bin._kids[1],_kids[1]);
     // Stupidly in Java: "Long x = 4;" fails
-    if( _kids[0].type().equals("Long") && _kids[1] instanceof ConAST con &&
+    if( _kids[0]._type.equals("Long") && _kids[1] instanceof ConAST con &&
         !con._con.equals("null") && !con._con.endsWith("L") )
       _kids[1] = new ConAST(con._con+"L");
 
     // var := (true,val)  or  var ?= not_null;
     if( _op == Operator.AsnIfNotFalse || _op == Operator.AsnIfNotNull) {
-      String type = _kids[0].type();
+      String type = _kids[0]._type;
       BlockAST blk = enclosing_block();
       if( _kids[0] instanceof DefRegAST ) {
         // Use the _par parent to find nearest enclosing If or Assert for a conditional assignment

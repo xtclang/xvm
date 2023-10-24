@@ -5,9 +5,9 @@ module TestMisc {
         console.print("hello world!");
         
         testBools();
-        //testChars();
+        testChars();
         testInts();
-        //testCast();
+        //testCast(); // Requires an intersection type of `Int` and `String`
         testTernary();
         testSpaceship();
         testElvis();
@@ -23,11 +23,11 @@ module TestMisc {
 
         testAssertTrue();
         testAssertTrueExpr();
-        //testAssertFalseExpr();
+        testAssertFalseExpr();
         testAssertDecl();
-
+        
         testInterval();
-        //testException();
+        testException();
         testConditional();
         //testBind();
         //testConstants();
@@ -88,27 +88,29 @@ module TestMisc {
         console.print("~b=" + ~b);
     }
 
-    //void testChars() {
-    //    console.print("\n** testChars()");
-    //
-    //    Char[] chars = "1aA!\n$£€".toCharArray();
-    //    for (Char ch : chars) {
-    //        String dec = "";
-    //        if (Int value := ch.decimalValue()) {
-    //            dec = $"\'{value}\'";
-    //        }
-    //
-    //        console.print($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
-    //                         | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
-    //                         | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
-    //                         );
-    //    }
-    //
-    //    // this also tests the conditional UInt8 to Int conversion
-    //    assert Int n := chars[0].asciiDigit(), n == 1;
-    //    assert !chars[1].asciiDigit();
-    //}
+    void testChars() {
+        console.print("\n** testChars()");
+    
+        Char[] chars = "1aA!\n$£€".toCharArray();
+        for (Char ch : chars) {
+            String dec = "";
+            if (Int value := ch.decimalValue()) {
+                dec = $"\'{value}\'";
+            }
+        
+            console.print($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
+                             | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
+                             | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
+                             );
+        }
+    
+        // this also tests the conditional UInt8 to Int conversion
+        assert Int n := chars[0].asciiDigit(), n == 1;
+        assert !chars[1].asciiDigit();
+    }
 
+    
+    // Requires an intersection type of `Int` and `String`
     //void testCast() {
     //    console.print("\n** testCast()");
     //
@@ -122,6 +124,7 @@ module TestMisc {
     //    console.print("o2=" + o2);
     //
     //    try {
+    //        // Requires an intersection type of `Int` and `String` here
     //        console.print("i.as(String) should throw " + i.as(String));
     //    } catch (Exception e) {
     //        console.print("i.as(String) failed correctly: \"" + e.text + '"');
@@ -299,14 +302,16 @@ module TestMisc {
         console.print("(done)");
     }
 
-    //void testAssertFalseExpr() {
-    //    console.print("\n** testAssertFalseExpr()");
-    //    try {
-    //        assert True == False;
-    //    } catch (IllegalState e) {
-    //        console.print("(done)");
-    //    }
-    //}
+    void testAssertFalseExpr() {
+        console.print("\n** testAssertFalseExpr()");
+        try {
+            assert True == False;
+        } catch (IllegalState e) {
+            Int x = 3;
+            console.print("(done)");
+            console.print(x);
+        }
+    }
 
     void testAssertDecl() {
         console.print("\n** testAssertDecl()");
@@ -328,15 +333,15 @@ module TestMisc {
         console.print("interval=" + r);
     }
 
-    //void testException() {
-    //    console.print("\n** testException()");
-    //
-    //    Exception e = new Exception("test");
-    //    console.print("e=" + e);
-    //
-    //    e = new IllegalArgument("test");
-    //    console.print("e=" + e);
-    //}
+    void testException() {
+        console.print("\n** testException()");
+    
+        Exception e = new Exception("test");
+        console.print("e=" + e);
+    
+        e = new IllegalArgument("test");
+        console.print("e=" + e);
+    }
 
     void testConditional() {
         console.print("\n** testConditional()");
