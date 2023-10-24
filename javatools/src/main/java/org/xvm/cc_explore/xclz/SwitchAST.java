@@ -53,7 +53,7 @@ class SwitchAST extends AST {
     // a selection of ints and int ranges
     if( cond instanceof MultiAST ) {
       // this is a multi-arm pattern match
-    } else if( "long".equals(cond.type()) ) {
+    } else if( "long".equals(cond._type) ) {
       // This is single-ints, confirm all case arms are ints (or ranges)
       for( Const c : cases )
         if( !valid_range( c ) )
@@ -124,14 +124,16 @@ class SwitchAST extends AST {
   }
 
   @Override boolean is_loopswitch() { return true; }
-
+  
+  @Override String _type() { return "void"; }
+  
   // Pre-cook the temps
   @Override AST rewrite() {
     BlockAST blk = enclosing_block();
     if( _kids[0] instanceof MultiAST cond ) {
       _tmps = new String[cond._kids.length];
       for( int i=0; i<cond._kids.length; i++ )
-        _tmps[i] = blk.add_tmp(cond._kids[i].type());
+        _tmps[i] = blk.add_tmp(cond._kids[i]._type);
     }
     return this;
   }

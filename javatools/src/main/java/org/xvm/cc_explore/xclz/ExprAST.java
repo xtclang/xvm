@@ -2,10 +2,8 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.cons.Const;
-import org.xvm.cc_explore.XEC;
 
 class ExprAST extends AST {
-  final String _type;
   static ExprAST make( XClzBuilder X ) {
     
     // Parse kids in order as stmts not exprs
@@ -17,6 +15,7 @@ class ExprAST extends AST {
   }
   
   ExprAST( String type, AST... kids ) { super(kids);  _type = type; }
+  @Override String _type() { return _type; }
 
   // new Runnable() { void run() { ....; } }.run()
   @Override void jpre( SB sb ) {

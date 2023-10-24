@@ -3,11 +3,13 @@ package org.xvm.cc_explore.xclz;
 import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.MethodPart;
 import org.xvm.cc_explore.cons.Const;
+import org.xvm.cc_explore.cons.StringCon;
 import org.xvm.cc_explore.cons.MethodCon;
 import org.xvm.cc_explore.util.SB;
 
 class InvokeAST extends AST {
   final String _meth;
+  final String[] _rets;
 
   static InvokeAST make( XClzBuilder X ) {
     Const[] retTypes = X.consts(); // Return types
@@ -22,6 +24,12 @@ class InvokeAST extends AST {
     // Calling target.method(args)
     MethodPart meth = (MethodPart)((MethodCon)methcon).part();
     _meth = meth._name;
+    if( retTypes==null ) _rets = null;
+    else {
+      _rets = new String[retTypes.length];
+      for( int i=0; i<retTypes.length; i++ )
+        _rets[i] = XClzBuilder.jtype(retTypes[i],false);
+    }
     
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
@@ -33,24 +41,68 @@ class InvokeAST extends AST {
     }
   }
   
-  InvokeAST( String meth, AST... kids ) {
+  InvokeAST( String meth, String ret, AST... kids ) {
     super(kids);
     _meth = meth;
+    _rets = ret==null ? null : new String[]{ret};
+  }
+  InvokeAST( String meth, String[] rets, AST... kids ) {
+    super(kids);
+    _meth = meth;
+    _rets = rets;
+  }
+
+  @Override String _type() {
+    if( _rets==null ) return "void";
+    if( _rets.length == 1 ) return _rets[0];
+    if( _rets.length == 2 && _rets[0].equals("boolean") )
+      return _rets[1];          // Conditional
+    throw XEC.TODO();
+  }
+  @Override boolean _cond() {
+    if( "TRACE".equals(_meth) ) return _kids[1]._cond; // TRACE passes condition thru
+    return _rets!=null && _rets.length == 2 && _rets[0].equals("boolean");
   }
   
   @Override AST rewrite() {
     // Cannot invoke directly on java primitives
-    if( _meth.equals("toString") && _kids[0].type().equals("long") )
-      return new InvokeAST(_meth,new ConAST("Long"),_kids[0]);
-    if( _meth.equals("toInt") && _kids[0] instanceof ConAST con )
-      return new InvokeAST("valueOf",new ConAST("Long"),_kids[0]);
-    if( _meth.equals("toInt64") ) { // Cast to a Long
-      if( "long".equals(_kids[0].type()) || "Long".equals(_kids[0].type()))
-        return _kids[0];
+    switch( _kids[0]._type ) {
+      
+    case "long": {
+      if( _meth.equals("toString") )
+        return new InvokeAST(_meth,"String",new ConAST("Long"),_kids[0]).do_type();
+      if( _meth.equals("toInt64") ) // Cast long to a Long
+        return _kids[0];            // Autoboxing in Java
       // Actually needs a cast
       throw XEC.TODO();
     }
+    case "Long": {
+      if( _meth.equals("toString") )
+        return _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,"String",new ConAST("Long"),_kids[1]).do_type();
+      if( _meth.equals("toInt64") ) // Cast long to a Long
+        return _kids[0];            // Autoboxing in Java
+      if( _meth.equals("valueOf") )
+        return this;
+      // Actually needs a cast
+      throw XEC.TODO();
+    }
+
+    case "char":
+    case "Character":
+      if( _meth.equals("asciiDigit") )
+        return new InvokeAST(_meth,new String[]{"boolean","char"},new ConAST("XRuntime"),_kids[0]).do_type();
+      throw XEC.TODO();      
+      
+    case "String":
+      if( _meth.equals("toCharArray") )
+        return new NewAST(_kids,"AryChar",null);
+      throw XEC.TODO();      
+    }
+    
     return this;
+    
+    //if( _meth.equals("toInt") && _kids[0] instanceof ConAST con )
+    //  return new InvokeAST("valueOf",new ConAST("Long"),_kids[0]);
   }
   @Override void jmid ( SB sb, int i ) {
     if( i==0 ) sb.p('.').p(_meth).p("(");
