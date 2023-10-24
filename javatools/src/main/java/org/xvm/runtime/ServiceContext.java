@@ -61,6 +61,7 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
@@ -1091,7 +1092,16 @@ public class ServiceContext
                 break;
                 }
 
-            if (!hArg.isPassThrough(container))
+            if (hArg.isPassThrough(container))
+                {
+                if (hArg instanceof FunctionHandle hFn)
+                    {
+                    // this service is returning a function; any call to that function will be
+                    // executed in the context of this service
+                    ahArg[i] = xRTFunction.makeAsyncDelegatingHandle(getService(), hFn);
+                    }
+                }
+            else
                 {
                 int ix = i;
                 if (hArg.getType().isA(frame.poolContext().typeAutoFreezable()))
