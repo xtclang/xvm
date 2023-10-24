@@ -99,4 +99,10 @@ public abstract class XRuntime {
     return x;
   }
 
+  // ASCII digit check
+  public static long asciiDigit(char c) {
+    long x = c-'0';
+    return SET$COND(0 <= x && x <= 9,x);
+  }
+  
 }

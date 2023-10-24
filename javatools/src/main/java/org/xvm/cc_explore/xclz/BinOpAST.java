@@ -9,7 +9,6 @@ import java.util.HashMap;
 class BinOpAST extends AST {
   static final Operator[] OPS = Operator.values();
   final String _op0, _op1;
-  final String _type;
 
   static BinOpAST make( XClzBuilder X, boolean has_type ) {
     AST[] kids = new AST[2];
@@ -35,7 +34,17 @@ class BinOpAST extends AST {
     _op1 = op1;
     _type = type;
   }
-  @Override String type() { return _type; }
+
+  @Override String _type() {
+    if( _op0.equals(".at(") ) {
+      String arytype = _kids[0]._type;
+      if( arytype.startsWith("Ary<") )
+        return arytype.substring(4,arytype.length()-1);
+      if( arytype.equals("AryChar") )  return "char";
+      if( arytype.equals("AryI64") )  return "long";
+    }
+    return _type;
+  }
 
   @Override AST rewrite() {
     // Range is not a valid Java operator, so need to change everything here
@@ -44,10 +53,10 @@ class BinOpAST extends AST {
     // Generally Java needs to use equals for refs and == is only for prims
     if( _op0.equals("==") && !(_kids[0] instanceof ConAST con && "null".equals(con._con)) ) {
       if( needs_equals(_kids[0]) || needs_equals(_kids[1]) )
-        return new InvokeAST("equals",_kids[0],_kids[1]);
+        return new InvokeAST("equals","boolean",_kids[0],_kids[1]).do_type();
     }
     if( _op0.equals("<=>") )
-      return new InvokeAST("spaceship",new ConAST("XClz"),_kids[0],_kids[1]);
+      return new InvokeAST("spaceship","Ordered",new ConAST("XClz"),_kids[0],_kids[1]).do_type();
 
     // This is a ternary null-check or elvis operator.  _kids[0] has, deep
     // within it, the matching predicate test.  I need to restructure this tree:
@@ -76,23 +85,23 @@ class BinOpAST extends AST {
   }
 
   private AST do_elvis( AST pred0, AST elvis ) {
-    String type = pred0.type();
+    String type = pred0._type;
     String tmp = enclosing_block().add_tmp(type);
     elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
     // Assign the tmp to predicate
-    AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred0);
+    AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred0).do_type();
     // Zero/null if primitive (if boxing changes type)
     AST zero = new ConAST(XClzBuilder.box(type).equals(type) ? "null" : "0");
     // Null check it
     AST nchk = new BinOpAST("!=","","boolean",asgn, zero );
     // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
-    return new TernaryAST( nchk, _kids[0], _kids[1]);
+    return new TernaryAST( nchk, _kids[0], _kids[1]).do_type();
   }
   
   
   // Boxed types (Long vs long) needs equals.
   static boolean needs_equals(AST k) {
-    String t = k.type();        // Constants dont give a proper type
+    String t = k._type;         // Constants dont give a proper type
     return !(k instanceof ConAST) && XClzBuilder.box(t).equals(t);
   }
   

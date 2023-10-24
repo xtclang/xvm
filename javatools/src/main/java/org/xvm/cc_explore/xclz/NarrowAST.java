@@ -8,7 +8,6 @@ import org.xvm.cc_explore.ClassPart;
 import java.util.HashMap;
 
 class NarrowAST extends AST {
-  final String _type;
 
   static NarrowAST make( XClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
@@ -22,7 +21,6 @@ class NarrowAST extends AST {
       ? "Object"
       : XClzBuilder.jtype((TCon)type,false);
   }
-
-  @Override String type() { return _type; }  
+  @Override String _type() { return _type; }
   @Override String name() { return _kids[0].name(); }
 }

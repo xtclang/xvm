@@ -15,6 +15,17 @@ class ReturnAST extends AST {
     return new ReturnAST(X.kids(n), ztype);
   }
   ReturnAST( AST[] kids, String ztype) { super(kids);  _ztype=ztype; }
+
+  @Override String _type() {
+    if( _ztype==null )
+      return _kids==null ? "void" : _kids[0]._type;
+    // Conditional, report the non-boolean type
+    if( _kids[0] instanceof MultiAST cond )
+      return cond._kids[1]._type;
+    // Conditional, always false, no other returned type
+    return "void";
+  }
+
   @Override SB jcode( SB sb ) {
     if( _kids==null ) return sb.ip("return");
     if( _ztype!=null ) {
@@ -34,13 +45,3 @@ class ReturnAST extends AST {
     throw XEC.TODO();
   }
 }
-
-
-//      String kid0 = _kids[0].type();
-//      // Conditional
-//      if( kid0.equals("Boolean" ) ) {
-//        sb.p("XRuntime.SET$COND(");
-//        _kids[0].jcode(sb).p(",");
-//        _kids[1].jcode(sb).p(")");
-//        return sb;
-//      }

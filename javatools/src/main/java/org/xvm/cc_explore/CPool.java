@@ -233,6 +233,18 @@ public class CPool {
     return as;
   }
 
+  public Const[] sparse_consts(int len) {
+    long mask = pack64(), i=0;
+    if( mask==0 ) return null;
+    Const[] as = new Const[len];
+    while( mask!=0 ) {
+      if( (mask&1)!=0 )
+        as[(int)i] = xget();
+      mask >>>= 1;
+      i++;
+    }
+    return as;
+  }
   
   // Read a UTF8 char
   public int utf8Char() {

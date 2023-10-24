@@ -7,23 +7,29 @@ import org.xvm.cc_explore.util.SB;
 // Since Java has no defaults, explicitly replace.
 class RegAST extends AST {
   final int _reg;
-  final String _name, _type;
+  final String _name;
   RegAST( int reg, String name, String type ) {
     super(null);
     _reg  = reg ;
-    if( name==null && reg== -4 /*A_DEFAULT*/ ) name = "default";
-    if( name==null && reg== -5 /*A_THIS*/    ) name = "this";
     _name = name;
     _type = type;
   }
   RegAST( int reg, XClzBuilder X ) {
     super(null);
     _reg  = reg ;
-    _name = X._locals.get(reg);
-    _type = X._ltypes.get(reg);
+    _name = switch( reg ) {
+    case -4 ->  "default";  // A_DEFAULT
+    case -5 ->  "this";     // A_THIS
+    default -> X._locals.get(reg);
+    };
+    _type = switch( reg ) {
+    case -4 ->  "void";  // A_DEFAULT
+    case -5 ->  XClzBuilder.java_class_name(X._mod._name); // A_THIS
+    default -> X._ltypes.get(reg);
+    };
+    
   }
-  RegAST( int reg ) { this(reg,null,null); }
-  @Override String type() { return _type; }
   @Override String name() { return _name; }
+  @Override String _type() { return _type; }
   @Override void jpre ( SB sb ) { sb.p(_name); }
 }

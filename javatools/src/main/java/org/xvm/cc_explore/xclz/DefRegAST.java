@@ -5,7 +5,7 @@ import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
 
 class DefRegAST extends AST {
-  final String _type, _name, _init;
+  final String _name, _init;
 
   static DefRegAST make( XClzBuilder X, boolean named, boolean initd ) {
     Const init = initd ? X.con() : null;
@@ -32,13 +32,11 @@ class DefRegAST extends AST {
   }
   DefRegAST( String type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
   
-  @Override String type() { return _type; }
   @Override String name() { return _name; }
+  @Override String _type() { return _type; }
   
   @Override void jpre( SB sb ) {
-    String type = type();
-    if( type==null ) type="var";
-    sb.p(type);
+    sb.p(_type);
     sb.p(" ").p(_name);
     if( _init != null ) sb.p(" = ").p(_init);
   }

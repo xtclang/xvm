@@ -5,8 +5,10 @@ import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.util.SB;
 
 public abstract class AST {
-  final AST[] _kids;
-  AST _par;
+  final AST[] _kids;            // Kids
+  AST _par;                     // Parent
+  String _type;                 // Null is unset, never valid. "void" or "int" or "Long" or "AryI64"
+  boolean _cond;                // True if passing the hidden condition flag
   
   // Simple all-fields constructor
   AST( AST[] kids ) { _kids = kids; }
@@ -30,28 +32,49 @@ public abstract class AST {
   }
   boolean is_loopswitch() { return false; }
 
-  // String java Type of this expression
-  String type() { throw XEC.TODO(); }
-
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }
-  
+
+  // Recursively walk the AST, setting the _type field.
+  final void type( ) {
+    if( _kids != null )
+      for( AST kid : _kids )
+        if( kid!=null )
+          kid.type();
+    do_type();
+  }
+  // Subclasses must override
+  abstract String _type();
+  boolean _cond() { return false; }
+
+  // Called after a rewrite to set the type again
+  AST do_type() {
+    String type = _type();
+    assert type != null;
+    assert _type==null || _type.equals(type);
+    _type = type;
+    _cond = _cond();
+    return this;
+  }
+
   // Walk, and allow AST to rewrite themselves in-place.
   // Set the _par parent.
-  final AST do_rewrite() {
+  final void do_rewrite() {
     if( _kids!=null )
       for( int i=0; i<_kids.length; i++ ) {
-        AST kid = _kids[i], old;
+        AST kid = _kids[i];
         if( kid != null ) {
-          do {          
+          while( true ) {
             kid._par = this;
-            kid = (old=kid).rewrite();
-          } while( old!=kid );
+            AST rwk = kid.rewrite();
+            if( kid==rwk )  break; // No change
+            assert rwk._type!=null;
+            kid = rwk;
+          }
           _kids[i] = kid;
           _kids[i].do_rewrite();
         }
       }
-    return this;
   }
   
   // Rewrite some AST bits before Java
@@ -92,7 +115,7 @@ public abstract class AST {
       return new RegAST(iop-32,X);  // Local variable register
     if( iop == NodeType.Escape.ordinal() ) return ast(X);
     if( iop >= 0 ) return _ast(X,iop);
-    if( iop > CONSTANT_OFFSET ) return new RegAST(iop); // "special" negative register
+    if( iop > CONSTANT_OFFSET ) return new RegAST(iop,X); // "special" negative register
     // Constants from the limited method constant pool
     return new ConAST( X.con(CONSTANT_OFFSET-iop) );
   }
@@ -114,7 +137,7 @@ public abstract class AST {
     case CallExpr     ->     CallAST.make(X);
     case CondOpExpr   ->    BinOpAST.make(X,false);
     case ContinueStmt -> ContinueAST.make(X);
-    case ConvertExpr  ->    UniOpAST.make(X,true);
+    case ConvertExpr  ->     ConvAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
@@ -146,7 +169,7 @@ public abstract class AST {
     case TernaryExpr  ->  TernaryAST.make(X);
     case TryCatchStmt -> TryCatchAST.make(X);
     case TupleExpr    ->     ListAST.make(X,true);
-    case UnaryOpExpr  ->    UniOpAST.make(X,false);
+    case UnaryOpExpr  ->    UniOpAST.make(X);
     case WhileDoStmt  ->    WhileAST.make(X);
     
     default -> throw XEC.TODO();

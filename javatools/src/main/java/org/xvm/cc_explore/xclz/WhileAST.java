@@ -26,6 +26,8 @@ class WhileAST extends AST {
 
   @Override boolean is_loopswitch() { return true; }
 
+  @Override String _type() { return "void"; }
+
   @Override SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
     // while( cond ) body;

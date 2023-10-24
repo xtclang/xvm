@@ -42,6 +42,7 @@ class TryCatchAST extends AST {
     }
   }
 
+  @Override String _type() { return "void"; }
   
   @Override SB jcode( SB sb ) {
     if( _xbody!=0 )
@@ -60,7 +61,7 @@ class TryCatchAST extends AST {
       sb.ip("catch( ");
       BlockAST blk = (BlockAST)_kids[i];
       DefRegAST ex = (DefRegAST)blk._kids[0];
-      sb.p(ex.type()).p(" ").p(ex.name()).p(" ) ");
+      sb.p(ex._type).p(" ").p(ex.name()).p(" ) ");
       blk._kids[1].jcode(sb);
     }
     return sb;

@@ -13,6 +13,8 @@ class IfAST extends AST {
     return new IfAST(kids);
   }  
   private IfAST( AST[] kids ) { super(kids); }
+  
+  @Override String _type() { return "void"; }
 
   BlockAST true_blk() {
     BlockAST blk;

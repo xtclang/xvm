@@ -104,7 +104,7 @@ $(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x
 	@echo "compiling " $@ " because " $?
 	@$(XTC) $? -o $(EXM)
 
-examples_run: $(classes) $(test_classes)
+examples_run: $(classes) $(test_classes) $(XDK) examples
 	$(XEC) $(EXM)/HelloWorld.xtc
 	$(XEC) $(EXM)/FizzBuzz.xtc
 	$(XEC) $(EXM)/Permutations.xtc

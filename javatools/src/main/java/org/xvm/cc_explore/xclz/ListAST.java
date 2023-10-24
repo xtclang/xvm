@@ -17,6 +17,8 @@ class ListAST extends AST {
     _type = XClzBuilder.jtype(type,false);
     _tuple = tuple;
   }
+  @Override String _type() { return _type; }
+  
   @Override void jpre( SB sb ) {
     if( !_tuple ) throw XEC.TODO();
     sb.p("new ").p(_type).p("(");
