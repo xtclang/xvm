@@ -8,6 +8,7 @@ class TemplateAST extends AST {
     super(kids);
     _kids[0] = null;            // Toss away the StringBuilder first op
   }
+  @Override String _type() { return "String"; }
   @Override void jpre ( SB sb ) { sb.p("\"\"+ "); }
   @Override void jmid ( SB sb, int i ) { sb.p("+ "); }
   @Override void jpost( SB sb ) { sb.unchar(2); }  

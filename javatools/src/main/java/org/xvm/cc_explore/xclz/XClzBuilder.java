@@ -119,11 +119,13 @@ public class XClzBuilder {
 
     // Output Java methods for all Module methods
     // TODO: Classes in a Module?
+    MethodPart run=null;
     for( Part part : _mod._name2kid.values() ) {
       if( part instanceof MMethodPart mmp ) {
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
         _sb.nl();
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
+        if( mmp._name.equals("run") ) run = meth;
         jmethod(meth,meth._name);
       } else if( part instanceof PackagePart ) {
         // Self module is OK
@@ -139,6 +141,17 @@ public class XClzBuilder {
       }
     }
 
+    // If the run method has a string array arguments -
+    // - make a no-arg run, which calls the arg-run with nulls.
+    // - make a main() which forwards to the arg-run
+    if( run != null && run._args != null ) {
+      _sb.ip("public void run() { run(new Ary<String>(String.class)); }").nl();
+      _sb.ip("public void main(String[] args) {").nl().ii();
+      _sb.ip(" run( new Ary<String>(args) );").nl().di();
+      _sb.ip("}").nl();
+    }
+    
+    
     // End the class body
     _sb.di().p("}").nl();    
   }
@@ -203,8 +216,12 @@ public class XClzBuilder {
     _meth = m;
     _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser
     AST ast = AST.parse(this);
+    // Set types in every AST
+    ast.type();
     // Do any trivial restructuring
-    return ast.do_rewrite();
+    ast.do_rewrite();
+    // Final AST ready to print as Java
+    return ast;
   }
 
   
@@ -213,6 +230,7 @@ public class XClzBuilder {
   long pack64() { return _pool.pack64(); }
   // Read an array of method constants
   Const[] consts() { return _pool.consts(); }
+  Const[] sparse_consts(int len) { return _pool.sparse_consts(len); }
   // Read a single method constant, advancing parse pointer
   Const con() { return con(u31()); }
   // Read a single method constant
@@ -296,6 +314,7 @@ public class XClzBuilder {
       put("IllegalArgument+ecstasy.x","IllegalArgumentException");
       put("IllegalState+ecstasy.x","IllegalStateX");
       put("Int64+ecstasy/numbers/Int64.x","long");
+      put("UInt8+ecstasy/numbers/UInt8.x","XUByte");
       put("IntLiteral+ecstasy/numbers/IntLiteral.x","long");
       put("Object+ecstasy/Object.x","Object");
       put("String+ecstasy/text/String.x","String");
@@ -304,6 +323,7 @@ public class XClzBuilder {
 
   // Convert a Java primitive to the Java object version.
   static final HashMap<String,String> XBOX = new HashMap<>() {{
+      put("boolean","Boolean");
       put("char","Character");
       put("int","Integer");
       put("long","Long");
@@ -311,6 +331,16 @@ public class XClzBuilder {
   public static String box(String s) {
     String box = XBOX.get(s);
     return box==null ? s : box;
+  }
+  static final HashMap<String,String> UNBOX = new HashMap<>() {{
+      put("Boolean","boolean");
+      put("Character","char");
+      put("Integer","int");
+      put("Long","long");
+    }};
+  public static String unbox(String s) {
+    String unbox = UNBOX.get(s);
+    return unbox==null ? s : unbox;
   }
 
   
@@ -336,10 +366,11 @@ public class XClzBuilder {
       ClassPart clz = ((ClzCon)ptc._con).clz();
       
       // These XTC classes are all intercepted and directly implemented in Java
-      if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
-        return telem.equals("Long")
-          ? "AryI64"            // Java ArrayList specialized to int64
-          : "Ary<"+telem+">";   // Shortcut class
+      if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
+        if( telem.equals("Long"     ) ) return "AryI64" ; // Java ArrayList specialized to int64
+        if( telem.equals("Character") ) return "AryChar"; // Java ArrayList specialized to char
+        return "Ary<"+telem+">";   // Shortcut class
+      }
 
       // All the long-based ranges, intervals and interators are just Ranges now.
       if( clz._name.equals("Range") && clz._path._str.equals("ecstasy/Range.x") ||
@@ -382,7 +413,40 @@ public class XClzBuilder {
       throw XEC.TODO();
     }
 
+    if( tc instanceof IntCon itc ) {
+      if( itc._f == Const.Format.Int64 ) 
+        return boxed ? "Long" : "long";
+      throw XEC.TODO();
+    }
+
+    if( tc instanceof StringCon )
+      return "String";
+
+    if( tc instanceof EnumCon econ ) {
+      ClassPart clz = (ClassPart)econ.part();
+      return unbox(clz._super._name);
+    }
     
+    if( tc instanceof LitCon lit ) {
+      if( lit._f==Const.Format.IntLiteral )
+        return boxed ? "Long" : "long";
+      throw XEC.TODO();
+    }
+    
+    if( tc instanceof AryCon ac )
+      return jtype(ac.type(),false);
+
+    if( tc instanceof MethodCon mcon )  {
+      MethodPart meth = (MethodPart)mcon.part();
+      String name = meth._name;
+      if( !name.equals("->") && meth._par._par instanceof MethodPart pmeth )
+        name = pmeth._name+"$"+meth._name;
+      return name;
+    }
+
+    if( tc instanceof SingleCon con0 )
+      return java_class_name(con0.part()._name);
+
     throw XEC.TODO();
   }  
 

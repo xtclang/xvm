@@ -1,10 +1,7 @@
 package org.xvm.cc_explore.xrun;
 
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.XEC;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.*;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
@@ -18,14 +15,27 @@ public class Ary<E> implements Iterable<E> {
     _es = (E[]) java.lang.reflect.Array.newInstance(_eclz,1);
     _len = 0;
   }
+  public Ary(String[] ss) {
+    _eclz = (Class<E>)String.class;
+    _es = (E[])ss;
+    _len = ss.length;
+  }
 
+  /** Length, as encoded as a size property read */
+  public int size$get() { return _len; }
+  
+  /** Element at */
+  public E at( int idx ) {
+    if( idx >= _len ) throw new ArrayIndexOutOfBoundsException(idx);
+    return _es[idx];
+  }
+  
   /** Add an element, doubling base array as needed */
   public Ary<E> add( E e ) {
     if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));
     _es[_len++] = e;
     return this;
   }
-
 
   /** @return an iterator */
   @Override public Iterator<E> iterator() { return new Iter(); }

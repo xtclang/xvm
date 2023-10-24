@@ -8,7 +8,7 @@ import org.xvm.cc_explore.tvar.TVBase;
   Exploring XEC Constants
  */
 public class LitCon extends TCon {
-  final Format _f;
+  public final Format _f;
   public String _str;           // The actual string constant
   public LitCon( CPool X, Format f ) {
     _f = f;
