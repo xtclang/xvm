@@ -64,6 +64,9 @@ class BindFuncAST extends AST {
     } else
       throw XEC.TODO();
   }
+
+  @Override String _type() { return "->"; } // Local lamdba type
+
   @Override SB jcode( SB sb ) {
     for( String arg : _args )
       sb.p(arg).p(" ");

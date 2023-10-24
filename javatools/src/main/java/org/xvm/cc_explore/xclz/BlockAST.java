@@ -23,6 +23,8 @@ class BlockAST extends AST {
   }
   
   BlockAST( AST... kids ) { super(kids); }
+
+  @Override String _type() { return "void"; }
   
   String add_tmp(String type) {
     return add_tmp(type,"$tmp"+_uid++);

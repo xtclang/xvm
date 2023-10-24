@@ -8,7 +8,7 @@ import java.math.BigInteger;
   Exploring XEC Constants
  */
 public class IntCon extends TCon {
-  private final Format _f;
+  public  final Format _f;
   public  final long _x;          // Only valid if _big is null
   public  final BigInteger _big;  // If null, _x holds the value.  If not-null _x is 0.
   private static final BigInteger LONG_MIN = BigInteger.valueOf(Long.MIN_VALUE);

@@ -13,13 +13,14 @@ class MultiAST extends AST {
     return new MultiAST(kids);
   }
   MultiAST( AST... kids ) { super(kids); }
-  @Override String type() {
-    String kid0 = _kids[0].type();
+  
+  @Override String _type() {
+    String kid0 = _kids[0]._type;
     if( _kids.length==1 ) return kid0;
-    String kid1 = _kids[1].type();
+    String kid1 = _kids[1]._type;
     if( kid0.equals("Boolean" ) )
       return "?"+kid1;
-    throw XEC.TODO();
+    return "boolean";
   }
 
   @Override AST rewrite() {
