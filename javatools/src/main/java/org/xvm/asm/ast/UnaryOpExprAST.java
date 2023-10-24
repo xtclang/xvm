@@ -76,8 +76,24 @@ public class UnaryOpExprAST
     }
 
     @Override
-    public boolean isConditional() {
+    public int getCount() {
         // "Trace" is a "pass-through" operation; infer the answer from the underlying expression
+        return op == Operator.Trace
+                ? getExpr().getCount()
+                : super.getCount();
+    }
+
+    @Override
+    public TypeConstant getType(int i) {
+        // ditto
+        return op == Operator.Trace
+                ? getExpr().getType(i)
+                : super.getType(i);
+    }
+
+    @Override
+    public boolean isConditional() {
+        // ditto
         return op == Operator.Trace
                 ? getExpr().isConditional()
                 : super.isConditional();
