@@ -19,7 +19,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -1172,23 +1171,6 @@ public abstract class Expression
         assert isValidated();
         throw new UnsupportedOperationException(
                 "BAST for Expression: " + this.getClass().getSimpleName());
-        }
-
-    /**
-     * Convert the specified argument to a {@link ExprAST binady expression expression}.
-     */
-    protected static ExprAST toExprAst(Argument arg)
-        {
-        if (arg instanceof Register reg)
-            {
-            return reg.getRegisterAST();
-            }
-        if (arg instanceof Constant constant)
-            {
-            return new ConstantExprAST(constant);
-            }
-
-        throw new UnsupportedOperationException(arg.toString());
         }
 
     /**

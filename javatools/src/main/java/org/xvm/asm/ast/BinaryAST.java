@@ -155,6 +155,7 @@ public abstract class BinaryAST {
         ReturnTStmt,        // return (expr, expr, ...);
         TryCatchStmt,       // using(res){...}, try(res){...} [catch(T e){...}]
         TryFinallyStmt,     // try{...} [catch(T e){...}] finally{...}
+        InitAst,            // default initializer TODO move higher?
         ;
 
         /**
@@ -235,6 +236,7 @@ public abstract class BinaryAST {
                 case TryCatchStmt       -> new TryCatchStmtAST();
                 case TryFinallyStmt     -> new TryFinallyStmtAST();
                 case AssertStmt         -> new AssertStmtAST();
+                case InitAst            -> new InitAST();
                 default -> throw new UnsupportedOperationException("nodeType: " + this);
             };
         }

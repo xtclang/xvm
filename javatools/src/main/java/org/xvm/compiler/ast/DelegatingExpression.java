@@ -5,6 +5,8 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.ast.ExprAST;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
@@ -191,6 +193,12 @@ public abstract class DelegatingExpression
     public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
         {
         return expr.generateAssignables(ctx, code, errs);
+        }
+
+    @Override
+    public ExprAST getExprAST()
+        {
+        return expr.getExprAST();
         }
 
 

@@ -155,6 +155,8 @@ public class RegisterAST
         return switch (regId) {
             case Op.A_THIS, Op.A_TARGET, Op.A_PUBLIC, Op.A_PROTECTED, Op.A_PRIVATE ->
                 "this";
+            case Op.A_STRUCT ->
+                "this:struct";
             case Op.A_CLASS ->
                 "this:class";
             case Op.A_SERVICE ->

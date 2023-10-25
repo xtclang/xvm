@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -31,6 +32,9 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -1788,6 +1792,23 @@ public abstract class AstNode
                 }
             }
         return true;
+        }
+
+    /**
+     * Convert the specified argument to a {@link ExprAST binady expression expression}.
+     */
+    protected static ExprAST toExprAst(Argument arg)
+        {
+        if (arg instanceof Register reg)
+            {
+            return reg.getRegisterAST();
+            }
+        if (arg instanceof Constant constant)
+            {
+            return new ConstantExprAST(constant);
+            }
+
+        throw new UnsupportedOperationException(arg.toString());
         }
 
 
