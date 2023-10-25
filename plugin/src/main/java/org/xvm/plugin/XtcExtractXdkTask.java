@@ -1,13 +1,15 @@
 package org.xvm.plugin;
 
 import org.gradle.api.DefaultTask;
-import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RelativePath;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
 import javax.inject.Inject;
@@ -18,6 +20,7 @@ import static org.xvm.plugin.Constants.XDK_VERSION_PATH;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_OUTGOING;
 import static org.xvm.plugin.Constants.XTC_MODULE_FILE_EXTENSION;
 
+@CacheableTask
 public class XtcExtractXdkTask extends DefaultTask {
     public static final String EXTRACT_TASK_NAME = "extractXdk";
     private static final String ARCHIVE_EXTENSION = "zip";
@@ -43,6 +46,7 @@ public class XtcExtractXdkTask extends DefaultTask {
     }
 
     @InputFiles
+    @PathSensitive(PathSensitivity.ABSOLUTE)
     public FileCollection getInputXdkArchive() {
         return project.filesFrom("xdkZip", "xdk");
     }

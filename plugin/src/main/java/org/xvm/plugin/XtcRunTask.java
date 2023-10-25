@@ -33,8 +33,14 @@ import static org.xvm.plugin.Constants.XTC_LANGUAGE_NAME;
 import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
 import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
+/**
+ * Task that runs and XTC module, given at least its name, using the module path from
+ * the xtc environment.
+ *
+ * TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
+ */
 public class XtcRunTask extends DefaultTask {
-    private static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
+    static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
 
     protected final XtcProjectDelegate project;
     protected final String prefix;
@@ -73,6 +79,9 @@ public class XtcRunTask extends DefaultTask {
         executedModules.clear();
     }
 
+    // TODO: Add modules {} segment to runtime DSL
+    // TODO: Add a generic xtcPlugin or xtc extension, where we can set stuff like, e.g. log level for the plugin (which does not redirect)
+    // TODO: For compile and runtime tasks, allow diverting stdout, with the JavaCompile pattern.
     private void createStartScriptTask() {
         // TODO we should add create and start script tasks just like in the JavaApplication plugin.
     }

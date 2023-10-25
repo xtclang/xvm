@@ -40,8 +40,6 @@ public class XtcPlugin implements Plugin<Project> {
     @Override
     public void apply(final Project project) {
         final var plugins = project.getPluginManager();
-        REQUIRED_PLUGINS.forEach(p -> {
-            plugins.apply(p);
-        });
+        REQUIRED_PLUGINS.forEach(plugins::apply);
     }
 }

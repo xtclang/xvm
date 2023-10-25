@@ -13,14 +13,17 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "0.4.8-SNAPSHOT"
-xdk-group = "org.xvm"
-xtc-plugin-version = "0.4.8-SNAPSHOT"
+xdk = "0.4.61"
+xtcplugin = "0.4.61"
+xdkgroup = "org.xvm"
+
+kohttp = "0.12.0"
 
 [plugins]
-xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtc-plugin-version" }
+xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtcplugin" }
 tasktree = { id = "com.dorongold.task-tree", version = "2.1.1" }
 download = { id = "de.undercouch.download", version = "5.5.0" }
+versions = { id = "com.github.ben-manes.versions", version = "0.49.0" }
 
 [libraries]
 javatools = { module = "org.xvm:javatools", version.ref = "xdk" }
@@ -41,6 +44,9 @@ xdk-oodb = { module = "org.xvm:lib-oodb", version.ref = "xdk" }
 xdk-web = { module = "org.xvm:lib-web", version.ref = "xdk" }
 xdk-webauth = { module = "org.xvm:lib-webauth", version.ref = "xdk" }
 xdk-xenia = { module = "org.xvm:lib-xenia", version.ref = "xdk" }
+
+kohttp = { module = "io.github.rybalkinsd:kohttp", version.ref = "kohttp" }
+kohttp-jackson = { module = "io.github.rybalkinsd:kohttp-jackson", version.ref = "kohttp" }
 
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version = "2.3.2" }

@@ -22,7 +22,7 @@ import java.util.Set;
  * For example, we have sanity checks here, so that we can assert on the
  * lifecycle phase we are in, and if we are in configuration or evaluation.
  */
-@SuppressWarnings("deprecation") // TODO: Use flow instead of buildListeners
+// TODO: Use flow instead of buildListeners
 public class StateListeners extends ProjectDelegate {
     private final XtcBuildListener buildListener;
     private final XtcTaskListener taskListener;

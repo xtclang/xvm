@@ -1,3 +1,8 @@
+import org.gradle.api.attributes.LibraryElements.JAR
+import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
+import org.gradle.api.attributes.Usage.JAVA_RUNTIME
+import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
+
 plugins {
     id("org.xvm.build.java")
     id("org.xvm.build.publish")
@@ -5,35 +10,43 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-internal val pluginGroup = "$group.plugin"
-internal val pluginVersion = version.toString()
-internal val pluginId = xdkPropertyOrgXvm("plugin.id")
-
-fun sanityCheckPlugin(): Boolean {
-    val projectGroup = project.group.toString()
-    val pluginGroupProperty = xdkPropertyOrgXvm("plugin.group", pluginGroup)
-    if (pluginGroupProperty != pluginGroup) {
-        throw buildException("$prefix plugin group defined in two places, the version catalog .toml file, AND the plugin properties.")
+val xtcJavaToolsJarConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    outgoing.artifact(tasks.jar)
+    attributes {
+        attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(JAR))
     }
-    if (pluginGroup.indexOf(project.group.toString()) != 0 || pluginGroup == projectGroup) {
-        logger.warn("WARNING: The plugin needs to be rebuilt for relatively small XDK changes; it is not a good idea to use a different version than the XDK repository root version.")
-        throw buildException("$prefix group mismatch, the plugin group is supposed to be 'project.group' + '.plugin'. ($pluginGroup != $projectGroup.plugin)")
-    }
-    if (pluginVersion != project.version.toString()) {
-        throw buildException("$prefix version mismatch between project version (${project.version}) and plugin version ($pluginVersion)")
-    }
-    logger.lifecycle("$prefix Plugin sanity check passed; artifact='$pluginGroup:$name:$pluginVersion' (plugin id: $pluginId)")
-    return true
 }
 
-tasks {
-    assemble {
-        sanityCheckPlugin()
-    }
+dependencies {
+    xtcJavaToolsJarConsumer(libs.javatools)
+}
 
-    withType<Javadoc> {
-        enabled = false
+internal val pluginGroup = "$group.plugin"
+internal val pluginVersion = version.toString()
+internal val pluginId = getXdkProperty("org.xvm.plugin.id")
+
+// TODO: Build another plugin artifact with the javatools included?
+internal val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false);
+
+val assemble by tasks.existing {
+    dependsOn(sanityCheckPluginVersion)
+}
+
+val jar by tasks.existing(Jar::class) {
+    // TODO: Should not be necessary, but it seem to not complete unless the jar has resolved its configs, so I guess it avoids a race
+    //dependsOn(gradle.includedBuild("javatools").task(":jar"))
+    if (shouldBundleJavaTools) {
+        logger.warn("$prefix Bundling the XVM Java Tools in the plugin jar, and moving to non-JavaExec mode.")
+        from(zipTree(xtcJavaToolsJarConsumer.get().singleFile))
     }
+}
+
+tasks.withType<Javadoc>().configureEach {
+    // TODO distribute and package Javadocs in the future, when we have them.
+    enabled = false
 }
 
 publishing {
@@ -43,28 +56,62 @@ publishing {
             artifactId = project.name
             version = pluginVersion
             from(components["java"])
-            logger.lifecycle("$prefix Publication '$groupId:$artifactId:$version.$name' configured.")
+            logger.lifecycle("$prefix Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
         }
     }
 }
 
 gradlePlugin {
+    // We may  want to manually configure the publications for the plugins, or we get semi-redundant tasks, which
+    // may be slightly confusing. We want full control over the publication process anyway, and we do have
+    // shared build logic, that makes sure that any declared publication is consistently applied over our
+    // projects that publish artifacts.
+    isAutomatedPublishing = true
+
     logger.lifecycle("$prefix Configuring gradlePlugin; isAutomatedPublishing=$isAutomatedPublishing")
 
     @Suppress("UnstableApiUsage")
-    vcsUrl = xdkPropertyOrgXvm("plugin.vcs.url")
+    vcsUrl = getXdkProperty("org.xvm.plugin.vcs.url")
     @Suppress("UnstableApiUsage")
-    website = xdkPropertyOrgXvm("plugin.website")
+    website = getXdkProperty("org.xvm.plugin.website")
 
     plugins {
         create("xtcPlugin") {
             version = pluginVersion
             id = pluginId
-            implementationClass = xdkPropertyOrgXvm("plugin.implementation.class")
-            displayName = xdkPropertyOrgXvm("plugin.display.name")
-            description = xdkPropertyOrgXvm("plugin.description")
+            implementationClass = getXdkProperty("org.xvm.plugin.implementation.class")
+            displayName = getXdkProperty("org.xvm.plugin.display.name")
+            description = getXdkProperty("org.xvm.plugin.description")
             @Suppress("UnstableApiUsage")
             tags = listOfNotNull("xtc", "gradle", "plugin", "xdk")
         }
     }
 }
+
+val sanityCheckPluginVersion by tasks.registering {
+    doLast {
+        val mismatch = "XTC Plugin version mismatch"
+        val projectGroup = project.group.toString()
+        val projectVersion = project.version.toString()
+        val catalogPluginVersion = libs.versions.xtcplugin.get()
+        val pluginGroupProperty = getXdkProperty("org.xvm.plugin.group", pluginGroup)
+
+        if (pluginGroupProperty != pluginGroup) {
+            throw buildException("$mismatch; the version catalog .toml file, AND the plugin properties.")
+        }
+        if (pluginVersion != catalogPluginVersion) {
+            throw buildException("$mismatch between plugin version ($pluginVersion) and version catalog ($catalogPluginVersion)")
+        }
+        if (pluginVersion != projectVersion) {
+            throw buildException("$mismatch between plugin version ($pluginVersion) and plugin project ($projectVersion)")
+        }
+        if (pluginGroup.indexOf(projectGroup) != 0 || pluginGroup == projectGroup) {
+            logger.warn("WARNING: The plugin needs to be rebuilt for relatively small XDK changes; it is not a good idea to use a different version than the XDK repository root version.")
+            throw buildException("$mismatch; the plugin group is supposed to be 'project.group' + '.plugin'. ($pluginGroup != $projectGroup.plugin)")
+        }
+
+        logger.lifecycle("XTC Plugin sanity check passed; plugin artifact='$pluginGroup:$name:$pluginVersion' (plugin id: $pluginId)")
+        logger.lifecycle("XTC Plugin sanity check passed; inherited artifact='$group:$name:$version' (plugin id: $pluginId)")
+    }
+}
+

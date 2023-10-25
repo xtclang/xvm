@@ -11,9 +11,4 @@ public abstract class DefaultXtcSourceDirectorySet extends DefaultSourceDirector
     public DefaultXtcSourceDirectorySet(final SourceDirectorySet sourceDirectorySet) {
         super(sourceDirectorySet, DefaultTaskDependencyFactory.withNoAssociatedProject());
     }
-
-    @Override
-    public SourceDirectorySet srcDir(Object srcPath) {
-        return super.srcDir(srcPath);
-    }
 }

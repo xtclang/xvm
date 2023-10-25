@@ -10,6 +10,7 @@ import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.tasks.DefaultSourceSet;
+import org.gradle.api.logging.LogLevel;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -23,10 +24,13 @@ import org.gradle.process.ExecResult;
 import org.gradle.process.internal.ExecException;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -49,7 +53,6 @@ import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 import static org.xvm.plugin.Constants.EMPTY_FILE_SET;
 import static org.xvm.plugin.Constants.JAR_MANIFEST_PATH;
 import static org.xvm.plugin.Constants.JAVATOOLS_ARTIFACT_ID;
-import static org.xvm.plugin.Constants.LOAD_ON_DEMAND_FILENAMES;
 import static org.xvm.plugin.Constants.UNSPECIFIED;
 import static org.xvm.plugin.Constants.XDK_CONFIG_NAME_CONTENTS;
 import static org.xvm.plugin.Constants.XDK_LIBRARY_ELEMENT_TYPE;
@@ -73,29 +76,60 @@ import static org.xvm.plugin.Constants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSIONFILE_TASK_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSION_GROUP_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSION_TASK_NAME;
+import static org.xvm.plugin.XtcCompileTask.*;
 import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
+import static org.xvm.plugin.XtcRunTask.*;
 
 /**
  * Base class for the Gradle XTC Plugin in a project context.
  */
 public class XtcProjectDelegate extends ProjectDelegate {
 
-    private static final boolean ALLOW_LOAD_ON_DEMAND = Boolean.getBoolean("org.xvm.plugin.allowLoadOnDemand");
+    // TODO pass exceptions from snippet that invokes local launcher too:
+    private static final ExecResult EXEC_RESULT_OK = new ExecResult() {
+        @Override
+        public int getExitValue() {
+            return 0;
+        }
+        @Override
+        public ExecResult assertNormalExitValue() throws ExecException {
+            return this;
+        }
+        @Override
+        public ExecResult rethrowFailure() throws ExecException {
+            return this;
+        }
+    };
+
+    private final Map<String, Method> launcherCalls;
 
     private final StateListeners listeners;
-    private final Set<String> loadOnDemand;
-    private final OnDemandLibraryLoader onDemandLoader;
 
     public XtcProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         super(project, component);
-        this.onDemandLoader = new OnDemandLibraryLoader(this);
         this.listeners = new StateListeners(project);
+
         // TODO: Fix the JavaTools resolution code, which is a big hacky right now.
         // TODO: After that, enable dynamic javatools.jar loading at runtime, making possible:
         //  1) To avoid the JVM fork for xtcCompile and xtcRun, which should speed up build time.
         //  2) To enable calling the Launcher from the plugin to e.g. verify if an .x file defines a module
         //     instead of relying on "top .x file level"-layout for module definitions.
-        this.loadOnDemand = ALLOW_LOAD_ON_DEMAND ? LOAD_ON_DEMAND_FILENAMES : Set.of();
+        this.launcherCalls = new HashMap<>();
+        Set.of(XTC_COMPILER_CLASS_NAME, XTC_RUNNER_CLASS_NAME).forEach(name -> {
+            final var method = resolveMethod(name, "main");
+            if (method != null) {
+                launcherCalls.put(name, method);
+            }
+        });
+    }
+
+    private Method resolveMethod(final String className, final String methodName) {
+        try {
+            return Class.forName(className).getMethod(methodName, String[].class);
+        } catch (final ClassNotFoundException | NoSuchMethodException e) {
+            info("{} Failed to resolve method '{}' in class '{}', launching with JavaExec.", prefix, methodName, className);
+            return null;
+        }
     }
 
     /**
@@ -104,13 +138,14 @@ public class XtcProjectDelegate extends ProjectDelegate {
     @Override
     public void apply() {
         listeners.apply();
-        project.getPluginManager().apply(JavaPlugin.class); // TODO: Enough with base plugin?
+        project.getPluginManager().apply(JavaPlugin.class);
         project.getComponents().add(component);
+
+        // TODO: xtc toplevel dsl with e.g. "run from local classpath".
 
         // Ensure extensions for configuring the xtc and xec exist.
         xtcCompileExtension();
 
-        // TODO: modules dsl for runner
         xtcRuntimeExtension();
 
         // This is all config phase. Warn if a project isn't versioned when the XTC plugin is applied, so that we
@@ -123,7 +158,7 @@ public class XtcProjectDelegate extends ProjectDelegate {
         createResolutionStrategy();
         createVersioningTasks();
 
-        lifecycle("{} Finished {}::apply; Successfully applied XTC Plugin to project (version: '{}:{}:{}')", prefix, getClass().getSimpleName(), project.getGroup(), project.getName(), project.getVersion());
+        lifecycle("{} [xtc-plugin] Finished {}::apply; Successfully applied XTC Plugin to project: '{}:{}:{}')", prefix, getClass().getSimpleName(), project.getGroup(), project.getName(), project.getVersion());
     }
 
     public URL getPluginUrl() {
@@ -176,14 +211,19 @@ public class XtcProjectDelegate extends ProjectDelegate {
     private TaskProvider<XtcCompileTask> createCompileTask(final SourceSet sourceSet) {
         final var compileTaskName = getCompileTaskName(sourceSet);
         final var compileTask = tasks.register(compileTaskName, XtcCompileTask.class, this, sourceSet);
-        final var classes = "main".equals(sourceSet.getName()) ? "classes" : sourceSet.getName() + "Classes";
+        final var classes = MAIN_SOURCE_SET_NAME.equals(sourceSet.getName()) ? "classes" : sourceSet.getName() + "Classes";
         project.getTasks().getByName(classes).dependsOn(compileTask);
         info("{} Mapping source set to compile task: {} -> {}", prefix, sourceSet.getName(), compileTaskName);
         return compileTask;
     }
 
     private String getSemanticVersion() {
-        return project.getGroup().toString() + ':' + project.getName() + ':' + project.getVersion();
+        final var group = project.getGroup().toString();
+        final var version = project.getVersion().toString();
+        if (group.isEmpty() || Project.DEFAULT_VERSION.equals(version)) {
+            error("{} Has not been properly versioned (group={}, version={})", prefix, group, version);
+        }
+        return group + ':' + project.getName() + ':' + version;
     }
 
     private void createVersioningTasks() {
@@ -469,6 +509,7 @@ public class XtcProjectDelegate extends ProjectDelegate {
         }
     }
 
+    // TODO: Handle rest results, conflicts etc.
     String getXtcSourceDirectoryRootPath(final SourceSet sourceSet) {
         return "src/" + sourceSet.getName() + '/' + XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
     }
@@ -487,6 +528,20 @@ public class XtcProjectDelegate extends ProjectDelegate {
         return sourceSet.getName().equals(MAIN_SOURCE_SET_NAME) ? XTC_CONFIG_NAME_OUTGOING : XTC_CONFIG_NAME_OUTGOING_TEST;
     }
 
+    private boolean execLauncherFromClasspath(final String mainClassName, final CommandLine args) {
+        final var main = launcherCalls.get(mainClassName);
+        if (main != null) {
+            warn("{} XTC Plugin will launch '{}' from the plugin process.", prefix, mainClassName);
+            try {
+                main.invoke(null, (Object)args.toList().toArray(new String[0]));
+            } catch (final IllegalAccessException | InvocationTargetException e) {
+                throw buildException(e.getMessage(), e);
+            }
+            return true;
+        }
+        return false;
+    }
+
     @SuppressWarnings("UnusedReturnValue")
     ExecResult execLauncher(final String identifier, final String mainClassName, final CommandLine args, final List<String> jvmArgs) {
         // We could actually get away with resolving javatools this late, even if we have never heard of it.
@@ -498,18 +553,26 @@ public class XtcProjectDelegate extends ProjectDelegate {
         }
         info("{} '{}' {}; Using javatools.jar in classpath from: {}", prefix, identifier, mainClassName, javaToolsJar.getAbsolutePath());
 
-        //warn("TODO: We should be able to redirect task output to some default place.");
-        // TODO: Make an execlauncher task.
-
         final var sb = new StringBuilder("java");
         jvmArgs.forEach(arg -> sb.append(' ').append(arg));
         sb.append(" -cp ").append(javaToolsJar.getAbsolutePath());
         sb.append(' ').append(mainClassName);
         args.toList().forEach(arg -> sb.append(' ').append(arg));
+
+        // TODO: Make exec launcher task
+        // TODO: Support stdout/stderr redirect
+        // TODO: Support xtc {} extension that tells us to avoid forks if we want to.
         lifecycle("{} {} exec: '{}'", prefix, identifier, sb.toString());
 
-        // TODO, avoid fork by dynamically loading javatools.jar into this classpath and using reflection.
+        if (execLauncherFromClasspath(mainClassName, args)) {
+            return EXEC_RESULT_OK;
+        }
+
+        final var out = new ByteArrayOutputStream();
+        final var err = new ByteArrayOutputStream();
         final var result = project.getProject().javaexec(spec -> {
+            spec.setStandardOutput(out);
+            spec.setErrorOutput(err);
             spec.classpath(javaToolsJar);
             spec.getMainClass().set(mainClassName);
             spec.args(args.toList());
@@ -517,12 +580,21 @@ public class XtcProjectDelegate extends ProjectDelegate {
         });
 
         final var exitValue = result.getExitValue();
-        info("{} '{}' JavaExec return value: {}", prefix, mainClassName, exitValue);
-        try {
-            return result.rethrowFailure();
-        } catch (final ExecException e) {
-            throw buildException("Error running XTC Launcher (result: " + result + ')', e);
+        final boolean success = exitValue == 0;
+        log(success ? LogLevel.INFO : LogLevel.ERROR, "{} '{}' JavaExec return value: {}", prefix, mainClassName, exitValue);
+
+        // TODO: Don't always redirect and reprint outputs. Make it configurable.
+        final var outStr = out.toString();
+        final var errStr = err.toString();
+        if (!outStr.isEmpty()) {
+            lifecycle("{} '{}' JavaExec stdout:", prefix, mainClassName);
+            System.out.println(outStr);
         }
+        if (!errStr.isEmpty()) {
+            lifecycle("{} '{}' JavaExec stderr:", prefix, mainClassName);
+            System.err.println(errStr);
+        }
+        return result.rethrowFailure();
     }
 
     static boolean hasFileExtension(final File file, final String extension) {
@@ -712,7 +784,7 @@ public class XtcProjectDelegate extends ProjectDelegate {
         }
     }
 
-    private boolean isJarFile(final File file) {
+    private boolean checkIsJarFile(final File file) {
         try (final ZipFile zip = new ZipFile(file)) {
             return zip.getEntry(JAR_MANIFEST_PATH) != null;
         } catch (final IOException e) {
@@ -720,23 +792,9 @@ public class XtcProjectDelegate extends ProjectDelegate {
         }
     }
 
-    private boolean shouldLoadOnDemand(final File file) {
-        return loadOnDemand.contains(file.getName());
-    }
-
-    // TODO: Move the resolution into the task hierarchy, perhaps? The javatools is something resolved by the run task, really.
     private File processJar(final File file) {
         assert file.exists();
-        if (isJarFile(file) && shouldLoadOnDemand(file)) {
-            info("{} Adding JavaTools '{}' to classpath", prefix, file.getAbsolutePath());
-            onDemandLoader.addToClasspath(file);
-            try {
-                final Class<?> clazz = Class.forName("org.xvm.tool.Launcher");
-                lifecycle("{} Loaded class dynamically at runtime: {}", prefix, clazz.getName());
-            } catch (final ClassNotFoundException e) {
-                throw buildException("Exception during dynamic class loading", e);
-            }
-        }
+        checkIsJarFile(file);
         return file;
     }
 
@@ -763,7 +821,8 @@ public class XtcProjectDelegate extends ProjectDelegate {
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
         if (resolvedFromConfig == null && resolvedFromXdk == null) {
-            throw buildException("ERROR: Failed to receive javatools.jar from any configuration or dependency.");
+            System.err.println(javaToolsFromXdk.getAsPath());
+            throw buildException("ERROR: Failed to resolve javatools.jar from any configuration or dependency.");
         }
 
         info("""

@@ -29,11 +29,9 @@ import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
 import static org.xvm.plugin.XtcProjectDelegate.hasFileExtension;
 import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
-// TODO: Also support a mode where we try to classload the javatools.jar
-
 @CacheableTask
 public abstract class XtcCompileTask extends SourceTask {
-    private static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
+    static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
 
     private final XtcProjectDelegate project;
     private final String prefix;
@@ -167,8 +165,13 @@ public abstract class XtcCompileTask extends SourceTask {
             project.warn("xtcCompile.forceRebuild=<boolean> is not supported for Maven/Gradle semantics yet.");
         }
 
+        // TODO: Add a "zip" task or something equivalent to the jar task for XTC builds - all modules in one archive/repository?
         args.addRepeated("-L", resolveXtcModulePath());
-        resolveXtcSourceFiles().stream().map(File::getAbsolutePath).forEach(args::addRaw);
+        final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).toList();
+        if (sourceFiles.isEmpty()) {
+            project.warn("{} No source file found for sourceSet: '{}'", prefix, sourceSet.getName());
+        }
+        sourceFiles.forEach(args::addRaw);
 
         project.execLauncher(getName(), XTC_COMPILER_CLASS_NAME, args, getJvmArgs().get());
 

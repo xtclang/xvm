@@ -45,7 +45,7 @@ listOfNotNull(
     if (!path.exists()) {
         throw GradleException("Can't find expected XDK project: '$projectName' (at: ${path.absolutePath})")
     }
-    logger.lifecycle("[xdk] Resolved XDK subproject '$projectName' (path: ${path.absolutePath})")
+    logger.lifecycle("[xdk] Resolved XDK subproject '$projectName' (at: '${path.absolutePath}')")
     include(":$p")
     project(":$p").projectDir = path
     project(":$p").name = projectName

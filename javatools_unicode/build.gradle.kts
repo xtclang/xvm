@@ -24,7 +24,7 @@ internal val ucdZip = "http://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.
 /**
  * Download the ucd zip file from the unicode site, if it does not exist.
  */
-val download = tasks.register<Download>("downloadUcdFlatZip") {
+val downloadUcdFlatZip by tasks.registering(Download::class) {
     overwrite(false)
     src(ucdZip)
     dest(project.mkdir(project.layout.buildDirectory.dir("ucd")))
@@ -32,8 +32,10 @@ val download = tasks.register<Download>("downloadUcdFlatZip") {
 
 /**
  * Build the javatools-unicode jar
+ *    existing -> getting (lazy -> eager)
+ *    registering -> creating (lazy -> eager)
  */
-val jar : TaskProvider<Jar> = tasks.named<Jar>("jar")
+val jar by tasks.existing(Jar::class)
 
 val run by tasks.registering {
     group = APPLICATION_GROUP
@@ -42,7 +44,7 @@ val run by tasks.registering {
     outputs.dir(project.layout.buildDirectory.dir("resources/main/unicode"))
     doLast {
         val unicodeJar = jar.get().archiveFile
-        val localUcdZip = download.get().outputs.files.singleFile
+        val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
         logger.lifecycle("Downloaded unicode file: ${localUcdZip.absolutePath}")
         javaexec {
             classpath(configurations.runtimeClasspath, unicodeJar)

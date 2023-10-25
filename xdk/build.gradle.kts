@@ -2,7 +2,6 @@ import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.internal.os.OperatingSystem
-import java.nio.file.Paths
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -13,6 +12,7 @@ plugins {
     id("org.xvm.build.publish")
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
+    alias(libs.plugins.versions)
     distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
 }
 
@@ -55,7 +55,7 @@ val xdkProvider by configurations.registering {
     }
 }
 
-tasks.named("clean") {
+val clean by tasks.existing {
     doLast {
         subprojects.forEach {
             // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
@@ -65,12 +65,12 @@ tasks.named("clean") {
     }
 }
 
-val distTar by tasks.getting(Tar::class) {
+val distTar by tasks.existing(Tar::class) {
     compression = Compression.GZIP
     archiveExtension.set("tar.gz")
 }
 
-var assembleDist = tasks.assembleDist {
+val assembleDist by tasks.existing {
     dependsOn(installDist)
 }
 
@@ -80,7 +80,6 @@ val distExe by tasks.registering {
     doFirst {
         TODO("$prefix distExe needs to be ported to the new build system.")
         /*
-        val distEXE = tasks.register("distEXE") {
             group = xtcDist.distributionGroup()
             description = "Create the XDK .exe file (Windows installer)"
 
@@ -119,7 +118,8 @@ val distExe by tasks.registering {
     }
 }
 
-val test by tasks.named("test") {
+val test by tasks.existing {
+    // TODO: Test task should be automatically configured by XTC the plugin in the future
     dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
 }
 
@@ -129,13 +129,20 @@ val test by tasks.named("test") {
  * TODO: This task should create symlinks for the launcher names to the right binaries.
  * TODO better copying, even if it means hardcoding directory names.
  */
-val installDist = tasks.installDist {
+val installDist by tasks.existing {
     doLast {
         logger.lifecycle("$prefix Installed distribution to build directory.")
         logger.info("$prefix Installation files:")
         outputs.files.asFileTree.forEach {
             logger.info("$prefix   ${it.absolutePath}")
         }
+    }
+}
+
+val findLocalDist by tasks.registering {
+    doLast {
+        val root = xdkBuildLogic.resolveLocalXdkInstallation()
+        logger.lifecycle("$prefix Detected existing local XTC installation at: '$root'")
     }
 }
 
@@ -146,10 +153,7 @@ val installLocalDist by tasks.registering {
     description = "Creates an XDK installation, and overwrites any local installation with it."
     dependsOn(installDist) // needs distTar, and distZip executed before this can run
     doLast {
-        val xecPath = executeCommand("which", "xec")
-            ?: throw buildException("$prefix Cannot find a local installation of the XDK on the system path.")
-        val xecFile = Paths.get(xecPath).toRealPath()
-        val libExecDir = file(xecFile.parent.parent)
+        val libExecDir = file(xdkBuildLogic.resolveLocalXdkInstallation())
         val backup = project.layout.buildDirectory.dir("xdkLocalDistCopy")
         copy {
             from(libExecDir)
@@ -245,6 +249,7 @@ class XvmDistribution @Inject constructor(private val project: Project) {
     val name: String = project.name
     val distributionDir = build.dir("distributions/")
     val installDir = build.dir("install/$name")
+
     private val version: String = buildString {
         fun isCiBuild(): Boolean {
             return System.getenv("CI") != null
