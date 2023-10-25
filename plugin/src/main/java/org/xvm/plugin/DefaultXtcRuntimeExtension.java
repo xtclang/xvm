@@ -99,9 +99,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     }
 
     /**
-     * Check if there are module { ... } declaretions without names. TODO: Can use mandatory flag
-     *
-     * @return
+     * Check if there are module { ... } declarations without names. TODO: Can use mandatory flag
      */
     public boolean validateModules() {
         for (final var m : getModules().get()) {

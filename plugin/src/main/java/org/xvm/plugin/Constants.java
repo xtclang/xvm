@@ -38,8 +38,6 @@ final class Constants {
     static final String XTC_CONFIG_NAME_JAVATOOLS_INCOMING = "xtcJavaTools";
     static final String XTC_CONFIG_NAME_JAVATOOLS_OUTGOING = XTC_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
 
-    static final Set<String> LOAD_ON_DEMAND_FILENAMES = Set.of(JAVATOOLS_FILENAME);
-
     static final String VERSION_CATALOG_XTC_VERSION = "xdk";
     static final String VERSION_CATALOG_XTC_GROUP = "group";
 
