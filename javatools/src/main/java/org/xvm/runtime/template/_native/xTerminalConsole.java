@@ -184,6 +184,7 @@ public class xTerminalConsole
         char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
         CONSOLE_LOG.log(ach, true);
         CONSOLE_OUT.println(ach);
+        CONSOLE_OUT.flush();
         return Op.R_NEXT;
         };
 
