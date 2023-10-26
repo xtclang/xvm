@@ -23,9 +23,17 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.AssignAST;
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.CallExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.InitAST;
 import org.xvm.asm.ast.NewExprAST;
 import org.xvm.asm.ast.OuterExprAST;
+import org.xvm.asm.ast.PropertyExprAST;
+import org.xvm.asm.ast.RegisterAST;
+import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -1404,18 +1412,24 @@ public class NewExpression
                 Parameter.NO_PARAMS, "construct", aParams, true, false);
         constrThis.setSynthetic(true);
 
-        Code code = constrThis.createCode();
+        Code                 code     = constrThis.createCode();
+        ArrayList<BinaryAST> listAsts = new ArrayList<>();
 
         // call the default initializer
         assert constrThis.isAnonymousClassWrapperConstructor();
         if (!methodSuper.isAnonymousClassWrapperConstructor())
             {
             code.add(new SynInit());
-            }
 
+            listAsts.add(InitAST.INSTANCE);
+            }
+        RegisterAST[] aAstArgs = new RegisterAST[cParams];
         if (cParams == 1)
             {
-            code.add(new Construct_1(idSuper, new Register(aParams[0].getType(), null, 0)));
+            Register regParam = new Register(aParams[0].getType(), null, 0);
+            code.add(new Construct_1(idSuper, regParam));
+
+            aAstArgs[0] = (RegisterAST) regParam.getRegisterAST();
             }
         else
             {
@@ -1423,11 +1437,18 @@ public class NewExpression
             Register[] aArgs = new Register[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
-                aArgs[i] = new Register(aParams[i].getType(), null, i);
+                Register regParam = new Register(aParams[i].getType(), null, i);
+
+                aArgs[i]    = regParam;
+                aAstArgs[i] = (RegisterAST) regParam.getRegisterAST();
                 }
             code.add(new Construct_N(idSuper, aArgs));
             }
         code.add(new Return_0());
+
+        listAsts.add(new CallExprAST(
+                new ConstantExprAST(idSuper), TypeConstant.NO_TYPES, aAstArgs, false));
+        constrThis.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false), aAstArgs);
 
         return constrThis.getIdentityConstant();
         }
@@ -1465,9 +1486,11 @@ public class NewExpression
         Parameter[]  aNewParams = new Parameter[cNewParams];
         int          iNewParam  = cOldParams;
         Argument[]   aNewArgs   = new Argument[cNewParams];
+
         assert cOldParams == aOldArgs.length;
         System.arraycopy(aOldParams, 0, aNewParams, 0, cOldParams);
         System.arraycopy(aOldArgs  , 0, aNewArgs  , 0, cOldParams);
+
         for (Entry<String, Boolean> entry : mapCapture.entrySet())
             {
             String       sName = entry.getKey();
@@ -1504,36 +1527,60 @@ public class NewExpression
         MethodStructure constrNew = clzAnon.createMethod(true, Access.PUBLIC, null,
                 Parameter.NO_PARAMS, "construct", aNewParams, true, false);
         constrNew.setSynthetic(true);
-        Code codeConstr = constrNew.createCode();
+        Code                 codeConstr = constrNew.createCode();
+        ArrayList<BinaryAST> listAsts   = new ArrayList<>();
+
+        Register[] aRegs = new Register[cNewParams];
+        for (int i = 0; i < cOldParams; i++)
+            {
+            Parameter param = aOldParams[i];
+            aRegs[i] = new Register(param.getType(), param.getName(), i);
+            }
 
         // for each capture variable needed by the anonymous inner class, create a property that
         // will hold it, and store the value (which is being passed into the new constructor) into
         // that property
-        for (int iCapture = 0; iCapture < cCaptures; ++iCapture)
+        if (cCaptures > 0)
             {
-            iNewParam = cOldParams + iCapture;
-            Parameter    param = aNewParams[iNewParam];
-            String       sName = param.getName();
-            TypeConstant type  = param.getType();
-            Register     reg   = new Register(type, null, iNewParam);
+            ExprAST astThis = new RegisterAST(Op.A_STRUCT,
+                    pool.ensureAccessTypeConstant(clzAnon.getFormalType(), Access.STRUCT), null);
+            for (int iCapture = 0; iCapture < cCaptures; ++iCapture)
+                {
+                iNewParam = cOldParams + iCapture;
+                Parameter    param = aNewParams[iNewParam];
+                String       sName = param.getName();
+                TypeConstant type  = param.getType();
+                Register     reg   = aRegs[iNewParam] = new Register(type, sName, iNewParam);
 
-            // create the property as a private synthetic
-            PropertyStructure prop = clzAnon.createProperty(
-                    false, Access.PRIVATE, Access.PRIVATE, type, sName);   // TODO @Final
-            // mark the property as unassigned to prevent default initialization
-            prop.addAnnotation(pool.clzUnassigned());
-            prop.setSynthetic(true);
+                // create the property as a private synthetic
+                PropertyStructure prop = clzAnon.createProperty(
+                        false, Access.PRIVATE, Access.PRIVATE, type, sName);
+                // mark the property as unassigned to prevent default initialization
+                prop.addAnnotation(pool.clzUnassigned());
+                prop.setSynthetic(true);
 
-            // store the constructor parameter into the property
-            codeConstr.add(new L_Set(prop.getIdentityConstant(), reg));
+                // store the constructor parameter into the property
+                PropertyConstant idProp = prop.getIdentityConstant();
+                codeConstr.add(new L_Set(idProp, reg));
+
+                listAsts.add(new AssignAST(new PropertyExprAST(astThis, idProp),
+                                AssignAST.Operator.Asn, reg.getRegisterAST()));
+                }
             }
 
         if (!constrOld.isAnonymousClassWrapperConstructor())
             {
             // call the default initializer
             codeConstr.add(new SynInit());
+
+            listAsts.add(InitAST.INSTANCE);
             }
 
+        RegisterAST[] aAstRegNew = new RegisterAST[cNewParams];
+        for (int i = 0; i < cNewParams; i++)
+            {
+            aAstRegNew[i] = (RegisterAST) aRegs[i].getRegisterAST();
+            }
         // call the previous constructor
         MethodConstant idOld = constrOld.getIdentityConstant();
         switch (cOldParams)
@@ -1543,19 +1590,30 @@ public class NewExpression
                 break;
 
             case 1:
-                codeConstr.add(new Construct_1(idOld, new Register(aNewParams[0].getType(), null, 0)));
+                codeConstr.add(new Construct_1(idOld, aRegs[0]));
                 break;
 
             default:
-                Register[] aArgs = new Register[cOldParams];
-                for (int i = 0; i < cOldParams; ++i)
+                Register[] aArgs = aRegs;
+                if (cCaptures > 0)
                     {
-                    aArgs[i] = new Register(aOldParams[i].getType(), null, i);
+                    aArgs = new Register[cOldParams];
+                    System.arraycopy(aRegs, 0, aArgs, 0, cOldParams);
                     }
-                codeConstr.add(new Construct_N(constrOld.getIdentityConstant(), aArgs));
+                codeConstr.add(new Construct_N(idOld, aArgs));
                 break;
             }
         codeConstr.add(new Return_0());
+
+        RegisterAST[] aAstRegOld = aAstRegNew;
+        if (cCaptures > 0)
+            {
+            aAstRegOld = new RegisterAST[cOldParams];
+            System.arraycopy(aAstRegNew, 0, aAstRegOld, 0, cOldParams);
+            }
+        listAsts.add(new CallExprAST(
+                new ConstantExprAST(idOld), TypeConstant.NO_TYPES, aAstRegOld, false));
+        constrNew.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false), aAstRegNew);
 
         // the new constructor calls the old constructor, so we need to call the new constructor
         m_constructor = constrNew;

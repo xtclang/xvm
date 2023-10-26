@@ -3112,7 +3112,7 @@ public class TypeCompositionStatement
                 // call the default initializer
                 code.add(new SynInit());
 
-                listAsts.add(new InitAST());
+                listAsts.add(InitAST.INSTANCE);
                 }
             }
         else
@@ -3146,7 +3146,7 @@ public class TypeCompositionStatement
                         // call the default initializer
                         code.add(new SynInit());
 
-                        listAsts.add(new InitAST());
+                        listAsts.add(InitAST.INSTANCE);
                         }
                     }
                 else // Composition.Incorporates

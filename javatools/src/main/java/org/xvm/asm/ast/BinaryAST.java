@@ -236,7 +236,7 @@ public abstract class BinaryAST {
                 case TryCatchStmt       -> new TryCatchStmtAST();
                 case TryFinallyStmt     -> new TryFinallyStmtAST();
                 case AssertStmt         -> new AssertStmtAST();
-                case InitAst            -> new InitAST();
+                case InitAst            -> InitAST.INSTANCE;
                 default -> throw new UnsupportedOperationException("nodeType: " + this);
             };
         }

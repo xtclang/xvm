@@ -17,6 +17,13 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import org.xvm.asm.ast.BinaryAST;
+import org.xvm.asm.ast.ConstantExprAST;
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.InvokeExprAST;
+import org.xvm.asm.ast.RegisterAST;
+import org.xvm.asm.ast.ReturnStmtAST;
+
 import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.TypeConstant.Relation;
@@ -3694,13 +3701,26 @@ public class ClassStructure
                     //    }
                     Register regThis     = new Register(typeAppender, "this"    , Op.A_THIS);
                     Register regAppender = new Register(typeAppender, "appender", 0);
-                    Register regStack    = new Register(typeAppender, "toString", Op.A_STACK);
+                    Register regString   = new Register(typeAppender, "toString", Op.A_STACK);
                     Register regResult   = new Register(typeAppender, "result"  , Op.A_STACK);
 
-                    code.add(new Invoke_01(regThis, methToString.getIdentityConstant(), regStack));
-                    code.add(new Invoke_11(regStack, methAppendTo.getIdentityConstant(), regAppender, regResult));
+                    MethodConstant idToString = methToString.getIdentityConstant();
+                    MethodConstant idAppendTo = methAppendTo.getIdentityConstant();
+
+                    code.add(new Invoke_01(regThis, idToString, regString));
+                    code.add(new Invoke_11(regString, idAppendTo, regAppender, regResult));
                     code.add(new Return_1(regResult));
 
+                    RegisterAST[] aAstReg = new RegisterAST[]
+                            {(RegisterAST) regAppender.getRegisterAST()};
+                    ExprAST astToString = new InvokeExprAST(
+                            idToString, new TypeConstant[]{regString.getType()},
+                            regThis.getRegisterAST(), ExprAST.NO_EXPRS, false);
+                    ExprAST astAppend = new InvokeExprAST(
+                            idAppendTo, new TypeConstant[] {typeAppender},
+                            astToString, aAstReg, false);
+
+                    methAppendTo.setAst(new ReturnStmtAST(astAppend), aAstReg);
                     methAppendTo.forceAssembly(pool);
                     }
 
@@ -3723,6 +3743,8 @@ public class ClassStructure
                         // return 0;
                         code.add(new Return_1(pool.val0()));
 
+                        methEstimate.setAst(
+                                new ReturnStmtAST(new ConstantExprAST(pool.val0())), BinaryAST.NO_REGS);
                         methEstimate.forceAssembly(pool);
                         }
                     }

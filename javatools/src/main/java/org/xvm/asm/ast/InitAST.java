@@ -13,7 +13,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.InitAst;
 public class InitAST
         extends BinaryAST {
 
-    public InitAST() {
+    private InitAST() {
     }
 
     @Override
@@ -36,4 +36,6 @@ public class InitAST
     public String toString() {
         return "<defaultInit>";
     }
+
+    static public final InitAST INSTANCE = new InitAST();
 }
