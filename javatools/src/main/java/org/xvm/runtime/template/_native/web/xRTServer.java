@@ -525,7 +525,7 @@ public class xRTServer
         {
         HttpServer httpServer  = hServer.getHttpServer();
         HttpServer httpsServer = hServer.getHttpsServer();
-        if (hServer != null)
+        if (httpServer != null)
             {
             if (httpServer.getExecutor() == null)
                 {
