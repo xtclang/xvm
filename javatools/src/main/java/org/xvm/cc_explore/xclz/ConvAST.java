@@ -21,16 +21,16 @@ class ConvAST extends AST {
     super(kids);
     // Expecting exactly 2 types; first is boolean for a COND.
     // Expecting exactly 1 conversion method.
-    assert types.length==2 && XClzBuilder.jtype(types[0],false).equals("boolean");
+    assert types.length==2 && XType.jtype(types[0],false).equals("boolean");
     assert convs.length==2 && convs[0]==null;
-    _type = XClzBuilder.jtype(types[1],false);
+    _type = XType.xtype(types[1],false);
     _meth = (MethodPart)((MethodCon)convs[1]).part();
   }
 
-  @Override String _type() { return _type; }
+  @Override XType _type() { return _type; }
   
   @Override SB jcode( SB sb ) {
-    sb.p("(").p(_type).p(")");
+    _type.p(sb.p("(")).p(")");
     _kids[0].jcode(sb);
     return sb;    
   }

@@ -2,34 +2,34 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.MethodPart;
+import org.xvm.cc_explore.ClassPart;
 import org.xvm.cc_explore.cons.Const;
-import org.xvm.cc_explore.cons.StringCon;
 import org.xvm.cc_explore.cons.MethodCon;
 import org.xvm.cc_explore.util.SB;
 
 class InvokeAST extends AST {
   final String _meth;
-  final String[] _rets;
+  final XType[] _rets;
 
   static InvokeAST make( XClzBuilder X ) {
     Const[] retTypes = X.consts(); // Return types
     AST[] kids = X.kids_bias(1);   // Call arguments
     Const methcon = X.con();       // Method constant, name
     kids[0] = ast_term(X);         // Method expression in kids[0]
-    return new InvokeAST(X,kids,retTypes,methcon);
+    return new InvokeAST( kids,retTypes,methcon);
   }
   
-  private InvokeAST( XClzBuilder X, AST[] kids, Const[] retTypes, Const methcon ) {
+  private InvokeAST( AST[] kids, Const[] retTypes, Const methcon ) {
     super(kids);
     // Calling target.method(args)
     MethodPart meth = (MethodPart)((MethodCon)methcon).part();
-    _meth = meth._name;
-    if( retTypes==null ) _rets = null;
-    else {
-      _rets = new String[retTypes.length];
-      for( int i=0; i<retTypes.length; i++ )
-        _rets[i] = XClzBuilder.jtype(retTypes[i],false);
-    }
+    String mname = meth._name;
+    // Method is nested in a method, qualify the name more
+    if( !(meth._par._par instanceof ClassPart) )
+      mname = meth._par._par._name+"$"+mname;
+    _meth = mname;
+    // Returns
+    _rets = XType.xtypes(retTypes);
     
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
@@ -41,36 +41,35 @@ class InvokeAST extends AST {
     }
   }
   
-  InvokeAST( String meth, String ret, AST... kids ) {
-    super(kids);
-    _meth = meth;
-    _rets = ret==null ? null : new String[]{ret};
+  InvokeAST( String meth, XType ret, AST... kids ) {
+    this(meth, ret==null ? null : new XType[]{ret}, kids);
   }
-  InvokeAST( String meth, String[] rets, AST... kids ) {
+  InvokeAST( String meth, XType[] rets, AST... kids ) {
     super(kids);
     _meth = meth;
     _rets = rets;
   }
 
-  @Override String _type() {
-    if( _rets==null ) return "void";
+  @Override XType _type() {
+    if( _rets==null ) return XType.VOID;
     if( _rets.length == 1 ) return _rets[0];
-    if( _rets.length == 2 && _rets[0].equals("boolean") )
+    if( _rets.length == 2 && _rets[0]==XType.BOOL )
       return _rets[1];          // Conditional
     throw XEC.TODO();
   }
   @Override boolean _cond() {
     if( "TRACE".equals(_meth) ) return _kids[1]._cond; // TRACE passes condition thru
-    return _rets!=null && _rets.length == 2 && _rets[0].equals("boolean");
+    return _rets!=null && _rets.length == 2 && _rets[0]==XType.BOOL;
   }
   
   @Override AST rewrite() {
+    if( !(_kids[0]._type instanceof XType.JType jt) ) return this;
     // Cannot invoke directly on java primitives
-    switch( _kids[0]._type ) {
-      
+    switch( jt._jtype ) {
+
     case "long": {
       if( _meth.equals("toString") )
-        return new InvokeAST(_meth,"String",new ConAST("Long"),_kids[0]).do_type();
+        return new InvokeAST(_meth,XType.STRING,new ConAST("Long"),_kids[0]).do_type();
       if( _meth.equals("toInt64") ) // Cast long to a Long
         return _kids[0];            // Autoboxing in Java
       // Actually needs a cast
@@ -78,7 +77,7 @@ class InvokeAST extends AST {
     }
     case "Long": {
       if( _meth.equals("toString") )
-        return _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,"String",new ConAST("Long"),_kids[1]).do_type();
+        return _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XType.STRING,new ConAST("Long"),_kids[1]).do_type();
       if( _meth.equals("toInt64") ) // Cast long to a Long
         return _kids[0];            // Autoboxing in Java
       if( _meth.equals("valueOf") )
@@ -90,19 +89,17 @@ class InvokeAST extends AST {
     case "char":
     case "Character":
       if( _meth.equals("asciiDigit") )
-        return new InvokeAST(_meth,new String[]{"boolean","char"},new ConAST("XRuntime"),_kids[0]).do_type();
+        return new InvokeAST(_meth,XType.COND_CHAR,new ConAST("XRuntime"),_kids[0]).do_type();
       throw XEC.TODO();      
       
     case "String":
       if( _meth.equals("toCharArray") )
-        return new NewAST(_kids,"AryChar",null);
-      throw XEC.TODO();      
+        return new NewAST(_kids,XType.ARYCHAR,null);
+      throw XEC.TODO();
+
+    default:
+      return this;
     }
-    
-    return this;
-    
-    //if( _meth.equals("toInt") && _kids[0] instanceof ConAST con )
-    //  return new InvokeAST("valueOf",new ConAST("Long"),_kids[0]);
   }
   @Override void jmid ( SB sb, int i ) {
     if( i==0 ) sb.p('.').p(_meth).p("(");

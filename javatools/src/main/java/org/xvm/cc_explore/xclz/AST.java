@@ -7,7 +7,7 @@ import org.xvm.cc_explore.util.SB;
 public abstract class AST {
   final AST[] _kids;            // Kids
   AST _par;                     // Parent
-  String _type;                 // Null is unset, never valid. "void" or "int" or "Long" or "AryI64"
+  XType _type;                  // Null is unset, never valid. "void" or "int" or "Long" or "AryI64"
   boolean _cond;                // True if passing the hidden condition flag
   
   // Simple all-fields constructor
@@ -44,14 +44,13 @@ public abstract class AST {
     do_type();
   }
   // Subclasses must override
-  abstract String _type();
+  abstract XType _type();
   boolean _cond() { return false; }
 
   // Called after a rewrite to set the type again
   AST do_type() {
-    String type = _type();
-    assert type != null;
-    assert _type==null || _type.equals(type);
+    XType type = _type();
+    assert _type==null || _type==type;
     _type = type;
     _cond = _cond();
     return this;
@@ -132,6 +131,7 @@ public abstract class AST {
     case Assign       ->   AssignAST.make(X,true);
     case BinOpAssign  ->   AssignAST.make(X,false);
     case BindFunctionExpr -> BindFuncAST.make(X);
+    case BindMethodExpr->BindMethAST.make(X);
     case BitNotExpr   ->    UniOpAST.make(X,"~",null);
     case BreakStmt    ->    BreakAST.make(X);
     case CallExpr     ->     CallAST.make(X);

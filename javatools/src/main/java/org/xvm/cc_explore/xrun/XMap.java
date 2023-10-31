@@ -5,6 +5,7 @@ import org.xvm.cc_explore.cons.TCon;
 import org.xvm.cc_explore.xclz.XClzBuilder;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.xclz.XClz;
+import org.xvm.cc_explore.xclz.XType;
 
 import static org.xvm.cc_explore.xclz.XClz.Mutability.*;
 
@@ -32,8 +33,8 @@ public abstract class XMap<K,V> extends XClz implements Cloneable {
   // Return a tuple class for this set of types.  The class is cached, and can
   // be used many times.
   public static String make_class( HashMap<String,String> cache, TCon[] parms ) {
-    String zkey = XClzBuilder.jtype(parms[0],true);
-    String zval = XClzBuilder.jtype(parms[1],true);
+    String zkey = XType.jtype(parms[0],true);
+    String zval = XType.jtype(parms[1],true);
     SB sb = new SB().p("XMap$").p(zkey).p("$").p(zval);
     String tclz = sb.toString();
     sb.clear();

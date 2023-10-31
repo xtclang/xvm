@@ -9,21 +9,21 @@ class ReturnAST extends AST {
 
     String ztype=null;
     if( X._meth.is_cond_ret() ) {
-      String type = XClzBuilder.jtype(X._meth._rets[1]._con,false);
-      ztype = XClzBuilder.box(type).equals(type) ? "null" : "0";
+      XType type = XType.xtype(X._meth._rets[1]._con,false);
+      ztype = type.ztype();
     }    
     return new ReturnAST(X.kids(n), ztype);
   }
   ReturnAST( AST[] kids, String ztype) { super(kids);  _ztype=ztype; }
 
-  @Override String _type() {
+  @Override XType _type() {
     if( _ztype==null )
-      return _kids==null ? "void" : _kids[0]._type;
+      return _kids==null ? XType.VOID : _kids[0]._type;
     // Conditional, report the non-boolean type
     if( _kids[0] instanceof MultiAST cond )
       return cond._kids[1]._type;
     // Conditional, always false, no other returned type
-    return "void";
+    return XType.VOID;
   }
 
   @Override SB jcode( SB sb ) {

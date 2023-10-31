@@ -48,7 +48,7 @@ public class XModBuilder {
       if( !construct.is_empty_function() ) {
         _sb.nl();
         _sb.ip("static {").nl();
-        new XClzBuilder(_sb).ast(construct).jcode(_sb);
+        new XClzBuilder(_mod,_sb).ast(construct).jcode(_sb);
         _sb.ip("}").nl().nl();
       }
     }

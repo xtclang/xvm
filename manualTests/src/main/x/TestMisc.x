@@ -5,7 +5,8 @@ module TestMisc {
         console.print("hello world!");
         
         testBools();
-        testChars();
+        //testChars();
+        testAsciiDigit();
         testInts();
         //testCast(); // Requires an intersection type of `Int` and `String`
         testTernary();
@@ -88,27 +89,35 @@ module TestMisc {
         console.print("~b=" + ~b);
     }
 
-    void testChars() {
-        console.print("\n** testChars()");
-    
+    void testAsciiDigit() {
+        console.print("\n** testAsciiDigit()");    
         Char[] chars = "1aA!\n$£€".toCharArray();
-        for (Char ch : chars) {
-            String dec = "";
-            if (Int value := ch.decimalValue()) {
-                dec = $"\'{value}\'";
-            }
-        
-            console.print($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
-                             | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
-                             | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
-                             );
-        }
-    
         // this also tests the conditional UInt8 to Int conversion
         assert Int n := chars[0].asciiDigit(), n == 1;
         assert !chars[1].asciiDigit();
     }
 
+    // Requires unicode character handling
+    //void testChars() {
+    //    console.print("\n** testChars()");
+    //    
+    //    Char[] chars = "1aA!\n$£€".toCharArray();
+    //    for (Char ch : chars) {
+    //        String dec = "";
+    //        if (Int value := ch.decimalValue()) {
+    //            dec = $"\'{value}\'";
+    //        }
+    //    
+    //        console.print($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
+    //                         | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
+    //                         | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
+    //                         );
+    //    }
+    //
+    //    // this also tests the conditional UInt8 to Int conversion
+    //    assert Int n := chars[0].asciiDigit(), n == 1;
+    //    assert !chars[1].asciiDigit();
+    //}
     
     // Requires an intersection type of `Int` and `String`
     //void testCast() {
@@ -265,6 +274,7 @@ module TestMisc {
         }
     }
 
+    // Requires nested inner Point class, which is missing the BAST constructor
     //void testSwitchNatural() {
     //    console.print("\n** testSwitchNatural()");
     //

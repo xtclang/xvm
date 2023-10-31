@@ -8,7 +8,7 @@ import org.xvm.cc_explore.util.SB;
 class RegAST extends AST {
   final int _reg;
   final String _name;
-  RegAST( int reg, String name, String type ) {
+  RegAST( int reg, String name, XType type ) {
     super(null);
     _reg  = reg ;
     _name = name;
@@ -23,13 +23,13 @@ class RegAST extends AST {
     default -> X._locals.get(reg);
     };
     _type = switch( reg ) {
-    case -4 ->  "void";  // A_DEFAULT
-    case -5 ->  XClzBuilder.java_class_name(X._mod._name); // A_THIS
+    case -4 ->  XType.VOID;  // A_DEFAULT
+    case -5 ->  X._type;     // A_THIS
     default -> X._ltypes.get(reg);
     };
     
   }
   @Override String name() { return _name; }
-  @Override String _type() { return _type; }
+  @Override XType _type() { return _type; }
   @Override void jpre ( SB sb ) { sb.p(_name); }
 }

@@ -1,7 +1,6 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.tvar.*;
 import org.xvm.cc_explore.util.SB;
 import static org.xvm.cc_explore.Part.Composition.*;
 
@@ -19,7 +18,6 @@ interface concrete method is a full lambda with FIDX.
 "class implements iface" - unify the open iface struct against closed class struct
 "class extends class" - chain thru a special field " super".  
 Special type constructor "isa X".
-_tcons add a field their name to the class, pts to a ISA tvar.
 Can drop the env lookup I think.
 
  */

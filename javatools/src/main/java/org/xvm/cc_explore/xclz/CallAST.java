@@ -5,7 +5,7 @@ import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.util.SB;
 
 class CallAST extends AST {
-  final String[] _rets;
+  final XType[] _rets;
   static CallAST make( XClzBuilder X ) {
     // Read optional array of return types (not currently used)
     Const[] retTypes = X.consts();
@@ -17,16 +17,11 @@ class CallAST extends AST {
   }
   private CallAST( AST[] kids, Const[] retTypes ) {
     super(kids);
-    if( retTypes==null ) _rets = null;
-    else {
-      _rets = new String[retTypes.length];
-      for( int i=0; i<retTypes.length; i++ )
-        _rets[i] = XClzBuilder.jtype(retTypes[i],false);
-    }
+    _rets = XType.xtypes(retTypes);
   }
   
-  @Override String _type() {
-    if( _rets==null ) return "void";
+  @Override XType _type() {
+    if( _rets==null ) return XType.VOID;
     if( _rets.length == 1 ) return _rets[0];
     throw XEC.TODO();
   }

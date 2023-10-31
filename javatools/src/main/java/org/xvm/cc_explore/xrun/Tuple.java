@@ -4,7 +4,7 @@ import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.TCon;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.xclz.XClz;
-import org.xvm.cc_explore.xclz.XClzBuilder;
+import org.xvm.cc_explore.xclz.XType;
 
 import static org.xvm.cc_explore.xclz.XClz.Mutability.*;
 
@@ -109,17 +109,16 @@ public abstract class Tuple extends XClz implements Cloneable {
 
   // Return a tuple class for this set of types.  The class is cached, and can
   // be used many times.
-  public static String make_class( HashMap<String,String> cache, TCon[] parms ) {
+  public static XType.JTupleType make_class( HashMap<String,String> cache, TCon[] parms ) {
     int N = parms==null ? 0 : parms.length;
-    String[] clzs = new String[N];
-    SB sb = new SB().p("Tuple").p(N);
+    XType[] clzs = new XType[N];
     for( int i=0; i<N; i++ )
-      sb.p("$").p(clzs[i]=XClzBuilder.jtype(parms[i],false));
-    String tclz = sb.toString();
-    sb.clear();
+      clzs[i]=XType.xtype(parms[i],false);
+    XType.JTupleType xtt = XType.JTupleType.make(clzs);
 
     // Lookup cached version
-    if( N==0 ) return tclz;     // Tuple0 already exists in the base runtime
+    if( N==0 ) return xtt;     // Tuple0 already exists in the base runtime
+    String tclz = xtt.clz();
     if( !cache.containsKey(tclz) ) {
       /* Gotta build one.  Looks like:
          class Tuple3$long$String$char extends Tuple3 {
@@ -135,14 +134,15 @@ public abstract class Tuple extends XClz implements Cloneable {
          }
       */
       // Tuple N class
+      SB sb = new SB();
       sb.p("class ").p(tclz).p(" extends Tuple"+N+" {").nl().ii();
       // N field declares
       for( int i=0; i<N; i++ )
-        sb.ip("public ").p(clzs[i]).p(" _f").p(i).p(";").nl();
+        sb.ip("public ").p(clzs[i].toString()).p(" _f").p(i).p(";").nl();
       // Constructor, taking N arguments
       sb.ip(tclz).p("( ");
       for( int i=0; i<N; i++ )
-        sb.p(clzs[i]).p(" f").p(i).p(", ");
+        sb.p(clzs[i].toString()).p(" f").p(i).p(", ");
       sb.unchar(2).p(") {").nl().ii().i();
       // N arg to  field assigns
       for( int i=0; i<N; i++ )
@@ -153,12 +153,12 @@ public abstract class Tuple extends XClz implements Cloneable {
         sb.ip("public Object f").p(i).p("() { return _f").p(i).p("; }").nl();
       // Abstract setters
       for( int i=0; i<N; i++ )
-        sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(XClzBuilder.box(clzs[i])).p(")e; }").nl();
+        sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(clzs[i].box().toString()).p(")e; }").nl();
       // Class end
       sb.di().ip("}").nl();
       cache.put(tclz,sb.toString());
     }
 
-    return tclz;
+    return xtt;
   }
 }

@@ -25,19 +25,18 @@ class DefRegAST extends AST {
     } else {
       _init = null;
     }
-    _type = XClzBuilder.jtype(type,false);
+    _type = XType.xtype(type,false);
     _name = name==null ? null : ((StringCon)name)._str;
     if( name!=null && !_name.equals("$") )
       X.define(_name,_type);
   }
-  DefRegAST( String type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
+  DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
   
   @Override String name() { return _name; }
-  @Override String _type() { return _type; }
+  @Override XType _type() { return _type; }
   
   @Override void jpre( SB sb ) {
-    sb.p(_type);
-    sb.p(" ").p(_name);
+    _type.p(sb).p(" ").p(_name);
     if( _init != null ) sb.p(" = ").p(_init);
   }
 }

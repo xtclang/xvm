@@ -10,19 +10,22 @@ class ExprAST extends AST {
     AST kid = ast(X);
     // Types?
     Const[] types = X.consts();
-    String type = XClzBuilder.jtype(types[0],false);
+    XType type = XType.xtype(types[0],false);
     return new ExprAST(type,kid);
   }
   
-  ExprAST( String type, AST... kids ) { super(kids);  _type = type; }
-  @Override String _type() { return _type; }
+  ExprAST( XType type, AST... kids ) { super(kids);  _type = type; }
+  @Override XType _type() { return _type; }
 
   // new Runnable() { void run() { ....; } }.run()
   @Override void jpre( SB sb ) {
-    sb.p("new XExpr() { public ").p(_type).p(" get_").p(_type).p("() {").ii().nl();
+    sb.p("new XExpr() { public ");
+    _type.p(sb).p(" get_");
+    _type.p(sb).p("() {").ii().nl();
   }
   @Override void jmid( SB sb, int i ) { sb.p(";").nl(); }
   @Override void jpost( SB sb ) {
-    sb.di().ip("}}.get_").p(_type).p("()");
+    sb.di().ip("}}.get_");
+    _type.p(sb).p("()");
   }
 }

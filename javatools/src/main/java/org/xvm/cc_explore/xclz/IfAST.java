@@ -14,7 +14,7 @@ class IfAST extends AST {
   }  
   private IfAST( AST[] kids ) { super(kids); }
   
-  @Override String _type() { return "void"; }
+  @Override XType _type() { return XType.VOID; }
 
   BlockAST true_blk() {
     BlockAST blk;

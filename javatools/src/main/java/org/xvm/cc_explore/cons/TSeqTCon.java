@@ -1,7 +1,5 @@
 package org.xvm.cc_explore.cons;
 
-import org.xvm.cc_explore.tvar.TVLeaf;
-import org.xvm.cc_explore.tvar.TVar;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.XEC;
 

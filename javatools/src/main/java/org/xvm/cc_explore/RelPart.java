@@ -1,7 +1,5 @@
 package org.xvm.cc_explore;
 
-import org.xvm.cc_explore.tvar.TVStruct;
-  
 /**
    Union or Interface composed interface Part
  */
@@ -30,16 +28,6 @@ public class RelPart extends ClassPart {
     // allowed set of fields we can use is limited to what is common across
     // all members - i.e., the intersection.
     Union {
-      @Override TVStruct op(TVStruct t1, TVStruct t2) {
-        // Make a fresh copy of fields found in both.
-        TVStruct t3 = (TVStruct)t2.fresh();
-        boolean old = t1._open;
-        t1._open = t3._open = false; // Both are closed; result has common fields
-        t1.fresh_unify(t3,null);
-        t1._open = old;
-        t3._open = true;        // Still an interface
-        return (TVStruct)t3.find();
-      }
       @Override Part search(Part c1, Part c2) {
         return c1==c2 ? c1 : null; // Must be in both
       }
@@ -49,30 +37,15 @@ public class RelPart extends ClassPart {
     // trivial parent/child classes.  The allowed set of fields we can use is
     // everything in both.
     Intersect {
-      @Override TVStruct op(TVStruct t1, TVStruct t2) {
-        // Make a fresh copy of fields found in both.
-        assert t1 != t2;
-        TVStruct t3 = (TVStruct)t2.fresh();
-        boolean old = t1._open;
-        t1._open = t3._open = true; // Both are open; result as all fields
-        t1.fresh_unify(t3,null);
-        t1._open = old;
-        return (TVStruct)t3.find();
-      }
       @Override Part search(Part c1, Part c2) {
         return c1==null ? c2 : c1; // Must be in either
       }
     },
     Difference {
-      @Override TVStruct op(TVStruct t1, TVStruct t2) {
-        // TODO: Not sure, just returning t1
-        return t1;
-      }
       @Override Part search(Part c1, Part c2) {
         return c1!=null && c2==null ? c1 : null; // Must be in first not 2nd
       }
     };
-    abstract TVStruct op(TVStruct t1, TVStruct t2);
     abstract Part search(Part c1, Part c2);
   };
 }

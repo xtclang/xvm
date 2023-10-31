@@ -2,7 +2,6 @@ package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.ModCon;
 import org.xvm.cc_explore.cons.Const;
-import org.xvm.cc_explore.tvar.TVLeaf;
 
 /**
      DAG structure containment of components
