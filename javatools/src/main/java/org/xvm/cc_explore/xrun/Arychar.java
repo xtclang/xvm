@@ -7,14 +7,14 @@ import java.util.Arrays;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class AryChar extends XClz {
+public class Arychar extends XClz {
   public char[] _cs;
   public int _len;
-  public AryChar() { _cs = new char[1]; }
-  public AryChar(String s) { _cs = s.toCharArray(); _len = _cs.length; }  
+  public Arychar() { _cs = new char[1]; }
+  public Arychar(String s) { _cs = s.toCharArray(); _len = _cs.length; }  
 
   // Add an element, doubling base array as needed
-  public AryChar add( char c ) {
+  public Arychar add( char c ) {
     if( _len >= _cs.length ) _cs = Arrays.copyOf(_cs,Math.max(1,_cs.length<<1));
     _cs[_len++] = c;
     return this;
@@ -42,7 +42,7 @@ public class AryChar extends XClz {
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
     if( this==o ) return true;
-    if( !(o instanceof AryChar ary) ) return false;
+    if( !(o instanceof Arychar ary) ) return false;
     if( _len != ary._len ) return false;
     if( _cs == ary._cs ) return true;
     for( int i=0; i<_len; i++ )
