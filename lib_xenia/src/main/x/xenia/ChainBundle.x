@@ -328,7 +328,7 @@ service ChainBundle {
         } else if (param.ParamType defaultValue := param.defaultValue()) {
             paramValue = defaultValue;
         } else {
-            throw new IllegalState($"Missing query parameter: {name.quoted}");
+            throw new IllegalState($"Missing query parameter: {name.quoted()}");
         }
         return values.add(paramValue.as(param.ParamType));
     }
