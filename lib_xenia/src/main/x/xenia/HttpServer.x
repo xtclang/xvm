@@ -83,6 +83,15 @@ interface HttpServer
     Byte[] getClientAddressBytes(RequestContext context);
 
     /**
+     * Obtain the host name that the request was sent from.
+     *
+     * @param context  the context that was passed to a `Handler` for a request
+     *
+     * @return the host name or Null if the name cannot be resolved
+     */
+    String? getClientHostName(RequestContext context);
+
+    /**
      * Obtain the port number on the client that the request was sent from
      *
      * @param context  the context that was passed to a `Handler` for a request
@@ -192,6 +201,15 @@ interface HttpServer
          */
         IPAddress getClientAddress() {
             return new IPAddress(server.getClientAddressBytes(context));
+        }
+
+        /**
+         * Obtain the host name that the request was sent from.
+         *
+         * @return the host name or Null if the name cannot be resolved
+         */
+        String? getClientHostName() {
+                return server.getClientHostName(context);
         }
 
         /**
@@ -322,8 +340,9 @@ interface HttpServer
             Scheme scheme    = getProtocol().scheme;
             Scheme tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
             UInt16 tlsPort   = server.tlsPort;
+            String hostName  = server.getClientHostName(context) ?: server.hostName;
 
-            return $|{tlsScheme.name}://{server.hostName}\
+            return $|{tlsScheme.name}://{hostName}\
                     |{{if (tlsPort!=443) {$.add(':').append(tlsPort);}}}\
                     |{server.getUriString(context)}
                     ;

@@ -54,6 +54,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -102,6 +103,7 @@ public class xRTServer
         markNativeMethod("close"       , null, VOID);
 
         markNativeMethod("getClientAddressBytes",  null, null);
+        markNativeMethod("getClientHostName",      null, null);
         markNativeMethod("getClientPort",          null, null);
         markNativeMethod("getServerAddressBytes",  null, null);
         markNativeMethod("getServerPort",          null, null);
@@ -152,6 +154,9 @@ public class xRTServer
                         : xRTFunction.makeAsyncNativeHandle(method).
                                 call1(frame, hService, new ObjectHandle[]{hArg}, iReturn);
                 }
+
+            case "getClientHostName":
+                return invokeGetClientHostName(frame, (HttpContextHandle) hArg, iReturn);
 
             case "getClientAddressBytes":
                 return invokeGetClientAddress(frame, (HttpContextHandle) hArg, iReturn);
@@ -387,6 +392,26 @@ public class xRTServer
         }
 
     /**
+     * Implementation of "String? getClientHostName(RequestContext context)" method.
+     */
+    private int invokeGetClientHostName(Frame frame, HttpContextHandle hCtx, int iResult)
+        {
+        String sHost = hCtx.f_exchange.getRequestHeaders().getFirst("Host");
+        if (sHost != null)
+            {
+            int ofPort = sHost.lastIndexOf(':');
+            if (ofPort >= 0)
+                {
+                sHost = sHost.substring(0, ofPort);
+                }
+            }
+
+        return frame.assignValue(iResult, sHost == null
+                ? xNullable.NULL
+                : xString.makeHandle(sHost));
+        }
+
+    /**
      * Implementation of "Byte[] getClientAddressBytes(RequestContext context)" method.
      */
     private int invokeGetClientAddress(Frame frame, HttpContextHandle hCtx, int iResult)
@@ -402,9 +427,22 @@ public class xRTServer
      */
     private int invokeGetClientPort(Frame frame, HttpContextHandle hCtx, int iResult)
         {
-        InetSocketAddress addr = hCtx.f_exchange.getRemoteAddress();
+        int    nPort = -1;
+        String sHost = hCtx.f_exchange.getRequestHeaders().getFirst("Host");
+        if (sHost != null)
+            {
+            int ofPort = sHost.lastIndexOf(':');
+            if (ofPort >= 0)
+                {
+                nPort = Integer.valueOf(sHost.substring(ofPort + 1));
+                }
+            }
+        if (nPort == -1)
+            {
+            nPort = hCtx.f_exchange.getRemoteAddress().getPort();
+            }
 
-        return frame.assignValue(iResult, xUInt16.INSTANCE.makeJavaLong(addr.getPort()));
+        return frame.assignValue(iResult, xUInt16.INSTANCE.makeJavaLong(nPort));
         }
 
     /**

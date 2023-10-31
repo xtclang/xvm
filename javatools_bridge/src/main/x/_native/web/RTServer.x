@@ -94,6 +94,9 @@ service RTServer
     Byte[] getClientAddressBytes(RequestContext context) {TODO("Native");}
 
     @Override
+    String? getClientHostName(RequestContext context) {TODO("Native");}
+
+    @Override
     UInt16 getClientPort(RequestContext context) {TODO("Native");}
 
     @Override
@@ -187,6 +190,15 @@ service RTServer
         void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body);
 
         // ----- request attributes accessors ------------------------------------------------------
+
+        /**
+         * Obtain the host name that the request was sent from.
+         *
+         * @param context  the context that was passed to a `Handler` for a request
+         *
+         * @return the host name or Null if the name cannot be resolved
+         */
+        String? getClientHostName(RequestContext context);
 
         /**
          * Obtain the IP address that the request was sent from.
