@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 class BlockAST extends AST {
-  HashMap<String,Ary<String>> _tmps;
+  HashMap<XType,Ary<String>> _tmps;
   private int _uid;
   
   static BlockAST make( XClzBuilder X ) {
@@ -24,12 +24,12 @@ class BlockAST extends AST {
   
   BlockAST( AST... kids ) { super(kids); }
 
-  @Override String _type() { return "void"; }
+  @Override XType _type() { return XType.VOID; }
   
-  String add_tmp(String type) {
+  String add_tmp(XType type) {
     return add_tmp(type,"$tmp"+_uid++);
   }
-  String add_tmp(String type, String name) {
+  String add_tmp(XType type, String name) {
     assert type != null;
     if( _tmps==null ) _tmps = new HashMap<>();
     Ary<String> tmps = _tmps.get(type);
@@ -41,9 +41,9 @@ class BlockAST extends AST {
     sb.p("{").ii().nl();
     // Print tmps used by enclosing expressions
     if( _tmps!=null ) {
-      for( String type : _tmps.keySet() ) {
+      for( XType type : _tmps.keySet() ) {
         Ary<String> tmps = _tmps.get(type);
-        sb.ip(type).p(" ");
+        type.str(sb.i()).p(" ");
         for( String tmp : tmps )
           sb.p(tmp).p(", ");
         sb.unchar(2).p(";").nl();

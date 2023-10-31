@@ -13,10 +13,10 @@ class AssertAST extends AST {
     return new AssertAST(new ConAST("XClz"), cond,intv,mesg);
   }
   private AssertAST( AST... kids ) { super(kids); }
-  @Override String _type() { return "void"; }
+  @Override XType _type() { return XType.VOID; }
 
   @Override AST rewrite() {
-    return new InvokeAST("xassert",(String)null,_kids).do_type();
+    return new InvokeAST("xassert",(XType)null,_kids).do_type();
   }
   @Override void jmid ( SB sb, int i ) {
     if( i==0 ) sb.p(".xassert(");
