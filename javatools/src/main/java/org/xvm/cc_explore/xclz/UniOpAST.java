@@ -28,7 +28,7 @@ class UniOpAST extends AST {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
     // XTC allows booleans "~" but Java does not.
-    if( "~".equals(pre) && "boolean".equals(XClzBuilder.jtype(type,false)) )
+    if( "~".equals(pre) && "boolean".equals(XType.jtype(type,false)) )
       pre = "!";                // Use Java bang instead
     return new UniOpAST(kids,pre,post,type);
   }
@@ -41,21 +41,21 @@ class UniOpAST extends AST {
     // if the kid is conditional, instead of the kids value type.  TRACE can
     // compute its type from its kid later.
     if( is_trace() ) type=null;
-    _type = type==null ? null : XClzBuilder.jtype(type,false);
+    _type = type==null ? null : XType.xtype(type,false);
   }
   boolean is_elvis() { return "ELVIS".equals(_pre); }
   static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern.is_elvis(); }
   boolean is_trace() { return ".TRACE()".equals(_post); }
 
-  @Override String _type() {
+  @Override XType _type() {
     // "!" is given a type in BAST (always "boolean"), but it uses a condition
     // test if available, or the first part of a Tuple (which must be a
     // boolean).
     if( "!".equals(_pre) )
       return _type;
     // Other operators carry through from the child
-    String t = _kids[0]._type;
-    if( is_elvis() ) t = XClzBuilder.unbox(t);
+    XType t = _kids[0]._type;
+    if( is_elvis() ) t = t.unbox();
     return t;
   }
   @Override boolean _cond() {
@@ -66,7 +66,7 @@ class UniOpAST extends AST {
 
   @Override AST rewrite() {
     if( is_trace() )
-      return new InvokeAST("TRACE",(String)null,new ConAST("XClz"),_kids[0]).do_type();
+      return new InvokeAST("TRACE",(XType)null,new ConAST("XClz"),_kids[0]).do_type();
     return this;
   }
   
@@ -74,7 +74,7 @@ class UniOpAST extends AST {
     // Bang "eats" the test part of {test,value} conditionals and drops the
     // value part.
     if( _kids[0]._cond ) {
-      assert _type.equals("boolean");
+      assert _type==XType.BOOL;
       if( "!".equals(_pre) ) {
         _kids[0].jcode(sb.p("$t("));
         return sb.p(") && !XRuntime.GET$COND()");

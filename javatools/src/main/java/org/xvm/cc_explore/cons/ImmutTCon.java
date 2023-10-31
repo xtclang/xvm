@@ -2,7 +2,6 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.tvar.*;
 
 /**
   Exploring XEC Constants

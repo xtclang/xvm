@@ -5,6 +5,7 @@ import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.xclz.AST;
 import org.xvm.cc_explore.xclz.XClz;
 import org.xvm.cc_explore.xclz.XClzBuilder;
+import org.xvm.cc_explore.xclz.XType;
 
 public abstract class XProp extends XClz {
   
@@ -20,9 +21,9 @@ public abstract class XProp extends XClz {
   // Fancier, e.g. marked LazyVar, or has non-default get/set or other pieces:
   //   private Prop$Type prop = new Prop$Type();
   //   // Calls are e.g. prop.$get() or prop.$set(p)
-  public static void make_class( SB sb, PropPart pp ) {
+  public static void make_class( ModPart mod, SB sb, PropPart pp ) {
     String pname = pp._name;
-    String jtype = XClzBuilder.jtype(pp._con,false);
+    String jtype = XType.jtype(pp._con,false);
     ClassPart aclz = (ClassPart)pp._contribs[0]._annot.part();
     String ano = aclz._name;
     
@@ -52,7 +53,7 @@ public abstract class XProp extends XClz {
       for( String name : pp._name2kid.keySet() ) {
         MMethodPart mm = (MMethodPart)pp._name2kid.get(name);
         MethodPart meth = (MethodPart)mm._name2kid.get(name);
-        XClzBuilder X =  new XClzBuilder(sb);
+        XClzBuilder X =  new XClzBuilder(mod,sb);
         X.jmethod(meth,pname+"$"+meth._name);
       }
     

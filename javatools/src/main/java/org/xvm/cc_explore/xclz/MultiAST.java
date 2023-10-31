@@ -14,13 +14,12 @@ class MultiAST extends AST {
   }
   MultiAST( AST... kids ) { super(kids); }
   
-  @Override String _type() {
-    String kid0 = _kids[0]._type;
+  @Override XType _type() {
+    XType kid0 = _kids[0]._type;
     if( _kids.length==1 ) return kid0;
-    String kid1 = _kids[1]._type;
-    if( kid0.equals("Boolean" ) )
-      return "?"+kid1;
-    return "boolean";
+    XType kid1 = _kids[1]._type;
+    // Box kid1, so we can null-check it
+    return kid0==XType.BOOL ? kid1.box() : XType.BOOL;
   }
 
   @Override AST rewrite() {
@@ -37,8 +36,8 @@ class MultiAST extends AST {
     if( elvis!=null && elvis._kids!=null ) {
       // Make 'e0==null'
       AST vsnull = elvis._kids[0]._kids[0];
-      BinOpAST eq0 = new BinOpAST("==","","boolean",new ConAST("null"),vsnull);
-      BinOpAST or = new BinOpAST("||","","boolean",eq0,_kids[0]);
+      BinOpAST eq0 = new BinOpAST("==","",XType.BOOL,new ConAST("null"),vsnull);
+      BinOpAST or  = new BinOpAST("||","",XType.BOOL,eq0,_kids[0]);
       _kids[0] = or;
       // Drop the elvis buried inside the expression
       elvis._kids[0] = vsnull;
