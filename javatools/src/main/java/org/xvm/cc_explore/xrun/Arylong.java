@@ -10,11 +10,12 @@ import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class AryI64 extends XClz implements Iterable<Long> {
+public class Arylong extends XClz implements Iterable<Long> {
   public long[] _es;
   public int _len;
-  public AryI64() { _es = new long[1]; }
-  public AryI64( long len, LongUnaryOperator fcn ) {
+  public Arylong() { _es = new long[1]; }
+  public Arylong(long... es) { _es = es; _len=es.length; }
+  public Arylong( long len, LongUnaryOperator fcn ) {
     _len = (int)len;
     if( _len != len ) throw XEC.TODO(); // Too Big
     _es = new long[_len];
@@ -24,8 +25,12 @@ public class AryI64 extends XClz implements Iterable<Long> {
   
 
   // Add an element, doubling base array as needed
-  public AryI64 add( long e ) {
-    if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));
+  public Arylong add( long e ) {
+    if( _len >= _es.length ) {
+      int len=1;
+      while( len <= _es.length ) len<<=1;
+      _es = Arrays.copyOf(_es,len);
+    }
     _es[_len++] = e;
     return this;
   }
@@ -52,7 +57,7 @@ public class AryI64 extends XClz implements Iterable<Long> {
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
     if( this==o ) return true;
-    if( !(o instanceof AryI64 ary) ) return false;
+    if( !(o instanceof Arylong ary) ) return false;
     if( _len != ary._len ) return false;
     if( _es == ary._es ) return true;
     for( int i=0; i<_len; i++ )

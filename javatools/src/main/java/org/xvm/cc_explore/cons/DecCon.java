@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
-import org.xvm.cc_explore.tvar.TVBase;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;

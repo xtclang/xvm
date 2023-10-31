@@ -17,10 +17,10 @@ class NarrowAST extends AST {
   
   private NarrowAST( AST[] kids, Const type ) {
     super(kids);
-    _type = type instanceof AccessTCon access
-      ? "Object"
-      : XClzBuilder.jtype((TCon)type,false);
+    _type = type instanceof AccessTCon
+      ? XType.OBJECT
+      : XType.xtype(type,false);
   }
-  @Override String _type() { return _type; }
+  @Override XType _type() { return _type; }
   @Override String name() { return _kids[0].name(); }
 }

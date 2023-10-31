@@ -7,18 +7,11 @@ import java.util.*;
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
 public class Ary<E> implements Iterable<E> {
-  public final Class<E> _eclz;
   public E[] _es;
   public int _len;
-  public Ary(Class<E> eclz) {
-    _eclz = eclz;
-    _es = (E[]) java.lang.reflect.Array.newInstance(_eclz,1);
-    _len = 0;
-  }
-  public Ary(String[] ss) {
-    _eclz = (Class<E>)String.class;
-    _es = (E[])ss;
-    _len = ss.length;
+  public Ary( E... es ) {
+    _es = es;
+    _len = es.length;
   }
 
   /** Length, as encoded as a size property read */

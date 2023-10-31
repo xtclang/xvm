@@ -1,8 +1,6 @@
 package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
-import org.xvm.cc_explore.tvar.TVar;
-import org.xvm.cc_explore.tvar.TVStruct;
 
 /**
    Same as a Java generic constant name: "Map<K,V>; <V> get(K key) { ... }"

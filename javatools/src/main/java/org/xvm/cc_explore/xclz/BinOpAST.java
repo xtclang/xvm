@@ -15,9 +15,9 @@ class BinOpAST extends AST {
     kids[0] = ast_term(X);
     Operator op = OPS[X.u31()];
     kids[1] = ast_term(X);
-    String type = has_type
-      ? XClzBuilder.jtype(X.con(),false) // Type from the AST file
-      : (op==Operator.CompOrd ? "Ordered" : "boolean" ); // Must be one of the ordering operators
+    XType type = has_type
+      ? XType.xtype(X.con(),false) // Type from the AST file
+      : (op==Operator.CompOrd ? XType.ORDERED : XType.BOOL ); // Must be one of the ordering operators
     return new BinOpAST(op.text,"",type,kids);
   }
   
@@ -28,35 +28,32 @@ class BinOpAST extends AST {
     return new BinOpAST(op0,op1,null,kids);
   }
   
-  BinOpAST( String op0, String op1, String type, AST... kids ) {
+  BinOpAST( String op0, String op1, XType type, AST... kids ) {
     super(kids);
     _op0 = op0;
     _op1 = op1;
     _type = type;
   }
 
-  @Override String _type() {
+  @Override XType _type() {
     if( _op0.equals(".at(") ) {
-      String arytype = _kids[0]._type;
-      if( arytype.startsWith("Ary<") )
-        return arytype.substring(4,arytype.length()-1);
-      if( arytype.equals("AryChar") )  return "char";
-      if( arytype.equals("AryI64") )  return "long";
+      XType.JAryType arytype = (XType.JAryType)_kids[0]._type;
+      return arytype._e;
     }
     return _type;
   }
 
   @Override AST rewrite() {
     // Range is not a valid Java operator, so need to change everything here
-    if( _op0.equals(".." ) ) return new NewAST(_kids,_type+"II",null);
-    if( _op0.equals("..<") ) return new NewAST(_kids,_type+"IE",null);
+    if( _op0.equals(".." ) ) return new NewAST(_kids,XType.RANGEII,null);
+    if( _op0.equals("..<") ) return new NewAST(_kids,XType.RANGEIE,null);
     // Generally Java needs to use equals for refs and == is only for prims
     if( _op0.equals("==") && !(_kids[0] instanceof ConAST con && "null".equals(con._con)) ) {
       if( needs_equals(_kids[0]) || needs_equals(_kids[1]) )
-        return new InvokeAST("equals","boolean",_kids[0],_kids[1]).do_type();
+        return new InvokeAST("equals",XType.BOOL,_kids[0],_kids[1]).do_type();
     }
     if( _op0.equals("<=>") )
-      return new InvokeAST("spaceship","Ordered",new ConAST("XClz"),_kids[0],_kids[1]).do_type();
+      return new InvokeAST("spaceship",XType.ORDERED,new ConAST("XClz"),_kids[0],_kids[1]).do_type();
 
     // This is a ternary null-check or elvis operator.  _kids[0] has, deep
     // within it, the matching predicate test.  I need to restructure this tree:
@@ -85,24 +82,23 @@ class BinOpAST extends AST {
   }
 
   private AST do_elvis( AST pred0, AST elvis ) {
-    String type = pred0._type;
+    XType type = pred0._type;
     String tmp = enclosing_block().add_tmp(type);
     elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
     // Assign the tmp to predicate
     AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred0).do_type();
     // Zero/null if primitive (if boxing changes type)
-    AST zero = new ConAST(XClzBuilder.box(type).equals(type) ? "null" : "0");
+    AST zero = new ConAST(type.ztype());
     // Null check it
-    AST nchk = new BinOpAST("!=","","boolean",asgn, zero );
+    AST nchk = new BinOpAST("!=","",XType.BOOL,asgn, zero );
     // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
     return new TernaryAST( nchk, _kids[0], _kids[1]).do_type();
   }
   
   
-  // Boxed types (Long vs long) needs equals.
+  // Boxed types (Long vs long) needs equals vs ==
   static boolean needs_equals(AST k) {
-    String t = k._type;         // Constants dont give a proper type
-    return !(k instanceof ConAST) && XClzBuilder.box(t).equals(t);
+    return (k._type.ztype().charAt(0)!='0');
   }
   
   @Override SB jcode( SB sb ) {
@@ -119,7 +115,7 @@ class BinOpAST extends AST {
             !bin._op1.equals(")") &&
             prec( _op0, bin._op0 );
     if( ast instanceof AssignAST ) wrap=true;
-    if( "String".equals(_type) && _kids[1]==ast &&
+    if( _type==XType.STRING && _kids[1]==ast &&
         (ast instanceof BinOpAST || ast instanceof TernaryAST || (ast instanceof SwitchAST sast && sast._kids[0] instanceof MultiAST ) ) ) {
       sb.p(" "); wrap=true;
     }

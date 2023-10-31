@@ -8,7 +8,7 @@ class ContinueAST extends AST {
   static ContinueAST make(XClzBuilder X) { return new ContinueAST(X.u31()); }
   private ContinueAST( int d ) { super(null); _d = d; }
 
-  @Override String _type() { return "void"; }
+  @Override XType _type() { return XType.VOID; }
 
   @Override SB jcode ( SB sb ) {
     if( _d > 0 ) throw XEC.TODO();

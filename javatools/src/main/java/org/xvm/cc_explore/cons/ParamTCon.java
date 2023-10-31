@@ -2,7 +2,6 @@ package org.xvm.cc_explore.cons;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.tvar.TVar;
 
 /**
    Parameterized Type Constant.
@@ -10,13 +9,11 @@ import org.xvm.cc_explore.tvar.TVar;
 public class ParamTCon extends TCon implements ClzCon {
   public TCon _con;
   public TCon[] _parms;
-  public final TVar[] _types;
   private ClassPart _part;
   
   public ParamTCon( CPool X ) {
     X.u31();
-    int len = X.skipAry();
-    _types = len==0 ? null : new TVar[len];
+    X.skipAry();
   }
   @Override public SB str(SB sb) {
     if( _con instanceof TermTCon tt ) sb.p(tt.name());
