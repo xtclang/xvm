@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.XEC;
 import java.util.HashMap;
@@ -37,7 +36,7 @@ class BinOpAST extends AST {
 
   @Override XType _type() {
     if( _op0.equals(".at(") ) {
-      XType.JAryType arytype = (XType.JAryType)_kids[0]._type;
+      XType.Ary arytype = (XType.Ary)_kids[0]._type;
       return arytype._e;
     }
     return _type;

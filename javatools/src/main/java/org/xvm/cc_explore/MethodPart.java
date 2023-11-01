@@ -242,4 +242,11 @@ public class MethodPart extends MMethodPart {
   
   
   public boolean is_cond_ret() { return (_nFlags & 0x2000) != 0; }
+
+  // Reasonable java name.
+  public String jname() {
+    // Method is nested in a method, qualify the name more
+    return _par._par instanceof ClassPart ? _name
+      :_par._par._name+"$"+_name;
+  }
 }
