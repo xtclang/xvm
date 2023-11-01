@@ -24,24 +24,23 @@ public abstract class XProp extends XClz {
   public static void make_class( ModPart mod, SB sb, PropPart pp ) {
     String pname = pp._name;
     String jtype = XType.jtype(pp._con,false);
-    ClassPart aclz = (ClassPart)pp._contribs[0]._annot.part();
-    String ano = aclz._name;
+    String ano = pp._contribs==null ? null : ((ClassPart)pp._contribs[0]._annot.part())._name;
     
     // Definition and init
     sb.ip("private ").p(jtype).p(" ").p(pname);
     // Special init for InjectedRef.  Other props get no init()?
-    if( ano.equals("InjectedRef") )
+    if( "InjectedRef".equals(ano) )
       sb.p(" = _container.").p(pname).p("()");
     sb.p(";").nl();
     
     // private boolean prop$init;
-    if( ano.equals("LazyVar") )
+    if( "LazyVar".equals(ano) )
       sb.ip("private boolean ").p(pname).p("$init;").nl();
     
     // Type prop$get() { return prop; }  OR
     // Type prop$get() { if( !init ) { init=true; prop=calc(); } return prop; }
     sb.ip(jtype).p(" ").p(pname).p("$get() { ");
-    if( ano.equals("LazyVar") )
+    if( "LazyVar".equals(ano) )
       // Type prop$get() { if( !prop$init ) { prop$init=true; prop=prop$calc(); } return prop; };
       sb.p("if( !").p(pname).p("$init").p(") { ").p(pname).p("$init").p("=true; ").p(pname).p(" = ").p(pname).p("$calc(); } ");
     sb.p("return ").p(pname).p("; }").nl();

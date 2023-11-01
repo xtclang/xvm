@@ -30,7 +30,7 @@ module TestMisc {
         testInterval();
         testException();
         testConditional();
-        //testBind();
+        testBind();
         //testConstants();
         testImport();
         //testRecursiveType();
@@ -436,36 +436,36 @@ module TestMisc {
         console.print("f6=" + f6 + " (should be False)");
     }
 
-    //void testBind() {
-    //    console.print("\n** testBind()");
-    //
-    //    foo(y="a", x=3);
-    //
-    //    function void (Int) fn1 = &foo(y="a");
-    //    fn1(3);
-    //
-    //    function void () fn1b = &fn1(3);
-    //    fn1b();
-    //
-    //    function void () fn2 = &foo(y="a", x=3);
-    //    fn2();
-    //
-    //    bar(3, z=4, y=2);
-    //
-    //    function void (Int, Int) fn3 = &bar(y=2);
-    //    fn3(3, 4);
-    //
-    //    function void (Int, Int) fn4 = &bar(3);
-    //    fn4(2, 4);
-    //
-    //    private void foo(Int x = 0, String y = "") {
-    //        console.print($"foo: x={x}, y={y}");
-    //    }
-    //
-    //    private void bar(Int x, Int y, Int z = 1) {
-    //        console.print($"bar: x={x}, y={y}, z={z}");
-    //    }
-    //}
+    void testBind() {
+        console.print("\n** testBind()");
+    
+        foo(y="a", x=3);
+    
+        function void (Int) fn1 = &foo(y="a");
+        fn1(3);
+    
+        function void () fn1b = &fn1(3);
+        fn1b();
+    
+        function void () fn2 = &foo(y="a", x=3);
+        fn2();
+    
+        bar(3, z=4, y=2);
+    
+        function void (Int, Int) fn3 = &bar(y=2);
+        fn3(3, 4);
+    
+        function void (Int, Int) fn4 = &bar(3);
+        fn4(2, 4);
+    
+        private void foo(Int x = 0, String y = "") {
+            console.print($"foo: x={x}, y={y}");
+        }
+    
+        private void bar(Int x, Int y, Int z = 1) {
+            console.print($"bar: x={x}, y={y}, z={z}");
+        }
+    }
 
     //void testConstants() {
     //    import ecstasy.collections.Hasher;

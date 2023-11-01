@@ -2,7 +2,6 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.XEC;
-import org.xvm.cc_explore.xrun.*;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.*;
 
@@ -17,7 +16,7 @@ public abstract class XType {
   private static final HashMap<XType,XType> INTERN = new HashMap<>();
 
   @Override public final String toString() { return str(new SB()).toString(); }
-  public SB p(SB sb) { return str(sb); }
+  public SB p(SB sb) { return clz(sb); }
   abstract SB str( SB sb );
   public final String clz() { return clz(new SB()).toString(); }
   abstract SB clz( SB sb );     // Class string
@@ -37,16 +36,16 @@ public abstract class XType {
   }
   
   // Shallow Java class name, or type. 
-  public static class JType extends XType {
-    private static JType FREE = null;
+  public static class Base extends XType {
+    private static Base FREE = null;
     public String _jtype;
-    private JType(String j) { _jtype = j; }
-    static JType make(String j) {
+    private Base( String j) { _jtype = j; }
+    static Base make( String j) {
       assert j.indexOf('<') == -1; // No generics here
-      if( FREE==null ) FREE = new JType(null);
+      if( FREE==null ) FREE = new Base(null);
       FREE._hash = 0;
       FREE._jtype = j;
-      JType jt = (JType)INTERN.get(FREE);
+      Base jt = (Base)INTERN.get(FREE);
       if( jt!=null ) return jt;
       INTERN.put(jt=FREE,FREE);
       FREE=null;
@@ -55,22 +54,22 @@ public abstract class XType {
     @Override public boolean is_prim_base() { return XBOX.containsKey(this); }
     @Override SB str( SB sb ) { return sb.p(_jtype); }
     @Override SB clz( SB sb ) { return sb.p(_jtype); }
-    @Override boolean eq(XType xt) { return _jtype.equals(((JType)xt)._jtype);  }
+    @Override boolean eq(XType xt) { return _jtype.equals(((Base)xt)._jtype);  }
     @Override int hash() { return _jtype.hashCode(); }
   }
 
   // Basically a Java class as a tuple
-  public static class JTupleType extends XType {
-    private static JTupleType FREE = new JTupleType(null);
+  public static class Tuple extends XType {
+    private static Tuple FREE = new Tuple(null);
     public XType[] _xts;
-    private JTupleType(XType[] xts) { _xts = xts; }
-    public static JTupleType make(XType... xts) {
+    private Tuple( XType[] xts) { _xts = xts; }
+    public static Tuple make( XType... xts) {
       FREE._hash = 0;
       FREE._xts = xts;
-      JTupleType jtt = (JTupleType)INTERN.get(FREE);
+      Tuple jtt = (Tuple)INTERN.get(FREE);
       if( jtt!=null ) return jtt;
       INTERN.put(jtt=FREE,FREE);
-      FREE = new JTupleType(null);
+      FREE = new Tuple(null);
       return jtt;
     }
     @Override public boolean is_prim_base() { return false; }
@@ -88,52 +87,50 @@ public abstract class XType {
       return sb.unchar();
     }
     // Using shallow equals,hashCode, not deep, because the parts are already interned
-    @Override boolean eq(XType xt) { return Arrays.equals(_xts,((JTupleType)xt)._xts); }
+    @Override boolean eq(XType xt) { return Arrays.equals(_xts,((Tuple)xt)._xts); }
     @Override int hash() { return Arrays.hashCode(_xts); }
   }
   
 
   // Basically a Java class as an array
-  public static class JAryType extends XType {
-    private static JAryType FREE = new JAryType(null);
+  public static class Ary extends XType {
+    private static Ary FREE = new Ary(null);
     public XType _e;
-    private JAryType(XType e) { _e = e; }
-    public static JAryType make(XType e) {
+    private Ary( XType e) { _e = e; }
+    public static Ary make( XType e) {
       FREE._hash = 0;
       FREE._e = e;
-      JAryType jtt = (JAryType)INTERN.get(FREE);
+      Ary jtt = (Ary)INTERN.get(FREE);
       if( jtt!=null ) return jtt;
       INTERN.put(jtt=FREE,FREE);
-      FREE = new JAryType(null);
+      FREE = new Ary(null);
       return jtt;
     }
     @Override boolean is_prim_base() { return _e.is_prim_base(); }
     @Override SB str( SB sb ) {
-      if( _e.is_prim_base() && _e instanceof JType )
-        return _e.p(sb.p("Ary")); // Primitives print as "AryLong" or "AryChar" classes
-      return clz(sb);
-    }
-    @Override SB clz( SB sb ) {
+      if( _e.is_prim_base() && _e instanceof Base )
+        return _e.p(sb.p("Ary")); // Primitives print as "Arylong" or "Arychar" classes
       return _e.str(sb.p("Ary<")).p(">");
     }
-    @Override boolean eq(XType xt) { return _e == ((JAryType)xt)._e; }
+    @Override SB clz( SB sb ) { return str(sb); }
+    @Override boolean eq(XType xt) { return _e == ((Ary)xt)._e; }
     @Override int hash() { return _e.hashCode() ^ 123456789; }
   }
 
   
   // Basically a Java class as a function
-  public static class JFunType extends XType {
-    private static JFunType FREE = new JFunType(null,null);
+  public static class Fun extends XType {
+    private static Fun FREE = new Fun(null,null);
     public XType[] _args, _rets;
-    private JFunType(XType[] args, XType[] rets) { _args = args;  _rets = rets; }
-    public static JFunType make(XType[] args, XType[] rets) {
+    private Fun( XType[] args, XType[] rets) { _args = args;  _rets = rets; }
+    public static Fun make( XType[] args, XType[] rets) {
       FREE._hash = 0;
       FREE._args = args;
       FREE._rets = rets;
-      JFunType jtt = (JFunType)INTERN.get(FREE);
+      Fun jtt = (Fun)INTERN.get(FREE);
       if( jtt!=null ) return jtt;
       INTERN.put(jtt=FREE,FREE);
-      FREE = new JFunType(null,null);
+      FREE = new Fun(null,null);
       return jtt;
     }
     public int nargs() { return _args.length; }
@@ -148,57 +145,83 @@ public abstract class XType {
       return sb.unchar().p(" }");
     }
     @Override SB clz( SB sb ) {
-      sb.p("XFunc").p(_args.length).p("$");
+      sb.p("Fun").p(_args.length).p("$");
       for( XType xt : _args )
         xt.str(sb).p("$");
       return sb.unchar();
     }
     // Using shallow equals,hashCode, not deep, because the parts are already interned
-    @Override boolean eq(XType xt) { return Arrays.equals(_args,((JFunType)xt)._args) && Arrays.equals(_rets,((JFunType)xt)._rets); }
+    @Override boolean eq(XType xt) { return Arrays.equals(_args,((Fun)xt)._args) && Arrays.equals(_rets,((Fun)xt)._rets); }
     @Override int hash() { return Arrays.hashCode(_args) ^ Arrays.hashCode(_rets); }
+
+    public Fun make_class( HashMap<String,String> cache ) {
+      String tclz = clz();
+      if( cache.containsKey(tclz) ) return this;
+      /* Gotta build one.  Looks like:
+         interface Fun2$long$String {
+         long call(long l, String s);
+         }
+      */
+      SB sb = new SB();
+      sb.p("interface ").p(tclz).p(" {").nl().ii();
+      sb.ip("abstract ");
+      // Return
+      if( _rets==null || _rets.length==0 ) sb.p("void");
+      else if( _rets.length==1 ) _rets[0].p(sb);
+      else throw XEC.TODO();
+      sb.p(" call( ");
+      int i=0;
+      for( XType arg : _args )
+        arg.p(sb).p(" x").p(i++).p(",");
+      sb.unchar().p(");").nl();
+      // Class end
+      sb.di().ip("}").nl();
+      cache.put(tclz,sb.toString());               
+      return this;
+    }
   }
 
   // Java non-primitive classes
-  public static JType CONSOLE= JType.make("Console");
-  public static JType EXCEPTION = JType.make("Exception");  
-  public static JType ILLARGX= JType.make("IllegalArgumentException");  
-  public static JType ILLSTATEX = JType.make("IllegalStateX");  
-  public static JType ITER64 = JType.make("XIter64");
-  public static JType JBOOL  = JType.make("Boolean");
-  public static JType JCHAR  = JType.make("Character");
-  public static JType JINT   = JType.make("Integer");
-  public static JType JLONG  = JType.make("Long");
-  public static JType JNULL  = JType.make("Nullable");
-  public static JType JUBYTE = JType.make("XUByte");  
-  public static JType OBJECT = JType.make("Object");
-  public static JType ORDERED= JType.make("Ordered");
-  public static JType RANGE  = JType.make("Range");
-  public static JType RANGEIE= JType.make("RangeIE");
-  public static JType RANGEII= JType.make("RangeII");
-  public static JType STRING = JType.make("String");  
-  public static JType STRINGBUFFER = JType.make("StringBuffer");  
-  public static JType XCONSOLE=JType.make("XConsole");
+  public static Base CONSOLE= Base.make("Console");
+  public static Base EXCEPTION = Base.make("Exception");
+  public static Base ILLARGX= Base.make("IllegalArgumentException");
+  public static Base ILLSTATEX = Base.make("IllegalStateX");
+  public static Base ITER64 = Base.make("XIter64");
+  public static Base JBOOL  = Base.make("Boolean");
+  public static Base JCHAR  = Base.make("Character");
+  public static Base JINT   = Base.make("Integer");
+  public static Base JLONG  = Base.make("Long");
+  public static Base JNULL  = Base.make("Nullable");
+  public static Base JUBYTE = Base.make("XUByte");
+  public static Base OBJECT = Base.make("Object");
+  public static Base ORDERED= Base.make("Ordered");
+  public static Base RANGE  = Base.make("Range");
+  public static Base RANGEIE= Base.make("RangeIE");
+  public static Base RANGEII= Base.make("RangeII");
+  public static Base STRING = Base.make("String");
+  public static Base STRINGBUFFER = Base.make("StringBuffer");
+  public static Base XCONSOLE= Base.make("XConsole");
 
   // Java primitives or primitive classes
-  public static JType BOOL = JType.make("boolean");
-  public static JType CHAR = JType.make("char");
-  public static JType LONG = JType.make("long");
-  public static JType INT  = JType.make("int");
+  public static Base BOOL = Base.make("boolean");
+  public static Base CHAR = Base.make("char");
+  public static Base LONG = Base.make("long");
+  public static Base INT  = Base.make("int");
   
-  public static JType FALSE= JType.make("false");
-  public static JType NULL = JType.make("null");
-  public static JType TRUE = JType.make("true");
-  public static JType VOID = JType.make("void");
+  public static Base FALSE= Base.make("false");
+  public static Base NULL = Base.make("null");
+  public static Base TRUE = Base.make("true");
+  public static Base VOID = Base.make("void");
 
-  public static JAryType ARYCHAR= JAryType.make(CHAR);
-  public static JAryType ARYLONG= JAryType.make(LONG);
-  public static JTupleType COND_CHAR = JTupleType.make(BOOL,CHAR);
+  public static Ary ARYCHAR= Ary.make(CHAR);
+  public static Ary ARYLONG= Ary.make(LONG);
+  public static Tuple COND_CHAR = Tuple.make(BOOL,CHAR);
   
 
   
   // A set of common XTC classes, and their Java replacements.
   // These are NOT parameterized.
-  static final HashMap<String,JType> XJMAP = new HashMap<>() {{
+  static final HashMap<String, Base> XJMAP = new HashMap<>() {{
       put("Boolean+ecstasy/Boolean.x",BOOL);
       put("Char+ecstasy/text/Char.x",CHAR);
       put("Console+ecstasy/io/Console.x",CONSOLE);
@@ -214,18 +237,18 @@ public abstract class XType {
     }};
 
   // Convert a Java primitive to the Java object version.
-  private static final HashMap<JType,JType> XBOX = new HashMap<>() {{
+  private static final HashMap<Base, Base> XBOX = new HashMap<>() {{
       put(BOOL,JBOOL);
       put(CHAR,JCHAR);
       put(INT ,JINT);
       put(LONG,JLONG);
     }};
   public XType box() {
-    JType jt = XBOX.get(this);
+    Base jt = XBOX.get(this);
     return jt==null ? this : jt;
   }
   // Convert a Java wrapped primitive to the unwrapped primitive
-  static final HashMap<JType,JType> UNBOX = new HashMap<>() {{
+  static final HashMap<Base, Base> UNBOX = new HashMap<>() {{
       put(JBOOL,BOOL);
       put(JCHAR,CHAR);
       put(JINT ,INT );
@@ -233,7 +256,7 @@ public abstract class XType {
       put(JNULL,NULL);
     }};
   XType unbox() {
-    JType jt = UNBOX.get(this);
+    Base jt = UNBOX.get(this);
     return jt==null ? this : jt;
   } 
   public String ztype() { return XBOX.containsKey(this) ? "0" : "null"; }
@@ -267,13 +290,13 @@ public abstract class XType {
     if( tc instanceof TermTCon ttc ) {
       ClassPart clz = (ClassPart)ttc.part();
       if( clz._path==null ) {
-        if( clz._name.equals("Null" ) ) return JType.NULL;
-        if( clz._name.equals("True" ) ) return JType.TRUE;
-        if( clz._name.equals("False") ) return JType.FALSE;
+        if( clz._name.equals("Null" ) ) return Base.NULL;
+        if( clz._name.equals("True" ) ) return Base.TRUE;
+        if( clz._name.equals("False") ) return Base.FALSE;
         throw XEC.TODO();
       }
       String key = clz._name + "+" + clz._path._str;
-      JType val = XJMAP.get(key);
+      Base val = XJMAP.get(key);
       if( val!=null )
         return boxed ? val.box() : val;
       throw XEC.TODO();
@@ -285,9 +308,15 @@ public abstract class XType {
       // These XTC classes are all intercepted and directly implemented in Java
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
         XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],false);
-        if( telem==JType.LONG ) return ARYLONG; // Java ArrayList specialized to int64
-        if( telem==JType.CHAR ) return ARYCHAR; // Java ArrayList specialized to char
-        return JAryType.make(telem);   // Shortcut class
+        if( telem== Base.LONG ) return ARYLONG; // Java ArrayList specialized to int64
+        if( telem== Base.CHAR ) return ARYCHAR; // Java ArrayList specialized to char
+        return Ary.make(telem);   // Shortcut class
+      }
+
+      if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
+        Tuple args = xtype(((ParamTCon)ptc._parms[0])._parms);
+        Tuple rets = xtype(((ParamTCon)ptc._parms[1])._parms);
+        return Fun.make(args._xts, rets._xts).make_class(XClzBuilder.XCLASSES);
       }
 
       XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true);
@@ -295,12 +324,12 @@ public abstract class XType {
       // All the long-based ranges, intervals and interators are just Ranges now.
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
-        if( telem==JType.LONG || telem==JType.JLONG ) return JType.RANGE; // Shortcut class
+        if( telem== Base.LONG || telem== Base.JLONG ) return Base.RANGE; // Shortcut class
         else throw XEC.TODO();
       }
 
       if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
-        if( telem==JType.LONG || telem==JType.JLONG ) return JType.ITER64; // Shortcut class
+        if( telem== Base.LONG || telem== Base.JLONG ) return Base.ITER64; // Shortcut class
         else throw XEC.TODO();
       }
 
@@ -308,7 +337,7 @@ public abstract class XType {
     //    return "Ary<"+telem+">"; // Shortcut class
 
       if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") )
-        return Tuple.make_class(XClzBuilder.XCLASSES, ptc._parms);
+        return org.xvm.cc_explore.xrun.Tuple.make_class(XClzBuilder.XCLASSES, xtype(ptc._parms));
 
     //  if( clz._name.equals("Map") && clz._path._str.equals("ecstasy/collections/Map.x") )
     //    return XMap.make_class(XClzBuilder.XCLASSES, ptc._parms);
@@ -316,11 +345,6 @@ public abstract class XType {
     //  // Attempt to use the Java class name
     //  if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
     //    return telem + ".class";
-
-      if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
-        XType rets = xtype(ptc._parms[1],false);
-        return JFunType.make(((JTupleType)telem)._xts, ((JTupleType)rets)._xts);
-      }
       throw XEC.TODO();
     }
 
@@ -337,21 +361,21 @@ public abstract class XType {
 
     if( tc instanceof IntCon itc ) {
       if( itc._f == Const.Format.Int64 )
-        return boxed ? JType.JLONG : JType.LONG;
+        return boxed ? Base.JLONG : Base.LONG;
       throw XEC.TODO();
     }
 
     if( tc instanceof StringCon )
-      return JType.STRING;
+      return Base.STRING;
 
     if( tc instanceof EnumCon econ ) {
       ClassPart clz = (ClassPart)econ.part();
-      return JType.make(clz._super._name).unbox();
+      return Base.make(clz._super._name).unbox();
     }
 
     if( tc instanceof LitCon lit ) {
       if( lit._f==Const.Format.IntLiteral )
-        return boxed ? JType.JLONG : JType.LONG;
+        return boxed ? Base.JLONG : Base.LONG;
       throw XEC.TODO();
     }
 
@@ -363,13 +387,23 @@ public abstract class XType {
       String name = meth._name;
       if( !name.equals("->") && meth._par._par instanceof MethodPart pmeth )
         name = pmeth._name+"$"+meth._name;
-      return JType.make(name);
+      return Base.make(name);
     }
 
     if( tc instanceof SingleCon con0 )
-      return JType.make(XClzBuilder.java_class_name(con0.part()._name));
+      // TODO: Keep ModPart; needed for e.g. Property lookup.
+      // TODO: Then needs a XType.Struct type with fields & sub-types, including prop's
+      return Base.make(XClzBuilder.java_class_name(((ModPart)con0.part())._name));
 
     throw XEC.TODO();
-  }  
+  }
+
+  private static Tuple xtype( TCon[] cons ) {
+    int N = cons==null ? 0 : cons.length;
+    XType[] clzs = new XType[N];
+    for( int i=0; i<N; i++ )
+      clzs[i]=XType.xtype(cons[i],false);
+    return Tuple.make(clzs);
+  }
 
 }

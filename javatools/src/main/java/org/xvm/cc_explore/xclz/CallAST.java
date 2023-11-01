@@ -26,7 +26,9 @@ class CallAST extends AST {
     throw XEC.TODO();
   }
   
-  @Override void jmid ( SB sb, int i ) { sb.p( i==0 ? "(" : ", " ); }
+  @Override void jmid ( SB sb, int i ) {
+    sb.p( i==0 ? (_kids[0] instanceof RegAST ? ".call(": "(") : ", " );
+  }
   @Override void jpost( SB sb ) {
     if( _kids.length > 1 )
       sb.unchar(2);

@@ -2,10 +2,8 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.MethodPart;
-import org.xvm.cc_explore.Parameter;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.XEC;
-import java.util.Arrays;
 
 class BindFuncAST extends AST {
   // Which arguments are being bound here.  This is basically reverse-currying
@@ -53,7 +51,7 @@ class BindFuncAST extends AST {
         xargs[i-nargs] = atype;
         X2.define(name,atype);
       }
-      _type = XType.JFunType.make(xargs,XType.xtypes(lam._rets));
+      _type = XType.Fun.make(xargs,XType.xtypes(lam._rets));
       
       // Build the lambda AST body
       AST body = X2.ast(lam);
@@ -68,50 +66,41 @@ class BindFuncAST extends AST {
       
       // Currying: pre-binding some method args
     } else {
-      XType.JFunType lam = (XType.JFunType)_kids[0]._type;
-      int lamnargs = lam.nargs();
+      XType.Fun lam = (XType.Fun)kids[0]._type;
+      assert nargs==idxs.length; // Every 
         
       // The idx[] args are pre-defined; the remaining args are passed along.
       // Example: foo( Int x, String s ) { ...body... }
-      //     &foo(s="abc")   ===>>>
-      //      foo2(long x) { return foo(x,"abc"); }  OR
-      //                       x -> foo(x,"abc")
+      // The "1th" arg is predefined here, the 0th arg is passed along.
+      //     foo2 = &foo(s="abc")   ===>>>
+      //     foo2(long x) = x -> foo(x,"abc");
       // 
-      // A builder for the lambda method
-      XClzBuilder X2 = new XClzBuilder(X._mod,null);
-      // All the explicit lambda args
-      _args = new String[lamnargs-nargs];
+      // All the explicit lambda args: all the args minus the given (curried) args
+      _args = new String[lam.nargs()-nargs];
+
+      // Recycle the kids array for the InvokeAST
+      AST[] ikids = new AST[lam.nargs()+1];
       
-      // Recycle the _kids array for the InvokeAST
-      AST[] ikids = new AST[lamnargs+1];
-      ikids[0] = new RegAST(-5,X);
-      
-      // Fill in the args
+      // Fill in the args, leaving slot 0 open
       int j=0;
-      for( int i=0; i<lamnargs; i++ ) {
-        if( idxs[j]==i ) {
-          ikids[i+1] = kids[1+j++];
-        } else {
-          String name = "TODO";//lam._args[i]._name;
-          XType atype = lam._args[i];
-          X2.define(name,atype);
-          _args[X2._nlocals-1] = name;
-          ikids[i+1] = new RegAST(X2._nlocals-1,X2);
-        }
-      }
+      for( int i=0; i<lam.nargs(); i++ )
+        ikids[i + 1] = j < nargs && idxs[j]==i
+          ? kids[1 + j++] // The jth curried arg
+          : new RegAST(i-j,_args[i-j] = "x"+i,lam._args[i]); // The ith arg e.g. "x0"
 
-      // Returns
-      Parameter[] prets = null; // bind._meth._rets;
-      XType[] rets = XType.xtypes(prets);
-
-      kids[0] = new InvokeAST("TODO"/*bind._meth._name*/,rets,ikids);
+      // If kid0 is a BindMeth, then called as "expr.call(args)"
+      // else                        called as "this.fun (args)"
+      String fname = kids[0] instanceof BindMethAST ? kids[0].name()   : "call";
+      ikids[0]     = kids[0] instanceof BindMethAST ? new RegAST(-5,X) : kids[0];
+      // Update this BindFunc to just call with the curried arguments
+      kids[0] = new InvokeAST(fname,lam._rets,ikids);
     } 
   }
 
   @Override XType _type() { return _type; } // Local lamdba type
 
   @Override SB jcode( SB sb ) {
-    sb.p("(");
+    sb.p("( ");
     for( String arg : _args )
       sb.p(arg).p(",");
     sb.unchar(1).p(") -> ");

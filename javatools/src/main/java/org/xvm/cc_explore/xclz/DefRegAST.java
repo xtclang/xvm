@@ -16,7 +16,7 @@ class DefRegAST extends AST {
   private DefRegAST( XClzBuilder X, Const init, Const type, Const name ) {
     super(null);
     if( init!=null ) {
-      // Destination is read first and is typeaware, so read the destination type.
+      // Destination is read first and is type-aware, so read the destination type.
       AnnotTCon anno = (AnnotTCon)init;
       // TODO: Handle other kinds of typed args
       TermTCon ttc = anno.con().is_generic();

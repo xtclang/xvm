@@ -21,6 +21,7 @@ class BindMethAST extends AST {
   }
 
   @Override XType _type() { return _type; }
+  @Override String name() { return _meth.jname(); }
 
   @Override void jpost( SB sb ) {
     sb.p(".").p(_meth._name);
