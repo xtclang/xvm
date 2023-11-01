@@ -27,7 +27,7 @@ public class XClzBuilder {
   // XTC Module, which is also the top-level Java class
   public final ModPart _mod;
   public final String _java_mod_name;
-  public final XType.JType _type;
+  public final Base _type;
   // Top level, vs e.g. nested inner class
   public final boolean _top;
   // Java code
@@ -50,7 +50,7 @@ public class XClzBuilder {
     _top = top;
     _sb = sb;
     _java_mod_name = java_class_name(_mod._name);
-    _type = XType.JType.make(_java_mod_name);
+    _type = Base.make(_java_mod_name);
     _names = new HashMap<>();
     _locals = new NonBlockingHashMapLong<>();
     _ltypes = new NonBlockingHashMapLong<>();
@@ -359,7 +359,7 @@ public class XClzBuilder {
     // Property constant.  Just the base name, and depending on usage
     // will be either console$get() or console$set(value).
     if( tc instanceof PropCon prop )
-      return ASB.p(prop._name).p("$get()");
+      return ASB.p(prop._name);
 
     // A class Type as a value
     if( tc instanceof ParamTCon ptc )
@@ -403,7 +403,7 @@ public class XClzBuilder {
     // Array constants
     if( tc instanceof AryCon ac ) {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
-      XType.JAryType ary = (XType.JAryType)XType.xtype(ac.type(),false);
+      XType.Ary ary = (XType.Ary)XType.xtype(ac.type(),false);
       // new Ary<String>( "abc", "def");
       // new Arylong( 0, 1, 2 );
       // new Ary<Arylong>( new Arylong(0) )

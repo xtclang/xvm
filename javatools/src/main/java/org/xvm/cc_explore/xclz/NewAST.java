@@ -1,10 +1,8 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.MethodPart;
-import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.cons.MethodCon;
-import org.xvm.cc_explore.cons.TCon;
 import org.xvm.cc_explore.util.SB;
 
 class NewAST extends AST {
@@ -23,7 +21,7 @@ class NewAST extends AST {
   private static AST[] kids_plus_clz(AST[] kids, XType type) {
     
     // If type is generic, add the generic class explicitly
-    if( !(type instanceof XType.JAryType tary ) ) return kids;
+    if( !(type instanceof XType.Ary tary ) ) return kids;
     if( tary.is_prim_base() ) return kids;
     AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+1];
     if( kids!=null ) System.arraycopy(kids,0,kids2,1,kids.length);

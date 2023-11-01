@@ -23,11 +23,7 @@ class InvokeAST extends AST {
     super(kids);
     // Calling target.method(args)
     MethodPart meth = (MethodPart)((MethodCon)methcon).part();
-    String mname = meth._name;
-    // Method is nested in a method, qualify the name more
-    if( !(meth._par._par instanceof ClassPart) )
-      mname = meth._par._par._name+"$"+mname;
-    _meth = mname;
+    _meth = meth.jname();
     // Returns
     _rets = XType.xtypes(retTypes);
     
@@ -51,7 +47,7 @@ class InvokeAST extends AST {
   }
 
   @Override XType _type() {
-    if( _rets==null ) return XType.VOID;
+    if( _rets==null || _rets.length==0 ) return XType.VOID;
     if( _rets.length == 1 ) return _rets[0];
     if( _rets.length == 2 && _rets[0]==XType.BOOL )
       return _rets[1];          // Conditional
@@ -63,7 +59,7 @@ class InvokeAST extends AST {
   }
   
   @Override AST rewrite() {
-    if( !(_kids[0]._type instanceof XType.JType jt) ) return this;
+    if( !(_kids[0]._type instanceof XType.Base jt) ) return this;
     // Cannot invoke directly on java primitives
     switch( jt._jtype ) {
 
