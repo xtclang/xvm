@@ -109,55 +109,51 @@ public abstract class Tuple extends XClz implements Cloneable {
 
   // Return a tuple class for this set of types.  The class is cached, and can
   // be used many times.
-  public static XType.JTupleType make_class( HashMap<String,String> cache, TCon[] parms ) {
-    int N = parms==null ? 0 : parms.length;
-    XType[] clzs = new XType[N];
-    for( int i=0; i<N; i++ )
-      clzs[i]=XType.xtype(parms[i],false);
-    XType.JTupleType xtt = XType.JTupleType.make(clzs);
-
+  public static XType.Tuple make_class( HashMap<String,String> cache, XType.Tuple xtt ) {
     // Lookup cached version
+    XType[] xts = xtt._xts;
+    int N = xts.length;
     if( N==0 ) return xtt;     // Tuple0 already exists in the base runtime
+    
     String tclz = xtt.clz();
-    if( !cache.containsKey(tclz) ) {
-      /* Gotta build one.  Looks like:
-         class Tuple3$long$String$char extends Tuple3 {
-           public long _f0;
-           public String _f1;
-           public char _f2;
-           Tuple(long f0, String f1, char f2) {
-             _f0=f0; _f1=f1; _f2=f2;
-           }
-           public Object f0() { return _f0; }
-           public Object f1() { return _f1; }
-           public Object f2() { return _f2; }
+    if( cache.containsKey(tclz) ) return xtt;
+    /* Gotta build one.  Looks like:
+       class Tuple3$long$String$char extends Tuple3 {
+         public long _f0;
+         public String _f1;
+         public char _f2;
+         Tuple(long f0, String f1, char f2) {
+           _f0=f0; _f1=f1; _f2=f2;
          }
-      */
-      // Tuple N class
-      SB sb = new SB();
-      sb.p("class ").p(tclz).p(" extends Tuple"+N+" {").nl().ii();
-      // N field declares
-      for( int i=0; i<N; i++ )
-        sb.ip("public ").p(clzs[i].toString()).p(" _f").p(i).p(";").nl();
-      // Constructor, taking N arguments
-      sb.ip(tclz).p("( ");
-      for( int i=0; i<N; i++ )
-        sb.p(clzs[i].toString()).p(" f").p(i).p(", ");
-      sb.unchar(2).p(") {").nl().ii().i();
-      // N arg to  field assigns
-      for( int i=0; i<N; i++ )
-        sb.p("_f").p(i).p("=").p("f").p(i).p("; ");
-      sb.nl().di().ip("}").nl();
-      // Abstract accessors
-      for( int i=0; i<N; i++ )
-        sb.ip("public Object f").p(i).p("() { return _f").p(i).p("; }").nl();
-      // Abstract setters
-      for( int i=0; i<N; i++ )
-        sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(clzs[i].box().toString()).p(")e; }").nl();
-      // Class end
-      sb.di().ip("}").nl();
-      cache.put(tclz,sb.toString());
-    }
+         public Object f0() { return _f0; }
+         public Object f1() { return _f1; }
+         public Object f2() { return _f2; }
+       }
+    */
+    // Tuple N class
+    SB sb = new SB();
+    sb.p("class ").p(tclz).p(" extends Tuple"+N+" {").nl().ii();
+    // N field declares
+    for( int i=0; i<N; i++ )
+      sb.ip("public ").p(xts[i].toString()).p(" _f").p(i).p(";").nl();
+    // Constructor, taking N arguments
+    sb.ip(tclz).p("( ");
+    for( int i=0; i<N; i++ )
+      sb.p(xts[i].toString()).p(" f").p(i).p(", ");
+    sb.unchar(2).p(") {").nl().ii().i();
+    // N arg to  field assigns
+    for( int i=0; i<N; i++ )
+      sb.p("_f").p(i).p("=").p("f").p(i).p("; ");
+    sb.nl().di().ip("}").nl();
+    // Abstract accessors
+    for( int i=0; i<N; i++ )
+      sb.ip("public Object f").p(i).p("() { return _f").p(i).p("; }").nl();
+    // Abstract setters
+    for( int i=0; i<N; i++ )
+      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xts[i].box().toString()).p(")e; }").nl();
+    // Class end
+    sb.di().ip("}").nl();
+    cache.put(tclz,sb.toString());
 
     return xtt;
   }
