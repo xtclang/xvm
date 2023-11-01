@@ -8,6 +8,7 @@ class PropertyAST extends AST {
   static PropertyAST make( XClzBuilder X ) {
     AST lhs = ast_term(X);    
     String prop = XClzBuilder.value_tcon(X.con());
+    // TODO: KEEP TYPE FROM LHS
     // Property is class-local
     if( lhs._type==X._type )
       lhs = null;
@@ -21,19 +22,24 @@ class PropertyAST extends AST {
   }
 
   @Override XType _type() {
-    if( _prop.equals("size$get()") ) {
+    if( _prop.equals("size") ) {
       _type=null;
       return XType.LONG; // Size get is a long for all types
     }
-    if( _prop.equals("console$get()") && _kids[0]==null )
+    if( _prop.equals("console") && _kids[0]==null )
       return XType.XCONSOLE;
     throw XEC.TODO();
   }
+  @Override String name() { return _prop; }
   
   @Override AST rewrite() {
     // Java strings do not have any properties, just rewrite to the java name
-    if( _prop.equals("size$get()") && _kids[0]._type==XType.STRING )
-      { _prop="length()"; _type=XType.LONG; }
+    if( _prop.equals("size") ) {
+      if( _kids[0]._type instanceof XType.Ary )
+        { _prop="_len"; _type=XType.LONG; }
+      if( _kids[0]._type == XType.STRING )
+        { _prop="length()"; _type=XType.LONG; }
+    }
     return this;
   }
   
