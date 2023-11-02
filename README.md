@@ -290,7 +290,7 @@ included Gradle Wrapper from within the `xvm` directory, which is the recommende
 
 Or on Windows: 
 
-    gradlew.bat build
+    C:\> gradlew.bat build
 
 Note that Windows may require the `JAVA_TOOLS_OPTIONS` environment variable to be set to
 `-Dfile.encoding=UTF-8` in the Environment Variables window that can be accessed from Control Panel.
@@ -303,16 +303,47 @@ accessed from Control Panel), click the "Change system locale..." button and che
 Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTING.md)
 document.
 
+## Debugging the build
+
+The build should be debuggable through any IDE, for example IntelliJ, using its Gradle tooling API 
+hook. You can run any task in the project in debug mode from within the IDE, with breakpoints in
+the build scripts and/or the underlying non-XTC code, for example in Javatools, to debug the 
+compiler, runner or disassembler.
+
+### Augmenting the build output
+
+XTC follow Gradle best practise, and you can run the build, or any task therein, with the standard
+verbosity flags. For example, to run the build with more verbose output, use:
+
+    ./gradlew build --info
+
+The build also supports Gradle build scans, which can be generated with: 
+
+    ./gradlew build --scan
+
+Note that build scans are published to the Gradle online build scan repository (as configured
+through the "gradle-enterprise" settings plugin.), so make sure that you aren't logging any
+secrets, and avoid publishing build scans in "--debug" mode, as it may be a potential security
+hazard.
+
+You can also combine the above flags, and use all other standard Gradle flags, like "--stacktrace",
+and so on.
+
 ## Bleeding Edge for Developers
 
 If you would like to contribute to the Ecstasy Project, it might be an idea to use the
 very latest version by invoking
 
-    gradlew installLocalDist
+    ./gradlew installLocalDist
 
-This copies the build from the xvm directory into the brew cellar.
+This copies the build from the xvm directory into the brew cellar, or other local installation,
+that is deduced from the location of the "xec" launcher on the system PATH.
 
-Note: this would be done after installing the XDK via brew.
+*Note*: this would be done after installing the XDK via brew, or through any other installation
+utility, depending on your platform. This will overwrite several libraries and files in any 
+local installation.
+
+For more information about the XTC DSL, please see the README.md file in the "plugin" project.
 
 ## Questions?
 

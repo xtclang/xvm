@@ -1,0 +1,37 @@
+TODO: XTC Language; Can we change the $ template operator to work like Kotlin does and just nearly like Kotlin, but different?
+TODO: Add a settings plugin that is also part of the distribution, which contains things like the github repository syntactic sugare, and maybe sugar for finding the local XDK installation and its repo.
+TODO: Implement a release action (including weaving the correct binary native launchers and symlinks), and publish tagged to GitHub, afterwards bumping to the next patch release version as a SNAPSHOT version.
+TODO: Make sure forceRebuild = true flag work for xtcCompile and its task environment.
+TODO: Gradle.useLogger - add a custom logger with timing, start and finish, indentation and levels, with possibilities to add outputs like a file or stderr. Configure through gradle properties?
+TODO: Maven plugin from flatfile/distro repo. Add our own plugindefinitionspdec ?
+TODO: Create a github template for the "simplest" xtc project possible
+TODO: Add runXtcNative and compileXtcNative, actually model a local distribution in a build logic.kt class.
+TODO: Get rid of the project delegate stuff, just extend project?
+./lib_ecstasy/build.gradle.kts:    xtcTurtle(libs.javatools.turtle) // TODO: Don't matter if we are a project or an artifact, which is great.
+./lib_ecstasy/build.gradle.kts: * Gradle/Maven build infrastructure.  TODO: make this a build task.
+./plugin/build.gradle.kts:// TODO: Build another plugin artifact with the javatools included?
+./plugin/build.gradle.kts:    // TODO distribute and package Javadocs in the future, when we have them.
+./xdk/build.gradle.kts:    // TODO these are added twice to the archive configuration. We probably don't want that.
+./xdk/build.gradle.kts:        TODO("$prefix distExe needs to be ported to the new build system.")
+./xdk/build.gradle.kts:    // TODO: Test task should be automatically configured by XTC the plugin in the future
+./xdk/build.gradle.kts: * TODO: This task should create symlinks for the launcher names to the right binaries.
+./xdk/build.gradle.kts: * TODO better copying, even if it means hardcoding directory names.
+./xdk/build.gradle.kts:    // TODO: This can be done a lot more nicely with relative path copy/renaming as
+./xdk/build.gradle.kts:                    path = path.replace("libexec-", "xdk-") // TODO: Hacky.
+./xdk/build.gradle.kts:                exclude("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
+./xdk/build.gradle.kts:                include("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
+./xdk/build.gradle.kts:// TODO: Add a sanity check, that makes sure all files in the distribution are there,
+./xdk/build.gradle.kts:// TODO - Keep dir patterns here too, or have it return copy specs based on resources
+./build-logic/common-plugins/src/main/kotlin/org.xvm.build.version.gradle.kts:// TODO if we can fold these functions into the XdkBuildLogic class, it would be a lot nicer.
+./build-logic/common-plugins/src/main/kotlin/org.xvm.build.java.gradle.kts:// TODO add more linting, integrate lint fix/checkstyle/spotless.
+./build-logic/common-plugins/src/main/kotlin/org.xvm.build.java.gradle.kts:    maxHeapSize = "4G" // TODO make this configurable in the properties files along with the other Java properties.
+./manualTests/webapp/build.gradle.kts:// TODO: xdkZip does not resolve on its own in this environment. It's not clear why.
+./manualTests/webapp/build.gradle.kts:    // TODO: webappConsumer(project(":webapp"))
+./manualTests/webapp/build.gradle.kts:// TODO: Right now processResources exists through the xtc plugin, is run, and copies src/<sourceSet>/resources to build resources for that source set
+./manualTests/build.gradle.kts:// TODO: Add source set for negative tests.
+./manualTests/build.gradle.kts:// TODO: Add modules { } dsl section to collect single module { } configurations, instead of listing them in the config as a sequence.
+./javatools_bridge/build.gradle.kts:    // TODO: outputFilename = "_native.xtc" has a bug. Figure out why.
+./javatools_launcher/build.gradle.kts: * TODO: We could add a mechanism to native compile this, but it would have to cross compile
+./javatools/build.gradle.kts:// TODO: Move these to buildSrc, the XDK composite build does use them in some different places.
+./javatools/build.gradle.kts:    // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
+./javatools/build.gradle.kts:    from(file(xdkImplicitsPath)) // TODO Hack: this should be changed to use a consumable configuration, and/or moving javautils as a subproject, as it is never used standalone, just as part of a fat javatools jar.

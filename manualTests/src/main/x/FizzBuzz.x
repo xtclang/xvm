@@ -9,7 +9,9 @@ module TestFizzBuzz {
                 case (0, _): "Fizz";
                 case (_, 0): "Buzz";
                 case (_, _): x.toString();
-                });
+                }, True);
+            console.print(" ", True);
         }
+        console.print();
     }
 }

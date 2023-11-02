@@ -37,6 +37,7 @@ public abstract class XtcCompileTask extends SourceTask {
     private final String prefix;
     private final SourceSet sourceSet;
     private final XtcCompilerExtension extCompiler;
+    private final XtcLauncher launcher;
 
     @Inject
     public XtcCompileTask(final XtcProjectDelegate project, final SourceSet sourceSet) {
@@ -45,8 +46,8 @@ public abstract class XtcCompileTask extends SourceTask {
         this.prefix = project.prefix();
         this.sourceSet = sourceSet;
         this.extCompiler = project.xtcCompileExtension();
+        this.launcher = XtcLauncher.create(project, XTC_COMPILER_CLASS_NAME, getIsFork().get(), getUseNativeLauncher().get());
         configureTask();
-        project.info("{} '{}' Registered and configured compile task for sourceSet: {}", prefix, getName(), sourceSet.getName());
     }
 
     private void configureTask() {
@@ -60,6 +61,7 @@ public abstract class XtcCompileTask extends SourceTask {
             project.info("{} '{}' finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
             sourceSet.getOutput().getAsFileTree().forEach(it -> project.info("{}.compileXtc sourceSet output: {}", prefix, it));
         });
+        project.info("{} '{}' Registered and configured compile task for sourceSet: {}", prefix, getName(), sourceSet.getName());
     }
 
     @InputFiles
@@ -88,6 +90,16 @@ public abstract class XtcCompileTask extends SourceTask {
     }
 
     @Input
+    public Property<Boolean> getFork() {
+        return extCompiler.getFork();
+    }
+
+    @Input
+    Property<Boolean> getUseNativeLauncher() {
+        return extCompiler.getUseNativeLauncher();
+    }
+
+    @Input
     public ListProperty<String> getJvmArgs() {
         return extCompiler.getJvmArgs();
     }
@@ -95,6 +107,11 @@ public abstract class XtcCompileTask extends SourceTask {
     @Input
     public Property<Boolean> getNoWarn() {
         return extCompiler.getNoWarn();
+    }
+
+    @Input
+    public Property<Boolean> getIsFork() {
+        return extCompiler.getFork();
     }
 
     @Input
@@ -139,7 +156,7 @@ public abstract class XtcCompileTask extends SourceTask {
 
     @TaskAction
     public void compile() {
-        final var args = new CommandLine();
+        final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, getJvmArgs().get());
 
         final var outputFilename = getOutputFilename().get();
         if (outputFilename.contains(File.separator)) {
@@ -173,7 +190,8 @@ public abstract class XtcCompileTask extends SourceTask {
         }
         sourceFiles.forEach(args::addRaw);
 
-        project.execLauncher(getName(), XTC_COMPILER_CLASS_NAME, args, getJvmArgs().get());
+        final var result = launcher.apply(args);
+        result.rethrowFailure();
 
         // TODO: A little bit kludgy, but the outputFilename property in the xtcCompile extension as some directory vs file issue (a bug).
         renameOutputs();

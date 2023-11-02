@@ -6,7 +6,11 @@
  * Any XTC project will have an extension with its resolved SemanticVersion
  */
 
+import SemanticVersion.Companion.XDK_VERSION_CATALOG_GROUP
+import SemanticVersion.Companion.XDK_VERSION_CATALOG_PLUGIN_VERSION
+import SemanticVersion.Companion.XDK_VERSION_CATALOG_VERSION
 import XdkBuildLogic.Companion.XDK_TASK_GROUP_VERSION
+import XdkBuildLogic.Companion.ls
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.findByType
@@ -16,12 +20,15 @@ plugins {
     id("org.xvm.build.debug")
 }
 
-initXdkVersion()
+val semanticVersion by extra {
+    initXdkVersion()
+}
 
 // TODO if we can fold these functions into the XdkBuildLogic class, it would be a lot nicer.
 fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion {
     checkIsNotVersioned()
     val (group, name, version) = semanticVersion
+
     if (project.name != name) {
         throw buildException("Illegal state: project name '${project.name}' does not match the name in the semantic version: '$name'")
     }
@@ -39,7 +46,6 @@ fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion 
     """.trimIndent()
     )
 
-    project.extra.set("org.xvm.project.semanticVersion", semanticVersion)
     return semanticVersion
 }
 
@@ -60,9 +66,9 @@ fun Project.checkIsNotVersioned() {
 
 fun Project.resolveSemanticVersion(): SemanticVersion {
     return SemanticVersion(
-        resolveCatalogVersion(SemanticVersion.XDK_VERSION_CATALOG_GROUP),
+        resolveCatalogVersion(XDK_VERSION_CATALOG_GROUP),
         project.name,
-        resolveCatalogVersion(SemanticVersion.XDK_VERSION_CATALOG_VERSION)
+        resolveCatalogVersion(XDK_VERSION_CATALOG_VERSION)
     )
 }
 
@@ -89,24 +95,85 @@ fun Project.isNotVersioned(): Boolean {
     return version == Project.DEFAULT_VERSION
 }
 
+/*
 fun Project.isSnapshotVersion(): Boolean {
     if (isNotVersioned()) {
         throw buildException("Project is not versioned; XDK subprojects should inherit version from XDK.")
     }
     return version.toString().endsWith("-SNAPSHOT")
-}
+}*/
 
-val xdkVersion by tasks.registering {
-    group = XDK_TASK_GROUP_VERSION
-    doFirst {
-        logger.lifecycle("XDK version: ${project.version}")
+fun changeVersion(current: SemanticVersion, next: SemanticVersion) {
+    val toml = File("${compositeRootProjectDirectory}/gradle/libs.versions.toml")
+
+    val changedLines = mutableListOf<Pair<String, String>>()
+    val srcLines = toml.readLines().map { it.trim() }
+    val destLines = buildList {
+        var section = ""
+        for (it in srcLines) {
+            if (it.isEmpty()) {
+                add(it)
+                continue
+            }
+
+            val first = it[0]
+            val last = it[it.length - 1]
+            if (first == '[' && last == ']') {
+                section = it
+                add(it)
+                continue
+            }
+
+            if (section != "[versions]") {
+                add(it)
+                continue
+            }
+
+            when (val split = it.split("=")[0].trim()) {
+                XDK_VERSION_CATALOG_VERSION, XDK_VERSION_CATALOG_PLUGIN_VERSION -> {
+                    if (!it.contains(current.artifactVersion)) {
+                        throw buildException("ERROR: Failed to find current version '$current' in version catalog entry: $it")
+                    }
+                    val updated = "$split = \"${next.artifactVersion}\""
+                    add(updated)
+                    changedLines.add(it to updated)
+                }
+                else -> add(it)
+            }
+        }
+    }
+
+    if (changedLines.isNotEmpty()) {
+        changedLines.forEach {
+            val (from, to) = it
+            logger.lifecycle("$prefix bumpProjectVersion changed TOML entry $from to $to.")
+        }
+        toml.writeText(destLines.joinToString(ls, postfix = ls))
+        logger.lifecycle("$prefix bumpProjectVersion updated TOML file: '$toml'")
+        logger.lifecycle("$prefix IMPORTANT: depending on your environment, a full rebuild may be required.")
+    } else {
+        logger.error("$prefix bumpProjectVersion failed to find any changes to make.")
     }
 }
 
 val bumpProjectVersion by tasks.registering {
     group = XDK_TASK_GROUP_VERSION
     description = "Increase the version of the current XDK build with one."
-    doFirst {
-        TODO("Implement bumpProjectVersion task, and perhaps auto detect and rebuild before executing another publication, if information in version catalog is stale.")
+    doLast {
+        val current = resolveSemanticVersion()
+        val next = current.bump(project, false)
+        logger.lifecycle("$prefix bumpProjectVersion (upgrading '$current' to '$next')")
+        changeVersion(current, next)
+    }
+}
+
+val bumpProjectVersionToSnapshot by tasks.registering {
+    group = XDK_TASK_GROUP_VERSION
+    description = "Increase the version of the current XDK build with one."
+    doLast {
+        val current = resolveSemanticVersion()
+        val next = current.bump(project, true)
+        logger.lifecycle("$prefix bumpProjectVersion (upgrading '$current' to '$next')")
+        changeVersion(current, next)
     }
 }

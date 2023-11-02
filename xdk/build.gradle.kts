@@ -1,7 +1,9 @@
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
-import org.gradle.internal.os.OperatingSystem
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -19,6 +21,38 @@ plugins {
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
+}
+
+/**
+ * Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
+ */
+val xdkProvider by configurations.registering {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+    // TODO these are added twice to the archive configuration. We probably don't want that.
+    outgoing.artifact(tasks.distZip) {
+        extension = "zip"
+    }
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xdk-distribution-archive"))
+    }
+}
+
+// TODO: Add a plugin handler that scans the local build dir? Bootstrapping? Worth it?
+val xtcPluginRepoConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+val xtcJavaToolsJarConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    outgoing.artifact(tasks.jar)
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
+    }
 }
 
 dependencies {
@@ -39,140 +73,8 @@ dependencies {
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
-val xvmDist = XvmDistribution(project)
-
-// Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
-val xdkProvider by configurations.registering {
-    isCanBeConsumed = true
-    isCanBeResolved = false
-    // TODO these are added twice to the archive configuration. We probably don't want that.
-    outgoing.artifact(tasks.distZip) {
-        extension = "zip"
-    }
-    attributes {
-        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xdk-distribution-archive"))
-    }
-}
-
-val clean by tasks.existing {
-    doLast {
-        subprojects.forEach {
-            // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
-            logger.lifecycle("$prefix Cleaning subproject ${it.name} build directory.")
-            delete(it.layout.buildDirectory)
-        }
-    }
-}
-
-val distTar by tasks.existing(Tar::class) {
-    compression = Compression.GZIP
-    archiveExtension.set("tar.gz")
-}
-
-val assembleDist by tasks.existing {
-    dependsOn(installDist)
-}
-
-val distExe by tasks.registering {
-    group = xvmDist.distributionGroup()
-    description = "Use an NSIS compatible plugin to create the Windows .exe installer."
-    doFirst {
-        TODO("$prefix distExe needs to be ported to the new build system.")
-        /*
-            group = xtcDist.distributionGroup()
-            description = "Create the XDK .exe file (Windows installer)"
-
-            dependsOn(build)
-            dependsOn(prepareDirs)
-
-            doLast {
-                val output = java.io.ByteArrayOutputStream()
-                project.exec {
-                    commandLine("which", "makensis")
-                    standardOutput = output
-                    setIgnoreExitValue(true)
-                }
-                if (output.toString().trim().length > 0) {
-                    // notes:
-                    // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
-                    // - requires the "makensis" command to be in the path
-                    // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
-
-                    val src = file("src/main/nsi/xdkinstall.nsi")
-                    val dest = "${distDir}/xdk-${distName}.exe"
-                    val ico = "${launcherMain}/c/x.ico"
-
-                    project.exec {
-                        environment("NSIS_SRC", "${xdkDir}")
-                        environment("NSIS_ICO", "${ico}")
-                        environment("NSIS_VER", "${distName}")
-                        environment("NSIS_OUT", "${dest}")
-                        commandLine("makensis", "${src}", "-NOCD")
-                    }
-                } else {
-                    logger.error("*** Failure building \"distEXE\": Missing \"makensis\" command")
-                }
-            }
-        }*/
-    }
-}
-
-val test by tasks.existing {
-    // TODO: Test task should be automatically configured by XTC the plugin in the future
-    dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
-}
-
-/**
- * Take the output of assembleDist and put it in an installation directory.
- *
- * TODO: This task should create symlinks for the launcher names to the right binaries.
- * TODO better copying, even if it means hardcoding directory names.
- */
-val installDist by tasks.existing {
-    doLast {
-        logger.lifecycle("$prefix Installed distribution to build directory.")
-        logger.info("$prefix Installation files:")
-        outputs.files.asFileTree.forEach {
-            logger.info("$prefix   ${it.absolutePath}")
-        }
-    }
-}
-
-val findLocalDist by tasks.registering {
-    doLast {
-        val root = xdkBuildLogic.resolveLocalXdkInstallation()
-        logger.lifecycle("$prefix Detected existing local XTC installation at: '$root'")
-    }
-}
-
-val installLocalDist by tasks.registering {
-    // TODO: This can be done a lot more nicely with relative path copy/renaming as
-    //   described in Chapter 1 of Gradle Beyond The Basics by O'Reilly.
-    group = xvmDist.distributionGroup()
-    description = "Creates an XDK installation, and overwrites any local installation with it."
-    dependsOn(installDist) // needs distTar, and distZip executed before this can run
-    doLast {
-        val libExecDir = file(xdkBuildLogic.resolveLocalXdkInstallation())
-        val backup = project.layout.buildDirectory.dir("xdkLocalDistCopy")
-        copy {
-            from(libExecDir)
-            into(backup)
-        }
-        copy {
-            from("${xvmDist.installDir}/libexec/bin")
-            into("$libExecDir/bin")
-        }
-        copy {
-            from("${xvmDist.installDir}/libexec/lib")
-            into("$libExecDir/lib")
-        }
-        copy {
-            from("${xvmDist.installDir}/libexec/javatools")
-            into("$libExecDir/javatools")
-        }
-    }
-}
+internal val xvmDist = xdkBuildLogic.xdkDistribution()
+logger.lifecycle("$prefix **** Building XDK; semantic version: ${property("semanticVersion")} ***")
 
 publishing {
     publications {
@@ -180,12 +82,27 @@ publishing {
             groupId = project.group.toString()
             artifactId = project.name
             version = project.version.toString()
-            logger.lifecycle("$prefix Publication '$groupId:$artifactId:$version.$name' configured.")
+            logger.lifecycle("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
             artifact(tasks.distZip) {
-                //classifier = "xdk"
                 extension = "zip"
             }
         }
+    }
+}
+
+signing {
+    require(getXdkPropertyBoolean("org.xvm.publications.sign", false))
+    sign(publishing.publications["xdkArchive"])
+}
+
+val pluginPublication by tasks.registering {
+    group = LifecycleBasePlugin.BUILD_GROUP
+    // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
+    dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
+    outputs.dir(buildRepoDirectory)
+    doLast {
+        logger.lifecycle("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
+        //printTaskOutputs()
     }
 }
 
@@ -196,9 +113,11 @@ publishing {
  */
 distributions {
     main {
-        distributionBaseName = xvmDist.name
+        distributionBaseName = xvmDist.distributionName // TODO: Should really rename the distribution to "xdk" explicitly.
         contents {
-            val resources = tasks["processResources"].outputs.files
+            val resources = tasks["processResources"].outputs.files.asFileTree
+            val published = tasks["pluginPublication"].outputs.files
+            // 1) copy build plugin repository publication of the XTC plugin to install/xdk/repo
             // 1) copy xdk resources/main/xdk to install/xdk/libexec
             // 2) copy javatools_launcher/bin/* to install/xdk/libexec/bin/
             // 3) copy xdk modules to install/xdk/libexec/lib
@@ -210,7 +129,9 @@ distributions {
                     includeEmptyDirs = false
                 }
             }
-            from()
+            from(published) {
+                into("repo")
+            }
             from(xtcLauncherBinaries) {
                 into("libexec/bin")
             }
@@ -234,59 +155,145 @@ distributions {
     }
 }
 
-// TODO: Add a sanity check, that makes sure all files in the distribution are there,
-//   and perhaps things like the right binaries having been resolved/copied. And maybe
-//   even some kind of signature/hash check.
+val clean by tasks.existing {
+    doLast {
+        subprojects.forEach {
+            // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
+            logger.lifecycle("$prefix $name Cleaning subproject ${it.name} build directory.")
+            delete(it.layout.buildDirectory)
+            logger.lifecycle("$prefix $name Done.")
+        }
+        logger.lifecycle("$prefix $name Cleaning composite build common build directory: ${compositeRootBuildDirectory.get()}")
+        delete(compositeRootBuildDirectory)
+        logger.lifecycle("$prefix $name Done.")
+    }
+}
 
-// TODO - Keep dir patterns here too, or have it return copy specs based on resources
-class XvmDistribution @Inject constructor(private val project: Project) {
-    companion object {
-        const val DISTRIBUTION_GROUP = "distribution"
-        private val CURRENT_OS = OperatingSystem.current()
+val distTar by tasks.existing(Tar::class) {
+    compression = Compression.GZIP
+    archiveExtension.set("tar.gz")
+}
+
+val assembleDist by tasks.existing {
+    doFirst {
+        logger.lifecycle("$prefix $name; Assembling distribution...")
+    }
+}
+
+val processResources by tasks.existing(Copy::class)
+
+val distExe by tasks.registering {
+    group = XdkDistribution.DISTRIBUTION_GROUP
+    description = "Use an NSIS compatible plugin to create the Windows .exe installer."
+    doLast {
+        throw GradleException("TODO: distExe needs to be implemented and verified.")
+    }
+    // TODO("$prefix distExe needs to be ported to the new build system.")
+    /*
+    val makensis = xdkBuildLogic.findExecutableOnPath("makensis")
+    val nsi = file("src/main/nsi/xdkinstall.nsi")
+    val outputDir = xvmDist.getDistributionDir()
+
+    outputs.dir(outputDir)
+
+    onlyIf {
+        makensis != null
     }
 
-    private val build = project.layout.buildDirectory
-    val name: String = project.name
-    val distributionDir = build.dir("distributions/")
-    val installDir = build.dir("install/$name")
-
-    private val version: String = buildString {
-        fun isCiBuild(): Boolean {
-            return System.getenv("CI") != null
+    // notes:
+    // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
+    // - requires the "makensis" command to be in the path
+    // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
+    // - requires the x.ico file to be in the same directory as the nsi file
+    doLast {
+        if (makensis == null) {
+            throw buildException("Cannot find makensis on the path.")
         }
-
-        fun getBuildNumber(): String? {
-            return System.getenv("BUILD_NUMBER")
+        if (!nsi.exists()) {
+            throw buildException("Cannot find nsi file: ${nsi.absolutePath}")
         }
+        val exe = File(outputDir.get().asFile, "xdk-$version.exe")
+        //val ico = "${launcherMain}/c/x.ico"
 
-        fun getLatestGitCommit(): String? {
-            return executeCommand("git", "rev-parse", "HEAD")
+        exec {
+            environment("NSIS_SRC", xvmDist.getInstallDir().get().asFile.absolutePath)
+            environment("NSIS_VER", xvmDist.getName())
+            environment("NSIS_OUT", exe.absolutePath)
+            //environment("NSIS_ICO", ico)
+            commandLine(makensis.toFile().absolutePath, nsi.absolutePath, "-NOCD")
         }
+    }*/
+}
 
-        fun getCiTag(): String {
-            if (!isCiBuild()) {
-                return ""
-            }
-            val buildNumber = getBuildNumber()
-            val gitCommit = getBuildNumber()
-            if (buildNumber == null || gitCommit == null) {
-                logger.error("$prefix Cannot resolve CI build tag (buildNumber=$buildNumber, commit=$gitCommit)")
-                return ""
-            }
-            return "-ci-$buildNumber+$gitCommit".also {
-                logger.lifecycle("$prefix Configuration XVM distribution for CI build: '$it'")
-            }
+val test by tasks.existing {
+    // TODO: Test task should be automatically configured by XTC the plugin in the future
+    //   This is just a sanity check to make sure we can plug in the XDK distro we are
+    //   building, and compile and run a small XTC program.
+    dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
+}
+
+/**
+ * Take the output of assembleDist and put it in an installation directory.
+ *
+ * TODO: This task should create symlinks for the launcher names to the right binaries.
+ * TODO better copying, even if it means hardcoding directory names.
+ */
+val installDist by tasks.existing {
+    doLast {
+        logger.lifecycle("$prefix Installed distribution to build directory.")
+        logger.info("$prefix Installation files:")
+        outputs.files.asFileTree.forEach {
+            logger.info("$prefix   ${it.absolutePath}")
         }
-
-        append(project.version)
-        append(getCiTag())
     }
+}
 
-    fun distributionGroup(): String {
-        return DISTRIBUTION_GROUP
+val findLocalDist by tasks.registering {
+    group = XdkDistribution.DISTRIBUTION_GROUP
+    description = "Find and add any local XDK installation from the PATH."
+    val localDistDir = xdkBuildLogic.findLocalXdkInstallation() // done during config
+    if (localDistDir == null) {
+        logger.error("$prefix No local XTC installation found.")
+    } else {
+        outputs.dir(localDistDir)
     }
+    doLast {
+        logger.lifecycle("$prefix Detected existing local XTC installation at: '$localDistDir'")
+        XdkBuildLogic.walkDir(project, localDistDir!!, LogLevel.INFO)
+    }
+}
 
-    override fun toString(): String {
-        return "$name-$version"
+val backupLocalDist by tasks.registering(Copy::class) {
+    group = XdkDistribution.DISTRIBUTION_GROUP
+    description = "Backs up a local installation to build dir before starting to overwrite."
+    val localDist = xdkBuildLogic.resolveLocalXdkInstallation()
+    val dest = xvmDist.getLocalDistBackupDir(localDist.name)
+    from(localDist).into(dest)
+    doLast {
+        logger.lifecycle("$prefix Backed up local installation at $localDist to ${dest.get()}")
+    }
+}
+
+val installLocalDist by tasks.registering {
+    group = XdkDistribution.DISTRIBUTION_GROUP
+    description = "Creates an XDK installation, and overwrites any local installation with it."
+
+    dependsOn(installDist, backupLocalDist)
+
+    // This task is always stale and not cached. Rerun it every time it is called. This makes it important that
+    // it's not included as part of future normal build jobs. If this is the case, we need to change to a cached
+    // configurable approach.
+    alwaysRerunTask()
+
+    doLast {
+        val localDistDir = xdkBuildLogic.resolveLocalXdkInstallation() // throws exception if file not found.
+        val localDistVersion = localDistDir.name
+        logger.lifecycle("$prefix $name Overwriting local installation: $localDistVersion (path: '${localDistDir.absolutePath}')...")
+        copy {
+            from(project.layout.buildDirectory.dir("install/xdk"))
+            into(localDistDir)
+        }
+        logger.lifecycle("$prefix $name Finished.")
+        XdkBuildLogic.walkDir(project, localDistDir)
     }
 }

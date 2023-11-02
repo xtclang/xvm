@@ -11,10 +11,12 @@ import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 import javax.inject.Inject;
 import java.io.File;
 
+import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
 import static org.xvm.plugin.Constants.JAVATOOLS_ARTIFACT_ID;
 import static org.xvm.plugin.Constants.XDK_VERSION_PATH;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_OUTGOING;
@@ -33,6 +35,8 @@ public class XtcExtractXdkTask extends DefaultTask {
         super();
         this.project = project;
         this.prefix = project.prefix();
+        setGroup(BUILD_GROUP);
+        setDescription("Extract an XDK zip resource into build/xdk/common/ as a build dependency.");
 
         project.configs.register(XTC_CONFIG_NAME_JAVATOOLS_OUTGOING, it -> {
             it.setCanBeConsumed(false);

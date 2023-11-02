@@ -52,6 +52,11 @@ sourceSets {
     }
 }
 
-xtcRuntime {
+xtc {
+    printVersion()
+}
+
+xtcRun {
+    verbose = true
     moduleName("TestFizzBuzz")
 }

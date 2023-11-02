@@ -13,15 +13,8 @@ xtcCompile {
     verbose = true
 }
 
-// TODO: Right now processResources exists through the xtc plugin, is run, and copies src/<sourceSet>/resources to build resources for that source set
-//   To do this properly with a node app, we just add a dependency to its output to copy those to our resources as well. A build may NEVER write
-//   anything under src/, or all dependency frameworks will break.
-//val processResources by tasks.existing(Copy::class) {
-//    from(webappConsumer)
-//}
-
 val runXtc by tasks.existing {
-    xtcRuntime {
+    xtcRun {
         verbose = true
         moduleName("welcomeTest")
     }

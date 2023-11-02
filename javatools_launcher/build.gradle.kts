@@ -27,7 +27,7 @@ val processResources by tasks.registering(Copy::class) {
     into(layout.buildDirectory.file("bin"))
 }
 
-val assemble by tasks.getting {
+val assemble by tasks.existing {
     dependsOn(processResources)
     doLast {
         logger.lifecycle("$prefix Finished assembling launcher resources into Gradle build.")

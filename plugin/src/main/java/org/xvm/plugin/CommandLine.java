@@ -1,17 +1,38 @@
 package org.xvm.plugin;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
 public class CommandLine {
     private final List<String> args;
+    private final List<String> jvmArgs;
+    private final String mainClass;
 
-    CommandLine() {
-        this.args = new ArrayList<>();
+    CommandLine(final String mainClass, final List<String> jvmArgs) {
+        this(mainClass, jvmArgs, Collections.emptyList());
     }
 
-    private CommandLine(final List<String> args) {
+    CommandLine(final String mainClass, final List<String> jvmArgs, final List<String> args) {
+        this.mainClass = mainClass;
+        this.jvmArgs = Collections.unmodifiableList(jvmArgs);
         this.args = new ArrayList<>(args);
+    }
+
+    public String getMainClassName() {
+        return mainClass;
+    }
+
+    public List<String> getJvmArgs() {
+        return jvmArgs;
+    }
+
+    public String getIdentifier() {
+        final int dot = mainClass.lastIndexOf('.');
+        return (dot == - 1 || dot == mainClass.length() - 1) ? mainClass : mainClass.substring(dot + 1);
     }
 
     /**
@@ -57,16 +78,20 @@ public class CommandLine {
     }
 
     public CommandLine copy() {
-        return new CommandLine(args);
+        return new CommandLine(mainClass, jvmArgs, args);
     }
 
     @Override
     public String toString() {
-        return toString(null, null, Collections.emptyList());
+        return toString(mainClass, jvmArgs, args, null);
     }
 
-    public String toString(final Class<?> clazz, final File javaTools, final List<String> jvmArgs) {
-        if (isEmpty()) {
+    public String toString(final File javaTools) {
+        return toString(mainClass, jvmArgs, args, javaTools);
+    }
+
+    public static String toString(final String clazz, final List<String> jvmArgs, final List<String> args, final File javaTools) {
+        if (args.isEmpty()) {
             return "[no arguments]";
         }
 
@@ -80,7 +105,7 @@ public class CommandLine {
         if (clazz != null) {
             sb.append(' ').append(clazz);
         }
-        for (final var arg : toList()) {
+        for (final var arg : args) {
             sb.append(' ').append(arg.trim());
         }
 

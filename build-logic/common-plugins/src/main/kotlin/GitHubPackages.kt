@@ -46,6 +46,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
     val gitHubOrganization: String = buildLogic.getProperty("org.xvm.github.organization", "xtclang")
     val gitHubToken: String = buildLogic.getProperty("org.xvm.github.token", System.getenv("GITHUB_TOKEN") ?: "")
     val gitHubUrl: String = buildLogic.getProperty("org.xvm.github.repository.url", "")
+    val gitHubCredentials: Pair<String, String> = gitHubUser to gitHubToken
 
     fun queryXtcLangPackageNames(): List<String> {
         return buildList {
@@ -94,7 +95,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             return false
         }
 
-        logger.lifecycle("$prefix Checking GitHub repo URL: '$gitHubUrl'")
+        logger.info("$prefix Checking GitHub repo URL: '$gitHubUrl'")
         if (gitHubUrl != gitHubUrl.lowercase()) {
             throw project.buildException("$prefix The repository URL '$gitHubUrl' needs to contain all-lowercase owner and repository names.")
         }

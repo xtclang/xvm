@@ -4,12 +4,6 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-tasks.processResources {
-    doLast {
-        printTaskOutputs(name)
-    }
-}
-
 val xtcTurtleProvider by configurations.registering {
     isCanBeResolved = false
     isCanBeConsumed = true

@@ -7,9 +7,6 @@ public interface XtcCompilerExtension extends XtcTaskExtension {
     // compiler only
     Property<Boolean> getNoWarn();
 
-    // compiler and runtime
-    Property<Boolean> getVerbose();
-
     // compiler only
     Property<Boolean> getStrict();
 
