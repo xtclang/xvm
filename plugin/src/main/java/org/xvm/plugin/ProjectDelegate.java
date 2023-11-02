@@ -18,9 +18,15 @@ import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.TaskContainer;
 
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URL;
 
-public abstract class ProjectDelegate {
+import static org.xvm.plugin.Constants.XTC_MODULE_FILE_EXTENSION;
+
+public abstract class ProjectDelegate<T, R> {
     private static final String DEFAULT_VERSION_CATALOG_NAME = "libs";
     private static final boolean LOG_ALL_LEVELS_TO_STDERR;
 
@@ -131,6 +137,30 @@ public abstract class ProjectDelegate {
         return versionCatalogExtension.find(name).orElse(null);
     }
 
+    boolean isXtcBinary(final File file) {
+        return isXtcBinary(file, true);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    boolean isXtcBinary(final File file, final boolean checkMagic) {
+        if (!file.exists() || !file.isFile() || !hasFileExtension(file, XTC_MODULE_FILE_EXTENSION)) {
+            return false;
+        }
+        if (!checkMagic) {
+            return true;
+        }
+        try (final var dis = new DataInputStream(new FileInputStream(file))) {
+            final long magic = dis.readInt() & 0xffff_ffffL;
+            if (magic != Constants.XTC_MAGIC) {
+                error("{} File '{}' should have started with magic value 0x{} (read: 0x{})", prefix, file.getAbsolutePath(), Long.toHexString(Constants.XTC_MAGIC), Long.toHexString(magic));
+            }
+            return true;
+        } catch (final IOException e) {
+            error("{} Error parsing XTC_MAGIC: {}", prefix, e.getMessage());
+            return false;
+        }
+    }
+
     protected MinimalExternalModuleDependency findVersionCatalogLib(final String name) {
         final var catalog = findVersionCatalog();
         if (catalog == null) {
@@ -161,7 +191,7 @@ public abstract class ProjectDelegate {
         return objects;
     }
 
-    protected <T> T ensureExtension(final String name, final Class<T> clazz) {
+    protected <E> E ensureExtension(final String name, final Class<E> clazz) {
         if (extensions.findByType(clazz) == null) {
             return extensions.create(name, clazz, project);
         }
@@ -172,5 +202,23 @@ public abstract class ProjectDelegate {
         return project.getLogger();
     }
 
-    protected abstract void apply();
+    static boolean hasFileExtension(final File file, final String extension) {
+        return getFileExtension(file).equalsIgnoreCase(extension);
+    }
+
+    static String getFileExtension(final File file) {
+        final String name = file.getName();
+        final int dot = name.lastIndexOf('.');
+        return dot == -1 ? "" : name.substring(dot + 1);
+    }
+
+    static String capitalize(final String string) {
+        return Character.toUpperCase(string.charAt(0)) + string.substring(1);
+    }
+
+    protected final R apply() {
+        return apply(null);
+    }
+
+    protected abstract R apply(T arg);
 }

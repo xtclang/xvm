@@ -4,6 +4,7 @@ import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,9 +17,11 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
     protected final ObjectFactory objects;
     protected final Logger logger;
 
-    private final ListProperty<String> jvmArgs;
+    protected final ListProperty<String> jvmArgs;
+    protected final Property<Boolean> isVerbose;
+    protected final Property<Boolean> isFork;
 
-    private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea"); // "-Xmx4G");
+    private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
     protected DefaultXtcTaskExtension(final Project project) {
         this.project = project;
@@ -26,6 +29,18 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
         this.objects = project.getObjects();
         this.logger = project.getLogger();
         this.jvmArgs = project.getObjects().listProperty(String.class).value(new ArrayList<>(DEFAULT_JVM_ARGS));
+        this.isVerbose = project.getObjects().property(Boolean.class).value(false);
+        this.isFork = project.getObjects().property(Boolean.class).value(true);
+    }
+
+    @Override
+    public Property<Boolean> getFork() {
+        return isFork;
+    }
+
+    @Override
+    public Property<Boolean> getVerbose() {
+        return isVerbose;
     }
 
     @Override

@@ -53,5 +53,6 @@ sourceSets {
 }
 
 xtcRuntime {
+    verbose = true
     moduleName("TestFizzBuzz")
 }

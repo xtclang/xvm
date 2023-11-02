@@ -29,18 +29,19 @@ internal val pluginVersion = version.toString()
 internal val pluginId = getXdkProperty("org.xvm.plugin.id")
 
 // TODO: Build another plugin artifact with the javatools included?
-internal val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false);
+internal val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false)
 
 val assemble by tasks.existing {
     dependsOn(sanityCheckPluginVersion)
 }
 
 val jar by tasks.existing(Jar::class) {
-    // TODO: Should not be necessary, but it seem to not complete unless the jar has resolved its configs, so I guess it avoids a race
-    //dependsOn(gradle.includedBuild("javatools").task(":jar"))
+    dependsOn(gradle.includedBuild("javatools").task(":jar"))
     if (shouldBundleJavaTools) {
-        logger.warn("$prefix Bundling the XVM Java Tools in the plugin jar, and moving to non-JavaExec mode.")
         from(zipTree(xtcJavaToolsJarConsumer.get().singleFile))
+        doLast {
+            logger.lifecycle("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
+        }
     }
 }
 
@@ -82,6 +83,7 @@ gradlePlugin {
             implementationClass = getXdkProperty("org.xvm.plugin.implementation.class")
             displayName = getXdkProperty("org.xvm.plugin.display.name")
             description = getXdkProperty("org.xvm.plugin.description")
+            logger.lifecycle("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
             @Suppress("UnstableApiUsage")
             tags = listOfNotNull("xtc", "gradle", "plugin", "xdk")
         }
