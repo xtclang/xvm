@@ -1919,7 +1919,7 @@ public class NameExpression
     @Override
     public ExprAST getExprAST()
         {
-        if (isConstant())
+        if (isConstant() && isRValue())
             {
             return new ConstantExprAST(toConstant());
             }

@@ -1,9 +1,8 @@
-module TestSimple {
+module TestSimple  {
     @Inject Console console;
 
+    Int q = 7;
     void run() {
-        for (Int i : 1 ..< 1) { // this used to blow up in the BAST production
-            console.print(i);
-        }
+        q = 11; // used to assert in BAST production
     }
 }

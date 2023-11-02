@@ -7,6 +7,10 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
+
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -81,6 +85,13 @@ public class IgnoredNameExpression
         {
         return generateBlackHole(null);
         }
+
+    @Override
+    public ExprAST getExprAST()
+        {
+        return new RegisterAST(Op.A_IGNORE, pool().typeObject(), null);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
