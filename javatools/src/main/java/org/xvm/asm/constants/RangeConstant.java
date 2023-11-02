@@ -209,7 +209,7 @@ public class RangeConstant
         Constant constHi    = fReverse ? constFirst : constLast;
 
         Constant constGT = constLo.apply(Id.COMP_GT, constHi);
-        if (constGT.equals(constGT.getConstantPool().valTrue()))
+        if (getConstantPool().valTrue().equals(constGT))
             {
             return m_fExclude1 || m_fExclude2 ? 0 : 1;
             }

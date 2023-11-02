@@ -166,6 +166,62 @@ public class EnumValueConstant
                 }
             }
 
+        switch (op)
+            {
+            case ADD:
+                {
+                // this can only be "nextValue" operation
+                assert that.equals(pool.ensureLiteralConstant(Format.IntLiteral, "1"));
+
+                ClassStructure clzValue = (ClassStructure) getClassConstant().getComponent();
+                ClassStructure clzEnum  = (ClassStructure) clzValue.getParent();
+                boolean        fNext    = false;
+                for (Component child : clzEnum.children())
+                    {
+                    if (fNext)
+                        {
+                        if (child instanceof ClassStructure clzChild &&
+                                clzChild.getFormat() == Component.Format.ENUMVALUE)
+                            {
+                            return pool.ensureSingletonConstConstant(clzChild.getIdentityConstant());
+                            }
+                        continue;
+                        }
+
+                    if (child == clzValue)
+                        {
+                        fNext = true;
+                        }
+                    }
+                return null;
+                }
+
+            case SUB:
+                {
+                // this can only be "prevValue" operation
+                assert that.equals(pool.ensureLiteralConstant(Format.IntLiteral, "1"));
+
+                ClassStructure clzValue = (ClassStructure) getClassConstant().getComponent();
+                ClassStructure clzEnum  = (ClassStructure) clzValue.getParent();
+                ClassStructure clzPrev  = null;
+                for (Component child : clzEnum.children())
+                    {
+                    if (child == clzValue)
+                        {
+                        return clzPrev == null
+                            ? null
+                            : pool.ensureSingletonConstConstant(clzPrev.getIdentityConstant());
+                        }
+
+                    if (child instanceof ClassStructure clzChild &&
+                            clzChild.getFormat() == Component.Format.ENUMVALUE)
+                        {
+                        clzPrev = clzChild;
+                        }
+                    }
+                return null;
+                }
+            }
 
         return super.apply(op, that);
         }

@@ -9,12 +9,11 @@ module TestLoops
         testWhile();
         testFor();
         testLabel();
-        testForEachConstRange();
+        testForEachCollection();
+        testForEachIterator();
         testForEachSequence();
-        //testForEachCollection();
-        //testForEachIterator();
-        //testDo();
-        //testForEachRange();
+        testForEachConstRange();
+        testForEachEnumRange();
         }
 
     void testWhile()
@@ -70,7 +69,7 @@ module TestLoops
         Collection<String> strs = ["hello", "world"];
         L1: for (String s : strs)
             {
-            console.print("s=" + s);
+            console.print($"{s=}");
             }
         }
 
@@ -81,7 +80,7 @@ module TestLoops
         String[] strs = ["hello", "world"];
         L1: for (String s : strs.iterator())
             {
-            console.print("s=" + s);
+            console.print($"{s=}");
             }
         }
 
@@ -92,7 +91,7 @@ module TestLoops
         String[] strs = ["hello", "world"];
         L1: for (String s : strs)
             {
-            console.print("s=" + s);
+            console.print($"{s=}");
             }
         }
 
@@ -102,35 +101,17 @@ module TestLoops
 
         L1: for (Int i : 9..7)
             {
-            console.print("i=" + i + ", first=" + L1.first + ", last=" + L1.last + ", count=" + L1.count);
+            console.print($"{i=}, first={L1.first}, last={L1.last}, count={L1.count}");
             }
         }
 
-    void testDo()
+    void testForEachEnumRange()
         {
-        console.print("\n** testDo()");
+        console.print("\n** testForEachEnumRange()");
 
-        Boolean f = False;
-        Int j = 0;
-        Int i = 0;
-        do
+        L1: for (Ordered o : Lesser ..< Greater)
             {
-            if (j == 4)                 // i is not def asn at this point ...
-                {
-                continue;               // ... so i is still not def asn at this point
-                }
-
-            i = ++j;
-
-            if (i == 4)
-                {
-                continue;
-                }
-
-            console.print("(in loop) i=" + i + ", j=" + j);
+            console.print($"{o=}, first={L1.first}, last={L1.last}, count={L1.count}");
             }
-        while (i < 10);                 // should be an error here (i is not def asn)
-
-        console.print("(after loop) i=" + i + ", j=" + j);
         }
     }

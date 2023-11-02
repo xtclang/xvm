@@ -9,6 +9,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -17,6 +18,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -59,6 +61,9 @@ public class xEnum
         if (this == INSTANCE)
             {
             // all the methods are marked as native due to a "rebase"
+
+            RANGE_TEMPLATE = f_container.getTemplate("Range");
+            RANGE_CTOR     = RANGE_TEMPLATE.getStructure().findMethod("construct", 4);
             }
         else if (getStructure().getFormat() == Format.ENUM)
             {
@@ -160,7 +165,7 @@ public class xEnum
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        EnumHandle hEnum = (EnumHandle) hTarget;
+        EnumHandle hThis = (EnumHandle) hTarget;
 
         switch (sPropName)
             {
@@ -176,13 +181,31 @@ public class xEnum
                 }
 
             case "name":
-                return frame.assignValue(iReturn, xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
+                return frame.assignValue(iReturn, xString.makeHandle(m_listNames.get(hThis.getOrdinal())));
 
             case "ordinal":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getOrdinal()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        EnumHandle hThis = (EnumHandle) hTarget;
+
+        switch (method.getName())
+            {
+            case "stepsTo":
+                {
+                EnumHandle hThat = (EnumHandle) hTarget;
+                return frame.assignValue(iReturn,
+                        xInt64.makeHandle(hThis.getOrdinal() - hThat.getOrdinal()));
+                }
+            }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -210,18 +233,70 @@ public class xEnum
     @Override
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
-        EnumHandle hEnum = (EnumHandle) hTarget;
+        EnumHandle hThis = (EnumHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getOrdinal()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
         }
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        EnumHandle hEnum = (EnumHandle) hTarget;
+        EnumHandle hThis = (EnumHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
+                xString.makeHandle(m_listNames.get(hThis.getOrdinal())));
+        }
+
+    @Override
+    public int invokeIRangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, false, false, iReturn);
+        }
+
+    @Override
+    public int invokeERangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, true, false, iReturn);
+        }
+
+    @Override
+    public int invokeIRangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, false, true, iReturn);
+        }
+
+    @Override
+    public int invokeERangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return createRange(frame, (EnumHandle) hTarget, (EnumHandle) hArg, true, true, iReturn);
+        }
+
+    /**
+     * Create a Range object for the specified elements and exclusion flags.
+     *
+     * Note: the reason we need this to be done differently from the generic logic at ClassTemplate
+     *       is that the corresponding method signature (e.g. Range<Orderable> to(Orderable that))
+     *       resolves the Orderable to the enum value type (e.g. Lesser) instead of the enum type
+     *       (e.g. Ordered) resulting in a TypeMismatch exception; we want a {@code Range<Ordered>}
+     *       and not a {@code Range<Lesser>}
+     *
+     * @return R_NEXT, R_CALL or R_EXCEPTION
+     */
+    private int createRange(Frame frame, EnumHandle hFirst, EnumHandle hLast,
+                           boolean fFirstEx, boolean fLastEx, int iReturn)
+        {
+        ConstantPool pool      = frame.poolContext();
+        TypeConstant typeRange = pool.ensureParameterizedTypeConstant(
+                pool.typeRange(), getCanonicalType());
+
+        ObjectHandle[] ahVar = new ObjectHandle[4];
+        ahVar[0] = hFirst;
+        ahVar[1] = hLast;
+        ahVar[2] = xBoolean.makeHandle(fFirstEx);
+        ahVar[3] = xBoolean.makeHandle(fLastEx);
+
+        return RANGE_TEMPLATE.construct(frame, RANGE_CTOR, typeRange.ensureClass(frame),
+                null, ahVar, iReturn);
         }
 
 
@@ -400,7 +475,10 @@ public class xEnum
         }
 
 
-    // ----- fields -----
+    // ----- constants and fields ------------------------------------------------------------------
+
+    private static ClassTemplate   RANGE_TEMPLATE;
+    private static MethodStructure RANGE_CTOR;
 
     protected List<String>     m_listNames;
     protected List<EnumHandle> m_listHandles;

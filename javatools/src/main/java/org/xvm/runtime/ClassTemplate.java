@@ -1884,32 +1884,6 @@ public abstract class ClassTemplate
         }
 
     /**
-     * @return a call chain for the specified op or null if none exists
-     */
-    public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp)
-        {
-        TypeInfo info = hTarget.getType().ensureTypeInfo();
-
-        Set<MethodConstant> setMethods = info.findOpMethods(sName, sOp, 0);
-        switch (setMethods.size())
-            {
-            case 0:
-                return null;
-
-            case 1:
-                {
-                MethodConstant idMethod = setMethods.iterator().next();
-                return hTarget.getComposition().getMethodCallChain(idMethod.getSignature());
-                }
-
-            default:
-                // soft assert
-                System.err.println("Ambiguous operation op=" + sOp + ", name=" + sName + " on " +
-                        hTarget.getType().getValueString());
-                return null;
-            }
-        }
-    /**
      * @return a call chain for the specified op and argument or null if none exists
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp, ObjectHandle hArg)
@@ -1924,8 +1898,22 @@ public abstract class ClassTemplate
 
             case 1:
                 {
-                MethodConstant idMethod = setMethods.iterator().next();
-                return hTarget.getComposition().getMethodCallChain(idMethod.getSignature());
+                MethodConstant    idMethod = setMethods.iterator().next();
+                SignatureConstant sig      = idMethod.getSignature();
+                if (hArg != null)
+                    {
+                    TypeConstant typeArg   = hArg.getType();
+                    TypeConstant typeParam = sig.getRawParams()[0];
+
+                    if (!typeArg.isA(typeParam))
+                        {
+                        // soft assert
+                        System.err.println("Invalid argument type \"" + typeArg.getValueString() +
+                            "\" for \"" + sName + "\" operation on " + hTarget.getType().getValueString());
+                        return null;
+                        }
+                    }
+                return hTarget.getComposition().getMethodCallChain(sig);
                 }
 
             default:
@@ -1982,7 +1970,7 @@ public abstract class ClassTemplate
                     }
 
                 // soft assert
-                System.err.println("Ambiguous \"" + sOp + "\" operation on " +
+                System.err.println("Ambiguous \"" + sName + "\" operation on " +
                         hTarget.getType().getValueString());
                 return null;
                 }
