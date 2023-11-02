@@ -18,9 +18,6 @@ mixin Interval<Element extends immutable Sequential>
      * Determine the first value that could exist in the range. Note that the value may not actually
      * exist in the range, because the lower and upper bound may preclude it, as would occur in an
      * integer range of `(0, 1)`, for example.
-     *
-     * @return the first value that would exist in the range, assuming at least one value exists in
-     *         the range
      */
     Element effectiveFirst.get() {
         return descending ? effectiveUpperBound : effectiveLowerBound;
@@ -30,9 +27,6 @@ mixin Interval<Element extends immutable Sequential>
      * Determine the last value that could exist in the range. Note that the value may not actually
      * exist in the range, because the lower and upper bound may preclude it, as would occur in an
      * integer range of `(0, 1)`, for example.
-     *
-     * @return the last value that would exist in the range, assuming at least one value exists in
-     *         the range
      */
     Element effectiveLast.get() {
         return descending ? effectiveLowerBound : effectiveUpperBound;
@@ -42,8 +36,6 @@ mixin Interval<Element extends immutable Sequential>
      * Determine the lowest value that could exist in the range. Note that the value may not
      * actually exist in the range, because the upper bound may preclude it, as would occur in an
      * integer range of `(0, 1)`, for example.
-     *
-     * @return the lowest value that could exist in the range
      */
     Element effectiveLowerBound.get() {
         return lowerExclusive ? lowerBound.nextValue() : lowerBound;
@@ -53,11 +45,24 @@ mixin Interval<Element extends immutable Sequential>
      * Determine the highest value that could exist in the range. Note that the value may not
      * actually exist in the range, because the lower bound may preclude it, as would occur in an
      * integer range of `(0, 1)`, for example.
-     *
-     * @return the highest value that could exist in the range
      */
     Element effectiveUpperBound.get() {
         return upperExclusive ? upperBound.prevValue() : upperBound;
+    }
+
+    /**
+     * Determine if the Interval is empty, which means that an Iteration over the Interval would
+     * produce no elements.
+     *
+     * True iff the Interval contains no elements.
+     */
+    Boolean empty.get() {
+        try {
+            return lowerBound.stepsTo(upperBound) - (lowerExclusive ? 1 : 0) - (upperExclusive ? 1 : 0) >= 0;
+        } catch (OutOfBounds e) {
+            // way too many steps implies "not empty"
+            return False;
+        }
     }
 
     /**
@@ -73,19 +78,17 @@ mixin Interval<Element extends immutable Sequential>
      * * The size of ['a'..'z') is 25
      * * The size of ['z'..'a'] is 26
      * * The size of ['z'..'a') is 25
+     *
+     * If the size exceeds the range of a 64-bit signed integer, the maximum Int value is returned.
      */
     @Override
     Int size.get() {
         try {
-            Element lo = effectiveLowerBound;
-            Element hi = effectiveUpperBound;
-            return switch (lo <=> hi) {
-                case Lesser : lo.stepsTo(hi) + 1;
-                case Equal  : 1;
-                case Greater: 0;
-            };
+            return (lowerBound.stepsTo(upperBound) - (lowerExclusive ? 1 : 0)
+                                                   - (upperExclusive ? 1 : 0)).notLessThan(0);
         } catch (OutOfBounds e) {
-            return 0;
+            // way too many steps
+            return MaxValue;
         }
     }
 
