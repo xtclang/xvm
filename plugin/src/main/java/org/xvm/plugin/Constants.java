@@ -29,7 +29,7 @@ final class Constants {
     static final String XTC_VERSION_TASK_NAME = XTC_VERSION_GROUP_NAME;
     static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     static final String XTC_EXTENSION_NAME_COMPILER = "xtcCompile";
-    static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRuntime";
+    static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRun";
 
     static final long XTC_MAGIC = 0xEC57_A5EEL;
 

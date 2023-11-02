@@ -5,6 +5,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
     protected final ListProperty<String> jvmArgs;
     protected final Property<Boolean> isVerbose;
     protected final Property<Boolean> isFork;
+    protected final Property<Boolean> useNativeLauncher;
 
     private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
@@ -31,11 +33,17 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
         this.jvmArgs = project.getObjects().listProperty(String.class).value(new ArrayList<>(DEFAULT_JVM_ARGS));
         this.isVerbose = project.getObjects().property(Boolean.class).value(false);
         this.isFork = project.getObjects().property(Boolean.class).value(true);
+        this.useNativeLauncher = project.getObjects().property(Boolean.class).value(false);
     }
 
     @Override
     public Property<Boolean> getFork() {
         return isFork;
+    }
+
+    @Override
+    public Property<Boolean> getUseNativeLauncher() {
+        return useNativeLauncher;
     }
 
     @Override

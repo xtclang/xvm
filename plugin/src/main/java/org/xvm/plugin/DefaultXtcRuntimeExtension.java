@@ -70,7 +70,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     private final ListProperty<XtcRunModule> modules;
     private final Property<Boolean> allowParallel;
     private final Property<Boolean> enableDebug;
-    private final Property<Boolean> useNativeLauncher;
 
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {
@@ -79,7 +78,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         this.modules = objects.listProperty(XtcRunModule.class).value(Collections.emptyList());
         this.allowParallel = objects.property(Boolean.class).value(false);
         this.enableDebug = objects.property(Boolean.class).value(false);
-        this.useNativeLauncher = objects.property(Boolean.class).value(false);
     }
 
     static XtcRunModule createModule(final Project project, final String name) {
@@ -145,9 +143,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         assert this.modules.get().size() == modules.size();
         return this;
     }
-
-    @Override
-    public Property<Boolean> getUseNativeLauncher() { return useNativeLauncher; }
 
     @Override
     public Property<Boolean> getAllowParallel() {

@@ -1,31 +1,135 @@
+import org.gradle.BuildListener
+import org.gradle.BuildResult
 import org.gradle.api.Project
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStreamReader
 import org.gradle.api.GradleException
+import org.gradle.api.Task
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.initialization.Settings
 import org.gradle.api.invocation.Gradle
+import org.gradle.api.logging.LogLevel
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.Objects.requireNonNull
 import java.util.Properties
 
 class XdkBuildLogic(val project: Project) {
+
+    companion object {
+        const val XDK_TASK_GROUP_DEBUG = "debug"
+        const val XDK_TASK_GROUP_VERSION = "version"
+        const val XDK_VERSION_CATALOG_GROUP = "xdkgroup"
+        const val XDK_VERSION_CATALOG_VERSION = "xdk"
+        const val REDACTED = "[REDACTED]"
+        const val ENV_PATH = "PATH"
+        const val XTC_LAUNCHER = "xec"
+        const val SNAPSHOT_SUFFIX = "-SNAPSHOT"
+        const val DEFAULT_JAVA_BYTECODE_VERSION = "17"
+
+        val ls: String = System.lineSeparator()
+
+        // companion objects are guaranteed to be singletons by Kotlin.
+        private val cache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
+
+        fun resolve(project: Project): XdkBuildLogic {
+            return cache[project] ?: XdkBuildLogic(project).also { cache[project] = it }
+        }
+
+        // Helper function to print contents of a directory tree with timestamps
+        fun walkDir(project: Project, dir: File, level: LogLevel = LogLevel.LIFECYCLE) {
+            fun getFormatTimeWithTz(ms: Long): String {
+                val currentTime = Date(ms)
+                val timeZoneDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+                return timeZoneDate.format(currentTime)
+            }
+            val prefix = "[${project.name}]"
+            project.logger.log(level, "$prefix ls -R $dir:")
+            val truncate = dir.absolutePath
+            dir.walkTopDown().forEach {
+                assert(it.absolutePath.startsWith(truncate))
+                val path = it.absolutePath.substring(truncate.length)
+                val timestamp = getFormatTimeWithTz(it.lastModified())
+                project.logger.log(level, "$prefix    [$timestamp] '${dir.name}$path'")
+            }
+        }
+    }
+
+    class XdkBuildListener(val project: Project) : BuildListener {
+        private val logger = project.logger
+        private val prefix = project.prefix + " BUILD CALLBACK: "
+        private var settings: Settings? = null
+        private var loaded: Boolean = false
+        private var evaluated: Boolean = false
+
+        override fun settingsEvaluated(settings: Settings) {
+            this.settings = settings;
+            logger.info("$prefix Settings evaluated.")
+        }
+
+        override fun projectsLoaded(gradle: Gradle) {
+            this.loaded = true
+            logger.info("$prefix Projects loaded.")
+        }
+
+        override fun projectsEvaluated(gradle: Gradle) {
+            this.evaluated = true
+            logger.info("$prefix Projects evaluated.");
+        }
+
+        @Deprecated("BuildListener.buildFinished is deprecated")
+        @SuppressWarnings("deprecated")
+        override fun buildFinished(result: BuildResult) {
+            // no-op, remove this when the Gradle API changes.
+        }
+
+        override fun toString(): String {
+            return buildString {
+                appendLine("${project.prefix} BuildListener:")
+                appendLine("  Settings evaluated: ${settings != null}")
+                appendLine("  Projects loaded: $loaded")
+                appendLine("  Projects evaluated: $evaluated")
+            }
+        }
+    }
+
     private val prefix = "[${project.name}]"
     private val logger = project.logger
-
     private val props = XdkPropertyManager()
+    private val listener: XdkBuildListener = XdkBuildListener(project)
+
+    val isParallel: Boolean get() = project.gradle.startParameter.isParallelProjectExecutionEnabled
+
+    init {
+        project.gradle.addBuildListener(listener)
+    }
 
     fun gitHubClient(): GitHubPackages {
         return GitHubPackages(this)
     }
 
-    private fun findExecutableOnPath(executable: String): Path? {
-        return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }?.first { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
+    fun xdkDistribution(): XdkDistribution {
+        return XdkDistribution(this)
+    }
+
+    fun isSnapshot(): Boolean {
+        return project.version.toString().endsWith(SNAPSHOT_SUFFIX)
+    }
+
+    fun findExecutableOnPath(executable: String): Path? {
+        return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
+    }
+
+    fun findLocalXdkInstallation(): File? {
+        return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile?.parentFile // xec -> bin -> libexec -> "x.y.z.ppp"
     }
 
     fun resolveLocalXdkInstallation(): File {
-        return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile ?: throw project.buildException("Could not find local installation of XVM.")
+        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
     }
 
     fun getPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
@@ -34,26 +138,6 @@ class XdkBuildLogic(val project: Project) {
 
     fun getProperty(key: String, defaultValue: String? = null): String {
         return props.get(key, defaultValue)
-    }
-
-    companion object {
-        const val XDK_TASK_GROUP_DEBUG = "debug"
-        const val XDK_TASK_GROUP_VERSION = "version"
-
-        const val XDK_VERSION_CATALOG_GROUP = "xdkgroup"
-        const val XDK_VERSION_CATALOG_VERSION = "xdk"
-
-        const val REDACTED = "[REDACTED]"
-
-        const val ENV_PATH = "PATH"
-        const val XTC_LAUNCHER = "xec"
-
-        // companion objects are guaranteed to be singletons by Kotlin.
-        private val cache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
-
-        fun resolve(project: Project): XdkBuildLogic {
-            return cache[project] ?: XdkBuildLogic(project).also { cache[project] = it }
-        }
     }
 
     /**
@@ -225,22 +309,38 @@ class XdkBuildLogic(val project: Project) {
 
 val Gradle.rootGradle: Gradle
     get() {
-        var dir = this
-        while (dir.parent != null) {
-            dir = dir.parent!!
+        var dir: Gradle? = this
+        while (dir!!.parent != null) {
+            dir = dir.parent
         }
         return dir
     }
 
-val Gradle.rootLayout: ProjectLayout get() = rootGradle.rootProject.layout
+val Gradle.rootLayout: ProjectLayout
+    get() = rootGradle.rootProject.layout
 
-val Project.compositeRootProjectDirectory get() = gradle.rootLayout.projectDirectory
-val Project.prefix get() = "[$name]"
-val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.resolve(this)
+val Project.compositeRootProjectDirectory
+    get() = gradle.rootLayout.projectDirectory
+
+val Project.compositeRootBuildDirectory
+    get() = gradle.rootLayout.buildDirectory
+
+val Project.buildRepoDirectory
+    get() = compositeRootBuildDirectory.dir("repo")
+
+val Project.buildSnapshotRepoDirectory
+    get() = compositeRootBuildDirectory.dir("snapshot-repo")
+
+val Project.xdkBuildLogic: XdkBuildLogic
+    get() = XdkBuildLogic.resolve(this)
+
+val Project.prefix
+    get() = "[$name]"
 
 // TODO: Hacky, use a config, but there is a mutual dependency between the lib_xtc and javatools.
 //  Better to add the resource directory as a source set?
-val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
+val Project.xdkImplicitsPath: String
+    get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
 
 fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = false): Boolean {
     return xdkBuildLogic.getPropertyBoolean(key, defaultValue)
@@ -264,4 +364,11 @@ fun Project.executeCommand(vararg args: String): String? {
     }
     result.assertNormalExitValue()
     return output.toString().trim().ifEmpty { null }
+}
+
+// always rerun this task (consider it out of date)
+fun Task.alwaysRerunTask() {
+    outputs.cacheIf { false }
+    outputs.upToDateWhen { false }
+    logger.warn("${project.prefix} WARNING: Task '$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle..")
 }

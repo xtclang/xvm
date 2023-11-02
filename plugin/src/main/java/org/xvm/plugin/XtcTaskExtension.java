@@ -9,6 +9,8 @@ public interface XtcTaskExtension {
 
     Property<Boolean> getFork();
 
+    Property<Boolean> getUseNativeLauncher();
+
     Property<Boolean> getVerbose();
 
     XtcTaskExtension jvmArgs(Object... jvmArgs);
@@ -19,4 +21,3 @@ public interface XtcTaskExtension {
 
     XtcTaskExtension setJvmArgs(Iterable<?> jvmArgs);
 }
-

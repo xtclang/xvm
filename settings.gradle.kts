@@ -21,7 +21,7 @@ gradleEnterprise {
         publishAlwaysIf(System.getenv("GITHUB_ACTIONS") == "true")
         publishOnFailure()
         capture {
-            isTaskInputFiles = true
+            isTaskInputFiles = System.getProperty("slow.internet.connection", "false").toBoolean()
         }
     }
 }

@@ -9,7 +9,7 @@ plugins {
     base
 }
 
-val Project.prefix get() = "[$name]"
+internal val Project.prefix get() = "[$name]"
 
 startBuildAggregator()
 
@@ -26,7 +26,6 @@ fun startBuildAggregator() {
         if (startParameterTasks.size > 1) {
             val msg = "$prefix Multiple start parameter tasks are not guaranteed to work. Please run each task individually."
             logger.warn(msg);
-            throw GradleException(msg);
         }
     }
 
@@ -34,7 +33,7 @@ fun startBuildAggregator() {
 }
 
 listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME).forEach { taskName ->
-    logger.lifecycle("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
+    logger.info("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
     tasks.named(taskName) {
         group = BUILD_GROUP
         description = "Aggregates and executes the '$taskName' task for all included builds."
@@ -45,7 +44,12 @@ listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_N
     }
 }
 
+
 val includedBuildsWithPublications = gradle.includedBuilds.filter {
+    fun declaresPublications(name: String): Boolean {
+        return listOfNotNull("xdk", "plugin").contains(name)
+    }
+
     fun hasPublishingPlugin(includedBuild: IncludedBuild): Boolean {
         val name = includedBuild.name
         val path = includedBuild.projectDir.path
@@ -53,16 +57,13 @@ val includedBuildsWithPublications = gradle.includedBuilds.filter {
             logger.info("$prefix Skipping publications for 'build-logic' project: $name")
             return false
         }
-        val hasPublications = when (name) {
-            "xdk", "plugin" -> {
-                logger.info("$prefix Included build '$name' has publishing logic; connecting to :xvm:publish* tasks.")
-                true
-            }
-
-            else -> false
+        if (declaresPublications(name)) {
+            logger.info("$prefix Included build '$name' has publishing logic; connecting to :xvm:publish* tasks.")
+            return true
         }
-        return hasPublications
+        return false
     }
+
     hasPublishingPlugin(it)
 }
 
@@ -88,7 +89,7 @@ val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
     includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":publishToMavenLocal"))
+        dependsOn(it.task(":publishLocal"))
     }
     doFirst {
         checkParallel(name)
@@ -118,13 +119,33 @@ listOfNotNull("list", "delete").forEach { taskPrefix ->
     }
 }
 
-fun checkParallel(taskName: String): Boolean {
+val installLocalDist by tasks.registering {
+    group = "distribution"
+    description = "Build and overwrite any local distribution with the new distribution produced by the build."
+    dependsOn(gradle.includedBuild("xdk").task(":installLocalDist"))
+    doLast {
+        logger.lifecycle("$prefix Finished installLocalDist (overwrote existing XDK distribution).")
+    }
+}
+
+/*val releaseZip by tasks.registering(Zip::class) {
+    archiveVersion = version.toString()
+    dependsOn(publishLocal)
+    from(layout.buildDirectory.dir("repo")) {
+        exclude("__/_.sha256")
+        exclude("__/_.sha512")
+    }
+}*/
+
+fun checkParallel(taskName: String, shouldThrow: Boolean = true): Boolean {
     if (gradle.startParameter.isParallelProjectExecutionEnabled) {
         val name = "${project.path}$taskName"
-        val msg = "$prefix WARNING: Task '$taskName'; parallel project may be racy due to existing issues in Gradle. Please clean and re-run the task as './gradlew $name --no-parallel')"
-        logger.error(msg)  // TODO: throw GradleException(msg)
-        return true
+        val msg = "$prefix ERROR: Task '$taskName'; parallel project may be racy due to existing issues in Gradle. Please clean and re-run the task as './gradlew $name --no-parallel')"
+        logger.error(msg)
+        if (shouldThrow) {
+            throw GradleException(msg)
+        }
+        return false
     }
     return false
 }
-
