@@ -477,12 +477,13 @@ public class FileStructure
             return;
             }
 
-        List<FileStructure>   listFilesTodo   = new ArrayList<>();
-        List<String>          listModulesTodo = new ArrayList<>(moduleNames());
-        List<ModuleStructure> listReplace     = new ArrayList<>();
-        Set<String>           setModulesDone  = new HashSet<>();
+        List<FileStructure>   listFilesTodo = new ArrayList<>();
+        List<ModuleStructure> listReplace   = new ArrayList<>();
 
-        // the primary module is implicitly linked already
+        // collect the child module names; we're already processing the primary module of this
+        // file structure, so mark it as "done" to avoid recursively processing the same one again
+        List<String> listModulesTodo = new ArrayList<>(moduleNames());
+        Set<String>  setModulesDone  = new HashSet<>();
         setModulesDone.add(getModuleName());
 
         // recursive link of all downstream modules; by now nothing is missing
@@ -497,12 +498,6 @@ public class FileStructure
 
             ModuleStructure moduleFingerprint = getModule(sModule);
             assert moduleFingerprint != null;
-            if (moduleFingerprint.isLinked())
-                {
-                // this module is already in our FileStructure as a real, fully loaded and linked
-                // module
-                continue;
-                }
 
             ModuleStructure moduleUnlinked = repository.loadModule(sModule); // TODO versions etc.
             assert moduleUnlinked != null;
@@ -518,7 +513,10 @@ public class FileStructure
                 }
             else // compile-time
                 {
-                moduleFingerprint.setFingerprintOrigin(moduleUnlinked);
+                if (!moduleFingerprint.isLinked())
+                    {
+                    moduleFingerprint.setFingerprintOrigin(moduleUnlinked);
+                    }
 
                 if (fileTop.getModule(sModule) == null)
                     {
