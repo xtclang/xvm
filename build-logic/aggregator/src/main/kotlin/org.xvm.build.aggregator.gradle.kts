@@ -24,7 +24,9 @@ fun startBuildAggregator() {
     if (startParameterTasks.isNotEmpty()) {
         logger.lifecycle("$prefix Start parameter tasks: $startParameterTasks")
         if (startParameterTasks.size > 1) {
-            logger.warn("$prefix Multiple start parameter tasks are not guaranteed to work. Please run each task individually.")
+            val msg = "$prefix Multiple start parameter tasks are not guaranteed to work. Please run each task individually."
+            logger.warn(msg);
+            throw GradleException(msg);
         }
     }
 
@@ -73,6 +75,7 @@ val includedBuildsWithPublications = gradle.includedBuilds.filter {
 
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
+    description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
     }
@@ -83,6 +86,7 @@ val publishRemote by tasks.registering {
 
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
+    description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":publishToMavenLocal"))
     }
@@ -116,11 +120,11 @@ listOfNotNull("list", "delete").forEach { taskPrefix ->
 
 fun checkParallel(taskName: String): Boolean {
     if (gradle.startParameter.isParallelProjectExecutionEnabled) {
-        logger.error("$prefix WARNING: Task '$taskName'; parallel project may be racy due to existing issues in Gradle. Please clean and re-run the task as './gradlew $name --no-parallel')")
+        val name = "${project.path}$taskName"
+        val msg = "$prefix WARNING: Task '$taskName'; parallel project may be racy due to existing issues in Gradle. Please clean and re-run the task as './gradlew $name --no-parallel')"
+        logger.error(msg)  // TODO: throw GradleException(msg)
         return true
     }
     return false
 }
-
-
 

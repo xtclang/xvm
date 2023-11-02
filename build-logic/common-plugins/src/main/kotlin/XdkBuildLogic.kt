@@ -132,7 +132,7 @@ class XdkBuildLogic(val project: Project) {
                 assert(project.property(secretKey) == REDACTED)
                 count++
             }
-            logger.lifecycle("$prefix Finished purgeSecrets; $count secrets were removed.")
+            logger.info("$prefix Finished purgeSecrets; $count secrets were removed.")
         }
 
         /*
