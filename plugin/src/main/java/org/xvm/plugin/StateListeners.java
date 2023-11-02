@@ -23,7 +23,8 @@ import java.util.Set;
  * lifecycle phase we are in, and if we are in configuration or evaluation.
  */
 // TODO: Use flow instead of buildListeners
-public class StateListeners extends ProjectDelegate {
+@SuppressWarnings("unused")
+public class StateListeners extends ProjectDelegate<Void, Void> {
     private final XtcBuildListener buildListener;
     private final XtcTaskListener taskListener;
     private final LogLevel logLevel;
@@ -45,9 +46,10 @@ public class StateListeners extends ProjectDelegate {
     }
 
     @Override
-    protected void apply() {
+    protected Void apply(final Void ignored) {
         gradle.addBuildListener(buildListener);
         gradle.getTaskGraph().addTaskExecutionGraphListener(taskListener);
+        return null;
     }
 
     public boolean areSettingsEvaluated() {
