@@ -9,7 +9,6 @@ import java.util.HashMap;
 
 public class DefaultXtcCompilerExtension extends DefaultXtcTaskExtension implements XtcCompilerExtension {
     private final Property<Boolean> disableWarnings;
-    private final Property<Boolean> isVerbose;
     private final Property<Boolean> isStrict;
     private final Property<Boolean> hasQualifiedOutputName;
     private final Property<Boolean> hasVersionedOutputName;
@@ -21,7 +20,6 @@ public class DefaultXtcCompilerExtension extends DefaultXtcTaskExtension impleme
     public DefaultXtcCompilerExtension(final Project project) {
         super(project);
         this.disableWarnings = objects.property(Boolean.class).value(false);
-        this.isVerbose = objects.property(Boolean.class).value(false);
         this.isStrict = objects.property(Boolean.class).value(false);
         this.hasQualifiedOutputName = objects.property(Boolean.class).value(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).value(false);
@@ -33,11 +31,6 @@ public class DefaultXtcCompilerExtension extends DefaultXtcTaskExtension impleme
     @Override
     public Property<Boolean> getNoWarn() {
         return disableWarnings;
-    }
-
-    @Override
-    public Property<Boolean> getVerbose() {
-        return isVerbose;
     }
 
     @Override

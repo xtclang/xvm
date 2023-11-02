@@ -20,7 +20,6 @@ val xdkProjectPath = rootDir
  * The explicit XDK subprojects that are built for each library included in the XDK.
  *   Naming convention: https://kotlinlang.org/docs/reference/coding-conventions.html#naming-rules
  */
-// TODO turn these into included builds
 listOfNotNull(
     "lib_ecstasy",
     "lib_collections",
@@ -43,7 +42,7 @@ listOfNotNull(
     val path = File(xdkProjectPath.parentFile, p)
     val projectName = projectName(p)
     if (!path.exists()) {
-        throw GradleException("Can't find expected XDK project: '$projectName' (at: ${path.absolutePath})")
+        throw GradleException("[xdk] Can't find expected XDK project: '$projectName' (at: ${path.absolutePath})")
     }
     logger.lifecycle("[xdk] Resolved XDK subproject '$projectName' (at: '${path.absolutePath}')")
     include(":$p")

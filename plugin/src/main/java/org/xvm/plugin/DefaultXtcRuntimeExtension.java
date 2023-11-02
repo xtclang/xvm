@@ -6,9 +6,7 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 
 import javax.inject.Inject;
-import java.io.File;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -68,22 +66,18 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         }
     }
 
-    private final Property<Boolean> isVerbose;
     private final Property<Boolean> showVersion;
     private final ListProperty<XtcRunModule> modules;
     private final Property<Boolean> allowParallel;
     private final Property<Boolean> enableDebug;
-    private final Property<Boolean> useNativeLauncher;
 
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {
         super(project);
-        this.isVerbose = objects.property(Boolean.class).value(false);
         this.showVersion = objects.property(Boolean.class).value(false);
         this.modules = objects.listProperty(XtcRunModule.class).value(Collections.emptyList());
         this.allowParallel = objects.property(Boolean.class).value(false);
         this.enableDebug = objects.property(Boolean.class).value(false);
-        this.useNativeLauncher = objects.property(Boolean.class).value(false);
     }
 
     static XtcRunModule createModule(final Project project, final String name) {
@@ -92,10 +86,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
 
     XtcRunModule createModule(final String name) {
         return createModule(project, name);
-    }
-
-    private void addModules(final Collection<File> modules) {
-        modules.forEach(m -> addModule(createModule(m.getName())));
     }
 
     /**
@@ -155,9 +145,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     }
 
     @Override
-    public Property<Boolean> getUseNativeLauncher() { return useNativeLauncher; }
-
-    @Override
     public Property<Boolean> getAllowParallel() {
         return allowParallel;
     }
@@ -170,11 +157,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     @Override
     public ListProperty<XtcRunModule> getModules() {
         return modules;
-    }
-
-    @Override
-    public Property<Boolean> getVerbose() {
-        return isVerbose;
     }
 
     @Override

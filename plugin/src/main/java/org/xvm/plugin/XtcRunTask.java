@@ -36,7 +36,6 @@ import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 /**
  * Task that runs and XTC module, given at least its name, using the module path from
  * the xtc environment.
- *
  * TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
  */
 public class XtcRunTask extends DefaultTask {
@@ -49,6 +48,7 @@ public class XtcRunTask extends DefaultTask {
     protected final ObjectFactory objects;
     protected final XtcRuntimeExtension extRuntime;
     protected final SourceSet sourceSet;
+    protected final XtcLauncher launcher;
 
     private final Map<ExecResult, XtcRunModule> executedModules; // TODO we can cache output here to if we want.
 
@@ -62,6 +62,7 @@ public class XtcRunTask extends DefaultTask {
         this.sourceSet = moduleSourceSet;
         this.extRuntime = project.xtcRuntimeExtension();
         this.executedModules = new LinkedHashMap<>();
+        this.launcher = XtcLauncher.create(project, XTC_RUNNER_CLASS_NAME, getIsFork().get(), getUseNativeLauncher().get());
         configureTask(moduleSourceSet);
     }
 
@@ -120,7 +121,12 @@ public class XtcRunTask extends DefaultTask {
     }
 
     @Input
-    Property<Boolean> getVerbose() {
+    Property<Boolean> getIsFork() {
+        return extRuntime.getFork();
+    }
+
+    @Input
+    Property<Boolean> getIsVerbose() {
         return extRuntime.getVerbose();
     }
 
@@ -151,12 +157,9 @@ public class XtcRunTask extends DefaultTask {
 
     @TaskAction
     public void run() {
-        if (getUseNativeLauncher().get()) {
-            throw project.buildException("The XTC plugin does not yet support using the native launcher."); // TODO: Add a run native task.
-        }
-        final var args = new CommandLine();
+        final var args = new CommandLine(XTC_RUNNER_CLASS_NAME, getJvmArgs().get());
         args.addBoolean("-version", getShowVersion().get());
-        args.addBoolean("-verbose", getVerbose().get());
+        args.addBoolean("-verbose", getIsVerbose().get());
         args.addBoolean("-debug", getDebuggerEnabled().get());
 
         final var modulePath = project.resolveModulePath(name, getInputDeclaredDependencyModules());
@@ -209,6 +212,7 @@ public class XtcRunTask extends DefaultTask {
         return modules;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     private ExecResult runOne(final XtcRunModule runConfig, final CommandLine args) {
         project.info("{} Executing resolved xtcRuntime.module closure: {}", prefix, runConfig);
         final var moduleMethod = runConfig.getMethod().get();
@@ -222,8 +226,10 @@ public class XtcRunTask extends DefaultTask {
         final var moduleArgs = runConfig.getArgs().get();
         args.addRaw(moduleArgs);
 
-        final var result = project.execLauncher(name, XTC_RUNNER_CLASS_NAME, args, getJvmArgs().get());
+        final var result = launcher.apply(args);
+        result.rethrowFailure();
         executedModules.put(result, runConfig);
+
         return result;
     }
 }
