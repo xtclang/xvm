@@ -555,6 +555,7 @@ public class WhileStatement
                 {
                 // while(false) {body} - optimized out completely (unreachable)
                 block.completes(ctx, false, code, errs);
+                holder.setAst(this, StmtBlockAST.EMPTY);
                 return fCompletes;
                 }
 

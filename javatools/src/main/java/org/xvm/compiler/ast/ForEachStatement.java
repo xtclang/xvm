@@ -24,6 +24,7 @@ import org.xvm.asm.ast.BinaryAST.NodeType;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ForEachStmtAST;
 import org.xvm.asm.ast.RegAllocAST;
+import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -915,6 +916,9 @@ public class ForEachStatement
 
         if (range.size() < 1)
             {
+            // block is unreachable
+            block.completes(ctx, false, code, errs);
+            ctx.getHolder().setAst(block, StmtBlockAST.EMPTY);
             return fReachable;
             }
 
