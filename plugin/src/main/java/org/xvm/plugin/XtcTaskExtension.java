@@ -19,4 +19,3 @@ public interface XtcTaskExtension {
 
     XtcTaskExtension setJvmArgs(Iterable<?> jvmArgs);
 }
-

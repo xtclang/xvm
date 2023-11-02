@@ -230,7 +230,9 @@ public class XtcRunTask extends DefaultTask {
         args.addRaw(moduleArgs);
 
         final var result = launcher.apply(args);
+        result.rethrowFailure();
         executedModules.put(result, runConfig);
+
         return result;
     }
 }

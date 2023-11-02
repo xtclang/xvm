@@ -39,6 +39,12 @@ fun Task.printTaskDependencies() {
     return project.printTaskDependencies(name)
 }
 
+fun Project.printRepos() {
+    repositories.forEach {
+        logger.lifecycle("$prefix Repository: '$it'")
+    }
+}
+
 fun Project.printResolvedConfigFiles(configNames: Collection<String>) {
     configNames.forEach { printResolvedConfigFile(it) }
 }
@@ -127,13 +133,12 @@ fun Project.printPublications() {
     }
     val count = publications.size
     logger.lifecycle("$prefix Project '$projectName' has $count publications.")
-
     publications.forEachIndexed{ i, it ->
-        logger.lifecycle("$prefix     ($i / $count) Publication: '$projectName:${it.name}'")
+        logger.lifecycle("$prefix     (${i + 1} / $count) Publication: '$projectName:${it.name}' (type: ${it::class}")
         if (it is MavenPublication) {
-            logger.lifecycle("$prefix     Publication ${project.name}.${it.name}' has ${it.artifacts.size} artifacts.")
+            logger.lifecycle("$prefix     Publication '${projectName}.${it.name}' has ${it.artifacts.size} artifacts.")
             it.artifacts.forEachIndexed { j, artifact ->
-                logger.lifecycle("$prefix         ($j / ${it.artifacts.size}) Artifact: '$artifact'")
+                logger.lifecycle("$prefix         (${j + 1} / ${it.artifacts.size}) Artifact: '$artifact'")
             }
         }
     }

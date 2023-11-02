@@ -10,6 +10,8 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
+val semanticVersion: SemanticVersion by extra
+
 val xtcJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
@@ -20,35 +22,29 @@ val xtcJavaToolsJarConsumer by configurations.registering {
     }
 }
 
-dependencies {
-    xtcJavaToolsJarConsumer(libs.javatools)
-}
-
-internal val pluginGroup = "$group.plugin"
-internal val pluginVersion = version.toString()
-internal val pluginId = getXdkProperty("org.xvm.plugin.id")
-
-// TODO: Build another plugin artifact with the javatools included?
-internal val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false)
-
-val assemble by tasks.existing {
-    dependsOn(sanityCheckPluginVersion)
-}
-
-val jar by tasks.existing(Jar::class) {
-    dependsOn(gradle.includedBuild("javatools").task(":jar"))
-    if (shouldBundleJavaTools) {
-        from(zipTree(xtcJavaToolsJarConsumer.get().singleFile))
-        doLast {
-            logger.lifecycle("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
-        }
+val xtcPluginRepoProvider by configurations.registering {
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    outgoing.artifact(buildRepoDirectory) {
+        builtBy("publishAllPublicationsToBuildRepository")
+        type = ArtifactTypeDefinition.DIRECTORY_TYPE
+    }
+    attributes {
+        attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("buildRepo"))
     }
 }
 
-tasks.withType<Javadoc>().configureEach {
-    // TODO distribute and package Javadocs in the future, when we have them.
-    enabled = false
+dependencies {
+    @Suppress("UnstableApiUsage")
+    xtcJavaToolsJarConsumer(libs.javatools)
 }
+
+private val pluginGroup = "$group.plugin"
+private val pluginVersion = version.toString()
+private val pluginId = getXdkProperty("org.xvm.plugin.id")
+
+internal val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false)
 
 publishing {
     publications {
@@ -62,14 +58,19 @@ publishing {
     }
 }
 
-gradlePlugin {
-    // We may  want to manually configure the publications for the plugins, or we get semi-redundant tasks, which
-    // may be slightly confusing. We want full control over the publication process anyway, and we do have
-    // shared build logic, that makes sure that any declared publication is consistently applied over our
-    // projects that publish artifacts.
-    isAutomatedPublishing = true
+signing {
+    require(getXdkPropertyBoolean("org.xvm.publications.sign", false))
+    sign(publishing.publications["xtcPlugin"])
+}
 
-    logger.lifecycle("$prefix Configuring gradlePlugin; isAutomatedPublishing=$isAutomatedPublishing")
+// TODO: For pure maven plugin artifacts, we can also use "de.benediktritter.maven-plugin-development, mavenPlugin { }"
+gradlePlugin {
+    // The built in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
+    // However, this results in the Gradle version of the plugin not being published. To read it
+    // from at least a local repo, we need that artifact too, hence we get three artifacts.
+    isAutomatedPublishing = getXdkPropertyBoolean("org.xvm.plugin.isAutomatedPublishing", true)
+
+    logger.info("$prefix Configuring gradlePlugin; isAutomatedPublishing=$isAutomatedPublishing")
 
     @Suppress("UnstableApiUsage")
     vcsUrl = getXdkProperty("org.xvm.plugin.vcs.url")
@@ -90,6 +91,11 @@ gradlePlugin {
     }
 }
 
+tasks.withType<Javadoc>().configureEach {
+    // TODO distribute and package Javadocs in the future, when we have them.
+    enabled = false
+}
+
 val sanityCheckPluginVersion by tasks.registering {
     doLast {
         val mismatch = "XTC Plugin version mismatch"
@@ -108,12 +114,41 @@ val sanityCheckPluginVersion by tasks.registering {
             throw buildException("$mismatch between plugin version ($pluginVersion) and plugin project ($projectVersion)")
         }
         if (pluginGroup.indexOf(projectGroup) != 0 || pluginGroup == projectGroup) {
-            logger.warn("WARNING: The plugin needs to be rebuilt for relatively small XDK changes; it is not a good idea to use a different version than the XDK repository root version.")
+            logger.warn("$prefix WARNING: The plugin needs to be rebuilt for relatively small XDK changes; it is not a good idea to use a different version than the XDK repository root version.")
             throw buildException("$mismatch; the plugin group is supposed to be 'project.group' + '.plugin'. ($pluginGroup != $projectGroup.plugin)")
         }
 
-        logger.lifecycle("XTC Plugin sanity check passed; plugin artifact='$pluginGroup:$name:$pluginVersion' (plugin id: $pluginId)")
-        logger.lifecycle("XTC Plugin sanity check passed; inherited artifact='$group:$name:$version' (plugin id: $pluginId)")
+        logger.info("$prefix XTC Plugin sanity check passed; plugin artifact='$pluginGroup:$name:$pluginVersion' (plugin id: $pluginId)")
+        logger.info("$prefix XTC Plugin sanity check passed; inherited artifact='$group:$name:$version' (plugin id: $pluginId)")
     }
 }
 
+val assemble by tasks.existing {
+    dependsOn(sanityCheckPluginVersion)
+}
+
+val jar by tasks.existing(Jar::class) {
+    dependsOn(gradle.includedBuild("javatools").task(":jar"))
+    if (shouldBundleJavaTools) {
+        from(zipTree(xtcJavaToolsJarConsumer.get().singleFile))
+        doLast {
+            logger.lifecycle("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
+        }
+    }
+
+    manifest {
+        attributes(
+            "Manifest-Version" to "1.0",
+            "Xdk-Version" to semanticVersion.toString(),
+            "Main-Class" to "org.xvm.plugin.Usage",
+            "Name" to "/org/xvm/plugin/",
+            "Sealed" to "true",
+            "Specification-Title" to "XTC Gradle and Maven Plugin",
+            "Specification-Vendor" to "xtclang.org",
+            "Specification-Version" to pluginVersion,
+            "Implementation-Title" to "xtc-plugin",
+            "Implementation-Vendor" to "xtclang.org",
+            "Implementation-Version" to pluginVersion,
+        )
+    }
+}

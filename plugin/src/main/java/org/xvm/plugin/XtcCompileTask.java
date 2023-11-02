@@ -185,7 +185,9 @@ public abstract class XtcCompileTask extends SourceTask {
         }
         sourceFiles.forEach(args::addRaw);
 
-        launcher.apply(args);
+        final var result = launcher.apply(args);
+        result.rethrowFailure();
+
         // TODO: A little bit kludgy, but the outputFilename property in the xtcCompile extension as some directory vs file issue (a bug).
         renameOutputs();
     }

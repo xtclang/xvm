@@ -1,15 +1,15 @@
 package org.xvm.plugin;
 
 import org.gradle.api.logging.LogLevel;
+import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.jar.Attributes;
-import java.util.jar.JarInputStream;
+import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.zip.ZipFile;
 
@@ -34,8 +34,7 @@ public class JavaExecLauncher extends XtcLauncher {
             throw buildException("Failed to resolve javatools.jar in any classpath.");
         }
         info("{} '{}' {}; Using javatools.jar in classpath from: {}", prefix, args.getIdentifier(), args.getClass(), javaToolsJar.getAbsolutePath());
-
-        lifecycle("{} JavaExec command: {}", prefix, args.toString(javaToolsJar));
+        info("{} JavaExec command: {}", prefix, args.toString(javaToolsJar));
 
         final var out = new ByteArrayOutputStream();
         final var err = new ByteArrayOutputStream();
@@ -57,31 +56,34 @@ public class JavaExecLauncher extends XtcLauncher {
         return result;
     }
 
+    String readXdkVersionFromJar(final File jar) {
+        return readXdkVersionFromJar(logger, prefix, jar);
+    }
+
+    static String readXdkVersionFromJar(final Logger logger, final String prefix, final File jar) {
+        if (jar == null) {
+            return null;
+        }
+        try (final var jarFile = new JarFile(jar)) {
+            final Manifest m = jarFile.getManifest();
+            final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
+            if (implVersion == null) {
+                throw new IOException("Invalid manifest entries found in " + jar.getAbsolutePath());
+            }
+            logger.info("{} Detected valid javatools.jar: {} (XTC Manifest Version: {})", prefix, jar.getAbsolutePath(), implVersion);
+            return implVersion.toString();
+        } catch (final IOException e) {
+            logger.error("{} Expected " + jar.getAbsolutePath() + " to be a jar file, with a readable manifest: {}", prefix, e.getMessage());
+            return null;
+        }
+    }
+
     private boolean isJavaToolsJar(final File file) {
         final boolean ok = "jar".equalsIgnoreCase(getFileExtension(file)) &&
                 file.getName().startsWith(JAVATOOLS_ARTIFACT_ID) &&
                 readXdkVersionFromJar(file) != null;
         info("{} isJavaToolsJar({}) = {}", prefix, file.getAbsolutePath(), ok);
         return ok;
-    }
-
-    private String readXdkVersionFromJar(final File jar) {
-        if (jar == null) {
-            return null;
-        }
-        try (final var jis = new JarInputStream(new FileInputStream(jar))) {
-            final Manifest mf = jis.getManifest();
-            final Object mainClass = mf.getMainAttributes().get(Attributes.Name.MAIN_CLASS);
-            final Object implVersion = mf.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
-            if (mainClass == null || implVersion == null) {
-                return null;
-            }
-            info("{} Detected valid javatools.jar: {} (XTC Manifest Version: {})", prefix, jar.getAbsolutePath(), implVersion);
-            return implVersion.toString();
-        } catch (final IOException e) {
-            error("{} Expected " + jar.getAbsolutePath() + " to be a jar file, with a readable manifest: {}", prefix, e.getMessage());
-            return null;
-        }
     }
 
     private boolean identical(final File f1, final File f2) {
