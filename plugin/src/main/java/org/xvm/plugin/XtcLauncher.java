@@ -37,10 +37,28 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
             }
             return this;
         }
+
+        @Override
+        public String toString() {
+            return "{exitValue=" + exitValue + ", failure=" + error + "}";
+        }
     }
 
-    static XtcLauncher create(final XtcProjectDelegate delegate, final String mainClassName, final boolean fork) {
-        if (fork) {
+    static String nativeLauncherFor(final XtcProjectDelegate delegate, final String mainClassName) {
+        return switch (mainClassName) {
+            case XtcCompileTask.XTC_COMPILER_CLASS_NAME -> "xtc";
+            case XtcRunTask.XTC_RUNNER_CLASS_NAME -> "xec";
+            default -> throw delegate.buildException("Unknown launcher for corresponding class: " + mainClassName);
+        };
+    }
+
+    static XtcLauncher create(final XtcProjectDelegate delegate, final String mainClassName, final boolean isFork, final boolean isNativeLauncher) {
+        if (isNativeLauncher) {
+            assert isFork : "For option for native launcher will be ignored. A native process is always forked.";
+            delegate.warn("{} The XTC plugin does not yet support using the native launcher.", delegate.prefix()); // TODO: Verify this works.
+            return new NativeBinaryLauncher(delegate, nativeLauncherFor(delegate, mainClassName));
+        }
+        if (isFork) {
             return new JavaExecLauncher(delegate);
         }
         return new BuildThreadLauncher(delegate, mainClassName);

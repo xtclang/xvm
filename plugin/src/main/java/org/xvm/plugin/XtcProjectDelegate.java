@@ -68,10 +68,12 @@ import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
  */
 public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
+    // TODO add a logger mode where a more detailed output is written.
+
     public XtcProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         super(project, component);
 
-        // TODO: Fix the JavaTools resolution code, which is a big hacky right now.
+        // TODO: Fix the JavaTools resolution code, which is a bit hacky right now.
         //   Enable calling the Launcher from the plugin to e.g. verify if an .x file defines a module
         //     instead of relying on "top .x file level"-layout for module definitions.
     }
@@ -84,11 +86,12 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         project.getPluginManager().apply(JavaPlugin.class);
         project.getComponents().add(component);
 
-        // TODO: xtc toplevel dsl with e.g. "run from local classpath".
+        // Add xtc extension.
+        // TODO: Later move any non-specific task flags, like "fork = <boolean>" here, and it will be applied to all tasks.
+        xtcExtension();
 
         // Ensure extensions for configuring the xtc and xec exist.
         xtcCompileExtension();
-
         xtcRuntimeExtension();
 
         // This is all config phase. Warn if a project isn't versioned when the XTC plugin is applied, so that we
@@ -101,7 +104,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         createResolutionStrategy();
         createVersioningTasks();
 
-        lifecycle("{} [xtc-plugin] Finished {}::apply; Successfully applied XTC Plugin to project: '{}:{}:{}')", prefix, getClass().getSimpleName(), project.getGroup(), project.getName(), project.getVersion());
+        info("{} [xtc-plugin] Finished {}::apply; Successfully applied XTC Plugin to project: '{}:{}:{}')", prefix, getClass().getSimpleName(), project.getGroup(), projectName, project.getVersion());
         return null;
     }
 
@@ -162,13 +165,13 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         if (group.isEmpty() || Project.DEFAULT_VERSION.equals(version)) {
             error("{} Has not been properly versioned (group={}, version={})", prefix, group, version);
         }
-        return group + ':' + project.getName() + ':' + version;
+        return group + ':' + projectName + ':' + version;
     }
 
     private void createVersioningTasks() {
         tasks.register(XTC_VERSION_TASK_NAME, task -> {
             task.setGroup(XTC_VERSION_GROUP_NAME);
-            task.setDescription("Display XTC version for plugin, and sanity check its application.");
+            task.setDescription("Display XTC version for project, and sanity check its application.");
             task.doLast(t -> lifecycle("{} '{}' XTC Semantic Version: '{}'",
                 prefix, t.getName(), project.getVersion(), getSemanticVersion()));
         });
@@ -176,18 +179,13 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         tasks.register(XTC_VERSIONFILE_TASK_NAME, task -> {
             task.setGroup(XTC_VERSION_GROUP_NAME);
             task.setDescription("Generate a file containing the XDK/XTC version under the build tree.");
-            final var version = buildDir.dir(XDK_VERSION_PATH.toLowerCase());
-            task.getOutputs().dir(version);
+            final var version = buildDir.file(XDK_VERSION_PATH);
+            task.getOutputs().file(version);
             task.doLast(t -> {
                 final var semanticVersion = getSemanticVersion();
                 lifecycle("{} Writing version information: {}", prefix, semanticVersion);
                 try {
-                    final File dest = version.get().getAsFile();
-                    if (dest.exists() && dest.isDirectory() || dest.mkdirs()) {
-                        Files.writeString(version.get().file(XDK_VERSION_PATH).getAsFile().toPath(), semanticVersion);
-                        return;
-                    }
-                    throw buildException("Failed to access and/or create destination directory: " + dest.getAbsolutePath());
+                    Files.writeString(version.get().getAsFile().toPath(), semanticVersion);
                 } catch (final IOException e) {
                     throw buildException("I/O error when writing version file: '" + e.getMessage() + '\'', e);
                 }
@@ -318,7 +316,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         project.artifacts(artifactHandler -> {
             final var location = getXdkContentsDir();
             artifactHandler.add(XDK_CONFIG_NAME_CONTENTS, location, artifact -> {
-                info("Adding outgoing XDK contents artifact to project {} {} builtBy {} (dir).", prefix, location.get(), extractTask.getName());
+                info("{} Adding outgoing XDK contents artifact to project {} ({}) builtBy {} (dir).", prefix, projectName, location.get(), extractTask.getName());
                 artifact.builtBy(extractTask);
                 artifact.setType(ArtifactTypeDefinition.DIRECTORY_TYPE);
             });
@@ -405,16 +403,16 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         /*
          * The Java sourceSets and the application of the Java plugin modifies the life cycle.
          * We may have to extend the compileClasspath and runtimeClasspath for the Java plugin with XTC
-         * stuff to get the compilation properly hooked up.
+         * stuff to get the compilation properly hooked up, but this seems to work right now:
          *
          *   Tasks:
          *      processResources
          *      processTestResources
          *      clean
          *      clean<TaskName>
-         *      compileJava <- tasks that contribute to compilation classpath, including jars on classpath via project eps>
+         *      compileXtc <- tasks that contribute to compilation classpath, including jars on classpath via project eps>
          *      classes <- compileJava, processResources
-         *      compileTestJava <- classes, tasks that contribute to testClassPath
+         *      compileTestXtc <- classes, tasks that contribute to testClassPath, by default in the sourceSet.test.xtc { .. } dirs: i.e. src/test/x and build/xdk/test/xtc (for the binaries) or the sourceSet.test.getOutput()
          *      testClasses <- compileTestJava, processTestResources
          *      test <- testClasses, and all tasks that produce the runtime classpath
          *
@@ -444,11 +442,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void checkProjectIsVersioned() {
         if (UNSPECIFIED.equalsIgnoreCase(project.getVersion().toString())) {
-            project.getLogger().lifecycle("WARNING: project {} has unspecified version.", prefix);
+            lifecycle("WARNING: project {} has unspecified version.", prefix);
         }
     }
 
-    // TODO: Handle rest results, conflicts etc.
     String getXtcSourceDirectoryRootPath(final SourceSet sourceSet) {
         return "src/" + sourceSet.getName() + '/' + XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
     }
@@ -495,7 +492,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             info("{} Scanning file collection: filesFrom: {} {}, files: {}", prefix, name, config.getState(), files.getFiles());
             fc = fc.plus(files);
         }
-        fc.getAsFileTree().forEach(it -> info("{}  RESOLVED fileTree '{}'", prefix, it.getAbsolutePath()));
+        fc.getAsFileTree().forEach(it -> info("{}    RESOLVED fileTree '{}'", prefix, it.getAbsolutePath()));
         return fc;
     }
 
@@ -613,11 +610,16 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         }
     }
 
-    public XtcCompilerExtension xtcCompileExtension() {
+    @SuppressWarnings("UnusedReturnValue")
+    XtcExtension xtcExtension() {
+        return ensureExtension(XTC_LANGUAGE_NAME, DefaultXtcExtension.class);
+    }
+
+    XtcCompilerExtension xtcCompileExtension() {
         return ensureExtension(XTC_EXTENSION_NAME_COMPILER, DefaultXtcCompilerExtension.class);
     }
 
-    public XtcRuntimeExtension xtcRuntimeExtension() {
+    XtcRuntimeExtension xtcRuntimeExtension() {
         return ensureExtension(XTC_EXTENSION_NAME_RUNTIME, DefaultXtcRuntimeExtension.class);
     }
 }

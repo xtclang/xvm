@@ -12,9 +12,11 @@ plugins {
     java
 }
 
+private val enablePreview = enablePreview()
+
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("java.jdk", "17").toInt())
+        val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("org.xvm.java.jdk", XdkBuildLogic.DEFAULT_JAVA_BYTECODE_VERSION).toInt())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             throw buildException("Error in Java toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
@@ -24,13 +26,14 @@ java {
     }
 }
 
-private val enablePreview : Boolean = getXdkProperty("java.enablePreview", "false").toBoolean()
-if (enablePreview) {
-    logger.warn("$prefix WARNING; project has Java preview features enabled.")
+testing {
+    suites {
+        @Suppress("UnstableApiUsage") val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+        }
+    }
 }
 
-// Note: make sure to use configureEach for any task collection modified through withType.
-// Otherwise, the task collection will always be configured, even if they aren't used in a particular build.
 tasks.withType<JavaExec>().configureEach {
     logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain)) // Or the plugin breaks
@@ -43,10 +46,10 @@ tasks.withType<JavaExec>().configureEach {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    val lint = getXdkProperty("java.lint", "false").toBoolean()
-    val maxErrors = getXdkProperty("java.maxErrors", "0").toInt()
-    val maxWarnings = getXdkProperty("java.maxWarnings", "0").toInt()
-    val warningsAsErrors = getXdkProperty("java.warningsAsErrors", "false").toBoolean()
+    val lint = getXdkProperty("org.xvm.java.lint", "false").toBoolean()
+    val maxErrors = getXdkProperty("org.xvm.java.maxErrors", "0").toInt()
+    val maxWarnings = getXdkProperty("org.xvm.java.maxWarnings", "0").toInt()
+    val warningsAsErrors = getXdkProperty("org.xvm-java.warningsAsErrors", "false").toBoolean()
 
     if (!warningsAsErrors) {
         logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best-practice (Enable -Werror).")
@@ -80,7 +83,7 @@ tasks.withType<JavaCompile>().configureEach {
     options.isDeprecation = lint
     options.encoding = UTF_8.toString()
     doLast {
-        logger.info("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
+        logger.lifecycle("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
     }
 }
 
@@ -101,10 +104,21 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-testing {
-    suites {
-        @Suppress("UnstableApiUsage") val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter()
+val readManifest by tasks.registering {
+    doLast {
+        val archive = configurations["compileClasspath"].filter {
+            // This will be list of resolved jars, so filter on the jar name.
+            it.name.startsWith("commons-lang3")
         }
+        val version = resources.text.fromArchiveEntry(archive, "META-INF/MANIFEST.MF")
+        println(version.asString())
     }
+}
+
+fun enablePreview(): Boolean {
+    val enablePreview = getXdkProperty("java.enablePreview", "false").toBoolean()
+    if (enablePreview) {
+        logger.warn("$prefix WARNING; project has Java preview features enabled.")
+    }
+    return enablePreview
 }

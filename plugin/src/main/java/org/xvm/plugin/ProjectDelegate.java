@@ -1,5 +1,6 @@
 package org.xvm.plugin;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
@@ -21,21 +22,28 @@ import org.gradle.api.tasks.TaskContainer;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.xvm.plugin.Constants.XTC_MODULE_FILE_EXTENSION;
 
 public abstract class ProjectDelegate<T, R> {
     private static final String DEFAULT_VERSION_CATALOG_NAME = "libs";
+
     private static final boolean LOG_ALL_LEVELS_TO_STDERR;
+    private static final boolean LOG_ALL_LEVELS_TO_BUILD_FILE;
 
     static {
-        final String logAll = System.getenv("XTC_LOG_STDERR");
-        LOG_ALL_LEVELS_TO_STDERR = Boolean.parseBoolean(logAll) || Boolean.parseBoolean(System.getProperty("XTC_LOG_STDERR"));
+        LOG_ALL_LEVELS_TO_STDERR = queryProperty("XTC_LOG_STDERR", false); // or system property xtc.log.stderr = ...
+        LOG_ALL_LEVELS_TO_BUILD_FILE = queryProperty("XTC_LOG_FILE", false); // or system property xtc.log.file = ...
     }
 
     protected final Project project;
+    protected final String projectName;
     protected final String prefix;
     protected final ObjectFactory objects;
     protected final Logger logger;
@@ -49,6 +57,7 @@ public abstract class ProjectDelegate<T, R> {
     protected final ExtraPropertiesExtension extra;
     protected final ExtensionContainer extensions;
     protected final VersionCatalogsExtension versionCatalogExtension;
+    protected final List<File> logFiles;
 
     @SuppressWarnings("unused")
     ProjectDelegate(final Project project) {
@@ -57,6 +66,7 @@ public abstract class ProjectDelegate<T, R> {
 
     ProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         this.project = project;
+        this.projectName = project.getName();
         this.prefix = prefix();
         this.objects = project.getObjects();
         this.layout = project.getLayout();
@@ -70,9 +80,56 @@ public abstract class ProjectDelegate<T, R> {
         this.versionCatalogExtension = extensions.findByType(VersionCatalogsExtension.class);
         this.component = component;
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
+        this.logFiles = new ArrayList<>();
 
         // add a property to the existing environment.
         extra.set("logPrefix", prefix);
+        project.setProperty("logPrefix", prefix); // TODO Allowed?
+    }
+
+    private static boolean queryProperty(final String envKey, final boolean defaultValue) {
+        final var envValue = System.getenv(envKey);
+        final var propKey = envKey.replace("_", ".").toLowerCase();
+        final var propValue = System.getProperty(propKey);
+        if (envValue == null && propValue == null) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(envKey) || Boolean.parseBoolean(propKey);
+    }
+
+    private Gradle rootGradle() {
+        Gradle gradle = project.getGradle();
+        while (gradle.getParent() != null) {
+            gradle = gradle.getParent();
+        }
+        // TODO: Add Gradle.useLogger, with a project prefixed logger.
+        return gradle;
+    }
+
+    private File logFileFull() {
+        return new File(rootGradle().getRootProject().getLayout().getBuildDirectory().get().getAsFile(), "build-xdk.log");
+    }
+
+    private File logFile() {
+        return new File(layout.getBuildDirectory().get().getAsFile(), "build-" + projectName + ".log");
+    }
+
+    private void logToFiles(final LogLevel level, final String msg) {
+        if (LOG_ALL_LEVELS_TO_BUILD_FILE) {
+            if (logFiles.isEmpty()) {
+                logFiles.add(logFileFull());
+                logFiles.add(logFile());
+            }
+            logFiles.forEach(log -> {
+                try (final var out = new PrintWriter(new FileWriter(log, true), true)) {
+                    final String hash = "0x" + Integer.toHexString(gradle.hashCode());
+                    final long pid = ProcessHandle.current().pid();
+                    out.println(hash + ' ' + pid + ' ' + level.name() + ": " + msg);
+                } catch (final IOException e) {
+                    throw new GradleException(prefix + " Failed to write log files to. " + logFile().getAbsolutePath() + " and/or " + logFileFull().getAbsolutePath(), e);
+                }
+            });
+        }
     }
 
     XtcBuildException buildException(final String msg) {
@@ -83,6 +140,7 @@ public abstract class ProjectDelegate<T, R> {
         if (LOG_ALL_LEVELS_TO_STDERR) {
             error(msg);
         }
+        logToFiles(LogLevel.ERROR, msg);
         return XtcBuildException.buildException(logger, prefix + ": " + msg, cause);
     }
 
@@ -107,6 +165,7 @@ public abstract class ProjectDelegate<T, R> {
         if (LOG_ALL_LEVELS_TO_STDERR) {
             System.err.println(msg);
         }
+        logToFiles(level, msg);
         logger.log(level, msg);
     }
 
@@ -216,6 +275,7 @@ public abstract class ProjectDelegate<T, R> {
         return Character.toUpperCase(string.charAt(0)) + string.substring(1);
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     protected final R apply() {
         return apply(null);
     }

@@ -13,8 +13,8 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "0.4.63"
-xtcplugin = "0.4.63"
+xdk = "0.4.41"
+xtcplugin = "0.4.41"
 xdkgroup = "org.xvm"
 
 kohttp = "0.12.0"
@@ -24,7 +24,8 @@ xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtcplugin" }
 tasktree = { id = "com.dorongold.task-tree", version = "2.1.1" }
 download = { id = "de.undercouch.download", version = "5.5.0" }
 versions = { id = "com.github.ben-manes.versions", version = "0.49.0" }
-shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
+#shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
+#nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
 
 [libraries]
 javatools = { module = "org.xvm:javatools", version.ref = "xdk" }

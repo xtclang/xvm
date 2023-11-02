@@ -46,7 +46,7 @@ public abstract class XtcCompileTask extends SourceTask {
         this.prefix = project.prefix();
         this.sourceSet = sourceSet;
         this.extCompiler = project.xtcCompileExtension();
-        this.launcher = XtcLauncher.create(project, XTC_COMPILER_CLASS_NAME, getIsFork().get());
+        this.launcher = XtcLauncher.create(project, XTC_COMPILER_CLASS_NAME, getIsFork().get(), getUseNativeLauncher().get());
         configureTask();
     }
 
@@ -92,6 +92,11 @@ public abstract class XtcCompileTask extends SourceTask {
     @Input
     public Property<Boolean> getFork() {
         return extCompiler.getFork();
+    }
+
+    @Input
+    Property<Boolean> getUseNativeLauncher() {
+        return extCompiler.getUseNativeLauncher();
     }
 
     @Input
@@ -185,7 +190,9 @@ public abstract class XtcCompileTask extends SourceTask {
         }
         sourceFiles.forEach(args::addRaw);
 
-        launcher.apply(args);
+        final var result = launcher.apply(args);
+        result.rethrowFailure();
+
         // TODO: A little bit kludgy, but the outputFilename property in the xtcCompile extension as some directory vs file issue (a bug).
         renameOutputs();
     }
