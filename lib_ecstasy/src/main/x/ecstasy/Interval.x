@@ -33,6 +33,23 @@ mixin Interval<Element extends immutable Sequential>
     }
 
     /**
+     * Determine the first and last value that exist in the range.
+     *
+     * @return True iff the interval is not empty
+     * @return (conditional) the first value in the range
+     * @return (conditional) the last value in the range
+     */
+    conditional (Element, Element) effectiveLimits() {
+        if (empty) {
+            return False;
+        }
+
+        return descending
+            ? (True, effectiveUpperBound, effectiveLowerBound)
+            : (True, effectiveLowerBound, effectiveUpperBound);
+    }
+
+    /**
      * Determine the lowest value that could exist in the range. Note that the value may not
      * actually exist in the range, because the upper bound may preclude it, as would occur in an
      * integer range of `(0, 1)`, for example.
@@ -58,7 +75,8 @@ mixin Interval<Element extends immutable Sequential>
      */
     Boolean empty.get() {
         try {
-            return lowerBound.stepsTo(upperBound) - (lowerExclusive ? 1 : 0) - (upperExclusive ? 1 : 0) >= 0;
+            return 0 > lowerBound.stepsTo(upperBound) - (lowerExclusive ? 1 : 0)
+                                                      - (upperExclusive ? 1 : 0);
         } catch (OutOfBounds e) {
             // way too many steps implies "not empty"
             return False;

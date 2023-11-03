@@ -985,34 +985,29 @@ public class ForEachStatement
         Argument argRange = m_exprRValue.generateArgument(ctx, code, true, false, errs);
 
         TypeInfo         infoRange = pool.ensureRangeType(typeSeq).ensureTypeInfo(errs);
-        PropertyConstant idFirst   = findWellKnownProperty(infoRange, "effectiveFirst", errs);
-        PropertyConstant idLast    = findWellKnownProperty(infoRange, "effectiveLast", errs);
+        MethodConstant   idLimits  = findWellKnownMethod(infoRange, "effectiveLimits", errs);
         PropertyConstant idDescend = findWellKnownProperty(infoRange, "descending", errs);
 
-        assert idFirst != null && idLast != null && idDescend != null;
+        if (idLimits == null || idDescend == null)
+            {
+            return false;
+            }
 
+        Register regCond       = code.createRegister(pool.typeBoolean());
         Register regFirstValue = code.createRegister(typeSeq);
+        Register regLastValue  = code.createRegister(typeSeq);
+        code.add(new Var(regCond));
         code.add(new Var(regFirstValue));
-        code.add(new P_Get(idFirst, argRange, regFirstValue));
-
-        Register regLastValue = code.createRegister(typeSeq);
         code.add(new Var(regLastValue));
-        code.add(new P_Get(idLast, argRange, regLastValue));
+        code.add(new Invoke_0N(argRange, idLimits,
+                    new Argument[] {regCond, regFirstValue, regLastValue}));
+
+        // check if the interval is empty
+        code.add(new JumpFalse(regCond, getEndLabel()));
 
         Register regDescend = code.createRegister(pool.typeBoolean());
         code.add(new Var(regDescend));
         code.add(new P_Get(idDescend, argRange, regDescend));
-
-        // check if the interval is empty
-        Label labelCheckDescending  = new Label("check_descending" + getLabelId());
-        Label labelLoop             = new Label("loop" + getLabelId());
-
-        code.add(new JumpTrue(regDescend, labelCheckDescending));
-        code.add(new JumpGt(regFirstValue, regLastValue, getEndLabel(), typeSeq)); // r1 > r2 => empty
-        code.add(new Jump(labelLoop));
-        code.add(labelCheckDescending);
-        code.add(new JumpLt(regFirstValue, regLastValue, getEndLabel(), typeSeq)); // r1 < r2 => empty
-        code.add(labelLoop);
 
         // from here down - almost identical to the emitConstantRange logic
 
