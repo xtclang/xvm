@@ -505,6 +505,12 @@ public class FileStructure
             FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
             if (fRuntime)
                 {
+                if (moduleFingerprint.isLinked())
+                    {
+                    // this module is already in our FileStructure as a real, fully loaded and linked
+                    // module
+                    continue;
+                    }
                 listReplace.add(moduleUnlinked);
 
                 // TODO eventually we need to handle the case that these are actual modules and not
