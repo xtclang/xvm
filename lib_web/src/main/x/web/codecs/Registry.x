@@ -95,6 +95,7 @@ service Registry {
         HTML       = Utf8Codec,
         JavaScript = Utf8Codec,
         Text       = Utf8Codec,
+        FormURL    = Utf8Codec,
         ];
 
     /**

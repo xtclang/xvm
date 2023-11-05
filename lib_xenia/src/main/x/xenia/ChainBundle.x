@@ -372,19 +372,27 @@ service ChainBundle {
         }
 
         Object paramValue;
-        switch (param.ParamType.is(_)) {
+        Type   paramType = param.ParamType;
+        switch (paramType.is(_)) {
         case Type<Byte[]>:
             paramValue = body.bytes;
             break;
 
         default:
-            Type type = param.ParamType;
-            if (Codec<type.DataType> codec := registry.findCodec(body.mediaType, type)) {
+            if (Codec<paramType.DataType> codec := registry.findCodec(body.mediaType, paramType)) {
                 paramValue = codec.decode(body.bytes);
-                break;
+                if (String formatName ?= param.format) {
+                    if (Format format := registry.findFormat(formatName, paramType),
+                               paramValue.is(String)) {
+                        paramValue = format.decode(paramValue);
+                        break;
+                    }
+                } else {
+                    break;
+                }
             }
 
-            throw new IllegalState($"Unsupported BodyParam type: \"{param.ParamType}\"");
+            throw new IllegalState($"Unsupported BodyParam type: \"{paramType}\"");
         }
 
         return values.add(paramValue.as(param.ParamType));
