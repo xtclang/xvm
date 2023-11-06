@@ -24,13 +24,10 @@ Can drop the env lookup I think.
 public class ClassPart extends Part {
   private final HashMap<String,TCon> _tcons; // String->TCon mapping
   public final LitCon _path;                 // File name compiling this file
-  final Part.Format _f;         // Class, Interface, Mixin, Enum, Module, Package
+  public final Part.Format _f; // Class, Interface, Mixin, Enum, Module, Package
 
   public ClassPart _super; // Super-class.  Note that "_par" field is the containing Package, not the superclass
 
-  ClassPart[] _mixes;             // List of incorporated mixins.
-
-  
   // A list of "extra" features about Classes: extends, implements, delegates
   public final Contrib[] _contribs;
   
@@ -76,12 +73,6 @@ public class ClassPart extends Part {
         c.link( repo );
         if( c._comp==Extends )
           _super = ((ClzCon)c._tContrib).clz();
-        else if( c._comp==Incorporates || c._comp==Annotation ) {
-          ClassPart mix = ((ClzCon)c._tContrib).clz();
-          if( _mixes==null ) _mixes = new ClassPart[1];
-          else _mixes = Arrays.copyOfRange(_mixes,0,_mixes.length+1);
-          _mixes[_mixes.length-1] = mix;          
-        }
       }
   }
 
