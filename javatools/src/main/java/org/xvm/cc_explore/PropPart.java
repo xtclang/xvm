@@ -13,6 +13,7 @@ public class PropPart extends Part {
   public final Const.Access _access;
   public TCon _con;
   public Const _init;
+  public short _order;          // Order of properties in sythentic methods for compares
   
   // A list of "extra" features about Properties
   public final Contrib[] _contribs;

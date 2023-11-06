@@ -2,34 +2,27 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.XEC;
+import org.xvm.cc_explore.cons.Const;
 
 class PropertyAST extends AST {
   public String _prop;
   static PropertyAST make( XClzBuilder X ) {
-    AST lhs = ast_term(X);    
-    String prop = XClzBuilder.value_tcon(X.con());
-    // TODO: KEEP TYPE FROM LHS
-    // Property is class-local
-    if( lhs._type==X._type )
-      lhs = null;
-    return new PropertyAST( lhs, prop);
+    AST lhs = ast_term(X);
+    Const tc = X.con();
+    String prop = XClzBuilder.value_tcon(tc);
+    XType type = XType.xtype(tc,false);
+    // Property is class-local, no need for class name
+    if( lhs._type==X._type ) lhs = null;
+    return new PropertyAST( lhs, type, prop);
   }
   
-  private PropertyAST( AST lhs, String prop ) {
+  private PropertyAST( AST lhs, XType type, String prop ) {
     super(new AST[]{lhs});
     _prop = prop;
-    if( lhs != null ) _type = lhs._type;
+    _type = type;
   }
 
-  @Override XType _type() {
-    if( _prop.equals("size") ) {
-      _type=null;
-      return XType.LONG; // Size get is a long for all types
-    }
-    if( _prop.equals("console") && _kids[0]==null )
-      return XType.XCONSOLE;
-    throw XEC.TODO();
-  }
+  @Override XType _type() { return _type; } // Already set
   @Override String name() { return _prop; }
   
   @Override AST rewrite() {
