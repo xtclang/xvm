@@ -17,7 +17,7 @@ public class RelPart extends ClassPart {
     return "["+n1+","+n2+"]";
   }
 
-  @Override Part search(String s, Part p) {
+  @Override Part search(String s, boolean into) {
     Part c1 = _p1.child(s);
     Part c2 = _p2.child(s);
     return _op.search(c1,c2);

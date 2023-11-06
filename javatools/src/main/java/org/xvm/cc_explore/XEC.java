@@ -126,7 +126,6 @@ public class XEC {
     }
     // Link the method constant pools
     void cons() {
-      VISIT.clear();
       for( ModPart mod : values() )
         mod.cons(this);
     }
