@@ -53,8 +53,9 @@ public abstract class XProp extends XClz {
         MMethodPart mm = (MMethodPart)pp._name2kid.get(name);
         MethodPart meth = (MethodPart)mm._name2kid.get(name);
         XClzBuilder X =  new XClzBuilder(mod,sb);
-        X.jmethod(meth,pname+"$"+meth._name);
-      }
-    
+        assert meth._name.equals("->");
+        assert pp._name2kid.size()==1;
+        X.jmethod(meth,pname+"$calc");
+      }    
   }
 }

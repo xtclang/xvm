@@ -105,17 +105,18 @@ public class XClzBuilder {
   // Java Class body; can be nested (static inner class)
   private void jclass_body( ClassPart clz ) {
     String java_class_name = java_class_name(clz._name);
-    boolean top_level = _mod!=null;
-    if( !top_level ) _sb.i();
+    if( !_top ) _sb.i();
     _sb.p("public ");
-    if( !top_level ) _sb.p("static ");
-    _sb.p("class ").p(java_class_name).p(" extends XRunClz {").nl().ii();
+    if( !_top ) _sb.p("static ");
+    _sb.p("class ").p(java_class_name).p(" extends ");
+    _sb.p(_top ? "XRunClz" : "XClz");
+    _sb.p(" {").nl().ii();
 
     // Required constructor to inject the container
-    if( top_level )
+    if( _top )
       _sb.ip("public ").p(java_class_name).p("( Container container ) { super(container); }").nl();
     
-    // Look for a module init.  This will become the Java <clinit>
+    // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)clz.child("construct");
     MethodPart construct = (MethodPart)mm.child(mm._name);
     if( construct != null ) {
@@ -124,9 +125,14 @@ public class XClzBuilder {
       // Skip common empty constructor
       if( !construct.is_empty_function() ) {
         _sb.nl();
-        _sb.ip("static {").nl();
-        ast(construct).jcode(_sb );
-        _sb.ip("}").nl().nl();
+        if( _top ) {
+          _sb.ip("static {").nl();
+          ast(construct).jcode(_sb );
+          _sb.ip("}").nl().nl();
+        } else {
+          _sb.i();
+          jmethod_body(construct,java_class_name);
+        }
       }
     }
 
@@ -138,8 +144,12 @@ public class XClzBuilder {
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
         _sb.nl();
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
-        if( mmp._name.equals("run") ) run = meth;
-        jmethod(meth,meth._name);
+        if( meth == null && clz._f == Part.Format.CONST ) {
+          XConst.make_meth(clz,mmp._name,_sb);
+        } else {
+          if( mmp._name.equals("run") ) run = meth; // Save the top-level run method
+          jmethod(meth,meth._name);
+        }
       } else if( part instanceof PackagePart ) {
         // Self module is OK
       } else if( part instanceof PropPart pp ) {
@@ -157,7 +167,7 @@ public class XClzBuilder {
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.
     // - make a main() which forwards to the arg-run
-    if( top_level && run != null && run._args != null ) {
+    if( _top && run != null && run._args != null ) {
       _sb.ip("public void run() { run(new Ary<String>(new String[0])); }").nl();
       _sb.ip("public void main(String[] args) {").nl().ii();
       _sb.ip(" run( new Ary<String>(args) );").nl().di();
@@ -165,7 +175,7 @@ public class XClzBuilder {
     }
 
     // End the class body
-    _sb.di().p("}").nl();    
+    _sb.di().ip("}").nl();    
   }
 
   // Emit a Java string for this MethodPart.
@@ -185,6 +195,15 @@ public class XClzBuilder {
     } else {
       throw XEC.TODO(); // Multi-returns will need much help
     }
+    jmethod_body(m,mname);
+  }
+
+  // Name, argument list, body:
+  //
+  // ...method_name( int arg0, String arg1, ...) {
+  //   ...indented_body
+  //   }
+  public void jmethod_body( MethodPart m, String mname ) {
     // Argument list
     _sb.p(mname).p("( ");
     XType[] xargs = XType.xtypes(m._args);
@@ -197,8 +216,11 @@ public class XClzBuilder {
       _sb.unchar(2);
     }
     _sb.p(" ) ");
-    // Body    
-    ast(m).jcode(_sb);
+    // Body
+    AST ast = ast(m);
+    if( !(ast instanceof BlockAST) )
+      ast = new BlockAST(ast);
+    ast.jcode(_sb);
     _sb.nl();
 
     // Popped back to the original args
@@ -277,7 +299,7 @@ public class XClzBuilder {
     }
   }
 
-  static String java_class_name( String xname ) {
+  public static String java_class_name( String xname ) {
     return "J"+xname;
   }
 
