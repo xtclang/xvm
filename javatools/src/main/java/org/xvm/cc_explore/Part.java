@@ -57,6 +57,7 @@ abstract public class Part {
   // have the kids yet, we can't really do a Visitor pattern here.
   final void parseKids( CPool X ) {
     int cnt = X.u31();          // Number of kids
+    short order=0;              // Order of properties loaded from disk
     for( int i=0; i<cnt; i++ ) {
       int n = X.u8();
       Part kid;
@@ -68,13 +69,15 @@ abstract public class Part {
         // Tok.
         kid = Format.fromFlags(n).parse(this,X.xget(), n, null, X);
       } else {
-        kid = null;
         throw XEC.TODO();
       }
       // if the child is a method, it can only be contained by a MultiMethodPart
       assert !(kid instanceof MethodPart) || (this instanceof MMethodPart);
       // Insert name->kid mapping
       putkid(kid._name,kid);
+      // Record the order of synthetic properties, used to order synthetic `compare` fields
+      if( kid instanceof PropPart pp && (pp._nFlags & Part.SYNTHETIC_BIT)!=0 )
+        pp._order = order++;
       // Here we could be lazy on the child's children, but instead are always eager.
       int len = X.u31();        // Length of serialized nested children
       if( len > 0 )             // If there are recursively more children
