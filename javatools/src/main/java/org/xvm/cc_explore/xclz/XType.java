@@ -200,7 +200,6 @@ public abstract class XType {
   public static Base RANGEII= Base.make("RangeII");
   public static Base STRING = Base.make("String");
   public static Base STRINGBUFFER = Base.make("StringBuffer");
-  public static Base XCONSOLE= Base.make("XConsole");
 
   // Java primitives or primitive classes
   public static Base BOOL = Base.make("boolean");
@@ -259,7 +258,8 @@ public abstract class XType {
     Base jt = UNBOX.get(this);
     return jt==null ? this : jt;
   } 
-  public String ztype() { return XBOX.containsKey(this) ? "0" : "null"; }
+  public String ztype() { return primeq() ? "0" : "null"; }
+  public boolean primeq() { return XBOX.containsKey(this); }
  
 
   // Legacy interface returning a string
@@ -389,6 +389,10 @@ public abstract class XType {
         name = pmeth._name+"$"+meth._name;
       return Base.make(name);
     }
+
+    // Property constant
+    if( tc instanceof PropCon prop )
+      return xtype(((PropPart)prop.part())._con,false);
 
     if( tc instanceof SingleCon con0 )
       // TODO: Keep ModPart; needed for e.g. Property lookup.

@@ -48,7 +48,7 @@ class BinOpAST extends AST {
     if( _op0.equals("..<") ) return new NewAST(_kids,XType.RANGEIE,null);
     // Generally Java needs to use equals for refs and == is only for prims
     if( _op0.equals("==") && !(_kids[0] instanceof ConAST con && "null".equals(con._con)) ) {
-      if( needs_equals(_kids[0]) || needs_equals(_kids[1]) )
+      if( !_kids[0]._type.primeq() || !_kids[1]._type.primeq() )
         return new InvokeAST("equals",XType.BOOL,_kids[0],_kids[1]).do_type();
     }
     if( _op0.equals("<=>") )
@@ -92,12 +92,6 @@ class BinOpAST extends AST {
     AST nchk = new BinOpAST("!=","",XType.BOOL,asgn, zero );
     // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
     return new TernaryAST( nchk, _kids[0], _kids[1]).do_type();
-  }
-  
-  
-  // Boxed types (Long vs long) needs equals vs ==
-  static boolean needs_equals(AST k) {
-    return (k._type.ztype().charAt(0)!='0');
   }
   
   @Override SB jcode( SB sb ) {

@@ -152,6 +152,7 @@ public abstract class AST {
     case NewExpr      ->      NewAST.make(X);
     case NotExpr      ->    UniOpAST.make(X,"!",null);
     case NotNullExpr  ->    UniOpAST.make(X,"ELVIS",null);
+    case OuterExpr    ->    OuterAST.make(X);
     case PostDecExpr  ->    UniOpAST.make(X,null,"--");
     case PostIncExpr  ->    UniOpAST.make(X,null,"++");
     case PreDecExpr   ->    UniOpAST.make(X,"--",null);

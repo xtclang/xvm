@@ -501,11 +501,11 @@ module TestMisc {
     //    AnyValue bar = new AnyValue(1, "bar");
     //    assert foo == bar;
     //}
-    //
-    //const Point(Int x, Int y) {
-    //    @Lazy(() -> x*x + y*y) Int hypo;
-    //}
-    //
+
+    const Point(Int x, Int y) {
+        @Lazy(() -> x*x + y*y) Int hypo;
+    }
+
     //const NamedPoint(String name, Int x, Int y)
     //        extends Point(2*y, x + 1) {
     //    @Override

@@ -5,14 +5,15 @@ import org.xvm.cc_explore.XEC;
 import java.util.Arrays;
 
 class MultiAST extends AST {
+  final boolean _expr;
   static MultiAST make(XClzBuilder X, boolean expr) {
     int len = X.u31();
     AST[] kids = new AST[len];
     for( int i=0; i<len; i++ )
       kids[i] = expr ? ast_term(X) : ast(X);
-    return new MultiAST(kids);
+    return new MultiAST(expr,kids);
   }
-  MultiAST( AST... kids ) { super(kids); }
+  MultiAST( boolean expr, AST... kids ) { super(kids); _expr = expr; }
   
   @Override XType _type() {
     XType kid0 = _kids[0]._type;
@@ -47,15 +48,16 @@ class MultiAST extends AST {
   }
   
   @Override public void jpre(SB sb) {
-    if( _kids.length > 1 )
-      sb.p("(");
+    if( _expr ) 
+      if( _kids.length > 1 )
+        sb.p("(");
   }
   @Override public void jmid(SB sb, int i) {
     if( _kids.length > 1 )
-      sb.p(") && (");
+      sb.p(_expr ? ") && (" : "; ");
   }
   @Override public void jpost(SB sb) {
     if( _kids.length > 1 )
-      sb.unchar(5);
+      sb.unchar( _expr ? 5 : 2); // Undo ") && (" or "; " from jmid
   }
 }
