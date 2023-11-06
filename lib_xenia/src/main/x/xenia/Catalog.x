@@ -276,6 +276,10 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
     private static void scanClasses(Class[] classes, ClassInfo[] classInfos, Class[] sessionMixins,
                              Set<String> declaredPaths) {
         for (Class child : classes) {
+            if (child.annotatedBy(Abstract)) {
+                continue;
+            }
+
             if (AnnotationTemplate webServiceAnno := child.annotatedBy(WebService)) {
                 Argument[] args = webServiceAnno.arguments;
                 assert !args.empty;
