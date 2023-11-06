@@ -46,7 +46,8 @@ public abstract class XProp extends XClz {
     sb.p("return ").p(pname).p("; }").nl();
 
     // void prop$set(Type p) { prop=p; }
-    sb.ip("void ").p(pname).p("$set( ").p(jtype).p(" p ) { ").p(pname).p(" = p; }").nl();
+    if( ((ClassPart)pp._par)._f != Part.Format.CONST )
+      sb.ip("void ").p(pname).p("$set( ").p(jtype).p(" p ) { ").p(pname).p(" = p; }").nl();
 
     if( pp._name2kid != null )
       for( String name : pp._name2kid.keySet() ) {
