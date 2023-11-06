@@ -165,65 +165,6 @@ public abstract class Const {
     // -------------------------------------------------------------------------------------
     Format() { this(null); }
     Format(String sPackage) { _package = sPackage; }
-    //public Format next() { return Format.valueOf(this.ordinal() + 1); }
-    
-    ///**
-    // * @return true if a corresponding Constant could be used as a terminal type
-    // */
-    //public boolean isTypeable() {
-    //  return switch (this) {
-    //  case Module, Package, Class, Typedef, Property, TypeParameter, FormalTypeChild,
-    //    DynamicFormal, ThisClass, ParentClass, ChildClass, DecoratedClass, NativeClass,
-    //    UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass
-    //    -> true;
-    //  default -> false;
-    //  };
-    //}
-    //
-    ///**
-    // * @return fully qualified Ecstasy class name corresponding to this enum value
-    // */
-    //public String getEcstasyName() {
-    //  return _package == null ? name() : _package + '.' + name();
-    //}
-    //
-    ///**
-    // * @param pool the ConstantPool to use
-    // *
-    // * @return the Ecstasy type for this format enum value
-    // */
-    //public TypeConstant getType(ConstantPool pool) {
-    //    return switch (this) {
-    //    case Int      -> pool.typeInt();
-    //    case CInt8    -> pool.typeCInt8();
-    //    case Int8     -> pool.typeInt8();
-    //    case CInt16   -> pool.typeCInt16();
-    //    case Int16    -> pool.typeInt16();
-    //    case CInt32   -> pool.typeCInt32();
-    //    case Int32    -> pool.typeInt32();
-    //    case CInt64   -> pool.typeCInt64();
-    //    case Int64    -> pool.typeInt64();
-    //    case CInt128  -> pool.typeCInt128();
-    //    case Int128   -> pool.typeInt128();
-    //    case CIntN    -> pool.typeCIntN();
-    //    case IntN     -> pool.typeIntN();
-    //    case UInt     -> pool.typeUInt();
-    //    case CUInt8   -> pool.typeCUInt8();
-    //    case UInt8    -> pool.typeUInt8();
-    //    case CUInt16  -> pool.typeCUInt16();
-    //    case UInt16   -> pool.typeUInt16();
-    //    case CUInt32  -> pool.typeCUInt32();
-    //    case UInt32   -> pool.typeUInt32();
-    //    case CUInt64  -> pool.typeCUInt64();
-    //    case UInt64   -> pool.typeUInt64();
-    //    case CUInt128 -> pool.typeCUInt128();
-    //    case UInt128  -> pool.typeUInt128();
-    //    case CUIntN   -> pool.typeCUIntN();
-    //    case UIntN    -> pool.typeUIntN();
-    //    case Dec      -> pool.typeDec();
-    //    default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());
-    //    };
-    //}
 
     /**
      * Look up a Format enum by its ordinal, without exposing the values array.
