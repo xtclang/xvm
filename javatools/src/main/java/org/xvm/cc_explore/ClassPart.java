@@ -86,23 +86,40 @@ public class ClassPart extends Part {
   }
 
   
-  @Override public Part child(String s) {  return search(s,null);  }
+  // Hunt this clz for name, plus recursively any Implements/Extends/Delegates
+  // contribs.  "Into" contribs are search 1 level deep only.  Order matters on
+  // the contribs, as the most specific hit should come first - but there may
+  // be more hits later with more general names.
+  //
+  // E.g.
+  // Looking for "Entry" in SkipListMap.
+  // SkipListMap implements OrderedMap implements "Entry" - as an @Override interface.
+  // SkipListMap incorporates CopyableMap.ReplicableCopier which implements CopyableMap
+  // which implements Map which implements "Entry".
+  // Map.Entry is the parent interface; OrderedMap.Entry is the child interface, it
+  // extends Map.Entry as well as other extends.
 
-  // Hunt this clz for name, plus recursively any Implements contribs.
-  // Assert only 1 found
-  Part search( String s, Part p ) {
-    Part p0 = _name2kid==null ? null : _name2kid.get(s);
-    if( p0!=null ) {
-      assert p==null || p==p0;
-      return p0;
+  @Override public Part child(String s) {  return search(s,true);  }
+
+  Part search( String s, boolean into ) {
+    Part p = _name2kid==null ? null : _name2kid.get(s);
+    if( p!=null ) return p;
+
+    // Search contributions, perhaps recursively.  Check them all; should be
+    // exactly 1 hit but for an assert confirm there is only one.
+    if( _contribs == null ) return null;
+    for( Contrib c : _contribs ) {
+      switch( c._comp ) {
+      case Into: if( !into ) continue; break;
+      case Incorporates: into=false; break;
+      case Implements: case Extends: case Delegates: break;
+      default: continue;
+      }
+      c._tContrib.link(null);
+      p = ((ClzCon)c._tContrib).clz().search(s,into);
+      if( p!=null ) return p;
     }
-    if( _contribs != null )
-      for( Contrib c : _contribs )
-        if( c._comp==Implements || c._comp==Into || c._comp==Extends || c._comp==Delegates ) {
-          c._tContrib.link(null);
-          p = ((ClzCon)c._tContrib).clz().search(s,p);
-        }
-    return p;
+    return null;
   }
   
   // Mangle a generic type name
