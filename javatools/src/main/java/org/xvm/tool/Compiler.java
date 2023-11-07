@@ -628,12 +628,16 @@ public class Compiler
 
     public ModuleRepository getLibraryRepo()
         {
-        return prevLibs;
+        return prevLibs == null
+                ? configureLibraryRepo(options().getModulePath())
+                : prevLibs;
         }
 
     public ModuleRepository getOutputRepo()
         {
-        return prevOutput;
+        return prevOutput == null
+                ? getLibraryRepo()
+                : prevOutput;
         }
 
 
