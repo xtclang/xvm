@@ -149,8 +149,6 @@ public class ModuleInfo
                                 sourceDir     = fileSpec;
                                 sourceFile    = new File(sourceDir, fileName + ".x");
                                 sourceStatus  = Status.NotExists;
-                                sourceIsTree  = new File(sourceDir, fileName).exists();
-                                sourceContent = Content.Invalid;
                                 }
                             else
                                 {
@@ -158,9 +156,9 @@ public class ModuleInfo
                                 sourceDir     = bestGuess.getParentFile();
                                 sourceStatus  = Status.Exists;
                                 fileName      = removeExtension(bestGuess.getName());
-                                sourceIsTree  = new File(sourceDir, fileName).exists();
-                                sourceContent = Content.Invalid;
                                 }
+                            sourceIsTree  = new File(sourceDir, fileName).exists();
+                            sourceContent = Content.Invalid;
                             break Search;
                             }
                         }
@@ -547,25 +545,25 @@ public class ModuleInfo
             if (fromSrc != null)
                 {
                 // e.g. src/main/x
-                File   nextdir = fromSrc.getParentFile();
+                File   nextDir = fromSrc.getParentFile();
                 String dirName = fromSrc.getName();
                 if (dirName.equalsIgnoreCase("x") || dirName.equalsIgnoreCase("ecstasy"))
                     {
-                    fromSrc = nextdir;
-                    nextdir = fromSrc.getParentFile();
+                    fromSrc = nextDir;
+                    nextDir = fromSrc.getParentFile();
                     dirName = fromSrc.getName();
                     }
 
                 if (dirName.equalsIgnoreCase("main") || dirName.equalsIgnoreCase("test"))
                     {
-                    fromSrc = nextdir;
-                    nextdir = fromSrc.getParentFile();
+                    fromSrc = nextDir;
+                    nextDir = fromSrc.getParentFile();
                     dirName = fromSrc.getName();
                     }
 
                 if (dirName.equalsIgnoreCase("src") || dirName.equalsIgnoreCase("source"))
                     {
-                    fromSrc = nextdir;
+                    fromSrc = nextDir;
                     }
                 }
 
@@ -573,11 +571,11 @@ public class ModuleInfo
             if (fromBin != null)
                 {
                 // e.g. ./build/ or ./target/
-                File   nextdir = fromBin.getParentFile();
+                File   nextDir = fromBin.getParentFile();
                 String dirName = dirBin.getName();
                 if (dirName.equalsIgnoreCase("build") || dirName.equalsIgnoreCase("target"))
                     {
-                    fromBin = nextdir;
+                    fromBin = nextDir;
                     }
                 }
 
@@ -1163,7 +1161,7 @@ public class ModuleInfo
 
         for (File child : children.values())
             {
-            if (dir.isDirectory())
+            if (child.isDirectory())
                 {
                 visitTree(child, ext, visitor);
                 }
@@ -1548,9 +1546,7 @@ public class ModuleInfo
             return sb.toString();
             }
 
-        /**
-         * @return the ResourceDir for this node; never null
-         */
+        @Override
         public ResourceDir resourceDir()
             {
             if (m_resdir == null)
@@ -1769,7 +1765,7 @@ public class ModuleInfo
             Node parent = parent();
             return parent == null
                     ? '/' + name() + '/'
-                    : parent.toString() + name() + '/';
+                    : parent + name() + '/';
             }
 
         // ----- fields ------------------------------------------------------------------------
@@ -1875,9 +1871,7 @@ public class ModuleInfo
                     : type().getCategory().getId().TEXT + ' ' + name();
             }
 
-        /**
-         * @return the ResourceDir for this node; never null
-         */
+        @Override
         public ResourceDir resourceDir()
             {
             if (m_resdir == null)
@@ -2140,7 +2134,7 @@ public class ModuleInfo
                     Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
                     return parser.parseModuleNameIgnoreEverythingElse();
                     }
-                catch (CompilerException | IOException e) {}
+                catch (CompilerException | IOException ignore) {}
                 }
             else if (isExplicitCompiledFile(name))
                 {
@@ -2148,7 +2142,7 @@ public class ModuleInfo
                     {
                     return new FileStructure(file).getModuleName();
                     }
-                catch (IOException e) {}
+                catch (IOException ignore) {}
                 }
             }
 
