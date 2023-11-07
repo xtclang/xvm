@@ -105,11 +105,14 @@ public class XClzBuilder {
   // Java Class body; can be nested (static inner class)
   private void jclass_body( ClassPart clz ) {
     String java_class_name = java_class_name(clz._name);
-    if( !_top ) _sb.i();
-    _sb.p("public ");
-    if( !_top ) _sb.p("static ");
-    _sb.p("class ").p(java_class_name).p(" extends ");
-    _sb.p(_top ? "XRunClz" : "XClz");
+    _sb.ip("// XTC ").p(_top ? "module ": "class ").p(clz._path._str).p(":").p(clz._name).p(" as Java class ").p(java_class_name).nl();
+
+    if( _top ) {
+      _sb.p("public class ").p(java_class_name).p(" extends XRunClz");
+    } else {
+      _sb.ip("public static class ").p(java_class_name).p(" extends ");
+      _sb.p(clz._f==Part.Format.CONST ? "XConst" : "XClz");
+    }
     _sb.p(" {").nl().ii();
 
     // Required constructor to inject the container
@@ -175,7 +178,9 @@ public class XClzBuilder {
     }
 
     // End the class body
-    _sb.di().ip("}").nl();    
+    _sb.di().ip("}").nl();
+    // Install for future reference
+    XType.install(clz,java_class_name);
   }
 
   // Emit a Java string for this MethodPart.
@@ -244,6 +249,19 @@ public class XClzBuilder {
       }
   }
 
+  public void jmethod_body_inline( MethodPart meth, String mname ) {
+    if( meth._name2kid != null ) throw XEC.TODO();
+    AST ast = ast(meth);
+    if( ast instanceof BlockAST blk ) {
+      if( blk._kids.length>1 ) throw XEC.TODO();
+      ast = blk._kids[0];
+    }
+    if( ast instanceof ReturnAST ret )
+      ast = ret._kids[0];
+    ast.jcode(_sb);
+  }
+  
+  
   public AST ast( MethodPart m ) {
     // Build the AST from bytes
     _meth = m;
@@ -409,8 +427,13 @@ public class XClzBuilder {
     }
 
     // Singleton class constants (that are not enums)
-    if( tc instanceof SingleCon con0 )
-      return ASB.p(java_class_name(((ModPart)con0.part())._name));
+    if( tc instanceof SingleCon con0 ) {
+      if( con0.part() instanceof ModPart mod )
+        return ASB.p(java_class_name(mod._name));
+      if( con0.part() instanceof PropPart prop )
+        return ASB.p(XProp.jname(prop)).p("$get()");
+      throw XEC.TODO();
+    }
 
     if( tc instanceof RangeCon rcon ) {
       String ext = rcon._xlo
