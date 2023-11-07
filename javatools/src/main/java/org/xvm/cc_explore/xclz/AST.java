@@ -135,6 +135,7 @@ public abstract class AST {
     case BitNotExpr   ->    UniOpAST.make(X,"~",null);
     case BreakStmt    ->    BreakAST.make(X);
     case CallExpr     ->     CallAST.make(X);
+    case CmpChainExpr -> CmpChainAST.make(X);
     case CondOpExpr   ->    BinOpAST.make(X,false);
     case ContinueStmt -> ContinueAST.make(X);
     case ConvertExpr  ->     ConvAST.make(X);

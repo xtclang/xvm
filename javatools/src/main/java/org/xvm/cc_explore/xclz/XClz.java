@@ -9,6 +9,7 @@ public abstract class XClz {
 
   // Trace
   public static <X extends XClz> X TRACE(X x) { return x; }
+  public static String TRACE(String x) { return x; }
   public static long TRACE(long x) { return x; }
   public static int  TRACE(int  x) { return x; }
 

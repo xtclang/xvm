@@ -7,8 +7,13 @@ import org.xvm.cc_explore.xclz.XClz;
 import org.xvm.cc_explore.xclz.XType;
 import org.xvm.cc_explore.xclz.XClzBuilder;
 
-public abstract class XConst extends XClz {
+public abstract class XConst extends XClz implements Comparable<XConst> {
 
+  abstract public Ordered compare( XConst that );
+  @Override public int compareTo( XConst o ) { return compare(o).ordinal()-1; }
+  public boolean CompLt( XConst that ) { return compare(that)==Ordered.Lesser; }
+
+  
   // Make several fixed constant class methods
   public static void make_meth( ClassPart clz, String methname, SB sb ) {
     switch( methname ) {
@@ -36,8 +41,8 @@ public abstract class XConst extends XClz {
     boolean any=false;
     for( Part p : clz._name2kid.values() )
       if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) ) {
-        boolean xeq = xeq(prop);
-        sb.p(prop._name).p(xeq ? "==" : ".equals(" ).p("that.").p(prop._name).p(xeq ? "" : ")").p(" && ");
+        XType xt = XType.xtype(prop._con,false);
+        xt.do_eq(sb.p(prop._name),"that."+prop._name).p(" && ");
       }
     if( any ) sb.unchar(4);
     else sb.p("true");
@@ -63,9 +68,10 @@ public abstract class XConst extends XClz {
   static void make_compare( ClassPart clz, SB sb ) {
     String clzname = XClzBuilder.java_class_name(clz._name);    
     sb.ip("// Default compare").nl();
-    sb.ip("public Ordered compare( ").p(clzname).p(" that ) {").nl().ii();
-    sb.ip(  "if( this==that ) return Ordered.Equal;").nl();
-    sb.ip(  "Ordered $x;").nl();
+    sb.ip("public Ordered compare( XConst o ) {").nl().ii();
+    sb.ip("if( this==o ) return Ordered.Equal;").nl();
+    sb.ip(clzname).p(" that = (").p(clzname).p(")o;").nl();
+    sb.ip("Ordered $x;").nl();
 
     Ary<PropPart> pps = new Ary<>(PropPart.class);
     for( Part p : clz._name2kid.values() )

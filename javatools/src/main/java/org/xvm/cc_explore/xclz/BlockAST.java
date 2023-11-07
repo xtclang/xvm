@@ -2,10 +2,9 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.util.Ary;
-import java.util.Arrays;
 import java.util.HashMap;
 
-class BlockAST extends AST {
+public class BlockAST extends AST {
   HashMap<XType,Ary<String>> _tmps;
   private int _uid;
   
