@@ -282,7 +282,10 @@ public class Token
         m_id        = newId;
 
         // return the new token
-        return new Token(start, middle, id);
+        Token peeled = new Token(start, middle, id);
+        peeled.noteWhitespace(hasLeadingWhitespace(), false);
+        this.noteWhitespace(false, hasTrailingWhitespace());
+        return peeled;
         }
 
     /**

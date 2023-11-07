@@ -3791,7 +3791,9 @@ public class Parser
                     try (SafeLookAhead attempt = new SafeLookAhead())
                         {
                         params = parseTypeParameterTypeList(true, true);
-                        if (attempt.isClean())
+                        if (attempt.isClean()
+                                // "index<size>>1" is a comparison and a shift, not a type
+                                && (peek().getId() != Id.COMP_GT || peek().hasLeadingWhitespace()))
                             {
                             attempt.keepResults();
                             lEndPos = prev().getEndPosition();
