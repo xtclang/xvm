@@ -1,3 +1,5 @@
+- CP: make DigestAuthenticator.NonceTable into a service
+
 - GG: add support for runtime constants that cross the module line; may need to restore the removed
       delegation logic in ConverterExpression
 
@@ -7,11 +9,6 @@
 
 - CP: add API support for multi-part body, for example (Body.x):
     conditional Body[] multipart() = False;
-
-- GG: improve FileExpression, LiteralExpression for LIT_BINSTR and LIT_STRING to retain the "origin" File
-  and produce one or more FSNodeConstants that the resulting Constant (e.g.: ByteArray or String)
-  optionally depends on; this will allow "upToDate" computation in the Launcher.java to figure out
-  whether a rebuild of the module is required
 
 - GG: add the following method to Tuple
         /**
