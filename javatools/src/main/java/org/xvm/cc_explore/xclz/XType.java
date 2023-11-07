@@ -1,9 +1,11 @@
 package org.xvm.cc_explore.xclz;
 
+import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.*;
 import org.xvm.cc_explore.util.*;
+import org.xvm.cc_explore.xrun.XProp;
 
 import java.util.HashMap;
 import java.util.Arrays;
@@ -15,6 +17,13 @@ public abstract class XType {
   // The intern table
   private static final HashMap<XType,XType> INTERN = new HashMap<>();
 
+  // Compiled
+  private static final HashMap<String,Base> XJMAP = new HashMap<>();
+  static void install(ClassPart clz, String name) {
+    XType old = XJMAP.put(xjkey(clz),Base.make(name));
+    assert old==null;
+  }
+  
   @Override public final String toString() { return str(new SB()).toString(); }
   public SB p(SB sb) { return clz(sb); }
   abstract SB str( SB sb );
@@ -220,7 +229,7 @@ public abstract class XType {
   
   // A set of common XTC classes, and their Java replacements.
   // These are NOT parameterized.
-  static final HashMap<String, Base> XJMAP = new HashMap<>() {{
+  static final HashMap<String, Base> BASE_XJMAP = new HashMap<>() {{
       put("Boolean+ecstasy/Boolean.x",BOOL);
       put("Char+ecstasy/text/Char.x",CHAR);
       put("Console+ecstasy/io/Console.x",CONSOLE);
@@ -234,6 +243,7 @@ public abstract class XType {
       put("String+ecstasy/text/String.x",STRING);
       put("StringBuffer+ecstasy/text/StringBuffer.x",STRINGBUFFER);
     }};
+  private static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
 
   // Convert a Java primitive to the Java object version.
   private static final HashMap<Base, Base> XBOX = new HashMap<>() {{
@@ -258,8 +268,13 @@ public abstract class XType {
     Base jt = UNBOX.get(this);
     return jt==null ? this : jt;
   } 
-  public String ztype() { return primeq() ? "0" : "null"; }
   public boolean primeq() { return XBOX.containsKey(this); }
+  public String ztype() { return primeq() ? "0" : "null"; }
+  
+  // Either "==name" or ".equals(name)"
+  public SB do_eq(SB sb, String name) {
+    return primeq() ? sb.p("==").p(name) : sb.p(".equals(").p(name).p(")");
+  }
  
 
   // Legacy interface returning a string
@@ -295,10 +310,15 @@ public abstract class XType {
         if( clz._name.equals("False") ) return Base.FALSE;
         throw XEC.TODO();
       }
-      String key = clz._name + "+" + clz._path._str;
-      Base val = XJMAP.get(key);
+      // Check the common base classes
+      String xjkey = xjkey(clz);
+      Base val = BASE_XJMAP.get(xjkey);
       if( val!=null )
         return boxed ? val.box() : val;
+      // Check installed classes
+      val = XJMAP.get(xjkey);
+      if( val!=null )
+        return val;
       throw XEC.TODO();
     }
 
@@ -321,7 +341,7 @@ public abstract class XType {
 
       XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true);
       
-      // All the long-based ranges, intervals and interators are just Ranges now.
+      // All the long-based ranges, intervals and iterators are just Ranges now.
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
         if( telem== Base.LONG || telem== Base.JLONG ) return Base.RANGE; // Shortcut class
@@ -398,11 +418,14 @@ public abstract class XType {
     if( tc instanceof PropCon prop )
       return xtype(((PropPart)prop.part())._con,false);
 
-    if( tc instanceof SingleCon con0 )
-      // TODO: Keep ModPart; needed for e.g. Property lookup.
-      // TODO: Then needs a XType.Struct type with fields & sub-types, including prop's
-      return Base.make(XClzBuilder.java_class_name(((ModPart)con0.part())._name));
-
+    if( tc instanceof SingleCon con0 ) {
+      if( con0.part() instanceof ModPart mod )
+        return Base.make(XClzBuilder.java_class_name(mod._name));
+      if( con0.part() instanceof PropPart prop )
+        return Base.make(XProp.jname(prop));
+      throw XEC.TODO();
+    }
+    
     throw XEC.TODO();
   }
 

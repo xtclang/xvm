@@ -18,7 +18,7 @@ module TestMisc {
         testSwitchExpr();
         testSwitchExpr3();
         testSwitchExpr4();
-        //testSwitchNatural();
+        testSwitchNatural();
         testStmtExpr();
         testAssignOps();
 
@@ -275,25 +275,25 @@ module TestMisc {
     }
 
     // Requires nested inner Point class, which is missing the BAST constructor
-    //void testSwitchNatural() {
-    //    console.print("\n** testSwitchNatural()");
-    //
-    //    assert test(new Point(0, 0)) == "min";
-    //    assert test(new Point(2, 2)) == "between";
-    //    assert test(new Point(4, 4)) == "max";
-    //    assert test(new Point(5, 5)) == "outside";
-    //
-    //    static Point MIN = new Point(0, 0);
-    //    static Point MAX = new Point(4, 4);
-    //
-    //    static String test(Point p) {
-    //        return switch (p) {
-    //            case MIN: "min";
-    //            case MAX: "max";
-    //            default : MIN < p < MAX ? "between" : "outside";
-    //        };
-    //    }
-    //}
+    void testSwitchNatural() {
+        console.print("\n** testSwitchNatural()");
+    
+        assert test(new Point(0, 0)) == "min";
+        assert test(new Point(2, 2)) == "between";
+        assert test(new Point(4, 4)) == "max";
+        assert test(new Point(5, 5)) == "outside";
+    
+        static Point MIN = new Point(0, 0);
+        static Point MAX = new Point(4, 4);
+    
+        static String test(Point p) {
+            return switch (p) {
+                case MIN: "min";
+                case MAX: "max";
+                default : MIN < p < MAX ? "between" : "outside";
+            };
+        }
+    }
 
     void testStmtExpr() {
         console.print("\n** testStmtExpr()");

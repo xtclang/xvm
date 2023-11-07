@@ -1,8 +1,6 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.XEC;
-import java.util.Arrays;
 
 class MultiAST extends AST {
   final boolean _expr;
