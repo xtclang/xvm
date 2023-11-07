@@ -1424,7 +1424,7 @@ public class ModuleInfo
                     {
                     errs.log(err);
                     }
-                m_errs = null;
+                deferred.clear();
                 }
             }
 
