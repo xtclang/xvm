@@ -24,6 +24,8 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
 
+import org.xvm.tool.ResourceDir;
+
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -4013,15 +4015,15 @@ public class Parser
                     next();
                     }
 
-                Token   tokFile = parsePath();
-                String  sFile   = (String) tokFile.getValue();
-                boolean fDir    = !fContents && sFile.endsWith("/");
-                long    lEnd    = tokFile.getEndPosition();
-                File    file    = m_source.resolvePath(sFile);
+                Token   tokFile  = parsePath();
+                String  sFile    = (String) tokFile.getValue();
+                boolean fDir     = !fContents && sFile.endsWith("/");
+                long    lEnd     = tokFile.getEndPosition();
+                Object  resource = m_source.resolvePath(sFile);
 
                 Token   tokData = null;
                 boolean fErr    = false;
-                if (fContents || file != null && file.exists() && (fDir || file.canRead()))
+                if (fContents || resource != null && (fDir || resource instanceof File))
                     {
                     if (fBin)
                         {
@@ -4068,7 +4070,7 @@ public class Parser
 
                 return fContents
                         ? new LiteralExpression(tokData)
-                        : new FileExpression(null, tokFile, file);
+                        : new FileExpression(null, tokFile, resource);
                 }
             }
         }
@@ -4515,20 +4517,20 @@ public class Parser
                 boolean fReqDir  = sFile.endsWith("/") || !fReqFile;
                 long    lStart   = type.getStartPosition();
                 long    lEnd     = tokFile.getEndPosition();
-                File    file     = m_source.resolvePath(sFile);
+                Object  resource = m_source.resolvePath(sFile);
 
-                if (file == null || !file.exists()              // path must exist
-                        || fReqFile && fReqDir                  // can't be both a file and a dir
-                        || fReqDir  && !file.isDirectory()      // dir is expected
-                        || fReqFile && !file.canRead())         // file is expected
+                if (resource == null                                        // path must exist
+                        || fReqFile && fReqDir                              // can't be both
+                        || fReqDir  && !(resource instanceof ResourceDir)   // dir is expected
+                        || fReqFile && !(resource instanceof File))         // file is expected
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                    if (file == null)
+                    if (resource == null)
                         {
                         throw new CompilerException("no such file: " + sFile);
                         }
                     }
-                return new FileExpression(type, tokFile, file);
+                return new FileExpression(type, tokFile, resource);
                 }
 
             default:

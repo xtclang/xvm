@@ -5,19 +5,21 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import java.nio.file.Path;
-
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
-import org.xvm.util.Handy;
+import org.xvm.tool.ModuleInfo.FileNode;
+
 
 import static org.xvm.compiler.Lexer.isLineTerminator;
 
 import static org.xvm.util.Handy.appendString;
+import static org.xvm.util.Handy.checkReadable;
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
+import static org.xvm.util.Handy.readFileBytes;
 import static org.xvm.util.Handy.readFileChars;
+import static org.xvm.util.Handy.toPathString;
 
 
 /**
@@ -40,32 +42,32 @@ public class Source
         }
 
     /**
-     * Construct a Source directly from a String of XTC source code.
-     *
-     * @param sScript  the XTC source code, as a String
-     */
-    public Source(String sScript, int cDepth)  // TODO not depth but ResourceDir
-        {
-        this(sScript.toCharArray());
-        m_cDirDepth = cDepth;
-        }
-
-    /**
      * Construct a Source by reading the XTC source code from a file.
      *
-     * @param file  the File containing the XTC source code to load
-     *
-     * @param cDepth  the number of directories up the source code can include files from
+     * @param file the File containing the XTC source code to load
      *
      * @throws IOException
      */
-    public Source(File file, int cDepth)  // TODO not depth but ResourceDir
+    public Source(File file)
             throws IOException
         {
         this(readFileChars(file));
-        m_file      = file;
-        m_cDirDepth = cDepth;
-        setFileName(file.getPath());
+        m_file = file;
+        }
+
+    /**
+     * Construct a Source object that represents the source code associated with the specified Node
+     * originating from a ModuleInfo. This constructor allows the Source object to access the
+     * resource directories and files that are associated with the source code by the ModuleInfo.
+     *
+     * @param node  a Node that came from a ModuleInfo
+     */
+    public Source(FileNode node)
+        {
+        m_file = node.file();
+        m_ach  = node.content();
+        m_cch  = m_ach.length;
+        m_node = node;
         }
 
     /**
@@ -125,6 +127,11 @@ public class Source
      */
     public String getFileName()
         {
+        if (m_sFile == null && m_file != null)
+            {
+            m_sFile = m_file.getPath();
+            }
+
         return m_sFile;
         }
 
@@ -137,172 +144,20 @@ public class Source
         }
 
     /**
-     * Specify the name of the file that the source comes from. This is automatically configured by
-     * the File-based constructor.
-     *
-     * @param sFile  the file name
-     */
-    public void setFileName(String sFile)
-        {
-        if (m_sFile == null)
-            {
-            m_sFile = sFile;
-            }
-        else if (!m_sFile.equals(sFile))
-            {
-            throw new IllegalStateException("file name cannot be modified");
-            }
-        }
-
-    /**
      * Determine the File referenced from inside another source file using the "File" or "Dir"
      * BNF constructions.
      *
      * @param sFile  a string put together from identifier tokens, "." tokens, "/" tokens, "./"
      *               tokens, and "../" tokens, following the rules defined in the Ecstasy BNF
      *
-     * @return the File for the file or directory, or null if unresolvable
+     * @return a File, a ResourceDir, or null if unresolvable
      */
-    public File resolvePath(String sFile)
+    public Object resolvePath(String sFile)
         {
-        if (m_file == null || sFile.length() == 0)
-            {
-            return null;
-            }
-
-        File    file  = m_file.getParentFile();
-        boolean fRoot = sFile.startsWith("/");
-        m_cUp = 0;
-        if (fRoot)
-            {
-            // it's not absolute; it's relative to the directory containing the module
-            while (m_cUp < m_cDirDepth)
-                {
-                file = file.getParentFile();
-                assert file != null;
-                ++m_cUp;
-                }
-            sFile = sFile.substring(1);
-            }
-
-        if (sFile.length() == 0)
-            {
-            return file.isDirectory() ? file : null;
-            }
-
-        boolean fRequireDir = sFile.endsWith("/");
-        if (fRequireDir)
-            {
-            sFile = sFile.substring(0, sFile.length()-1);
-            }
-
-        String[] segments = Handy.parseDelimitedString(sFile, '/');
-        for (String segment : segments)
-            {
-            if (segment.length() == 0)
-                {
-                return null;
-                }
-
-            if (segment.equals("."))
-                {
-                // nothing to do
-                }
-            else if (segment.equals(".."))
-                {
-                file = file.getParentFile();
-                if (file == null || ++m_cUp > m_cDirDepth)
-                    {
-                    return null;
-                    }
-                }
-            else
-                {
-                if (file.exists() && !file.isDirectory())
-                    {
-                    return null;
-                    }
-
-                file = new File(file, segment);
-                --m_cUp;
-                }
-            }
-
-        if (!file.exists())
-            {
-            // the file may be in the "symmetrical" resources directory
-            File fileSrc = getSubDir("x");
-            File fileRes = getSubDir("resources");
-            if (fileSrc != null && fileRes != null)
-                {
-                if (fRoot)
-                    {
-                    file = new File(fileRes, sFile);
-                    }
-                else
-                    {
-                    Path path    = file.toPath().normalize();
-                    Path pathSrc = fileSrc.toPath().normalize();
-                    Path pathRes = fileRes.toPath().normalize();
-                    Path pathRel = pathSrc.relativize(path);
-                    file = pathRes.resolve(pathRel).toFile();
-                    }
-                if (!file.exists())
-                    {
-                    return null;
-                    }
-                }
-            }
-
-        return fRequireDir && !file.isDirectory() ? null : file;
+        return sFile != null && sFile.length() > 0 && m_node != null
+                ? m_node.resolveResource(sFile)
+                : null;
         }
-    private transient int m_cUp;    // Java needs multiple return values. This is a hack.
-
-    /**
-     * @return the directory containing the module, or null if it cannot be determined
-     */
-    private File getTopDir()
-        {
-        if (m_file == null)
-            {
-            return null;
-            }
-
-        File file = m_file.getAbsoluteFile().getParentFile();
-        for (int i = 0, c = m_cDirDepth; i < c; ++i)
-            {
-            file = file.getParentFile();
-            if (file == null)
-                {
-                return null;
-                }
-            }
-        return file;
-        }
-
-    /**
-     * @param sChild the name of the child directory
-     *
-     * @return the specified directory at the same level as the top directory, if it exists
-     */
-    private File getSubDir(String sChild)
-        {
-        File file = getTopDir();
-        if (file != null && file.exists() && file.isDirectory())
-            {
-            file = file.getParentFile();
-            if (file != null && file.exists() && file.isDirectory())
-                {
-                file = new File(file, sChild);
-                if (file.exists() && file.isDirectory())
-                    {
-                    return file;
-                    }
-                }
-            }
-        return null;
-        }
-
 
     /**
      * Load a file (as text) referenced from inside another source file.
@@ -315,20 +170,10 @@ public class Source
     public Source includeString(String sFile)
             throws IOException
         {
-        File file = resolvePath(sFile);
-        if (file == null)
+        Object resource = resolvePath(sFile);
+        if (resource instanceof File file && checkReadable(file))
             {
-            return null;
-            }
-
-        if (file.equals(m_file))
-            {
-            return clone();
-            }
-
-        if (file.exists() && file.isFile() && file.canRead())
-            {
-            return new Source(file, m_cDirDepth - m_cUp);
+            return new Source(file);
             }
 
         return null;
@@ -345,15 +190,10 @@ public class Source
     public byte[] includeBinary(String sFile)
             throws IOException
         {
-        File file = resolvePath(sFile);
-        if (file == null)
+        Object resource = resolvePath(sFile);
+        if (resource instanceof File file && checkReadable(file))
             {
-            return null;
-            }
-
-        if (file.exists() && file.isFile() && file.canRead())
-            {
-            return Handy.readFileBytes(file);
+            return readFileBytes(file);
             }
 
         return null;
@@ -798,6 +638,11 @@ public class Source
     private boolean m_fEscapesEncountered;
 
     /**
+     * The compiler ModuleInfo FileNode that this Source originates from.
+     */
+    private FileNode m_node;
+
+    /**
      * The file name that the source comes from.
      */
     private String m_sFile;
@@ -806,9 +651,4 @@ public class Source
      * The file that the source comes from.
      */
     private File m_file;
-
-    /**
-     * The directory depth within the module of the file that the source comes from.
-     */
-    private int m_cDirDepth;
     }

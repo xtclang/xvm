@@ -3,11 +3,17 @@ package org.xvm.tool;
 
 import java.io.File;
 
+import java.nio.file.attribute.FileTime;
+
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeMap;
 
 import org.xvm.util.Hash;
+
+
+import static org.xvm.compiler.ast.FileExpression.createdTime;
+import static org.xvm.compiler.ast.FileExpression.modifiedTime;
 
 
 /**
@@ -31,7 +37,7 @@ public class ResourceDir
      */
     public ResourceDir(File[] resourcePath)
         {
-        this.resourcePath = resourcePath = resourcePath.clone();
+        this(null, "", resourcePath.clone());
 
         for (File file : resourcePath)
             {
@@ -46,6 +52,17 @@ public class ResourceDir
                         "Resource location \"" + file + "\" does not exist");
                 }
             }
+        }
+
+    /**
+     * @param resourcePath  the non-null array of non-null File objects indicating the sequence
+     *                      of directory (or single file) locations to use as the resource path
+     */
+    protected ResourceDir(ResourceDir parent, String name, File[] resourcePath)
+        {
+        this.parent       = parent;
+        this.name         = name;
+        this.resourcePath = resourcePath;
         }
 
     /**
@@ -71,7 +88,7 @@ public class ResourceDir
                 File resDir = new File(parentDir, "resources");
                 if (resDir.isDirectory())
                     {
-                    return new ResourceDir(resDir);
+                    return new ResourceDir(new File[] {srcDir, resDir});
                     }
 
                 // don't go "up" past the project directory
@@ -84,7 +101,84 @@ public class ResourceDir
                 }
             }
 
+        if (srcDir != null)
+            {
+            return new ResourceDir(new File[] {srcDir});
+            }
+
         return NoResources;
+        }
+
+    /**
+     * @return the parent of this ResourceDir, of null iff this is the "root" ResourceDir
+     */
+    public ResourceDir getParent()
+        {
+        return parent;
+        }
+
+    /**
+     * @return the name by which this ResourceDir is known within its parent ResourceDir
+     */
+    public String getName()
+        {
+        return name;
+        }
+
+    /**
+     * @return the creation date/time for the directory itself
+     */
+    public FileTime getCreatedTime()
+        {
+        FileTime created = null;
+        for (File file : resourcePath)
+            {
+            if (file.isDirectory())
+                {
+                FileTime newTime = createdTime(file);
+                if (created == null)
+                    {
+                    created = newTime;
+                    }
+                else if (newTime.compareTo(created) > 0)
+                    {
+                    created = newTime;
+                    }
+                }
+            }
+        return created;
+        }
+
+    /**
+     * @return the modification date/time for the directory itself
+     */
+    public FileTime getModifiedTime()
+        {
+        FileTime modified = null;
+        for (File file : resourcePath)
+            {
+            if (file.isDirectory())
+                {
+                FileTime newTime = modifiedTime(file);
+                if (modified == null)
+                    {
+                    modified = newTime;
+                    }
+                else if (newTime.compareTo(modified) > 0)
+                    {
+                    modified = newTime;
+                    }
+                }
+            }
+        return modified;
+        }
+
+    /**
+     * @return the depth of this ResourceDir, with zero being the "root" ResourceDir
+     */
+    public int getDepth()
+        {
+        return parent == null ? 0 : 1 + parent.getDepth();
         }
 
     /**
@@ -162,7 +256,7 @@ public class ResourceDir
 
         return subdirs == null
                 ? null
-                : new ResourceDir(subdirs.toArray(new File[0]));
+                : new ResourceDir(this, name, subdirs.toArray(new File[0]));
         }
 
     /**
@@ -200,12 +294,15 @@ public class ResourceDir
         for (String name : getNames())
             {
             Object resource = getByName(name);
-            long timestamp = resource instanceof File file
-                    ? file.lastModified()
-                    : ((ResourceDir) resource).getTimestamp();
-            if (timestamp > resourcesTimestamp)
+            if (resource != null)
                 {
-                resourcesTimestamp = timestamp;
+                long timestamp = resource instanceof File file
+                        ? file.lastModified()
+                        : ((ResourceDir) resource).getTimestamp();
+                if (timestamp > resourcesTimestamp)
+                    {
+                    resourcesTimestamp = timestamp;
+                    }
                 }
             }
         return resourcesTimestamp;
@@ -234,6 +331,10 @@ public class ResourceDir
      * A ResourceDir that represents an empty set of resources.
      */
     public static final ResourceDir NoResources = new ResourceDir(new File[0]);
+
+    private final ResourceDir parent;
+
+    private final String name;
 
     private final File[] resourcePath;
     }

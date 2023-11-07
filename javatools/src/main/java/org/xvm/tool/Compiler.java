@@ -21,8 +21,14 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.tool.ModuleInfo.Node;
+
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+
+import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+import static org.xvm.util.Handy.resolveFile;
 
 
 /**
@@ -207,13 +213,13 @@ public class Compiler
         for (ModuleInfo moduleInfo : aTarget)
             {
             log(Severity.INFO, "Loading and parsing sources for module: " + moduleInfo);
-            Node node = loadSourceTree(moduleInfo.getSourceFile(), Stage.Linked);
+            Node node = moduleInfo.getSourceTree(this);
 
             // short-circuit the compilation of any up-to-date modules
-            if (fRebuild || !moduleUpToDate(node, moduleInfo.getBinaryFile()))  // TODO CP use ModuleInfo instead
+            if (fRebuild || !moduleInfo.isUpToDate())
                 {
                 mapTargets.put(moduleInfo.getSourceFile(), node);
-                if (isSystemModule(node))
+                if (moduleInfo.isSystemModule())
                     {
                     ++cSystemModules;
                     }
@@ -270,7 +276,19 @@ public class Compiler
         generateCode(compilers);
         flushAndCheckErrors(allNodes);
 
-        log(Severity.INFO, "Storing results of compilation");
+        if (allNodes.length == 1)
+            {
+            log(Severity.INFO, "Storing results of compilation: " + allNodes[0].moduleInfo().getBinaryFile());
+            }
+        else
+            {
+            log(Severity.INFO, "Storing results of compilation:");
+            for (Node node : allNodes)
+                {
+                ModuleInfo info = node.moduleInfo();
+                log(Severity.INFO, "  " + info.getQualifiedModuleName() + " -> " + info.getBinaryFile());
+                }
+            }
         emitModules(allNodes, repoOutput);
         flushAndCheckErrors(allNodes);
 
@@ -319,17 +337,17 @@ public class Compiler
         ModuleRepository repoBuild = extractBuildRepo(repo);
         for (Node node : allNodes)
             {
-            String name = node.name();
+            // create a module/package/class structure for each dir/file node in the "module tree"
+            var           compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
+            FileStructure struct   = compiler.generateInitialFileStructure();
+            assert struct != null;
+
+            String name = struct.getModuleName();
             if (mapCompilers.containsKey(name))
                 {
                 log(Severity.ERROR, "Duplicate module name: \"" + name + "\"");
                 continue;
                 }
-
-            // create a module/package/class structure for each dir/file node in the "module tree"
-            var           compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
-            FileStructure struct   = compiler.generateInitialFileStructure();
-            assert struct != null;
 
             // hold on to the module compiler
             mapCompilers.put(name, compiler);

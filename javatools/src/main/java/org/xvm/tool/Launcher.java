@@ -11,12 +11,8 @@ import java.nio.file.Paths;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -26,33 +22,27 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.XvmStructure;
-
-import org.xvm.asm.constants.FSNodeConstant;
 
 import org.xvm.compiler.BuildRepository;
-import org.xvm.compiler.CompilerException;
-import org.xvm.compiler.Parser;
-import org.xvm.compiler.Source;
 
-import org.xvm.compiler.ast.Statement;
-import org.xvm.compiler.ast.StatementBlock;
-import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
-import static org.xvm.util.Handy.indentLines;
+import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedString;
+import static org.xvm.util.Handy.resolveFile;
+import static org.xvm.util.Handy.toPathString;
 
 
 /**
@@ -64,6 +54,7 @@ import static org.xvm.util.Handy.quotedString;
  * </li></ul>
  */
 public abstract class Launcher
+        implements ErrorListener
     {
     /**
      * Entry point from the OS.
@@ -98,15 +89,15 @@ public abstract class Launcher
         switch (cmd)
             {
             case "xtc":
+                System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
+                // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
+                // fall through (until the new xtc command is in place)
+            case "xcc":
                 Compiler.main(argv);
                 break;
 
             case "xec":
                 Runner.main(argv);
-                break;
-
-            case "xam":
-                Disassembler.main(argv);
                 break;
 
             default:
@@ -382,7 +373,7 @@ public abstract class Launcher
                 return quotedString((String) oVal);
 
             case File:
-                return filePath((File) oVal);
+                return toPathString((File) oVal);
 
             case Repo:
                 StringBuilder sb    = new StringBuilder();
@@ -397,13 +388,37 @@ public abstract class Launcher
                         {
                         sb.append(':');
                         }
-                    sb.append(file.getPath());
+                    sb.append(toPathString(file));
                     }
                 return sb.toString();
 
             default:
                 throw new IllegalStateException();
             }
+        }
+
+
+    // ----- ErrorListener interface ---------------------------------------------------------------
+
+    @Override public boolean log(ErrorInfo err)
+        {
+        log(err.getSeverity(), err.toString());
+        return isAbortDesired();
+        }
+
+    @Override public boolean isAbortDesired()
+        {
+        return options().isBadEnoughToAbort(m_sevWorst);
+        }
+
+    @Override public boolean hasSeriousErrors()
+        {
+        return m_sevWorst.compareTo(Severity.ERROR) >= 0;
+        }
+
+    @Override public boolean isSilent()
+        {
+        return errorsSuspended();
         }
 
 
@@ -951,7 +966,7 @@ public abstract class Launcher
                                             else if (file.exists())
                                                 {
                                                 log(Severity.ERROR, (file.isDirectory() ? "Directory"
-                                                        : "File") + " not readable: \"" + file + "\"");
+                                                        : "File") + " not readable: " + file);
                                                 }
                                             }
                                         }
@@ -1072,8 +1087,6 @@ public abstract class Launcher
                 }
             return sb.append("    }").toString();
             }
-
-        // ----- internal ----------------------------------------------------------------------
 
         /**
          * For options that are allowed to have multiple values, this will accumulate multiple
@@ -1293,6 +1306,44 @@ public abstract class Launcher
     // ----- file management -----------------------------------------------------------------------
 
     /**
+     * Obtain the module information based on the specified file(s).
+     *
+     * @param fileSpec       the file or directory to analyze, which may or may not exist
+     * @param resourceSpecs  (optional) an array of files and/or directories which represent (in
+     *                       aggregate) the resource path; null indicates that the default resources
+     *                       location should be used, while an empty array explicitly indicates
+     *                       that there is no resource path; as provided to the compiler using
+     *                       the "-rp" command line switch
+     * @param binarySpec     (optional) the file or directory which represents the target of the
+     *                       binary; as provided to the compiler using the "-o" command line switch
+     */
+    public ModuleInfo ensureModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec)
+        {
+        boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
+        if (fCache && moduleCache != null)
+            {
+            ModuleInfo info = moduleCache.get(fileSpec);
+            if (info != null)
+                {
+                return info;
+                }
+            }
+
+        ModuleInfo info = new ModuleInfo(fileSpec, resourceSpecs, binarySpec);
+
+        if (fCache)
+            {
+            if (moduleCache == null)
+                {
+                moduleCache = new HashMap<>();
+                }
+            moduleCache.put(fileSpec, info);
+            }
+
+        return info;
+        }
+
+    /**
      * Validate that the contents of the path are existent directories and/or .xtc files.
      *
      * @param listPath
@@ -1336,12 +1387,13 @@ public abstract class Launcher
     public File validateSourceInput(File file)
         {
         // this is expected to be the name of a file to compile
-        if (!file.exists())
+        if (!file.exists() || file.isDirectory())
             {
-            File fileGuess = sourceFile(file);
-            if (fileGuess != null)
+            ModuleInfo info = ensureModuleInfo(file, null, null);
+            File srcFile = info == null ? null : info.getSourceFile();
+            if (srcFile != null)
                 {
-                return fileGuess;
+                return srcFile;
                 }
             log(Severity.ERROR, "No such source file: \"" + file + "\"");
             }
@@ -1353,13 +1405,6 @@ public abstract class Launcher
         else if (file.isFile() && !file.getName().endsWith(".x"))
             {
             log(Severity.WARNING, "Source file does not use \".x\" extension: \"" + file + "\"");
-            }
-        else if (file.isDirectory())
-            {
-            if (file.listFiles((File f) -> f.isFile() && f.getName().endsWith(".x")).length == 0)
-                {
-                log(Severity.ERROR, "Directory contains no source files: \"" + file + "\"");
-                }
             }
         return file;
         }
@@ -1379,87 +1424,46 @@ public abstract class Launcher
             return;
             }
 
-        if (!file.exists())
+        boolean fSingle = isExplicitCompiledFile(file.getName());
+        if (fSingle && fMulti)
             {
-            File fileParent = file.getParentFile();
-            if (fileParent == null || !fileParent.exists() || fileParent.isDirectory())
-                {
-                // an error may be reported further down
-                file.mkdirs();
-                }
+            log(Severity.ERROR, "The single file " + file
+                    + " is specified, but multiple modules are expected");
+            return;
             }
 
-        if (file.exists() && file.isDirectory())
+        File dir = fSingle ? file.getParentFile() : file;
+        if (!dir.exists())
             {
-            if (!file.canWrite())
-                {
-                log(Severity.ERROR, "Directory \"" + file + "\" can not be written to");
-                }
-            }
-        else if (file.exists() && file.isFile())
-            {
-            if (!file.getName().endsWith(".xtc"))
-                {
-                log(Severity.WARNING, "File \"" + file + "\" does not have the \".xtc\" extension");
-                }
-
-            if (fMulti)
-                {
-                log(Severity.ERROR, "The single file \"" + file
-                        + "\" is specified, but multiple modules are expected");
-                }
-
-            if (!file.canWrite())
-                {
-                log(Severity.ERROR, "File \"" + file + "\" can not be written to");
-                }
-            }
-        else if (file.canWrite() && (file.getParentFile() == null || file.getParentFile().canWrite())
-                && file.getName().endsWith(".xtc"))
-            {
-            // the file doesn't exist, but we can write it, and it's obviously a file name for a
-            // module because it ends with .xtc
-            if (fMulti)
-                {
-                log(Severity.ERROR, "The single file \"" + file
-                        + "\" is specified, but multiple modules are expected");
-                }
-            }
-        else
-            {
-            log(Severity.ERROR, "File or directory \"" + file + "\" can not be written to");
-            }
-        }
-
-    /**
-     * Given a file (or directory) or null, produce a file (or directory) to use. Defaults to the
-     * current working directory.
-     *
-     * @param file  a file, or directory, or null
-     *
-     * @return a resolved file or directory
-     */
-    protected static File resolveFile(File file)
-        {
-        if (file != null)
-            {
-            try
-                {
-                return file.getCanonicalFile();
-                }
-            catch (IOException e)
-                {
-                return file.getAbsoluteFile();
-                }
+            log(Severity.INFO, "Creating directory " + dir);
+            // ignore any errors here; errors would end up being reported further down
+            dir.mkdirs();
             }
 
-        try
+        if (file.exists())
             {
-            return new File(".").getAbsoluteFile().getCanonicalFile();
+            if (!file.isDirectory())
+                {
+                if (!fSingle)
+                    {
+                    log(Severity.WARNING, "File " + file + " does not have the \".xtc\" extension");
+                    }
+
+                if (fMulti)
+                    {
+                    log(Severity.ERROR, "The single file " + file
+                            + " is specified, but multiple modules are expected");
+                    }
+
+                if (!file.canWrite())
+                    {
+                    log(Severity.ERROR, "File " + file + " can not be written to");
+                    }
+                }
             }
-        catch (IOException e)
+        else if (!dir.exists())
             {
-            return new File(".").getAbsoluteFile();
+            log(Severity.ERROR, "Directory " + dir + " is missing");
             }
         }
 
@@ -1473,14 +1477,15 @@ public abstract class Launcher
      *
      * @throws IOException
      */
-    public static List<File> resolvePath(String sPath)
+    protected static List<File> resolvePath(String sPath)
             throws IOException
         {
         List<File> files = new ArrayList<>();
 
-        if (sPath.startsWith("~" + File.separator))
+        if (sPath.length() >= 2 && sPath.charAt(0) == '~'
+                && (sPath.charAt(1) == '/' || sPath.charAt(1) == File.separatorChar))
             {
-            sPath = System.getProperty("user.home") + sPath.substring(1);
+            sPath = System.getProperty("user.home") + File.separatorChar + sPath.substring(2);
             }
 
         if (sPath.indexOf('*') >= 0 || sPath.indexOf('?') >= 0)
@@ -1500,548 +1505,6 @@ public abstract class Launcher
         }
 
     /**
-     * Produce a string describing the path of the passed file.
-     *
-     * @param file  the file to render the path of
-     *
-     * @return a string for display of the file's path
-     */
-    public static String filePath(File file)
-        {
-        String sPath = file.getPath();
-        String sAbs;
-        try
-            {
-            sAbs = file.getCanonicalPath();
-            }
-        catch (IOException e)
-            {
-            sAbs = file.getAbsolutePath();
-            }
-        return sPath.equals(sAbs)
-            ? sPath
-            : sPath + " (" + sAbs + ')';
-        }
-
-    /**
-     * Based on a file, find the file representing the source module.
-     *
-     * @param file  the file or directory to examine
-     *
-     * @return the file containing the module, or null
-     */
-    public File findModule(File file)
-        {
-        if (file.isFile())
-            {
-            // just in case the file is relative to some working
-            // directory, resolve its location
-            file = resolveFile(file);
-
-            if (isModule(file))
-                {
-                return file;
-                }
-
-            file = file.getParentFile();
-            }
-
-        // we're going to have to walk up the directory tree, so
-        // the entire path needs to be resolved
-        file = resolveFile(file);
-
-        while (file != null && file.isDirectory())
-            {
-            // if the directory is "/a/b/c/", then check for a module in the "/a/b/c.x" file
-            String name = file.getName();
-            file = file.getParentFile();
-            File moduleFile = new File(file, name + ".x");
-            if (moduleFile.exists() && moduleFile.isFile())
-                {
-                if (isModule(moduleFile))
-                    {
-                    return moduleFile;
-                    }
-                }
-            }
-
-        return null;
-        }
-
-    /**
-     * Check if the specified file contains a module.
-     *
-     * @param file  the file (NOT a directory) to examine
-     *
-     * @return true iff the file declares a module
-     */
-    protected boolean isModule(File file)
-        {
-        return file.getName().endsWith(".x") && getModuleName(file) != null;
-        }
-
-    /**
-     * Check if the specified file contains a module and if so, return the module's name.
-     *
-     * @param file  the file (NOT a directory) to examine
-     *
-     * @return the module's name if the file declares a module; null otherwise
-     */
-    public String getModuleName(File file)
-        {
-        String sName = m_mapModuleNames.get(file);
-        if (sName != null)
-            {
-            return sName;
-            }
-
-        assert file.isFile() && file.canRead();
-        log(Severity.INFO, "Parsing file: " + file);
-
-        try
-            {
-            Source source = new Source(file, 0);
-            Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
-            sName = parser.parseModuleNameIgnoreEverythingElse();
-            m_mapModuleNames.put(file, sName);
-            return sName;
-            }
-        catch (CompilerException e)
-            {
-            log(Severity.ERROR, "An exception occurred parsing \"" + file + "\": " + e);
-            }
-        catch (IOException e)
-            {
-            log(Severity.ERROR, "An exception occurred reading \"" + file + "\": " + e);
-            }
-
-        return null;
-        }
-
-    /**
-     * Check if the specified source or binary file contains a module and if so, return the module's
-     * name.
-     *
-     * @param file  the file (source or binary) to examine
-     *
-     * @return the module's name if the file declares a module; null otherwise
-     */
-    public static String extractModuleName(File file)
-        {
-        if (file.exists() && file.canRead())
-            {
-            String name = file.getName();
-            if (isExplicitSourceFile(name))
-                {
-                try
-                    {
-                    Source source = new Source(file, 0);
-                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
-                    return parser.parseModuleNameIgnoreEverythingElse();
-                    }
-                catch (CompilerException | IOException e) {}
-                }
-            else if (isExplicitCompiledFile(name))
-                {
-                try
-                    {
-                    return new FileStructure(file).getModuleName();
-                    }
-                catch (IOException e) {}
-                }
-            }
-
-        return null;
-        }
-
-    /**
-     * Determine if the specified module name is an explicit Ecstasy source or compiled module file
-     * name.
-     *
-     * @param sFile  a module name or file name
-     *
-     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
-     */
-    public static boolean isExplicitEcstasyFile(String sFile)
-        {
-        String sExt = getExtension(sFile);
-        return sExt != null && (sExt.equalsIgnoreCase("x") || sExt.equalsIgnoreCase("xtc"));
-        }
-
-    /**
-     * Determine if the specified module name is an explicit Ecstasy source file name.
-     *
-     * @param sFile  a module name or file name
-     *
-     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
-     */
-    public static boolean isExplicitSourceFile(String sFile)
-        {
-        String sExt = getExtension(sFile);
-        return sExt != null && sExt.equalsIgnoreCase("x");
-        }
-
-    /**
-     * Determine if the specified module name is an explicit Ecstasy compiled module file name.
-     *
-     * @param sFile  a module name or file name
-     *
-     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
-     */
-    public static boolean isExplicitCompiledFile(String sFile)
-        {
-        String sExt = getExtension(sFile);
-        return sExt != null && sExt.equalsIgnoreCase("xtc");
-        }
-
-    /**
-     * @param dir  a directory
-     *
-     * @return true iff the directory appears to be a project directory
-     */
-    public static boolean isProjectDir(File dir)
-        {
-        return dir != null && dir.isDirectory() &&
-            (new File(dir, "src").exists() && !new File(dir, "src.x").exists() ||
-             new File(dir, "source").exists() && !new File(dir, "source.x").exists());
-        }
-
-    /** TODO MOVE TO HANDY, add helper that takes File argument
-     * If the passed file name has a "dot extension" such as ".x" or ".xtc" extension, then return
-     * the extension, such as "x" or "xtc"
-     *
-     * @param sFile  the file name
-     *
-     * @return the extension, if the file has an extension; otherwise null
-     */
-    public static String getExtension(String sFile)
-        {
-        int ofDot = sFile.lastIndexOf('.');
-        if (ofDot <= 0)
-            {
-            return null;
-            }
-
-        String sExt = sFile.substring(ofDot + 1);
-        return sExt.indexOf('/') >= 0 || sExt.indexOf(File.pathSeparatorChar) >= 0 ? null : sExt;
-        }
-
-    /** TODO MOVE TO HANDY, add helper that takes File argument
-     * If the passed file name ends with an extension (such as ".x" or a ".xtc"), then return the
-     * file name without the extension.
-     *
-     * @param sFile  the file name, possibly with an extension such as ".x" or ".xtc"
-     *
-     * @return the same file name, but without an extension (if it previously had an extension)
-     */
-    public static String removeExtension(String sFile)
-        {
-        int ofDot = sFile.lastIndexOf('.');
-        if (ofDot <= 0)
-            {
-            return sFile;
-            }
-
-        return sFile.lastIndexOf('/') < ofDot && sFile.indexOf(File.pathSeparatorChar) < ofDot
-                ? sFile.substring(0, ofDot)
-                : sFile;
-        }
-
-    /**
-     * Given a possible module file, try to find the corresponding module source file.
-     * TODO CP get rid of this (or switch it to use ModuleInfo)
-     *
-     * @param fileModule  the module file (either source or compiled)
-     *
-     * @return the module source file, or null if it could not be found
-     */
-    protected File sourceFile(File fileModule)
-        {
-        String sModule = removeExtension(fileModule.getName());
-        File   fileDir = resolveFile(fileModule).getParentFile();
-        File   fileSrc = new File(fileDir, sModule + ".x");
-        if (fileSrc.exists())
-            {
-            return fileSrc;
-            }
-
-        // in case names don't match (since file name for source doesn't have to match module name)
-        fileSrc = findModuleSource(fileDir, sModule);
-        if (checkFile(fileSrc, null))
-            {
-            return fileSrc;
-            }
-
-        // check if we're in the "build" or "dist" directory, and try to navigate to the source
-        // directory using well known conventions
-        if (fileDir.getName().equals("build") || fileDir.getName().equals("dist"))
-            {
-            // try a few more possibilities before giving up
-            String[] asSearchPath = parseDelimitedString(
-                "src,source,src/x,source/x,src/main,source/main,src/main/x,source/main/x", ',');
-            for (String sPath : asSearchPath)
-                {
-                File fileSearchDir = navigateTo(fileDir, sPath);
-                if (fileSearchDir != null && fileSearchDir.isDirectory())
-                    {
-                    fileSrc = findModuleSource(fileSearchDir, sModule);
-                    if (fileSrc != null && fileSrc.exists())
-                        {
-                        return fileSrc;
-                        }
-                    }
-                }
-            }
-
-        return null;
-        }
-
-    /**
-     * Given a possible module file, try to find the actual compiled module binary file.
-     * TODO CP get rid of this (or switch it to use ModuleInfo)
-     *
-     * @param fileModule  the module file (either source or compiled)
-     *
-     * @return the module binary file, or null if it could not be found
-     */
-    protected File binaryFile(File fileModule)
-        {
-        String sModule = removeExtension(fileModule.getName());
-        File   fileDir = resolveFile(fileModule).getParentFile();
-        File   fileBin = new File(fileDir, sModule + ".xtc");
-        if (fileBin.exists())
-            {
-            return fileBin;
-            }
-
-        // in case names don't match (because simple vs qualified names)
-        fileBin = findModuleBinary(fileDir, sModule);
-        if (checkFile(fileBin, null))
-            {
-            return fileBin;
-            }
-
-        // check if we're in the "src" or "source" directory, and try to navigate to the build or
-        // dist directory using well known conventions
-        // TODO verify Compiler command respects these same rules by default (e.g. when no "-o")
-        List<String> listSubs = new LinkedList<>();
-        String       sDir     = fileDir.getName();
-        while (sDir.equals("src") || sDir.equals("source") || sDir.equals("main") || sDir.equals("x"))
-            {
-            if (!sDir.equals("src") && !sDir.equals("source"))
-                {
-                listSubs.add(0, sDir);
-                }
-            fileDir = fileDir.getParentFile();
-            if (fileDir == null)
-                {
-                return null;
-                }
-            sDir = fileDir.getName();
-            }
-
-        // TODO look for both build and dist and use the latest
-        File     fileLatest   = null;
-        String[] asSearchPath = parseDelimitedString("dist,build", ',');
-        for (String sPath : asSearchPath)
-            {
-            File fileSearchDir = navigateTo(fileDir, sPath);
-            if (fileSearchDir != null && fileSearchDir.isDirectory())
-                {
-                fileBin = findModuleBinary(fileSearchDir, sModule, listSubs);
-                if (checkFile(fileBin, null))
-                    {
-                    return fileBin;
-                    }
-                }
-            }
-
-        return null;
-        }
-
-    /** TODO move to handy
-     * Given a starting directory and a sequence of '/'-delimited directory names, obtain the file
-     * or directory indicated.
-     *
-     * @param file   the starting point
-     * @param sPath  a '/'-delimited relative path
-     *
-     * @return the indicated file or directory, or null if it could not be navigated to
-     */
-    protected static File navigateTo(File file, String sPath)
-        {
-        // TODO if File.pathSeparatorChar != '/' do a replace?
-        for (String sPart : parseDelimitedString(sPath, '/'))
-            {
-            if (!file.isDirectory())
-                {
-                return null;
-                }
-
-            file = switch (sPart)
-                {
-                case "."  -> file;
-                case ".." -> resolveFile(file).getParentFile();
-                default   -> new File(file, sPart);
-                };
-
-            if (file == null || !file.exists())
-                {
-                return null;
-                }
-            }
-
-        return file;
-        }
-
-    /**
-     * Given a directory that may contain an arbitrarily named source file containing the specified
-     * module name, search for that source file.
-     *
-     * @param fileDir  a directory that may contain source
-     * @param sModule  the module name (either the short name or the qualified name)
-     *
-     * @return the file that appears to contain the source for the module, or null
-     */
-    protected File findModuleSource(File fileDir, String sModule)
-        {
-        if (fileDir == null || !fileDir.exists() || !fileDir.isDirectory())
-            {
-            return null;
-            }
-
-        // extract the simple name of the module
-        int    ofDot   = sModule.indexOf('.');
-        String sSimple = ofDot < 0 ? sModule : sModule.substring(0, ofDot);
-
-        // check various .x files in the directory to see if they contain the module
-        suspendErrors();
-        try
-            {
-            for (File fileSrc : listFiles(fileDir))
-                {
-                if (fileSrc.isFile() && fileSrc.canRead() && fileSrc.getName().endsWith(".x"))
-                    {
-                    String sCurrent = getModuleName(fileSrc);
-                    if (sCurrent.equals(sModule) || sCurrent.equals(sSimple))
-                        {
-                        return fileSrc;
-                        }
-
-                    ofDot = sCurrent.indexOf('.');
-                    if (ofDot >= 0 && sCurrent.substring(0, ofDot).equals(sSimple))
-                        {
-                        return fileSrc;
-                        }
-                    }
-                }
-            }
-        finally
-            {
-            resumeErrors();
-            }
-
-        return null;
-        }
-
-    /**
-     * Given a directory that may contain the module file for the specified module name, search for
-     * that module file.
-     *
-     * @param fileDir  a directory that may contain a module file
-     * @param sModule  the module name (either the short name or the qualified name)
-     *
-     * @return the file that appears to contain the compiled module, or null
-     */
-    protected File findModuleBinary(File fileDir, String sModule)
-        {
-        return findModuleBinary(fileDir, sModule, null);
-        }
-
-    /**
-     * Given a directory that may contain the module file for the specified module name, search for
-     * that module file.
-     *
-     * @param fileDir   a directory that may contain a module file
-     * @param sModule   the module name (either the short name or the qualified name)
-     * @param listSubs  a list of potential sub-directory names to search
-     *
-     * @return the file that appears to contain the compiled module, or null
-     */
-    protected File findModuleBinary(File fileDir, String sModule, List<String> listSubs)
-        {
-        if (fileDir == null || !fileDir.exists() || !fileDir.isDirectory())
-            {
-            return null;
-            }
-
-        // extract the simple name of the module
-        int    ofDot   = sModule.indexOf('.');
-        String sSimple = ofDot < 0 ? sModule : sModule.substring(0, ofDot);
-
-        // check various .x files in the directory to see if they contain the module
-        for (File fileBin : fileDir.listFiles())
-            {
-            if (fileBin.isFile() && fileBin.canRead() && fileBin.getName().endsWith(".xtc"))
-                {
-                String sCurrent = removeExtension(fileBin.getName());
-                if (sCurrent.equals(sModule) || sCurrent.equals(sSimple))
-                    {
-                    return fileBin;
-                    }
-
-                ofDot = sCurrent.indexOf('.');
-                if (ofDot >= 0 && sCurrent.substring(0, ofDot).equals(sSimple))
-                    {
-                    return fileBin;
-                    }
-                }
-            }
-
-        return null;
-        }
-
-    /**
-     * Evaluate the passed file to make sure that it exists and can be read.
-     *
-     * @param file   the file to check
-     * @param sDesc  a short description of the file, such as "source file", to be used in any
-     *               logged errors; pass null to suppress error logging
-     *
-     * @return true if the file check passes
-     */
-    protected boolean checkFile(File file, String sDesc)
-        {
-        String sErr;
-        if (file == null || !file.exists())
-            {
-            sErr = "does not exist";
-            }
-        else if (file.length() == 0)
-            {
-            sErr = "is empty";
-            }
-        else if (!file.isFile())
-            {
-            sErr = "is not a file";
-            }
-        else if (!file.canRead())
-            {
-            sErr = "cannot be read";
-            }
-        else
-            {
-            return true;
-            }
-
-        if (sDesc != null)
-            {
-            log(Severity.ERROR, "Specified " + sDesc + " (\"" + file + "\") " + sErr);
-            }
-        return false;
-        }
-
-    /**
      * Select modules to target for source code processing.
      *
      * @param listSources    a list of source locations
@@ -2057,8 +1520,22 @@ public abstract class Launcher
         Set<File> setDups = null;
         for (File file : listSources)
             {
-            ModuleInfo info    = new ModuleInfo(file, resourceSpecs, outputSpec);
-            File       srcFile = info.getSourceFile();
+            ModuleInfo info    = null;
+            File       srcFile = null;
+            try
+                {
+                info = ensureModuleInfo(file, resourceSpecs, outputSpec);
+                if (info != null)
+                    {
+                    srcFile = info.getSourceFile();
+                    }
+                }
+            catch (IllegalStateException | IllegalArgumentException e)
+                {
+                String msg = e.getMessage();
+                log(Severity.ERROR, "Could not find module information for " + toPathString(file)
+                        + " (" + (msg == null ? "Reason unknown" : msg) + ")");
+                }
             if (srcFile == null)
                 {
                 log(Severity.ERROR, "Unable to find module source for file: " + file);
@@ -2085,299 +1562,21 @@ public abstract class Launcher
         }
 
     /**
-     * Determine if the module on disk is up to date vis-a-vis the source code.
-     *
-     * @param nodeSourceTree      the source code
-     * @param fileModuleLocation  the location of the compiled module (directory or file)
-     *
-     * @return true iff the date/time on the compiled module is up to date compared to the source
-     */
-    protected boolean moduleUpToDate(Node nodeSourceTree, File fileModuleLocation)
-        {
-        String sModule    = nodeSourceTree.name();
-        File   fileModule = fileModuleLocation.isDirectory()
-                ? new File(fileModuleLocation, sModule + ".xtc")
-                : fileModuleLocation;
-
-        if (fileModule.isFile() && fileModule.exists())
-            {
-            long ldtModule = fileModule.lastModified();
-            if (nodeSourceTree.lastModified() >= ldtModule)
-                {
-                return false;
-                }
-
-            File dirParent = nodeSourceTree.file().getParentFile();
-            try
-                {
-                FileStructure       struct      = new FileStructure(fileModule);
-                Set<FSNodeConstant> setChecked  = new HashSet<>();
-                Set<FSNodeConstant> setDeferred = new HashSet<>();
-                for (Iterator<? extends XvmStructure> it = struct.getConstantPool().getContained();
-                        it.hasNext(); )
-                    {
-                    if (it.next() instanceof FSNodeConstant constNode)
-                        {
-                        switch (constNode.getFormat())
-                            {
-                            case FSDir:
-                                if (!dirUpToDate(dirParent, constNode, ldtModule, setChecked, setDeferred))
-                                    {
-                                    return false;
-                                    }
-                                break;
-
-                            case FSFile, FSLink:
-                                if (!fileUpToDate(dirParent, constNode, ldtModule, setChecked, setDeferred))
-                                    {
-                                    return false;
-                                    }
-                                break;
-                            }
-                        }
-                    }
-
-                // non-empty deferred set indicates that some resources were removed;
-                // we need to force recompilation to report on that
-                return setDeferred.isEmpty();
-                }
-            catch (Exception ignore) {}
-            }
-        return false;
-        }
-
-    /**
-     * Determine if the directory stored within the module is up to date vis-a-vis the source.
-     *
-     * @param dirParent    the parent directory for the source content
-     * @param constDir     the FSNodeConstant representing the directory
-     * @param ldtModule    the timestamp of the module
-     * @param setChecked   already processed constants
-     * @param setDeferred  deferred constants
-     *
-     * @return false iff the directory content is *not* up to date
-     */
-    private boolean dirUpToDate(File dirParent, FSNodeConstant constDir, long ldtModule,
-                                Set<FSNodeConstant> setChecked, Set<FSNodeConstant> setDeferred)
-        {
-        if (!setChecked.add(constDir))
-            {
-            // already processed
-            return true;
-            }
-
-        File fileDir = new File(dirParent, constDir.getName());
-        if (fileDir.exists())
-            {
-            setDeferred.remove(constDir);
-            }
-        else
-            {
-            setChecked.remove(constDir);
-            setDeferred.add(constDir);
-            return true;
-            }
-
-        if (fileDir.lastModified() >= ldtModule)
-            {
-            return false;
-            }
-
-        for (FSNodeConstant constNode : constDir.getDirectoryContents())
-            {
-            switch (constNode.getFormat())
-                {
-                case FSDir:
-                    if (!dirUpToDate(fileDir, constNode, ldtModule, setChecked, setDeferred))
-                        {
-                        return false;
-                        }
-                    break;
-
-                case FSFile, FSLink:
-                    {
-                    // REVIEW: do we need a special "follow the link" processing for links?
-                    if (!fileUpToDate(fileDir, constNode, ldtModule, setChecked, setDeferred))
-                        {
-                        return false;
-                        }
-                    break;
-                    }
-                }
-            }
-        return true;
-        }
-
-    /**
-     * Determine if the file stored within the module is up to date vis-a-vis the source.
-     *
-     * @param dirParent    the parent directory for the source content
-     * @param constFile    the FSNodeConstant representing the file
-     * @param ldtModule    the timestamp of the module
-     * @param setChecked   already processed constants
-     * @param setDeferred  deferred constants
-     *
-     * @return false iff the directory content is *not* up to date
-     */
-    private boolean fileUpToDate(File dirParent, FSNodeConstant constFile, long ldtModule,
-                                 Set<FSNodeConstant> setChecked, Set<FSNodeConstant> setDeferred)
-        {
-        if (!setChecked.add(constFile))
-            {
-            // already checked
-            return true;
-            }
-
-        File fileResource = new File(dirParent, constFile.getName());
-        if (fileResource.exists())
-            {
-            setDeferred.remove(constFile);
-            return fileResource.lastModified() < ldtModule;
-            }
-        else
-            {
-            setChecked.remove(constFile);
-            setDeferred.add(constFile);
-            return true;
-            }
-        }
-
-    /**
-     * When working with a source code tree, and given a "module file" such as returned from
-     * {@link #findModule(File)}, produce a source tree of the desired processing stage.
-     *
-     * @param fileModule  a file as returned from {@link #findModule(File)}
-     * @param desired    the desired stage of processing: Parsed, Named, or Linked
-     *
-     * @return the root {@link Node} of the tree
-     */
-    protected Node loadSourceTree(File fileModule, Stage desired)
-        {
-        assert fileModule.isFile();
-        Node nodeModule = buildSourceTree(fileModule);
-        nodeModule.logErrors();
-        checkErrors();
-
-        if (desired.compareTo(Stage.Parsed) >= 0)
-            {
-            nodeModule.parse();
-            nodeModule.logErrors();
-            checkErrors();
-            }
-
-        if (desired.compareTo(Stage.Named) >= 0)
-            {
-            nodeModule.registerNames();
-            nodeModule.logErrors();
-            checkErrors();
-            }
-
-        if (desired.compareTo(Stage.Linked) >= 0)
-            {
-            nodeModule.linkParseTrees();
-            nodeModule.logErrors();
-            checkErrors();
-            }
-
-        return nodeModule;
-        }
-
-    /**
-     * Build a tree of source files that compose an Ecstasy module, or any sub-package thereof.
-     *
-     * @param fileModule  a module file
-     *
-     * @return the root node for the module
-     */
-    protected Node buildSourceTree(File fileModule)
-        {
-        // look for a subdirectory containing expanded module contents
-        String sFile = fileModule.getName();
-        if (sFile.endsWith(".x"))
-            {
-            File fileDir = new File(fileModule.getParentFile(), sFile.substring(0, sFile.length()-2));
-            if (fileDir.exists() && fileDir.isDirectory())
-                {
-                DirNode nodeModule = makeDirNode(null, fileDir);
-                nodeModule.configureSource(fileModule, makeFileNode(nodeModule, fileModule));
-                buildSourceTree(nodeModule, fileDir);
-                return nodeModule;
-                }
-            }
-
-        return makeFileNode(null, fileModule);
-        }
-
-    /**
-     * Build a sub-tree of source files that are in the specified directory.
-     *
-     * @param nodeParent  the parent node
-     * @param fileDir     a directory that may contain source code
-     */
-    protected void buildSourceTree(DirNode nodeParent, File fileDir)
-        {
-        for (File fileChild : listFiles(nodeParent.file()))
-            {
-            if (fileChild.isDirectory())
-                {
-                // if the directory has no corresponding ".x" file, then it is an implied package
-                if (!(new File(fileDir, fileChild.getName() + ".x")).exists()
-                        && fileChild.getName().indexOf('.') < 0
-                        && fileChild.listFiles(f -> f.isDirectory() ^ f.getName().endsWith(".x")).length > 0)
-                    {
-                    DirNode nodeChild = makeDirNode(nodeParent, fileChild);
-                    nodeParent.packageNodes().add(nodeChild);
-                    buildSourceTree(nodeChild, fileChild);
-                    }
-                }
-            else
-                {
-                String sFile = fileChild.getName();
-                if (!sFile.endsWith(".x"))
-                    {
-                    continue;
-                    }
-
-                // if there is a directory by the same name (minus the ".x"), then recurse to create
-                // a subtree
-                File fileSubDir = new File(fileDir, sFile.substring(0, sFile.length()-2));
-                if (fileSubDir.exists() && fileSubDir.isDirectory())
-                    {
-                    // create a sub-tree
-                    DirNode nodeSub = makeDirNode(nodeParent, fileSubDir);
-                    nodeSub.configureSource(fileChild, makeFileNode(nodeSub, fileChild));
-                    nodeParent.packageNodes().add(nodeSub);
-                    buildSourceTree(nodeSub, fileSubDir);
-                    }
-                else
-                    {
-                    // it's a source file
-                    nodeParent.classNodes().put(fileChild, makeFileNode(nodeParent, fileChild));
-                    }
-                }
-            }
-        }
-
-    /**
-     * @return an array of files in the specified directory ordered by name
-     */
-    private File[] listFiles(File dir)
-        {
-        File[] aFile = dir.listFiles();
-        Arrays.sort(aFile, Comparator.comparing(File::getName));
-        return aFile;
-        }
-
-    /**
      * Flush errors from the specified nodes, and then check for errors globally.
      *
      * @param nodes  the nodes to flush
      */
     protected void flushAndCheckErrors(Node[] nodes)
         {
-        for (Node node : nodes)
+        if (nodes != null)
             {
-            node.logErrors();
+            for (Node node : nodes)
+                {
+                if (node != null)
+                    {
+                    node.logErrors(this);
+                    }
+                }
             }
         checkErrors();
         }
@@ -2387,747 +1586,9 @@ public abstract class Launcher
      */
     protected void reset()
         {
-        m_sevWorst       = Severity.NONE;
-        m_cSuspended     = 0;
-        m_mapModuleNames = null;
-        }
-
-    /**
-     * Determine if the specified module node represents a system module.
-     *
-     * @param nodeModule  a module node
-     *
-     * @return true iff the module node is for the Ecstasy or native prototype module
-     */
-    public boolean isSystemModule(Node nodeModule)
-        {
-        assert nodeModule.parent() == null;
-        assert nodeModule.stage().compareTo(Stage.Named) >= 0;
-
-        String sModule = nodeModule.name();
-        return sModule.equals(Constants.ECSTASY_MODULE)
-            || sModule.equals(Constants.TURTLE_MODULE);
-        }
-
-    /**
-     * Represents either a module/package or a class source node.
-     */
-    public abstract class Node
-        {
-        /**
-         * Construct a Node.
-         *
-         * @param parent  the parent node
-         * @param file    the file that this node will represent
-         */
-        public Node(DirNode parent, File file)
-            {
-            // at least one of the parameters is required
-            assert parent != null || file != null;
-
-            m_parent       = parent;
-            m_file         = file;
-            m_lastModified = file == null ? parent.m_lastModified : file.lastModified();
-            }
-
-        /**
-         * @return the parent of this node
-         */
-        public DirNode parent()
-            {
-            return m_parent;
-            }
-
-        /**
-         * @return the depth of this node
-         */
-        public int depth()
-            {
-            return parent() == null ? 0 : 1 + parent().depth();
-            }
-
-        /**
-         * @return the file that this node represents
-         */
-        public File file()
-            {
-            return m_file;
-            }
-
-        /**
-         * @return the date/time value when this node was last modified
-         */
-        public long lastModified()
-            {
-            return m_lastModified;
-            }
-
-        /**
-         * @return the stage of the node
-         */
-        public Stage stage()
-            {
-            return m_stage;
-            }
-
-        /**
-         * Load and parse the source code, as necessary.
-         */
-        public abstract void parse();
-
-        /**
-         * Collect the various top-level type names within the module.
-         */
-        public abstract void registerNames();
-
-        /**
-         * Link the various nodes of the module together
-         */
-        public void linkParseTrees()
-            {
-            }
-
-        /**
-         * @return the name of this node
-         */
-        public abstract String name();
-
-        /**
-         * @return a descriptive name for this node
-         */
-        public abstract String descriptiveName();
-
-        /**
-         * @return the parsed AST from this node
-         */
-        public abstract Statement ast();
-
-        /**
-         * @return the type (from the parsed AST) of this node
-         */
-        public abstract TypeCompositionStatement type();
-
-        /**
-         * @return the list containing any errors accumulated on (or under) this node
-         */
-        public abstract ErrorList errs();
-
-        /**
-         * @return log any errors accumulated on (or under) this node
-         */
-        public abstract void logErrors();
-
-        // ----- fields ------------------------------------------------------------------------
-
-        /**
-         * The parent node, or null.
-         */
-        protected DirNode m_parent;
-
-        /**
-         * The file that this node is based on.
-         */
-        protected File    m_file;
-
-        /**
-         * Stage progression.
-         */
-        protected Stage   m_stage = Stage.Init;
-
-        /**
-         * A cached, last-modified date/time.
-         */
-        protected long    m_lastModified;
-        }
-
-    /**
-     * Virtual factory: DirNode.
-     *
-     * @param parent  the parent node
-     * @param file    the directory
-     *
-     * @return the new DirNode
-     */
-    public DirNode makeDirNode(DirNode parent, File file)
-        {
-        return new DirNode(parent, file);
-        }
-
-    /**
-     * A DirNode represents a directory, which corresponds to a module or package.
-     */
-    public class DirNode
-            extends Node
-        {
-        /**
-         * Construct a DirNode.
-         *
-         * @param parent  the parent node
-         * @param file    the directory that this node will represent
-         */
-        protected DirNode(DirNode parent, File file)
-            {
-            super(parent, file);
-            }
-
-        /**
-         * Configure the source code for the package implementation itself.
-         *
-         * @param fileSrc  the file for the package.x file (or null if it does not exist)
-         * @param nodeSrc  the node representing the package.x contents
-         */
-        void configureSource(File fileSrc, FileNode nodeSrc)
-            {
-            m_fileSrc = fileSrc;
-            m_nodeSrc = nodeSrc;
-            }
-
-        /**
-         * @return the simple package name, or if this is a module, the fully qualified module name
-         */
-        @Override
-        public String name()
-            {
-            String sName = null;
-
-            if (sourceNode() != null)
-                {
-                sName = sourceNode().name();
-                }
-
-            if (sName == null)
-                {
-                sName = file().getParent();
-                }
-
-            return sName == null ? "?" : sName;
-            }
-
-        @Override
-        public String descriptiveName()
-            {
-            if (parent() == null)
-                {
-                return "module " + name();
-                }
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("package ")
-              .append(name());
-
-            DirNode node = parent();
-            while (node.parent() != null)
-                {
-                sb.insert(8, node.name() + '.');
-                node = node.parent();
-                }
-
-            return sb.toString();
-            }
-
-        /**
-         * Parse this node and all nodes it contains.
-         */
-        @Override
-        public void parse()
-            {
-            if (m_stage == Stage.Init)
-                {
-                long lModified = m_file.lastModified();
-
-                if (m_nodeSrc == null)
-                    {
-                    // provide a default implementation
-                    assert m_parent != null;
-                    m_nodeSrc = makeFileNode(this, "package " + file().getName() + "{}");
-                    }
-                else
-                    {
-                    lModified = Math.max(lModified, m_nodeSrc.m_lastModified);
-                    }
-                m_nodeSrc.parse();
-
-                for (FileNode cmpFile : m_mapClzNodes.values())
-                    {
-                    cmpFile.parse();
-                    lModified = Math.max(lModified, cmpFile.m_lastModified);
-                    }
-
-                for (DirNode child : m_listPkgNodes)
-                    {
-                    child.parse();
-                    lModified = Math.max(lModified, child.m_lastModified);
-                    }
-
-                m_stage        = Stage.Parsed;
-                m_lastModified = lModified;
-                }
-            }
-
-        /**
-         * Go through all the packages and types in this package and register their names.
-         */
-        public void registerNames()
-            {
-            assert stage().compareTo(Stage.Parsed) >= 0;
-
-            if (stage() == Stage.Parsed)
-                {
-                // code was created by the parse phase if there was none
-                assert sourceNode() != null;
-
-                sourceNode().registerNames();
-
-                for (FileNode clz : classNodes().values())
-                    {
-                    clz.registerNames();
-                    registerName(clz.name(), clz);
-                    }
-
-                for (DirNode pkg : packageNodes())
-                    {
-                    pkg.registerNames();
-                    registerName(pkg.name(), pkg);
-                    }
-
-                m_stage = Stage.Named;
-                }
-            }
-
-        /**
-         * Register a node under a specified name.
-         *
-         * @param name  a name that must not conflict with any other child's name; if null, the
-         *              request is ignored because it is assumed that an error has already been
-         *              raised
-         * @param node  the child node to register with the specified name
-         */
-        public void registerName(String name, Node node)
-            {
-            if (name != null)
-                {
-                if (children().containsKey(name))
-                    {
-                    log(Severity.ERROR, "Duplicate name \"" + name + "\" detected in " + descriptiveName());
-                    }
-                else
-                    {
-                    children().put(name, node);
-                    }
-                }
-            }
-
-        @Override
-        public void linkParseTrees()
-            {
-            Node nodePkg = sourceNode();
-            if (nodePkg == null)
-                {
-                Launcher.this.log(Severity.ERROR, "No package node for " + descriptiveName());
-                }
-            else
-                {
-                TypeCompositionStatement typePkg = nodePkg.type();
-
-                for (FileNode nodeClz : classNodes().values())
-                    {
-                    typePkg.addEnclosed(nodeClz.ast());
-                    }
-
-                for (DirNode nodeNestedPkg : packageNodes())
-                    {
-                    // nest the package within this package
-                    typePkg.addEnclosed(nodeNestedPkg.sourceNode().ast());
-
-                    // recursively nest the classes and packages of the nested package within it
-                    nodeNestedPkg.linkParseTrees();
-                    }
-                }
-            }
-
-        @Override
-        public Statement ast()
-            {
-            return sourceNode() == null ? null : sourceNode().ast();
-            }
-
-        @Override
-        public TypeCompositionStatement type()
-            {
-            return sourceNode() == null ? null : sourceNode().type();
-            }
-
-        @Override
-        public ErrorList errs()
-            {
-            if (sourceNode() != null)
-                {
-                return sourceNode().errs();
-                }
-
-            return null;
-            }
-
-        @Override
-        public void logErrors()
-            {
-            if (sourceNode() != null)
-                {
-                sourceNode().logErrors();
-                }
-
-            for (FileNode clz : classNodes().values())
-                {
-                clz.logErrors();
-                }
-
-            for (DirNode pkg : packageNodes())
-                {
-                pkg.logErrors();
-                }
-            }
-
-        /**
-         * @return the module, package, or class source file, or null if none
-         */
-        public File sourceFile()
-            {
-            return m_fileSrc;
-            }
-
-        /**
-         * @return the corresponding node for the {@link #sourceFile()}
-         */
-        public Node sourceNode()
-            {
-            return m_nodeSrc;
-            }
-
-        /**
-         * @return the list of child nodes that are packages
-         */
-        public List<DirNode> packageNodes()
-            {
-            return m_listPkgNodes;
-            }
-
-        /**
-         * @return the map containing all class nodes by file
-         */
-        public ListMap<File, FileNode> classNodes()
-            {
-            return m_mapClzNodes;
-            }
-
-        /**
-         * @return the map containing all children by name
-         */
-        public Map<String, Node> children()
-            {
-            return m_mapChildren;
-            }
-
-        @Override
-        public String toString()
-            {
-            StringBuilder sb = new StringBuilder();
-            sb.append(name())
-              .append(": ")
-              .append(sourceFile() == null ? "(no package.x)" : sourceFile().getName());
-
-            for (Map.Entry<File, FileNode> entry : classNodes().entrySet())
-                {
-                File     file = entry.getKey();
-                FileNode node = entry.getValue();
-
-                sb.append("\n |- ")
-                  .append(node == null ? file.getName() : node);
-                }
-
-            List<DirNode> pkgs = packageNodes();
-            for (int i = 0, c = pkgs.size(); i < c; ++i)
-                {
-                DirNode pkg = pkgs.get(i);
-                sb.append("\n |- ")
-                  .append(indentLines(pkg.toString(), (i == c - 1 ? "    " : " |  ")).substring(4));
-                }
-
-            return sb.toString();
-            }
-
-        // ----- fields ------------------------------------------------------------------------
-
-        /**
-         * The module.x or package.x file, or null.
-         */
-        protected File                    m_fileSrc;
-
-        /**
-         * The node for the module, package, or class source.
-         */
-        protected FileNode                m_nodeSrc;
-
-        /**
-         * The classes nested directly in the module or package.
-         */
-        protected ListMap<File, FileNode> m_mapClzNodes  = new ListMap<>();
-
-        /**
-         * The packages nested directly in the module or package.
-         */
-        protected List<DirNode>           m_listPkgNodes = new ArrayList<>();
-
-        /**
-         * The child nodes (both packages and classes) nested directly in the module or package.
-         */
-        protected Map<String, Node>       m_mapChildren  = new HashMap<>();
-        }
-
-    /**
-     * Virtual factory: FileNode.
-     *
-     * @param parent  the parent node
-     * @param file    the source file
-     *
-     * @return the new FileNode
-     */
-    public FileNode makeFileNode(DirNode parent, File file)
-        {
-        return new FileNode(parent, file);
-        }
-
-    /**
-     * Virtual factory: FileNode.
-     *
-     * @param parent  the parent node
-     * @param source  the source code
-     *
-     * @return the new FileNode
-     */
-    public FileNode makeFileNode(DirNode parent, String source)
-        {
-        return new FileNode(parent, source);
-        }
-
-    /**
-     * A FileNode represents an individual ".x" source file.
-     */
-    public class FileNode
-            extends Node
-            implements ErrorListener
-        {
-        /**
-         * Construct a FileNode.
-         *
-         * @param parent  the parent node
-         * @param file    the file that this node will represent
-         */
-        public FileNode(DirNode parent, File file)
-            {
-            super(parent, file);
-
-            try
-                {
-                m_source = new Source(file, depth());
-                }
-            catch (IOException e)
-                {
-                Launcher.this.log(Severity.ERROR, "Failure reading: " + file);
-                }
-            }
-
-        /**
-         * Construct a FileNode from the code that would have been in a file.
-         *
-         * @param code  the source code
-         */
-        public FileNode(DirNode parent, String code)
-            {
-            super(parent, null);
-
-            m_source = new Source(code, depth());
-            }
-
-        @Override
-        public int depth()
-            {
-            int     cDepth     = super.depth();
-            DirNode nodeParent = parent();
-            if (nodeParent != null && nodeParent.parent() == null)
-                {
-                // this is a synthetic "root" parent
-                --cDepth;
-                }
-            return cDepth;
-            }
-
-        @Override
-        public String name()
-            {
-            TypeCompositionStatement stmtType = type();
-            if (stmtType != null)
-                {
-                return stmtType.getName();
-                }
-
-            String sName = file().getName();
-            if (sName.endsWith(".x"))
-                {
-                sName = sName.substring(0, sName.length()-2);
-                }
-            return sName;
-            }
-
-        @Override
-        public String descriptiveName()
-            {
-            return m_stmtType == null
-                    ? file().getAbsolutePath()
-                    : type().getCategory().getId().TEXT + ' ' + name();
-            }
-
-        /**
-         * @return the source code for this node
-         */
-        public Source source()
-            {
-            return m_source;
-            }
-
-        @Override
-        public void parse()
-            {
-            if (m_stage == Stage.Init)
-                {
-                Source source = source();
-                try
-                    {
-                    m_stmtAST = new Parser(source, this).parseSource();
-                    }
-                catch (CompilerException e)
-                    {
-                    if (!hasSeriousErrors())
-                        {
-                        log(Severity.FATAL, Parser.FATAL_ERROR, null,
-                            source, source.getPosition(), source.getPosition());
-                        }
-                    }
-                m_stage = Stage.Parsed;
-                }
-            }
-
-        @Override
-        public void registerNames()
-            {
-            assert stage().compareTo(Stage.Parsed) >= 0;
-
-            if (stage() == Stage.Parsed)
-                {
-                // this can only happen if the errors were ignored
-                Statement stmt = ast();
-                if (stmt != null)
-                    {
-                    if (stmt instanceof TypeCompositionStatement stmtType)
-                        {
-                        m_stmtType = stmtType;
-                        }
-                    else
-                        {
-                        List<Statement> list = ((StatementBlock) stmt).getStatements();
-                        m_stmtType = (TypeCompositionStatement) list.get(list.size() - 1);
-                        }
-                    }
-
-                m_stage = Stage.Named;
-                }
-            }
-
-        @Override
-        public Statement ast()
-            {
-            return m_stmtAST;
-            }
-
-        @Override
-        public TypeCompositionStatement type()
-            {
-            return m_stmtType;
-            }
-
-        @Override
-        public boolean log(ErrorInfo err)
-            {
-            return errs().log(err);
-            }
-
-        @Override
-        public boolean isAbortDesired()
-            {
-            return m_errs != null && m_errs.isAbortDesired();
-            }
-
-        @Override
-        public boolean hasSeriousErrors()
-            {
-            return m_errs != null && m_errs.hasSeriousErrors();
-            }
-
-        @Override
-        public boolean hasError(String sCode)
-            {
-            return m_errs != null && m_errs.hasError(sCode);
-            }
-
-        @Override
-        public ErrorList errs()
-            {
-            ErrorList errs = m_errs;
-            if (errs == null)
-                {
-                m_errs = errs = new ErrorList(341);
-                }
-            return errs;
-            }
-
-        @Override
-        public void logErrors()
-            {
-            ErrorList errs = m_errs;
-            if (errs != null)
-                {
-                Launcher.this.log(errs);
-                m_errs.clear();
-                }
-            }
-
-        @Override
-        public String toString()
-            {
-            return name() + '(' + stage().name() + (stage().compareTo(Stage.Parsed) >= 0
-                    && ast() == null ? ", parse failed" : "") + ')';
-            }
-
-        // ----- fields ------------------------------------------------------------------------
-
-        /**
-         * The source code for the file node, if it has been loaded.
-         */
-        protected Source                   m_source;
-
-        /**
-         * The error list that buffers errors for the file node, if any.
-         */
-        protected ErrorList                m_errs;
-
-        /**
-         * The AST for the source code, once it has been parsed.
-         */
-        protected Statement                m_stmtAST;
-
-        /**
-         * The primary class (or other type) that the source file declares.
-         */
-        protected TypeCompositionStatement m_stmtType;
+        m_sevWorst   = Severity.NONE;
+        m_cSuspended = 0;
+        moduleCache  = null;
         }
 
 
@@ -3244,6 +1705,23 @@ public abstract class Launcher
 
     protected enum Stage {Init, Parsed, Named, Linked}
 
+    /**
+     * Unknown fatal error. {0}
+     */
+    public static final String FATAL_ERROR      = "LAUNCHER-01";
+    /**
+     * Duplicate name "{0}" detected in {1}
+     */
+    public static final String DUP_NAME         = "LAUNCHER-02";
+    /**
+     * No package node for {0}
+     */
+    public static final String MISSING_PKG_NODE = "LAUNCHER-03";
+    /**
+     * Failure reading: {0}
+     */
+    public static final String READ_FAILURE     = "LAUNCHER-04";
+
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -3267,8 +1745,5 @@ public abstract class Launcher
      */
     protected int m_cSuspended;
 
-    /**
-     * Cache of module names extracted from corresponding ".x" source files.
-     */
-    private Map<File, String> m_mapModuleNames = Collections.synchronizedMap(new HashMap<>());
+    protected Map<File, ModuleInfo> moduleCache;
     }

@@ -4,9 +4,15 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
+
 import java.util.function.Consumer;
 
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 
@@ -14,20 +20,30 @@ import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+
 import org.xvm.util.Handy;
-import org.xvm.util.Hash;
+import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 
-import static org.xvm.tool.Launcher.getExtension;
-import static org.xvm.tool.Launcher.extractModuleName;
-import static org.xvm.tool.Launcher.isExplicitCompiledFile;
-import static org.xvm.tool.Launcher.isExplicitEcstasyFile;
-import static org.xvm.tool.Launcher.isExplicitSourceFile;
-import static org.xvm.tool.Launcher.isProjectDir;
-import static org.xvm.tool.Launcher.removeExtension;
-import static org.xvm.tool.Launcher.resolveFile;
+import static org.xvm.asm.Constants.ECSTASY_MODULE;
+import static org.xvm.asm.Constants.TURTLE_MODULE;
 
+import static org.xvm.tool.Launcher.DUP_NAME;
+import static org.xvm.tool.Launcher.MISSING_PKG_NODE;
+import static org.xvm.tool.Launcher.READ_FAILURE;
+
+import static org.xvm.tool.ResourceDir.NoResources;
+
+import static org.xvm.util.Handy.getExtension;
+import static org.xvm.util.Handy.listFiles;
 import static org.xvm.util.Handy.parseDelimitedString;
+import static org.xvm.util.Handy.readFileChars;
+import static org.xvm.util.Handy.removeExtension;
+import static org.xvm.util.Handy.resolveFile;
 
 
 /**
@@ -89,7 +105,7 @@ public class ModuleInfo
                 // 4) any of ./build or ./target dir
                 File[] srcFiles;
                 if ((srcFiles = fileSpec.listFiles(f -> !f.isDirectory()
-                       && getExtension(f.getName()).equalsIgnoreCase("x"))).length > 0)
+                       && "x".equalsIgnoreCase(getExtension(f.getName())))).length > 0)
                     {
                     // we're somewhere down in the source directory hierarchy
                     File dir       = fileSpec;
@@ -398,7 +414,7 @@ public class ModuleInfo
                 }
             }
 
-        this.fileSpec = resolveFile(fileSpec);
+        this.fileSpec = fileSpec;
 
         if (binarySpec != null)
             {
@@ -614,6 +630,18 @@ public class ModuleInfo
         }
 
     /**
+     * Determine if the specified module node represents a system module.
+     *
+     * @return true iff this module is for the Ecstasy or native prototype module
+     */
+    public boolean isSystemModule()
+        {
+        String sModule = getQualifiedModuleName();
+        return sModule.equals(ECSTASY_MODULE)
+            || sModule.equals(TURTLE_MODULE);
+        }
+
+    /**
      * @param fromGBF  true iff this is being called from the getBinaryFile() method
      *
      * @return the module name, which may be qualified
@@ -636,7 +664,7 @@ public class ModuleInfo
                         sourceContent = Content.Invalid;
                         try
                             {
-                            Source source = new Source(fileSrc, 0);
+                            Source source = new Source(fileSrc);
                             Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
                             moduleName    = parser.parseModuleNameIgnoreEverythingElse();
                             if (moduleName != null)
@@ -645,9 +673,7 @@ public class ModuleInfo
                                 return moduleName;
                                 }
                             }
-                        catch (CompilerException | IOException e)
-                            {
-                            }
+                        catch (CompilerException | IOException ignore) {}
                     }
                 }
 
@@ -892,40 +918,6 @@ public class ModuleInfo
         }
 
     /**
-     * @return lazily computed and cached hash of the resource directory contents, or 0 if none
-     */
-    public int getSourceHash()
-        {
-        if (sourceHash == 0)
-            {
-            File file = getSourceFile();
-            if (file != null)
-                {
-                // TODO why not SHA3-256 of contents?
-                int hash = Hash.of(file.getName(),
-                           Hash.of(file.length(),
-                           Hash.of(file.lastModified())));
-
-                if (sourceIsTree)
-                    {
-                    synchronized (this)
-                        {
-                        accumulator = hash;
-                        visitTree(new File(sourceDir, removeExtension(file.getName())), "x",
-                                  f -> accumulator = Hash.of(f.getName(),
-                                                     Hash.of(file.length(),
-                                                     Hash.of(file.lastModified(), (int) accumulator))));
-                        sourceHash  = (int) accumulator;
-                        accumulator = 0;
-                        }
-                    }
-                }
-            }
-
-        return sourceHash;
-        }
-
-    /**
      * @param dir  a file, directory, or null
      *
      * @return an array of 0 or more source files; never null
@@ -965,19 +957,6 @@ public class ModuleInfo
             }
 
         return resourcesTimestamp;
-        }
-
-    /**
-     * @return lazily computed and cached hash of the resource directory contents, or 0 if none
-     */
-    public int getResourcesHash()
-        {
-        if (resourcesHash == 0)
-            {
-            resourcesHash = getResourceDir().getHash();
-            }
-
-        return resourcesHash;
         }
 
 
@@ -1121,26 +1100,6 @@ public class ModuleInfo
         }
 
     /**
-     * @return lazily computed and cached hash of the compiled module file, or 0 if none
-     */
-    public int getBinaryHash()
-        {
-        if (binaryHash == 0)
-            {
-            File file = getBinaryFile();
-            if (file != null && file.exists())
-                {
-                // TODO why not SHA3-256 of contents?
-                binaryHash = Hash.of(file.getName(),
-                             Hash.of(file.length(),
-                             Hash.of(file.lastModified())));
-                }
-            }
-
-        return resourcesHash;
-        }
-
-    /**
      * @param dir  a file, directory, or null
      *
      * @return an array of 0 or more compiled module files; never null
@@ -1179,7 +1138,7 @@ public class ModuleInfo
         }
 
 
-    // ----- internal ----------------------------------------------------------------------
+    // ----- internal ------------------------------------------------------------------------------
 
     /**
      * Visit all of the subdirectories (recursively) and files matching the optional extension
@@ -1215,6 +1174,1042 @@ public class ModuleInfo
             }
         }
 
+
+    // ----- source tree ---------------------------------------------------------------------------
+
+    /**
+     * When working with a source code tree, and given a "module file", produce a source tree of the desired processing stage.
+     *
+     * @param errs  an optional error listener
+     *
+     * @return the root {@link Node} of the tree, or null if the ModuleInfo does not know the source
+     *         location, or if serious errors occur loading the source tree
+     */
+    public Node getSourceTree(ErrorListener errs)
+        {
+        if (sourceNode != null)
+            {
+            return sourceNode;
+            }
+
+        File srcDir  = getSourceDir();
+        File srcFile = getSourceFile();
+        if (srcDir == null || srcFile == null)
+            {
+            return null;
+            }
+
+        if (errs == null)
+            {
+            errs = new ErrorList(100);
+            }
+
+        if (sourceIsTree)
+            {
+            assert fileName != null;
+            File subDir = new File(srcDir, fileName);
+            assert subDir.exists();
+            DirNode dirNode = new DirNode(/*parent=*/null, subDir, srcFile);
+            dirNode.buildSourceTree();
+            sourceNode = dirNode;
+            }
+        else
+            {
+            sourceNode = new FileNode(null, srcFile);
+            }
+        sourceNode.logErrors(errs);
+        if (errs.hasSeriousErrors() || errs.isAbortDesired())
+            {
+            return null;
+            }
+
+        sourceNode.parse();
+        sourceNode.logErrors(errs);
+        if (errs.hasSeriousErrors() || errs.isAbortDesired())
+            {
+            return null;
+            }
+
+        sourceNode.registerNames();
+        sourceNode.logErrors(errs);
+        if (errs.hasSeriousErrors() || errs.isAbortDesired())
+            {
+            return null;
+            }
+
+        sourceNode.linkParseTrees();
+        sourceNode.logErrors(errs);
+        if (errs.hasSeriousErrors() || errs.isAbortDesired())
+            {
+            return null;
+            }
+
+        return sourceNode;
+        }
+
+    /**
+     * Represents either a module/package or a class source node.
+     */
+    public abstract class Node
+            implements ErrorListener
+        {
+        /**
+         * Construct a Node.
+         *
+         * @param parent  the parent node
+         * @param file    the file that this node will represent
+         */
+        public Node(DirNode parent, File file)
+            {
+            // at least one of the parameters is required
+            assert parent != null || file != null;
+
+            m_parent       = parent;
+            m_file         = file;
+            }
+
+        /**
+         * @return the parent of this node
+         */
+        public DirNode parent()
+            {
+            return m_parent;
+            }
+
+        /**
+         * @return the root node
+         */
+        public Node root()
+            {
+            return m_parent == null ? this : m_parent.root();
+            }
+
+        /**
+         * @return the node represent the module
+         */
+        public FileNode module()
+            {
+            Node rootNode = root();
+            if (rootNode instanceof DirNode rootDir)
+                {
+                return rootDir.sourceNode();
+                }
+            else
+                {
+                return (FileNode) rootNode;
+                }
+            }
+
+        /**
+         * @return the ModuleInfo for the module
+         */
+        public ModuleInfo moduleInfo()
+            {
+            return ModuleInfo.this;
+            }
+
+        /**
+         * @return the depth of this node
+         */
+        public int depth()
+            {
+            return parent() == null ? 0 : 1 + parent().depth();
+            }
+
+        /**
+         * @return the file that this node represents
+         */
+        public File file()
+            {
+            return m_file;
+            }
+
+        /**
+         * @return the ResourceDir for this node; never null
+         */
+        public abstract ResourceDir resourceDir();
+
+        /**
+         * @return the child directory name for this node's ResourceDir compared to its parent's,
+         *         or null to indicate that the parent's ResourceDir should be used
+         */
+        protected String resourcePathPart()
+            {
+            return null;
+            }
+
+        /**
+         * Load and parse the source code, as necessary.
+         */
+        public abstract void parse();
+
+        /**
+         * Collect the various top-level type names within the module.
+         */
+        public abstract void registerNames();
+
+        /**
+         * Link the various nodes of the module together
+         */
+        public void linkParseTrees()
+            {
+            }
+
+        /**
+         * @return the name of this node
+         */
+        public abstract String name();
+
+        /**
+         * @return a descriptive name for this node
+         */
+        public abstract String descriptiveName();
+
+        /**
+         * @return the parsed AST from this node
+         */
+        public abstract Statement ast();
+
+        /**
+         * @return the type (from the parsed AST) of this node
+         */
+        public abstract TypeCompositionStatement type();
+
+        @Override
+        public boolean log(ErrorInfo err)
+            {
+            return errs().log(err);
+            }
+
+        @Override
+        public boolean isAbortDesired()
+            {
+            return m_errs != null && m_errs.isAbortDesired();
+            }
+
+        @Override
+        public boolean hasSeriousErrors()
+            {
+            return m_errs != null && m_errs.hasSeriousErrors();
+            }
+
+        @Override
+        public boolean hasError(String sCode)
+            {
+            return m_errs != null && m_errs.hasError(sCode);
+            }
+
+        /**
+         * @return the list containing any errors accumulated on (or under) this node
+         */
+        public ErrorList errs()
+            {
+            ErrorList errs = m_errs;
+            if (errs == null)
+                {
+                m_errs = errs = new ErrorList(341);
+                }
+            return errs;
+            }
+
+        /**
+         * @return log any errors accumulated on (or under) this node
+         */
+        public void logErrors(ErrorListener errs)
+            {
+            ErrorList deferred = m_errs;
+            if (deferred != null)
+                {
+                for (ErrorInfo err : deferred.getErrors())
+                    {
+                    errs.log(err);
+                    }
+                m_errs = null;
+                }
+            }
+
+
+        // ----- fields ------------------------------------------------------------------------
+
+        /**
+         * The parent node, or null.
+         */
+        protected DirNode m_parent;
+
+        /**
+         * The file that this node is based on.
+         */
+        protected File m_file;
+
+        /**
+         * The cached ResourceDir for this Node.
+         */
+        protected ResourceDir m_resdir;
+
+        /**
+         * The error list that buffers errors for the file node, if any.
+         */
+        protected ErrorList m_errs;
+        }
+
+    /**
+     * A DirNode represents a source directory, which corresponds to a module or package.
+     */
+    public class DirNode
+            extends Node
+        {
+        /**
+         * Construct the root DirNode.
+         *
+         * @param parent   the parent node, which is null for the root node
+         * @param dir      the directory that this node will represent
+         * @param fileSrc  the file for the package.x file (or null if it does not exist)
+         */
+        protected DirNode(DirNode parent, File dir, File fileSrc)
+            {
+            super(parent, dir);
+            assert dir.isDirectory();
+
+            if (fileSrc != null)
+                {
+                m_fileSrc = fileSrc;
+                m_nodeSrc = new FileNode(this, fileSrc);
+                }
+            }
+
+        /**
+         * Build a sub-tree of nodes that are contained within this node.
+         */
+        void buildSourceTree()
+            {
+            File thisDir = file();
+            for (File file : listFiles(thisDir))
+                {
+                String name = file.getName();
+                if (file.isDirectory())
+                    {
+                    // if the directory has no corresponding ".x" file, then it is an implied package
+                    if (!(new File(thisDir, name + ".x")).exists() && name.indexOf('.') < 0)
+                        {
+                        DirNode child = new DirNode(this, file, null);
+                        packageNodes().add(child);
+                        child.buildSourceTree();
+                        }
+                    }
+                else if (name.endsWith(".x"))
+                    {
+                    // if there is a directory by the same name (minus the ".x"), then recurse to create
+                    // a subtree
+                    File subDir = new File(thisDir, removeExtension(name));
+                    if (subDir.exists() && subDir.isDirectory())
+                        {
+                        // create a sub-tree
+                        DirNode child = new DirNode(this, subDir, file);
+                        packageNodes().add(child);
+                        child.buildSourceTree();
+                        }
+                    else
+                        {
+                        // it's a source file
+                        classNodes().put(file, new FileNode(this, file));
+                        }
+                    }
+                }
+            }
+
+        /**
+         * @return the simple package name, or if this is a module, the fully qualified module name
+         */
+        @Override
+        public String name()
+            {
+            return file().getName();
+            }
+
+        @Override
+        public String descriptiveName()
+            {
+            if (parent() == null)
+                {
+                return "module " + name();
+                }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("package ")
+              .append(name());
+
+            DirNode node = parent();
+            while (node.parent() != null)
+                {
+                sb.insert(8, node.name() + '.');
+                node = node.parent();
+                }
+
+            return sb.toString();
+            }
+
+        /**
+         * @return the ResourceDir for this node; never null
+         */
+        public ResourceDir resourceDir()
+            {
+            if (m_resdir == null)
+                {
+                DirNode     parent    = parent();
+                ResourceDir parentDir = parent == null
+                        ? ModuleInfo.this.getResourceDir()
+                        : parent.resourceDir();
+                m_resdir = parentDir.getDirectory(resourcePathPart());
+
+                // if no resources could be found, use an empty ResourceDir; this is helpful because
+                // we can't "cache" the null result, and the caller doesn't have to check for null,
+                // either
+                if (m_resdir == null)
+                    {
+                    m_resdir = NoResources;
+                    }
+                }
+            return m_resdir;
+            }
+
+        @Override
+        protected String resourcePathPart()
+            {
+            String name = file().getName();
+            int    dot  = name.indexOf('.');
+            return dot >= 0 ? name.substring(0, dot) : name;
+            }
+
+        /**
+         * Parse this node and all nodes it contains.
+         */
+        @Override
+        public void parse()
+            {
+            if (m_nodeSrc == null)
+                {
+                // provide a default implementation
+                assert m_parent != null;
+                m_nodeSrc = new FileNode(this, "package " + file().getName() + "{}");
+                }
+            m_nodeSrc.parse();
+
+            for (FileNode cmpFile : m_mapClzNodes.values())
+                {
+                cmpFile.parse();
+                }
+
+            for (DirNode child : m_listPkgNodes)
+                {
+                child.parse();
+                }
+            }
+
+        /**
+         * Go through all the packages and types in this package and register their names.
+         */
+        public void registerNames()
+            {
+            // code was created by the parse phase if there was none
+            assert sourceNode() != null;
+
+            sourceNode().registerNames();
+
+            for (FileNode clz : classNodes().values())
+                {
+                clz.registerNames();
+                registerName(clz.name(), clz);
+                }
+
+            for (DirNode pkg : packageNodes())
+                {
+                pkg.registerNames();
+                registerName(pkg.name(), pkg);
+                }
+            }
+
+        /**
+         * Register a node under a specified name.
+         *
+         * @param name  a name that must not conflict with any other child's name; if null, the
+         *              request is ignored because it is assumed that an error has already been
+         *              raised
+         * @param node  the child node to register with the specified name
+         */
+        public void registerName(String name, Node node)
+            {
+            if (name != null)
+                {
+                if (children().containsKey(name))
+                    {
+                    log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
+                    }
+                else
+                    {
+                    children().put(name, node);
+                    }
+                }
+            }
+
+        @Override
+        public void linkParseTrees()
+            {
+            Node nodePkg = sourceNode();
+            if (nodePkg == null)
+                {
+                log(Severity.ERROR, MISSING_PKG_NODE, new Object[]{descriptiveName()}, null);
+                }
+            else
+                {
+                TypeCompositionStatement typePkg = nodePkg.type();
+
+                for (FileNode nodeClz : classNodes().values())
+                    {
+                    typePkg.addEnclosed(nodeClz.ast());
+                    }
+
+                for (DirNode nodeNestedPkg : packageNodes())
+                    {
+                    // nest the package within this package
+                    typePkg.addEnclosed(nodeNestedPkg.sourceNode().ast());
+
+                    // recursively nest the classes and packages of the nested package within it
+                    nodeNestedPkg.linkParseTrees();
+                    }
+                }
+            }
+
+        @Override
+        public Statement ast()
+            {
+            return sourceNode() == null ? null : sourceNode().ast();
+            }
+
+        @Override
+        public TypeCompositionStatement type()
+            {
+            return sourceNode() == null ? null : sourceNode().type();
+            }
+
+        @Override
+        public ErrorList errs()
+            {
+            if (sourceNode() != null)
+                {
+                return sourceNode().errs();
+                }
+
+            return null;
+            }
+
+        @Override
+        public void logErrors(ErrorListener errs)
+            {
+            super.logErrors(errs);
+
+            if (sourceNode() != null)
+                {
+                sourceNode().logErrors(errs);
+                }
+
+            for (FileNode clz : classNodes().values())
+                {
+                clz.logErrors(errs);
+                }
+
+            for (DirNode pkg : packageNodes())
+                {
+                pkg.logErrors(errs);
+                }
+            }
+
+        /**
+         * @return the module, package, or class source file, or null if none
+         */
+        public File sourceFile()
+            {
+            return m_fileSrc;
+            }
+
+        /**
+         * @return the corresponding node for the {@link #sourceFile()}
+         */
+        public FileNode sourceNode()
+            {
+            return m_nodeSrc;
+            }
+
+        /**
+         * @return the list of child nodes that are packages
+         */
+        public List<DirNode> packageNodes()
+            {
+            return m_listPkgNodes;
+            }
+
+        /**
+         * @return the map containing all class nodes by file
+         */
+        public ListMap<File, FileNode> classNodes()
+            {
+            return m_mapClzNodes;
+            }
+
+        /**
+         * @return the map containing all children by name
+         */
+        public Map<String, Node> children()
+            {
+            return m_mapChildren;
+            }
+
+        @Override
+        public String toString()
+            {
+            Node parent = parent();
+            return parent == null
+                    ? '/' + name() + '/'
+                    : parent.toString() + name() + '/';
+            }
+
+        // ----- fields ------------------------------------------------------------------------
+
+        /**
+         * The module.x or package.x file, or null.
+         */
+        protected File                    m_fileSrc;
+
+        /**
+         * The node for the module, package, or class source.
+         */
+        protected FileNode                m_nodeSrc;
+
+        /**
+         * The classes nested directly in the module or package.
+         */
+        protected ListMap<File, FileNode> m_mapClzNodes  = new ListMap<>();
+
+        /**
+         * The packages nested directly in the module or package.
+         */
+        protected List<DirNode>           m_listPkgNodes = new ArrayList<>();
+
+        /**
+         * The child nodes (both packages and classes) nested directly in the module or package.
+         */
+        protected Map<String, Node>       m_mapChildren  = new HashMap<>();
+        }
+
+    /**
+     * A FileNode represents an individual ".x" source file.
+     */
+    public class FileNode
+            extends Node
+        {
+        /**
+         * Construct a FileNode.
+         *
+         * @param parent  the parent node
+         * @param file    the file that this node will represent
+         */
+        public FileNode(DirNode parent, File file)
+            {
+            super(parent, file);
+            }
+
+        /**
+         * Construct a FileNode from the code that would have been in a file.
+         *
+         * @param code  the source code
+         */
+        public FileNode(DirNode parent, String code)
+            {
+            super(parent, null);
+            m_text = code;
+            }
+
+        @Override
+        public int depth()
+            {
+            int     cDepth     = super.depth();
+            DirNode nodeParent = parent();
+            if (nodeParent != null && nodeParent.parent() == null)
+                {
+                // this is a synthetic "root" parent
+                --cDepth;
+                }
+            return cDepth;
+            }
+
+        @Override
+        public String name()
+            {
+            TypeCompositionStatement stmtType = type();
+            if (stmtType != null)
+                {
+                return stmtType.getName();
+                }
+
+            File file = file();
+            if (file != null)
+                {
+                String sName = file().getName();
+                if (sName.endsWith(".x"))
+                    {
+                    sName = sName.substring(0, sName.length()-2);
+                    }
+                return sName;
+                }
+
+            DirNode parent = parent();
+            return parent == null
+                    ? "<unknown>"
+                    : parent.file().getParent();
+            }
+
+        @Override
+        public String descriptiveName()
+            {
+            return m_stmtType == null
+                    ? file().getAbsolutePath()
+                    : type().getCategory().getId().TEXT + ' ' + name();
+            }
+
+        /**
+         * @return the ResourceDir for this node; never null
+         */
+        public ResourceDir resourceDir()
+            {
+            if (m_resdir == null)
+                {
+                DirNode parent = parent();
+                if (parent == null || parent.parent() == null && isPackageSource())
+                    {
+                    // this is the root node; use the root ResourceDir
+                    m_resdir = ModuleInfo.this.getResourceDir();
+                    }
+                else if (isPackageSource()) {
+                    m_resdir = parent.parent().resourceDir();
+                    }
+                else
+                    {
+                    m_resdir = parent.resourceDir();
+                    }
+                }
+            return m_resdir;
+            }
+
+        /**
+         * @return true iff this FileNode is the node that represents the module or package code for
+         *         the DirNode that contains this node (or if this is a single file module)
+         */
+        public boolean isPackageSource()
+            {
+            DirNode parent = parent();
+            return parent == null || this == parent.sourceNode();
+            }
+
+        /**
+         * @return the source code text for this node, or an empty array if the source code is
+         *         unavailable
+         */
+        public char[] content()
+            {
+            if (m_text != null)
+                {
+                return m_text.toCharArray();
+                }
+
+            try
+                {
+                return readFileChars(m_file);
+                }
+            catch (IOException e)
+                {
+                log(Severity.ERROR, READ_FAILURE, new Object[] {m_file}, null);
+                }
+
+            return new char[0];
+            }
+
+        /**
+         * @return the source code for this node
+         */
+        public Source source()
+            {
+            if (m_source == null)
+                {
+                m_source = new Source(this);
+                }
+
+            return m_source;
+            }
+
+        /**
+         * Determine the File referenced by the provided path string, relative to this node.
+         *
+         * @param path  a path string composed of any legal sequence of a "/" root path indicator,
+         *               a "./" current directory indicator, "." directories, ".." parent
+         *               directories, named directories, and a file name, following the rules
+         *               defined in the Ecstasy BNF
+         *
+         * @return a File, a ResourceDir, or null if unresolvable
+         */
+        public Object resolveResource(String path)
+            {
+            ResourceDir dir;
+            if (path.startsWith("/"))
+                {
+                path = path.substring(1);
+                if (path.startsWith("/"))
+                    {
+                    return null;
+                    }
+
+                dir = ModuleInfo.this.getResourceDir();
+                }
+            else
+                {
+                dir = resourceDir();
+                }
+
+            boolean fRequireDir = path.endsWith("/");
+            if (fRequireDir)
+                {
+                path = path.substring(0, path.length()-1);
+                if (path.endsWith("/"))
+                    {
+                    return null;
+                    }
+                }
+
+            if (dir == null || path.length() == 0)
+                {
+                return dir;
+                }
+
+            String[] segments = parseDelimitedString(path, '/');
+            for (int i = 0, last = segments.length - 1; i <= last; ++i)
+                {
+                String segment = segments[i];
+                if (segment.length() == 0)
+                    {
+                    return null;
+                    }
+
+                if (segment.equals("."))
+                    {
+                    // nothing to do
+                    }
+                else if (segment.equals(".."))
+                    {
+                    dir = dir.getParent();
+                    if (dir == null)
+                        {
+                        return null;
+                        }
+                    }
+                else
+                    {
+                    Object resource = dir.getByName(segment);
+                    if (resource instanceof ResourceDir subdir)
+                        {
+                        dir = subdir;
+                        }
+                    else
+                        {
+                        return i == last && !fRequireDir ? resource : null;
+                        }
+                    }
+                }
+
+            return dir;
+            }
+
+        @Override
+        public void parse()
+            {
+            Source source = source();
+            try
+                {
+                m_stmtAST = new Parser(source, this).parseSource();
+                }
+            catch (CompilerException e)
+                {
+                if (!hasSeriousErrors())
+                    {
+                    log(Severity.FATAL, Parser.FATAL_ERROR, null,
+                        source, source.getPosition(), source.getPosition());
+                    }
+                }
+            }
+
+        @Override
+        public void registerNames()
+            {
+            // this can only happen if the errors were ignored
+            Statement stmt = ast();
+            if (stmt != null)
+                {
+                if (stmt instanceof TypeCompositionStatement stmtType)
+                    {
+                    m_stmtType = stmtType;
+                    }
+                else
+                    {
+                    List<Statement> list = ((StatementBlock) stmt).getStatements();
+                    m_stmtType = (TypeCompositionStatement) list.get(list.size() - 1);
+                    }
+                }
+            }
+
+        @Override
+        public Statement ast()
+            {
+            return m_stmtAST;
+            }
+
+        @Override
+        public TypeCompositionStatement type()
+            {
+            return m_stmtType;
+            }
+
+        @Override
+        public String toString()
+            {
+            String text   = "";
+
+            Node   parent = parent();
+            if (parent != null)
+                {
+                text = parent.toString();
+                if (text.endsWith("/"))
+                    {
+                    text = text.substring(0, text.length()-1);
+                    }
+                }
+
+            return text + name() + ".x";
+            }
+
+        // ----- fields ------------------------------------------------------------------------
+
+        /**
+         * The source code text for the file node.
+         */
+        protected String                   m_text;
+
+        /**
+         * The Source object code for the file node; lazily created.
+         */
+        protected Source                   m_source;
+
+        /**
+         * The AST for the source code, once it has been parsed.
+         */
+        protected Statement                m_stmtAST;
+
+        /**
+         * The primary class (or other type) that the source file declares.
+         */
+        protected TypeCompositionStatement m_stmtType;
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Check if the specified source or binary file contains a module and if so, return the module's
+     * name.
+     *
+     * @param file  the file (source or binary) to examine
+     *
+     * @return the module's name if the file declares a module; null otherwise
+     */
+    public static String extractModuleName(File file)
+        {
+        if (file.exists() && file.canRead())
+            {
+            String name = file.getName();
+            if (isExplicitSourceFile(name))
+                {
+                try
+                    {
+                    Source source = new Source(file);
+                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
+                    return parser.parseModuleNameIgnoreEverythingElse();
+                    }
+                catch (CompilerException | IOException e) {}
+                }
+            else if (isExplicitCompiledFile(name))
+                {
+                try
+                    {
+                    return new FileStructure(file).getModuleName();
+                    }
+                catch (IOException e) {}
+                }
+            }
+
+        return null;
+        }
+
+    /**
+     * Determine if the specified module name is an explicit Ecstasy source or compiled module file
+     * name.
+     *
+     * @param sFile  a module name or file name
+     *
+     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
+     */
+    public static boolean isExplicitEcstasyFile(String sFile)
+        {
+        String sExt = getExtension(sFile);
+        return sExt != null && (sExt.equalsIgnoreCase("x") || sExt.equalsIgnoreCase("xtc"));
+        }
+
+    /**
+     * Determine if the specified module name is an explicit Ecstasy source file name.
+     *
+     * @param sFile  a module name or file name
+     *
+     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
+     */
+    public static boolean isExplicitSourceFile(String sFile)
+        {
+        String sExt = getExtension(sFile);
+        return sExt != null && sExt.equalsIgnoreCase("x");
+        }
+
+    /**
+     * Determine if the specified module name is an explicit Ecstasy compiled module file name.
+     *
+     * @param sFile  a module name or file name
+     *
+     * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
+     */
+    public static boolean isExplicitCompiledFile(String sFile)
+        {
+        String sExt = getExtension(sFile);
+        return sExt != null && sExt.equalsIgnoreCase("xtc");
+        }
+
+    /**
+     * @param dir  a directory
+     *
+     * @return true iff the directory appears to be a project directory
+     */
+    public static boolean isProjectDir(File dir)
+        {
+        return dir != null && dir.isDirectory() &&
+            (new File(dir, "src"   ).exists() && !new File(dir, "src.x"   ).exists() ||
+             new File(dir, "source").exists() && !new File(dir, "source.x").exists());
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
     private enum Status  {Unknown, NotExists, Exists}
     private enum Content {Unknown, Invalid, Module}
 
@@ -1233,17 +2228,15 @@ public class ModuleInfo
     private boolean     sourceIsTree;   // true iff the module sources include subdirectories
     private Content     sourceContent = Content.Unknown;  // what is known about the module source file content
     private long        sourceTimestamp;// last known change to a source file
-    private int         sourceHash;     // hash of source file attributes
+    private Node        sourceNode;     // root node of the source tree
 
     private Status      resourcesStatus = Status.Unknown;
     private ResourceDir resourceDir;
     private long        resourcesTimestamp;
-    private int         resourcesHash;
 
     private Status      binaryStatus = Status.Unknown;
     private File        binaryDir;
     private File        binaryFile;
     private Content     binaryContent = Content.Unknown;  // what is known about the compiled module file content
     private long        binaryTimestamp;
-    private int         binaryHash;
     }

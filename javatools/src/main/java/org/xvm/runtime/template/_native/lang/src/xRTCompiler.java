@@ -50,6 +50,7 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
 
 import org.xvm.tool.Compiler;
 import org.xvm.tool.ModuleInfo;
+import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -437,13 +438,13 @@ public class xRTCompiler
                 int             cSystemModules = 0;
                 for (ModuleInfo moduleInfo : listTargets)
                     {
-                    Node node = loadSourceTree(moduleInfo.getSourceFile(), Stage.Linked);
+                    Node node = moduleInfo.getSourceTree(this);
 
                     // short-circuit the compilation of any up-to-date modules
-                    if (fRebuild || !moduleUpToDate(node, fileOutput))
+                    if (fRebuild || !moduleInfo.isUpToDate())
                         {
                         mapTargets.put(moduleInfo.getSourceFile(), node);
-                        if (isSystemModule(node))
+                        if (moduleInfo.isSystemModule())
                             {
                             ++cSystemModules;
                             }

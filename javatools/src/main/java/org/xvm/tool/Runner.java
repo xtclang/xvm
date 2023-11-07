@@ -26,6 +26,8 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
+
+import static org.xvm.util.Handy.checkReadable;
 import static org.xvm.util.Handy.quotedString;
 
 
@@ -163,7 +165,7 @@ public class Runner
         // check if the compiled module file name was specified
         if (module == null && binExists)
             {
-            if (checkFile(fileBin, null))
+            if (checkReadable(fileBin))
                 {
                 try
                     {
@@ -181,7 +183,12 @@ public class Runner
                 }
             }
 
-        if (module != null)
+        if (module == null)
+            {
+            log(Severity.ERROR, "Missing module  for " + fileSpec);
+            abort(true);
+            }
+        else
             {
             try
                 {
@@ -195,6 +202,7 @@ public class Runner
             checkErrors();
             }
 
+        log(Severity.INFO, "Executing " + info.getQualifiedModuleName() + " from " + info.getBinaryFile());
         try
             {
             Connector connector = new Connector(repo);

@@ -11,6 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 
+import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -22,6 +24,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.tool.ResourceDir;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
@@ -40,17 +44,24 @@ public class FileExpression
     /**
      * Construct a FileExpression.
      *
-     * @param type  one of FileStore, Directory, File, or null (implies Directory or File)
-     * @param path  a token that contains the entire path that specifies the directory or file
-     * @param file  the resolved directory or file corresponding to the path for which this
-     *              expression exists
+     * @param type      one of FileStore, Directory, File, or null (implies Directory or File)
+     * @param path      a token that contains the entire path that specifies the directory or file
+     * @param resource  the resolved directory or file corresponding to the path for which this
+     *                  expression exists
      */
-    public FileExpression(TypeExpression type, Token path, File file)
+    public FileExpression(TypeExpression type, Token path, Object resource)
         {
         this.type = type;
         this.path = path;
 
-        m_file = file;
+        if (resource instanceof File file)
+            {
+            m_file = file;
+            }
+        else if (resource instanceof ResourceDir dir)
+            {
+            m_dir = dir;
+            }
         }
 
 
@@ -99,20 +110,23 @@ public class FileExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        assert m_file != null && m_file.exists();
-
         ConstantPool pool  = pool();
         String       sType = getSimpleTypeName();
         if (sType == null)
             {
-            if (m_file == null || !m_file.exists())
+            if (m_dir != null)
                 {
-                return pool.typePath();
+                return pool.typeFileStore();    // or directory or path ...
                 }
 
-            return m_file.isDirectory()
-                    ? pool.typeFileStore()  // or directory or path ...
-                    : pool.typeFile();      // or path ...
+            if (m_file != null && m_file.exists())
+                {
+                return m_file.isDirectory()
+                        ? pool.typeFileStore()  // or directory or path ...
+                        : pool.typeFile();      // or path ...
+                }
+
+            return pool.typePath();
             }
         else
             {
@@ -167,18 +181,19 @@ public class FileExpression
         String sType = getSimpleTypeName();
         if (sType == null)
             {
-            if (m_file == null || !m_file.exists())
-                {
-                return PATH;
-                }
-            else if (m_file.isDirectory())
+            if (m_dir != null)
                 {
                 return FS | DIR | PATH;
                 }
-            else
+
+            if (m_file != null && m_file.exists())
                 {
-                return FILE | PATH;
+                return m_file.isDirectory()
+                        ? FS | DIR | PATH
+                        : FILE | PATH;
                 }
+
+            return PATH;
             }
         else
             {
@@ -186,9 +201,9 @@ public class FileExpression
                 {
                 case "FileStore" -> FS;
                 case "Directory" -> DIR;
-                case "File" -> FILE;
-                case "Path" -> PATH;
-                default -> throw new IllegalStateException("type=" + sType);
+                case "File"      -> FILE;
+                case "Path"      -> PATH;
+                default          -> throw new IllegalStateException("type=" + sType);
                 };
             }
         }
@@ -250,7 +265,9 @@ public class FileExpression
 
                 case DIR:
                     typeActual = pool.typeDirectory();
-                    constVal   = buildDirectoryConstant(pool(), m_file);
+                    constVal   = m_dir == null
+                            ? buildDirectoryConstant(pool, m_file)
+                            : buildDirectoryConstant(pool, m_dir);
                     break;
 
                 case FILE:
@@ -321,40 +338,10 @@ public class FileExpression
         {
         ConstantPool   pool     = pool();
         String         sPath    = (String) path.getValue();
-        FSNodeConstant constDir = buildDirectoryConstant(pool, m_file);
+        FSNodeConstant constDir = m_dir == null
+                ? buildDirectoryConstant(pool, m_file)
+                : buildDirectoryConstant(pool, m_dir);
         return pool.ensureFileStoreConstant(sPath, constDir);
-        }
-
-    /**
-     * @return an empty FileStore constant
-     */
-    protected Constant buildEmptyConstant(Context ctx)
-        {
-        ConstantPool pool  = pool();
-        String       sPath = (String) path.getValue();
-        File         file  = m_file == null ? new File("error") : m_file;
-        String       sType = getImplicitType(ctx).getSingleUnderlyingClass(true).getName();
-
-        return switch (sType)
-            {
-            case "FileStore" ->
-                pool().ensureFileStoreConstant(sPath, pool.ensureDirectoryConstant(file.getName(),
-                    createdTime(pool, file), modifiedTime(pool, file), FSNodeConstant.NO_NODES));
-
-            case "Directory" ->
-                pool.ensureDirectoryConstant(file.getName(),
-                    createdTime(pool, file), modifiedTime(pool, file), FSNodeConstant.NO_NODES);
-
-            case "File" ->
-                pool.ensureFileConstant(file.getName(),
-                    createdTime(pool, file), modifiedTime(pool, file), Handy.EMPTY_BYTE_ARRAY);
-
-            case "Path" ->
-                pool.ensureLiteralConstant(Constant.Format.Path, "/");
-
-            default ->
-                throw new IllegalStateException("type=" + sType);
-            };
         }
 
     /**
@@ -387,7 +374,48 @@ public class FileExpression
             }
 
         return pool.ensureDirectoryConstant(dir.getName(),
-                createdTime(pool, dir), modifiedTime(pool, dir), aConsts);
+                                            createdTime(dir), modifiedTime(dir), aConsts);
+        }
+
+    /**
+     * Build a directory FSNodeConstant for the specified directory.
+     *
+     * @param pool  the ConstantPool
+     * @param dir   the directory
+     *
+     * @return a directory {@link FSNodeConstant}
+     *
+     * @throws IOException if some low level issue occurs attempting to vacuum in the directory
+     */
+    public static FSNodeConstant buildDirectoryConstant(ConstantPool pool, ResourceDir dir)
+            throws IOException
+        {
+        Set<String>      children = dir.getNames();
+        int              cConsts  = children.size();
+        FSNodeConstant[] aConsts  = new FSNodeConstant[cConsts];
+        int              iConst   = 0;
+        for (String child : children)
+            {
+            assert iConst < cConsts;
+            Object resource = dir.getByName(child);
+            if (resource instanceof ResourceDir subdir)
+                {
+                aConsts[iConst++] = buildDirectoryConstant(pool, subdir);
+                }
+            else if (resource instanceof File file)
+                {
+                aConsts[iConst++] = buildFileConstant(pool, file);
+                }
+            else
+                {
+                throw new IllegalStateException("unknown resource \"" + child + "\" from " + dir +
+                                                " : " + resource);
+                }
+            }
+        assert iConst == cConsts;
+
+        return pool.ensureDirectoryConstant(dir.getName(),
+                dir.getCreatedTime(), dir.getModifiedTime(), aConsts);
         }
 
     /**
@@ -405,18 +433,17 @@ public class FileExpression
         {
         byte[] ab = Handy.readFileBytes(file);
         return pool.ensureFileConstant(file.getName(),
-                createdTime(pool, file), modifiedTime(pool, file), ab);
+                                       createdTime(file), modifiedTime(file), ab);
         }
 
     /**
      * Determine the created date/time value for the specified directory or file.
      *
-     * @param pool  the ConstantPool
-     * @param file  the directory or file to obtain the date/time value for
+     * @param file the directory or file to obtain the date/time value for
      *
      * @return the FileTime for the date/time that the file was created
      */
-    public static FileTime createdTime(ConstantPool pool, File file)
+    public static FileTime createdTime(File file)
         {
         try
             {
@@ -432,12 +459,11 @@ public class FileExpression
     /**
      * Determine the modified date/time value for the specified directory or file.
      *
-     * @param pool  the ConstantPool
-     * @param file  the directory or file to obtain the date/time value for
+     * @param file the directory or file to obtain the date/time value for
      *
      * @return the FileTime for the date/time that the file was modified
      */
-    public static FileTime modifiedTime(ConstantPool pool, File file)
+    public static FileTime modifiedTime(File file)
         {
         try
             {
@@ -471,9 +497,14 @@ public class FileExpression
     protected Token path;
 
     /**
-     * The File for the directory or file that the path string was resolved to.
+     * The File that the path string was resolved to.
      */
-    private final File m_file;
+    private File m_file;
+
+    /**
+     * The ResourceDir that the path string was resolved to.
+     */
+    private ResourceDir m_dir;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(FileExpression.class, "type");
     }

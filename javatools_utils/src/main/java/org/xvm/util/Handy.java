@@ -22,6 +22,7 @@ import java.nio.charset.Charset;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 
 
@@ -1273,6 +1274,196 @@ public class Handy
     // ----- file I/O ------------------------------------------------------------------------------
 
     /**
+     * Given a file (or directory) or null, produce a file (or directory) to use. Defaults to the
+     * current working directory.
+     *
+     * @param file  a file, or directory, or null
+     *
+     * @return a resolved file or directory
+     */
+    public static File resolveFile(File file)
+        {
+        if (file != null)
+            {
+            try
+                {
+                return file.getCanonicalFile();
+                }
+            catch (IOException e)
+                {
+                return file.getAbsoluteFile();
+                }
+            }
+
+        try
+            {
+            return new File(".").getAbsoluteFile().getCanonicalFile();
+            }
+        catch (IOException e)
+            {
+            return new File(".").getAbsoluteFile();
+            }
+        }
+
+    /**
+     * Given a starting directory and a sequence of '/'-delimited directory names, obtain the file
+     * or directory indicated.
+     *
+     * @param file   the starting point
+     * @param sPath  a '/'-delimited relative path
+     *
+     * @return the indicated file or directory, or null if it could not be navigated to
+     */
+    protected static File navigateTo(File file, String sPath)
+        {
+        if (file == null)
+            {
+            return null;
+            }
+
+        file = resolveFile(file);
+
+        if (File.pathSeparatorChar != '/')
+            {
+            sPath = sPath.replace(File.pathSeparatorChar, '/');
+            }
+
+        for (String sPart : parseDelimitedString(sPath, '/'))
+            {
+            file = switch (sPart)
+                {
+                case "."  -> file;
+                case ".." -> file.getParentFile();
+                default   -> file.isDirectory() ? new File(file, sPart) : null;
+                };
+
+            if (file == null || !file.exists())
+                {
+                return null;
+                }
+            }
+
+        return file;
+        }
+
+    /**
+     * @return an array of files in the specified directory ordered by case-insensitive name
+     */
+    public static File[] listFiles(File dir)
+        {
+        if (dir == null || !dir.isDirectory())
+            {
+            return NO_FILES;
+            }
+
+        File[] aFile = dir.listFiles();
+        Arrays.sort(aFile, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        return aFile;
+        }
+
+
+    /**
+     * If the passed file  has a "dot extension" such as ".x" or ".xtc" extension, then return the
+     * extension, such as "x" or "xtc"
+     *
+     * @param file  the file
+     *
+     * @return the extension, if the file has an extension; otherwise null
+     */
+    public static String getExtension(File file)
+        {
+        return file == null ? null : getExtension(file.getName());
+        }
+
+    /**
+     * If the passed file name has a "dot extension" such as ".x" or ".xtc" extension, then return
+     * the extension, such as "x" or "xtc"
+     *
+     * @param sFile  the file name
+     *
+     * @return the extension, if the file has an extension; otherwise null
+     */
+    public static String getExtension(String sFile)
+        {
+        if (sFile == null)
+            {
+            return null;
+            }
+
+        int ofDot = sFile.lastIndexOf('.');
+        if (ofDot <= 0)
+            {
+            return null;
+            }
+
+        String sExt = sFile.substring(ofDot + 1);
+        return sExt.indexOf('/') >= 0 || sExt.indexOf(File.pathSeparatorChar) >= 0 ? null : sExt;
+        }
+
+    /**
+     * If the passed file name ends with an extension (such as ".x" or a ".xtc"), then return the
+     * file name without the extension.
+     *
+     * @param sFile  the file name, possibly with an extension such as ".x" or ".xtc"
+     *
+     * @return the same file name, but without an extension (if it previously had an extension)
+     */
+    public static String removeExtension(String sFile)
+        {
+        int ofDot = sFile.lastIndexOf('.');
+        if (ofDot <= 0)
+            {
+            return sFile;
+            }
+
+        return sFile.lastIndexOf('/') < ofDot && sFile.indexOf(File.pathSeparatorChar) < ofDot
+                ? sFile.substring(0, ofDot)
+                : sFile;
+        }
+
+    /**
+     * Produce a string describing the path of the passed file.
+     *
+     * @param file  the file to render the path of
+     *
+     * @return a string for display of the file's path
+     */
+    public static String toPathString(File file)
+        {
+        if (file == null)
+            {
+            return "<null>";
+            }
+
+        String sPath = file.getPath();
+        String sAbs;
+        try
+            {
+            sAbs = file.getCanonicalPath();
+            }
+        catch (IOException e)
+            {
+            sAbs = file.getAbsolutePath();
+            }
+
+        return sPath.equals(sAbs)
+            ? sPath
+            : sPath + " (" + sAbs + ')';
+        }
+
+    /**
+     * Evaluate the passed file to make sure that it exists and can be read.
+     *
+     * @param file the file to check
+     *
+     * @return true if the file check passes
+     */
+    public static boolean checkReadable(File file)
+        {
+        return file != null && file.exists() && !file.isDirectory() && file.canRead();
+        }
+
+    /**
      * Open the specified file as an InputStream.
      *
      * @param file  the file to open
@@ -1783,4 +1974,9 @@ public class Handy
      * A constant empty array of <tt>String</tt>.
      */
     public final static String[] NO_ARGS = new String[0];
+
+    /**
+     * A constant empty array of <tt>File</tt>.
+     */
+    public final static File[] NO_FILES = new File[0];
     }
