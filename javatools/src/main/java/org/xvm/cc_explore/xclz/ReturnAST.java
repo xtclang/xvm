@@ -3,7 +3,7 @@ package org.xvm.cc_explore.xclz;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.XEC;
 
-class ReturnAST extends AST {
+public class ReturnAST extends AST {
   private final String _ztype;
   static ReturnAST make( XClzBuilder X, int n ) {
 
@@ -31,7 +31,7 @@ class ReturnAST extends AST {
     if( _ztype!=null ) {
       assert _kids.length==1;
       // The only two returns allowed are: MultiAST (Boolean,T) or False
-      if( _kids[0] instanceof ConAST con ) {
+      if( _kids[0] instanceof ConAST ) {
         return sb.ip("return XRuntime.SET$COND(false,").p(_ztype).p(")");
       } else {
         assert _kids[0] instanceof MultiAST && _kids[0]._kids.length==2;

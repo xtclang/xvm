@@ -2,7 +2,6 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.*;
 
 class OuterAST extends AST {
   final int _depth;

@@ -21,9 +21,7 @@ class BinOpAST extends AST {
   }
   
   static BinOpAST make( XClzBuilder X, String op0, String op1 ) {
-    AST[] kids = new AST[2];
-    kids[0] = ast_term(X);
-    kids[1] = ast_term(X);
+    AST[] kids = X.kids(2);
     return new BinOpAST(op0,op1,null,kids);
   }
   
