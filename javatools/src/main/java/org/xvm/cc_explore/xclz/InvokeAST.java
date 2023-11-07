@@ -2,7 +2,6 @@ package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.MethodPart;
-import org.xvm.cc_explore.ClassPart;
 import org.xvm.cc_explore.cons.Const;
 import org.xvm.cc_explore.cons.MethodCon;
 import org.xvm.cc_explore.util.SB;
@@ -91,6 +90,8 @@ class InvokeAST extends AST {
     case "String":
       if( _meth.equals("toCharArray") )
         return new NewAST(_kids,XType.ARYCHAR,null);
+      if( _meth.equals("equals") )
+        return this;
       throw XEC.TODO();
 
     default:

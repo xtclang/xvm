@@ -1,7 +1,6 @@
 package org.xvm.cc_explore;
 
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.xclz.AST;
 
 public class MethodPart extends MMethodPart {
   // Linked list of siblings at the same DAG level with the same name
@@ -9,17 +8,14 @@ public class MethodPart extends MMethodPart {
   
   // Method's "super"
   private final MethodCon  _supercon;
-  private MMethodPart _super;
   
   public final PartCon[] _supers;
   public final Part[] _super_parts;
   
   // Optional "finally" block
   public final MethodCon _finally;
-  private MMethodPart _final;
 
   public final MethodCon _methcon;
-  //public final int _lamidx; // Lambda index; for distinguish "->" lambdas with identical signatures
   
   // Annotations
   public final Annot[] _annos;
@@ -159,10 +155,7 @@ public class MethodPart extends MMethodPart {
   }
   
   // Tok, kid-specific internal linking.
-  @Override void link_innards( XEC.ModRepo repo ) {
-    if( _supercon!=null ) _super = (MMethodPart)_supercon.link(repo);
-    if( _finally !=null ) _final = (MMethodPart)_finally .link(repo);
-    
+  @Override void link_innards( XEC.ModRepo repo ) {   
     if( _args !=null )
       // Lambda-local type variables
       // From ectasy.x,

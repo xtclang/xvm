@@ -1,7 +1,6 @@
 package org.xvm.cc_explore.xclz;
 
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.XEC;
 import org.xvm.cc_explore.cons.Const;
 
 class PropertyAST extends AST {
