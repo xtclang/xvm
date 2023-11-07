@@ -646,7 +646,7 @@ public class ModuleInfo
      */
     private String getQualifiedModuleName(boolean fromGBF)
         {
-        if (moduleName == null)
+        UnknownModule: if (moduleName == null)
             {
             File fileSrc = getSourceFile();
             if (sourceStatus == Status.Exists)
@@ -676,6 +676,11 @@ public class ModuleInfo
                 }
 
             File fileBin = fromGBF ? binaryFile : getBinaryFile();
+            if (moduleName != null)
+                {
+                break UnknownModule;
+                }
+
             if (binaryStatus == Status.Exists)
                 {
                 // obtain the module name from the compiled module, if possible
