@@ -75,9 +75,9 @@ service PseudoRandom(UInt64 seed = 0)
     @Override
     UInt64 uint64() {
         UInt64 seed = seed;
-        seed ^= (seed >> 12);
-        seed ^= (seed << 25);
-        seed ^= (seed >> 27);
+        seed ^= seed >> 12;
+        seed ^= seed << 25;
+        seed ^= seed >> 27;
         this.seed = seed;
         return seed * 0x2545F4914F6CDD1D;
     }

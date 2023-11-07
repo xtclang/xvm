@@ -169,7 +169,7 @@ mixin ByteArray<Element extends Byte>
         // Tiny format: the first bit of the first byte is used to indicate a single byte format,
         // in which the entire value is contained in the 7 MSBs
         if (b & 0x01 != 0) {
-            return (b >> 1), index + 1;
+            return b >> 1, index + 1;
         }
 
         // Small and Medium formats are indicated by the second bit (and differentiated by the
