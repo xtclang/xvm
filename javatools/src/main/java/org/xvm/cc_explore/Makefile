@@ -112,7 +112,7 @@ examples_run: $(classes) $(test_classes) $(XDK) examples
 
 # Manual tests use an explicit list
 MANUAL_DIR = ../manualTests/src/main/x
-MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x queues.x services.x reflect.x regex.x tuple.x TestMisc.x
+MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x queues.x services.x reflect.x regex.x tuple.x TestMisc.x TestModIFace.x
 
 manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
@@ -121,9 +121,6 @@ manuals:	$(manuals_x:x=xtc) $(XDK)
 $(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
 	@echo "compiling " $@ " because " $?
 	@$(XTC) $? -o $(MANUAL_DIR)
-
-
-TESTS = $(examples_x)
 
 
 test:	$(classes) $(test_classes) $(MANUAL_DIR)/TestMisc.xtc

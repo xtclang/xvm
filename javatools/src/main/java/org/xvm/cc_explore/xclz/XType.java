@@ -345,6 +345,10 @@ public abstract class XType {
     //  // Attempt to use the Java class name
     //  if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
     //    return telem + ".class";
+
+      if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") )
+        throw XEC.TODO();
+      
       throw XEC.TODO();
     }
 

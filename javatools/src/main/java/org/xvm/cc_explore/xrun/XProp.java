@@ -2,7 +2,6 @@ package org.xvm.cc_explore.xrun;
 
 import org.xvm.cc_explore.*;
 import org.xvm.cc_explore.util.SB;
-import org.xvm.cc_explore.xclz.AST;
 import org.xvm.cc_explore.xclz.XClz;
 import org.xvm.cc_explore.xclz.XClzBuilder;
 import org.xvm.cc_explore.xclz.XType;
@@ -24,7 +23,7 @@ public abstract class XProp extends XClz {
   public static void make_class( ModPart mod, SB sb, PropPart pp ) {
     String pname = pp._name;
     String jtype = XType.jtype(pp._con,false);
-    String ano = pp._contribs==null ? null : ((ClassPart)pp._contribs[0]._annot.part())._name;
+    String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
     
     // Definition and init
     sb.ip("private ").p(jtype).p(" ").p(pname);
@@ -46,8 +45,8 @@ public abstract class XProp extends XClz {
     sb.p("return ").p(pname).p("; }").nl();
 
     // void prop$set(Type p) { prop=p; }
-    if( ((ClassPart)pp._par)._f != Part.Format.CONST )
-      sb.ip("void ").p(pname).p("$set( ").p(jtype).p(" p ) { ").p(pname).p(" = p; }").nl();
+    sb.ip("void ").p(pname).p("$set( ").p(jtype).p(" p ) { ");
+    sb.p( ((ClassPart)pp._par)._f == Part.Format.CONST ? "throw new ReadOnlyX();" : pname + " = p;").p(" }").nl();
 
     if( pp._name2kid != null )
       for( String name : pp._name2kid.keySet() ) {
