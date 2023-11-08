@@ -1,5 +1,12 @@
 /**
  * A representation of a store of cryptographic keys and certificates.
+ *
+ * An injection of a KeyStore requires an Info object, for example:
+ *
+ *     KeyStore getKeystore(File keystoreFile, String password) {
+ *         @Inject(opts=new KeyStore.Info(keystoreFile.contents, password)) KeyStore keystore;
+ *         return keystore;
+ *     }
  */
 interface KeyStore {
     /**
