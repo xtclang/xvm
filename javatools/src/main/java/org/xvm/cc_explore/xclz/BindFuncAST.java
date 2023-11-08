@@ -3,7 +3,6 @@ package org.xvm.cc_explore.xclz;
 import org.xvm.cc_explore.util.SB;
 import org.xvm.cc_explore.MethodPart;
 import org.xvm.cc_explore.cons.*;
-import org.xvm.cc_explore.XEC;
 
 class BindFuncAST extends AST {
   // Which arguments are being bound here.  This is basically reverse-currying
@@ -33,7 +32,7 @@ class BindFuncAST extends AST {
       // Embedded Lambda
       MethodPart lam = (MethodPart)((MethodCon)con._tcon).part();
       // A builder for the lambda method
-      XClzBuilder X2 = new XClzBuilder(X._mod,null);
+      XClzBuilder X2 = new XClzBuilder(null);
       // All the args from the current scope visible in the lambda body, as
       // hidden extra arguments
       for( int i=0; i<nargs; i++ ) {

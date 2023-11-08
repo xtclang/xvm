@@ -313,12 +313,15 @@ public abstract class XType {
       // Check the common base classes
       String xjkey = xjkey(clz);
       Base val = BASE_XJMAP.get(xjkey);
-      if( val!=null )
-        return boxed ? val.box() : val;
+      if( val!=null )  return boxed ? val.box() : val;
       // Check installed classes
       val = XJMAP.get(xjkey);
-      if( val!=null )
-        return val;
+      if( val!=null )  return val;
+      // Same module compiles shortly, with the short name
+      XType clzpar = Base.make(XClzBuilder.java_class_name(clz._par._name));
+      if( clzpar==XClzBuilder.MOD_TYPE )
+        return Base.make(XClzBuilder.java_class_name(clz._name));
+      // TODO: Figure out cross-XTC-module naming
       throw XEC.TODO();
     }
 

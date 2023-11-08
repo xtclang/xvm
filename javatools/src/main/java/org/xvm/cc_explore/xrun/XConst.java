@@ -7,7 +7,10 @@ import org.xvm.cc_explore.xclz.XClz;
 import org.xvm.cc_explore.xclz.XType;
 import org.xvm.cc_explore.xclz.XClzBuilder;
 
-public abstract class XConst extends XClz implements Comparable<XConst> {
+public abstract class XConst extends XClz
+  implements Comparable<XConst>,  // Java Comparable; XTC Comparable has equals, which is included in Java Object
+             XStringable          // has appendTo
+{
 
   abstract public Ordered compare( XConst that );
   @Override public int compareTo( XConst o ) { return compare(o).ordinal()-1; }
