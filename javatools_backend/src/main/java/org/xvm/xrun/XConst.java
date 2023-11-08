@@ -20,43 +20,13 @@ public abstract class XConst extends XClz
   // Make several fixed constant class methods
   public static void make_meth( ClassPart clz, String methname, SB sb ) {
     switch( methname ) {
-    case "equals"  : make_equals  (clz,sb); break;
     case "compare" : make_compare (clz,sb); break;
+    case "equals"  : make_equals  (clz,sb); break;
     case "hashCode": make_hashCode(clz,sb); break;
+    case "toString": make_toString(clz,sb); break;
     default: throw XEC.TODO();
     }
   }
-
-  /* Generate:
-     public boolean equals( Object o ) {
-       if( this==o ) return true;
-       if( !(o instanceof CLAZZ that) ) return false;
-       return fld0.equals(that.fld0) && fld1==that.fld1 && ... fldN.equals(that.fldN);
-     }
-  */
-  static void make_equals( ClassPart clz, SB sb ) {
-    String clzname = XClzBuilder.java_class_name(clz._name);    
-    sb.ip("// Default equals").nl();
-    sb.ip("public boolean equals( Object o ) {").nl().ii();
-    sb.ip(  "if( this==o ) return true;").nl();
-    sb.ip(  "if( !(o instanceof ").p(clzname).p(" that) ) return false;").nl();
-    sb.ip(  "return ");
-    boolean any=false;
-    for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) ) {
-        XType xt = XType.xtype(prop._con,false);
-        xt.do_eq(sb.p(prop._name),"that."+prop._name).p(" && ");
-      }
-    if( any ) sb.unchar(4);
-    else sb.p("true");
-    sb.p(";").nl().di();
-    sb.ip("}").nl();
-  }
-
-  private static boolean xeq(PropPart p) {
-    return XType.xtype(p._con,false).primeq();
-  }
-
   
   /* Generate:
      public Ordered compare( CLZ that ) {
@@ -92,6 +62,36 @@ public abstract class XConst extends XClz
   };
 
   /* Generate:
+     public boolean equals( Object o ) {
+       if( this==o ) return true;
+       if( !(o instanceof CLAZZ that) ) return false;
+       return fld0.equals(that.fld0) && fld1==that.fld1 && ... fldN.equals(that.fldN);
+     }
+  */
+  static void make_equals( ClassPart clz, SB sb ) {
+    String clzname = XClzBuilder.java_class_name(clz._name);    
+    sb.ip("// Default equals").nl();
+    sb.ip("public boolean equals( Object o ) {").nl().ii();
+    sb.ip(  "if( this==o ) return true;").nl();
+    sb.ip(  "if( !(o instanceof ").p(clzname).p(" that) ) return false;").nl();
+    sb.ip(  "return ");
+    boolean any=false;
+    for( Part p : clz._name2kid.values() )
+      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) ) {
+        XType xt = XType.xtype(prop._con,false);
+        xt.do_eq(sb.p(prop._name),"that."+prop._name).p(" && ");
+      }
+    if( any ) sb.unchar(4);
+    else sb.p("true");
+    sb.p(";").nl().di();
+    sb.ip("}").nl();
+  }
+
+  private static boolean xeq(PropPart p) {
+    return XType.xtype(p._con,false).primeq();
+  }
+
+  /* Generate:
      public long hash() {
        return fld0.hash()^fld1^...^fldN.hash();
      }
@@ -112,4 +112,30 @@ public abstract class XConst extends XClz
     sb.ip("public int hashCode() { long h = hash(); return (int)((h>>32)^h); }").nl();
   };
 
+
+  /* Generate:
+     @Override public String toString() {
+       SB sb = new SB().p("(");
+       sb.p(fld0.toString()).p(",");
+       sb.p( fld_prim      ).p(",");
+       sb.p(fldN.toString()).p(");");
+       return sb.toString();
+     }
+  */
+  static void make_toString( ClassPart clz, SB sb ) {
+    sb.ip("// Default toString").nl();
+    sb.ip("@Override public String toString() {").nl().ii();
+    sb.ip("StringBuilder sb = new StringBuilder().append(\"(\");").nl();
+    Ary<PropPart> pps = new Ary<>(PropPart.class);
+    for( Part p : clz._name2kid.values() )
+      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 )
+        pps.setX(prop._order,prop);
+    for( int i=0; i<pps._len; i++ ) {
+      sb.ip("sb.append(").p(pps._es[i]._name);
+      if( !xeq(pps._es[i]) ) sb.ip(".toString()");
+      sb.p(").append(\"").p(i<pps._len-1 ? "," : ")").p("\");").nl();
+    }
+    sb.ip("return sb.toString();").nl().di();
+    sb.ip("}").nl();
+  };
 }
