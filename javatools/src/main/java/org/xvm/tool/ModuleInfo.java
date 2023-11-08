@@ -139,7 +139,7 @@ public class ModuleInfo
                         // walk up to the next parent directory and see if it contains .x files
                         dir      = dir.getParentFile();
                         srcFiles = dir == null ? NO_FILES : dir.listFiles(f -> !f.isDirectory()
-                                && getExtension(f.getName()).equalsIgnoreCase("x"));
+                                && "x".equalsIgnoreCase(getExtension(f.getName())));
                         if (srcFiles.length == 0)
                             {
                             // failed to find the module source file
@@ -229,7 +229,7 @@ public class ModuleInfo
                     File   bestGuess = fileSpec;
                     File   dir       = fileSpec.getParentFile().getParentFile();
                     File[] srcFiles  = dir == null ? NO_FILES : dir.listFiles(f -> !f.isDirectory()
-                                        && getExtension(f.getName()).equalsIgnoreCase("x"));
+                                        && "x".equalsIgnoreCase(getExtension(f.getName())));
                     while (true)
                         {
                         if (srcFiles.length == 1)
@@ -271,7 +271,7 @@ public class ModuleInfo
 
                         dir      = dir.getParentFile();
                         srcFiles = dir == null ? NO_FILES : dir.listFiles(f -> !f.isDirectory()
-                                    && getExtension(f.getName()).equalsIgnoreCase("x"));
+                                    && "x".equalsIgnoreCase(getExtension(f.getName())));
                         }
                     }
 
@@ -1111,7 +1111,7 @@ public class ModuleInfo
         {
         return dir == null || !dir.isDirectory()
                 ? NO_FILES
-                : dir.listFiles(f -> !f.isDirectory() && getExtension(f.getName()).equalsIgnoreCase("xtc"));
+                : dir.listFiles(f -> !f.isDirectory() && "xtc".equalsIgnoreCase(getExtension(f.getName())));
         }
 
 
@@ -1157,7 +1157,7 @@ public class ModuleInfo
         for (File child : dir.listFiles())
             {
             String name = child.getName();
-            if (ext == null || getExtension(name).equals(ext))
+            if (ext == null || ext.equalsIgnoreCase(getExtension(name)))
                 {
                 assert !children.containsKey(name);
                 children.put(name, child);
