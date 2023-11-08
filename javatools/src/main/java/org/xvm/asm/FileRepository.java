@@ -69,7 +69,7 @@ public class FileRepository
     public Set<String> getModuleNames()
         {
         checkCache();
-        return file.exists() && name != null ? Collections.singleton(name) : Collections.EMPTY_SET;
+        return file.exists() && name != null ? Collections.singleton(name) : Collections.emptySet();
         }
 
     @Override

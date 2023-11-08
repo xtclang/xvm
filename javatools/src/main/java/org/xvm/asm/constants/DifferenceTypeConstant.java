@@ -308,7 +308,7 @@ public class DifferenceTypeConstant
         {
         if (info1 == null || info2 == null)
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
@@ -353,7 +353,7 @@ public class DifferenceTypeConstant
         {
         if (info1 == null)
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         if (info2 == null)
@@ -383,7 +383,7 @@ public class DifferenceTypeConstant
         {
         if (info1 == null)
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         if (info2 == null)

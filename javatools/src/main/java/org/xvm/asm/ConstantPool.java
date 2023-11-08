@@ -2499,12 +2499,12 @@ public class ConstantPool
         if (info == null)
             {
             m_infoPlaceholder = info = new TypeInfo(
-                typeObject(), 0, null, 0, true, Collections.EMPTY_MAP,
+                typeObject(), 0, null, 0, true, Collections.emptyMap(),
                 Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 typeObject(), null, typeObject(),
                 Collections.emptyList(), new ListMap<>(), new ListMap<>(),
-                Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-                Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+                Collections.emptyMap(), Collections.emptyMap(),
+                Collections.emptyMap(), Collections.emptyMap(),
                 ListMap.EMPTY, null, Progress.Building)
                     {
                     public String toString()
@@ -3797,9 +3797,9 @@ public class ConstantPool
                 Collections.emptyList(), // listProcess,
                 ListMap.EMPTY,          // listmapClassChain
                 ListMap.EMPTY,          // listmapDefaultChain
-                Collections.EMPTY_MAP,  // mapProps
+                Collections.emptyMap(),  // mapProps
                 mapMethods,
-                Collections.EMPTY_MAP,  // mapVirtProps
+                Collections.emptyMap(),  // mapVirtProps
                 mapVirtMethods,
                 ListMap.EMPTY,          // mapChildren
                 null, Progress.Complete

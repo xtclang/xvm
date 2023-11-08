@@ -102,7 +102,7 @@ public class AnyCondition
                 }
             }
 
-        return setVers == null ? Collections.EMPTY_SET : setVers;
+        return setVers == null ? Collections.emptySet() : setVers;
         }
 
     @Override

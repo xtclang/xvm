@@ -563,14 +563,14 @@ public class ClassComposition
 
         if (!f_template.isGenericHandle())
             {
-            m_mapFields = Collections.EMPTY_MAP;
+            m_mapFields = Collections.emptyMap();
             return;
             }
 
         TypeConstant typePublic = f_typeInception.getUnderlyingType();
         if (typePublic instanceof PropertyClassTypeConstant)
             {
-            m_mapFields = Collections.EMPTY_MAP;
+            m_mapFields = Collections.emptyMap();
             return;
             }
 
@@ -706,7 +706,7 @@ public class ClassComposition
 
         m_cRegularFields = cRegular;
         m_mapFields      = mapFields.isEmpty()
-                ? Collections.EMPTY_MAP
+                ? Collections.emptyMap()
                 : mapFields.size() > 8
                     ? new LinkedHashMap<>(mapFields)
                     : mapFields;

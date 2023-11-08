@@ -582,8 +582,8 @@ public abstract class RelationalTypeConstant
                             ListMap.EMPTY,          // listmapDefaultChain
                             mergeProperties(info1, info2, errs),
                             mergeMethods(info1, info2, errs),
-                            Collections.EMPTY_MAP,  // mapVirtProps
-                            Collections.EMPTY_MAP,  // mapVirtMethods
+                            Collections.emptyMap(),  // mapVirtProps
+                            Collections.emptyMap(),  // mapVirtMethods
                             mergeChildren(info1, info2, errs),
                             null, // REVIEW: mergeDepends?
                             info1 == null || info2 == null

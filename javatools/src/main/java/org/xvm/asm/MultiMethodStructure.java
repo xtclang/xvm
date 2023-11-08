@@ -403,7 +403,7 @@ public class MultiMethodStructure
         {
         ensureChildren();
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
-        return map == null ? Collections.EMPTY_MAP : map;
+        return map == null ? Collections.emptyMap() : map;
         }
 
     /**

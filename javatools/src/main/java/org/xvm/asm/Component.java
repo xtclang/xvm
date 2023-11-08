@@ -799,7 +799,7 @@ public abstract class Component
         {
         ensureChildren();
         Map<String, Component> map = m_childByName;
-        return map == null ? Collections.EMPTY_MAP : map;
+        return map == null ? Collections.emptyMap() : map;
         }
 
     /**
