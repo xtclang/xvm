@@ -190,7 +190,7 @@ public class TypeCollector
             }
 
         assert m_listMulti == null;
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
         }
 
     /**
@@ -231,7 +231,7 @@ public class TypeCollector
             }
 
         return m_listSingle == null
-                ? Collections.EMPTY_LIST
+                ? Collections.emptyList()
                 : ensureMulti();
         }
 

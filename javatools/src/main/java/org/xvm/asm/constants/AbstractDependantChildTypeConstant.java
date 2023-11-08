@@ -179,7 +179,7 @@ public abstract class AbstractDependantChildTypeConstant
         if (typeParent.containsGenericParam(sName))
             {
             // the passed in list applies only to the child and should not be used by the parent
-            type = typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
+            type = typeParent.getGenericParamType(sName, Collections.emptyList());
             }
         else
             {

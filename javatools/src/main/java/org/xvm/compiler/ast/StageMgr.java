@@ -464,7 +464,7 @@ public class StageMgr
         List<AstNode> listPrevious = m_listRevisit;
         m_listRevisit = null;
         return listPrevious == null
-                ? Collections.EMPTY_LIST
+                ? Collections.emptyList()
                 : listPrevious;
         }
 

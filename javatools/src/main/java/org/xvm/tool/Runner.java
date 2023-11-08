@@ -306,7 +306,7 @@ public class Runner
          */
         public List<File> getModulePath()
             {
-            return (List<File>) values().getOrDefault("L", Collections.EMPTY_LIST);
+            return (List<File>) values().getOrDefault("L", Collections.emptyList());
             }
 
         /**

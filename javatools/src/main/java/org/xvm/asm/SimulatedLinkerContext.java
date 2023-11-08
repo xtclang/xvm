@@ -228,9 +228,9 @@ public class SimulatedLinkerContext
     public static final SimulatedLinkerContext EMPTY = new SimulatedLinkerContext(null);
 
     private final ConditionalConstant           cond;
-    private Map<ConditionalConstant, Influence> influences  = Collections.EMPTY_MAP;
-    private Set<String>                         names       = Collections.EMPTY_SET;
-    private Map<IdentityConstant, Boolean>      present     = Collections.EMPTY_MAP;
-    private Map<ModuleConstant, Version>        modules     = Collections.EMPTY_MAP;
+    private Map<ConditionalConstant, Influence> influences  = Collections.emptyMap();
+    private Set<String>                         names       = Collections.emptySet();
+    private Map<IdentityConstant, Boolean>      present     = Collections.emptyMap();
+    private Map<ModuleConstant, Version>        modules     = Collections.emptyMap();
     private Version                             version;
     }

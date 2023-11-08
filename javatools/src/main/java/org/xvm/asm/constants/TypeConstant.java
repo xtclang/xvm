@@ -123,7 +123,7 @@ public abstract class TypeConstant
     @Override
     public TypeConstant resolveGenericType(String sFormalName)
         {
-        return getGenericParamType(sFormalName, Collections.EMPTY_LIST);
+        return getGenericParamType(sFormalName, Collections.emptyList());
         }
 
 
@@ -437,7 +437,7 @@ public abstract class TypeConstant
         {
         return isModifyingType()
                 ? getUnderlyingType().getParamTypes()
-                : Collections.EMPTY_LIST;
+                : Collections.emptyList();
         }
 
     /**
@@ -2339,7 +2339,7 @@ public abstract class TypeConstant
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP, ListMap.EMPTY,
+                mapProps, mapMethods, mapVirtProps, Collections.emptyMap(), ListMap.EMPTY,
                 null, fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
@@ -4544,7 +4544,7 @@ public abstract class TypeConstant
                     }
                 }
             }
-        return listMatch == null ? Collections.EMPTY_LIST : listMatch;
+        return listMatch == null ? Collections.emptyList() : listMatch;
         }
 
     /**
@@ -4618,7 +4618,7 @@ public abstract class TypeConstant
                     }
                 }
             }
-        return listMatch == null ? Collections.EMPTY_LIST : listMatch;
+        return listMatch == null ? Collections.emptyList() : listMatch;
         }
 
     /**
@@ -6032,7 +6032,7 @@ public abstract class TypeConstant
 
         return typeLeftN.isDuckTypeAbleFrom(typeRightN) &&
                typeLeftN.isInterfaceAssignableFrom(
-                        typeRightN, accessRight, Collections.EMPTY_LIST).isEmpty()
+                        typeRightN, accessRight, Collections.emptyList()).isEmpty()
                 ? Relation.IS_A
                 : Relation.INCOMPATIBLE;
         }
@@ -6316,7 +6316,7 @@ public abstract class TypeConstant
             mapUsage.put(sTypeName, Usage.IN_PROGRESS);
             try
                 {
-                usage = checkConsumption(sTypeName, access, Collections.EMPTY_LIST);
+                usage = checkConsumption(sTypeName, access, Collections.emptyList());
                 }
             catch (RuntimeException | Error e)
                 {
@@ -6370,7 +6370,7 @@ public abstract class TypeConstant
             mapUsage.put(sTypeName, Usage.IN_PROGRESS);
             try
                 {
-                usage = checkProduction(sTypeName, access, Collections.EMPTY_LIST);
+                usage = checkProduction(sTypeName, access, Collections.emptyList());
                 }
             catch (RuntimeException | Error e)
                 {
@@ -7332,8 +7332,8 @@ public abstract class TypeConstant
                             }
 
                         String       sName      = constName.getValue();
-                        TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, Collections.EMPTY_LIST);
-                        TypeConstant typePRight = typeRight.getGenericParamType(sName, Collections.EMPTY_LIST);
+                        TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, Collections.emptyList());
+                        TypeConstant typePRight = typeRight.getGenericParamType(sName, Collections.emptyList());
 
                         if (!typePRight.equals(typePLeft))
                             {

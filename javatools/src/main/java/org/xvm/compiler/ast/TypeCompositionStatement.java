@@ -937,7 +937,7 @@ public class TypeCompositionStatement
         // validate and register annotations
         if (annotations != null && !annotations.isEmpty())
             {
-            if (compositions == null || compositions == Collections.EMPTY_LIST)
+            if (compositions == null || compositions.isEmpty())
                 {
                 compositions = new ArrayList<>();
                 }
@@ -2798,7 +2798,7 @@ public class TypeCompositionStatement
         StatementBlock blockBody = body;
         if (body == null)
             {
-            blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
+            blockBody = adopt(new StatementBlock(Collections.emptyList()));
             }
         return new RootContext(blockBody, constructor);
         }

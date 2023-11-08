@@ -396,7 +396,7 @@ public class xRTCompiler
 
         protected List<String> getErrors()
             {
-            return m_log == null ? Collections.EMPTY_LIST : m_log;
+            return m_log == null ? Collections.emptyList() : m_log;
             }
 
         protected ModuleRepository getBuildRepository()

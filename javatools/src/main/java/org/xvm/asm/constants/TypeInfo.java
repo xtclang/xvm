@@ -149,7 +149,7 @@ public class TypeInfo
         f_cInvalidations      = cInvalidations;
         f_struct              = infoConstraint.f_struct;
         f_cDepth              = infoConstraint.f_cDepth;
-        f_mapTypeParams       = Collections.EMPTY_MAP;
+        f_mapTypeParams       = Collections.emptyMap();
         f_aannoClass          = Annotation.NO_ANNOTATIONS;
         f_aannoMixin          = Annotation.NO_ANNOTATIONS;
         f_typeExtends         = infoConstraint.f_type;
@@ -1053,7 +1053,7 @@ public class TypeInfo
         MethodStructure method = (MethodStructure) idMethod.getComponent();
         if (method != null && !method.hasChildren())
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         Map<IdentityConstant, Map<String, PropertyInfo>> mapProps = m_mapNestedProperties;
@@ -1079,7 +1079,7 @@ public class TypeInfo
                 }
             if (map == null)
                 {
-                map = Collections.EMPTY_MAP;
+                map = Collections.emptyMap();
                 }
             mapProps.put(idMethod, map);
             }
@@ -1123,7 +1123,7 @@ public class TypeInfo
                 }
             if (map == null)
                 {
-                map = Collections.EMPTY_MAP;
+                map = Collections.emptyMap();
                 }
             mapProps.put(idProp, map);
             }
@@ -1915,7 +1915,7 @@ public class TypeInfo
                 }
 
             // cache the result
-            m_setOps = setOps = (setOps == null ? Collections.EMPTY_SET : setOps);
+            m_setOps = setOps = (setOps == null ? Collections.emptySet() : setOps);
             }
 
         return setOps;
@@ -2104,7 +2104,7 @@ public class TypeInfo
             // cache the miss
             if (setMethods == null)
                 {
-                mapMethods.put(sKey, setMethods = Collections.EMPTY_SET);
+                mapMethods.put(sKey, setMethods = Collections.emptySet());
                 }
             else if (fAny && setMethods.size() == 1)
                 {
@@ -2189,7 +2189,7 @@ public class TypeInfo
             if (setMethods == null)
                 {
                 // cache the miss
-                mapMethods.put(sKey, setMethods = Collections.EMPTY_SET);
+                mapMethods.put(sKey, setMethods = Collections.emptySet());
                 }
             else if (fAny && setMethods.size() == 1)
                 {
@@ -2250,7 +2250,7 @@ public class TypeInfo
                 }
 
             // cache the result
-            m_setAuto = setAuto = (setAuto == null ? Collections.EMPTY_SET : setAuto);
+            m_setAuto = setAuto = (setAuto == null ? Collections.emptySet() : setAuto);
             }
 
         return setAuto;

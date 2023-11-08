@@ -108,7 +108,7 @@ public class VersionOverride
     @Override
     public Map<String, Object> getDumpChildren()
         {
-        return Collections.EMPTY_MAP;
+        return Collections.emptyMap();
         }
 
 

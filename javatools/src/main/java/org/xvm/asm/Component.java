@@ -511,7 +511,7 @@ public abstract class Component
         List<Contribution> list = m_listContribs;
         if (list == null)
             {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
             }
         assert (list = Collections.unmodifiableList(m_listContribs)) != null;
         return list;
@@ -799,7 +799,7 @@ public abstract class Component
         {
         ensureChildren();
         Map<String, Component> map = m_childByName;
-        return map == null ? Collections.EMPTY_MAP : map;
+        return map == null ? Collections.emptyMap() : map;
         }
 
     /**
@@ -1790,7 +1790,7 @@ public abstract class Component
                 }
             }
 
-        return matches == null ? Collections.EMPTY_LIST : matches;
+        return matches == null ? Collections.emptyList() : matches;
         }
 
     protected boolean canBeSeen(Access access)

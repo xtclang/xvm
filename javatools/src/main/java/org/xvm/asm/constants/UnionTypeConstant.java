@@ -506,7 +506,7 @@ public class UnionTypeConstant
         {
         if (info1 == null || info2 == null)
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         ConstantPool           pool = getConstantPool();
@@ -568,7 +568,7 @@ public class UnionTypeConstant
         {
         if (info1 == null || info2 == null)
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
@@ -653,7 +653,7 @@ public class UnionTypeConstant
         {
         if (info1 == null || info2 == null)
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         // calling info.getNarrowingMethod() can change the content of "MethodBySignature", causing

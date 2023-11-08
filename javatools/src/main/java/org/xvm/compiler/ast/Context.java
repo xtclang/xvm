@@ -552,7 +552,7 @@ public class Context
      */
     public void merge(Map<String, Assignment> mapAdd)
         {
-        merge(mapAdd, Collections.EMPTY_MAP);
+        merge(mapAdd, Collections.emptyMap());
         }
 
     /**
@@ -1224,7 +1224,7 @@ public class Context
         {
         Map<String, Assignment> map = m_mapAssigned;
         return map == null
-                ? Collections.EMPTY_MAP
+                ? Collections.emptyMap()
                 : map;
         }
 
@@ -1306,7 +1306,7 @@ public class Context
         return hasInitialNames()
                 ? ensureNameMap()
                 : m_mapByName == null
-                        ? Collections.EMPTY_MAP
+                        ? Collections.emptyMap()
                         : m_mapByName;
         }
 
@@ -1585,7 +1585,7 @@ public class Context
     protected Map<String, Argument> getNarrowingMap(boolean fWhenTrue)
         {
         Map<String, Argument> map = fWhenTrue ? m_mapWhenTrue : m_mapWhenFalse;
-        return map == null ? Collections.EMPTY_MAP : map;
+        return map == null ? Collections.emptyMap() : map;
         }
 
     /**
@@ -1622,7 +1622,7 @@ public class Context
             case WhenFalse -> m_mapFormalWhenFalse;
             default        -> m_mapFormal;
             };
-        return map == null ? Collections.EMPTY_MAP : map;
+        return map == null ? Collections.emptyMap() : map;
         }
 
     /**
@@ -1632,7 +1632,7 @@ public class Context
         {
         Map<FormalConstant, TypeConstant> map = getFormalTypeMap(branch);
 
-        if (map == Collections.EMPTY_MAP)
+        if (map.isEmpty())
             {
             return switch (branch)
                 {
@@ -2913,7 +2913,7 @@ public class Context
         public Map<String, Boolean> getCaptureMap()
             {
             return m_mapCapture == null
-                    ? Collections.EMPTY_MAP
+                    ? Collections.emptyMap()
                     : m_mapCapture;
             }
 
@@ -2932,7 +2932,7 @@ public class Context
                 if (getCaptureMap().isEmpty())
                     {
                     // there are never more capture-registers than there are captures
-                    return Collections.EMPTY_MAP;
+                    return Collections.emptyMap();
                     }
 
                 m_mapRegisters = map = new HashMap<>();
@@ -2947,7 +2947,7 @@ public class Context
         public Map<String, Argument> getFormalMap()
             {
             return m_mapFormalInfo == null
-                    ? Collections.EMPTY_MAP
+                    ? Collections.emptyMap()
                     : m_mapFormalInfo;
             }
 

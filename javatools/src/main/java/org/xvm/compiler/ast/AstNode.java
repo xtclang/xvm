@@ -1025,7 +1025,7 @@ public abstract class AstNode
         // collect available types for unnamed arguments and a map of named expressions
         Map<String, Expression> mapNamedExpr = cExpr > 0
                 ? extractNamedArgs(listExprArgs, errs)
-                : Collections.EMPTY_MAP;
+                : Collections.emptyMap();
 
         if (mapNamedExpr == null)
             {
@@ -1186,7 +1186,7 @@ public abstract class AstNode
                     }
                 }
             }
-        return mapNamed == null ? Collections.EMPTY_MAP : mapNamed;
+        return mapNamed == null ? Collections.emptyMap() : mapNamed;
         }
 
     /**
@@ -2012,7 +2012,7 @@ public abstract class AstNode
         Field[] fields = getChildFields();
         if (fields.length == 0)
             {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
             }
 
         Map<String, Object> map = new ListMap<>();

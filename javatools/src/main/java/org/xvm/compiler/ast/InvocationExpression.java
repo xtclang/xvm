@@ -909,7 +909,7 @@ public class InvocationExpression
                     return null;
                     }
 
-                Map<FormalConstant, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
+                Map<FormalConstant, TypeConstant> mapTypeParams = Collections.emptyMap();
                 if (cTypeParams > 0)
                     {
                     transformTypeArguments(ctx, method, listArgs, atypeArgs);

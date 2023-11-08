@@ -272,7 +272,7 @@ public class SwitchStatement
                 {
                 if (!entry.getKey().isDiscarded())
                     {
-                    addBreak(entry.getKey(), entry.getValue(), Collections.EMPTY_MAP, m_labelContinue);
+                    addBreak(entry.getKey(), entry.getValue(), Collections.emptyMap(), m_labelContinue);
                     }
                 }
             m_listContinues = null;
@@ -296,7 +296,7 @@ public class SwitchStatement
         // we will process the assignments ourselves; see SwitchContext.mergeBreaks()
         m_listBreaks.add(mapAsn);
 
-        super.addBreak(nodeOrigin, Collections.EMPTY_MAP, Collections.EMPTY_MAP, label);
+        super.addBreak(nodeOrigin, Collections.emptyMap(), Collections.emptyMap(), label);
         }
 
     @Override

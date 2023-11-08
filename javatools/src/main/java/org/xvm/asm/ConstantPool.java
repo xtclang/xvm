@@ -2499,12 +2499,12 @@ public class ConstantPool
         if (info == null)
             {
             m_infoPlaceholder = info = new TypeInfo(
-                typeObject(), 0, null, 0, true, Collections.EMPTY_MAP,
+                typeObject(), 0, null, 0, true, Collections.emptyMap(),
                 Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 typeObject(), null, typeObject(),
-                Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
-                Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-                Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+                Collections.emptyList(), new ListMap<>(), new ListMap<>(),
+                Collections.emptyMap(), Collections.emptyMap(),
+                Collections.emptyMap(), Collections.emptyMap(),
                 ListMap.EMPTY, null, Progress.Building)
                     {
                     public String toString()
@@ -3228,7 +3228,7 @@ public class ConstantPool
         List<TypeConstant> list = f_tlolistDeferred.get();
         if (list == null)
             {
-            list = Collections.EMPTY_LIST;
+            list = Collections.emptyList();
             }
         else
             {
@@ -3794,12 +3794,12 @@ public class ConstantPool
                 null,                   // typeExtends
                 null,                   // typeRebase
                 null,                   // typeInto
-                Collections.EMPTY_LIST, // listProcess,
+                Collections.emptyList(), // listProcess,
                 ListMap.EMPTY,          // listmapClassChain
                 ListMap.EMPTY,          // listmapDefaultChain
-                Collections.EMPTY_MAP,  // mapProps
+                Collections.emptyMap(),  // mapProps
                 mapMethods,
-                Collections.EMPTY_MAP,  // mapVirtProps
+                Collections.emptyMap(),  // mapVirtProps
                 mapVirtMethods,
                 ListMap.EMPTY,          // mapChildren
                 null, Progress.Complete
