@@ -58,7 +58,7 @@ public abstract class XtcCompileTask extends SourceTask {
         setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
         project.info("{} Associating {} compile task {} with SourceDirectorySet: {}", prefix, sourceSet.getName(), name, getSource().getFiles());
         if (extCompiler.getForceRebuild().get()) {
-            project.lifecycle("{} Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
+            project.info("{} Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
             touchSourceSet(sourceSet);
         }
         doLast(t -> {
@@ -200,7 +200,7 @@ public abstract class XtcCompileTask extends SourceTask {
             if (!dir.exists()) {
                 project.warn("{} Resource directory does not exist: {} (ignoring passing as input to compiler)", prefix, dir);
             } else {
-                project.lifecycle("{} Adding resource directory: {}", prefix, dir);
+                project.info("{} Adding resource directory: {}", prefix, dir);
                 args.add("-r", dir.getAbsolutePath());
             }
         });
