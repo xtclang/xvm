@@ -95,14 +95,14 @@ public class LiteralExpression
 
             case LIT_INT:
                 return pool.typeIntLiteral();
-            case LIT_INTA:
-                return pool.typeInt64();
+
             case LIT_INT8:
                 return pool.typeInt8();
             case LIT_INT16:
                 return pool.typeInt16();
             case LIT_INT32:
                 return pool.typeInt32();
+            case LIT_INTA:
             case LIT_INT64:
                 return pool.typeInt64();
             case LIT_INT128:
@@ -110,14 +110,13 @@ public class LiteralExpression
             case LIT_INTN:
                 return pool.typeIntN();
 
-            case LIT_UINTA:
-                return pool.typeUInt64();
             case LIT_UINT8:
                 return pool.typeUInt8();
             case LIT_UINT16:
                 return pool.typeUInt16();
             case LIT_UINT32:
                 return pool.typeUInt32();
+            case LIT_UINTA:
             case LIT_UINT64:
                 return pool.typeUInt64();
             case LIT_UINT128:
@@ -314,10 +313,6 @@ public class LiteralExpression
                 format = Format.IntLiteral;
                 break;
 
-            case LIT_INTA:
-                format = Format.Int64;
-                break;
-
             case LIT_INT8:
                 format = Format.Int8;
                 break;
@@ -330,6 +325,7 @@ public class LiteralExpression
                 format = Format.Int32;
                 break;
 
+            case LIT_INTA:
             case LIT_INT64:
                 format = Format.Int64;
                 break;
@@ -340,10 +336,6 @@ public class LiteralExpression
 
             case LIT_INTN:
                 format = Format.IntN;
-                break;
-
-            case LIT_UINTA:
-                format = Format.UInt64;
                 break;
 
             case LIT_UINT8:
@@ -358,6 +350,7 @@ public class LiteralExpression
                 format = Format.UInt32;
                 break;
 
+            case LIT_UINTA:
             case LIT_UINT64:
                 format = Format.UInt64;
                 break;
@@ -375,14 +368,11 @@ public class LiteralExpression
                 format = Format.FPLiteral;
                 break;
 
-            case LIT_DECA:
-                format = Format.Dec64;
-                break;
-
             case LIT_DEC32:
                 format = Format.Dec32;
                 break;
 
+            case LIT_DECA:
             case LIT_DEC64:
                 format = Format.Dec64;
                 break;

@@ -54,6 +54,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;
 
+import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Expression.TypeFit;
 import org.xvm.compiler.ast.NameExpression.Meaning;
 
@@ -1356,18 +1357,29 @@ public abstract class AstNode
                     }
                 else if (typeParam != null && !errsTemp.hasSeriousErrors())
                     {
-                    if (exprArg instanceof NameExpression exprName)
+                    if (exprArg instanceof LiteralExpression lit &&
+                            typeParam.isA(pool.typeFileNode()) &&
+                            lit.getLiteral().getId() == Token.Id.LIT_PATH)
                         {
-                        typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
+                        log(errs, Severity.ERROR, Compiler.MISSING_PARAM_RESOURCE,
+                                String.valueOf(i+1), method.getParam(i).getName(),
+                                lit.getLiteral().getValueText());
                         }
+                    else
+                        {
+                        if (exprArg instanceof NameExpression exprName)
+                            {
+                            typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
+                            }
 
-                    log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
-                            String.valueOf(i+1), method.getParam(i).getName(),
-                            method.getIdentityConstant().getSignature().removeAutoNarrowing().getValueString(),
-                            typeParam.removeAutoNarrowing().getValueString(),
-                            typeExpr == null
-                                ? exprArg.toString()
-                                : typeExpr.removeAutoNarrowing().getValueString());
+                        log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
+                                String.valueOf(i+1), method.getParam(i).getName(),
+                                method.getIdentityConstant().getSignature().removeAutoNarrowing().getValueString(),
+                                typeParam.removeAutoNarrowing().getValueString(),
+                                typeExpr == null
+                                    ? exprArg.toString()
+                                    : typeExpr.removeAutoNarrowing().getValueString());
+                        }
                     }
 
                 if (typeParam != null)

@@ -588,8 +588,7 @@ public abstract class Expression
                     (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null)
                 {
                 // cannot provide the required type
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        typeRequired.getValueString(), typeActual.getValueString());
+                reportTypeMismatch(typeRequired, typeActual, errs);
                 fit = TypeFit.NoFit;
                 }
             else if (constVal != null && !(constVal instanceof SingletonConstant))
@@ -866,8 +865,7 @@ public abstract class Expression
                         (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null)
                     {
                     // cannot provide the required type
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                            typeRequired.getValueString(), typeActual.getValueString());
+                    reportTypeMismatch(typeRequired, typeActual, errs);
                     fit = TypeFit.NoFit;
                     }
                 else
@@ -2070,6 +2068,26 @@ public abstract class Expression
             }
         return arg;
         }
+
+    /**
+     * Report a type mismatch, attempting to provide a most useful error.
+     */
+    protected void reportTypeMismatch(TypeConstant typeRequired, TypeConstant typeActual,
+                                      ErrorListener errs)
+        {
+        if (this instanceof LiteralExpression lit &&
+                typeRequired.isA(pool().typeFileNode()) &&
+                lit.getLiteral().getId() == Token.Id.LIT_PATH)
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_RESOURCE);
+            }
+        else
+            {
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                typeRequired.getValueString(), typeActual.getValueString());
+            }
+        }
+
 
     // ----- inner class: Assignable ---------------------------------------------------------------
 

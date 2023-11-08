@@ -1405,6 +1405,14 @@ public class Compiler
      */
     public static final String INVALID_ANNOTATIONS_COMBO          = "COMPILER-198";
     /**
+     * A resource (file or directory) is missing.
+     */
+    public static final String MISSING_RESOURCE                   = "COMPILER-199";
+    /**
+     * Parameter {0} ({1}) points to a missing resource {2}.
+     */
+    public static final String MISSING_PARAM_RESOURCE             = "COMPILER-200";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
