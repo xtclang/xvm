@@ -95,8 +95,8 @@ public class Runner
                 File fileSrc = info.getSourceFile();
                 if (fileSrc != null && fileSrc.exists())
                     {
-                    log(Severity.INFO, "The compiled module " + info.getQualifiedModuleName()
-                            + " is missing; attempting to compile it from " + info.getSourceFile() + " ....");
+                    log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
+                            + "\" is missing; attempting to compile it from " + info.getSourceFile() + " ....");
                     fCompile = true;
                     }
                 else
@@ -144,8 +144,8 @@ public class Runner
             }
         else if (!info.isUpToDate())
             {
-            log(Severity.INFO, "The compiled module " + info.getQualifiedModuleName()
-                    + " is out-of-date; recompiling ....");
+            log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
+                    + "\" is out-of-date; recompiling ....");
             if (!info.getBinaryFile().delete())
                 {
                 log(Severity.ERROR, "Failed to delete the out-of-date module: " + info.getBinaryFile());
