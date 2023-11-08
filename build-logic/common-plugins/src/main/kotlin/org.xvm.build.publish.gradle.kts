@@ -10,7 +10,8 @@ plugins {
 internal val xtcGitHubClient = xdkBuildLogic.gitHubClient()
 
 /**
- * Configure repositories to publish artifacts to.
+ * Configure repositories for XDK artifact publication. Currently we publish the XDK zip "xdkArchive", and
+ * the XTC plugin, "xtcPlugin".
  */
 publishing {
     repositories {
@@ -68,7 +69,7 @@ tasks.withType<Sign>().configureEach {
     onlyIf {
         xdkBuildLogic.isSnapshot().not() && getXdkPropertyBoolean("org.xvm.publications.sign", false) && System.getenv("CI").isNullOrEmpty() // TODO postpone signing in CI.
     }
-    logger.lifecycle("$prefix Configuring signature: '$name'")
+    logger.info("$prefix Configuring signature: '$name'")
     val keyId = getXdkProperty("org.xvm.signing.keyId", "")
     val password = getXdkProperty("org.xvm.signing.password", "")
     val secretKeyRingFile = getXdkProperty("org.xvm.signing.secretKeyRingFile", "")
@@ -77,20 +78,9 @@ tasks.withType<Sign>().configureEach {
     project.extra["signing.secretKeyRingFile"] = secretKeyRingFile
 }
 
-fun notParallel(taskName: String): Boolean {
-    if (xdkBuildLogic.isParallel) {
-        logger.warn("$prefix Parallel builds are not supported for '$taskName'. Task disabled.")
-        return false
-    }
-    return true
-}
-
 val listGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
-    onlyIf {
-        notParallel(name)
-    }
     doLast {
         logger.lifecycle("$prefix Listing publications for project '${project.group}:${project.name}':")
         val packageNames = xtcGitHubClient.queryXtcLangPackageNames()
@@ -99,7 +89,13 @@ val listGitHubPublications by tasks.registering {
             return@doLast
         }
         packageNames.forEach {
-            logger.lifecycle("$prefix   Maven package: '$it'")
+            logger.lifecycle("$prefix    Maven package: '$it':")
+            val versions = xtcGitHubClient.queryXtcLangPackageVersions(it)
+            if (versions.isEmpty()) {
+                logger.warn("$prefix        WARNING: No versions found for this package. Corrupted package repo?")
+                return@forEach
+            }
+            versions.forEach { logger.lifecycle("$prefix        version: '$it'") }
         }
     }
 }
@@ -108,23 +104,9 @@ val deleteGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description =
         "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
-    onlyIf {
-        notParallel(name)
-    }
     doLast {
         logger.lifecycle("Deleting publications for project: '${project.group}:${project.name}'...")
         xtcGitHubClient.deleteXtcLangPackages()
-    }
-}
-
-val listTaskOutput by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Task that lists the output of the 'publish' task."
-    dependsOn("publishAllPublicationsToBuildRepository")
-    doLast {
-        buildRepoDirectory.get().asFileTree.forEach {
-            logger.lifecycle("$prefix OUTPUT PUBLISH: $it")
-        }
     }
 }
 
@@ -145,6 +127,6 @@ val pruneBuildRepo by tasks.registering {
     description = "Helper task called internally to make sure the build repo is wiped out before republishing."
     delete(buildRepoDirectory)
     doLast {
-        logger.lifecycle("$prefix Finished pruneBuildRepo (deleted build repo under ${buildRepoDirectory.get()}).")
+        logger.lifecycle("$prefix Finished $name (deleted build repo under ${buildRepoDirectory.get()}).")
     }
 }

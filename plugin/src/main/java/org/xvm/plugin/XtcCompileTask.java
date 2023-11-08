@@ -57,11 +57,34 @@ public abstract class XtcCompileTask extends SourceTask {
         dependsOn(EXTRACT_TASK_NAME);
         setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
         project.info("{} Associating {} compile task {} with SourceDirectorySet: {}", prefix, sourceSet.getName(), name, getSource().getFiles());
+        if (extCompiler.getForceRebuild().get()) {
+            project.info("{} Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
+            touchSourceSet(sourceSet);
+        }
         doLast(t -> {
+            // This happens during task execution, after the config phase.
             project.info("{} '{}' finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
             sourceSet.getOutput().getAsFileTree().forEach(it -> project.info("{}.compileXtc sourceSet output: {}", prefix, it));
         });
         project.info("{} '{}' Registered and configured compile task for sourceSet: {}", prefix, getName(), sourceSet.getName());
+    }
+
+    private void touch(final File file) {
+        touch(file, System.currentTimeMillis());
+    }
+
+    private void touch(final File file, final long now) {
+        final var oldLastModified = file.lastModified();
+        if (!file.setLastModified(now)) {
+            project.warn("{} Failed to update modification time stamp for file: {}", prefix, file.getAbsolutePath());
+        }
+        project.info("{} Touch file: {} (timestamp: {} -> {})", prefix, file.getAbsolutePath(), oldLastModified, now);
+    }
+
+    private void touchSourceSet(final SourceSet sourceSet) {
+        sourceSet.getResources().getAsFileTree().forEach(this::touch);
+        sourceSet.getAllSource().getAsFileTree().forEach(this::touch);
+        project.info("{} Updated lastModified of source set '{}' and resources to 'now', to enforce a full rebuild.", prefix, sourceSet.getName());
     }
 
     @InputFiles
@@ -171,16 +194,23 @@ public abstract class XtcCompileTask extends SourceTask {
         args.add("-o", outputDir.getAbsolutePath());
         project.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
 
+        // Resource should already be an input because we inherit the SourceTask, which uses a project wide file change policy.
+        final var resourceDirs = sourceSet.getResources().getSrcDirs();
+        resourceDirs.forEach(dir -> {
+            if (!dir.exists()) {
+                project.warn("{} Resource directory does not exist: {} (ignoring passing as input to compiler)", prefix, dir);
+            } else {
+                project.info("{} Adding resource directory: {}", prefix, dir);
+                args.add("-r", dir.getAbsolutePath());
+            }
+        });
+
         args.addBoolean("-nowarn", getNoWarn().get());
         args.addBoolean("-verbose", getIsVerbose().get());
         args.addBoolean("-strict", getIsStrict().get());
         args.addBoolean("-qualify", getQualifiedOutputName().get());
         args.addBoolean("-rebuild", getForceRebuild().get());
         args.addBoolean("-version", getVersionedOutputName().get());
-        if (getForceRebuild().get()) {
-            // TODO: This probably works but we need an integration test to verify that it does.
-            project.warn("xtcCompile.forceRebuild=<boolean> is not supported for Maven/Gradle semantics yet.");
-        }
 
         // TODO: Add a "zip" task or something equivalent to the jar task for XTC builds - all modules in one archive/repository?
         args.addRepeated("-L", resolveXtcModulePath());
