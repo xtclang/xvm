@@ -31,7 +31,7 @@ module TestMisc {
         testException();
         testConditional();
         testBind();
-        //testConstants();
+        testConstants();
         testImport();
         //testRecursiveType();
         //testChild();
@@ -467,17 +467,17 @@ module TestMisc {
         }
     }
 
-    //void testConstants() {
-    //    import ecstasy.collections.Hasher;
-    //    import ecstasy.collections.NaturalHasher;
-    //
-    //    console.print("\n** testConstants()");
-    //
-    //    IntLiteral lit = 42;
-    //    console.print("lit=" + lit);
-    //
-    //    Point point1 = new Point(0, 2);
-    //    console.print($"point1={point1} hypo={point1.hypo}");
+    void testConstants() {
+        import ecstasy.collections.Hasher;
+        import ecstasy.collections.NaturalHasher;
+    
+        console.print("\n** testConstants()");
+    
+        IntLiteral lit = 42;
+        console.print("lit=" + lit);
+    
+        Point point1 = new Point(0, 2);
+        console.print($"point1={point1} hypo={point1.hypo}");
     //
     //    NamedPoint point2 = new NamedPoint("top-left", 1, 0);
     //    console.print($"point2={point2} hypo={point2.hypo}");
@@ -500,7 +500,7 @@ module TestMisc {
     //    AnyValue foo = new AnyValue(1, "foo");
     //    AnyValue bar = new AnyValue(1, "bar");
     //    assert foo == bar;
-    //}
+    }
 
     const Point(Int x, Int y) {
         @Lazy(() -> x*x + y*y) Int hypo;
