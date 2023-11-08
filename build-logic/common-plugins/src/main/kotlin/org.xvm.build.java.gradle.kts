@@ -21,7 +21,7 @@ java {
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             throw buildException("Error in Java toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
         }
-        logger.lifecycle("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
+        logger.info("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
         languageVersion.set(xdkJavaVersion)
     }
 }
@@ -57,8 +57,7 @@ tasks.withType<JavaCompile>().configureEach {
 
     val args = buildList {
         if (lint) {
-            add("-Xlint:unchecked")
-            add("-Xlint:deprecation")
+            add("-Xlint:all") // was: unchecked, deprecation, preview
         }
         if (enablePreview) {
             add("--enable-preview")
@@ -101,17 +100,6 @@ tasks.withType<Test>().configureEach {
     }
     doLast {
         logger.info("$prefix Task '$name' configured (Test).")
-    }
-}
-
-val readManifest by tasks.registering {
-    doLast {
-        val archive = configurations["compileClasspath"].filter {
-            // This will be list of resolved jars, so filter on the jar name.
-            it.name.startsWith("commons-lang3")
-        }
-        val version = resources.text.fromArchiveEntry(archive, "META-INF/MANIFEST.MF")
-        println(version.asString())
     }
 }
 
