@@ -11,7 +11,7 @@ class PropertyAST extends AST {
     String prop = XClzBuilder.value_tcon(tc);
     XType type = XType.xtype(tc,false);
     // Property is class-local, no need for class name
-    if( lhs._type==X._type ) lhs = null;
+    if( lhs._type==XClzBuilder.MOD_TYPE ) lhs = null;
     return new PropertyAST( lhs, type, prop);
   }
   
@@ -31,6 +31,9 @@ class PropertyAST extends AST {
         { _prop="_len"; _type=XType.LONG; }
       if( _kids[0]._type == XType.STRING )
         { _prop="length()"; _type=XType.LONG; }
+    } else if( !(_par instanceof AssignAST) ) {
+      // Prop READS use prop$get, but assigns keep the plain name
+      _prop = _prop+"$get()";
     }
     return this;
   }
