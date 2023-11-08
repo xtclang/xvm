@@ -4115,6 +4115,7 @@ public class Parser
             // DIR_PARENT   -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
             // IDENTIFIER   -> DOT | DIV
             // DOT          -> IDENTIFIER
+            // note: there are no keywords in a path, so they're all treated as identifiers
             switch (peek().getId())
                 {
                 case DOT:
@@ -4126,10 +4127,49 @@ public class Parser
                         throw new CompilerException("illegal include-file path: " + sb);
                         }
                     // fall through
-                case IDENTIFIER:
+                case ALLOW:       case AS:         case ASSERT:    case AVOID:
+                case BREAK:       case CASE:       case CATCH:     case CLASS:
+                case CONDITIONAL: case CONST:      case CONSTRUCT: case CONTINUE:
+                case DEFAULT:     case DELEGATES:  case DESIRED:   case DO:
+                case ELSE:        case EMBEDDED:   case ENUM:      case EXTENDS:
+                case FINALLY:     case FOR:        case FUNCTION:  case IF:
+                case IMMUTABLE:   case IMPLEMENTS: case IMPORT:    case INCORPORATES:
+                case INJECT:      case INTERFACE:  case INTO:      case IS:
+                case MIXIN:       case MODULE:     case NEW:       case OPTIONAL:
+                case OUTER:       case PACKAGE:    case PREFER:    case PRIVATE:
+                case PROTECTED:   case PUBLIC:     case REQUIRED:  case RETURN:
+                case SERVICE:     case STATIC:     case STRUCT:    case SUPER:
+                case SWITCH:      case THIS:       case THROW:     // no T0D0
+                case TRY:         case TYPEDEF:    case USING:     case VAL:
+                case VAR:         case VOID:       case WHILE:     case IDENTIFIER:
                     untilDiv: while (true)
                         {
-                        Token tokName = expect(Id.IDENTIFIER);
+                        Token tokName;
+                        switch (peek().getId())
+                            {
+                            case ALLOW:       case AS:         case ASSERT:    case AVOID:
+                            case BREAK:       case CASE:       case CATCH:     case CLASS:
+                            case CONDITIONAL: case CONST:      case CONSTRUCT: case CONTINUE:
+                            case DEFAULT:     case DELEGATES:  case DESIRED:   case DO:
+                            case ELSE:        case EMBEDDED:   case ENUM:      case EXTENDS:
+                            case FINALLY:     case FOR:        case FUNCTION:  case IF:
+                            case IMMUTABLE:   case IMPLEMENTS: case IMPORT:    case INCORPORATES:
+                            case INJECT:      case INTERFACE:  case INTO:      case IS:
+                            case MIXIN:       case MODULE:     case NEW:       case OPTIONAL:
+                            case OUTER:       case PACKAGE:    case PREFER:    case PRIVATE:
+                            case PROTECTED:   case PUBLIC:     case REQUIRED:  case RETURN:
+                            case SERVICE:     case STATIC:     case STRUCT:    case SUPER:
+                            case SWITCH:      case THIS:       case THROW:     // no T0D0
+                            case TRY:         case TYPEDEF:    case USING:     case VAL:
+                            case VAR:         case VOID:       case WHILE:     case IDENTIFIER:
+                                tokName = current();
+                                break;
+
+                            default:
+                                tokName = expect(Id.IDENTIFIER);
+                                break;
+                            }
+
                         sb.append(tokName.getValue());
                         if (tokName.hasTrailingWhitespace())
                             {

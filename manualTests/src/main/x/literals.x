@@ -153,6 +153,9 @@ module TestLiterals
         assert path1.endsWith(path1);
         assert !path1.endsWith(path4);
 
+        Path path5 = ./allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt;
+        Path path6 = /allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt;
+
         File file = ./resources/more/msgs_EN.txt;
         console.print($"File ./resources/more/msgs_EN.txt={file}");
 
@@ -169,6 +172,9 @@ module TestLiterals
 
         String s = $./resources/more/msgs_EN.txt;
         console.print($"./resources/more/msgs_EN.txt={s}");
+
+        assert $./allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt == "hello world!";
+        assert $/allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt == "hello world!";
         }
 
     void testMultiline()
