@@ -161,6 +161,11 @@ public class XClzBuilder {
       }
     }
 
+    // Const classes get a specific toString, although its not mentioned if its
+    // the default
+    if( clz._f == Part.Format.CONST && clz.child("toString")==null )
+      XConst.make_meth(clz,"toString",_sb);
+    
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.
     // - make a main() which forwards to the arg-run
