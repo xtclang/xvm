@@ -26,8 +26,6 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
         }
     }
 
-    Property<Boolean> getUseNativeLauncher();
-
     Property<Boolean> getShowVersion();
 
     Property<Boolean> getAllowParallel();

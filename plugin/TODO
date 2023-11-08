@@ -1,3 +1,4 @@
+TODO: XTC Language; Can we change the $ template operator to work like Kotlin does and just nearly like Kotlin, but different?
 TODO: Add a settings plugin that is also part of the distribution, which contains things like the github repository syntactic sugare, and maybe sugar for finding the local XDK installation and its repo.
 TODO: Implement a release action (including weaving the correct binary native launchers and symlinks), and publish tagged to GitHub, afterwards bumping to the next patch release version as a SNAPSHOT version.
 TODO: Make sure forceRebuild = true flag work for xtcCompile and its task environment.

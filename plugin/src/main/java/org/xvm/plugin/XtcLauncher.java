@@ -4,8 +4,6 @@ import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 import org.gradle.process.internal.ExecException;
 
-import java.lang.annotation.Native;
-
 public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResult> {
 
     static class XtcExecResult implements ExecResult {
@@ -57,6 +55,7 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
     static XtcLauncher create(final XtcProjectDelegate delegate, final String mainClassName, final boolean isFork, final boolean isNativeLauncher) {
         if (isNativeLauncher) {
             assert isFork : "For option for native launcher will be ignored. A native process is always forked.";
+            delegate.warn("{} The XTC plugin does not yet support using the native launcher.", delegate.prefix()); // TODO: Verify this works.
             return new NativeBinaryLauncher(delegate, nativeLauncherFor(delegate, mainClassName));
         }
         if (isFork) {

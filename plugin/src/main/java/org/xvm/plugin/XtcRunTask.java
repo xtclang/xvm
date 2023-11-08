@@ -62,7 +62,7 @@ public class XtcRunTask extends DefaultTask {
         this.sourceSet = moduleSourceSet;
         this.extRuntime = project.xtcRuntimeExtension();
         this.executedModules = new LinkedHashMap<>();
-        this.launcher = XtcLauncher.create(project, XTC_RUNNER_CLASS_NAME, getIsFork().get());
+        this.launcher = XtcLauncher.create(project, XTC_RUNNER_CLASS_NAME, getIsFork().get(), getUseNativeLauncher().get());
         configureTask(moduleSourceSet);
     }
 
@@ -157,9 +157,6 @@ public class XtcRunTask extends DefaultTask {
 
     @TaskAction
     public void run() {
-        if (getUseNativeLauncher().get()) {
-            throw project.buildException("The XTC plugin does not yet support using the native launcher."); // TODO: Add a run native task.
-        }
         final var args = new CommandLine(XTC_RUNNER_CLASS_NAME, getJvmArgs().get());
         args.addBoolean("-version", getShowVersion().get());
         args.addBoolean("-verbose", getIsVerbose().get());
