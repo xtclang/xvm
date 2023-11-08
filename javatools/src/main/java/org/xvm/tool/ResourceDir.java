@@ -9,8 +9,6 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.xvm.util.Hash;
-
 
 import static org.xvm.compiler.ast.FileExpression.createdTime;
 import static org.xvm.compiler.ast.FileExpression.modifiedTime;
@@ -290,6 +288,7 @@ public class ResourceDir
      */
     public long getTimestamp()
         {
+// TODO CP optimize
         long resourcesTimestamp = 0L;
         for (String name : getNames())
             {
@@ -306,25 +305,6 @@ public class ResourceDir
                 }
             }
         return resourcesTimestamp;
-        }
-
-    /**
-     * @return the hash of all of the resource files (name, size, timestamp); if there are no
-     *         resources, 0 is returned
-     */
-    public int getHash()
-        {
-        int hash = 0;
-        for (String name : getNames())
-            {
-            Object resource = getByName(name);
-            hash = resource instanceof File file
-                    ? Hash.of(file.getName(),
-                      Hash.of(file.length(),
-                      Hash.of(file.lastModified(), hash)))
-                    : Hash.of(((ResourceDir) resource).getHash(), hash);
-            }
-        return hash;
         }
 
     /**
