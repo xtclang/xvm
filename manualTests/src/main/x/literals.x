@@ -124,14 +124,14 @@ module TestLiterals
         {
         console.print("\n** testPaths()");
 
-        Path path1 = Path:./resources/;
-        console.print($"Path ./resources/={path1}");
+        Path path1 = Path:./;
+        console.print($"Path ./={path1}");
 
-        Path path2 = Path:./resources/more/;
-        console.print($"Path ./resources/more/={path2}");
+        Path path2 = Path:./more/;
+        console.print($"Path ./more/={path2}");
 
-        Path path3 = Path:./resources/more/msgs_EN.txt;
-        console.print($"Path ./resources/more/msgs_EN.txt={path3}");
+        Path path3 = Path:./more/msgs_EN.txt;
+        console.print($"Path ./more/msgs_EN.txt={path3}");
 
         assert path3.startsWith(path3);
         assert path3.startsWith(path2);
@@ -143,7 +143,7 @@ module TestLiterals
         assert !path1.startsWith(path3);
 
         Path path4 = new Path("msgs_EN.txt");
-        console.print($"Path ./resources/more/msgs_EN.txt={path4}");
+        console.print($"Path for \"msgs_EN.txt\"={path4}");
 
         assert path4.endsWith(path4);
         assert path3.endsWith(path4);
@@ -156,22 +156,22 @@ module TestLiterals
         Path path5 = ./allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt;
         Path path6 = /allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt;
 
-        File file = ./resources/more/msgs_EN.txt;
-        console.print($"File ./resources/more/msgs_EN.txt={file}");
+        File file = ./more/msgs_EN.txt;
+        console.print($"File ./more/msgs_EN.txt={file}");
 
-        Directory dir = ./resources/;
-        console.print($"Dir ./resources/={dir}");
+        Directory dir = ./;
+        console.print($"Dir ./={dir}");
 
-        dir = Directory:./resources/more/;
-        console.print($"Dir ./resources/more/={dir}");
+        dir = Directory:./more/;
+        console.print($"Dir ./more/={dir}");
         }
 
     void testIncludes()
         {
         console.print("\n** testIncludes()");
 
-        String s = $./resources/more/msgs_EN.txt;
-        console.print($"./resources/more/msgs_EN.txt={s}");
+        String s = $./more/msgs_EN.txt;
+        console.print($"./more/msgs_EN.txt={s}");
 
         assert $./allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt == "hello world!";
         assert $/allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt == "hello world!";
@@ -268,17 +268,17 @@ module TestLiterals
         {
         console.print("\n** testDirs()");
 
-        FileStore fs = FileStore:/resources/;
+        FileStore fs = FileStore:/archive/moduleTest;
         console.print("fs=" + fs);
 
-        console.print($"\n(recursive)\n{{fs.emitListing($);}}");
+        console.print($"\n(recursive)\n{{fs.emitListing($, recursive=True);}}");
         console.print($"\n(non-recursive)\n{{fs.emitListing($, False);}}");
 
-        File file = File:./resources/more/msgs_EN.txt;
-        console.print($"File:./resources/more/msgs_EN.txt={file}");
+        File file = File:./more/msgs_EN.txt;
+        console.print($"File:./more/msgs_EN.txt={file}");
 
-        Directory dir = Directory:./resources/;
-        console.print($"Directory:./resources/=(recursive)\n{{dir.emitListing($);}}");
+        Directory dir = Directory:./archive/moduleTest;
+        console.print($"Directory:./archive/moduleTest=(recursive)\n{{dir.emitListing($, recursive=True);}}");
         }
 
     void testDates()

@@ -15,7 +15,11 @@ const Path
      */
     @Override
     construct(String pathString) {
-        assert pathString.size > 0;
+        if (pathString == "") {
+            construct Path(Null, Current);
+            return;
+        }
+
         if (pathString == "/") {
             construct Path(Null, Root);
             return;

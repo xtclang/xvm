@@ -4,17 +4,17 @@
  *
  *    keytool -genkeypair -alias test_pair -keyalg RSA -keysize 2048 -validity 365
  *            -dname "cn=xqiz.it, ou=manual_test"\
- *            -keystore src/main/x/resources/test_store.p12 -storetype PKCS12 -storepass password
+ *            -keystore src/main/x/test_store.p12 -storetype PKCS12 -storepass password
  *
  *  - a symmetrical key created by the command like:
  *
  *    keytool -genseckey -alias test_sym -keyalg AES -keysize 256\
- *            -keystore src/main/x/resources/test_store.p12 -storepass password
+ *            -keystore src/main/x/test_store.p12 -storepass password
  *
  * - a password entry is created by the command like:
  *
  *    keytool -importpass -alias test_pass
- *            -keystore src/main/x/resources/test_store.p12 -storepass password
+ *            -keystore src/main/x/test_store.p12 -storepass password
  */
 module TestCrypto {
     @Inject Console console;
@@ -24,7 +24,7 @@ module TestCrypto {
     import crypto.*;
 
     void run(String[] args = ["password"]) {
-        File   store    = File:./resources/test_store.p12;
+        File   store    = File:./test_store.p12;
         String pairName = "test_pair";
         String symName  = "test_sym";
         String pwdName  = "test_pass";
