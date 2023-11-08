@@ -175,7 +175,7 @@ class CircularArray<Element>
         } else {
             assert:bounds 0 < index < size;
             Int mask = contents.size - 1;
-            if (index < (size >> 1)) {
+            if (index < size >> 1) {
                 // move the tail
                 for (Int iCopy = tail, Int iLast = tail + index - 1; iCopy <= iLast; ++iCopy) {
                     contents[iCopy-1 & mask] = contents[iCopy & mask];
@@ -219,7 +219,7 @@ class CircularArray<Element>
             tail -= additional;
         } else {
             assert:bounds 0 < index < size;
-            if (index < (size >> 1)) {
+            if (index < size >> 1) {
                 // move the tail
                 for (Int iCopy = tail, Int iLast = tail + index - 1; iCopy <= iLast; ++iCopy) {
                     contents[iCopy-additional & mask] = contents[iCopy & mask];
@@ -252,7 +252,7 @@ class CircularArray<Element>
             contents[indexFor(--head)] = Null;
         } else {
             Int mask = contents.size - 1;
-            if (index < (size >> 1)) {
+            if (index < size >> 1) {
                 // move the tail forward (but copy the sliding elements right to left)
                 for (Int iCopy = tail + index - 1; iCopy >= tail; --iCopy) {
                     contents[iCopy+1 & mask] = contents[iCopy & mask];
