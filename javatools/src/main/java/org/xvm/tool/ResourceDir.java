@@ -288,23 +288,25 @@ public class ResourceDir
      */
     public long getTimestamp()
         {
-// TODO CP optimize
-        long resourcesTimestamp = 0L;
-        for (String name : getNames())
+        long timestamp = 0L;
+        for (File file : resourcePath)
             {
-            Object resource = getByName(name);
-            if (resource != null)
+            timestamp = Math.max(timestamp, calcTimestamp(file));
+            }
+        return timestamp;
+        }
+
+    private long calcTimestamp(File dirOrFile)
+        {
+        long timestamp = dirOrFile.lastModified();
+        if (dirOrFile.isDirectory())
+            {
+            for (File file : dirOrFile.listFiles())
                 {
-                long timestamp = resource instanceof File file
-                        ? file.lastModified()
-                        : ((ResourceDir) resource).getTimestamp();
-                if (timestamp > resourcesTimestamp)
-                    {
-                    resourcesTimestamp = timestamp;
-                    }
+                timestamp = Math.max(timestamp, calcTimestamp(file));
                 }
             }
-        return resourcesTimestamp;
+        return timestamp;
         }
 
     /**
